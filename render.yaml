@@ -1,0 +1,52 @@
+services:
+  # ─── Backend API ─────────────────────────────────────────────────────────────
+  - type: web
+    name: stc-cloud-api
+    runtime: node
+    region: oregon
+    plan: free
+    buildCommand: cd cloud && npm install && npm run build
+    startCommand: cd cloud && node dist/api/server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: stc-cloud-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          name: stc-cloud-redis
+          type: redis
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: PORTAL_ADMIN_USER
+        value: admin
+      - key: PORTAL_ADMIN_PASSWORD
+        sync: false
+      - key: PORTAL_ORIGIN
+        sync: false
+      - key: TONER_WARN_PCT
+        value: "20"
+      - key: TONER_CRITICAL_PCT
+        value: "10"
+
+  # ─── Redis (cache + cola de comandos) ────────────────────────────────────────
+  - type: redis
+    name: stc-cloud-redis
+    plan: free
+    maxmemoryPolicy: allkeys-lru
+    ipAllowList: []
+
+databases:
+  # ─── NOTA: Usamos Neon en vez de Render PostgreSQL ──────────────────────────
+  # Configurar DATABASE_URL manualmente en el dashboard de Render
+  # con la connection string de Neon:
+  #   postgresql://user:pass@ep-xxx.us-east-2.aws.neon.tech/stc_cloud?sslmode=require
+  #
+  # Si prefieres usar Render PostgreSQL (plan free 1GB), descomentar:
+  # - name: stc-cloud-db
+  #   plan: free
+  #   databaseName: stc_cloud
+  #   user: stc_admin

@@ -179,10 +179,15 @@ const createAgentSchema = {
 
 const start = async () => {
   try {
-    // CORS: solo permite el origen del portal (configurable por env)
-    const portalOrigin = process.env.PORTAL_ORIGIN || "http://localhost:5173";
+    // CORS: acepta portal desde Vercel, dominio propio y localhost (dev)
+    const allowedOrigins = [
+      process.env.PORTAL_ORIGIN,                 // URL de Vercel o dominio propio
+      "http://localhost:5173",                    // dev portal
+      "http://localhost:3000",                    // dev API
+    ].filter(Boolean) as string[];
+
     await fastify.register(cors, {
-      origin: portalOrigin,
+      origin: allowedOrigins.length > 0 ? allowedOrigins : true,
       credentials: true,
       methods: ["GET", "POST", "PUT", "DELETE"],
     });
