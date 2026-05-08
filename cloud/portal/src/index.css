@@ -1,0 +1,61 @@
+@import "tailwindcss";
+
+:root {
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: light;
+  color: #1a2333;
+  background-color: #e9eff3;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background-color: #e9eff3;
+}
+
+#root {
+  width: 100%;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar        { width: 6px; height: 6px; }
+::-webkit-scrollbar-track  { background: #e9eff3; }
+::-webkit-scrollbar-thumb  { background-color: #b0bec5; border-radius: 9999px; }
+::-webkit-scrollbar-thumb:hover { background-color: #90a4ae; }
+
+/* Panel — card base shared across pages */
+.cd-panel {
+  background: #ffffff;
+  border: 1px solid #d1d8e0;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+/* Table zebra rows */
+.cd-table tbody tr:nth-child(even) { background-color: #f3f7fa; }
+.cd-table tbody tr:hover           { background-color: #e8f0fe; }
+
+/* Input base */
+.cd-input {
+  background: #ffffff;
+  border: 1px solid #d1d8e0;
+  color: #1a2333;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 0.875rem;
+  transition: border-color 0.15s;
+}
+.cd-input:focus {
+  outline: none;
+  border-color: #2980b9;
+  box-shadow: 0 0 0 3px rgba(41, 128, 185, 0.12);
+}
+.cd-input::placeholder { color: #94a3b8; }

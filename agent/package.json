@@ -1,0 +1,41 @@
+{
+  "name": "stc-agent",
+  "version": "1.0.0",
+  "description": "Agente local STC Cloud - Scanner SNMP multimarca",
+  "main": "dist/core/main.js",
+  "bin": "dist/core/main.js",
+  "scripts": {
+    "dev": "tsx watch src/core/main.ts",
+    "build": "tsc",
+    "start": "node dist/core/main.js",
+    "install-svc": "node src/install/install.js",
+    "uninstall-svc": "node src/install/uninstall.js",
+    "test": "npx tsx --test src/tests/scanner.test.ts src/tests/queue.test.ts",
+    "test:scanner": "npx tsx --test src/tests/scanner.test.ts",
+    "test:queue": "npx tsx --test src/tests/queue.test.ts",
+    "snmp:sim": "npx tsx src/tests/snmpSimulator.ts"
+  },
+  "dependencies": {
+    "better-sqlite3": "12.9.0",
+    "net-snmp": "^3.11.0",
+    "node-windows": "^1.0.0-beta.8"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "7.6.11",
+    "@types/node": "^20.11.20",
+    "esbuild": "^0.27.7",
+    "pkg": "^5.8.1",
+    "postject": "^1.0.0-alpha.6",
+    "tsx": "^4.7.1",
+    "typescript": "^5.3.3"
+  },
+  "pkg": {
+    "assets": [
+      "node_modules/better-sqlite3/build/Release/*.node"
+    ],
+    "targets": [
+      "node18-win-x64"
+    ],
+    "outputPath": "dist"
+  }
+}

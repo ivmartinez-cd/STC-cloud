@@ -1,0 +1,108 @@
+version: '3.9'
+
+services:
+  api:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    env_file: ../../.env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - stc-network
+
+  portal:
+    build:
+      context: ../portal
+      dockerfile: ../docker/Dockerfile.portal
+    restart: unless-stopped
+    networks:
+      - stc-network
+
+  postgres:
+    image: timescale/timescaledb:latest-pg16
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: ${DB_USER:-stc_admin}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME:-stc_cloud}
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${DB_USER:-stc_admin} -d ${DB_NAME:-stc_cloud}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - stc-network
+
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redisdata:/data
+    command: redis-server --appendonly yes
+    restart: unless-stopped
+    networks:
+      - stc-network
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - certbot-certs:/etc/letsencrypt:ro
+      - certbot-www:/var/www/certbot:ro
+    depends_on:
+      - api
+      - portal
+    restart: unless-stopped
+    networks:
+      - stc-network
+
+  # Certbot — renovación automática SSL (runs every 12h, no-op if cert is fresh)
+  certbot:
+    image: certbot/certbot:latest
+    volumes:
+      - certbot-certs:/etc/letsencrypt
+      - certbot-www:/var/www/certbot
+    entrypoint: /bin/sh -c 'trap exit TERM; while :; do certbot renew --webroot -w /var/www/certbot --quiet; sleep 12h & wait $${!}; done'
+    restart: unless-stopped
+
+  # Backup automático PostgreSQL — diario a las 02:00 UTC
+  backup:
+    image: timescale/timescaledb:latest-pg16
+    volumes:
+      - backups:/backups
+    environment:
+      PGPASSWORD: ${DB_PASSWORD}
+    entrypoint: /bin/sh -c >
+      'trap exit TERM; while :; do
+        pg_dump -h postgres -U ${DB_USER:-stc_admin} ${DB_NAME:-stc_cloud}
+        | gzip > /backups/stc_$(date +%Y%m%d_%H%M).sql.gz;
+        find /backups -name "*.sql.gz" -mtime +30 -delete;
+        echo "[Backup] Completado: $$(date)";
+        sleep 86400 & wait $${!};
+      done'
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - stc-network
+
+volumes:
+  pgdata:
+  redisdata:
+  certbot-certs:
+  certbot-www:
+  backups:
+
+networks:
+  stc-network:
+    driver: bridge

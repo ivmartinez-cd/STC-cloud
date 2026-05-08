@@ -1,0 +1,6 @@
+<linker>
+  <!-- Preserve WinForms infrastructure needed for tray + forms -->
+  <assembly fullname="System.Windows.Forms" preserve="all"/>
+  <assembly fullname="System.Drawing" preserve="all"/>
+  <assembly fullname="System.ServiceProcess.ServiceController" preserve="all"/>
+</linker>

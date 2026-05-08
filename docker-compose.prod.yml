@@ -1,0 +1,129 @@
+# STC Cloud — Docker Compose de Producción
+# Uso: docker compose -f docker-compose.prod.yml up -d --build
+
+services:
+  # ─── Backend API (Fastify + TypeScript) ────────────────────────────────────
+  api:
+    build:
+      context: ./cloud
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file: .env.production
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - stc-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ─── Portal Web (React + Vite → nginx) ────────────────────────────────────
+  portal:
+    build:
+      context: ./cloud/portal
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    networks:
+      - stc-network
+
+  # ─── Base de datos (PostgreSQL 16 + TimescaleDB) ──────────────────────────
+  postgres:
+    image: timescale/timescaledb:latest-pg16
+    restart: always
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: ${DB_USER:-stc_admin}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME:-stc_cloud}
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${DB_USER:-stc_admin} -d ${DB_NAME:-stc_cloud}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - stc-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ─── Cache y cola de comandos ─────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    restart: always
+    volumes:
+      - redisdata:/data
+    command: redis-server --appendonly yes
+    networks:
+      - stc-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ─── Reverse Proxy (nginx + SSL) ─────────────────────────────────────────
+  nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - certbot-certs:/etc/letsencrypt:ro
+      - certbot-www:/var/www/certbot:ro
+    depends_on:
+      - api
+      - portal
+    networks:
+      - stc-network
+
+  # ─── Certbot — renovación automática SSL (cada 12h) ──────────────────────
+  certbot:
+    image: certbot/certbot:latest
+    volumes:
+      - certbot-certs:/etc/letsencrypt
+      - certbot-www:/var/www/certbot
+    entrypoint: /bin/sh -c 'trap exit TERM; while :; do certbot renew --webroot -w /var/www/certbot --quiet; sleep 12h & wait $${!}; done'
+    restart: unless-stopped
+
+  # ─── Backup automático PostgreSQL — diario, retención 30 días ─────────────
+  backup:
+    image: timescale/timescaledb:latest-pg16
+    restart: unless-stopped
+    volumes:
+      - backups:/backups
+    environment:
+      PGPASSWORD: ${DB_PASSWORD}
+    entrypoint: /bin/sh -c >
+      'trap exit TERM; while :; do
+        pg_dump -h postgres -U ${DB_USER:-stc_admin} ${DB_NAME:-stc_cloud}
+        | gzip > /backups/stc_$(date +%Y%m%d_%H%M).sql.gz;
+        find /backups -name "*.sql.gz" -mtime +30 -delete;
+        echo "[Backup] Completado: $$(date)";
+        sleep 86400 & wait $${!};
+      done'
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - stc-network
+
+volumes:
+  pgdata:
+  redisdata:
+  certbot-certs:
+  certbot-www:
+  backups:
+
+networks:
+  stc-network:
+    driver: bridge

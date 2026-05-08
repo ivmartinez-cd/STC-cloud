@@ -1,0 +1,32 @@
+{
+  "name": "stc-cloud-monorepo",
+  "version": "1.0.0",
+  "description": "Multi-brand Cloud Counter Reading System",
+  "private": true,
+  "workspaces": [
+    "cloud",
+    "cloud/portal",
+    "agent",
+    "shared"
+  ],
+  "scripts": {
+    "dev:cloud": "npm run dev -w cloud",
+    "dev:portal": "npm run dev -w portal",
+    "build:cloud": "npm run build -w cloud",
+    "build:portal": "npm run build -w portal",
+    "build:agent": "npx pkg agent/src/core/main.js --target node20-win-x64 --output dist/ContadorImpresoras.exe",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down"
+  },
+  "keywords": [
+    "snmp",
+    "printer",
+    "monitoring",
+    "timescaledb"
+  ],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.2.4"
+  }
+}

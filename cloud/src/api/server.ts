@@ -1,0 +1,685 @@
+import Fastify, { FastifyReply, FastifyRequest } from "fastify";
+import cors from "@fastify/cors";
+import helmet from "@fastify/helmet";
+import jwt from "@fastify/jwt";
+import rateLimit from "@fastify/rate-limit";
+import dotenv from "dotenv";
+import path from "path";
+import Redis from "ioredis";
+import knex from "knex";
+import crypto from "crypto";
+
+import knexConfig from "../db/knexfile";
+import { AgentService } from "../services/agentService";
+
+dotenv.config({ path: path.join(__dirname, "../../../.env") });
+
+// Falla explícito si JWT_SECRET no está configurado (no más fallback inseguro)
+if (!process.env.JWT_SECRET) {
+  console.error("FATAL: JWT_SECRET no está definido en .env");
+  process.exit(1);
+}
+
+const fastify = Fastify({ logger: true });
+
+const db = knex(knexConfig.development);
+const redis = new Redis(process.env.REDIS_URL || "redis://localhost:6379");
+const agentService = new AgentService(db);
+
+// JWT de 30 días para agentes, 8 horas para portal (mismo secret, distinto payload)
+const JWT_AGENT_TTL = "30d";
+const JWT_PORTAL_TTL = "8h";
+
+// ─── Helpers de autenticación ────────────────────────────────────────────────
+
+async function agentAuth(request: FastifyRequest, reply: FastifyReply) {
+  try {
+    await request.jwtVerify();
+    const user = request.user as any;
+    if (!user.agentId) {
+      return reply.status(403).send({ error: "Token de portal no puede acceder a esta ruta" });
+    }
+    const blacklisted = await agentService.isBlacklisted(redis, user.agentId);
+    if (blacklisted) {
+      return reply.status(401).send({ error: "Token revocado" });
+    }
+  } catch {
+    return reply.status(401).send({ error: "Token inválido o expirado" });
+  }
+}
+
+async function portalAuth(request: FastifyRequest, reply: FastifyReply) {
+  try {
+    await request.jwtVerify();
+    const user = request.user as any;
+    if (user.role !== "portal") {
+      return reply.status(403).send({ error: "Token de agente no puede acceder a esta ruta" });
+    }
+  } catch {
+    return reply.status(401).send({ error: "Token inválido o expirado" });
+  }
+}
+
+// ─── Schemas de validación ───────────────────────────────────────────────────
+
+const activateSchema = {
+  body: {
+    type: "object",
+    required: ["key"],
+    properties: {
+      key: { type: "string", minLength: 64, maxLength: 64 },
+      hardwareId: { type: "string", maxLength: 255 },
+    },
+  },
+};
+
+const refreshSchema = {
+  body: {
+    type: "object",
+    required: ["agentId", "refresh_token"],
+    properties: {
+      agentId: { type: "string", format: "uuid" },
+      refresh_token: { type: "string", minLength: 128, maxLength: 128 },
+    },
+  },
+};
+
+const portalLoginSchema = {
+  body: {
+    type: "object",
+    required: ["username", "password"],
+    properties: {
+      username: { type: "string" },
+      password: { type: "string" },
+    },
+  },
+};
+
+const syncSchema = {
+  body: {
+    type: "object",
+    required: ["readings"],
+    properties: {
+      readings: {
+        type: "array",
+        maxItems: 500,
+        items: {
+          type: "object",
+          required: ["device_id", "time", "total_pages"],
+          properties: {
+            device_id: { type: "string" },
+            ip: { type: "string" },
+            brand: { type: "string" },
+            time: { type: "string" },
+            total_pages: { type: "integer", minimum: 0 },
+            mono_pages: { type: "integer", minimum: 0 },
+            color_pages: { type: "integer", minimum: 0 },
+            toner_black: { type: "integer", minimum: 0, maximum: 100 },
+            toner_cyan: { type: "integer", minimum: 0, maximum: 100 },
+            toner_magenta: { type: "integer", minimum: 0, maximum: 100 },
+            toner_yellow: { type: "integer", minimum: 0, maximum: 100 },
+            status: { type: "string" },
+            offline: { type: "boolean" },
+          },
+        },
+      },
+    },
+  },
+};
+
+const commandSchema = {
+  body: {
+    type: "object",
+    required: ["type"],
+    properties: {
+      type: { type: "string", enum: ["FORCE_SCAN", "RESTART", "UPDATE_CONFIG", "PING"] },
+      payload: { type: "object" },
+    },
+  },
+};
+
+const createClientSchema = {
+  body: {
+    type: "object",
+    required: ["name"],
+    properties: {
+      name: { type: "string", minLength: 1, maxLength: 255 },
+      contact_name: { type: "string", maxLength: 100 },
+      contact_email: { type: "string", format: "email" },
+      contact_phone: { type: "string", maxLength: 50 },
+    },
+  },
+};
+
+const createAgentSchema = {
+  body: {
+    type: "object",
+    required: ["clientId", "name"],
+    properties: {
+      clientId: { type: "string", format: "uuid" },
+      name: { type: "string", minLength: 1, maxLength: 100 },
+      ip_ranges: {
+        type: "array",
+        items: {
+          type: "object",
+          required: ["start", "end"],
+          properties: {
+            start: { type: "string" },
+            end: { type: "string" },
+          },
+        },
+      },
+      snmp_community: { type: "string", maxLength: 64 },
+      scan_interval_minutes: { type: "integer", minimum: 1, maximum: 1440 },
+    },
+  },
+};
+
+// ─── Startup ─────────────────────────────────────────────────────────────────
+
+const start = async () => {
+  try {
+    // CORS: solo permite el origen del portal (configurable por env)
+    const portalOrigin = process.env.PORTAL_ORIGIN || "http://localhost:5173";
+    await fastify.register(cors, {
+      origin: portalOrigin,
+      credentials: true,
+      methods: ["GET", "POST", "PUT", "DELETE"],
+    });
+
+    // Security headers (Content-Security-Policy, X-Frame-Options, etc.)
+    await fastify.register(helmet, {
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          scriptSrc:  ["'self'"],
+          styleSrc:   ["'self'", "'unsafe-inline'"],
+          imgSrc:     ["'self'", "data:"],
+        },
+      },
+    });
+
+    await fastify.register(jwt, { secret: process.env.JWT_SECRET! });
+
+    // Rate limiting global con Redis como store (para deploys multi-instancia)
+    await fastify.register(rateLimit, {
+      max: 100,
+      timeWindow: "1 minute",
+      redis,
+      keyGenerator: (request) =>
+        (request.headers["x-forwarded-for"] as string) || request.ip,
+    });
+
+    // WebSocket (opcional — instalar con: npm install @fastify/websocket)
+    try {
+      const wsPlugin = require("@fastify/websocket");
+      await fastify.register(wsPlugin);
+      const { registerWebSocket } = await import("../ws/index");
+      await registerWebSocket(fastify);
+      fastify.log.info("WebSocket hub activo en /ws");
+    } catch {
+      fastify.log.warn("@fastify/websocket no instalado — WebSocket desactivado");
+    }
+
+    // ─── Rutas públicas ───────────────────────────────────────────────────────
+
+    fastify.get("/health", async () => ({ status: "ok", version: "1.0.0" }));
+
+    // Login del portal — genera JWT con role: 'portal'
+    fastify.post("/api/v1/portal/login", {
+      schema: portalLoginSchema,
+      config: { rateLimit: { max: 10, timeWindow: "1 minute" } },
+    }, async (request, reply) => {
+      const { username, password } = request.body as any;
+      const adminUser = process.env.PORTAL_ADMIN_USER || "admin";
+      const adminPass = process.env.PORTAL_ADMIN_PASSWORD;
+
+      if (!adminPass) {
+        return reply.status(503).send({ error: "PORTAL_ADMIN_PASSWORD no configurado en .env" });
+      }
+      if (username !== adminUser || password !== adminPass) {
+        return reply.status(401).send({ error: "Credenciales inválidas" });
+      }
+
+      const token = fastify.jwt.sign(
+        { role: "portal", userId: adminUser },
+        { expiresIn: JWT_PORTAL_TTL }
+      );
+      return { token, expiresIn: JWT_PORTAL_TTL };
+    });
+
+    // Activar agente con one-time key
+    fastify.post("/api/v1/agents/activate", {
+      schema: activateSchema,
+      config: { rateLimit: { max: 5, timeWindow: "1 minute" } },
+    }, async (request, reply) => {
+      const body = request.body as any;
+      const key = body.key?.trim();
+      const hardwareId = body.hardwareId || "unknown";
+      
+      try {
+        if (!key) throw new Error("La clave de activacion es requerida");
+        const result = await agentService.activateAgent(key, hardwareId);
+        const token = fastify.jwt.sign(
+          { agentId: result.agentId, jti: crypto.randomUUID() },
+          { expiresIn: JWT_AGENT_TTL }
+        );
+        return {
+          status: "success",
+          agentId: result.agentId,
+          token,
+          refresh_token: result.refreshToken,
+          config: { pollInterval: 30, heartbeatInterval: 60 },
+        };
+      } catch (err: any) {
+        return reply.status(401).send({ error: err.message });
+      }
+    });
+
+    // Renovar JWT del agente con refresh token
+    fastify.post("/api/v1/agents/refresh", { schema: refreshSchema }, async (request, reply) => {
+      const { agentId, refresh_token } = request.body as any;
+      try {
+        const result = await agentService.refreshAgentToken(agentId, refresh_token);
+        const token = fastify.jwt.sign(
+          { agentId: result.agentId, jti: crypto.randomUUID() },
+          { expiresIn: JWT_AGENT_TTL }
+        );
+        return { status: "success", token, refresh_token: result.refreshToken };
+      } catch (err: any) {
+        return reply.status(401).send({ error: err.message });
+      }
+    });
+
+    // ─── Rutas autenticadas — AGENTE ─────────────────────────────────────────
+
+    fastify.get(
+      "/api/v1/agents/:id/commands",
+      { preHandler: agentAuth },
+      async (request) => {
+        const { id } = request.params as any;
+        return await agentService.getCommands(redis, id);
+      }
+    );
+
+    fastify.post(
+      "/api/v1/agents/:id/heartbeat",
+      { preHandler: agentAuth },
+      async (request) => {
+        const { id } = request.params as any;
+        await agentService.heartbeat(id);
+        const [config, commands] = await Promise.all([
+          agentService.getConfig(id),
+          agentService.getCommands(redis, id)
+        ]);
+        return { status: "received", config, commands };
+      }
+    );
+
+    fastify.post(
+      "/api/v1/devices/sync",
+      { preHandler: agentAuth, schema: syncSchema },
+      async (request, reply) => {
+        const { readings } = request.body as any;
+        const { agentId } = request.user as any;
+        try {
+          await agentService.syncReadings(redis, readings, agentId);
+          return { status: "success", count: readings.length };
+        } catch (e: any) {
+          return reply.status(500).send({ error: e.message });
+        }
+      }
+    );
+
+    fastify.post(
+      "/api/v1/devices/register",
+      { preHandler: agentAuth },
+      async (request) => {
+        const { devices } = request.body as any;
+        const { agentId } = request.user as any;
+        await agentService.registerDevices(agentId, devices);
+        return { status: "success" };
+      }
+    );
+
+    // ─── Rutas autenticadas — PORTAL ─────────────────────────────────────────
+
+    // Crear cliente
+    fastify.post(
+      "/api/v1/clients",
+      { preHandler: portalAuth, schema: createClientSchema },
+      async (request) => {
+        const data = request.body as any;
+        const [client] = await db("clients").insert(data).returning("*");
+        return client;
+      }
+    );
+
+    // Crear agente y generar activation key
+    fastify.post(
+      "/api/v1/agents",
+      { preHandler: portalAuth, schema: createAgentSchema },
+      async (request) => {
+        const { clientId, name, ip_ranges, snmp_community, scan_interval_minutes } = request.body as any;
+        return await agentService.createActivationKey(clientId, name, { ip_ranges, snmp_community, scan_interval_minutes });
+      }
+    );
+
+    // Revocar agente (bug del análisis — faltaba el endpoint HTTP)
+    fastify.post(
+      "/api/v1/agents/:id/revoke",
+      { preHandler: portalAuth },
+      async (request) => {
+        const { id } = request.params as any;
+        const requestIp = (request.headers["x-forwarded-for"] as string) || request.ip;
+        // TTL = 30 días en segundos (duración máxima del access token)
+        await agentService.revokeToken(redis, id, 30 * 24 * 60 * 60, requestIp);
+        return { status: "revoked" };
+      }
+    );
+
+    // Enviar comando al agente
+    fastify.post(
+      "/api/v1/agents/:id/command",
+      { preHandler: portalAuth, schema: commandSchema },
+      async (request) => {
+        const { id } = request.params as any;
+        const { type, payload } = request.body as any;
+        await agentService.sendCommand(redis, id, type, payload || {});
+        return { status: "queued" };
+      }
+    );
+
+    // Leer configuración del agente (ip_ranges, snmp_community, scan_interval_minutes)
+    fastify.get(
+      "/api/v1/agents/:id/config",
+      { preHandler: portalAuth },
+      async (request) => {
+        const { id } = request.params as any;
+        return await agentService.getConfig(id);
+      }
+    );
+
+    // Actualizar configuración del agente (ip_ranges, snmp_community)
+    fastify.put(
+      "/api/v1/agents/:id/config",
+      { preHandler: portalAuth },
+      async (request) => {
+        const { id } = request.params as any;
+        return await agentService.updateConfig(id, request.body);
+      }
+    );
+
+    // Detalle de un monitor (agente) con conteos y datos del cliente
+    fastify.get(
+      "/api/v1/agents/:id",
+      { preHandler: portalAuth },
+      async (request) => {
+        const { id } = request.params as any;
+        const agent = await db("agents")
+          .where("agents.id", id)
+          .select(
+            "agents.*",
+            "clients.name as client_name",
+            "clients.id as client_id",
+            db.raw("COUNT(DISTINCT CASE WHEN d.active = true THEN d.id END)::int AS active_device_count"),
+            db.raw("COUNT(DISTINCT d.id)::int AS total_device_count")
+          )
+          .leftJoin("clients", "clients.id", "agents.client_id")
+          .leftJoin("devices as d", "d.agent_id", "agents.id")
+          .groupBy("agents.id", "clients.name", "clients.id")
+          .first();
+        if (!agent) return { error: "Monitor no encontrado" };
+        return agent;
+      }
+    );
+
+    // Dispositivos de un monitor
+    fastify.get(
+      "/api/v1/agents/:id/devices",
+      { preHandler: portalAuth },
+      async (request) => {
+        const { id } = request.params as any;
+        return await db("devices")
+          .where("agent_id", id)
+          .orderBy("brand");
+      }
+    );
+
+    // Lista de agentes (portal)
+    fastify.get(
+      "/api/v1/agents",
+      { preHandler: portalAuth },
+      async () =>
+        await db("agents")
+          .select("id", "name", "hardware_id", "status", "last_seen", "client_id", "created_at")
+          .orderBy("created_at", "desc")
+    );
+
+    // Eliminar monitor (agente)
+    fastify.delete(
+      "/api/v1/agents/:id",
+      { preHandler: portalAuth },
+      async (request, reply) => {
+        const { id } = request.params as any;
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (!uuidRegex.test(id)) {
+          return reply.status(400).send({ error: "ID de agente inválido" });
+        }
+        try {
+          fastify.log.info({ agentId: id }, "Solicitud de eliminación de agente");
+          const deletedCount = await db("agents").where("id", id).delete();
+          if (deletedCount === 0) {
+            return reply.status(404).send({ error: "Agente no encontrado" });
+          }
+          return { status: "deleted" };
+        } catch (err: any) {
+          fastify.log.error(err, "Error al eliminar agente");
+          return reply.status(500).send({ error: "Internal Server Error", details: err.message });
+        }
+      }
+    );
+
+    // Lista de clientes con conteos agregados
+    fastify.get(
+      "/api/v1/clients",
+      { preHandler: portalAuth },
+      async () =>
+        await db("clients")
+          .select(
+            "clients.*",
+            db.raw("COUNT(DISTINCT CASE WHEN a.status != 'revoked' THEN a.id END)::int AS monitor_count"),
+            db.raw("COUNT(DISTINCT CASE WHEN d.active = true THEN d.id END)::int AS device_count")
+          )
+          .leftJoin("agents as a", "a.client_id", "clients.id")
+          .leftJoin("devices as d", "d.agent_id", "a.id")
+          .groupBy("clients.id")
+          .orderBy("clients.name")
+    );
+
+    // Cliente por ID con conteos
+    fastify.get(
+      "/api/v1/clients/:id",
+      { preHandler: portalAuth },
+      async (request) => {
+        const { id } = request.params as any;
+        return await db("clients")
+          .where("clients.id", id)
+          .select(
+            "clients.*",
+            db.raw("COUNT(DISTINCT CASE WHEN a.status != 'revoked' THEN a.id END)::int AS monitor_count"),
+            db.raw("COUNT(DISTINCT CASE WHEN d.active = true THEN d.id END)::int AS device_count")
+          )
+          .leftJoin("agents as a", "a.client_id", "clients.id")
+          .leftJoin("devices as d", "d.agent_id", "a.id")
+          .groupBy("clients.id")
+          .first();
+      }
+    );
+
+    // Monitores de un cliente con conteo de dispositivos
+    fastify.get(
+      "/api/v1/clients/:id/monitors",
+      { preHandler: portalAuth },
+      async (request) => {
+        const { id } = request.params as any;
+        return await db("agents")
+          .where("agents.client_id", id)
+          .select(
+            "agents.id", "agents.name", "agents.status", "agents.last_seen",
+            "agents.hardware_id", "agents.ip_ranges", "agents.scan_interval_minutes",
+            db.raw("COUNT(DISTINCT CASE WHEN d.active = true THEN d.id END)::int AS device_count")
+          )
+          .leftJoin("devices as d", "d.agent_id", "agents.id")
+          .groupBy("agents.id")
+          .orderBy("agents.name");
+      }
+    );
+
+    // Uso mensual del cliente para gráfico (últimos 4 meses)
+    fastify.get(
+      "/api/v1/clients/:id/usage",
+      { preHandler: portalAuth },
+      async (request) => {
+        const { id } = request.params as any;
+        const result = await db.raw(`
+          SELECT
+            to_char(date_trunc('month', r.time), 'Mon YYYY') AS month,
+            date_trunc('month', r.time) AS month_date,
+            COALESCE(SUM(r.mono_pages),  0)::int AS mono,
+            COALESCE(SUM(r.color_pages), 0)::int AS color
+          FROM readings r
+          JOIN devices d ON r.device_id = d.id
+          JOIN agents  a ON d.agent_id = a.id
+          WHERE a.client_id = ?
+            AND r.time >= NOW() - INTERVAL '4 months'
+          GROUP BY date_trunc('month', r.time)
+          ORDER BY month_date ASC
+        `, [id]);
+        return result.rows;
+      }
+    );
+
+    // Todos los dispositivos (inventario global)
+    fastify.get(
+      "/api/v1/devices",
+      { preHandler: portalAuth },
+      async () =>
+        await db("devices")
+          .join("agents", "devices.agent_id", "agents.id")
+          .join("clients", "agents.client_id", "clients.id")
+          .where("devices.active", true)
+          .select(
+            "devices.*",
+            "agents.name as monitor_name",
+            "clients.name as client_name"
+          )
+          .orderBy("clients.name")
+    );
+
+    // Dispositivos de un cliente (JOIN agents)
+    fastify.get(
+      "/api/v1/clients/:id/devices",
+      { preHandler: portalAuth },
+      async (request) => {
+        const { id } = request.params as any;
+        return await db("devices")
+          .join("agents", "devices.agent_id", "agents.id")
+          .where("agents.client_id", id)
+          .select(
+            "devices.*",
+            "agents.name as monitor_name",
+            "agents.last_seen as monitor_last_seen"
+          )
+          .orderBy("devices.brand");
+      }
+    );
+
+    // Serie temporal de contadores — nuevo endpoint (faltaba en el análisis)
+    fastify.get(
+      "/api/v1/devices/:id/readings",
+      { preHandler: portalAuth },
+      async (request) => {
+        const { id } = request.params as any;
+        const { from, to, limit } = request.query as any;
+
+        const query = db("readings")
+          .where({ device_id: id })
+          .orderBy("time", "desc")
+          .limit(Math.min(Number(limit) || 500, 5000));
+
+        if (from) query.where("time", ">=", new Date(from));
+        if (to) query.where("time", "<=", new Date(to));
+
+        return await query.select("*");
+      }
+    );
+
+    // Alertas activas (portal)
+    fastify.get("/api/v1/alerts", { preHandler: portalAuth }, async (request) => {
+      const { resolved } = request.query as any;
+      const query = db("alerts")
+        .join("devices", "alerts.device_id", "devices.id")
+        .select(
+          "alerts.*",
+          "devices.brand",
+          "devices.ip",
+          "devices.name as device_name",
+        )
+        .orderBy("alerts.created_at", "desc")
+        .limit(200);
+
+      if (resolved === "true") {
+        query.where("alerts.resolved", true);
+      } else {
+        query.where("alerts.resolved", false);
+      }
+
+      return await query;
+    });
+
+    // Dashboard
+    fastify.get("/api/v1/dashboard", { preHandler: portalAuth }, async () => {
+      const [devicesCount, agentsCount, readingsCount, alertsCount, recentReadings] =
+        await Promise.all([
+          db("devices").where({ active: true }).count("* as c").first(),
+          db("agents").where({ status: "active" }).count("* as c").first(),
+          db("readings").count("* as c").first(),
+          db("alerts").where({ resolved: false }).count("* as c").first(),
+          db("readings")
+            .join("devices", "readings.device_id", "devices.id")
+            .select(
+              "readings.time",
+              "readings.total_pages",
+              "readings.status",
+              "devices.brand",
+              "devices.serial",
+              "devices.ip"
+            )
+            .orderBy("readings.time", "desc")
+            .limit(10),
+        ]);
+
+      return {
+        stats: {
+          devices:  devicesCount?.c  || 0,
+          agents:   agentsCount?.c   || 0,
+          readings: readingsCount?.c || 0,
+          alerts:   alertsCount?.c   || 0,
+        },
+        recent: recentReadings,
+      };
+    });
+
+    // ─── Start ────────────────────────────────────────────────────────────────
+
+    const port = Number(process.env.PORT) || 3000;
+    await fastify.listen({ port, host: "0.0.0.0" });
+    console.log(`Servidor listo en http://0.0.0.0:${port}`);
+  } catch (err) {
+    fastify.log.error(err);
+    process.exit(1);
+  }
+};
+
+start();

@@ -1,0 +1,58 @@
+# ─── Dependencias ─────────────────────────────────────────────────────────────
+node_modules/
+package-lock.json
+
+# ─── Build / Compilados ──────────────────────────────────────────────────────
+dist/
+build/
+*.exe
+*.blob
+*.node
+
+# ─── .NET (Monitor UI) ──────────────────────────────────────────────────────
+monitor-ui/bin/
+monitor-ui/obj/
+monitor-ui/publish/
+
+# ─── Instalador output ──────────────────────────────────────────────────────
+installer/output/
+
+# ─── Entorno / Secretos ─────────────────────────────────────────────────────
+.env
+.env.local
+.env.production
+!.env.production.example
+config.enc
+local_db.json
+
+# ─── Datos locales ───────────────────────────────────────────────────────────
+*.sqlite
+*.sqlite3
+*.db
+agent.log*
+backups/
+
+# ─── AI Tooling ──────────────────────────────────────────────────────────────
+.gemini/
+
+# ─── IDE ─────────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# ─── OS ──────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ─── Scripts temporales / debug ──────────────────────────────────────────────
+cloud/scratch/
+cloud/check_key.js
+
+# ─── Documentos internos de desarrollo AI ────────────────────────────────────
+ANTIGRAVITY_SKILLS.md
+PROJECT_GUIDELINES.md

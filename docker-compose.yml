@@ -1,0 +1,41 @@
+version: '3.9'
+
+services:
+  # Base de datos principal con extension de series temporales
+  postgres:
+    image: timescale/timescaledb:latest-pg16
+    container_name: stc_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: stc_admin
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-stc_secret}
+      POSTGRES_DB: stc_cloud
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  # Cache y cola de comandos
+  redis:
+    image: redis:7-alpine
+    container_name: stc_redis
+    restart: always
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+
+  # Servidor API (placeholder para cuando se construya la imagen)
+  # api:
+  #   build: ./cloud
+  #   ports:
+  #     - "3000:3000"
+  #   env_file: .env
+  #   depends_on:
+  #     - postgres
+  #     - redis
+
+volumes:
+  pgdata:
+  redisdata:
