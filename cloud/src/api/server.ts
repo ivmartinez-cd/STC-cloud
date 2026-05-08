@@ -228,7 +228,14 @@ const start = async () => {
 
     // ─── Rutas públicas ───────────────────────────────────────────────────────
 
+    // Manejador para el health check de Render en la raíz
+    fastify.get("/", async () => ({ status: "ok", service: "stc-cloud-api" }));
     fastify.get("/health", async () => ({ status: "ok", version: "1.0.0" }));
+
+    // Evitar que el servidor crashee si Redis se desconecta temporalmente
+    redis.on("error", (err) => {
+      console.error("[Redis] Error de conexión:", err.message);
+    });
 
     // Login del portal — genera JWT con role: 'portal'
     fastify.post("/api/v1/portal/login", {
