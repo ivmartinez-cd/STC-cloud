@@ -4,7 +4,7 @@ const path = require('path');
 const scriptPath = path.join(__dirname, '..', '..', 'dist', 'core', 'main.js');
 
 const svc = new Service({
-  name: 'ContadorImpresoras',
+  name: 'STCCloudMonitor',
   script: scriptPath,
 });
 

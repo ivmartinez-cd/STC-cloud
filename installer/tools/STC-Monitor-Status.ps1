@@ -11,9 +11,9 @@ Add-Type -AssemblyName System.Drawing
 
 function Get-AgentExe {
     $candidates = @(
-        (Join-Path $PSScriptRoot "ContadorImpresoras.exe"),
-        "C:\Program Files\STC\Monitor\ContadorImpresoras.exe",
-        "C:\Program Files (x86)\STC\Monitor\ContadorImpresoras.exe"
+        (Join-Path $PSScriptRoot "STCCloudMonitor.exe"),
+        "C:\Program Files\STC\Monitor\STCCloudMonitor.exe",
+        "C:\Program Files (x86)\STC\Monitor\STCCloudMonitor.exe"
     )
     foreach ($p in $candidates) { if (Test-Path $p) { return $p } }
     return $null
@@ -52,11 +52,11 @@ function Invoke-ServiceControl ($Action) {
 
     try {
         if ($Action -eq "Restart") {
-            Restart-Service -Name "ContadorImpresoras" -Force -ErrorAction Stop
+            Restart-Service -Name "STCCloudMonitor" -Force -ErrorAction Stop
         } elseif ($Action -eq "Stop") {
-            Stop-Service  -Name "ContadorImpresoras" -Force -ErrorAction Stop
+            Stop-Service  -Name "STCCloudMonitor" -Force -ErrorAction Stop
         } elseif ($Action -eq "Start") {
-            Start-Service -Name "ContadorImpresoras" -ErrorAction Stop
+            Start-Service -Name "STCCloudMonitor" -ErrorAction Stop
         }
         return $true
     } catch {
@@ -73,11 +73,11 @@ function Invoke-ServiceControl ($Action) {
 if ($ServiceAction -ne "") {
     try {
         if ($ServiceAction -eq "Restart") {
-            Restart-Service -Name "ContadorImpresoras" -Force -ErrorAction Stop
+            Restart-Service -Name "STCCloudMonitor" -Force -ErrorAction Stop
         } elseif ($ServiceAction -eq "Stop") {
-            Stop-Service  -Name "ContadorImpresoras" -Force -ErrorAction Stop
+            Stop-Service  -Name "STCCloudMonitor" -Force -ErrorAction Stop
         } elseif ($ServiceAction -eq "Start") {
-            Start-Service -Name "ContadorImpresoras" -ErrorAction Stop
+            Start-Service -Name "STCCloudMonitor" -ErrorAction Stop
         }
         [System.Windows.Forms.MessageBox]::Show(
             "Servicio '$ServiceAction' completado.",
@@ -385,7 +385,7 @@ $btnLogs.Add_Click({
     }
     try {
         $s = Get-AgentStatus
-        $logFile = if ($s -and $s.dataDir) { Join-Path $s.dataDir "agent.log" } else { "C:\ProgramData\ContadorImpresoras\agent.log" }
+        $logFile = if ($s -and $s.dataDir) { Join-Path $s.dataDir "agent.log" } else { "C:\ProgramData\STCCloudMonitor\agent.log" }
         if (Test-Path $logFile) {
             Start-Process notepad.exe -ArgumentList $logFile
         } else {

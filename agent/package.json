@@ -1,5 +1,5 @@
 {
-  "name": "stc-agent",
+  "name": "stc-cloud-monitor",
   "version": "1.0.0",
   "description": "Agente local STC Cloud - Scanner SNMP multimarca",
   "main": "dist/core/main.js",

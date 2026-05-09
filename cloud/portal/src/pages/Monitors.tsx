@@ -380,7 +380,7 @@ const Monitors = () => {
               <p className="text-sm font-medium text-emerald-700/80 mt-1">Válida por 24 horas. Copie y ejecute el comando en el servidor local:</p>
               
               <div className="mt-4 p-4 bg-white/60 border border-emerald-200 rounded-xl font-mono text-xs break-all select-all flex items-center justify-between gap-4">
-                <span className="text-emerald-800">ContadorImpresoras.exe --activate <span className="font-bold underline">{activationKey}</span> --server {window.location.origin}</span>
+                <span className="text-emerald-800">STCCloudMonitor.exe --activate <span className="font-bold underline">{activationKey}</span> --server {window.location.origin}</span>
                 <Info size={16} className="text-emerald-400 shrink-0" />
               </div>
             </div>

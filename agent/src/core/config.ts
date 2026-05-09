@@ -63,7 +63,7 @@ export function getHardwareId(): string {
 export const get_DATA_DIR = () =>
   process.env.AGENT_DATA_DIR ??
   (process.platform === 'win32'
-    ? 'C:\\ProgramData\\ContadorImpresoras'
+    ? 'C:\\ProgramData\\STCCloudMonitor'
     : path.join(process.cwd(), 'agent-data'));
 
 export const DATA_DIR = get_DATA_DIR();

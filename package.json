@@ -13,7 +13,7 @@
     "dev:portal": "cd cloud/portal && npm run dev",
     "build:cloud": "npm run build -w cloud",
     "build:portal": "cd cloud/portal && npm install && npm run build",
-    "build:agent": "npx pkg agent/src/core/main.js --target node20-win-x64 --output dist/ContadorImpresoras.exe",
+    "build:agent": "npx pkg agent/src/core/main.js --target node20-win-x64 --output dist/STCCloudMonitor.exe",
     "docker:up": "docker-compose up -d",
     "docker:down": "docker-compose down"
   },

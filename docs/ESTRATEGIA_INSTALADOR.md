@@ -19,7 +19,7 @@ Usaremos un framework como **Inno Setup** para empaquetar el agente.
 1. **Bienvenida**: Logo de STC Cloud y explicación del propósito.
 2. **Requisitos**: Verificación automática de privilegios de administrador.
 3. **Clave de Activación**: Campo obligatorio para ingresar la `KEY` antes de finalizar.
-4. **Instalación del Servicio**: Registro automático de `ContadorImpresoras.exe` como servicio usando `node-windows`.
+4. **Instalación del Servicio**: Registro automático de `STCCloudMonitor.exe` como servicio usando `node-windows`.
 
 ### Fase B: Interfaz de Configuración Local (Monitor UI)
 Propondremos una pequeña UI (ventana simple):
@@ -34,7 +34,7 @@ Propondremos una pequeña UI (ventana simple):
 ### Fase 1: Preparación del Agente (CLI & IPC)
 - [ ] Implementar un comando de salud (`--status`) que devuelva JSON.
 - [ ] Separar la lógica de activación del agente principal.
-- [ ] Asegurar que el binario `ContadorImpresoras.exe` contenga metadatos de versión.
+- [ ] Asegurar que el binario `STCCloudMonitor.exe` contenga metadatos de versión.
 
 ### Fase 2: El Instalador de Windows (Inno Setup)
 - [ ] **Script base**: Creación del `.iss` para `C:\Program Files\STC\Monitor`.

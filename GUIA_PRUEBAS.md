@@ -463,7 +463,7 @@ Resultado esperado:
 ```
 Activando en http://localhost:3000...
 Activado. ID: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-Config cifrada en: C:\ProgramData\ContadorImpresoras
+Config cifrada en: C:\ProgramData\STCCloudMonitor
 Configura los rangos IP desde el portal y reinicia el servicio.
 ```
 
@@ -657,7 +657,7 @@ Marcar cada ítem una vez verificado.
 
 ### Agente
 
-- [ ] `--activate` con llave válida crea config cifrada en `C:\ProgramData\ContadorImpresoras`
+- [ ] `--activate` con llave válida crea config cifrada en `C:\ProgramData\STCCloudMonitor`
 - [ ] `--activate` con llave usada o inválida falla con error claro
 - [ ] El agente en modo normal envía heartbeat cada 60s
 - [ ] El agente aparece como "Activo" en el portal tras activarse

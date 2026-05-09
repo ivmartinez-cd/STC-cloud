@@ -16,15 +16,15 @@
 ;        STC-Monitor-Status.ps1 <- consola de estado (UI)
 ;        STC-Monitor-UI.bat     <- lanzador de la consola
 ;    agent/dist/
-;      ContadorImpresoras.exe   <- generado por: cd agent && build\build.bat
+;      STCCloudMonitor.exe   <- generado por: cd agent && build\build.bat
 ; ============================================================================
 
 #define MyAppName      "STC Cloud Monitor"
 #define MyAppVersion   "1.0.0"
 #define MyAppPublisher "STC Cloud"
 #define MyAppExeName   "stc-node.exe"
-#define ServiceName    "ContadorImpresoras"
-#define DataDir        "C:\ProgramData\ContadorImpresoras"
+#define ServiceName    "STCCloudMonitor"
+#define DataDir        "C:\ProgramData\STCCloudMonitor"
 #define DefaultServer  "https://stc-cloud.onrender.com"
 
 ; ─── Configuración general ───────────────────────────────────────────────────

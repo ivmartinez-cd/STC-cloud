@@ -1,13 +1,13 @@
 const { Service } = require('node-windows');
 const path = require('path');
 
-const DATA_DIR = 'C:\\ProgramData\\ContadorImpresoras';
+const DATA_DIR = 'C:\\ProgramData\\STCCloudMonitor';
 
 // Apunta al .js compilado en producción o al .exe empaquetado con pkg
 const scriptPath = path.join(__dirname, '..', '..', 'dist', 'core', 'main.js');
 
 const svc = new Service({
-  name: 'ContadorImpresoras',
+  name: 'STCCloudMonitor',
   description: 'STC Cloud - Servicio de monitoreo de impresoras multimarca',
   script: scriptPath,
   nodeOptions: [],

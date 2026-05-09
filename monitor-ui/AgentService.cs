@@ -21,8 +21,8 @@ internal sealed class AgentStatus
 
 internal static class AgentService
 {
-    private const string ServiceName    = "ContadorImpresoras";
-    private const string DefaultDataDir = @"C:\ProgramData\ContadorImpresoras";
+    private const string ServiceName    = "STCCloudMonitor";
+    private const string DefaultDataDir = @"C:\ProgramData\STCCloudMonitor";
 
     // ── Locate runtime + bundle ───────────────────────────────────────────────
     // Arquitectura SEA: stc-node.exe es el runtime Node.js; bundle.js es el código.

@@ -185,7 +185,7 @@ async function printStatus(): Promise<void> {
 
   let serviceStatus = 'not-installed';
   try {
-    const out = execSync('sc query ContadorImpresoras', {
+    const out = execSync('sc query STCCloudMonitor', {
       encoding: 'utf8', windowsHide: true, stdio: ['ignore', 'pipe', 'ignore'],
     });
     // Parseo robusto sin importar el idioma del Windows
