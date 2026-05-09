@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ToastProvider } from './context/ToastContext';
 import Layout from './components/Layout';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
@@ -19,24 +20,26 @@ function RequireAuth() {
 function App() {
   return (
     <AuthProvider>
-      <Router>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route element={<RequireAuth />}>
-            <Route element={<Layout />}>
-              <Route path="/"              element={<Dashboard />} />
-              <Route path="/clients"       element={<Clients />} />
-              <Route path="/clients/:id"   element={<ClientDetail />} />
-              <Route path="/monitors/:id"  element={<MonitorDetail />} />
-              <Route path="/monitors/:id/devices" element={<MonitorDevices />} />
-              <Route path="/devices/:id"   element={<DeviceDetail />} />
-              <Route path="/reports"       element={<Reports />} />
-              <Route path="/settings"      element={<Settings />} />
+      <ToastProvider>
+        <Router>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route element={<RequireAuth />}>
+              <Route element={<Layout />}>
+                <Route path="/"              element={<Dashboard />} />
+                <Route path="/clients"       element={<Clients />} />
+                <Route path="/clients/:id"   element={<ClientDetail />} />
+                <Route path="/monitors/:id"  element={<MonitorDetail />} />
+                <Route path="/monitors/:id/devices" element={<MonitorDevices />} />
+                <Route path="/devices/:id"   element={<DeviceDetail />} />
+                <Route path="/reports"       element={<Reports />} />
+                <Route path="/settings"      element={<Settings />} />
+              </Route>
             </Route>
-          </Route>
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </Router>
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Router>
+      </ToastProvider>
     </AuthProvider>
   );
 }

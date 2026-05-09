@@ -1,25 +1,39 @@
 @import "tailwindcss";
 
 :root {
-  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  /* Brand Colors — Canal Directo */
+  --color-primary: #2980b9;      /* Belize Hole - Blue */
+  --color-primary-dark: #2c3e50; /* Midnight Blue */
+  --color-accent: #e67e22;       /* Carrot - Orange */
+  --color-accent-hover: #d35400; /* Pumpkin */
+  --color-bg: #f8fafc;           /* Slate 50 - Cleaner background */
+  --color-text: #1a2333;
+  --color-border: #e2e8f0;
+
+  font-family: 'Inter', system-ui, sans-serif;
   line-height: 1.5;
   font-weight: 400;
 
   color-scheme: light;
-  color: #1a2333;
-  background-color: #e9eff3;
+  color: var(--color-text);
+  background-color: var(--color-bg);
 
-  font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4 {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.025em;
 }
 
 body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  background-color: #e9eff3;
+  background-color: var(--color-bg);
 }
 
 #root {
@@ -28,34 +42,58 @@ body {
 
 /* Scrollbar */
 ::-webkit-scrollbar        { width: 6px; height: 6px; }
-::-webkit-scrollbar-track  { background: #e9eff3; }
-::-webkit-scrollbar-thumb  { background-color: #b0bec5; border-radius: 9999px; }
-::-webkit-scrollbar-thumb:hover { background-color: #90a4ae; }
+::-webkit-scrollbar-track  { background: transparent; }
+::-webkit-scrollbar-thumb  { background-color: #cbd5e1; border-radius: 9999px; }
+::-webkit-scrollbar-thumb:hover { background-color: #94a3b8; }
+
+/* Global Transitions */
+* {
+  transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
 
 /* Panel — card base shared across pages */
 .cd-panel {
   background: #ffffff;
-  border: 1px solid #d1d8e0;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  border: 1px solid var(--color-border);
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.cd-panel:hover {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
 }
 
 /* Table zebra rows */
-.cd-table tbody tr:nth-child(even) { background-color: #f3f7fa; }
-.cd-table tbody tr:hover           { background-color: #e8f0fe; }
+.cd-table thead {
+  background-color: var(--color-primary);
+  color: white;
+}
+.cd-table tbody tr:nth-child(even) { background-color: #f8fafc; }
+.cd-table tbody tr:hover           { background-color: #f1f5f9; }
 
 /* Input base */
 .cd-input {
   background: #ffffff;
-  border: 1px solid #d1d8e0;
-  color: #1a2333;
-  border-radius: 6px;
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  border-radius: 8px;
   padding: 8px 12px;
   font-size: 0.875rem;
-  transition: border-color 0.15s;
+  outline: none;
 }
 .cd-input:focus {
-  outline: none;
-  border-color: #2980b9;
-  box-shadow: 0 0 0 3px rgba(41, 128, 185, 0.12);
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(41, 128, 185, 0.1);
 }
 .cd-input::placeholder { color: #94a3b8; }
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.4s ease-out forwards;
+}
