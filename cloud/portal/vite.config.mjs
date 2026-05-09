@@ -6,6 +6,7 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   build: {
     outDir: 'dist',
+    chunkSizeWarningLimit: 1000,
   },
   server: {
     proxy: {
