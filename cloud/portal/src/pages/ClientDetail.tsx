@@ -426,7 +426,15 @@ const ClientDetail = () => {
                           className="cd-input w-full font-mono text-xs"
                           placeholder="192.168.1.1"
                           value={monitorForm.ipStart}
-                          onChange={e => setMonitorForm({ ...monitorForm, ipStart: e.target.value })}
+                          onChange={e => {
+                            const val = e.target.value;
+                            const lastDot = val.lastIndexOf('.');
+                            let newIpEnd = monitorForm.ipEnd;
+                            if (lastDot !== -1) {
+                              newIpEnd = val.substring(0, lastDot + 1);
+                            }
+                            setMonitorForm({ ...monitorForm, ipStart: val, ipEnd: newIpEnd });
+                          }}
                         />
                       </div>
                       <div className="space-y-1">
