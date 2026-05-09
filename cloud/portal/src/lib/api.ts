@@ -22,13 +22,12 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   let body: unknown = {};
   try {
     body = text ? JSON.parse(text) : {};
-  } catch (err) {
-    console.warn('Error parsing JSON:', text, err);
+  } catch {
+    console.warn('Error parsing JSON:', text);
   }
 
   if (!res.ok) {
-    const errorMsg = (body as { error?: string })?.error || `HTTP ${res.status}`;
-    throw new Error(errorMsg);
+    throw new Error(body.error || `HTTP ${res.status}`);
   }
 
   return body as T;
