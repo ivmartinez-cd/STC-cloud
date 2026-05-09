@@ -19,10 +19,10 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   }
 
   const text = await res.text();
-  let body: any = {};
+  let body: unknown = {};
   try {
     body = text ? JSON.parse(text) : {};
-  } catch (e) {
+  } catch {
     console.warn('Error parsing JSON:', text);
   }
 

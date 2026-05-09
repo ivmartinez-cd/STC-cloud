@@ -6,7 +6,7 @@
 ;    STC-Monitor-Setup-v1.0.0.exe
 ;
 ;  Instalación silenciosa (GPO / scripts):
-;    STC-Monitor-Setup-v1.0.0.exe /VERYSILENT /SUPPRESSMSGBOXES /KEY=xxxxxxxxxxxx /SERVER=https://monitor.stc.cloud
+;    STC-Monitor-Setup-v1.0.0.exe /VERYSILENT /SUPPRESSMSGBOXES /KEY=xxxxxxxxxxxx /SERVER=https://stc-cloud.onrender.com
 ;
 ;  Estructura de archivos esperada antes de compilar:
 ;    installer/
@@ -25,6 +25,7 @@
 #define MyAppExeName   "stc-node.exe"
 #define ServiceName    "ContadorImpresoras"
 #define DataDir        "C:\ProgramData\ContadorImpresoras"
+#define DefaultServer  "https://stc-cloud.onrender.com"
 
 ; ─── Configuración general ───────────────────────────────────────────────────
 [Setup]
@@ -174,8 +175,63 @@ begin
        '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
 end;
 
+// ── Utilidades para parámetros de consola ────────────────────────────────────
+function GetParam(ParamName: String): String;
+var
+  i: Integer;
+  Param: String;
+begin
+  Result := '';
+  for i := 1 to ParamCount do
+  begin
+    Param := ParamStr(i);
+    if Pos('/' + Uppercase(ParamName) + '=', Uppercase(Param)) = 1 then
+    begin
+      Result := Copy(Param, Pos('=', Param) + 1, Length(Param));
+      Break;
+    end;
+  end;
+end;
+
+// ── Activar el agente si se pasan parámetros /KEY y /SERVER ──────────────────
+procedure ActivateAgent;
+var
+  ActivationKey: String;
+  ServerUrl: String;
+  ResultCode: Integer;
+  Args: String;
+begin
+  ActivationKey := GetParam('KEY');
+  ServerUrl := GetParam('SERVER');
+  
+  if ServerUrl = '' then ServerUrl := '{#DefaultServer}';
+
+  if ActivationKey <> '' then
+  begin
+    if not WizardSilent then
+      WizardForm.StatusLabel.Caption := 'Activando agente con el servidor...';
+      
+    Args := '"' + ExpandConstant('{app}\bundle.js') + '" --activate ' + ActivationKey + ' --server ' + ServerUrl;
+    
+    if Exec(ExpandConstant('{app}\stc-node.exe'), Args, '', SW_HIDE, ewWaitUntilTerminated, ResultCode) then
+    begin
+      if ResultCode = 0 then
+      begin
+        // Si activó bien, ponemos el servicio en AUTO_START de una vez
+        Exec(ExpandConstant('{app}\nssm.exe'), 'set {#ServiceName} Start SERVICE_AUTO_START', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+        Log('Activación exitosa durante la instalación.');
+      end else begin
+        Log('Fallo la activación automática. Código: ' + IntToStr(ResultCode));
+      end;
+    end;
+  end;
+end;
+
 procedure CurStepChanged(CurStep: TSetupStep);
 begin
   if CurStep = ssPostInstall then
+  begin
     RegisterService;
+    ActivateAgent;
+  end;
 end;

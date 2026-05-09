@@ -61,8 +61,8 @@ const Reports = () => {
         `/devices/${deviceId}/readings?from=${from}T00:00:00Z&to=${to}T23:59:59Z&limit=5000`
       );
       setReadings(data);
-    } catch (e: any) {
-      setError(e.message);
+    } catch (e: unknown) {
+      setError((e as Error).message);
     } finally {
       setLoading(false);
     }

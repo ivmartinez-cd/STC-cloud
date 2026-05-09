@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
 import { ArrowLeft, Printer, RefreshCw, FileText, Clock, TrendingUp, Activity } from 'lucide-react';
 import {
-  LineChart, Line, XAxis, YAxis, Tooltip,
-  ResponsiveContainer, CartesianGrid, Legend, Area, AreaChart
+  Line, XAxis, YAxis, Tooltip,
+  ResponsiveContainer, CartesianGrid, Area, AreaChart
 } from 'recharts';
 
 interface Reading {
@@ -23,15 +23,15 @@ const DeviceDetail = () => {
   const [loading, setLoading]   = useState(true);
   const [error, setError]       = useState('');
 
-  const load = () => {
+  const load = useCallback(() => {
     setLoading(true);
     api.get<Reading[]>(`/devices/${id}/readings?limit=48`)
       .then(setReadings)
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
-  };
+  }, [id]);
 
-  useEffect(() => { load(); }, [id]);
+  useEffect(() => { load(); }, [load]);
 
   const latest = readings[0] ?? null;
   const chartData = [...readings].reverse().map(r => ({

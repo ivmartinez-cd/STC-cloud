@@ -16,7 +16,7 @@
     "snmp:sim": "npx tsx src/tests/snmpSimulator.ts"
   },
   "dependencies": {
-    "better-sqlite3": "12.9.0",
+    "better-sqlite3": "^12.9.0",
     "net-snmp": "^3.11.0",
     "node-windows": "^1.0.0-beta.8"
   },

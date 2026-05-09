@@ -1,13 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { api } from '../lib/api';
 import {
   HardDrive, ChevronRight, Users, Radio,
-  MapPin, Mail, Phone, BarChart2, Plus, X, Loader2, Copy, Check, Trash2, 
-  Calendar, Layout, Info, TrendingUp, Clock, Shield
+  MapPin, Mail, BarChart2, Plus, X, Loader2, Copy, Check, Trash2, 
+  Layout, Info, TrendingUp, Clock, Shield
 } from 'lucide-react';
 import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
 } from 'recharts';
 import ConfirmModal from '../components/ConfirmModal';
 import { useToast } from '../context/ToastContext';
@@ -93,7 +93,7 @@ const ClientDetail = () => {
   const [monitorToDelete, setMonitorToDelete] = useState<{ id: string, name: string } | null>(null);
   const [deletingMonitor, setDeletingMonitor] = useState(false);
 
-  const fetchData = () => {
+  const fetchData = useCallback(() => {
     setLoading(true);
     Promise.all([
       api.get<Client>(`/clients/${id}`),
@@ -105,15 +105,21 @@ const ClientDetail = () => {
       })
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
-  };
+  }, [id]);
 
-  useEffect(() => { fetchData(); }, [id]);
+  useEffect(() => { fetchData(); }, [fetchData]);
 
   const handleCreateMonitor = async (e: React.FormEvent) => {
     e.preventDefault();
     setMonitorSubmitting(true);
     try {
-      const payload: any = {
+      const payload: {
+        clientId?: string;
+        name: string;
+        snmp_community: string;
+        scan_interval_minutes: number;
+        ip_ranges?: Array<{ start: string; end: string }>;
+      } = {
         clientId: id,
         name: monitorForm.name,
         snmp_community: monitorForm.snmp_community,
@@ -122,13 +128,13 @@ const ClientDetail = () => {
       if (monitorForm.ipStart && monitorForm.ipEnd) {
         payload.ip_ranges = [{ start: monitorForm.ipStart, end: monitorForm.ipEnd }];
       }
-      const result = await api.post<{ key: string }>('/agents', payload);
-      const key = (result as any).key || (result as any).activationKey || (result as any).activation_key;
+      const result = await api.post<{ key?: string; activationKey?: string; activation_key?: string }>('/agents', payload);
+      const key = result.key || result.activationKey || result.activation_key;
       setActivationKey(key || '');
       showToast('Monitor creado exitosamente', 'success');
       fetchData();
-    } catch (err: any) {
-      showToast('Error al crear monitor: ' + err.message, 'error');
+    } catch (err: unknown) {
+      showToast('Error al crear monitor: ' + (err as Error).message, 'error');
     } finally {
       setMonitorSubmitting(false);
     }
@@ -156,8 +162,8 @@ const ClientDetail = () => {
       showToast(`Monitor ${monitorToDelete.name} eliminado`, 'success');
       setMonitorToDelete(null);
       fetchData();
-    } catch (err: any) {
-      showToast('Error al eliminar monitor: ' + err.message, 'error');
+    } catch (err: unknown) {
+      showToast('Error al eliminar monitor: ' + (err as Error).message, 'error');
     } finally {
       setDeletingMonitor(false);
     }

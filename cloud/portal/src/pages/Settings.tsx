@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Radio, Save, Mail, Shield, CheckCircle, Settings as SettingsIcon, Bell, User, Key, Plus, ShieldCheck, ShieldOff, RefreshCw, X, Trash2, Cpu, Activity, Clock, Globe, Copy, Check, ChevronRight, Server, Search, Filter, Users } from 'lucide-react';
+import { Radio, Save, Mail, Shield, CheckCircle, Settings as SettingsIcon, Bell, User } from 'lucide-react';
 
 interface Thresholds {
   monitorOfflineMinutes: number;
@@ -103,7 +103,7 @@ const Settings = () => {
                 {Icon && <Icon size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />}
                 <input
                   type={type || 'text'}
-                  value={(smtp as any)[key]}
+                  value={smtp[key as keyof typeof smtp]}
                   onChange={e => setSmtp(p => ({ ...p, [key]: e.target.value }))}
                   placeholder={placeholder}
                   className="cd-input w-full !pl-10 !bg-slate-50/50 border-transparent focus:!bg-white focus:!border-[#2980b9]"

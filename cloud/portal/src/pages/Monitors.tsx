@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Key, Plus, ShieldCheck, ShieldOff, RefreshCw, X, Settings, Trash2, Radio, Server, Activity, ChevronRight, Loader2, Info } from 'lucide-react';
+import { Key, Plus, ShieldCheck, ShieldOff, RefreshCw, X, Settings, Trash2, Radio, Server, Activity, Loader2, Info } from 'lucide-react';
 import { api } from '../lib/api';
 import { useToast } from '../context/ToastContext';
 import ConfirmModal from '../components/ConfirmModal';
@@ -77,8 +77,8 @@ const Monitors = () => {
       const data = await api.get<Monitor[]>('/agents');
       setMonitors(data);
       if (isRefresh) showToast('Lista de monitores actualizada', 'success');
-    } catch (e: any) {
-      showToast('Error al cargar monitores: ' + e.message, 'error');
+    } catch (e: unknown) {
+      showToast('Error al cargar monitores: ' + (e as Error).message, 'error');
     }
   }, [showToast]);
 
@@ -87,7 +87,7 @@ const Monitors = () => {
       api.get<Monitor[]>('/agents').then(setMonitors),
       api.get<Client[]>('/clients').then(setClients),
     ])
-    .catch(e => showToast('Error inicial: ' + e.message, 'error'))
+    .catch((e: Error) => showToast('Error inicial: ' + e.message, 'error'))
     .finally(() => setLoading(false));
   }, [showToast]);
 
@@ -138,8 +138,8 @@ const Monitors = () => {
       resetForm();
       showToast('Monitor registrado exitosamente', 'success');
       await loadMonitors();
-    } catch (e: any) {
-      showToast('Error: ' + e.message, 'error');
+    } catch (e: unknown) {
+      showToast('Error: ' + (e as Error).message, 'error');
     } finally {
       setCreating(false);
     }
@@ -151,8 +151,8 @@ const Monitors = () => {
       await api.post(`/agents/${id}/revoke`, {});
       showToast('Acceso revocado correctamente', 'success');
       await loadMonitors();
-    } catch (e: any) {
-      showToast('Error al revocar: ' + e.message, 'error');
+    } catch (e: unknown) {
+      showToast('Error al revocar: ' + (e as Error).message, 'error');
     } finally {
       setRevoking(null);
     }
@@ -166,8 +166,8 @@ const Monitors = () => {
       setMonitorToDelete(null);
       showToast('Monitor eliminado permanentemente', 'success');
       await loadMonitors();
-    } catch (e: any) {
-      showToast('Error al eliminar: ' + e.message, 'error');
+    } catch (e: unknown) {
+      showToast('Error al eliminar: ' + (e as Error).message, 'error');
     } finally {
       setDeletingMonitor(false);
     }
@@ -213,8 +213,8 @@ const Monitors = () => {
       });
       showToast('Configuración actualizada correctamente', 'success');
       closeConfigModal();
-    } catch (e: any) {
-      showToast('Error al guardar: ' + e.message, 'error');
+    } catch (e: unknown) {
+      showToast('Error al guardar: ' + (e as Error).message, 'error');
     } finally {
       setSavingConfig(false);
     }

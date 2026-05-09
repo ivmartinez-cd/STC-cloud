@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../lib/api';
-import { HardDrive, ChevronRight, Wifi, WifiOff, RefreshCw, Search, Printer } from 'lucide-react';
+import { ChevronRight, WifiOff, RefreshCw, Search, Printer } from 'lucide-react';
 
 interface Device {
   id: string;
@@ -26,8 +26,8 @@ const Devices = () => {
     try {
       const data = await api.get<Device[]>('/devices');
       setDevices(data);
-    } catch (e: any) {
-      setError(e.message);
+    } catch (e: unknown) {
+      setError((e as Error).message);
     } finally {
       setLoading(false);
     }

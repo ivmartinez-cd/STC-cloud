@@ -27,7 +27,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      throw new Error((err as any).error || 'Credenciales inválidas');
+      throw new Error((err as { error?: string }).error || 'Credenciales inválidas');
     }
     const data = await res.json() as { token: string };
     localStorage.setItem('stc_token', data.token);
@@ -48,6 +48,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAuth() {
   const ctx = useContext(AuthContext);
   if (!ctx) throw new Error('useAuth must be used within AuthProvider');

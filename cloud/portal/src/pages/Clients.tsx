@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../lib/api';
 import { useToast } from '../context/ToastContext';
-import { Users, Search, Building2, Radio, HardDrive, ChevronRight, Plus, X, Loader2, MapPin, Mail } from 'lucide-react';
+import { Users, Search, Building2, ChevronRight, Plus, X, Loader2, MapPin, Mail } from 'lucide-react';
 
 interface Client {
   id: string;
@@ -58,7 +58,7 @@ const Clients = () => {
     contact_email: '',
   });
 
-  const fetchClients = () => {
+  const fetchClients = useCallback(() => {
     setLoading(true);
     api.get<Client[]>('/clients')
       .then(setClients)
@@ -67,11 +67,11 @@ const Clients = () => {
         showToast('Error al cargar la lista de clientes', 'error');
       })
       .finally(() => setLoading(false));
-  };
+  }, [showToast]);
 
   useEffect(() => {
     fetchClients();
-  }, []);
+  }, [fetchClients]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -82,8 +82,8 @@ const Clients = () => {
       setShowModal(false);
       setFormData({ name: '', contact_name: '', contact_phone: '', contact_email: '' });
       fetchClients();
-    } catch (err: any) {
-      showToast('Error al crear cliente: ' + err.message, 'error');
+    } catch (err: unknown) {
+      showToast('Error al crear cliente: ' + (err as Error).message, 'error');
     } finally {
       setIsSubmitting(false);
     }

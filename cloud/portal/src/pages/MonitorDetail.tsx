@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
 import {
-  Users, ChevronRight, HardDrive, Wifi, WifiOff,
-  Server, Clock, Globe, Settings, Copy, Check, Edit, X, Plus, Trash2, Loader2, Shield, Layout, Info, Activity
+  ChevronRight, HardDrive, Wifi, WifiOff,
+  Clock, Globe, Settings, Copy, Check, Edit, X, Plus, Trash2, Loader2, Shield, Layout, Info, Activity, MapPin
 } from 'lucide-react';
 import ConfirmModal from '../components/ConfirmModal';
 import { useToast } from '../context/ToastContext';
@@ -79,7 +79,7 @@ const MonitorDetail = () => {
     ip_ranges: [] as { start: string, end: string }[]
   });
 
-  const fetchData = () => {
+  const fetchData = useCallback(() => {
     setLoading(true);
     Promise.all([
       api.get<MonitorData>(`/agents/${id}`),
@@ -88,9 +88,9 @@ const MonitorDetail = () => {
       .then(([m, d]) => { setMonitor(m); setDevices(d); })
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
-  };
+  }, [id]);
 
-  useEffect(() => { fetchData(); }, [id]);
+  useEffect(() => { fetchData(); }, [fetchData]);
 
   const copyKey = () => {
     if (!monitor?.activation_key) return;
@@ -124,8 +124,8 @@ const MonitorDetail = () => {
       showToast('Configuración actualizada correctamente', 'success');
       fetchData();
       setShowEditModal(false);
-    } catch (err: any) {
-      showToast('Error al actualizar: ' + err.message, 'error');
+    } catch (err: unknown) {
+      showToast('Error al actualizar: ' + (err as Error).message, 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -138,8 +138,8 @@ const MonitorDetail = () => {
       await api.delete(`/agents/${id}`);
       showToast('Monitor eliminado permanentemente', 'success');
       navigate(`/clients/${monitor.client_id}`);
-    } catch (err: any) {
-      showToast('Error al eliminar monitor: ' + err.message, 'error');
+    } catch (err: unknown) {
+      showToast('Error al eliminar monitor: ' + (err as Error).message, 'error');
     } finally {
       setDeletingMonitor(false);
       setShowDeleteModal(false);

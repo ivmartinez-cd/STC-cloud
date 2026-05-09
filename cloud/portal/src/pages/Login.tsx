@@ -18,8 +18,8 @@ const Login = () => {
     try {
       await login(username, password);
       navigate('/', { replace: true });
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError((err as Error).message);
     } finally {
       setLoading(false);
     }

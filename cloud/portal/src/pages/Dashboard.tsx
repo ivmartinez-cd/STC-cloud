@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { HardDrive, AlertTriangle, Activity, Radio, TrendingUp, ChevronRight } from 'lucide-react';
 import { api } from '../lib/api';
 import { useToast } from '../context/ToastContext';
@@ -28,7 +28,7 @@ interface DashboardData {
 const StatCard = ({
   title, value, icon: Icon, iconColor, iconBg, trend,
 }: {
-  title: string; value: string | number; icon: any; iconColor: string; iconBg: string; trend?: string;
+  title: string; value: string | number; icon: React.ElementType; iconColor: string; iconBg: string; trend?: string;
 }) => (
   <div className="cd-panel p-6 flex flex-col justify-between group hover:-translate-y-1 transition-all duration-300">
     <div className="flex items-start justify-between">
@@ -140,7 +140,7 @@ const Dashboard = () => {
                   }}
                   itemStyle={{ fontSize: '12px', fontWeight: 'bold' }}
                   labelStyle={{ display: 'none' }}
-                  formatter={(value: any, _: any, props: any) => [value.toLocaleString(), props.payload.label]}
+                  formatter={(value: number, _name: string, props: { payload: { label: string } }) => [value.toLocaleString(), props.payload.label]}
                 />
                 <Bar dataKey="total" radius={[6, 6, 0, 0]}>
                   {chartData.map((_, index) => (

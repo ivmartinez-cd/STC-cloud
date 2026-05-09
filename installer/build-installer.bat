@@ -57,9 +57,9 @@ if not exist "%NSSM_EXE%" (
         "$dest = '%TOOLS_DIR%';" ^
         "Invoke-WebRequest -Uri $url -OutFile $zip -UseBasicParsing;" ^
         "Expand-Archive -Path $zip -DestinationPath $dest -Force;" ^
-        "Copy-Item -Path '$dest\nssm-2.24\win64\nssm.exe' -Destination '$dest\nssm.exe' -Force;" ^
+        "Copy-Item -Path \"$dest\nssm-2.24\win64\nssm.exe\" -Destination \"$dest\nssm.exe\" -Force;" ^
         "Remove-Item -Path $zip -Force;" ^
-        "Remove-Item -Path '$dest\nssm-2.24' -Recurse -Force;"
+        "Remove-Item -Path \"$dest\nssm-2.24\" -Recurse -Force;"
 
     if not exist "%NSSM_EXE%" (
         echo.

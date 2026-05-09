@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Key, Plus, ShieldCheck, ShieldOff, RefreshCw, X, Settings, Trash2, Cpu, Activity, Clock, Globe, Copy, Check, ChevronRight, Server, Search, Filter, Users } from 'lucide-react';
+import { Key, Plus, ShieldCheck, ShieldOff, RefreshCw, X, Settings, Trash2, Cpu, Activity, Clock, Globe, Copy, Check, Server, Search, Loader2 } from 'lucide-react';
 import { api } from '../lib/api';
 import { useToast } from '../context/ToastContext';
 import ConfirmModal from '../components/ConfirmModal';
@@ -76,7 +76,7 @@ const Agents = () => {
     try {
       const data = await api.get<Agent[]>('/agents');
       setAgents(data);
-    } catch (e: any) {
+    } catch {
       showToast('Error al cargar agentes', 'error');
     }
   }, [showToast]);
@@ -132,8 +132,8 @@ const Agents = () => {
       resetForm();
       showToast('Llave de activación generada con éxito', 'success');
       await loadAgents();
-    } catch (e: any) {
-      showToast('Error: ' + e.message, 'error');
+    } catch (e: unknown) {
+      showToast('Error: ' + (e as Error).message, 'error');
     } finally {
       setCreating(false);
     }
@@ -148,8 +148,8 @@ const Agents = () => {
       showToast('Agente revocado correctamente', 'success');
       setAgentToRevoke(null);
       await loadAgents();
-    } catch (e: any) {
-      showToast('Error al revocar: ' + e.message, 'error');
+    } catch (e: unknown) {
+      showToast('Error al revocar: ' + (e as Error).message, 'error');
     } finally {
       setRevoking(null);
     }
@@ -200,8 +200,8 @@ const Agents = () => {
       });
       showToast('Configuración remota actualizada', 'success');
       closeConfigModal();
-    } catch (e: any) {
-      showToast('Error al guardar: ' + e.message, 'error');
+    } catch (e: unknown) {
+      showToast('Error al guardar: ' + (e as Error).message, 'error');
     } finally {
       setSavingConfig(false);
     }
@@ -209,7 +209,7 @@ const Agents = () => {
 
   const filteredAgents = agents.filter(a => 
     a.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    a.hardware_id?.toLowerCase().includes(searchTerm.toLowerCase())
+    (a.hardware_id?.toLowerCase() ?? '').includes(searchTerm.toLowerCase())
   );
 
   // ── Render ────────────────────────────────────────────────────────────────────
