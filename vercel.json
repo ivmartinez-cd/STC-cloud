@@ -11,6 +11,10 @@
     {
       "source": "/health",
       "destination": "https://stc-cloud.onrender.com/health"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ]
 }
