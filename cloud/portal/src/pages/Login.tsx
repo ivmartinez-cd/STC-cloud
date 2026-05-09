@@ -26,53 +26,66 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Background decoration */}
-      <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-50 rounded-full blur-3xl opacity-60" />
-      <div className="absolute bottom-[-10%] left-[-10%] w-[40%] h-[40%] bg-orange-50 rounded-full blur-3xl opacity-60" />
+    <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4 relative overflow-hidden font-sans">
+      {/* Background decoration - Design Spells: Ambient Glow */}
+      <div className="absolute top-[-10%] right-[-10%] w-[60%] h-[60%] bg-blue-600/10 blur-[120px] rounded-full pointer-events-none" />
+      <div className="absolute bottom-[-10%] left-[-10%] w-[60%] h-[60%] bg-blue-900/10 blur-[120px] rounded-full pointer-events-none" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-[0.02] pointer-events-none" />
 
-      <div className="w-full max-w-[420px] relative z-10">
+      <div className="w-full max-w-[440px] relative z-10">
         {/* Logo and Header */}
-        <div className="text-center mb-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <div className="flex justify-center mb-6">
-            <div className="bg-white p-4 rounded-[24px] shadow-xl shadow-blue-900/5 ring-1 ring-slate-100">
-              <img src="/logo.png" alt="STC Cloud" className="h-12 w-auto object-contain" />
+        <div className="text-center mb-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
+          <div className="flex justify-center mb-8">
+            <div className="relative group">
+              <div className="absolute inset-0 bg-blue-500/20 blur-2xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+              <div className="bg-white/5 backdrop-blur-xl p-5 rounded-[2.5rem] border border-white/10 shadow-2xl relative z-10">
+                <img src="/logo1.png" alt="STC Cloud" className="h-12 w-auto object-contain" />
+              </div>
             </div>
           </div>
-          <h1 className="text-3xl font-extrabold text-[#1a2333] tracking-tight">
-            STC <span className="text-[#2980b9]">Cloud</span>
-          </h1>
-          <p className="text-slate-500 mt-2 text-sm font-medium uppercase tracking-widest opacity-60">Portal de Gestión de Contadores</p>
+          
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <span className="text-4xl font-montserrat font-black tracking-tighter text-white">
+              STC
+            </span>
+            <span className="text-4xl font-montserrat font-black tracking-tighter text-blue-500">
+              Cloud
+            </span>
+          </div>
+          <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.3em] opacity-80">Portal de Gestión de Contadores</p>
         </div>
 
-        {/* Login Card */}
-        <div className="bg-white rounded-[32px] p-10 shadow-2xl shadow-slate-200/60 border border-slate-100 animate-in fade-in slide-in-from-bottom-6 duration-700">
-          <div className="mb-8">
-            <h2 className="text-xl font-extrabold text-[#1a2333] tracking-tight">Bienvenido</h2>
+        {/* Login Card - Glassmorphism Pattern */}
+        <div className="bg-white/[0.03] backdrop-blur-2xl rounded-[2.5rem] p-10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-white/10 animate-in fade-in slide-in-from-bottom-8 duration-1000 relative overflow-hidden">
+          {/* Subtle internal glow */}
+          <div className="absolute -top-24 -left-24 w-48 h-48 bg-blue-500/5 rounded-full blur-3xl pointer-events-none" />
+          
+          <div className="mb-10 relative z-10">
+            <h2 className="text-2xl font-black text-white tracking-tight">Bienvenido</h2>
             <p className="text-slate-400 text-sm font-medium mt-1">Ingrese sus credenciales para continuar</p>
           </div>
 
           {error && (
-            <div className="flex items-center gap-3 bg-rose-50 border border-rose-100 rounded-2xl p-4 mb-6 animate-in shake duration-300">
-              <div className="bg-rose-500 text-white p-1 rounded-full shrink-0">
+            <div className="flex items-center gap-3 bg-rose-500/10 border border-rose-500/20 rounded-2xl p-4 mb-8 animate-in shake duration-300">
+              <div className="bg-rose-500 text-white p-1 rounded-full shrink-0 shadow-[0_0_15px_rgba(244,63,94,0.3)]">
                 <AlertCircle size={14} />
               </div>
-              <p className="text-xs text-rose-600 font-bold uppercase tracking-tight">{error}</p>
+              <p className="text-[11px] text-rose-400 font-bold uppercase tracking-wide">{error}</p>
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-2">
-              <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest ml-1">Identificador de Usuario</label>
+          <form onSubmit={handleSubmit} className="space-y-7 relative z-10">
+            <div className="space-y-2.5">
+              <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] ml-1">Usuario</label>
               <div className="relative group">
-                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#2980b9] transition-colors">
-                  <User size={18} />
+                <div className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-blue-400 transition-colors duration-300">
+                  <User size={19} />
                 </div>
                 <input
                   type="text"
                   value={username}
                   onChange={e => setUsername(e.target.value)}
-                  className="cd-input w-full !pl-12 !h-14 !bg-slate-50 border-transparent focus:!bg-white focus:!border-[#2980b9] text-sm"
+                  className="w-full h-14 pl-14 pr-6 bg-white/[0.02] border border-white/5 rounded-2xl text-white text-sm transition-all duration-300 focus:bg-white/[0.05] focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/10 outline-none placeholder:text-slate-600"
                   placeholder="admin"
                   required
                   autoFocus
@@ -80,17 +93,17 @@ const Login = () => {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest ml-1">Clave de Acceso</label>
+            <div className="space-y-2.5">
+              <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] ml-1">Contraseña</label>
               <div className="relative group">
-                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#2980b9] transition-colors">
-                  <Lock size={18} />
+                <div className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-blue-400 transition-colors duration-300">
+                  <Lock size={19} />
                 </div>
                 <input
                   type="password"
                   value={password}
                   onChange={e => setPassword(e.target.value)}
-                  className="cd-input w-full !pl-12 !h-14 !bg-slate-50 border-transparent focus:!bg-white focus:!border-[#2980b9] text-sm"
+                  className="w-full h-14 pl-14 pr-6 bg-white/[0.02] border border-white/5 rounded-2xl text-white text-sm transition-all duration-300 focus:bg-white/[0.05] focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/10 outline-none placeholder:text-slate-600"
                   placeholder="••••••••"
                   required
                 />
@@ -100,24 +113,24 @@ const Login = () => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full h-14 bg-[#e67e22] hover:bg-[#d35400] disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-2xl text-sm font-extrabold shadow-lg shadow-orange-900/20 transition-all active:scale-95 flex items-center justify-center gap-2 mt-4"
+              className="w-full h-15 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-2xl text-xs font-black uppercase tracking-[0.2em] shadow-[0_10px_25px_rgba(249,115,22,0.3)] hover:shadow-[0_15px_35px_rgba(249,115,22,0.4)] transition-all active:scale-[0.98] flex items-center justify-center gap-3 mt-6 border border-white/10"
             >
-              {loading ? <Loader2 size={20} className="animate-spin" /> : <ShieldCheck size={20} />}
+              {loading ? <Loader2 size={18} className="animate-spin" /> : <ShieldCheck size={18} />}
               {loading ? 'Verificando...' : 'Acceder al Portal'}
             </button>
           </form>
         </div>
 
         {/* Footer info */}
-        <div className="text-center mt-10 space-y-4">
-          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.2em] opacity-40">
+        <div className="text-center mt-12 space-y-5">
+          <p className="text-[10px] text-slate-600 font-bold uppercase tracking-[0.3em]">
             Canal Directo S.A. — © {new Date().getFullYear()}
           </p>
-          <div className="flex items-center justify-center gap-2">
-            <div className="h-px w-8 bg-slate-200" />
-            <div className="w-1.5 h-1.5 rounded-full bg-[#2980b9]" />
-            <div className="w-1.5 h-1.5 rounded-full bg-[#e67e22]" />
-            <div className="h-px w-8 bg-slate-200" />
+          <div className="flex items-center justify-center gap-3">
+            <div className="h-px w-10 bg-white/5" />
+            <div className="w-1.5 h-1.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]" />
+            <div className="w-1.5 h-1.5 rounded-full bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.5)]" />
+            <div className="h-px w-10 bg-white/5" />
           </div>
         </div>
       </div>
