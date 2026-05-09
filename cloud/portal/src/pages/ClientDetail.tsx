@@ -428,9 +428,11 @@ const ClientDetail = () => {
                           value={monitorForm.ipStart}
                           onChange={e => {
                             const val = e.target.value;
-                            const lastDot = val.lastIndexOf('.');
-                            // Start mirroring immediately. If there's a dot, trim to the prefix.
-                            const newIpEnd = lastDot !== -1 ? val.substring(0, lastDot + 1) : val;
+                            const parts = val.split('.');
+                            // Mirror everything until we reach the 4th octet (3 dots)
+                            const newIpEnd = parts.length <= 3 
+                              ? val 
+                              : parts.slice(0, 3).join('.') + '.';
                             setMonitorForm({ ...monitorForm, ipStart: val, ipEnd: newIpEnd });
                           }}
                         />
