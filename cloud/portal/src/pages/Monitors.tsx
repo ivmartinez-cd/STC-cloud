@@ -90,7 +90,22 @@ const Monitors = () => {
   };
 
   const updateFormRange = (idx: number, field: 'start' | 'end', value: string) =>
-    setFormRanges(rs => rs.map((r, i) => i === idx ? { ...r, [field]: value } : r));
+    setFormRanges(rs => rs.map((r, i) => {
+      if (i !== idx) return r;
+      const updated = { ...r, [field]: value };
+      // Auto-fill end IP prefix if start is being updated
+      if (field === 'start') {
+        const lastDot = value.lastIndexOf('.');
+        if (lastDot !== -1) {
+          const prefix = value.substring(0, lastDot + 1);
+          // Only update end if it was empty or already matching the prefix logic
+          if (!r.end || r.end.startsWith(value.substring(0, value.lastIndexOf('.') - 1) || '')) {
+            updated.end = prefix;
+          }
+        }
+      }
+      return updated;
+    }));
 
   const generateKey = async () => {
     if (!formClientId || !formName.trim()) return;
@@ -427,7 +442,18 @@ const Monitors = () => {
                     {configForm.ip_ranges.map((range, idx) => (
                       <div key={idx} className="flex items-center gap-2">
                         <input type="text" placeholder="IP inicio" value={range.start}
-                          onChange={e => setConfigForm(f => ({ ...f, ip_ranges: f.ip_ranges.map((r, i) => i === idx ? { ...r, start: e.target.value } : r) }))}
+                          onChange={e => {
+                            const val = e.target.value;
+                            setConfigForm(f => ({
+                              ...f,
+                              ip_ranges: f.ip_ranges.map((r, i) => {
+                                if (i !== idx) return r;
+                                const lastDot = val.lastIndexOf('.');
+                                const endVal = lastDot !== -1 ? val.substring(0, lastDot + 1) : r.end;
+                                return { ...r, start: val, end: endVal };
+                              })
+                            }));
+                          }}
                           className="flex-1 bg-gray-800/60 border border-gray-700/50 rounded-xl py-2 px-3 text-sm text-white focus:outline-none focus:border-blue-500/60 font-mono" />
                         <span className="text-gray-600 text-sm shrink-0">—</span>
                         <input type="text" placeholder="IP fin" value={range.end}

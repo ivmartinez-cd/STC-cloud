@@ -39,6 +39,7 @@ backups/
 # ─── IDE ─────────────────────────────────────────────────────────────────────
 .vscode/
 .idea/
+*.code-workspace
 *.suo
 *.ntvs*
 *.njsproj
