@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useLocation, Outlet } from 'react-router-dom';
 import {
-  LayoutDashboard, Users, FileText, LogOut, Bell, Search, Settings, Menu, X, ChevronRight, Server
+  LayoutDashboard, Users, FileText, LogOut, Bell, Search, Settings, Menu, X, ChevronRight
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -9,7 +9,6 @@ const navItems = [
   { name: 'Dashboard',     path: '/',          icon: LayoutDashboard },
   { name: 'Clientes',      path: '/clients',   icon: Users           },
   { name: 'Reportes',      path: '/reports',   icon: FileText        },
-  { name: 'Agentes',       path: '/agents',    icon: Server          },
   { name: 'Configuración', path: '/settings',  icon: Settings        },
 ];
 
