@@ -36,8 +36,9 @@ export async function up(knex: Knex): Promise<void> {
     table.timestamp("created_at").defaultTo(knex.fn.now());
   });
 
-  // Lecturas (TimescaleDB)
+  // Lecturas (PostgreSQL Estándar)
   await knex.schema.createTable("readings", (table) => {
+    table.uuid("id").primary().defaultTo(knex.raw("gen_random_uuid()")); // <-- Línea agregada
     table.timestamp("time").notNullable();
     table.uuid("device_id").references("id").inTable("devices").onDelete("CASCADE");
     table.integer("total_pages");
@@ -52,9 +53,9 @@ export async function up(knex: Knex): Promise<void> {
   });
 
   // Convert readings to hypertable (Requires TimescaleDB extension)
-  await knex.raw("SELECT create_hypertable('readings', 'time')");
-  await knex.raw("ALTER TABLE readings SET (timescaledb.compress)");
-  await knex.raw("SELECT add_compression_policy('readings', INTERVAL '7 days')");
+  //await knex.raw("SELECT create_hypertable('readings', 'time')");
+  //await knex.raw("ALTER TABLE readings SET (timescaledb.compress)");
+  //await knex.raw("SELECT add_compression_policy('readings', INTERVAL '7 days')");
 }
 
 export async function down(knex: Knex): Promise<void> {

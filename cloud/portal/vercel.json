@@ -2,11 +2,11 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://stc-cloud-api.onrender.com/api/:path*"
+      "destination": "https://stc-cloud.onrender.com/api/:path*"
     },
     {
       "source": "/health",
-      "destination": "https://stc-cloud-api.onrender.com/health"
+      "destination": "https://stc-cloud.onrender.com/health"
     }
   ]
 }

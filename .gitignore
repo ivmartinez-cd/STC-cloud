@@ -56,3 +56,6 @@ cloud/check_key.js
 # ─── Documentos internos de desarrollo AI ────────────────────────────────────
 ANTIGRAVITY_SKILLS.md
 PROJECT_GUIDELINES.md
+
+# ─── Env ────────────────────────────────────
+env
