@@ -101,7 +101,9 @@ const ClientDetail = () => {
       api.get<UsageMonth[]>(`/clients/${id}/usage`),
     ])
       .then(([c, m, u]) => {
-        setClient(c); setMonitors(m); setUsage(u);
+        setClient(c); 
+        setMonitors(Array.isArray(m) ? m : []); 
+        setUsage(Array.isArray(u) ? u : []);
       })
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));

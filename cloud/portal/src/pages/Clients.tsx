@@ -61,7 +61,7 @@ const Clients = () => {
   const fetchClients = useCallback(() => {
     setLoading(true);
     api.get<Client[]>('/clients')
-      .then(setClients)
+      .then(data => setClients(Array.isArray(data) ? data : []))
       .catch((e: Error) => {
         setError(e.message);
         showToast('Error al cargar la lista de clientes', 'error');

@@ -26,7 +26,7 @@ const DeviceDetail = () => {
   const load = useCallback(() => {
     setLoading(true);
     api.get<Reading[]>(`/devices/${id}/readings?limit=48`)
-      .then(setReadings)
+      .then(data => setReadings(Array.isArray(data) ? data : []))
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
   }, [id]);

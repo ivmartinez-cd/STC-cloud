@@ -43,13 +43,17 @@ const Reports = () => {
   const [error, setError]       = useState('');
 
   useEffect(() => {
-    api.get<Client[]>('/clients').then(setClients).catch(() => {});
+    api.get<Client[]>('/clients').then(data => setClients(Array.isArray(data) ? data : [])).catch(() => {});
   }, []);
 
   useEffect(() => {
     if (!clientId) { setDevices([]); setDeviceId(''); return; }
     api.get<Device[]>(`/clients/${clientId}/devices`)
-      .then(d => { setDevices(d); setDeviceId(d[0]?.id || ''); })
+      .then(d => { 
+        const data = Array.isArray(d) ? d : [];
+        setDevices(data); 
+        setDeviceId(data[0]?.id || ''); 
+      })
       .catch(() => {});
   }, [clientId]);
 
@@ -60,7 +64,7 @@ const Reports = () => {
       const data = await api.get<Reading[]>(
         `/devices/${deviceId}/readings?from=${from}T00:00:00Z&to=${to}T23:59:59Z&limit=5000`
       );
-      setReadings(data);
+      setReadings(Array.isArray(data) ? data : []);
     } catch (e: unknown) {
       setError((e as Error).message);
     } finally {

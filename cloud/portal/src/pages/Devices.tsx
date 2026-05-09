@@ -25,7 +25,7 @@ const Devices = () => {
     setLoading(true);
     try {
       const data = await api.get<Device[]>('/devices');
-      setDevices(data);
+      setDevices(Array.isArray(data) ? data : []);
     } catch (e: unknown) {
       setError((e as Error).message);
     } finally {

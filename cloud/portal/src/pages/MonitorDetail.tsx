@@ -85,7 +85,7 @@ const MonitorDetail = () => {
       api.get<MonitorData>(`/agents/${id}`),
       api.get<Device[]>(`/agents/${id}/devices`),
     ])
-      .then(([m, d]) => { setMonitor(m); setDevices(d); })
+      .then(([m, d]) => { setMonitor(m); setDevices(Array.isArray(d) ? d : []); })
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
   }, [id]);

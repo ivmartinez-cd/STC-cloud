@@ -83,8 +83,8 @@ const Agents = () => {
 
   useEffect(() => {
     Promise.all([
-      api.get<Agent[]>('/agents').then(setAgents),
-      api.get<Client[]>('/clients').then(setClients),
+      api.get<Agent[]>('/agents').then(data => setAgents(Array.isArray(data) ? data : [])),
+      api.get<Client[]>('/clients').then(data => setClients(Array.isArray(data) ? data : [])),
     ]).catch(() => {
       showToast('Error de conexión con el servidor', 'error');
     }).finally(() => setLoading(false));
