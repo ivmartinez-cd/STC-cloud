@@ -41,30 +41,29 @@ const Layout = () => {
         {/* Subtle Ambient Glow */}
         <div className="absolute top-0 left-0 w-full h-64 bg-blue-500/10 blur-[100px] pointer-events-none" />
 
-        {/* Brand Header - Replicated from Login Style */}
-        <div className="px-8 py-12 relative flex flex-col items-center border-b border-white/5 bg-gradient-to-b from-white/[0.02] to-transparent">
-          <Link to="/" className="flex flex-col items-center gap-5 group" onClick={() => setIsMobileMenuOpen(false)}>
+        {/* Brand Header - Refined Style */}
+        <div className="px-8 py-10 relative flex flex-col items-center border-b border-white/5 bg-gradient-to-b from-white/[0.02] to-transparent">
+          <Link to="/" className="flex flex-col items-center gap-4 group" onClick={() => setIsMobileMenuOpen(false)}>
             <div className="relative">
               <img 
                 src="/logo1.png" 
                 alt="Canal Directo" 
-                className="h-10 w-auto object-contain transition-transform duration-500 group-hover:scale-110" 
+                className="h-10 w-auto object-contain transition-transform duration-500 group-hover:scale-105" 
               />
-              {/* Subtle glow behind logo */}
-              <div className="absolute inset-0 bg-blue-500/20 blur-xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+              <div className="absolute inset-0 bg-blue-500/10 blur-xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
             </div>
             
             <div className="flex items-center gap-1.5 relative z-10">
-              <span className="font-montserrat font-black text-2xl tracking-tighter text-white">
+              <span className="font-montserrat font-black text-lg tracking-tight text-white">
                 STC
               </span>
-              <span className="font-montserrat font-black text-2xl tracking-tighter text-blue-500">
+              <span className="font-montserrat font-black text-lg tracking-tight text-blue-500">
                 Cloud
               </span>
             </div>
           </Link>
           
-          <button onClick={toggleMobileMenu} className="md:hidden absolute top-12 right-6 p-2 hover:bg-white/5 rounded-full transition-colors">
+          <button onClick={toggleMobileMenu} className="md:hidden absolute top-10 right-6 p-2 hover:bg-white/5 rounded-full transition-colors">
             <X size={20} className="text-slate-400" />
           </button>
         </div>
