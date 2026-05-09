@@ -444,6 +444,10 @@ const ClientDetail = () => {
                           className="cd-input w-full font-mono text-xs"
                           placeholder="192.168.1.254"
                           value={monitorForm.ipEnd}
+                          onFocus={e => {
+                            const val = e.target.value;
+                            e.target.setSelectionRange(val.length, val.length);
+                          }}
                           onChange={e => setMonitorForm({ ...monitorForm, ipEnd: e.target.value })}
                         />
                       </div>
