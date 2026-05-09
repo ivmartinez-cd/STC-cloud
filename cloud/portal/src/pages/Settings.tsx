@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Radio, Save, Mail, Shield, CheckCircle, Settings as SettingsIcon, Bell } from 'lucide-react';
+import { Radio, Save, Mail, Shield, CheckCircle, Settings as SettingsIcon, Bell, User, Key, Plus, ShieldCheck, ShieldOff, RefreshCw, X, Trash2, Cpu, Activity, Clock, Globe, Copy, Check, ChevronRight, Server, Search, Filter, Users } from 'lucide-react';
 
 interface Thresholds {
   monitorOfflineMinutes: number;

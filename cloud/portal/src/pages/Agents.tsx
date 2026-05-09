@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Key, Plus, ShieldCheck, ShieldOff, RefreshCw, X, Settings, Trash2, Cpu, Activity, Clock, Globe, Copy, Check, ChevronRight, Server, Search, Filter } from 'lucide-react';
+import { Key, Plus, ShieldCheck, ShieldOff, RefreshCw, X, Settings, Trash2, Cpu, Activity, Clock, Globe, Copy, Check, ChevronRight, Server, Search, Filter, Users } from 'lucide-react';
 import { api } from '../lib/api';
 import { useToast } from '../context/ToastContext';
 import ConfirmModal from '../components/ConfirmModal';
