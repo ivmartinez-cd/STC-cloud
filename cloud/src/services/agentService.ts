@@ -126,6 +126,30 @@ export class AgentService {
     return { status: "success" };
   }
 
+  async regenerateActivationKey(agentId: string) {
+    const agent = await this.db("agents").where({ id: agentId }).first();
+    if (!agent) throw new Error("Agente no encontrado");
+
+    const key = crypto.randomBytes(32).toString("hex"); // 64 chars hex
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+    await this.db("agents").where({ id: agentId }).update({
+      activation_key: key,
+      activation_expires_at: expiresAt,
+      status: "pending",
+      hardware_id: null,
+      refresh_token_hash: null,
+    });
+
+    await this.db("audit_logs").insert({
+      action: "REGENERATE_KEY",
+      target_id: agentId,
+      metadata: JSON.stringify({ reason: "Manual key regeneration from portal" }),
+    });
+
+    return { agentId, key, expiresAt };
+  }
+
   async registerDevices(agentId: string, devices: any[]) {
     for (const device of devices) {
       await this.db("devices")

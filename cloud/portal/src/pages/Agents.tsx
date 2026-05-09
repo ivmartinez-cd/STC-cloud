@@ -72,6 +72,11 @@ const Agents = () => {
   // Revoke modal state
   const [agentToRevoke, setAgentToRevoke] = useState<Agent | null>(null);
 
+  // Regenerate key modal
+  const [regenModal, setRegenModal] = useState<{ agentName: string; key: string; expiresAt: string } | null>(null);
+  const [regenLoading, setRegenLoading] = useState<string | null>(null);
+  const [keyCopied, setKeyCopied] = useState(false);
+
   const loadAgents = useCallback(async () => {
     try {
       const data = await api.get<Agent[]>('/agents');
@@ -152,6 +157,21 @@ const Agents = () => {
       showToast('Error al revocar: ' + (e as Error).message, 'error');
     } finally {
       setRevoking(null);
+    }
+  };
+
+  const regenerateKey = async (agent: Agent) => {
+    setRegenLoading(agent.id);
+    try {
+      const data = await api.post<{ key: string; expiresAt: string }>(`/agents/${agent.id}/regenerate-key`, {});
+      setRegenModal({ agentName: agent.name, key: data.key, expiresAt: data.expiresAt });
+      setKeyCopied(false);
+      showToast('Nueva llave generada — válida por 24 h', 'success');
+      await loadAgents();
+    } catch (e: unknown) {
+      showToast('Error al regenerar: ' + (e as Error).message, 'error');
+    } finally {
+      setRegenLoading(null);
     }
   };
 
@@ -513,6 +533,16 @@ const Agents = () => {
                             <Settings size={20} />
                           </button>
                         )}
+                        <button
+                          onClick={() => regenerateKey(agent)}
+                          disabled={regenLoading === agent.id}
+                          className="p-3 bg-amber-50 text-amber-500 hover:bg-amber-500 hover:text-white rounded-2xl transition-all active:scale-90 shadow-sm disabled:opacity-40"
+                          title="Regenerar Llave de Activación"
+                        >
+                          {regenLoading === agent.id
+                            ? <RefreshCw size={20} className="animate-spin" />
+                            : <Key size={20} />}
+                        </button>
                         {agent.status === 'active' && (
                           <button
                             onClick={() => setAgentToRevoke(agent)}
@@ -531,6 +561,77 @@ const Agents = () => {
           </div>
         )}
       </div>
+
+      {/* ── Regenerate Key Modal ───────────────────────────────────────────────── */}
+      {regenModal && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 sm:p-6 bg-[#1a2333]/80 backdrop-blur-md animate-in fade-in duration-300">
+          <div className="bg-white rounded-[40px] shadow-2xl w-full max-w-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+            {/* Header */}
+            <header className="px-10 py-8 bg-gradient-to-r from-amber-500 to-amber-400 text-white flex justify-between items-center relative overflow-hidden">
+              <div className="relative z-10">
+                <h2 className="text-2xl font-black tracking-tight uppercase">Llave de Activación</h2>
+                <p className="text-[10px] font-black text-white/70 uppercase tracking-[0.2em] mt-1">Agente: {regenModal.agentName}</p>
+              </div>
+              <button onClick={() => setRegenModal(null)} className="relative z-10 p-3 hover:bg-white/20 rounded-2xl transition-all active:scale-90">
+                <X size={28} />
+              </button>
+              <div className="absolute -right-8 -top-8 opacity-20">
+                <Key size={140} />
+              </div>
+            </header>
+
+            {/* Body */}
+            <div className="p-10 space-y-8">
+              {/* Warning */}
+              <div className="flex gap-4 bg-amber-50 border border-amber-100 rounded-[28px] p-6">
+                <div className="p-3 bg-amber-100 rounded-2xl shrink-0">
+                  <Clock size={22} className="text-amber-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-black text-amber-800">Llave válida por 24 horas</p>
+                  <p className="text-xs text-amber-600 mt-1 font-medium">
+                    Expira: {new Date(regenModal.expiresAt).toLocaleString('es-AR', { dateStyle: 'medium', timeStyle: 'short' })}
+                  </p>
+                </div>
+              </div>
+
+              {/* Command box */}
+              <div>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-3 ml-1">Comando de Activación</p>
+                <div className="relative group">
+                  <div className="p-8 bg-[#1a2333] rounded-[28px] font-mono text-[13px] text-emerald-100 break-all leading-relaxed shadow-inner border border-white/5">
+                    <span className="text-emerald-400">$</span> STC-Agent.exe --activate{' '}
+                    <span className="text-white font-black underline decoration-amber-400 underline-offset-4">{regenModal.key}</span>
+                    {' '}--url {window.location.origin}
+                  </div>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(`STC-Agent.exe --activate ${regenModal.key} --url ${window.location.origin}`);
+                      setKeyCopied(true);
+                      showToast('Comando copiado al portapapeles', 'success');
+                      setTimeout(() => setKeyCopied(false), 3000);
+                    }}
+                    className="absolute right-4 top-4 p-3 bg-white/10 hover:bg-white/20 rounded-2xl text-white transition-all active:scale-90 flex items-center gap-2"
+                    title="Copiar Comando"
+                  >
+                    {keyCopied ? <Check size={20} className="text-emerald-400" /> : <Copy size={20} />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Footer action */}
+              <div className="flex justify-end">
+                <button
+                  onClick={() => setRegenModal(null)}
+                  className="px-10 py-4 bg-[#1a2333] text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-[#2c3e50] transition-all active:scale-95"
+                >
+                  Entendido
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Config Modal ──────────────────────────────────────────────────────── */}
       {configModal && (

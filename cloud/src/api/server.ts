@@ -390,6 +390,21 @@ const start = async () => {
       }
     );
 
+    // Regenerar llave de activación para un agente existente
+    fastify.post(
+      "/api/v1/agents/:id/regenerate-key",
+      { preHandler: portalAuth },
+      async (request, reply) => {
+        const { id } = request.params as any;
+        try {
+          const result = await agentService.regenerateActivationKey(id);
+          return result;
+        } catch (err: any) {
+          return reply.status(404).send({ error: err.message });
+        }
+      }
+    );
+
     // Enviar comando al agente
     fastify.post(
       "/api/v1/agents/:id/command",
