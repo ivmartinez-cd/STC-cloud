@@ -1,99 +1,131 @@
 @import "tailwindcss";
 
 :root {
-  /* Brand Colors — Canal Directo */
-  --color-primary: #2980b9;      /* Belize Hole - Blue */
-  --color-primary-dark: #2c3e50; /* Midnight Blue */
-  --color-accent: #e67e22;       /* Carrot - Orange */
-  --color-accent-hover: #d35400; /* Pumpkin */
-  --color-bg: #f8fafc;           /* Slate 50 - Cleaner background */
-  --color-text: #1a2333;
-  --color-border: #e2e8f0;
+  /* Brand Colors — Canal Directo Premium Palette */
+  --color-primary: #2563eb;       /* Modern Blue */
+  --color-primary-dark: #1e3a8a;
+  --color-accent: #f59e0b;        /* Amber */
+  --color-bg: #f8fafc;
+  --color-panel: #ffffff;
+  --color-text: #0f172a;
+  --color-text-muted: #64748b;
+  --color-border: #f1f5f9;
 
-  font-family: 'Inter', system-ui, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
-
-  color-scheme: light;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
   color: var(--color-text);
   background-color: var(--color-bg);
-
-  text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
 }
 
-h1, h2, h3, h4 {
+/* Base Styles */
+h1, h2, h3, h4, .font-montserrat {
   font-family: 'Montserrat', sans-serif;
-  font-weight: 700;
-  letter-spacing: -0.025em;
+  letter-spacing: -0.02em;
 }
 
 body {
   margin: 0;
-  min-width: 320px;
   min-height: 100vh;
-  background-color: var(--color-bg);
+  overflow-x: hidden;
 }
 
-#root {
-  width: 100%;
-}
+/* Custom Scrollbar — Discrete & Modern */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: #cbd5e1; }
 
-/* Scrollbar */
-::-webkit-scrollbar        { width: 6px; height: 6px; }
-::-webkit-scrollbar-track  { background: transparent; }
-::-webkit-scrollbar-thumb  { background-color: #cbd5e1; border-radius: 9999px; }
-::-webkit-scrollbar-thumb:hover { background-color: #94a3b8; }
+/* --- UI COMPONENTS --- */
 
-/* Global Transitions */
-* {
-  transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* Panel — card base shared across pages */
+/* Premium Panel Card */
 .cd-panel {
-  background: #ffffff;
+  background: var(--color-panel);
   border: 1px solid var(--color-border);
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05);
-  border-radius: 12px;
-  overflow: hidden;
+  border-radius: 24px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -2px rgba(0, 0, 0, 0.02);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .cd-panel:hover {
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+  border-color: rgba(37, 99, 235, 0.1);
 }
 
-/* Table zebra rows */
-.cd-table thead {
-  background-color: var(--color-primary);
-  color: white;
+/* High-End Table System */
+.cd-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  text-align: left;
 }
-.cd-table tbody tr:nth-child(even) { background-color: #f8fafc; }
-.cd-table tbody tr:hover           { background-color: #f1f5f9; }
 
-/* Input base */
+.cd-table thead th {
+  background: #f8fafc;
+  color: var(--color-text-muted);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 1.25rem 2rem;
+  border-bottom: 1px solid var(--color-border);
+  white-space: nowrap;
+}
+
+.cd-table tbody td {
+  padding: 1.25rem 2rem;
+  font-size: 13px;
+  border-bottom: 1px solid var(--color-border);
+  background: white;
+  transition: all 0.2s ease;
+}
+
+.cd-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.cd-table tbody tr:hover td {
+  background: #fcfdfe;
+}
+
+/* Modern Input System */
 .cd-input {
-  background: #ffffff;
-  border: 1px solid var(--color-border);
-  color: var(--color-text);
-  border-radius: 8px;
-  padding: 8px 12px;
-  font-size: 0.875rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 0.75rem 1.25rem;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
   outline: none;
+  color: var(--color-text);
 }
+
 .cd-input:focus {
+  background: white;
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(41, 128, 185, 0.1);
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.08);
 }
-.cd-input::placeholder { color: #94a3b8; }
+
+.cd-input::placeholder {
+  color: #94a3b8;
+  font-weight: 400;
+}
 
 /* Animations */
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(4px); }
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
-.animate-fade-in {
-  animation: fadeIn 0.4s ease-out forwards;
+.animate-slide-up {
+  animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Custom Scrollbar for Containers */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 10px;
 }
