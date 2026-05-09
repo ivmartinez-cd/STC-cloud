@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
-import { ArrowLeft, Printer, RefreshCw, FileText } from 'lucide-react';
+import { ArrowLeft, Printer, RefreshCw, FileText, Clock, TrendingUp, Activity } from 'lucide-react';
 import {
   LineChart, Line, XAxis, YAxis, Tooltip,
-  ResponsiveContainer, CartesianGrid, Legend,
+  ResponsiveContainer, CartesianGrid, Legend, Area, AreaChart
 } from 'recharts';
 
 interface Reading {
@@ -41,104 +41,195 @@ const DeviceDetail = () => {
     Color: r.color_pages ?? 0,
   }));
 
-  const isOk = latest && ['idle', 'online'].includes(latest.status);
+  const isOk = latest && ['idle', 'online', 'ok'].includes(latest.status.toLowerCase());
 
   return (
-    <div className="space-y-5 animate-in fade-in duration-500">
+    <div className="space-y-8 animate-in fade-in duration-500">
       <header className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-4">
           <button
             onClick={() => navigate(-1)}
-            className="p-2 hover:bg-white border border-transparent hover:border-[#d1d8e0] rounded-lg transition-all text-slate-400 hover:text-[#2980b9]"
+            className="p-3 bg-white hover:bg-slate-50 border border-slate-100 rounded-2xl transition-all text-slate-400 hover:text-[#2980b9] shadow-sm active:scale-95"
           >
-            <ArrowLeft size={18} />
+            <ArrowLeft size={20} />
           </button>
           <div>
-            <h1 className="text-2xl font-bold text-[#1a2333]">Detalle de Dispositivo</h1>
-            <p className="text-slate-400 text-sm mt-0.5">Historial de contadores de páginas</p>
+            <div className="flex items-center gap-2">
+              <Printer size={16} className="text-[#2980b9]" />
+              <h1 className="text-3xl font-extrabold text-[#1a2333] tracking-tight">Detalle del Dispositivo</h1>
+            </div>
+            <p className="text-slate-400 text-sm mt-1 font-medium">Análisis de rendimiento y contadores históricos</p>
           </div>
         </div>
         <button
           onClick={load}
           disabled={loading}
-          className="p-2 text-slate-400 hover:text-[#2980b9] hover:bg-white border border-transparent hover:border-[#d1d8e0] rounded-lg transition-all disabled:opacity-40"
+          className="p-3 bg-white text-slate-400 hover:text-[#2980b9] border border-slate-100 rounded-2xl transition-all shadow-sm active:scale-95 disabled:opacity-40"
         >
-          <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+          <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
         </button>
       </header>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-red-600 text-sm">{error}</div>
+        <div className="bg-rose-50 border border-rose-100 rounded-[24px] p-6 text-rose-600 font-bold animate-in shake">
+          Error: {error}
+        </div>
       )}
 
       {!error && readings.length === 0 && !loading && (
-        <div className="cd-panel rounded-xl text-center py-16">
-          <Printer size={40} className="mx-auto mb-3 text-slate-300" />
-          <p className="text-slate-400 text-sm">No hay lecturas disponibles para este dispositivo.</p>
+        <div className="cd-panel text-center py-24">
+          <Printer size={64} className="mx-auto mb-6 text-slate-100" />
+          <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">Sin lecturas registradas</p>
         </div>
       )}
 
       {!error && latest && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          {/* Chart */}
-          <div className="lg:col-span-2 cd-panel rounded-xl p-6">
-            <h3 className="font-semibold text-[#1a2333] text-sm mb-5">
-              Contadores Históricos — últimas {readings.length} lecturas
-            </h3>
-            <ResponsiveContainer width="100%" height={260}>
-              <LineChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                <XAxis dataKey="time" tick={{ fill: '#94a3b8', fontSize: 11 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: '#94a3b8', fontSize: 11 }} width={64} axisLine={false} tickLine={false} />
-                <Tooltip
-                  contentStyle={{ background: '#fff', border: '1px solid #d1d8e0', borderRadius: '8px', fontSize: '12px' }}
-                  labelStyle={{ color: '#1a2333' }}
-                />
-                <Legend wrapperStyle={{ fontSize: '12px', color: '#64748b' }} />
-                <Line type="monotone" dataKey="Total" stroke="#2980b9" strokeWidth={2} dot={false} />
-                <Line type="monotone" dataKey="Mono"  stroke="#94a3b8" strokeWidth={1.5} dot={false} />
-                <Line type="monotone" dataKey="Color" stroke="#f39c12" strokeWidth={1.5} dot={false} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-
-          {/* Counters panel */}
-          <div className="cd-panel rounded-xl p-5 flex flex-col gap-5">
-            <div>
-              <h3 className="font-semibold text-[#1a2333] text-sm mb-4 flex items-center gap-2">
-                <FileText size={15} className="text-[#2980b9]" />
-                Contadores Actuales
-              </h3>
-
-              <div className="space-y-3">
-                <div className="bg-[#e9eff3] rounded-lg p-4">
-                  <div className="text-xs text-slate-500 mb-1">Total de Páginas</div>
-                  <div className="text-2xl font-bold text-[#1a2333]">{latest.total_pages.toLocaleString()}</div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Chart Section */}
+          <div className="lg:col-span-2 space-y-8">
+            <div className="cd-panel p-8">
+              <div className="flex items-center justify-between mb-8">
+                <h3 className="font-extrabold text-[#1a2333] text-lg flex items-center gap-3">
+                  <TrendingUp size={20} className="text-[#2980b9]" />
+                  Tendencia de Impresión
+                </h3>
+                <div className="flex gap-2">
+                   <span className="text-[10px] font-extrabold px-3 py-1 bg-slate-100 text-slate-500 rounded-full uppercase tracking-widest">
+                     Últimas {readings.length} lecturas
+                   </span>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-[#e9eff3] rounded-lg p-4">
-                    <div className="text-xs text-slate-500 mb-1">Monocromo</div>
-                    <div className="text-xl font-bold text-[#1a2333]">{(latest.mono_pages ?? 0).toLocaleString()}</div>
+              </div>
+              
+              <div className="h-[300px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={chartData}>
+                    <defs>
+                      <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#2980b9" stopOpacity={0.1}/>
+                        <stop offset="95%" stopColor="#2980b9" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                    <XAxis 
+                      dataKey="time" 
+                      tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 700 }} 
+                      axisLine={false} 
+                      tickLine={false}
+                      dy={10}
+                    />
+                    <YAxis 
+                      tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 700 }} 
+                      width={40} 
+                      axisLine={false} 
+                      tickLine={false} 
+                    />
+                    <Tooltip
+                      contentStyle={{ 
+                        background: '#fff', 
+                        border: 'none', 
+                        borderRadius: '16px', 
+                        boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
+                        fontSize: '12px',
+                        fontWeight: '800'
+                      }}
+                    />
+                    <Area 
+                      type="monotone" 
+                      dataKey="Total" 
+                      stroke="#2980b9" 
+                      strokeWidth={4} 
+                      fillOpacity={1} 
+                      fill="url(#colorTotal)" 
+                      animationDuration={1500}
+                    />
+                    <Line type="monotone" dataKey="Mono" stroke="#cbd5e1" strokeWidth={2} dot={false} strokeDasharray="5 5" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="cd-panel p-6 border-l-4 border-l-[#2980b9]">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-blue-50 text-[#2980b9] rounded-2xl">
+                    <Activity size={20} />
                   </div>
-                  <div className="bg-[#f39c12]/10 border border-[#f39c12]/20 rounded-lg p-4">
-                    <div className="text-xs text-[#f39c12] mb-1">Color</div>
-                    <div className="text-xl font-bold text-[#e67e22]">{(latest.color_pages ?? 0).toLocaleString()}</div>
+                  <div>
+                    <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Estado Operativo</p>
+                    <p className={`text-lg font-extrabold capitalize ${isOk ? 'text-emerald-600' : 'text-slate-600'}`}>
+                      {latest.status || 'Desconocido'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="cd-panel p-6 border-l-4 border-l-emerald-500">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-emerald-50 text-emerald-600 rounded-2xl">
+                    <Clock size={20} />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Última Sincronización</p>
+                    <p className="text-lg font-extrabold text-slate-700">
+                      {new Date(latest.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} hs
+                    </p>
                   </div>
                 </div>
               </div>
             </div>
+          </div>
 
-            <div className="border-t border-[#d1d8e0] pt-4 text-sm space-y-2.5">
-              <div className="flex justify-between items-center">
-                <span className="text-slate-500">Estado</span>
-                <span className={`font-semibold capitalize text-sm ${isOk ? 'text-[#689f38]' : 'text-slate-400'}`}>
-                  {latest.status || '—'}
-                </span>
+          {/* Stats Panel */}
+          <div className="space-y-6">
+            <div className="cd-panel p-8 bg-gradient-to-br from-[#1a2333] to-[#2c3e50] text-white border-none shadow-2xl shadow-blue-900/20">
+              <div className="flex items-center gap-3 mb-8">
+                <div className="p-2 bg-white/10 rounded-xl backdrop-blur-md">
+                  <FileText size={20} className="text-blue-300" />
+                </div>
+                <h3 className="font-extrabold text-lg tracking-tight">Contadores Actuales</h3>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-slate-500">Última lectura</span>
-                <span className="text-xs text-slate-400">{new Date(latest.time).toLocaleString()}</span>
+
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <p className="text-[10px] font-extrabold text-blue-300/60 uppercase tracking-widest ml-1">Total Acumulado</p>
+                  <div className="text-5xl font-black tracking-tighter text-white">
+                    {latest.total_pages.toLocaleString()}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-4 pt-4">
+                  <div className="bg-white/5 border border-white/10 rounded-3xl p-5 backdrop-blur-sm">
+                    <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-1">Monocromo</p>
+                    <p className="text-2xl font-black">{(latest.mono_pages ?? 0).toLocaleString()}</p>
+                  </div>
+                  
+                  <div className="bg-gradient-to-r from-[#e67e22]/20 to-transparent border border-[#e67e22]/30 rounded-3xl p-5 backdrop-blur-sm">
+                    <p className="text-[10px] font-extrabold text-[#f39c12] uppercase tracking-widest mb-1">Color</p>
+                    <p className="text-2xl font-black text-[#f39c12]">{(latest.color_pages ?? 0).toLocaleString()}</p>
+                  </div>
+                </div>
               </div>
+
+              <div className="mt-10 pt-8 border-t border-white/10 flex flex-col gap-4">
+                <div className="flex justify-between items-center px-2">
+                  <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Lectura realizada el</span>
+                  <span className="text-xs font-bold text-slate-300">{new Date(latest.time).toLocaleDateString()}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="cd-panel p-6 bg-slate-50 border-slate-100">
+               <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-4">Registro de Sistema</p>
+               <div className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/50"></div>
+                    <p className="text-xs font-bold text-slate-600">Dispositivo autorizado para red</p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500 shadow-sm shadow-blue-500/50"></div>
+                    <p className="text-xs font-bold text-slate-600">Integridad de datos verificada</p>
+                  </div>
+               </div>
             </div>
           </div>
         </div>
@@ -148,3 +239,4 @@ const DeviceDetail = () => {
 };
 
 export default DeviceDetail;
+

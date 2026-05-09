@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../lib/api';
-import { FileText, Download, Search } from 'lucide-react';
+import { FileText, Download, Search, Calendar, User, Printer, Filter } from 'lucide-react';
 
 interface Client  { id: string; name: string }
 interface Device  { id: string; name: string; ip: string; brand: string }
@@ -75,119 +75,173 @@ const Reports = () => {
     downloadCSV(toCSV(readings, label), `reporte_${label}_${from}_${to}.csv`);
   };
 
-  const selectCls = 'cd-input w-full';
-
   return (
-    <div className="space-y-5 animate-in fade-in duration-500">
+    <div className="space-y-8 animate-in fade-in duration-500">
       <header>
-        <h1 className="text-2xl font-bold text-[#1a2333]">Reportes de Lectura</h1>
-        <p className="text-slate-500 text-sm mt-0.5">Exporta historial de contadores por dispositivo y período.</p>
+        <h1 className="text-3xl font-extrabold text-[#1a2333] tracking-tight">Reportes de Contadores</h1>
+        <p className="text-slate-500 mt-1 font-medium">Análisis histórico y auditoría de lecturas por dispositivo</p>
       </header>
 
       {/* Filters */}
-      <div className="cd-panel rounded-xl p-5">
-        <h3 className="font-semibold text-[#1a2333] text-sm mb-4">Parámetros del reporte</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div>
-            <label className="block text-xs text-slate-500 mb-1.5 font-medium">Cliente</label>
-            <select value={clientId} onChange={e => setClientId(e.target.value)} className={selectCls}>
-              <option value="">Seleccionar cliente</option>
-              {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
+      <div className="cd-panel p-8">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="p-2 bg-blue-50 text-[#2980b9] rounded-xl">
+            <Filter size={20} />
           </div>
-          <div>
-            <label className="block text-xs text-slate-500 mb-1.5 font-medium">Dispositivo</label>
-            <select value={deviceId} onChange={e => setDeviceId(e.target.value)}
-              disabled={!clientId} className={`${selectCls} disabled:opacity-40 disabled:cursor-not-allowed`}>
-              <option value="">Seleccionar dispositivo</option>
-              {devices.map(d => <option key={d.id} value={d.id}>{d.brand?.toUpperCase()} — {d.name || d.ip}</option>)}
-            </select>
+          <h3 className="text-lg font-extrabold text-[#1a2333]">Parámetros de Búsqueda</h3>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="space-y-2">
+            <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest ml-1">Cliente</label>
+            <div className="relative">
+              <User size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+              <select 
+                value={clientId} 
+                onChange={e => setClientId(e.target.value)} 
+                className="cd-input w-full !pl-10 !bg-slate-50 border-transparent focus:!bg-white focus:!border-[#2980b9]"
+              >
+                <option value="">Seleccionar cliente</option>
+                {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </div>
           </div>
-          <div>
-            <label className="block text-xs text-slate-500 mb-1.5 font-medium">Desde</label>
-            <input type="date" value={from} onChange={e => setFrom(e.target.value)} className={selectCls} />
+
+          <div className="space-y-2">
+            <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest ml-1">Dispositivo</label>
+            <div className="relative">
+              <Printer size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+              <select 
+                value={deviceId} 
+                onChange={e => setDeviceId(e.target.value)}
+                disabled={!clientId} 
+                className="cd-input w-full !pl-10 !bg-slate-50 border-transparent focus:!bg-white focus:!border-[#2980b9] disabled:opacity-40"
+              >
+                <option value="">Seleccionar dispositivo</option>
+                {devices.map(d => <option key={d.id} value={d.id}>{d.brand?.toUpperCase()} — {d.name || d.ip}</option>)}
+              </select>
+            </div>
           </div>
-          <div>
-            <label className="block text-xs text-slate-500 mb-1.5 font-medium">Hasta</label>
-            <input type="date" value={to} onChange={e => setTo(e.target.value)} className={selectCls} />
+
+          <div className="space-y-2">
+            <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest ml-1">Fecha Inicial</label>
+            <div className="relative">
+              <Calendar size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input 
+                type="date" 
+                value={from} 
+                onChange={e => setFrom(e.target.value)} 
+                className="cd-input w-full !pl-10 !bg-slate-50 border-transparent focus:!bg-white focus:!border-[#2980b9]" 
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest ml-1">Fecha Final</label>
+            <div className="relative">
+              <Calendar size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input 
+                type="date" 
+                value={to} 
+                onChange={e => setTo(e.target.value)} 
+                className="cd-input w-full !pl-10 !bg-slate-50 border-transparent focus:!bg-white focus:!border-[#2980b9]" 
+              />
+            </div>
           </div>
         </div>
 
-        <div className="flex gap-3 mt-5">
+        <div className="flex flex-col sm:flex-row gap-4 mt-8 pt-6 border-t border-slate-50">
           <button
             onClick={generate}
             disabled={!deviceId || loading}
-            className="flex items-center gap-2 bg-[#f39c12] hover:bg-[#e67e22] disabled:opacity-40 text-white px-5 py-2 rounded text-sm font-medium transition-colors"
+            className="flex-1 flex items-center justify-center gap-2 bg-[#2980b9] hover:bg-[#2471a3] disabled:opacity-40 text-white px-8 py-4 rounded-2xl text-sm font-extrabold shadow-lg shadow-blue-900/10 transition-all active:scale-95"
           >
-            <Search size={14} />
-            {loading ? 'Generando...' : 'Generar reporte'}
+            <Search size={18} />
+            {loading ? 'Generando Reporte...' : 'Generar Reporte Detallado'}
           </button>
+          
           {readings && readings.length > 0 && (
             <button
               onClick={exportCSV}
-              className="flex items-center gap-2 bg-[#689f38] hover:bg-[#558b2f] text-white px-5 py-2 rounded text-sm font-medium transition-colors"
+              className="flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-4 rounded-2xl text-sm font-extrabold shadow-lg shadow-emerald-900/10 transition-all active:scale-95 animate-in zoom-in-95"
             >
-              <Download size={14} />
-              Exportar CSV ({readings.length} filas)
+              <Download size={18} />
+              Exportar a CSV ({readings.length} registros)
             </button>
           )}
         </div>
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-red-600 text-sm">{error}</div>
+        <div className="bg-rose-50 border border-rose-100 rounded-[24px] p-6 text-rose-600 text-sm font-bold animate-in shake">
+          Error: {error}
+        </div>
       )}
 
       {/* Results */}
       {readings !== null && (
-        <div className="cd-panel rounded-xl overflow-hidden">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-[#d1d8e0]">
-            <h3 className="font-semibold text-[#1a2333] text-sm flex items-center gap-2">
-              <FileText size={15} className="text-[#2980b9]" />
-              {readings.length} lecturas encontradas
+        <div className="cd-panel overflow-hidden animate-in slide-in-from-bottom-4 duration-500">
+          <header className="px-8 py-6 border-b border-slate-50 flex items-center justify-between bg-slate-50/30">
+            <h3 className="font-extrabold text-[#1a2333] flex items-center gap-3">
+              <div className="p-2 bg-white rounded-xl shadow-sm text-[#2980b9]">
+                <FileText size={18} />
+              </div>
+              Lecturas Encontradas
             </h3>
-          </div>
+            <span className="bg-slate-200 text-slate-600 text-[10px] font-extrabold px-3 py-1 rounded-full uppercase tracking-widest shadow-sm">
+              {readings.length} Resultados
+            </span>
+          </header>
 
           {readings.length === 0 ? (
-            <div className="text-center py-10 text-slate-400 text-sm">
-              No hay lecturas en el período seleccionado.
+            <div className="text-center py-20 bg-white">
+              <FileText size={48} className="mx-auto mb-4 text-slate-100" />
+              <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">Sin registros en este período</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-sm cd-table">
+              <table className="cd-table">
                 <thead>
-                  <tr className="bg-[#2980b9] text-white text-xs uppercase tracking-wider">
-                    <th className="px-5 py-3 text-left font-semibold">Fecha</th>
-                    <th className="px-5 py-3 text-right font-semibold">Total</th>
-                    <th className="px-5 py-3 text-right font-semibold">Mono</th>
-                    <th className="px-5 py-3 text-right font-semibold">Color</th>
-                    <th className="px-5 py-3 text-left font-semibold">Estado</th>
+                  <tr>
+                    <th>Fecha y Hora</th>
+                    <th className="text-right">Total Acumulado</th>
+                    <th className="text-right">Monocromo</th>
+                    <th className="text-right">Color</th>
+                    <th>Estado</th>
                   </tr>
                 </thead>
                 <tbody>
                   {readings.slice(0, 100).map((r, i) => (
-                    <tr key={i} className="border-t border-[#d1d8e0]">
-                      <td className="px-5 py-2.5 text-slate-600 whitespace-nowrap text-xs">
+                    <tr key={i} className="hover:bg-slate-50/50 transition-colors">
+                      <td className="font-medium text-slate-500 whitespace-nowrap text-xs">
                         {new Date(r.time).toLocaleString()}
                       </td>
-                      <td className="px-5 py-2.5 text-right font-semibold text-[#1a2333]">
+                      <td className="text-right font-extrabold text-[#1a2333]">
                         {r.total_pages.toLocaleString()}
                       </td>
-                      <td className="px-5 py-2.5 text-right text-slate-500">
-                        {r.mono_pages?.toLocaleString() ?? '—'}
+                      <td className="text-right text-slate-400 font-bold">
+                        {r.mono_pages?.toLocaleString() ?? '---'}
                       </td>
-                      <td className="px-5 py-2.5 text-right text-slate-500">
-                        {r.color_pages?.toLocaleString() ?? '—'}
+                      <td className="text-right text-slate-400 font-bold">
+                        {r.color_pages?.toLocaleString() ?? '---'}
                       </td>
-                      <td className="px-5 py-2.5 capitalize text-xs text-slate-500">{r.status}</td>
+                      <td>
+                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider ${
+                          r.status === 'ok' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'
+                        }`}>
+                          {r.status}
+                        </span>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
               {readings.length > 100 && (
-                <p className="text-center text-xs text-slate-400 py-3">
-                  Mostrando primeras 100 filas. Usa "Exportar CSV" para ver todas.
-                </p>
+                <div className="bg-slate-50/50 px-8 py-4 border-t border-slate-50">
+                  <p className="text-center text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">
+                    Vista previa limitada a 100 registros. Use el botón de exportación para obtener el historial completo.
+                  </p>
+                </div>
               )}
             </div>
           )}
@@ -198,3 +252,4 @@ const Reports = () => {
 };
 
 export default Reports;
+

@@ -3,9 +3,10 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
 import {
   Users, ChevronRight, HardDrive, Wifi, WifiOff,
-  Server, Clock, Globe, Settings, Copy, Check, Edit, X, Plus, Trash2, Loader2
+  Server, Clock, Globe, Settings, Copy, Check, Edit, X, Plus, Trash2, Loader2, Shield, Layout, Info, Activity
 } from 'lucide-react';
 import ConfirmModal from '../components/ConfirmModal';
+import { useToast } from '../context/ToastContext';
 
 interface MonitorData {
   id: string;
@@ -57,6 +58,7 @@ function formatDate(dateStr: string | null): string {
 const MonitorDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { showToast } = useToast();
   const [monitor, setMonitor] = useState<MonitorData | null>(null);
   const [devices, setDevices] = useState<Device[]>([]);
   const [loading, setLoading] = useState(true);
@@ -71,12 +73,14 @@ const MonitorDetail = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editForm, setEditForm] = useState({
+    name: '',
     snmp_community: 'public',
     scan_interval_minutes: 15,
     ip_ranges: [] as { start: string, end: string }[]
   });
 
-  useEffect(() => {
+  const fetchData = () => {
+    setLoading(true);
     Promise.all([
       api.get<MonitorData>(`/agents/${id}`),
       api.get<Device[]>(`/agents/${id}/devices`),
@@ -84,18 +88,22 @@ const MonitorDetail = () => {
       .then(([m, d]) => { setMonitor(m); setDevices(d); })
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
-  }, [id]);
+  };
+
+  useEffect(() => { fetchData(); }, [id]);
 
   const copyKey = () => {
     if (!monitor?.activation_key) return;
     navigator.clipboard.writeText(monitor.activation_key);
     setKeyCopied(true);
+    showToast('Clave de activación copiada', 'success');
     setTimeout(() => setKeyCopied(false), 2000);
   };
 
   const openEditModal = () => {
     if (!monitor) return;
     setEditForm({
+      name: monitor.name,
       snmp_community: monitor.snmp_community || 'public',
       scan_interval_minutes: monitor.scan_interval_minutes || 15,
       ip_ranges: monitor.ip_ranges ? [...monitor.ip_ranges] : []
@@ -108,15 +116,16 @@ const MonitorDetail = () => {
     setIsSubmitting(true);
     try {
       await api.put(`/agents/${id}/config`, {
+        name: editForm.name,
         snmp_community: editForm.snmp_community,
         scan_interval_minutes: editForm.scan_interval_minutes,
         ip_ranges: editForm.ip_ranges.length > 0 ? editForm.ip_ranges : null
       });
-      const m = await api.get<MonitorData>(`/agents/${id}`);
-      setMonitor(m);
+      showToast('Configuración actualizada correctamente', 'success');
+      fetchData();
       setShowEditModal(false);
     } catch (err: any) {
-      alert('Error al actualizar: ' + err.message);
+      showToast('Error al actualizar: ' + err.message, 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -127,9 +136,10 @@ const MonitorDetail = () => {
     setDeletingMonitor(true);
     try {
       await api.delete(`/agents/${id}`);
+      showToast('Monitor eliminado permanentemente', 'success');
       navigate(`/clients/${monitor.client_id}`);
     } catch (err: any) {
-      alert('Error al eliminar monitor: ' + err.message);
+      showToast('Error al eliminar monitor: ' + err.message, 'error');
     } finally {
       setDeletingMonitor(false);
       setShowDeleteModal(false);
@@ -146,335 +156,370 @@ const MonitorDetail = () => {
     setEditForm(prev => ({ ...prev, ip_ranges: prev.ip_ranges.filter((_, i) => i !== index) }));
   };
 
-  const activeDevices = devices.filter(d => d.active);
-  const inactiveDevices = devices.filter(d => !d.active);
+  const activeDevicesCount = devices.filter(d => d.active).length;
+  const inactiveDevicesCount = devices.filter(d => !d.active).length;
 
   return (
-    <div className="space-y-5 animate-in fade-in duration-500">
+    <div className="space-y-8 animate-in fade-in duration-500">
       {/* Breadcrumb */}
-      <nav className="flex items-center gap-1.5 text-xs text-slate-400 flex-wrap">
-        <Link to="/clients" className="flex items-center gap-1 hover:text-[#2980b9] transition-colors">
-          <Users size={12} /> Clientes
+      <nav className="flex items-center gap-3 text-xs">
+        <Link to="/clients" className="flex items-center gap-2 text-slate-400 hover:text-[#2980b9] font-bold uppercase tracking-widest transition-colors">
+          <Users size={14} /> Clientes
         </Link>
-        <ChevronRight size={12} className="text-slate-300" />
+        <ChevronRight size={14} className="text-slate-300" />
         {monitor ? (
-          <Link to={`/clients/${monitor.client_id}`} className="hover:text-[#2980b9] transition-colors">
+          <Link to={`/clients/${monitor.client_id}`} className="text-slate-400 hover:text-[#2980b9] font-bold uppercase tracking-widest transition-colors">
             {monitor.client_name}
           </Link>
         ) : (
-          <span className="text-slate-300">…</span>
+          <div className="h-4 w-24 bg-slate-100 animate-pulse rounded-full" />
         )}
-        <ChevronRight size={12} className="text-slate-300" />
+        <ChevronRight size={14} className="text-slate-300" />
         {monitor ? (
-          <span className="text-[#1a2333] font-medium">{monitor.name}</span>
+          <span className="text-[#2980b9] font-extrabold uppercase tracking-widest">{monitor.name}</span>
         ) : (
-          <span className="text-slate-300">Cargando…</span>
+          <div className="h-4 w-32 bg-slate-100 animate-pulse rounded-full" />
         )}
       </nav>
 
-      {loading && <div className="text-center py-16 text-slate-400 text-sm">Cargando monitor…</div>}
-      {error && <div className="text-center py-16 text-red-500 text-sm">{error}</div>}
-
-      {!loading && !error && monitor && (
-        <>
-          {/* 3-panel header */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-
-            {/* Left — Device summary (clickable) */}
-            <div className="cd-panel rounded-xl overflow-hidden">
-              <div className="bg-[#2980b9] text-white px-5 py-3 flex items-center gap-2">
-                <HardDrive size={14} />
-                <span className="text-xs font-bold uppercase tracking-wider">Dispositivos</span>
-              </div>
-              <div className="p-5 space-y-3">
-                <Link
-                  to={`/monitors/${monitor.id}/devices`}
-                  className="block w-full text-center group cursor-pointer"
-                >
-                  <div className="text-4xl font-bold text-[#2980b9] group-hover:text-[#f39c12] transition-colors">
-                    {monitor.total_device_count}
-                  </div>
-                  <div className="text-xs text-slate-400 mt-1 group-hover:text-[#1a2333] transition-colors">
-                    Click para ver detalle
-                  </div>
-                </Link>
-
-                <div className="border-t border-slate-100 pt-3 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="w-2.5 h-2.5 rounded-full bg-[#689f38]" />
-                      <span className="text-xs text-slate-500">Activos</span>
-                    </div>
-                    <span className="font-bold text-sm text-[#1a2333]">{activeDevices.length}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="w-2.5 h-2.5 rounded-full bg-red-400" />
-                      <span className="text-xs text-slate-500">Inactivos</span>
-                    </div>
-                    <span className="font-bold text-sm text-[#1a2333]">{inactiveDevices.length}</span>
-                  </div>
-                </div>
-                {/* Progress bar */}
-                <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-[#689f38] rounded-full transition-all"
-                    style={{ width: `${monitor.total_device_count > 0 ? (activeDevices.length / monitor.total_device_count) * 100 : 0}%` }}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Center — Monitor status */}
-            <div className="cd-panel rounded-xl overflow-hidden">
-              <div className="bg-[#2980b9] text-white px-5 py-3 flex items-center gap-2">
-                <Server size={14} />
-                <span className="text-xs font-bold uppercase tracking-wider">Estado del Monitor</span>
-              </div>
-              <div className="p-5">
-                <table className="w-full text-sm">
-                  <tbody className="divide-y divide-slate-50">
-                    <tr>
-                      <td className="py-2 text-slate-500 pr-4">Estado</td>
-                      <td className="py-2 font-medium text-[#1a2333]">
-                        {monitor.status === 'active' || monitor.status === 'online' ? (
-                          <span className="inline-flex items-center gap-1.5 text-[#689f38]">
-                            <Wifi size={12} /> Activo
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1.5 text-slate-400">
-                            <WifiOff size={12} /> {monitor.status}
-                          </span>
-                        )}
-                      </td>
-                    </tr>
-                    <tr>
-                      <td className="py-2 text-slate-500 pr-4">Presencia</td>
-                      <td className="py-2 font-medium">
-                        {(() => {
-                          const isOnline = monitor.last_seen && (Date.now() - new Date(monitor.last_seen).getTime()) < 300000;
-                          return (
-                            <span className={`inline-flex items-center gap-1.5 ${isOnline ? 'text-[#689f38]' : 'text-red-500'}`}>
-                              <span className={`w-2 h-2 rounded-full ${isOnline ? 'bg-[#689f38]' : 'bg-red-500'}`} />
-                              {isOnline ? 'En línea' : 'Fuera de línea'}
-                            </span>
-                          );
-                        })()}
-                      </td>
-                    </tr>
-                    <tr>
-                      <td className="py-2 text-slate-500 pr-4">Última actividad</td>
-                      <td className="py-2 text-[#1a2333]">{timeAgo(monitor.last_seen)}</td>
-                    </tr>
-                    <tr>
-                      <td className="py-2 text-slate-500 pr-4">Creado</td>
-                      <td className="py-2 text-[#1a2333]">{formatDate(monitor.created_at)}</td>
-                    </tr>
-                    <tr>
-                      <td className="py-2 text-slate-500 pr-4">Hardware ID</td>
-                      <td className="py-2 text-[#1a2333] font-mono text-xs">{monitor.hardware_id || '—'}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            {/* Right — Configuration */}
-            <div className="cd-panel rounded-xl overflow-hidden">
-              <div className="bg-[#2980b9] text-white px-5 py-3 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Settings size={14} />
-                  <span className="text-xs font-bold uppercase tracking-wider">Configuración</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={openEditModal}
-                    className="p-1 hover:bg-white/20 rounded transition-colors text-white"
-                    title="Editar Configuracion"
-                  >
-                    <Edit size={14} />
-                  </button>
-                  <button
-                    onClick={() => setShowDeleteModal(true)}
-                    className="p-1 hover:bg-white/20 rounded transition-colors text-white"
-                    title="Eliminar Monitor"
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-              </div>
-              <div className="p-5">
-                <table className="w-full text-sm">
-                  <tbody className="divide-y divide-slate-50">
-                    <tr>
-                      <td className="py-2 text-slate-500 pr-4">Comunidad SNMP</td>
-                      <td className="py-2 font-medium text-[#1a2333] font-mono text-xs">{monitor.snmp_community || 'public'}</td>
-                    </tr>
-                    <tr>
-                      <td className="py-2 text-slate-500 pr-4">Intervalo de escaneo</td>
-                      <td className="py-2 text-[#1a2333]">
-                        <span className="inline-flex items-center gap-1">
-                          <Clock size={12} className="text-slate-400" />
-                          {monitor.scan_interval_minutes || 15} min
-                        </span>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td className="py-2 text-slate-500 pr-4">Rangos IP</td>
-                      <td className="py-2">
-                        {monitor.ip_ranges && monitor.ip_ranges.length > 0 ? (
-                          <div className="space-y-1">
-                            {monitor.ip_ranges.map((r, i) => (
-                              <div key={i} className="font-mono text-xs text-[#1a2333] bg-slate-50 px-2 py-1 rounded inline-flex items-center gap-1 mr-1">
-                                <Globe size={10} className="text-slate-400" />
-                                {r.start} — {r.end}
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <span className="text-slate-400 text-xs">No configurados</span>
-                        )}
-                      </td>
-                    </tr>
-                    {monitor.activation_key && (
-                      <tr>
-                        <td className="py-2 text-slate-500 pr-4">Clave de activación</td>
-                        <td className="py-2">
-                          <div className="flex items-center gap-1">
-                            <span className="font-mono text-xs text-slate-400 truncate max-w-[120px]">
-                              {monitor.activation_key.slice(0, 16)}…
-                            </span>
-                            <button onClick={copyKey} className="p-1 rounded hover:bg-slate-100 transition-colors" title="Copiar">
-                              {keyCopied ? <Check size={12} className="text-[#689f38]" /> : <Copy size={12} className="text-slate-400" />}
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        </>
+      {loading && (
+        <div className="flex flex-col items-center justify-center py-24 gap-4">
+          <Loader2 className="animate-spin text-[#2980b9]" size={40} />
+          <p className="text-slate-400 font-extrabold uppercase tracking-widest text-[10px]">Cargando expediente del monitor...</p>
+        </div>
       )}
-
-      {/* Edit Configuration Modal */}
-      {showEditModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200">
-            <header className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-[#2980b9] text-white">
-              <h2 className="font-bold">Editar Configuración</h2>
-              <button onClick={() => setShowEditModal(false)} className="p-1 hover:bg-white/10 rounded-full transition-colors">
-                <X size={20} />
-              </button>
-            </header>
-            <form onSubmit={handleUpdateConfig} className="p-6 space-y-5 max-h-[80vh] overflow-y-auto">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Comunidad SNMP</label>
-                  <input
-                    type="text"
-                    required
-                    className="cd-input w-full font-mono text-xs"
-                    value={editForm.snmp_community}
-                    onChange={(e) => setEditForm(prev => ({ ...prev, snmp_community: e.target.value }))}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Intervalo (min)</label>
-                  <input
-                    type="number"
-                    min={1}
-                    required
-                    className="cd-input w-full"
-                    value={editForm.scan_interval_minutes}
-                    onChange={(e) => setEditForm(prev => ({ ...prev, scan_interval_minutes: Number(e.target.value) }))}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Rangos IP para escaneo</label>
-                  <button
-                    type="button"
-                    onClick={addIpRange}
-                    className="flex items-center gap-1 text-xs font-semibold text-[#2980b9] hover:text-[#2471a3] transition-colors"
-                  >
-                    <Plus size={14} /> Agregar Rango
-                  </button>
-                </div>
-                {editForm.ip_ranges.length === 0 ? (
-                  <div className="text-center py-6 bg-slate-50 rounded-xl border border-slate-100 text-sm text-slate-400">
-                    No hay rangos IP configurados. El agente no escaneará dispositivos automáticamente.
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {editForm.ip_ranges.map((range, idx) => (
-                      <div key={idx} className="flex gap-2 items-start">
-                        <input
-                          type="text"
-                          required
-                          placeholder="IP Inicio (ej: 192.168.1.1)"
-                          className="cd-input flex-1 font-mono text-xs"
-                          value={range.start}
-                          onChange={(e) => updateIpRange(idx, 'start', e.target.value)}
-                        />
-                        <input
-                          type="text"
-                          required
-                          placeholder="IP Fin (ej: 192.168.1.254)"
-                          className="cd-input flex-1 font-mono text-xs"
-                          value={range.end}
-                          onChange={(e) => updateIpRange(idx, 'end', e.target.value)}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => removeIpRange(idx)}
-                          className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                          title="Eliminar rango"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <div className="pt-4 flex gap-3">
-                <button
-                  type="button"
-                  onClick={() => setShowEditModal(false)}
-                  className="flex-1 px-4 py-2.5 rounded-lg border border-slate-200 text-slate-600 font-semibold hover:bg-slate-50 transition-all"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="flex-1 px-4 py-2.5 rounded-lg bg-[#2980b9] text-white font-bold hover:bg-[#2471a3] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-                >
-                  {isSubmitting ? <Loader2 size={18} className="animate-spin" /> : 'Guardar Cambios'}
-                </button>
-              </div>
-            </form>
-          </div>
+      
+      {error && (
+        <div className="bg-rose-50 border border-rose-100 rounded-[24px] p-8 text-rose-600 font-bold animate-in shake">
+          {error}
         </div>
       )}
 
-      {/* Confirm Delete Modal */}
-      <ConfirmModal
-        isOpen={showDeleteModal}
-        onClose={() => setShowDeleteModal(false)}
-        onConfirm={confirmDeleteMonitor}
-        isLoading={deletingMonitor}
-        isDanger
-        title="Eliminar Monitor"
-        message={`¿Estás seguro de que deseas eliminar el monitor "${monitor?.name}"? Esta acción borrará también todos sus dispositivos y lecturas de forma permanente.`}
-        confirmText="Eliminar"
-      />
+      {!loading && !error && monitor && (
+        <>
+          {/* Main Dashboard Layout */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            
+            {/* Left Column: Device Overview */}
+            <div className="lg:col-span-4 space-y-6">
+              <div className="cd-panel overflow-hidden border-none shadow-xl shadow-blue-900/5 group">
+                <div className="bg-gradient-to-r from-[#2980b9] to-[#3498db] px-6 py-4 flex items-center justify-between text-white">
+                  <div className="flex items-center gap-3">
+                    <HardDrive size={18} />
+                    <span className="text-[10px] font-black uppercase tracking-widest">Dispositivos Vinculados</span>
+                  </div>
+                  <Activity size={16} className="animate-pulse" />
+                </div>
+                <div className="p-8 space-y-6 text-center">
+                  <Link to={`/monitors/${monitor.id}/devices`} className="block group/stat">
+                    <div className="text-6xl font-black text-[#1a2333] tracking-tighter group-hover/stat:text-[#2980b9] transition-colors">
+                      {monitor.total_device_count}
+                    </div>
+                    <div className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mt-2 group-hover/stat:text-[#1a2333]">
+                      Explorar Inventario Detallado
+                    </div>
+                  </Link>
+
+                  <div className="grid grid-cols-2 gap-4 pt-6 border-t border-slate-50">
+                    <div className="text-center">
+                      <div className="text-xl font-black text-emerald-600">{activeDevicesCount}</div>
+                      <div className="text-[9px] font-extrabold text-slate-400 uppercase tracking-widest">En Línea</div>
+                    </div>
+                    <div className="text-center border-l border-slate-50">
+                      <div className="text-xl font-black text-rose-600">{inactiveDevicesCount}</div>
+                      <div className="text-[9px] font-extrabold text-slate-400 uppercase tracking-widest">Offline</div>
+                    </div>
+                  </div>
+
+                  <div className="relative h-2 bg-slate-100 rounded-full overflow-hidden">
+                    <div 
+                      className="absolute left-0 top-0 h-full bg-gradient-to-r from-emerald-400 to-emerald-600 rounded-full transition-all duration-1000"
+                      style={{ width: `${monitor.total_device_count > 0 ? (activeDevicesCount / monitor.total_device_count) * 100 : 0}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Status Details */}
+              <div className="cd-panel p-8 space-y-6">
+                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-3">
+                  <Info size={16} className="text-[#2980b9]" /> Diagnóstico del Nodo
+                </h3>
+                
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between py-2 border-b border-slate-50">
+                    <span className="text-xs font-bold text-slate-500 uppercase tracking-tight">Estado de Red</span>
+                    {monitor.status === 'active' || monitor.status === 'online' ? (
+                      <span className="inline-flex items-center gap-2 text-xs font-black text-emerald-600 uppercase">
+                        <Wifi size={14} /> Sincronizado
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-2 text-xs font-black text-rose-500 uppercase">
+                        <WifiOff size={14} /> Desconectado
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center justify-between py-2 border-b border-slate-50">
+                    <span className="text-xs font-bold text-slate-500 uppercase tracking-tight">Latencia Relativa</span>
+                    <span className="text-xs font-black text-[#1a2333] uppercase">{timeAgo(monitor.last_seen)}</span>
+                  </div>
+                  <div className="flex items-center justify-between py-2 border-b border-slate-50">
+                    <span className="text-xs font-bold text-slate-500 uppercase tracking-tight">Fecha de Alta</span>
+                    <span className="text-xs font-black text-[#1a2333] uppercase">{formatDate(monitor.created_at)}</span>
+                  </div>
+                  <div className="flex items-center justify-between py-2">
+                    <span className="text-xs font-bold text-slate-500 uppercase tracking-tight">Hardware ID</span>
+                    <span className="text-[10px] font-black text-slate-400 font-mono tracking-tighter uppercase">{monitor.hardware_id || 'SIN VINCULAR'}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Right Column: Configuration & Ranges */}
+            <div className="lg:col-span-8 space-y-6">
+              <div className="cd-panel overflow-hidden border-none shadow-xl shadow-blue-900/5">
+                <div className="bg-[#1a2333] px-8 py-6 flex items-center justify-between text-white">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 bg-white/10 rounded-2xl">
+                      <Settings size={20} />
+                    </div>
+                    <div>
+                      <h2 className="text-lg font-black tracking-tight uppercase">Parámetros Operativos</h2>
+                      <p className="text-[10px] font-bold text-blue-300/60 uppercase tracking-widest">Configuración de escaneo y SNMP</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={openEditModal}
+                      className="p-3 bg-white/5 hover:bg-white/10 rounded-2xl transition-all active:scale-90"
+                      title="Modificar Configuración"
+                    >
+                      <Edit size={18} />
+                    </button>
+                    <button
+                      onClick={() => setShowDeleteModal(true)}
+                      className="p-3 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 rounded-2xl transition-all active:scale-90"
+                      title="Dar de Baja Nodo"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
+                </div>
+                
+                <div className="p-10 grid grid-cols-1 md:grid-cols-2 gap-10">
+                  <div className="space-y-6">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Comunidad SNMP Activa</label>
+                      <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-[20px] border border-slate-100">
+                        <Shield size={16} className="text-[#2980b9]" />
+                        <span className="font-mono text-sm font-bold text-[#1a2333]">{monitor.snmp_community || 'public'}</span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Frecuencia de Muestreo</label>
+                      <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-[20px] border border-slate-100">
+                        <Clock size={16} className="text-[#2980b9]" />
+                        <span className="text-sm font-black text-[#1a2333] uppercase">CADA {monitor.scan_interval_minutes || 15} MINUTOS</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-6">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Segmentos de Red (IP Ranges)</label>
+                    <div className="space-y-3">
+                      {monitor.ip_ranges && monitor.ip_ranges.length > 0 ? (
+                        monitor.ip_ranges.map((r, i) => (
+                          <div key={i} className="flex items-center gap-4 p-4 bg-blue-50/30 rounded-[20px] border border-blue-100/50 group hover:bg-blue-50 transition-colors">
+                            <div className="p-2 bg-white rounded-xl shadow-sm text-[#2980b9]">
+                              <Globe size={14} />
+                            </div>
+                            <div className="flex-1">
+                              <div className="text-[10px] font-black text-[#2980b9] uppercase tracking-tighter">Segmento {i + 1}</div>
+                              <div className="font-mono text-xs font-bold text-[#1a2333]">{r.start} — {r.end}</div>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-center py-8 bg-slate-50 rounded-[24px] border border-dashed border-slate-200">
+                           <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Sin rangos definidos</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {monitor.activation_key && (
+                  <div className="mx-10 mb-10 p-6 bg-emerald-50 border border-emerald-100 rounded-[24px] flex items-center justify-between group">
+                    <div className="flex items-center gap-4">
+                      <div className="p-3 bg-white rounded-2xl shadow-sm text-emerald-600">
+                        <Shield size={20} />
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-black text-emerald-700 uppercase tracking-widest">Token de Seguridad de la Sesión</p>
+                        <p className="font-mono text-xs font-bold text-emerald-900 truncate max-w-[200px] sm:max-w-md">{monitor.activation_key}</p>
+                      </div>
+                    </div>
+                    <button 
+                      onClick={copyKey} 
+                      className="p-4 bg-white text-emerald-600 rounded-2xl shadow-md hover:bg-emerald-600 hover:text-white transition-all active:scale-90"
+                    >
+                      {keyCopied ? <Check size={20} /> : <Copy size={20} />}
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Edit Modal */}
+          {showEditModal && (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 bg-[#1a2333]/60 backdrop-blur-md animate-in fade-in duration-300">
+              <div className="bg-white rounded-[32px] shadow-2xl w-full max-w-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+                <header className="px-8 py-8 border-b border-slate-50 flex items-center justify-between bg-gradient-to-r from-[#2980b9] to-[#3498db] text-white">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-sm">
+                      <Settings size={24} />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-black tracking-tight uppercase">Configurar Nodo</h2>
+                      <p className="text-xs text-blue-100 font-medium">Ajusta los parámetros operativos del agente</p>
+                    </div>
+                  </div>
+                  <button onClick={() => setShowEditModal(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors active:scale-90">
+                    <X size={24} />
+                  </button>
+                </header>
+
+                <form onSubmit={handleUpdateConfig} className="p-10 space-y-8 max-h-[70vh] overflow-y-auto custom-scrollbar">
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest ml-1">Identificador del Nodo *</label>
+                    <div className="relative">
+                      <Layout size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
+                      <input
+                        required
+                        type="text"
+                        className="cd-input w-full !pl-12"
+                        value={editForm.name}
+                        onChange={(e) => setEditForm(prev => ({ ...prev, name: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-6">
+                    <div className="space-y-3">
+                      <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest ml-1">Comunidad SNMP</label>
+                      <div className="relative">
+                        <Shield size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
+                        <input
+                          type="text"
+                          required
+                          className="cd-input w-full !pl-12 font-mono text-sm"
+                          value={editForm.snmp_community}
+                          onChange={(e) => setEditForm(prev => ({ ...prev, snmp_community: e.target.value }))}
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-3">
+                      <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest ml-1">Intervalo de Escaneo</label>
+                      <div className="relative">
+                        <Clock size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
+                        <select
+                          className="cd-input w-full !pl-12"
+                          value={editForm.scan_interval_minutes}
+                          onChange={(e) => setEditForm(prev => ({ ...prev, scan_interval_minutes: Number(e.target.value) }))}
+                        >
+                          <option value={15}>Cada 15 min</option>
+                          <option value={30}>Cada 30 min</option>
+                          <option value={60}>Cada 1 hora</option>
+                          <option value={1440}>Cada 24 horas</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest ml-1">Segmentación IP (Whitelist)</label>
+                      <button
+                        type="button"
+                        onClick={addIpRange}
+                        className="flex items-center gap-2 text-[10px] font-black text-[#2980b9] uppercase tracking-widest hover:text-[#2471a3] transition-colors"
+                      >
+                        <Plus size={14} /> Agregar Rango
+                      </button>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      {editForm.ip_ranges.map((range, idx) => (
+                        <div key={idx} className="flex gap-4 items-center bg-slate-50 p-4 rounded-[24px] border border-slate-100 group animate-in slide-in-from-right-4 duration-300">
+                          <div className="relative flex-1">
+                            <MapPin size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
+                            <input
+                              type="text"
+                              required
+                              placeholder="IP Inicio"
+                              className="cd-input w-full !pl-10 !bg-white font-mono text-xs"
+                              value={range.start}
+                              onChange={(e) => updateIpRange(idx, 'start', e.target.value)}
+                            />
+                          </div>
+                          <div className="relative flex-1">
+                            <MapPin size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
+                            <input
+                              type="text"
+                              required
+                              placeholder="IP Fin"
+                              className="cd-input w-full !pl-10 !bg-white font-mono text-xs"
+                              value={range.end}
+                              onChange={(e) => updateIpRange(idx, 'end', e.target.value)}
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => removeIpRange(idx)}
+                            className="p-3 text-slate-300 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="pt-6 flex gap-4">
+                    <button
+                      type="button"
+                      onClick={() => setShowEditModal(false)}
+                      className="flex-1 py-5 rounded-[24px] border border-slate-200 text-slate-500 font-extrabold hover:bg-slate-50 transition-all active:scale-95"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isSubmitting}
+                      className="flex-1 py-5 rounded-[24px] bg-[#2980b9] text-white font-black hover:bg-[#2471a3] transition-all shadow-xl shadow-blue-900/10 active:scale-95 flex items-center justify-center gap-3 disabled:opacity-50"
+                    >
+                      {isSubmitting ? <Loader2 size={24} className="animate-spin" /> : 'Sincronizar Cambios'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+
+          <ConfirmModal
+            isOpen={showDeleteModal}
+            onClose={() => setShowDeleteModal(false)}
+            onConfirm={confirmDeleteMonitor}
+            isLoading={deletingMonitor}
+            isDanger
+            title="Dar de Baja Nodo de Monitoreo"
+            message={`¿Estás seguro de que deseas eliminar permanentemente el nodo "${monitor?.name}"? Esta acción desactivará el agente STC en el servidor del cliente y borrará todo el historial de dispositivos asociados.`}
+            confirmText="Baja Permanente"
+          />
+        </>
+      )}
     </div>
   );
 };
