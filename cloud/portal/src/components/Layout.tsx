@@ -148,14 +148,15 @@ const Layout = () => {
             >
               <Menu size={20} />
             </button>
-            <div className="relative hidden sm:block lg:w-96">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-              <input
-                type="text"
-                placeholder="Buscar impresoras, clientes o IPs..."
-                className="cd-input w-full !pl-11 !bg-slate-50 border-transparent focus:!bg-white focus:!border-[#2980b9] h-10"
-              />
-            </div>
+          </div>
+
+          <div className="relative hidden sm:block lg:w-96">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+            <input
+              type="text"
+              placeholder="Buscar impresoras, clientes o IPs..."
+              className="cd-input w-full !pl-11 !bg-slate-50 border-transparent focus:!bg-white focus:!border-[#2980b9] h-10"
+            />
           </div>
         </header>
 
