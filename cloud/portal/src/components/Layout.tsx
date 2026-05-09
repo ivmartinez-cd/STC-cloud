@@ -44,21 +44,20 @@ const Layout = () => {
 
         {/* Logo Section */}
         <div className="px-8 py-10 relative">
-          <Link to="/" className="flex flex-col gap-1 group" onClick={() => setIsMobileMenuOpen(false)}>
-            <div className="flex items-center gap-3">
-              <div className="bg-white p-2 rounded-xl shadow-[0_0_20px_rgba(255,255,255,0.1)] group-hover:scale-105 transition-transform duration-500">
-                <img src="/logo.png" alt="STC Cloud" className="h-7 w-auto object-contain" />
-              </div>
-              <span className="font-montserrat font-extrabold text-xl tracking-tight bg-gradient-to-br from-white to-slate-400 bg-clip-text text-transparent">
+          <Link to="/" className="flex items-center gap-4 group" onClick={() => setIsMobileMenuOpen(false)}>
+            <div className="bg-white p-2.5 rounded-2xl shadow-[0_10px_25px_rgba(255,255,255,0.05)] group-hover:scale-110 group-hover:rotate-3 transition-all duration-500">
+              <img src="/logo.png" alt="STC Cloud" className="h-6 w-auto object-contain" />
+            </div>
+            <div className="flex flex-col">
+              <span className="font-montserrat font-black text-lg leading-tight tracking-tighter text-white">
                 STC Cloud
               </span>
-            </div>
-            <div className="flex items-center gap-2 mt-3 pl-1">
-              <div className="h-[1px] w-4 bg-blue-500/50" />
-              <span className="text-[9px] text-blue-400 font-black uppercase tracking-[0.25em] opacity-80">Canal Directo</span>
+              <span className="text-[10px] text-blue-400/60 font-black uppercase tracking-[0.2em] mt-0.5">
+                Portal
+              </span>
             </div>
           </Link>
-          <button onClick={toggleMobileMenu} className="md:hidden absolute top-10 right-6 p-2 hover:bg-white/5 rounded-full transition-colors">
+          <button onClick={toggleMobileMenu} className="md:hidden absolute top-11 right-6 p-2 hover:bg-white/5 rounded-full transition-colors">
             <X size={20} className="text-slate-400" />
           </button>
         </div>
