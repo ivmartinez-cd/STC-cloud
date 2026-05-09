@@ -35,29 +35,37 @@ const Layout = () => {
 
       {/* Sidebar */}
       <aside className={`
-        fixed inset-y-0 left-0 w-64 bg-slate-900 text-white flex flex-col z-[70] transition-transform duration-300 ease-in-out
+        fixed inset-y-0 left-0 w-72 bg-slate-950 text-white flex flex-col z-[70] transition-transform duration-500 cubic-bezier(0.4, 0, 0.2, 1)
         md:translate-x-0 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
-        bg-gradient-to-b from-[#2c3e50] to-[#1a2533] shadow-2xl
+        border-r border-white/5 shadow-[20px_0_50px_rgba(0,0,0,0.3)]
       `}>
-        {/* Logo */}
-        <div className="px-6 py-8 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-3" onClick={() => setIsMobileMenuOpen(false)}>
-            <div className="bg-white p-1.5 rounded-lg shadow-inner">
-              <img src="/logo.png" alt="STC Cloud" className="h-8 w-auto object-contain" />
+        {/* Subtle Ambient Glow */}
+        <div className="absolute top-0 left-0 w-full h-64 bg-blue-500/10 blur-[100px] pointer-events-none" />
+
+        {/* Logo Section */}
+        <div className="px-8 py-10 relative">
+          <Link to="/" className="flex flex-col gap-1 group" onClick={() => setIsMobileMenuOpen(false)}>
+            <div className="flex items-center gap-3">
+              <div className="bg-white p-2 rounded-xl shadow-[0_0_20px_rgba(255,255,255,0.1)] group-hover:scale-105 transition-transform duration-500">
+                <img src="/logo.png" alt="STC Cloud" className="h-7 w-auto object-contain" />
+              </div>
+              <span className="font-montserrat font-extrabold text-xl tracking-tight bg-gradient-to-br from-white to-slate-400 bg-clip-text text-transparent">
+                STC Cloud
+              </span>
             </div>
-            <div className="flex flex-col">
-              <span className="font-bold tracking-tight text-lg leading-none">STC Cloud</span>
-              <span className="text-[10px] text-blue-300 font-bold uppercase tracking-[0.1em] mt-1 opacity-80">Canal Directo</span>
+            <div className="flex items-center gap-2 mt-3 pl-1">
+              <div className="h-[1px] w-4 bg-blue-500/50" />
+              <span className="text-[9px] text-blue-400 font-black uppercase tracking-[0.25em] opacity-80">Canal Directo</span>
             </div>
           </Link>
-          <button onClick={toggleMobileMenu} className="md:hidden p-1 hover:bg-white/10 rounded-lg">
-            <X size={20} />
+          <button onClick={toggleMobileMenu} className="md:hidden absolute top-10 right-6 p-2 hover:bg-white/5 rounded-full transition-colors">
+            <X size={20} className="text-slate-400" />
           </button>
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 px-4 py-4 space-y-1.5 overflow-y-auto">
-          <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider px-3 mb-4 opacity-50">Menú Principal</div>
+        <nav className="flex-1 px-4 py-4 space-y-1.5 overflow-y-auto relative custom-scrollbar">
+          <div className="text-[10px] text-slate-500 font-bold uppercase tracking-[0.2em] px-5 mb-6">Navegación</div>
           {navItems.map(({ name, path, icon: Icon }) => {
             const active = isActive(path);
             return (
@@ -65,40 +73,57 @@ const Layout = () => {
                 key={path}
                 to={path}
                 onClick={() => setIsMobileMenuOpen(false)}
-                className={`flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold transition-all group ${
+                className={`flex items-center justify-between px-4 py-3 rounded-2xl text-[13px] font-bold transition-all duration-300 group relative ${
                   active
-                    ? 'bg-[#2980b9] text-white shadow-lg shadow-blue-900/20'
-                    : 'text-slate-400 hover:bg-white/5 hover:text-white'
+                    ? 'text-white'
+                    : 'text-slate-400 hover:text-white hover:bg-white/[0.03]'
                 }`}
               >
-                <div className="flex items-center gap-3">
+                {active && (
+                  <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 to-blue-600/5 rounded-2xl border border-blue-500/20 shadow-[0_0_20px_rgba(37,99,235,0.1)]" />
+                )}
+                {active && (
+                  <div className="absolute left-0 top-1/4 bottom-1/4 w-1 bg-blue-500 rounded-full shadow-[0_0_10px_rgba(59,130,246,0.5)]" />
+                )}
+                
+                <div className="flex items-center gap-4 relative z-10">
                   <Icon
-                    size={18}
-                    className={active ? 'text-white' : 'text-slate-500 group-hover:text-blue-400 transition-colors'}
+                    size={19}
+                    strokeWidth={active ? 2.5 : 2}
+                    className={active ? 'text-blue-400' : 'text-slate-500 group-hover:text-blue-400 transition-colors duration-300'}
                   />
-                  {name}
+                  <span className={active ? 'translate-x-1 transition-transform duration-300' : 'group-hover:translate-x-1 transition-transform duration-300'}>
+                    {name}
+                  </span>
                 </div>
-                {active && <ChevronRight size={14} className="text-white/50" />}
+                {active && <ChevronRight size={14} className="text-blue-400/50 relative z-10" />}
               </Link>
             );
           })}
         </nav>
 
-        {/* User Profile / Footer */}
-        <div className="p-4 border-t border-white/5">
-          <div className="bg-white/5 rounded-2xl p-4 flex flex-col gap-3">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-[#e67e22] flex items-center justify-center text-white font-bold shadow-lg shadow-orange-900/20">
-                {(email || 'A')[0].toUpperCase()}
+        {/* User Profile - Premium Card */}
+        <div className="p-6 relative">
+          <div className="bg-gradient-to-br from-white/[0.05] to-transparent rounded-[2rem] border border-white/5 p-5 backdrop-blur-sm relative overflow-hidden group">
+            {/* Decorative background circle */}
+            <div className="absolute -bottom-10 -right-10 w-24 h-24 bg-blue-500/5 rounded-full blur-2xl group-hover:bg-blue-500/10 transition-colors duration-500" />
+            
+            <div className="flex items-center gap-4 mb-4">
+              <div className="relative">
+                <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-orange-500 to-amber-400 flex items-center justify-center text-white font-black shadow-[0_10px_20px_rgba(245,158,11,0.2)]">
+                  {(email || 'A')[0].toUpperCase()}
+                </div>
+                <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 border-4 border-slate-950 rounded-full" />
               </div>
               <div className="flex flex-col min-w-0">
-                <span className="text-xs font-bold text-white truncate">{email || 'Administrador'}</span>
-                <span className="text-[10px] text-slate-400 truncate">Soporte Técnico</span>
+                <span className="text-sm font-bold text-white truncate">{email?.split('@')[0] || 'admin'}</span>
+                <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Soporte IT</span>
               </div>
             </div>
+            
             <button
               onClick={logout}
-              className="flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-white/5 hover:bg-rose-500/20 hover:text-rose-400 text-xs font-bold text-slate-400 transition-all border border-transparent hover:border-rose-500/30"
+              className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-white/[0.03] hover:bg-rose-500/10 hover:text-rose-400 text-[11px] font-black uppercase tracking-widest text-slate-400 transition-all duration-300 border border-white/5 hover:border-rose-500/20"
             >
               <LogOut size={14} />
               Cerrar Sesión
