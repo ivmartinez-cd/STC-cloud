@@ -1,4 +1,8 @@
 {
+  "framework": "vite",
+  "installCommand": "cd cloud/portal && npm install",
+  "buildCommand": "cd cloud/portal && npm run build",
+  "outputDirectory": "cloud/portal/dist",
   "rewrites": [
     {
       "source": "/api/:path*",

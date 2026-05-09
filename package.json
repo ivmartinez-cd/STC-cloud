@@ -5,15 +5,14 @@
   "private": true,
   "workspaces": [
     "cloud",
-    "cloud/portal",
     "agent",
     "shared"
   ],
   "scripts": {
     "dev:cloud": "npm run dev -w cloud",
-    "dev:portal": "npm run dev -w portal",
+    "dev:portal": "cd cloud/portal && npm run dev",
     "build:cloud": "npm run build -w cloud",
-    "build:portal": "npm run build -w portal",
+    "build:portal": "cd cloud/portal && npm install && npm run build",
     "build:agent": "npx pkg agent/src/core/main.js --target node20-win-x64 --output dist/ContadorImpresoras.exe",
     "docker:up": "docker-compose up -d",
     "docker:down": "docker-compose down"
@@ -25,8 +24,5 @@
     "timescaledb"
   ],
   "author": "",
-  "license": "ISC",
-  "devDependencies": {
-    "@tailwindcss/vite": "^4.2.4"
-  }
+  "license": "ISC"
 }
