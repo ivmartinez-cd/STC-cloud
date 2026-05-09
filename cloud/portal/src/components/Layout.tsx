@@ -16,6 +16,7 @@ const Layout = () => {
   const location = useLocation();
   const { email, logout } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
 
   const isActive = (path: string) =>
     path === '/' ? location.pathname === '/' : location.pathname.startsWith(path);
@@ -32,12 +33,18 @@ const Layout = () => {
         />
       )}
 
-      {/* Sidebar */}
-      <aside className={`
-        fixed inset-y-0 left-0 w-72 bg-slate-950 text-white flex flex-col z-[70] transition-transform duration-500 cubic-bezier(0.4, 0, 0.2, 1)
-        md:translate-x-0 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
+      <aside 
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+        className={`
+        fixed inset-y-0 left-0 w-72 bg-slate-950 text-white flex flex-col z-[70] transition-all duration-500 cubic-bezier(0.4, 0, 0.2, 1)
+        ${isHovered || isMobileMenuOpen ? 'translate-x-0' : 'md:-translate-x-[280px] -translate-x-full'}
         border-r border-white/5 shadow-[20px_0_50px_rgba(0,0,0,0.3)]
       `}>
+        {/* Glow indicator when collapsed */}
+        {!isHovered && !isMobileMenuOpen && (
+          <div className="absolute top-0 right-0 w-1 h-full bg-blue-500/30 blur-sm md:block hidden" />
+        )}
         {/* Subtle Ambient Glow */}
         <div className="absolute top-0 left-0 w-full h-64 bg-blue-500/10 blur-[100px] pointer-events-none" />
 
@@ -138,7 +145,7 @@ const Layout = () => {
       </aside>
 
       {/* Main Content Area */}
-      <div className="md:pl-64 flex flex-col min-h-screen">
+      <div className="flex flex-col min-h-screen transition-all duration-500">
         {/* Top Header */}
         <header className="h-16 bg-white/80 backdrop-blur-md border-b border-slate-200 sticky top-0 z-50 px-6 flex items-center justify-between">
           <div className="flex items-center gap-4">
