@@ -11,6 +11,7 @@ import MonitorDevices from './pages/MonitorDevices';
 import DeviceDetail from './pages/DeviceDetail';
 import Reports from './pages/Reports';
 import Settings from './pages/Settings';
+import Agents from './pages/Agents';
 
 function RequireAuth() {
   const { isAuthenticated } = useAuth();
@@ -31,6 +32,7 @@ function App() {
                 <Route path="/clients/:id"   element={<ClientDetail />} />
                 <Route path="/monitors/:id"  element={<MonitorDetail />} />
                 <Route path="/monitors/:id/devices" element={<MonitorDevices />} />
+                <Route path="/agents"        element={<Agents />} />
                 <Route path="/devices/:id"   element={<DeviceDetail />} />
                 <Route path="/reports"       element={<Reports />} />
                 <Route path="/settings"      element={<Settings />} />
