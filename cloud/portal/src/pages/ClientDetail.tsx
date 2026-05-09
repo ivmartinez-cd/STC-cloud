@@ -17,6 +17,7 @@ interface Client {
   contact_email: string | null;
   address: string | null;
   country: string | null;
+  contact_phone: string | null;
   monitor_count: number;
   device_count: number;
 }
@@ -259,6 +260,15 @@ const ClientDetail = () => {
                       <Mail size={14} className="text-slate-400 group-hover:text-[#2980b9]" />
                     </div>
                     <span className="truncate">{client.contact_email}</span>
+                  </div>
+                )}
+
+                {client.contact_phone && (
+                  <div className="flex items-center gap-3 text-sm text-slate-600 group">
+                    <div className="p-1.5 bg-slate-50 rounded-lg group-hover:bg-blue-50 transition-colors">
+                      <Phone size={14} className="text-slate-400 group-hover:text-[#2980b9]" />
+                    </div>
+                    <span>{client.contact_phone}</span>
                   </div>
                 )}
 
