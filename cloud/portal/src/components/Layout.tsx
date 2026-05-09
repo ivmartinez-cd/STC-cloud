@@ -163,11 +163,6 @@ const Layout = () => {
               <Bell size={20} />
               <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-rose-500 rounded-full border-2 border-white"></span>
             </button>
-            <div className="h-8 w-[1px] bg-slate-200 mx-2 hidden sm:block"></div>
-            <div className="flex flex-col items-end hidden sm:flex">
-              <span className="text-xs font-bold text-slate-800 leading-none">Canal Directo</span>
-              <span className="text-[10px] text-emerald-500 font-bold mt-1 uppercase">Servicio Cloud</span>
-            </div>
           </div>
         </header>
 
