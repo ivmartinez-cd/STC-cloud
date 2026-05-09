@@ -1,7 +1,7 @@
 {
   "framework": "vite",
-  "buildCommand": "vite build",
-  "outputDirectory": "dist",
+  "buildCommand": "npm run build:portal",
+  "outputDirectory": "cloud/portal/dist",
   "rewrites": [
     {
       "source": "/api/:path*",
