@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../lib/api';
 import { useToast } from '../context/ToastContext';
-import { Users, Search, Building2, ChevronRight, Plus, X, Loader2, MapPin, Mail } from 'lucide-react';
+import { Users, Search, Building2, ChevronRight, Plus, X, Loader2, MapPin, Mail, AlertTriangle } from 'lucide-react';
 
 interface Client {
   id: string;
