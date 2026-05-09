@@ -41,18 +41,19 @@ const Layout = () => {
         {/* Subtle Ambient Glow */}
         <div className="absolute top-0 left-0 w-full h-64 bg-blue-500/10 blur-[100px] pointer-events-none" />
 
-        {/* Logo Section */}
+        {/* Logo Section - Integrated Design */}
         <div className="px-8 py-10 relative">
-          <Link to="/" className="flex items-center gap-4 group" onClick={() => setIsMobileMenuOpen(false)}>
-            <div className="bg-white p-2.5 rounded-2xl shadow-[0_10px_25px_rgba(255,255,255,0.05)] group-hover:scale-110 group-hover:rotate-3 transition-all duration-500">
-              <img src="/logo.png" alt="STC Cloud" className="h-6 w-auto object-contain" />
+          <Link to="/" className="flex flex-col gap-4 group" onClick={() => setIsMobileMenuOpen(false)}>
+            <div className="flex items-center">
+              <img src="/logo1.png" alt="Canal Directo" className="h-6 w-auto object-contain opacity-90 group-hover:opacity-100 transition-opacity duration-300" />
             </div>
-            <div className="flex flex-col">
-              <span className="font-montserrat font-black text-lg leading-tight tracking-tighter text-white">
+            
+            <div className="flex flex-col gap-0.5 border-l-2 border-blue-500/30 pl-4 py-1">
+              <span className="font-montserrat font-black text-xl tracking-tighter text-white">
                 STC Cloud
               </span>
-              <span className="text-[10px] text-blue-400/60 font-black uppercase tracking-[0.2em] mt-0.5">
-                Portal
+              <span className="text-[10px] text-blue-400 font-black uppercase tracking-[0.3em]">
+                Portal Maestro
               </span>
             </div>
           </Link>
