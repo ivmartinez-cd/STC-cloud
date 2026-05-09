@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useLocation, Outlet } from 'react-router-dom';
 import {
-  LayoutDashboard, Users, FileText, LogOut, Bell, Search, Settings, Menu, X, ChevronRight
+  LayoutDashboard, Users, FileText, LogOut, Search, Settings, Menu, X, ChevronRight
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -156,13 +156,6 @@ const Layout = () => {
                 className="cd-input w-full !pl-11 !bg-slate-50 border-transparent focus:!bg-white focus:!border-[#2980b9] h-10"
               />
             </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button className="p-2.5 text-slate-500 hover:text-[#2980b9] hover:bg-blue-50 rounded-xl transition-all relative">
-              <Bell size={20} />
-              <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-rose-500 rounded-full border-2 border-white"></span>
-            </button>
           </div>
         </header>
 
