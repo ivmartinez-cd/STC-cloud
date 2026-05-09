@@ -230,36 +230,51 @@ const ClientDetail = () => {
             </div>
 
             {/* Center — client info card */}
-            <div className="cd-panel rounded-xl p-5 flex flex-col justify-between">
-              <div>
-                <div className="w-10 h-10 bg-[#2980b9]/10 rounded-lg flex items-center justify-center mb-3">
-                  <Users size={18} className="text-[#2980b9]" />
+            <div className="cd-panel rounded-xl p-5 flex flex-col">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-12 h-12 bg-[#2980b9] rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20">
+                  <Users size={22} className="text-white" />
                 </div>
-                <h1 className="text-xl font-bold text-[#1a2333] truncate">{client.name}</h1>
+                <h1 className="text-xl font-bold text-[#1a2333] truncate leading-tight">
+                  {client.name}
+                  <span className="block text-xs font-normal text-slate-400 mt-0.5 tracking-wide uppercase">Cliente Registrado</span>
+                </h1>
               </div>
-              <div className="mt-4 space-y-2">
+
+              <div className="space-y-3.5">
+                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.1em] mb-1">Contacto Principal</div>
+                
                 {client.contact_name && (
-                  <div className="flex items-center gap-2 text-sm text-slate-600">
-                    <Phone size={12} className="text-slate-400 shrink-0" />
-                    {client.contact_name}
+                  <div className="flex items-center gap-3 text-sm text-slate-600 group">
+                    <div className="p-1.5 bg-slate-50 rounded-lg group-hover:bg-blue-50 transition-colors">
+                      <Users size={14} className="text-slate-400 group-hover:text-[#2980b9]" />
+                    </div>
+                    <span className="font-medium">{client.contact_name}</span>
                   </div>
                 )}
+                
                 {client.contact_email && (
-                  <div className="flex items-center gap-2 text-sm text-slate-600">
-                    <Mail size={12} className="text-slate-400 shrink-0" />
+                  <div className="flex items-center gap-3 text-sm text-slate-600 group">
+                    <div className="p-1.5 bg-slate-50 rounded-lg group-hover:bg-blue-50 transition-colors">
+                      <Mail size={14} className="text-slate-400 group-hover:text-[#2980b9]" />
+                    </div>
                     <span className="truncate">{client.contact_email}</span>
                   </div>
                 )}
+
                 {(client.address || client.country) && (
-                  <div className="flex items-center gap-2 text-sm text-slate-600">
-                    <MapPin size={12} className="text-slate-400 shrink-0" />
-                    <span className="truncate">
+                  <div className="flex items-center gap-3 text-sm text-slate-600 group pt-1">
+                    <div className="p-1.5 bg-slate-50 rounded-lg group-hover:bg-blue-50 transition-colors">
+                      <MapPin size={14} className="text-slate-400 group-hover:text-[#2980b9]" />
+                    </div>
+                    <span className="truncate text-xs">
                       {[client.address, client.country].filter(Boolean).join(', ')}
                     </span>
                   </div>
                 )}
+
                 {!client.contact_name && !client.contact_email && !client.address && (
-                  <p className="text-sm text-slate-400">Sin información de contacto.</p>
+                  <p className="text-sm text-slate-400 italic">Sin información de contacto detallada.</p>
                 )}
               </div>
             </div>
