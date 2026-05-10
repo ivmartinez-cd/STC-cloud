@@ -676,36 +676,80 @@ const start = async () => {
       return await query;
     });
 
-    // Dashboard
+    // Dashboard Estratégico (Portal Global)
     fastify.get("/api/v1/dashboard", { preHandler: portalAuth }, async () => {
-      const [devicesCount, agentsCount, readingsCount, alertsCount, recentReadings] =
-        await Promise.all([
-          db("devices").where({ active: true }).count("* as c").first(),
-          db("agents").where({ status: "active" }).count("* as c").first(),
-          db("readings").count("* as c").first(),
-          db("alerts").where({ resolved: false }).count("* as c").first(),
-          db("readings")
-            .join("devices", "readings.device_id", "devices.id")
-            .select(
-              "readings.time",
-              "readings.total_pages",
-              "readings.status",
-              "devices.brand",
-              "devices.serial",
-              "devices.ip"
-            )
-            .orderBy("readings.time", "desc")
-            .limit(10),
-        ]);
+      const fiveMinsAgo = new Date(Date.now() - 5 * 60 * 1000);
+
+      const [
+        devicesCount,
+        agentsStats,
+        clientsCount,
+        monthlyVolume,
+        topClients,
+        brandStats,
+        offlineAgents
+      ] = await Promise.all([
+        // Total dispositivos activos
+        db("devices").where({ active: true }).count("* as c").first(),
+        
+        // Stats de agentes (Online vs Total)
+        db("agents")
+          .select(
+            db.raw("COUNT(*)::int as total"),
+            db.raw("COUNT(CASE WHEN last_seen >= ? THEN 1 END)::int as online", [fiveMinsAgo])
+          )
+          .first(),
+
+        // Total clientes
+        db("clients").count("* as c").first(),
+
+        // Volumen del mes actual
+        db("readings")
+          .where("time", ">=", db.raw("date_trunc('month', now())"))
+          .select(db.raw("SUM(total_pages)::bigint as total"))
+          .first(),
+
+        // Top 5 clientes por cantidad de dispositivos
+        db("clients")
+          .select("clients.name", "clients.id")
+          .count("devices.id as device_count")
+          .leftJoin("agents", "agents.client_id", "clients.id")
+          .leftJoin("devices", "devices.agent_id", "agents.id")
+          .groupBy("clients.id", "clients.name")
+          .orderBy("device_count", "desc")
+          .limit(5),
+
+        // Distribución por marca
+        db("devices")
+          .where({ active: true })
+          .select("brand")
+          .count("* as count")
+          .groupBy("brand")
+          .orderBy("count", "desc")
+          .limit(5),
+
+        // Agentes offline con nombre de cliente
+        db("agents")
+          .join("clients", "agents.client_id", "clients.id")
+          .where("agents.last_seen", "<", fiveMinsAgo)
+          .select("agents.id", "agents.name", "clients.name as client_name", "agents.last_seen")
+          .orderBy("agents.last_seen", "desc")
+          .limit(10)
+      ]);
 
       return {
         stats: {
-          devices:  devicesCount?.c  || 0,
-          agents:   agentsCount?.c   || 0,
-          readings: readingsCount?.c || 0,
-          alerts:   alertsCount?.c   || 0,
+          devices: Number(devicesCount?.c || 0),
+          agents: {
+            total: agentsStats?.total || 0,
+            online: agentsStats?.online || 0
+          },
+          clients: Number(clientsCount?.c || 0),
+          volume: Number(monthlyVolume?.total || 0)
         },
-        recent: recentReadings,
+        topClients: topClients.map((c: any) => ({ ...c, device_count: Number(c.device_count) })),
+        brands: brandStats.map((b: any) => ({ ...b, count: Number(b.count) })),
+        offlineAgents
       };
     });
 

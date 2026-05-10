@@ -14,7 +14,7 @@ const IGNORED_COMPONENTS = new Set([
   'DeviceDetail', 'Reports', 'Settings', 'Dashboard', 'Login', 'App',
   'Fragment', 'Suspense', 'Portal', 'AreaChart', 'Area', 'Line', 'LineChart',
   'RechartsTooltip', 'PieChart', 'Pie', 'ErrorBoundary',
-  'AgentConfig', 'Agent', 'Client', 'DashboardData', 'MonitorData', 'MonitorConfig', 'Thresholds', 'Reading', 'Device', 'Icon'
+  'AgentConfig', 'Agent', 'Client', 'DashboardData', 'MonitorData', 'MonitorConfig', 'Thresholds', 'Reading', 'Device', 'Icon', 'PieChartIcon'
 ]);
 
 function checkIcons(dir) {
