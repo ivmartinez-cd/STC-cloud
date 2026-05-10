@@ -103,45 +103,39 @@ const Layout = () => {
                 className={`
                   flex items-center group relative h-12 rounded-2xl transition-all duration-300
                   ${active ? 'text-white' : 'text-slate-400 hover:text-white hover:bg-white/[0.03]'}
-                  ${isHovered ? 'px-4' : 'px-0 justify-center'}
-                `}
-                title={!isHovered ? name : ''}
-              >
-                {active && (
-                  <div className={`
-                    absolute transition-all duration-500 border border-blue-500/20 shadow-[0_0_20px_rgba(37,99,235,0.1)]
-                    ${isHovered 
-                      ? 'inset-0 bg-gradient-to-r from-blue-600/20 to-blue-600/5 rounded-2xl' 
-                      : 'left-2.5 right-2.5 top-1 bottom-1 bg-blue-600/10 rounded-2xl'}
-                  `} />
+                {active && isHovered && (
+                  <div className="absolute inset-0 bg-blue-600/10 rounded-2xl border border-blue-500/10 shadow-[0_4px_12px_rgba(0,0,0,0.1)]" />
                 )}
                 
-                <div className="flex items-center gap-4 relative z-10">
+                <div className="flex items-center gap-4 relative z-10 w-full justify-center md:justify-start">
                   <div className={`
                     flex items-center justify-center shrink-0 transition-all duration-300
-                    ${isHovered ? 'w-5' : 'w-12 h-12'}
+                    ${isHovered ? 'w-5 ml-2' : 'w-20'}
                   `}>
                     <Icon
-                      size={isHovered ? 19 : 22}
+                      size={isHovered ? 19 : 24}
                       strokeWidth={active ? 2.5 : 2}
-                      className={active ? 'text-blue-400' : 'text-slate-500 group-hover:text-blue-400 transition-colors duration-300'}
+                      className={active ? 'text-blue-400 drop-shadow-[0_0_8px_rgba(96,165,250,0.4)]' : 'text-slate-500 group-hover:text-slate-300 transition-colors duration-300'}
                     />
                   </div>
                   
                   <span className={`
                     text-[13px] font-bold whitespace-nowrap transition-all duration-500
                     ${isHovered ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4 pointer-events-none w-0'}
-                    ${active ? 'text-white' : ''}
+                    ${active ? 'text-white' : 'text-slate-400'}
                   `}>
                     {name}
                   </span>
+                  
+                  {active && isHovered && <ChevronRight size={14} className="ml-auto mr-4 text-blue-400/50" />}
                 </div>
 
-                {active && isHovered && <ChevronRight size={14} className="ml-auto text-blue-400/50 relative z-10" />}
-                
-                {/* Active Indicator Bar (Rail mode) */}
-                {active && !isHovered && (
-                  <div className="absolute left-0 top-3 bottom-3 w-1 bg-blue-500 rounded-r-full shadow-[0_0_15px_rgba(59,130,246,0.8)] z-20" />
+                {/* Active Indicator - Senior UI Pattern */}
+                {active && (
+                  <div className={`
+                    absolute left-0 bg-blue-500 rounded-r-full transition-all duration-500 shadow-[0_0_15px_rgba(59,130,246,0.6)]
+                    ${isHovered ? 'w-1 top-3 bottom-3' : 'w-1.5 top-4 bottom-4'}
+                  `} />
                 )}
               </Link>
             );
