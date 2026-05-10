@@ -56,11 +56,18 @@ const Layout = () => {
           ${isHovered ? 'px-8' : 'px-0'}
         `}>
           <Link to="/" className="flex flex-col items-center gap-4 group" onClick={() => setIsMobileMenuOpen(false)}>
-            <div className="relative">
+            <div className="relative h-10 flex items-center justify-center min-w-[40px]">
+              {/* Logo Full - Expanded */}
               <img 
                 src="/logo1.png" 
+                alt="STC Cloud" 
+                className={`h-9 w-auto object-contain transition-all duration-500 ${isHovered ? 'opacity-100 scale-100' : 'opacity-0 scale-75 absolute pointer-events-none'}`} 
+              />
+              {/* Logo Icon - Rail */}
+              <img 
+                src="/logo2.png" 
                 alt="STC" 
-                className={`h-9 w-auto object-contain transition-all duration-500 ${isHovered ? 'scale-100' : 'scale-110'}`} 
+                className={`h-10 w-auto object-contain transition-all duration-500 ${!isHovered ? 'opacity-100 scale-110' : 'opacity-0 scale-125 absolute pointer-events-none'}`} 
               />
               <div className="absolute inset-0 bg-blue-500/10 blur-xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
             </div>
