@@ -474,14 +474,24 @@ const start = async () => {
       }
     );
 
-    // Lista de agentes (portal)
+    // Lista de agentes (portal) con nombre de cliente
     fastify.get(
       "/api/v1/agents",
       { preHandler: portalAuth },
       async () =>
         await db("agents")
-          .select("id", "name", "hardware_id", "status", "last_seen", "client_id", "created_at")
-          .orderBy("created_at", "desc")
+          .join("clients", "agents.client_id", "clients.id")
+          .select(
+            "agents.id",
+            "agents.name",
+            "agents.hardware_id",
+            "agents.status",
+            "agents.last_seen",
+            "agents.client_id",
+            "agents.created_at",
+            "clients.name as client_name"
+          )
+          .orderBy("agents.created_at", "desc")
     );
 
     // Eliminar monitor (agente)

@@ -237,7 +237,8 @@ const Agents = () => {
 
   const filteredAgents = agents.filter(a => 
     a.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (a.hardware_id?.toLowerCase() ?? '').includes(searchTerm.toLowerCase())
+    (a.hardware_id?.toLowerCase() ?? '').includes(searchTerm.toLowerCase()) ||
+    (a.client_name?.toLowerCase() ?? '').includes(searchTerm.toLowerCase())
   );
 
   // ── Render ────────────────────────────────────────────────────────────────────
@@ -471,6 +472,7 @@ const Agents = () => {
               <thead>
                 <tr>
                   <th>Identificación del Nodo</th>
+                  <th>Cliente</th>
                   <th>Hardware ID</th>
                   <th>Última Sincronización</th>
                   <th className="text-center">Estado de Seguridad</th>
@@ -480,7 +482,7 @@ const Agents = () => {
               <tbody>
                 {filteredAgents.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="py-32 text-center bg-white">
+                    <td colSpan={6} className="py-32 text-center bg-white">
                       <div className="flex flex-col items-center">
                         <div className="p-6 bg-slate-50 rounded-full mb-6">
                           <Activity size={48} className="text-slate-200" />
@@ -499,6 +501,17 @@ const Agents = () => {
                         </span>
                         <span className="text-[10px] font-bold text-slate-400 uppercase">Nodo ID: {agent.id.substring(0, 8)}</span>
                       </div>
+                    </td>
+                    <td>
+                      <Link 
+                        to={`/clients/${agent.client_id}`}
+                        className="flex flex-col group/client"
+                      >
+                        <span className="text-xs font-black text-[#2980b9] group-hover/client:text-[#1a2333] transition-colors uppercase tracking-tight">
+                          {agent.client_name || 'Desconocido'}
+                        </span>
+                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Ver Expediente</span>
+                      </Link>
                     </td>
                     <td>
                       <span className="font-mono text-[11px] font-black text-slate-500 uppercase tracking-tighter bg-slate-50 px-2 py-1 rounded-lg">
