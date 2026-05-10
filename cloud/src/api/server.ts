@@ -734,7 +734,10 @@ const start = async () => {
           .where("agents.last_seen", "<", fiveMinsAgo)
           .select("agents.id", "agents.name", "clients.name as client_name", "agents.last_seen")
           .orderBy("agents.last_seen", "desc")
-          .limit(10)
+          .limit(10),
+
+        // ÚLTIMA LECTURA PROCESADA
+        db("readings").orderBy("time", "desc").select("time").first()
       ]);
 
       return {
@@ -749,7 +752,12 @@ const start = async () => {
         },
         topClients: topClients.map((c: any) => ({ ...c, device_count: Number(c.device_count) })),
         brands: brandStats.map((b: any) => ({ ...b, count: Number(b.count) })),
-        offlineAgents
+        offlineAgents,
+        systemHealth: {
+          status: 'healthy',
+          uptime: process.uptime(),
+          lastSync: brandStats.length > 0 ? (await db("readings").orderBy("time", "desc").select("time").first())?.time : null
+        }
       };
     });
 

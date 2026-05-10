@@ -39,6 +39,11 @@ interface DashboardData {
     client_name: string;
     last_seen: string;
   }>;
+  systemHealth: {
+    status: 'healthy' | 'degraded' | 'error';
+    uptime: number;
+    lastSync: string | null;
+  };
 }
 
 const StatCard = ({
@@ -305,10 +310,20 @@ const Dashboard = () => {
         </Link>
         <div className="p-6 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-[2.5rem] shadow-xl shadow-blue-900/20 text-white relative overflow-hidden group flex items-center justify-between">
           <div className="relative z-10">
-            <h4 className="text-sm font-black uppercase tracking-tight">Estado del Sistema</h4>
-            <p className="text-[10px] font-bold text-blue-100 uppercase tracking-widest mt-1">Núcleo Central Operativo</p>
+            <div className="flex items-center gap-2">
+              <div className={`w-2 h-2 rounded-full ${data?.systemHealth.status === 'healthy' ? 'bg-emerald-400 animate-pulse' : 'bg-rose-400'} `} />
+              <h4 className="text-sm font-black uppercase tracking-tight">Estado del Sistema</h4>
+            </div>
+            <div className="flex flex-col mt-1">
+              <p className="text-[10px] font-bold text-blue-100 uppercase tracking-widest">
+                Uptime: {data?.systemHealth.uptime ? Math.floor(data.systemHealth.uptime / 3600) : 0}h {data?.systemHealth.uptime ? Math.floor((data.systemHealth.uptime % 3600) / 60) : 0}m
+              </p>
+              <p className="text-[10px] font-bold text-blue-100 uppercase tracking-widest mt-0.5">
+                Sinc: {data?.systemHealth.lastSync ? new Date(data.systemHealth.lastSync).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : 'Sin datos'}
+              </p>
+            </div>
           </div>
-          <div className="w-12 h-12 rounded-full border-4 border-white/20 border-t-white animate-spin relative z-10" />
+          <ShieldAlert size={32} className={`relative z-10 transition-all duration-500 ${data?.systemHealth.status === 'healthy' ? 'text-emerald-300 opacity-20' : 'text-rose-300 opacity-100'}`} />
           <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl group-hover:bg-white/20 transition-colors duration-700" />
         </div>
       </div>
