@@ -103,6 +103,8 @@ const Layout = () => {
                 className={`
                   flex items-center group relative h-12 rounded-2xl transition-all duration-300
                   ${active ? 'text-white' : 'text-slate-400 hover:text-white hover:bg-white/[0.03]'}
+                `}
+              >
                 {active && isHovered && (
                   <div className="absolute inset-0 bg-blue-600/10 rounded-2xl border border-blue-500/10 shadow-[0_4px_12px_rgba(0,0,0,0.1)]" />
                 )}
