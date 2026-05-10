@@ -25,7 +25,7 @@ const Layout = () => {
   const toggleMobileMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] text-[#1a2333] font-sans">
+    <div className="min-h-screen bg-[#f8fafc] text-[#1a2333] font-sans flex">
       {/* Mobile Backdrop */}
       {isMobileMenuOpen && (
         <div 
@@ -34,51 +34,59 @@ const Layout = () => {
         />
       )}
 
+      {/* Sidebar - Rail + Expansion Pattern */}
       <aside 
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
         className={`
-        fixed inset-y-0 left-0 w-72 bg-slate-950 text-white flex flex-col z-[70] transition-all duration-500 cubic-bezier(0.4, 0, 0.2, 1)
-        ${isHovered || isMobileMenuOpen ? 'translate-x-0' : 'md:-translate-x-[280px] -translate-x-full'}
-        border-r border-white/5 shadow-[20px_0_50px_rgba(0,0,0,0.3)]
-      `}>
-        {/* Glow indicator when collapsed */}
-        {!isHovered && !isMobileMenuOpen && (
-          <div className="absolute top-0 right-0 w-1 h-full bg-blue-500/30 blur-sm md:block hidden" />
-        )}
+          fixed inset-y-0 left-0 bg-slate-950 text-white flex flex-col z-[70] transition-all duration-500 cubic-bezier(0.4, 0, 0.2, 1)
+          ${isHovered ? 'w-72 shadow-[20px_0_50px_rgba(0,0,0,0.3)]' : 'md:w-20 w-0 -translate-x-full md:translate-x-0 border-r border-white/5'}
+          ${isMobileMenuOpen ? 'w-72 translate-x-0' : ''}
+          overflow-hidden
+        `}
+      >
         {/* Subtle Ambient Glow */}
         <div className="absolute top-0 left-0 w-full h-64 bg-blue-500/10 blur-[100px] pointer-events-none" />
 
-        {/* Brand Header - Refined Style */}
-        <div className="px-8 py-10 relative flex flex-col items-center border-b border-white/5 bg-gradient-to-b from-white/[0.02] to-transparent">
+        {/* Brand Header */}
+        <div className={`
+          px-4 py-10 relative flex flex-col items-center border-b border-white/5 
+          bg-gradient-to-b from-white/[0.02] to-transparent shrink-0
+          transition-all duration-500
+          ${isHovered ? 'px-8' : 'px-0'}
+        `}>
           <Link to="/" className="flex flex-col items-center gap-4 group" onClick={() => setIsMobileMenuOpen(false)}>
             <div className="relative">
               <img 
                 src="/logo1.png" 
-                alt="Canal Directo" 
-                className="h-10 w-auto object-contain transition-transform duration-500 group-hover:scale-105" 
+                alt="STC" 
+                className={`h-9 w-auto object-contain transition-all duration-500 ${isHovered ? 'scale-100' : 'scale-110'}`} 
               />
               <div className="absolute inset-0 bg-blue-500/10 blur-xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
             </div>
             
-            <div className="flex items-center gap-1.5 relative z-10">
-              <span className="font-montserrat font-black text-lg tracking-tight text-white">
-                STC
-              </span>
-              <span className="font-montserrat font-black text-lg tracking-tight text-blue-500">
-                Cloud
-              </span>
+            <div className={`flex items-center gap-1.5 relative z-10 transition-all duration-500 ${isHovered ? 'opacity-100' : 'opacity-0 scale-90 h-0 overflow-hidden'}`}>
+              <span className="font-montserrat font-black text-lg tracking-tight text-white">STC</span>
+              <span className="font-montserrat font-black text-lg tracking-tight text-blue-500">Cloud</span>
             </div>
           </Link>
           
-          <button onClick={toggleMobileMenu} className="md:hidden absolute top-10 right-6 p-2 hover:bg-white/5 rounded-full transition-colors">
-            <X size={20} className="text-slate-400" />
-          </button>
+          {isMobileMenuOpen && (
+            <button onClick={toggleMobileMenu} className="md:hidden absolute top-10 right-6 p-2 hover:bg-white/5 rounded-full transition-colors">
+              <X size={20} className="text-slate-400" />
+            </button>
+          )}
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 px-4 py-4 space-y-1.5 overflow-y-auto relative custom-scrollbar">
-          <div className="text-[10px] text-slate-500 font-bold uppercase tracking-[0.2em] px-5 mb-6">Navegación</div>
+        <nav className="flex-1 px-3 py-6 space-y-2 overflow-y-auto relative custom-scrollbar overflow-x-hidden">
+          <div className={`
+            text-[10px] text-slate-500 font-bold uppercase tracking-[0.2em] mb-6 px-5 transition-opacity duration-300
+            ${isHovered ? 'opacity-100' : 'opacity-0'}
+          `}>
+            Navegación
+          </div>
+          
           {navItems.map(({ name, path, icon: Icon }) => {
             const active = isActive(path);
             return (
@@ -86,49 +94,70 @@ const Layout = () => {
                 key={path}
                 to={path}
                 onClick={() => setIsMobileMenuOpen(false)}
-                className={`flex items-center justify-between px-4 py-3 rounded-2xl text-[13px] font-bold transition-all duration-300 group relative ${
-                  active
-                    ? 'text-white'
-                    : 'text-slate-400 hover:text-white hover:bg-white/[0.03]'
-                }`}
+                className={`
+                  flex items-center group relative h-12 rounded-2xl transition-all duration-300
+                  ${active ? 'text-white' : 'text-slate-400 hover:text-white hover:bg-white/[0.03]'}
+                  ${isHovered ? 'px-4' : 'px-0 justify-center'}
+                `}
+                title={!isHovered ? name : ''}
               >
                 {active && (
                   <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 to-blue-600/5 rounded-2xl border border-blue-500/20 shadow-[0_0_20px_rgba(37,99,235,0.1)]" />
                 )}
-                {active && (
-                  <div className="absolute left-0 top-1/4 bottom-1/4 w-1 bg-blue-500 rounded-full shadow-[0_0_10px_rgba(59,130,246,0.5)]" />
-                )}
                 
                 <div className="flex items-center gap-4 relative z-10">
-                  <Icon
-                    size={19}
-                    strokeWidth={active ? 2.5 : 2}
-                    className={active ? 'text-blue-400' : 'text-slate-500 group-hover:text-blue-400 transition-colors duration-300'}
-                  />
-                  <span className={active ? 'translate-x-1 transition-transform duration-300' : 'group-hover:translate-x-1 transition-transform duration-300'}>
+                  <div className={`
+                    flex items-center justify-center shrink-0 transition-all duration-300
+                    ${isHovered ? 'w-5' : 'w-12 h-12'}
+                    ${active && !isHovered ? 'bg-blue-600/10 rounded-2xl' : ''}
+                  `}>
+                    <Icon
+                      size={isHovered ? 19 : 22}
+                      strokeWidth={active ? 2.5 : 2}
+                      className={active ? 'text-blue-400' : 'text-slate-500 group-hover:text-blue-400 transition-colors duration-300'}
+                    />
+                  </div>
+                  
+                  <span className={`
+                    text-[13px] font-bold whitespace-nowrap transition-all duration-500
+                    ${isHovered ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4 pointer-events-none w-0'}
+                    ${active ? 'text-white' : ''}
+                  `}>
                     {name}
                   </span>
                 </div>
-                {active && <ChevronRight size={14} className="text-blue-400/50 relative z-10" />}
+
+                {active && isHovered && <ChevronRight size={14} className="ml-auto text-blue-400/50 relative z-10" />}
+                
+                {/* Active Indicator Bar (Rail mode) */}
+                {active && !isHovered && (
+                  <div className="absolute left-0 top-3 bottom-3 w-1 bg-blue-500 rounded-r-full shadow-[0_0_10px_rgba(59,130,246,0.5)]" />
+                )}
               </Link>
             );
           })}
         </nav>
 
-        {/* User Profile - Premium Card */}
-        <div className="p-6 relative">
-          <div className="bg-gradient-to-br from-white/[0.05] to-transparent rounded-[2rem] border border-white/5 p-5 backdrop-blur-sm relative overflow-hidden group">
-            {/* Decorative background circle */}
-            <div className="absolute -bottom-10 -right-10 w-24 h-24 bg-blue-500/5 rounded-full blur-2xl group-hover:bg-blue-500/10 transition-colors duration-500" />
-            
-            <div className="flex items-center gap-4 mb-4">
-              <div className="relative">
-                <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-orange-500 to-amber-400 flex items-center justify-center text-white font-black shadow-[0_10px_20px_rgba(245,158,11,0.2)]">
+        {/* User Profile */}
+        <div className={`p-3 relative transition-all duration-500 ${isHovered ? 'p-6' : 'p-2'}`}>
+          <div className={`
+            bg-gradient-to-br from-white/[0.05] to-transparent rounded-[2rem] border border-white/5 backdrop-blur-sm relative overflow-hidden group
+            transition-all duration-500
+            ${isHovered ? 'p-5' : 'p-0 h-14 w-14 mx-auto flex items-center justify-center'}
+          `}>
+            <div className={`flex items-center gap-4 ${isHovered ? 'mb-4' : ''}`}>
+              <div className="relative shrink-0">
+                <div className={`
+                  rounded-2xl bg-gradient-to-tr from-orange-500 to-amber-400 flex items-center justify-center text-white font-black shadow-[0_10px_20px_rgba(245,158,11,0.2)]
+                  transition-all duration-500
+                  ${isHovered ? 'w-11 h-11' : 'w-10 h-10'}
+                `}>
                   {(email || 'A')[0].toUpperCase()}
                 </div>
-                <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 border-4 border-slate-950 rounded-full" />
+                <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-emerald-500 border-2 border-slate-950 rounded-full" />
               </div>
-              <div className="flex flex-col min-w-0">
+              
+              <div className={`flex flex-col min-w-0 transition-all duration-500 ${isHovered ? 'opacity-100' : 'opacity-0 w-0 h-0 overflow-hidden'}`}>
                 <span className="text-sm font-bold text-white truncate">{email?.split('@')[0] || 'admin'}</span>
                 <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Soporte IT</span>
               </div>
@@ -136,19 +165,26 @@ const Layout = () => {
             
             <button
               onClick={logout}
-              className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-white/[0.03] hover:bg-rose-500/10 hover:text-rose-400 text-[11px] font-black uppercase tracking-widest text-slate-400 transition-all duration-300 border border-white/5 hover:border-rose-500/20"
+              className={`
+                flex items-center justify-center gap-2 rounded-xl bg-white/[0.03] hover:bg-rose-500/10 hover:text-rose-400 text-[11px] font-black uppercase tracking-widest text-slate-400 transition-all duration-300 border border-white/5
+                ${isHovered ? 'w-full py-2.5 px-4' : 'absolute inset-0 opacity-0 group-hover:opacity-100 bg-slate-950/80 backdrop-blur-sm border-none rounded-[2rem]'}
+              `}
+              title="Cerrar Sesión"
             >
-              <LogOut size={14} />
-              Cerrar Sesión
+              <LogOut size={isHovered ? 14 : 18} />
+              {isHovered && "Salir"}
             </button>
           </div>
         </div>
       </aside>
 
       {/* Main Content Area */}
-      <div className="flex flex-col min-h-screen transition-all duration-500">
+      <div className={`
+        flex flex-col flex-1 min-h-screen transition-all duration-500 ease-in-out
+        md:pl-20 ${isHovered ? 'md:pl-72' : ''}
+      `}>
         {/* Top Header */}
-        <header className="h-16 bg-white/80 backdrop-blur-md border-b border-slate-200 sticky top-0 z-50 px-6 flex items-center justify-between">
+        <header className="h-16 bg-white/80 backdrop-blur-xl border-b border-slate-200 sticky top-0 z-50 px-6 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button 
               onClick={toggleMobileMenu}
@@ -156,21 +192,35 @@ const Layout = () => {
             >
               <Menu size={20} />
             </button>
+            <div className="hidden md:block">
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Centro de Operaciones</span>
+            </div>
           </div>
 
-          <div className="relative hidden sm:block lg:w-96">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-            <input
-              type="text"
-              placeholder="Buscar impresoras, clientes o IPs..."
-              className="cd-input w-full !pl-11 !bg-slate-50 border-transparent focus:!bg-white focus:!border-[#2980b9] h-10"
-            />
+          <div className="flex items-center gap-4">
+            <div className="relative hidden sm:flex items-center group">
+              <div className="absolute left-3.5 text-slate-400 group-focus-within:text-blue-500 transition-colors pointer-events-none">
+                <Search size={16} />
+              </div>
+              <input
+                type="text"
+                placeholder="Buscar..."
+                className="cd-input w-64 !pl-11 !pr-10 !bg-slate-100/50 border-transparent focus:!bg-white focus:!border-blue-500/30 h-10 text-sm transition-all rounded-xl"
+              />
+              <div className="absolute right-3 px-1.5 py-0.5 rounded-md bg-white border border-slate-200 text-[10px] font-bold text-slate-400 pointer-events-none">
+                Ctrl K
+              </div>
+            </div>
+            
+            <button className="p-2.5 text-slate-500 hover:bg-slate-100 rounded-xl transition-all">
+              <Settings size={20} />
+            </button>
           </div>
         </header>
 
         {/* Content */}
-        <main className="p-4 md:p-8 flex-1 animate-fade-in">
-          <div className="max-w-7xl mx-auto">
+        <main className="p-4 md:p-10 flex-1 animate-fade-in bg-[#f8fafc]">
+          <div className="max-w-[1400px] mx-auto">
             <Outlet />
           </div>
         </main>
