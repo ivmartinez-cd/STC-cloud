@@ -50,18 +50,17 @@ const Layout = () => {
 
         {/* Brand Header */}
         <div className={`
-          px-4 py-10 relative flex flex-col items-center border-b border-white/5 
-          bg-gradient-to-b from-white/[0.02] to-transparent shrink-0
+          py-10 relative flex flex-col items-center shrink-0
           transition-all duration-500
           ${isHovered ? 'px-8' : 'px-0'}
         `}>
-          <Link to="/" className="flex flex-col items-center gap-4 group" onClick={() => setIsMobileMenuOpen(false)}>
-            <div className="relative h-10 flex items-center justify-center min-w-[40px]">
+          <Link to="/" className="flex flex-col items-center group" onClick={() => setIsMobileMenuOpen(false)}>
+            <div className="relative h-14 flex items-center justify-center min-w-[40px]">
               {/* Logo Full - Expanded */}
               <img 
                 src="/logo1.png" 
                 alt="STC Cloud" 
-                className={`h-9 w-auto object-contain transition-all duration-500 ${isHovered ? 'opacity-100 scale-100' : 'opacity-0 scale-75 absolute pointer-events-none'}`} 
+                className={`h-11 w-auto object-contain transition-all duration-500 ${isHovered ? 'opacity-100 scale-100' : 'opacity-0 scale-75 absolute pointer-events-none'}`} 
               />
               {/* Logo Icon - Rail */}
               <img 
@@ -72,9 +71,9 @@ const Layout = () => {
               <div className="absolute inset-0 bg-blue-500/10 blur-xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
             </div>
             
-            <div className={`flex items-center gap-1.5 relative z-10 transition-all duration-500 ${isHovered ? 'opacity-100' : 'opacity-0 scale-90 h-0 overflow-hidden'}`}>
-              <span className="font-montserrat font-black text-lg tracking-tight text-white">STC</span>
-              <span className="font-montserrat font-black text-lg tracking-tight text-blue-500">Cloud</span>
+            <div className={`flex items-center gap-1.5 relative z-10 transition-all duration-500 -mt-3 ${isHovered ? 'opacity-100' : 'opacity-0 scale-90 h-0 overflow-hidden'}`}>
+              <span className="font-montserrat font-black text-base tracking-tight text-white">STC</span>
+              <span className="font-montserrat font-black text-base tracking-tight text-blue-500">Cloud</span>
             </div>
           </Link>
           
