@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { Key, Plus, ShieldCheck, ShieldOff, RefreshCw, X, Settings, Trash2, Cpu, Activity, Clock, Globe, Copy, Check, Server, Search, Loader2 } from 'lucide-react';
 import { api } from '../lib/api';
 import { useToast } from '../context/ToastContext';
