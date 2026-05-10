@@ -34,7 +34,8 @@ export class AgentService {
 
   async activateAgent(key: string, hardwareId: string) {
     const agent = await this.db("agents")
-      .where({ activation_key: key, status: "pending" })
+      .where({ activation_key: key })
+      .whereIn("status", ["pending", "offline"])
       .first();
 
     if (!agent) {

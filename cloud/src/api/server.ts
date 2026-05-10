@@ -11,6 +11,7 @@ import crypto from "crypto";
 
 import knexConfig from "../db/knexfile";
 import { AgentService } from "../services/agentService";
+import "../jobs/heartbeatMonitor"; // Inicia el monitor de heartbeat al arrancar
 
 dotenv.config({ path: path.join(__dirname, "../../../.env") });
 

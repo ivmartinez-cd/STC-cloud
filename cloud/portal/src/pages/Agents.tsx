@@ -8,7 +8,7 @@ interface Agent {
   id: string;
   name: string;
   hardware_id: string | null;
-  status: 'pending' | 'active' | 'revoked';
+  status: 'pending' | 'active' | 'revoked' | 'offline';
   last_seen: string | null;
   client_id: string;
   client_name?: string;
@@ -38,6 +38,14 @@ function formatLastSeen(ts: string | null) {
 }
 
 const emptyRange = (): IpRange => ({ start: '', end: '' });
+
+// Umbral: si el agente activo no tuvo heartbeat en >5 min → sin señal
+const OFFLINE_THRESHOLD_MS = 5 * 60 * 1000;
+function isAgentOffline(agent: Agent): boolean {
+  if (agent.status !== 'active' && agent.status !== 'offline') return false;
+  if (!agent.last_seen) return true;
+  return Date.now() - new Date(agent.last_seen).getTime() > OFFLINE_THRESHOLD_MS;
+}
 
 const defaultConfig: AgentConfig = {
   ip_ranges: [],
@@ -506,9 +514,14 @@ const Agents = () => {
                       </div>
                     </td>
                     <td className="text-center">
-                      {agent.status === 'active' && (
+                      {(agent.status === 'active' || agent.status === 'offline') && !isAgentOffline(agent) && (
                         <span className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-emerald-600 bg-emerald-50 px-4 py-2 rounded-full border border-emerald-100">
                           <ShieldCheck size={14} /> OPERATIVO
+                        </span>
+                      )}
+                      {isAgentOffline(agent) && (
+                        <span className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-amber-600 bg-amber-50 px-4 py-2 rounded-full border border-amber-100 animate-pulse">
+                          <Activity size={14} /> SIN SEÑAL
                         </span>
                       )}
                       {agent.status === 'revoked' && (
