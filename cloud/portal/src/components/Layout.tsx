@@ -108,14 +108,18 @@ const Layout = () => {
                 title={!isHovered ? name : ''}
               >
                 {active && (
-                  <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 to-blue-600/5 rounded-2xl border border-blue-500/20 shadow-[0_0_20px_rgba(37,99,235,0.1)]" />
+                  <div className={`
+                    absolute transition-all duration-500 border border-blue-500/20 shadow-[0_0_20px_rgba(37,99,235,0.1)]
+                    ${isHovered 
+                      ? 'inset-0 bg-gradient-to-r from-blue-600/20 to-blue-600/5 rounded-2xl' 
+                      : 'left-2.5 right-2.5 top-1 bottom-1 bg-blue-600/10 rounded-2xl'}
+                  `} />
                 )}
                 
                 <div className="flex items-center gap-4 relative z-10">
                   <div className={`
                     flex items-center justify-center shrink-0 transition-all duration-300
                     ${isHovered ? 'w-5' : 'w-12 h-12'}
-                    ${active && !isHovered ? 'bg-blue-600/10 rounded-2xl' : ''}
                   `}>
                     <Icon
                       size={isHovered ? 19 : 22}
@@ -137,7 +141,7 @@ const Layout = () => {
                 
                 {/* Active Indicator Bar (Rail mode) */}
                 {active && !isHovered && (
-                  <div className="absolute left-0 top-3 bottom-3 w-1 bg-blue-500 rounded-r-full shadow-[0_0_10px_rgba(59,130,246,0.5)]" />
+                  <div className="absolute left-0 top-3 bottom-3 w-1 bg-blue-500 rounded-r-full shadow-[0_0_15px_rgba(59,130,246,0.8)] z-20" />
                 )}
               </Link>
             );
