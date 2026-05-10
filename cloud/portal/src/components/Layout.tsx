@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import { Link, useLocation, Outlet } from 'react-router-dom';
 import {
-  LayoutDashboard, Users, FileText, LogOut, Search, Settings, Menu, X, ChevronRight
+  LayoutDashboard, Users, FileText, LogOut, Search, Settings, Menu, X, ChevronRight, Shield
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const navItems = [
   { name: 'Dashboard',     path: '/',          icon: LayoutDashboard },
   { name: 'Clientes',      path: '/clients',   icon: Users           },
+  { name: 'Agentes',       path: '/agents',    icon: Shield          },
   { name: 'Reportes',      path: '/reports',   icon: FileText        },
   { name: 'Configuración', path: '/settings',  icon: Settings        },
 ];
