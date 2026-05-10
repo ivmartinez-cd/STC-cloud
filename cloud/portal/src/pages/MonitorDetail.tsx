@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
 import {
   ChevronRight, HardDrive, Wifi, WifiOff, Users,
-  Clock, Globe, Settings, Copy, Check, Edit, X, Plus, Trash2, Loader2, Shield, Layout, Info, Activity, MapPin
+  Clock, Globe, Settings, Copy, Check, Edit, X, Plus, Trash2, Loader2, Shield, Layout, Info, Activity, MapPin, Key, RefreshCw
 } from 'lucide-react';
 import ConfirmModal from '../components/ConfirmModal';
 import { useToast } from '../context/ToastContext';
@@ -68,6 +68,11 @@ const MonitorDetail = () => {
   // Delete Monitor modal
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deletingMonitor, setDeletingMonitor] = useState(false);
+
+  // Regenerate key
+  const [regenLoading, setRegenLoading] = useState(false);
+  const [regenKey, setRegenKey] = useState<{ key: string; expiresAt: string } | null>(null);
+  const [regenCopied, setRegenCopied] = useState(false);
 
   // Edit Configuration Modal
   const [showEditModal, setShowEditModal] = useState(false);
@@ -143,6 +148,22 @@ const MonitorDetail = () => {
     } finally {
       setDeletingMonitor(false);
       setShowDeleteModal(false);
+    }
+  };
+
+  const handleRegenerateKey = async () => {
+    if (!monitor) return;
+    setRegenLoading(true);
+    try {
+      const data = await api.post<{ key: string; expiresAt: string }>(`/agents/${monitor.id}/regenerate-key`, {});
+      setRegenKey(data);
+      setRegenCopied(false);
+      showToast('Nueva llave generada — válida 24 h', 'success');
+      fetchData();
+    } catch (err: unknown) {
+      showToast('Error al regenerar: ' + (err as Error).message, 'error');
+    } finally {
+      setRegenLoading(false);
     }
   };
 
@@ -295,6 +316,14 @@ const MonitorDetail = () => {
                       title="Modificar Configuración"
                     >
                       <Edit size={18} />
+                    </button>
+                    <button
+                      onClick={handleRegenerateKey}
+                      disabled={regenLoading}
+                      className="p-3 bg-amber-500/20 hover:bg-amber-500/40 text-amber-300 rounded-2xl transition-all active:scale-90 disabled:opacity-40"
+                      title="Regenerar Llave de Activación"
+                    >
+                      {regenLoading ? <RefreshCw size={18} className="animate-spin" /> : <Key size={18} />}
                     </button>
                     <button
                       onClick={() => setShowDeleteModal(true)}
@@ -518,6 +547,64 @@ const MonitorDetail = () => {
             message={`¿Estás seguro de que deseas eliminar permanentemente el nodo "${monitor?.name}"? Esta acción desactivará el agente STC en el servidor del cliente y borrará todo el historial de dispositivos asociados.`}
             confirmText="Baja Permanente"
           />
+
+          {/* New Regeneration Key Modal */}
+          {regenKey && (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 backdrop-blur-md bg-slate-900/40 animate-in fade-in duration-300">
+              <div className="bg-white rounded-[40px] shadow-2xl w-full max-w-lg overflow-hidden border border-slate-100 animate-in zoom-in-95 duration-300">
+                <div className="bg-gradient-to-br from-amber-500 to-orange-600 p-10 text-white relative">
+                  <div className="absolute top-0 right-0 p-8 opacity-10">
+                    <Shield size={120} />
+                  </div>
+                  <div className="relative space-y-4">
+                    <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm">
+                      <Key size={32} />
+                    </div>
+                    <h3 className="text-3xl font-black tracking-tight leading-tight">Nueva Llave de Activación</h3>
+                    <p className="text-amber-50 text-sm font-bold uppercase tracking-widest opacity-80">Seguridad STC Cloud</p>
+                  </div>
+                </div>
+                
+                <div className="p-10 space-y-8">
+                  <div className="space-y-4">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] block">Comando de Activación</label>
+                    <div className="relative group">
+                      <div className="p-6 bg-slate-900 rounded-3xl font-mono text-xs text-amber-400 break-all leading-relaxed border-2 border-slate-800 group-hover:border-amber-500/30 transition-all">
+                        STC-Agent.exe --activate {regenKey.key} --url https://stc-cloud-portal.vercel.app
+                      </div>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(`STC-Agent.exe --activate ${regenKey.key} --url https://stc-cloud-portal.vercel.app`);
+                          setRegenCopied(true);
+                          setTimeout(() => setRegenCopied(false), 2000);
+                        }}
+                        className="absolute top-4 right-4 p-3 bg-white/10 hover:bg-white/20 text-white rounded-xl transition-all backdrop-blur-sm"
+                      >
+                        {regenCopied ? <Check size={16} className="text-emerald-400" /> : <Copy size={16} />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="bg-amber-50 rounded-3xl p-6 border border-amber-100 flex gap-4">
+                    <AlertTriangle className="text-amber-600 shrink-0" size={24} />
+                    <div className="space-y-1">
+                      <p className="text-xs font-black text-amber-900 uppercase tracking-tight">Importante</p>
+                      <p className="text-xs text-amber-800/70 font-bold leading-relaxed">
+                        Esta llave expirará en 24 horas. Utilízala para reactivar el agente en el servidor del cliente. El agente anterior será desconectado automáticamente.
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => setRegenKey(null)}
+                    className="w-full py-5 rounded-[24px] bg-[#1a2333] text-white font-black hover:bg-black transition-all shadow-xl shadow-slate-900/20 active:scale-95"
+                  >
+                    Entendido
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </>
       )}
     </div>
