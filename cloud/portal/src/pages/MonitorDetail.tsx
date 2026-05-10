@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
 import {
-  ChevronRight, HardDrive, Wifi, WifiOff, Users,
+  ChevronRight, HardDrive, Wifi, WifiOff, Users, AlertTriangle,
   Clock, Globe, Settings, Copy, Check, Edit, X, Plus, Trash2, Loader2, Shield, Layout, Info, Activity, MapPin, Key, RefreshCw
 } from 'lucide-react';
 import ConfirmModal from '../components/ConfirmModal';
