@@ -129,7 +129,7 @@ const Dashboard = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard 
           title="Parque Global" 
-          value={data?.stats.devices.toLocaleString() || '0'} 
+          value={data?.stats?.devices?.toLocaleString() ?? '0'} 
           subtitle="Impresoras Monitoreadas"
           icon={HardDrive} 
           color="blue" 
@@ -137,21 +137,21 @@ const Dashboard = () => {
         />
         <StatCard 
           title="Monitores" 
-          value={`${data?.stats.agents.online}/${data?.stats.agents.total}`} 
+          value={`${data?.stats?.agents?.online ?? 0}/${data?.stats?.agents?.total ?? 0}`} 
           subtitle="Nodos en línea"
           icon={Radio} 
           color="emerald" 
         />
         <StatCard 
           title="Clientes" 
-          value={data?.stats.clients || '0'} 
+          value={data?.stats?.clients?.toLocaleString() ?? '0'} 
           subtitle="Empresas Registradas"
           icon={Users} 
           color="indigo" 
         />
         <StatCard 
           title="Volumen Mensual" 
-          value={data?.stats.volume.toLocaleString() || '0'} 
+          value={data?.stats?.volume?.toLocaleString() ?? '0'} 
           subtitle="Páginas Procesadas"
           icon={BarChart3} 
           color="orange" 
