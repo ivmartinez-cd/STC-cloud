@@ -35,9 +35,9 @@ function fakeReading(ip: string, totalPages = 1000): DeviceReading {
     sysDescr: 'HP LaserJet Pro',
     sysName: 'printer1',
     serial: `SN-${ip}`,
-    totalPages,
-    monoPages: totalPages - 100,
-    colorPages: 100,
+    total_pages: totalPages,
+    mono_pages: totalPages - 100,
+    color_pages: 100,
     status: 'idle',
     time: new Date().toISOString(),
   };

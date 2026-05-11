@@ -29,7 +29,7 @@ export interface DeviceReading {
   serial:     string | null;
   total_pages: number | null;
   mono_pages:  number | null;
-  color_pages: number | null,
+  color_pages: number | null;
   status:     string;
   time:       string;
 }

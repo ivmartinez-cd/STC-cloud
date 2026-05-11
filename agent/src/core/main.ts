@@ -169,7 +169,7 @@ async function snmpScan(config: AgentConfig): Promise<void> {
         }
 
         enqueueReading(reading);
-        log('INFO', `[${ip}] ${reading.model} | Total: ${reading.totalPages ?? '-'} | Mono: ${reading.monoPages ?? '-'} | Color: ${reading.colorPages ?? '-'}`);
+        log('INFO', `[${ip}] ${reading.model} | Total: ${reading.total_pages ?? '-'} | Mono: ${reading.mono_pages ?? '-'} | Color: ${reading.color_pages ?? '-'}`);
       } catch (e: any) {
         log('WARN', `[${ip}] SNMP: ${e.message}`);
       }
