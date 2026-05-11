@@ -152,10 +152,10 @@ const Layout = () => {
               ? 'bg-gradient-to-br from-white/[0.05] to-transparent border border-white/5 backdrop-blur-sm p-5 rounded-[2rem]' 
               : 'h-12 w-full flex items-center justify-center rounded-2xl hover:bg-white/[0.03]'}
           `}>
-            <div className={`flex items-center gap-4 relative z-10 w-full ${isHovered ? 'mb-4 md:justify-start' : 'justify-center md:justify-start'}`}>
+            <div className={`flex items-center gap-4 relative z-10 w-full ${isHovered ? 'mb-4 md:justify-start' : 'justify-center'}`}>
               <div className={`
                 flex items-center justify-center shrink-0 transition-all duration-500
-                ${isHovered ? 'w-11 h-11' : 'w-20'}
+                ${isHovered ? 'w-11 h-11' : 'w-full'}
               `}>
                 <div className="relative group/avatar">
                   <div className={`
