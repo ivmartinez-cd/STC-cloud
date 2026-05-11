@@ -452,8 +452,19 @@ internal sealed class ActivationForm : Form
                 AgentService.SetAutoStart();
                 var (svcOk, svcError) = AgentService.StartService();
 
+                if (!svcOk)
+                {
+                    // Verificación final: el servicio puede haberse iniciado justo después del timeout
+                    await Task.Delay(2000);
+                    var finalStatus = AgentService.GetStatus();
+                    if (finalStatus?.Service == "running")
+                        svcOk = true;
+                }
+
                 if (svcOk)
-                    MessageBox.Show("¡Agente activado y servicio iniciado!", "Éxito", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show(
+                        "¡Agente activado! Iniciando escaneo de dispositivos inmediato. Los resultados aparecerán en el portal en breve.",
+                        "Éxito", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 else
                     MessageBox.Show($"Activado, pero no se pudo iniciar servicio:\n{svcError}", "Advertencia", MessageBoxButtons.OK, MessageBoxIcon.Warning);
 

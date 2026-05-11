@@ -75,18 +75,44 @@ export class ConfigManager {
     if (!fs.existsSync(CONFIG_PATH)) {
       throw new Error(`Config no encontrada: ${CONFIG_PATH}. Ejecutar con --activate <KEY>`);
     }
-    const encrypted = fs.readFileSync(CONFIG_PATH, 'utf8');
-    const json = await SecurityUtils.decrypt(encrypted, getHardwareId());
-    return JSON.parse(json) as AgentConfig;
+    
+    try {
+      const encrypted = fs.readFileSync(CONFIG_PATH, 'utf8');
+      const json = await SecurityUtils.decrypt(encrypted, getHardwareId());
+      return JSON.parse(json) as AgentConfig;
+    } catch (error: any) {
+      // Si la desencriptacin falla (ej. por corrupcin tras un crash), respaldamos el archivo y avisamos
+      const backupPath = `${CONFIG_PATH}.corrupt-${Date.now()}`;
+      try {
+        fs.renameSync(CONFIG_PATH, backupPath);
+      } catch (e) {
+        // Ignorar si no se puede renombrar
+      }
+      throw new Error(`Error al cargar configuracin (posible corrupcin): ${error.message}. Se ha respaldado en ${path.basename(backupPath)}`);
+    }
   }
 
   static async save(config: AgentConfig): Promise<void> {
     fs.mkdirSync(DATA_DIR, { recursive: true });
     const encrypted = await SecurityUtils.encrypt(JSON.stringify(config), getHardwareId());
-    fs.writeFileSync(CONFIG_PATH, encrypted, { encoding: 'utf8', mode: 0o600 });
+    
+    // Escritura atmica: escribir en temporal y luego renombrar
+    const tempPath = `${CONFIG_PATH}.tmp`;
+    fs.writeFileSync(tempPath, encrypted, { encoding: 'utf8', mode: 0o600 });
+    fs.renameSync(tempPath, CONFIG_PATH);
+  }
+
+  static async deleteConfig(): Promise<void> {
+    const files = [CONFIG_PATH, `${CONFIG_PATH}.tmp` ];
+    for (const f of files) {
+      if (fs.existsSync(f)) {
+        try { fs.unlinkSync(f); } catch { /* ignore */ }
+      }
+    }
   }
 
   // Backward-compat alias usado por main.ts
   static loadConfig = ConfigManager.load;
   static saveConfig = ConfigManager.save;
+  static deleteConfigAlias = ConfigManager.deleteConfig;
 }

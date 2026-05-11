@@ -615,6 +615,27 @@ const start = async () => {
           .orderBy("clients.name")
     );
 
+    // Detalle de un dispositivo específico
+    fastify.get(
+      "/api/v1/devices/:id",
+      { preHandler: portalAuth },
+      async (request, reply) => {
+        const { id } = request.params as any;
+        const device = await db("devices")
+          .where("devices.id", id)
+          .select(
+            "devices.*",
+            "agents.name as monitor_name",
+            "clients.name as client_name"
+          )
+          .join("agents", "agents.id", "devices.agent_id")
+          .join("clients", "clients.id", "agents.client_id")
+          .first();
+        if (!device) return reply.status(404).send({ error: "Dispositivo no encontrado" });
+        return device;
+      }
+    );
+
     // Dispositivos de un cliente (JOIN agents)
     fastify.get(
       "/api/v1/clients/:id/devices",

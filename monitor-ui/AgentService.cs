@@ -144,7 +144,7 @@ internal static class AgentService
             if (svc.Status != ServiceControllerStatus.Running)
             {
                 svc.Start();
-                svc.WaitForStatus(ServiceControllerStatus.Running, TimeSpan.FromSeconds(15));
+                svc.WaitForStatus(ServiceControllerStatus.Running, TimeSpan.FromSeconds(45));
             }
             return (true, null);
         }
@@ -166,7 +166,7 @@ internal static class AgentService
                 svc.WaitForStatus(ServiceControllerStatus.Stopped, TimeSpan.FromSeconds(10));
             }
             svc.Start();
-            svc.WaitForStatus(ServiceControllerStatus.Running, TimeSpan.FromSeconds(15));
+            svc.WaitForStatus(ServiceControllerStatus.Running, TimeSpan.FromSeconds(45));
             return (true, null);
         }
         catch (Exception ex)

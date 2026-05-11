@@ -13,35 +13,59 @@ interface Reading {
   total_pages: number;
   mono_pages:  number | null;
   color_pages: number | null;
+  totalPages?: number; // Compatibilidad con camelCase
+  monoPages?:  number;
+  colorPages?: number;
   status:      string;
+}
+
+interface Device {
+  id:           string;
+  brand:        string;
+  model:        string;
+  serial:       string;
+  ip:           string;
+  monitor_name: string;
+  client_name:  string;
 }
 
 const DeviceDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [readings, setReadings] = useState<Reading[]>([]);
+  const [device, setDevice]     = useState<Device | null>(null);
   const [loading, setLoading]   = useState(true);
   const [error, setError]       = useState('');
 
   const load = useCallback(() => {
     setLoading(true);
-    api.get<Reading[]>(`/devices/${id}/readings?limit=48`)
-      .then(data => setReadings(Array.isArray(data) ? data : []))
-      .catch((e: Error) => setError(e.message))
-      .finally(() => setLoading(false));
+    
+    // Cargar datos del dispositivo y lecturas en paralelo
+    Promise.all([
+      api.get<Device>(`/devices/${id}`),
+      api.get<Reading[]>(`/devices/${id}/readings?limit=48`)
+    ])
+    .then(([deviceData, readingsData]) => {
+      setDevice(deviceData);
+      setReadings(Array.isArray(readingsData) ? readingsData : []);
+    })
+    .catch((e: Error) => setError(e.message))
+    .finally(() => setLoading(false));
   }, [id]);
 
   useEffect(() => { load(); }, [load]);
 
   const latest = readings[0] ?? null;
+  
+  // Normalizar datos (manejar tanto snake_case como camelCase)
   const chartData = [...readings].reverse().map(r => ({
     time:  new Date(r.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    Total: r.total_pages,
-    Mono:  r.mono_pages  ?? 0,
-    Color: r.color_pages ?? 0,
+    Total: r.total_pages ?? r.totalPages ?? 0,
+    Mono:  r.mono_pages  ?? r.monoPages  ?? 0,
+    Color: r.color_pages ?? r.colorPages ?? 0,
   }));
 
-  const isOk = latest && ['idle', 'online', 'ok'].includes(latest.status.toLowerCase());
+  const isOk = latest && ['idle', 'online', 'ok', 'running'].includes(latest.status.toLowerCase());
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -80,6 +104,36 @@ const DeviceDetail = () => {
         <div className="cd-panel text-center py-24">
           <Printer size={64} className="mx-auto mb-6 text-slate-100" />
           <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">Sin lecturas registradas</p>
+        </div>
+      )}
+
+      {/* Device Info Bar */}
+      {device && (
+        <div className="cd-panel p-6 bg-white border-slate-100 flex flex-wrap gap-8 items-center animate-in slide-in-from-top duration-700">
+          <div className="flex items-center gap-3">
+             <div className="p-2 bg-slate-50 rounded-xl text-[#2980b9]"><Printer size={20}/></div>
+             <div>
+               <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Modelo / Marca</p>
+               <p className="text-sm font-black text-slate-700 tracking-tight">{device.model} ({device.brand})</p>
+             </div>
+          </div>
+          <div className="w-px h-8 bg-slate-100 hidden md:block"></div>
+          <div>
+            <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Número de Serie</p>
+            <p className="text-sm font-black text-slate-700 tracking-tight">{device.serial || 'S/N Desconocido'}</p>
+          </div>
+          <div className="w-px h-8 bg-slate-100 hidden md:block"></div>
+          <div>
+            <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Dirección IP</p>
+            <p className="text-sm font-black text-[#2980b9] tracking-tight">{device.ip}</p>
+          </div>
+          <div className="md:ml-auto flex items-center gap-3">
+             <div className="text-right hidden sm:block">
+               <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Cliente / Monitor</p>
+               <p className="text-xs font-bold text-slate-500">{device.client_name} · {device.monitor_name}</p>
+             </div>
+             <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+          </div>
         </div>
       )}
 
@@ -193,19 +247,19 @@ const DeviceDetail = () => {
                 <div className="space-y-2">
                   <p className="text-[10px] font-extrabold text-blue-300/60 uppercase tracking-widest ml-1">Total Acumulado</p>
                   <div className="text-5xl font-black tracking-tighter text-white">
-                    {latest.total_pages.toLocaleString()}
+                    {(latest.total_pages ?? latest.totalPages ?? 0).toLocaleString()}
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 gap-4 pt-4">
                   <div className="bg-white/5 border border-white/10 rounded-3xl p-5 backdrop-blur-sm">
                     <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-1">Monocromo</p>
-                    <p className="text-2xl font-black">{(latest.mono_pages ?? 0).toLocaleString()}</p>
+                    <p className="text-2xl font-black">{(latest.mono_pages ?? latest.monoPages ?? 0).toLocaleString()}</p>
                   </div>
                   
                   <div className="bg-gradient-to-r from-[#e67e22]/20 to-transparent border border-[#e67e22]/30 rounded-3xl p-5 backdrop-blur-sm">
                     <p className="text-[10px] font-extrabold text-[#f39c12] uppercase tracking-widest mb-1">Color</p>
-                    <p className="text-2xl font-black text-[#f39c12]">{(latest.color_pages ?? 0).toLocaleString()}</p>
+                    <p className="text-2xl font-black text-[#f39c12]">{(latest.color_pages ?? latest.colorPages ?? 0).toLocaleString()}</p>
                   </div>
                 </div>
               </div>

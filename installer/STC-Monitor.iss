@@ -70,7 +70,7 @@ Source: "..\monitor-ui\publish\STC.Monitor.UI.exe"; DestDir: "{app}"; Flags: ign
 
 ; ─── Directorio de datos ─────────────────────────────────────────────────────
 [Dirs]
-Name: "{#DataDir}"; Permissions: everyone-readexec
+Name: "{#DataDir}"; Permissions: everyone-full
 
 ; ─── Accesos directos ────────────────────────────────────────────────────────
 [Icons]
@@ -81,18 +81,22 @@ Name: "{commondesktop}\{#MyAppName}";               Filename: "{app}\STC.Monitor
 [Tasks]
 Name: "desktopicon"; Description: "Crear acceso directo en el &escritorio"; GroupDescription: "Opciones adicionales:"
 
-[Registry]
-Root: HKLM; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "{#MyAppName}"; ValueData: """{app}\STC.Monitor.UI.exe"""; Flags: uninsdeletevalue
-
 ; ─── Lanzar consola de gestión al finalizar (sin ventana de consola) ─────────
 [Run]
+; Crear tarea programada ONLOGON con privilegios elevados — evita UAC en cada reinicio (igual que HP SDS DCA)
+; Usamos ""\""{app}\...\"""" para que schtasks reciba la ruta entre comillas y no falle con espacios.
+Filename: "schtasks.exe"; Parameters: "/Create /SC ONLOGON /TN ""STC-Monitor-UI"" /TR ""\""{app}\STC.Monitor.UI.exe\"""" /RL HIGHEST /F"; Flags: runhidden; StatusMsg: "Configurando inicio automtico en bandeja..."
+; Ajustamos la tarea para que funcione en laptops (batera) y no se detenga sola
+Filename: "powershell.exe"; Parameters: "-NoProfile -WindowStyle Hidden -Command ""$t = Get-ScheduledTask -TaskName 'STC-Monitor-UI'; $t.Settings.StopIfGoingOnBatteries = $false; $t.Settings.DisallowStartIfOnBatteries = $false; $t.Settings.ExecutionTimeLimit = 'PT0S'; Set-ScheduledTask -InputObject $t"""; Flags: runhidden; StatusMsg: "Optimizando tarea programada para laptops..."
 Filename: "{app}\STC.Monitor.UI.exe"; Description: "Iniciar consola de monitoreo STC"; Flags: postinstall nowait skipifsilent shellexec; StatusMsg: "Iniciando consola de monitoreo..."
 
 ; ─── Desinstalación ──────────────────────────────────────────────────────────
 [UninstallRun]
 ; 1. Forzar cierre de la consola de bandeja si el usuario la dejó abierta
 Filename: "taskkill.exe";    Parameters: "/F /IM STC.Monitor.UI.exe /T";  Flags: runhidden skipifdoesntexist; RunOnceId: "KillUI"
-; 2. Detener y remover el servicio
+; 2. Eliminar tarea programada de inicio automático
+Filename: "schtasks.exe";    Parameters: "/Delete /TN ""STC-Monitor-UI"" /F";  Flags: runhidden; RunOnceId: "DeleteTask"
+; 3. Detener y remover el servicio
 Filename: "net.exe";         Parameters: "stop {#ServiceName}";           Flags: runhidden; RunOnceId: "StopSvc"
 Filename: "{app}\nssm.exe";  Parameters: "remove {#ServiceName} confirm";  Flags: runhidden; RunOnceId: "RemoveSvc"
 

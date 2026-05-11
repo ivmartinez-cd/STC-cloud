@@ -73,6 +73,24 @@ async function heartbeat(): Promise<void> {
         await handleRemoteConfig(data.config);
       }
       log('INFO', 'Heartbeat OK');
+      
+      // Si el escaneo estaba suspendido por un error 403 previo, lo reanudamos
+      if (!scanInterval && currentConfig.ipRanges.length > 0) {
+        log('INFO', 'Acceso restaurado — reanudando ciclo de escaneo.');
+        const scanMs = (currentConfig.scanIntervalMinutes ?? 15) * 60_000;
+        scanInterval = setInterval(() => snmpScan(currentConfig), scanMs);
+      }
+    } else if (res.status === 404) {
+      log('ERROR', 'Agente no encontrado en el servidor (posiblemente eliminado). Eliminando identidad local...');
+      await ConfigManager.deleteConfig();
+      log('INFO', 'Identidad eliminada. El agente se detendr.');
+      process.exit(0);
+    } else if (res.status === 401 || res.status === 403) {
+      log('WARN', `Acceso denegado (HTTP ${res.status}). Suspendiendo escaneos por seguridad.`);
+      if (scanInterval) {
+        clearInterval(scanInterval);
+        scanInterval = null;
+      }
     } else {
       log('WARN', `Heartbeat HTTP ${res.status}`);
     }
@@ -83,9 +101,14 @@ async function heartbeat(): Promise<void> {
 
 async function handleRemoteConfig(remote: any): Promise<void> {
   let changed = false;
+  let triggerImmediateScan = false;
 
   if (remote.ip_ranges && JSON.stringify(remote.ip_ranges) !== JSON.stringify(currentConfig.ipRanges)) {
     log('INFO', `Nuevo rango de IPs detectado: ${JSON.stringify(remote.ip_ranges)}`);
+    // Dispara scan inmediato si llegaron rangos donde antes no había ninguno
+    if (currentConfig.ipRanges.length === 0 && remote.ip_ranges.length > 0) {
+      triggerImmediateScan = true;
+    }
     currentConfig.ipRanges = remote.ip_ranges;
     changed = true;
   }
@@ -109,6 +132,13 @@ async function handleRemoteConfig(remote: any): Promise<void> {
   if (changed) {
     await ConfigManager.save(currentConfig);
     log('INFO', 'Configuración actualizada y guardada localmente.');
+  }
+
+  if (triggerImmediateScan) {
+    log('INFO', 'Primera configuración de IPs recibida — iniciando scan inmediato.');
+    await snmpScan(currentConfig);
+    log('INFO', 'Scan inmediato completado — sincronizando con el portal.');
+    await syncLoop();
   }
 }
 
@@ -306,7 +336,8 @@ async function main(): Promise<void> {
     try {
       currentConfig = await ConfigManager.load();
     } catch (e: any) {
-      log('ERROR', `Error al cargar config: ${e.message}`);
+      log('ERROR', `Error crtico al cargar configuracin: ${e.message}`);
+      log('ERROR', 'El agente no puede continuar sin una configuracin vlida. Por favor, realice la activacin de nuevo.');
       process.exit(1);
     }
 
