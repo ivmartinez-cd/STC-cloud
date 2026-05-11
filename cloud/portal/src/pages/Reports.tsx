@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../lib/api';
 import { FileText, Download, Search, Calendar, User, Printer, Filter } from 'lucide-react';
+import { REPORT_RECORD_LIMIT, REPORT_DISPLAY_LIMIT } from '../lib/constants';
 
 interface Client  { id: string; name: string }
 interface Device  { id: string; name: string; ip: string; brand: string }
@@ -62,7 +63,7 @@ const Reports = () => {
     setLoading(true); setError(''); setReadings(null);
     try {
       const data = await api.get<Reading[]>(
-        `/devices/${deviceId}/readings?from=${from}T00:00:00Z&to=${to}T23:59:59Z&limit=5000`
+        `/devices/${deviceId}/readings?from=${from}T00:00:00Z&to=${to}T23:59:59Z&limit=${REPORT_RECORD_LIMIT}`
       );
       setReadings(Array.isArray(data) ? data : []);
     } catch (e: unknown) {
@@ -215,7 +216,7 @@ const Reports = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {readings.slice(0, 100).map((r, i) => (
+                  {readings.slice(0, REPORT_DISPLAY_LIMIT).map((r, i) => (
                     <tr key={i} className="hover:bg-slate-50/50 transition-colors">
                       <td className="font-medium text-slate-500 whitespace-nowrap text-xs">
                         {new Date(r.time).toLocaleString()}

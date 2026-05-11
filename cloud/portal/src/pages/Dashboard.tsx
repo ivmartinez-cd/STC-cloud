@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { api } from '../lib/api';
 import { useToast } from '../context/ToastContext';
+import { DASHBOARD_POLL_MS } from '../lib/constants';
 import {
   Tooltip,
   ResponsiveContainer, Cell,
@@ -91,7 +92,7 @@ const Dashboard = () => {
 
   useEffect(() => {
     load();
-    const t = setInterval(load, 60_000);
+    const t = setInterval(load, DASHBOARD_POLL_MS);
     return () => clearInterval(t);
   }, [load]);
 

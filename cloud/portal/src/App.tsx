@@ -1,17 +1,18 @@
-import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, Outlet, Suspense, lazy } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ToastProvider } from './context/ToastContext';
 import Layout from './components/Layout';
 import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
-import Clients from './pages/Clients';
-import ClientDetail from './pages/ClientDetail';
-import MonitorDetail from './pages/MonitorDetail';
-import MonitorDevices from './pages/MonitorDevices';
-import DeviceDetail from './pages/DeviceDetail';
-import Reports from './pages/Reports';
-import Settings from './pages/Settings';
-import Agents from './pages/Agents';
+
+const Dashboard    = lazy(() => import('./pages/Dashboard'));
+const Clients      = lazy(() => import('./pages/Clients'));
+const ClientDetail = lazy(() => import('./pages/ClientDetail'));
+const MonitorDetail   = lazy(() => import('./pages/MonitorDetail'));
+const MonitorDevices  = lazy(() => import('./pages/MonitorDevices'));
+const DeviceDetail = lazy(() => import('./pages/DeviceDetail'));
+const Reports      = lazy(() => import('./pages/Reports'));
+const Settings     = lazy(() => import('./pages/Settings'));
+const Agents       = lazy(() => import('./pages/Agents'));
 
 function RequireAuth() {
   const { isAuthenticated, checking } = useAuth();
@@ -28,15 +29,17 @@ function App() {
             <Route path="/login" element={<Login />} />
             <Route element={<RequireAuth />}>
               <Route element={<Layout />}>
-                <Route path="/"              element={<Dashboard />} />
-                <Route path="/clients"       element={<Clients />} />
-                <Route path="/clients/:id"   element={<ClientDetail />} />
-                <Route path="/monitors/:id"  element={<MonitorDetail />} />
-                <Route path="/monitors/:id/devices" element={<MonitorDevices />} />
-                <Route path="/agents"        element={<Agents />} />
-                <Route path="/devices/:id"   element={<DeviceDetail />} />
-                <Route path="/reports"       element={<Reports />} />
-                <Route path="/settings"      element={<Settings />} />
+                <Suspense fallback={null}>
+                  <Route path="/"              element={<Dashboard />} />
+                  <Route path="/clients"       element={<Clients />} />
+                  <Route path="/clients/:id"   element={<ClientDetail />} />
+                  <Route path="/monitors/:id"  element={<MonitorDetail />} />
+                  <Route path="/monitors/:id/devices" element={<MonitorDevices />} />
+                  <Route path="/agents"        element={<Agents />} />
+                  <Route path="/devices/:id"   element={<DeviceDetail />} />
+                  <Route path="/reports"       element={<Reports />} />
+                  <Route path="/settings"      element={<Settings />} />
+                </Suspense>
               </Route>
             </Route>
             <Route path="*" element={<Navigate to="/" replace />} />

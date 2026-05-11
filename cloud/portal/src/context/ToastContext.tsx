@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
+import { TOAST_DURATION_MS } from '../lib/constants';
 import { X, CheckCircle, AlertCircle, Info, AlertTriangle } from 'lucide-react';
 
 type ToastType = 'success' | 'error' | 'info' | 'warning';
@@ -23,9 +24,12 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, []);
 
   const showToast = useCallback((message: string, type: ToastType = 'info') => {
-    const id = Math.random().toString(36).substring(2, 9);
-    setToasts(prev => [...prev, { id, message, type }]);
-    setTimeout(() => removeToast(id), 5000);
+    setToasts(prev => {
+      if (prev.some(t => t.message === message && t.type === type)) return prev;
+      const id = Math.random().toString(36).substring(2, 9);
+      setTimeout(() => removeToast(id), TOAST_DURATION_MS);
+      return [...prev, { id, message, type }];
+    });
   }, [removeToast]);
 
   return (

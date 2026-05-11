@@ -5,6 +5,8 @@ import { api } from '../lib/api';
 import { useToast } from '../context/ToastContext';
 import ConfirmModal from '../components/ConfirmModal';
 import { useTime } from '../hooks/useTime';
+import { OFFLINE_THRESHOLD_MS, SNMP_DEFAULT_COMMUNITY, SCAN_DEFAULT_INTERVAL } from '../lib/constants';
+import { formatRelativeTime } from '../lib/formatters';
 
 interface Agent {
   id: string;
@@ -29,20 +31,9 @@ interface AgentConfig {
 
 interface Client { id: string; name: string }
 
-function formatLastSeen(ts: string | null, now: number) {
-  if (!ts) return 'Nunca';
-  const min = Math.floor((now - new Date(ts).getTime()) / 60000);
-  if (min < 2)  return 'Hace un momento';
-  if (min < 60) return `Hace ${min} min`;
-  const hrs = Math.floor(min / 60);
-  if (hrs < 24) return `Hace ${hrs}h`;
-  return new Date(ts).toLocaleString();
-}
-
 const emptyRange = (): IpRange => ({ start: '', end: '' });
 
-// Umbral: si el agente activo no tuvo heartbeat en >5 min → sin señal
-const OFFLINE_THRESHOLD_MS = 5 * 60 * 1000;
+// Umbral importado desde constants — no duplicar aquí
 function isAgentOffline(agent: Agent): boolean {
   if (agent.status !== 'active' && agent.status !== 'offline') return false;
   if (!agent.last_seen) return true;
@@ -51,8 +42,8 @@ function isAgentOffline(agent: Agent): boolean {
 
 const defaultConfig: AgentConfig = {
   ip_ranges: [],
-  snmp_community: 'public',
-  scan_interval_minutes: 15,
+  snmp_community: SNMP_DEFAULT_COMMUNITY,
+  scan_interval_minutes: SCAN_DEFAULT_INTERVAL,
 };
 
 const Agents = () => {
@@ -70,8 +61,8 @@ const Agents = () => {
   const [formClientId, setFormClientId]         = useState('');
   const [formName, setFormName]                 = useState('');
   const [formRanges, setFormRanges]             = useState<IpRange[]>([emptyRange()]);
-  const [formSnmp, setFormSnmp]                 = useState('public');
-  const [formInterval, setFormInterval]         = useState(15);
+  const [formSnmp, setFormSnmp]                 = useState(SNMP_DEFAULT_COMMUNITY);
+  const [formInterval, setFormInterval]         = useState(SCAN_DEFAULT_INTERVAL);
 
   // Config modal
   const [configModal, setConfigModal]     = useState<{ id: string; name: string } | null>(null);
@@ -546,7 +537,7 @@ const Agents = () => {
                         <div className="p-2 bg-slate-50 rounded-xl group-hover/row:bg-blue-50 transition-colors">
                           <Clock size={14} className="text-slate-400 group-hover/row:text-brand" />
                         </div>
-                        <span className="text-xs font-bold uppercase text-slate-600">{formatLastSeen(agent.last_seen, now)}</span>
+                        <span className="text-xs font-bold uppercase text-slate-600">{formatRelativeTime(agent.last_seen, now)}</span>
                       </div>
                     </td>
                     <td className="text-center">

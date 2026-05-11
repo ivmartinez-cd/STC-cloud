@@ -2,6 +2,13 @@
 
 @theme {
   --color-brand: #2980b9;
+
+  /* Z-index scale — single source of truth */
+  --z-sidebar: 50;
+  --z-dropdown: 60;
+  --z-overlay: 100;
+  --z-modal: 150;
+  --z-toast: 200;
 }
 
 :root {

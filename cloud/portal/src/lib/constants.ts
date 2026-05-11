@@ -1,0 +1,9 @@
+export const OFFLINE_THRESHOLD_MS   = 5 * 60 * 1000;   // 5 min sin heartbeat → agente offline
+export const DASHBOARD_POLL_MS      = 60_000;           // intervalo de refresco del dashboard
+export const REPORT_RECORD_LIMIT    = 5_000;            // máximo registros a traer en reportes
+export const REPORT_DISPLAY_LIMIT   = 100;              // máximo filas visibles en tabla de reporte
+export const SNMP_DEFAULT_COMMUNITY = 'public';         // comunidad SNMP por defecto
+export const SCAN_DEFAULT_INTERVAL  = 15;               // minutos entre escaneos (default form)
+export const API_TIMEOUT_MS         = 15_000;           // timeout de requests HTTP
+export const TOAST_DURATION_MS      = 5_000;            // duración auto-dismiss de toasts
+export const TIME_TICK_MS           = 60_000;           // intervalo de actualización de timestamps relativos

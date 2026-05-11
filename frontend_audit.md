@@ -329,13 +329,13 @@ Tareas ordenadas por impacto/esfuerzo. Las marcadas con `⚡` son cambios de <30
 
 ### Bloque 3 — REFACTOR (deuda técnica controlada)
 
-- [ ] `⚡` **REF-03** — Agregar timeout de 15s con `AbortController` en `api.ts`
-- [ ] `⚡` **REF-08** — Agregar deduplicación de toasts en `ToastContext.tsx`
-- [ ] `⚡` **REF-07** — Añadir prop `isLoading` a `ConfirmModal`
-- [ ] **REF-02** — Crear `src/lib/formatters.ts` y centralizar funciones de fecha
-- [ ] **REF-04** — Crear `src/lib/constants.ts` y mover constantes mágicas
-- [ ] **REF-05** — Definir escala de z-index en `tailwind.config.js`
-- [ ] **REF-06** — Implementar `React.lazy()` para las páginas en `App.tsx`
+- [x] `⚡` **REF-03** ~~Agregar timeout de 15s con `AbortController` en `api.ts`~~ — **RESUELTO** `AbortController` + `setTimeout(15_000)` con `clearTimeout` en `finally`. Lanza `"La solicitud tardó demasiado"` en AbortError.
+- [x] `⚡` **REF-08** ~~Agregar deduplicación de toasts en `ToastContext.tsx`~~ — **RESUELTO** `showToast` verifica `prev.some(t => t.message === message && t.type === type)` antes de añadir. Mismo mensaje+tipo activo = ignorado.
+- [x] `⚡` **REF-07** ~~Añadir prop `isLoading` a `ConfirmModal`~~ — **YA EXISTÍA** (añadido durante CRIT-02). Prop `isLoading?: boolean` presente, botones deshabilitados y spinner activo.
+- [x] **REF-02** ~~Crear `src/lib/formatters.ts` y centralizar funciones de fecha~~ — **RESUELTO** Creado con `formatRelativeTime`, `formatDate`, `formatDateTime`. Función local `formatLastSeen` en `Agents.tsx` eliminada y reemplazada por `formatRelativeTime`.
+- [x] **REF-04** ~~Crear `src/lib/constants.ts` y mover constantes mágicas~~ — **RESUELTO** Creado `src/lib/constants.ts` con 9 constantes. Conectado en `Dashboard`, `Agents`, `Reports`, `ToastContext`, `useTime`.
+- [x] **REF-05** ~~Definir escala de z-index en `tailwind.config.js`~~ — **RESUELTO** Tailwind v4 no usa config.js. Variables CSS semánticas `--z-sidebar/dropdown/overlay/modal/toast` definidas en `@theme {}` de `index.css`. Los valores `z-[50/100/150/200]` existentes ya coinciden con la escala.
+- [x] **REF-06** ~~Implementar `React.lazy()` para las páginas en `App.tsx`~~ — **RESUELTO** 9 páginas convertidas a `lazy()`. `Suspense` envuelve todas las rutas protegidas. `Login` y `Layout` quedan estáticos (se cargan siempre).
 - [ ] **REF-01** — Fragmentar `Agents.tsx` en sub-componentes (sprint dedicado)
 
 ---
