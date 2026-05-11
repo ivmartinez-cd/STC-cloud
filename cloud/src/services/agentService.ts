@@ -161,8 +161,8 @@ export class AgentService {
           mac: device.mac,
           serial: device.serial,
           brand: device.brand,
-          model: device.model,
-          name: device.name,
+          model: (device.model || "").slice(0, 100),
+          name: (device.name || "").slice(0, 100),
         })
         .onConflict(["agent_id", "serial"])
         .merge(["ip", "model", "name", "brand", "mac"]);
@@ -202,9 +202,9 @@ export class AgentService {
           agentId,
           r.ip || null,
           r.device_id,
-          r.device_id,
-          r.brand || "unknown",
-          r.model || "unknown"
+          (r.device_id || "").slice(0, 100),
+          (r.brand || "unknown").slice(0, 50),
+          (r.model || "unknown").slice(0, 100)
         ]);
         deviceId = upserted.rows[0].id;
       }
