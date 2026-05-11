@@ -145,22 +145,31 @@ const Layout = () => {
         </nav>
 
         {/* User Profile */}
-        <div className={`p-3 relative transition-all duration-500 ${isHovered ? 'p-6' : 'p-2'}`}>
+        <div className="px-3 py-6 relative transition-all duration-500">
           <div className={`
-            bg-gradient-to-br from-white/[0.05] to-transparent border border-white/5 backdrop-blur-sm relative overflow-hidden group
-            transition-all duration-500
-            ${isHovered ? 'p-5 rounded-[2rem]' : 'h-12 w-12 mx-auto flex items-center justify-center rounded-2xl'}
+            relative overflow-hidden group transition-all duration-500
+            ${isHovered 
+              ? 'bg-gradient-to-br from-white/[0.05] to-transparent border border-white/5 backdrop-blur-sm p-5 rounded-[2rem]' 
+              : 'h-12 w-full flex items-center justify-center rounded-2xl hover:bg-white/[0.03]'}
           `}>
-            <div className={`flex items-center gap-4 ${isHovered ? 'mb-4' : ''}`}>
-              <div className="relative shrink-0">
-                <div className={`
-                  rounded-2xl bg-gradient-to-tr from-orange-500 to-amber-400 flex items-center justify-center text-white font-black shadow-[0_10px_20px_rgba(245,158,11,0.2)]
-                  transition-all duration-500
-                  ${isHovered ? 'w-11 h-11' : 'w-10 h-10'}
-                `}>
-                  {(email || 'A')[0].toUpperCase()}
+            <div className={`flex items-center gap-4 relative z-10 w-full ${isHovered ? 'mb-4 md:justify-start' : 'justify-center md:justify-start'}`}>
+              <div className={`
+                flex items-center justify-center shrink-0 transition-all duration-500
+                ${isHovered ? 'w-11 h-11' : 'w-20'}
+              `}>
+                <div className="relative">
+                  <div className={`
+                    rounded-2xl bg-gradient-to-tr from-orange-500 to-amber-400 flex items-center justify-center text-white font-black shadow-[0_10px_20px_rgba(245,158,11,0.2)]
+                    transition-all duration-500
+                    ${isHovered ? 'w-11 h-11' : 'w-10 h-10'}
+                  `}>
+                    {(email || 'A')[0].toUpperCase()}
+                  </div>
+                  <div className={`
+                    absolute bg-emerald-500 border-2 border-slate-950 rounded-full transition-all duration-500
+                    ${isHovered ? 'w-3 h-3 -bottom-1 -right-1' : 'w-2.5 h-2.5 -bottom-0.5 -right-0.5'}
+                  `} />
                 </div>
-                <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-emerald-500 border-2 border-slate-950 rounded-full" />
               </div>
               
               <div className={`flex flex-col min-w-0 transition-all duration-500 ${isHovered ? 'opacity-100' : 'opacity-0 w-0 h-0 overflow-hidden'}`}>
@@ -181,7 +190,7 @@ const Layout = () => {
               {isHovered && "Salir"}
             </button>
 
-            {/* Hover Indicator Pattern */}
+            {/* Hover Indicator Pattern - Matches Nav Style */}
             {!isHovered && (
               <div className="absolute left-0 top-3 bottom-3 w-1 bg-orange-500 rounded-r-full opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-[0_0_10px_rgba(245,158,11,0.5)]" />
             )}
