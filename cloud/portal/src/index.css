@@ -1,9 +1,13 @@
 @import "tailwindcss";
 
+@theme {
+  --color-brand: #2980b9;
+}
+
 :root {
   /* Brand Colors — Canal Directo Premium Palette */
-  --color-primary: #2563eb;       /* Modern Blue */
-  --color-primary-dark: #1e3a8a;
+  --color-primary: #2980b9;       /* STC Brand Blue */
+  --color-primary-dark: #1a5f88;
   --color-accent: #f59e0b;        /* Amber */
   --color-bg: #f8fafc;
   --color-panel: #ffffff;
@@ -48,7 +52,7 @@ body {
 
 .cd-panel:hover {
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
-  border-color: rgba(37, 99, 235, 0.1);
+  border-color: rgba(41, 128, 185, 0.1);
 }
 
 /* High-End Table System */
@@ -103,7 +107,7 @@ body {
 .cd-input:focus {
   background: white;
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.08);
+  box-shadow: 0 0 0 4px rgba(41, 128, 185, 0.08);
 }
 
 .cd-input::placeholder {

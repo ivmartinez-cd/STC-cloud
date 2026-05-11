@@ -38,7 +38,7 @@ const Settings = () => {
       {/* Monitor threshold */}
       <div className="cd-panel p-8">
         <div className="flex items-center gap-4 mb-6">
-          <div className="p-3 bg-blue-50 text-[#2980b9] rounded-2xl">
+          <div className="p-3 bg-blue-50 text-brand rounded-2xl">
             <Bell size={24} />
           </div>
           <div>
@@ -58,7 +58,7 @@ const Settings = () => {
               min={1}
               value={thresholds.monitorOfflineMinutes}
               onChange={e => setThresholds({ monitorOfflineMinutes: Number(e.target.value) })}
-              className="cd-input w-full !pl-12 !bg-white border-transparent focus:!border-[#2980b9]"
+              className="cd-input w-full !pl-12 !bg-white border-transparent focus:!border-brand"
               placeholder="Ej: 10"
             />
           </div>
@@ -76,7 +76,7 @@ const Settings = () => {
       <div className="cd-panel p-8">
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
-            <div className="p-3 bg-blue-50 text-[#2980b9] rounded-2xl">
+            <div className="p-3 bg-blue-50 text-brand rounded-2xl">
               <Mail size={24} />
             </div>
             <div>
@@ -106,7 +106,7 @@ const Settings = () => {
                   value={smtp[key as keyof typeof smtp]}
                   onChange={e => setSmtp(p => ({ ...p, [key]: e.target.value }))}
                   placeholder={placeholder}
-                  className="cd-input w-full !pl-10 !bg-slate-50/50 border-transparent focus:!bg-white focus:!border-[#2980b9]"
+                  className="cd-input w-full !pl-10 !bg-slate-50/50 border-transparent focus:!bg-white focus:!border-brand"
                 />
               </div>
             </div>
@@ -115,12 +115,12 @@ const Settings = () => {
 
         <div className="mt-8 p-6 bg-slate-50 border border-slate-100 rounded-[24px] flex items-start gap-4 shadow-sm">
           <div className="p-2 bg-white rounded-lg shadow-sm">
-            <Shield size={18} className="text-[#2980b9]" />
+            <Shield size={18} className="text-brand" />
           </div>
           <div>
             <p className="text-xs text-slate-500 leading-relaxed font-medium">
               <strong className="text-slate-700">Nota de seguridad:</strong> Las credenciales SMTP reales se gestionan exclusivamente 
-              a través del archivo <code className="bg-white px-1.5 py-0.5 rounded border border-slate-200 text-[#2980b9] font-mono font-bold">.env</code> del servidor. 
+              a través del archivo <code className="bg-white px-1.5 py-0.5 rounded border border-slate-200 text-brand font-mono font-bold">.env</code> del servidor. 
               Este formulario es una herramienta de visualización para administradores.
             </p>
           </div>
@@ -130,7 +130,7 @@ const Settings = () => {
       <div className="flex items-center gap-6 pt-4">
         <button
           onClick={save}
-          className="flex items-center gap-3 bg-[#2980b9] hover:bg-[#2471a3] text-white px-10 py-5 rounded-[24px] text-sm font-extrabold shadow-xl shadow-blue-900/10 transition-all active:scale-95 group"
+          className="flex items-center gap-3 bg-brand hover:bg-[#2471a3] text-white px-10 py-5 rounded-[24px] text-sm font-extrabold shadow-xl shadow-blue-900/10 transition-all active:scale-95 group"
         >
           <Save size={18} className="group-hover:scale-110 transition-transform" />
           Guardar Cambios

@@ -14,7 +14,8 @@ import Settings from './pages/Settings';
 import Agents from './pages/Agents';
 
 function RequireAuth() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, checking } = useAuth();
+  if (checking) return null;
   return isAuthenticated ? <Outlet /> : <Navigate to="/login" replace />;
 }
 

@@ -15,7 +15,7 @@ const navItems = [
 
 const Layout = () => {
   const location = useLocation();
-  const { email, logout } = useAuth();
+  const { userEmail: email, logout } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
 

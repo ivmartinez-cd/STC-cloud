@@ -184,12 +184,12 @@ const MonitorDetail = () => {
     <div className="space-y-8 animate-in fade-in duration-500">
       {/* Breadcrumb */}
       <nav className="flex items-center gap-3 text-xs">
-        <Link to="/clients" className="flex items-center gap-2 text-slate-400 hover:text-[#2980b9] font-bold uppercase tracking-widest transition-colors">
+        <Link to="/clients" className="flex items-center gap-2 text-slate-400 hover:text-brand font-bold uppercase tracking-widest transition-colors">
           <Users size={14} /> Clientes
         </Link>
         <ChevronRight size={14} className="text-slate-300" />
         {monitor ? (
-          <Link to={`/clients/${monitor.client_id}`} className="text-slate-400 hover:text-[#2980b9] font-bold uppercase tracking-widest transition-colors">
+          <Link to={`/clients/${monitor.client_id}`} className="text-slate-400 hover:text-brand font-bold uppercase tracking-widest transition-colors">
             {monitor.client_name}
           </Link>
         ) : (
@@ -197,7 +197,7 @@ const MonitorDetail = () => {
         )}
         <ChevronRight size={14} className="text-slate-300" />
         {monitor ? (
-          <span className="text-[#2980b9] font-extrabold uppercase tracking-widest">{monitor.name}</span>
+          <span className="text-brand font-extrabold uppercase tracking-widest">{monitor.name}</span>
         ) : (
           <div className="h-4 w-32 bg-slate-100 animate-pulse rounded-full" />
         )}
@@ -205,7 +205,7 @@ const MonitorDetail = () => {
 
       {loading && (
         <div className="flex flex-col items-center justify-center py-24 gap-4">
-          <Loader2 className="animate-spin text-[#2980b9]" size={40} />
+          <Loader2 className="animate-spin text-brand" size={40} />
           <p className="text-slate-400 font-extrabold uppercase tracking-widest text-[10px]">Cargando expediente del monitor...</p>
         </div>
       )}
@@ -224,7 +224,7 @@ const MonitorDetail = () => {
             {/* Left Column: Device Overview */}
             <div className="lg:col-span-4 space-y-6">
               <div className="cd-panel overflow-hidden border-none shadow-xl shadow-blue-900/5 group">
-                <div className="bg-gradient-to-r from-[#2980b9] to-[#3498db] px-6 py-4 flex items-center justify-between text-white">
+                <div className="bg-gradient-to-r from-brand to-[#3498db] px-6 py-4 flex items-center justify-between text-white">
                   <div className="flex items-center gap-3">
                     <HardDrive size={18} />
                     <span className="text-[10px] font-black uppercase tracking-widest">Dispositivos Vinculados</span>
@@ -233,7 +233,7 @@ const MonitorDetail = () => {
                 </div>
                 <div className="p-8 space-y-6 text-center">
                   <Link to={`/monitors/${monitor.id}/devices`} className="block group/stat">
-                    <div className="text-6xl font-black text-[#1a2333] tracking-tighter group-hover/stat:text-[#2980b9] transition-colors">
+                    <div className="text-6xl font-black text-[#1a2333] tracking-tighter group-hover/stat:text-brand transition-colors">
                       {monitor.total_device_count}
                     </div>
                     <div className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mt-2 group-hover/stat:text-[#1a2333]">
@@ -264,7 +264,7 @@ const MonitorDetail = () => {
               {/* Status Details */}
               <div className="cd-panel p-8 space-y-6">
                 <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-3">
-                  <Info size={16} className="text-[#2980b9]" /> Diagnóstico del Nodo
+                  <Info size={16} className="text-brand" /> Diagnóstico del Nodo
                 </h3>
                 
                 <div className="space-y-4">
@@ -340,7 +340,7 @@ const MonitorDetail = () => {
                     <div className="space-y-2">
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Comunidad SNMP Activa</label>
                       <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-[20px] border border-slate-100">
-                        <Shield size={16} className="text-[#2980b9]" />
+                        <Shield size={16} className="text-brand" />
                         <span className="font-mono text-sm font-bold text-[#1a2333]">{monitor.snmp_community || 'public'}</span>
                       </div>
                     </div>
@@ -348,7 +348,7 @@ const MonitorDetail = () => {
                     <div className="space-y-2">
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Frecuencia de Muestreo</label>
                       <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-[20px] border border-slate-100">
-                        <Clock size={16} className="text-[#2980b9]" />
+                        <Clock size={16} className="text-brand" />
                         <span className="text-sm font-black text-[#1a2333] uppercase">CADA {monitor.scan_interval_minutes || 15} MINUTOS</span>
                       </div>
                     </div>
@@ -360,11 +360,11 @@ const MonitorDetail = () => {
                       {monitor.ip_ranges && monitor.ip_ranges.length > 0 ? (
                         monitor.ip_ranges.map((r, i) => (
                           <div key={i} className="flex items-center gap-4 p-4 bg-blue-50/30 rounded-[20px] border border-blue-100/50 group hover:bg-blue-50 transition-colors">
-                            <div className="p-2 bg-white rounded-xl shadow-sm text-[#2980b9]">
+                            <div className="p-2 bg-white rounded-xl shadow-sm text-brand">
                               <Globe size={14} />
                             </div>
                             <div className="flex-1">
-                              <div className="text-[10px] font-black text-[#2980b9] uppercase tracking-tighter">Segmento {i + 1}</div>
+                              <div className="text-[10px] font-black text-brand uppercase tracking-tighter">Segmento {i + 1}</div>
                               <div className="font-mono text-xs font-bold text-[#1a2333]">{r.start} — {r.end}</div>
                             </div>
                           </div>
@@ -405,7 +405,7 @@ const MonitorDetail = () => {
           {showEditModal && (
             <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 bg-[#1a2333]/60 backdrop-blur-md animate-in fade-in duration-300">
               <div className="bg-white rounded-[32px] shadow-2xl w-full max-w-2xl overflow-hidden animate-in zoom-in-95 duration-300">
-                <header className="px-8 py-8 border-b border-slate-50 flex items-center justify-between bg-gradient-to-r from-[#2980b9] to-[#3498db] text-white">
+                <header className="px-8 py-8 border-b border-slate-50 flex items-center justify-between bg-gradient-to-r from-brand to-[#3498db] text-white">
                   <div className="flex items-center gap-4">
                     <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-sm">
                       <Settings size={24} />
@@ -473,7 +473,7 @@ const MonitorDetail = () => {
                       <button
                         type="button"
                         onClick={addIpRange}
-                        className="flex items-center gap-2 text-[10px] font-black text-[#2980b9] uppercase tracking-widest hover:text-[#2471a3] transition-colors"
+                        className="flex items-center gap-2 text-[10px] font-black text-brand uppercase tracking-widest hover:text-[#2471a3] transition-colors"
                       >
                         <Plus size={14} /> Agregar Rango
                       </button>
@@ -527,7 +527,7 @@ const MonitorDetail = () => {
                     <button
                       type="submit"
                       disabled={isSubmitting}
-                      className="flex-1 py-5 rounded-[24px] bg-[#2980b9] text-white font-black hover:bg-[#2471a3] transition-all shadow-xl shadow-blue-900/10 active:scale-95 flex items-center justify-center gap-3 disabled:opacity-50"
+                      className="flex-1 py-5 rounded-[24px] bg-brand text-white font-black hover:bg-[#2471a3] transition-all shadow-xl shadow-blue-900/10 active:scale-95 flex items-center justify-center gap-3 disabled:opacity-50"
                     >
                       {isSubmitting ? <Loader2 size={24} className="animate-spin" /> : 'Sincronizar Cambios'}
                     </button>
@@ -570,11 +570,11 @@ const MonitorDetail = () => {
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] block">Comando de Activación</label>
                     <div className="relative group">
                       <div className="p-6 bg-slate-900 rounded-3xl font-mono text-xs text-amber-400 break-all leading-relaxed border-2 border-slate-800 group-hover:border-amber-500/30 transition-all">
-                        STC-Agent.exe --activate {regenKey.key} --url https://stc-cloud-portal.vercel.app
+                        STC-Agent.exe --activate {regenKey.key} --url {window.location.origin}
                       </div>
                       <button
                         onClick={() => {
-                          navigator.clipboard.writeText(`STC-Agent.exe --activate ${regenKey.key} --url https://stc-cloud-portal.vercel.app`);
+                          navigator.clipboard.writeText(`STC-Agent.exe --activate ${regenKey.key} --url ${window.location.origin}`);
                           setRegenCopied(true);
                           setTimeout(() => setRegenCopied(false), 2000);
                         }}

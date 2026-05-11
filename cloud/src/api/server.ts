@@ -1,5 +1,6 @@
 import Fastify, { FastifyReply, FastifyRequest } from "fastify";
 import cors from "@fastify/cors";
+import cookie from "@fastify/cookie";
 import helmet from "@fastify/helmet";
 import jwt from "@fastify/jwt";
 import rateLimit from "@fastify/rate-limit";
@@ -58,11 +59,15 @@ async function agentAuth(request: FastifyRequest, reply: FastifyReply) {
 
 async function portalAuth(request: FastifyRequest, reply: FastifyReply) {
   try {
-    await request.jwtVerify();
-    const user = request.user as any;
-    if (user.role !== "portal") {
+    const token = request.cookies?.stc_session;
+    if (!token) {
+      return reply.status(401).send({ error: "No autenticado" });
+    }
+    const decoded = fastify.jwt.verify<{ role: string; userId: string }>(token);
+    if (decoded.role !== "portal") {
       return reply.status(403).send({ error: "Token de agente no puede acceder a esta ruta" });
     }
+    (request as any).user = decoded;
   } catch {
     return reply.status(401).send({ error: "Token inválido o expirado" });
   }
@@ -212,6 +217,12 @@ const start = async () => {
       },
     });
 
+    await fastify.register(cookie, {
+      secret: process.env.COOKIE_SECRET || process.env.JWT_SECRET!,
+      hook: "onRequest",
+      parseOptions: {},
+    });
+
     await fastify.register(jwt, { secret: process.env.JWT_SECRET! });
 
     // Rate limiting global con Redis como store (para deploys multi-instancia)
@@ -265,7 +276,26 @@ const start = async () => {
         { role: "portal", userId: adminUser },
         { expiresIn: JWT_PORTAL_TTL }
       );
-      return { token, expiresIn: JWT_PORTAL_TTL };
+      reply.setCookie("stc_session", token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "strict",
+        path: "/",
+        maxAge: 8 * 60 * 60, // 8 horas en segundos
+      });
+      return { ok: true };
+    });
+
+    // Logout del portal — elimina la cookie de sesión
+    fastify.post("/api/v1/portal/logout", async (_request, reply) => {
+      reply.clearCookie("stc_session", { path: "/" });
+      return { ok: true };
+    });
+
+    // Verificar sesión activa (usado por el frontend al cargar)
+    fastify.get("/api/v1/portal/me", { preHandler: portalAuth }, async (request) => {
+      const user = request.user as any;
+      return { userId: user.userId, role: user.role };
     });
 
     // Activar agente con one-time key

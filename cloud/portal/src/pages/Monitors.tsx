@@ -232,7 +232,7 @@ const Monitors = () => {
         <div className="flex gap-3">
           <button
             onClick={() => loadMonitors(true)}
-            className="p-3 text-slate-400 hover:text-[#2980b9] hover:bg-white rounded-xl transition-all shadow-sm border border-slate-100"
+            className="p-3 text-slate-400 hover:text-brand hover:bg-white rounded-xl transition-all shadow-sm border border-slate-100"
             title="Actualizar"
           >
             <RefreshCw size={18} />
@@ -254,7 +254,7 @@ const Monitors = () => {
       {/* Create form */}
       {showForm && (
         <div className="cd-panel border-none shadow-xl bg-gradient-to-br from-white to-slate-50 overflow-hidden ring-1 ring-slate-100 animate-in slide-in-from-top-4 duration-300">
-          <div className="bg-[#2980b9] p-4 flex items-center gap-3 text-white">
+          <div className="bg-brand p-4 flex items-center gap-3 text-white">
             <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
               <Radio size={18} />
             </div>
@@ -268,7 +268,7 @@ const Monitors = () => {
                 <select
                   value={formClientId}
                   onChange={e => setFormClientId(e.target.value)}
-                  className="cd-input w-full !h-12 !bg-white border-slate-200 focus:border-[#2980b9]"
+                  className="cd-input w-full !h-12 !bg-white border-slate-200 focus:border-brand"
                 >
                   <option value="">Seleccionar empresa...</option>
                   {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -281,7 +281,7 @@ const Monitors = () => {
                   placeholder="Ej: Sucursal Centro / Depósito A"
                   value={formName}
                   onChange={e => setFormName(e.target.value)}
-                  className="cd-input w-full !h-12 !bg-white border-slate-200 focus:border-[#2980b9]"
+                  className="cd-input w-full !h-12 !bg-white border-slate-200 focus:border-brand"
                 />
               </div>
             </div>
@@ -291,7 +291,7 @@ const Monitors = () => {
                 <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Segmentos de Red (IP Ranges)</label>
                 <button
                   onClick={() => setFormRanges(rs => [...rs, emptyRange()])}
-                  className="flex items-center gap-1.5 text-[10px] font-extrabold text-[#2980b9] uppercase hover:opacity-70 transition-opacity"
+                  className="flex items-center gap-1.5 text-[10px] font-extrabold text-brand uppercase hover:opacity-70 transition-opacity"
                 >
                   <Plus size={14} /> Agregar otro rango
                 </button>
@@ -305,7 +305,7 @@ const Monitors = () => {
                         placeholder="IP Inicio"
                         value={r.start}
                         onChange={e => updateFormRange(idx, 'start', e.target.value)}
-                        className="cd-input w-full !h-11 !bg-white border-slate-200 focus:border-[#2980b9] font-mono text-xs"
+                        className="cd-input w-full !h-11 !bg-white border-slate-200 focus:border-brand font-mono text-xs"
                       />
                     </div>
                     <div className="h-px w-4 bg-slate-200 shrink-0" />
@@ -315,7 +315,7 @@ const Monitors = () => {
                         placeholder="IP Fin"
                         value={r.end}
                         onChange={e => updateFormRange(idx, 'end', e.target.value)}
-                        className="cd-input w-full !h-11 !bg-white border-slate-200 focus:border-[#2980b9] font-mono text-xs"
+                        className="cd-input w-full !h-11 !bg-white border-slate-200 focus:border-brand font-mono text-xs"
                       />
                     </div>
                     {formRanges.length > 1 && (
@@ -338,7 +338,7 @@ const Monitors = () => {
                   type="text" 
                   value={formSnmp} 
                   onChange={e => setFormSnmp(e.target.value)}
-                  className="cd-input w-full !h-12 !bg-white border-slate-200 focus:border-[#2980b9] font-mono text-xs" 
+                  className="cd-input w-full !h-12 !bg-white border-slate-200 focus:border-brand font-mono text-xs" 
                 />
               </div>
               <div className="space-y-2">
@@ -349,7 +349,7 @@ const Monitors = () => {
                   max={1440} 
                   value={formInterval} 
                   onChange={e => setFormInterval(Number(e.target.value))}
-                  className="cd-input w-full !h-12 !bg-white border-slate-200 focus:border-[#2980b9]" 
+                  className="cd-input w-full !h-12 !bg-white border-slate-200 focus:border-brand" 
                 />
               </div>
             </div>
@@ -358,7 +358,7 @@ const Monitors = () => {
               <button 
                 onClick={generateKey} 
                 disabled={!formClientId || !formName.trim() || creating}
-                className="bg-[#2980b9] hover:bg-[#2c3e50] disabled:opacity-40 text-white rounded-xl py-3 px-8 text-sm font-extrabold transition-all shadow-lg shadow-blue-900/20 flex items-center gap-2"
+                className="bg-brand hover:bg-[#2c3e50] disabled:opacity-40 text-white rounded-xl py-3 px-8 text-sm font-extrabold transition-all shadow-lg shadow-blue-900/20 flex items-center gap-2"
               >
                 {creating ? <Loader2 size={18} className="animate-spin" /> : <Key size={18} />}
                 {creating ? 'Generando...' : 'Generar Llave de Activación'}
@@ -399,7 +399,7 @@ const Monitors = () => {
 
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20 text-slate-400 gap-3">
-            <Loader2 size={32} className="animate-spin text-[#2980b9]" />
+            <Loader2 size={32} className="animate-spin text-brand" />
             <span className="text-sm font-bold uppercase tracking-widest opacity-50">Sincronizando agentes...</span>
           </div>
         ) : (
@@ -470,7 +470,7 @@ const Monitors = () => {
                         {monitor.status !== 'revoked' && (
                           <button 
                             onClick={() => openConfigModal(monitor)}
-                            className="p-2 text-[#2980b9] hover:bg-[#2980b9] hover:text-white rounded-lg transition-all"
+                            className="p-2 text-brand hover:bg-brand hover:text-white rounded-lg transition-all"
                             title="Configurar"
                           >
                             <Settings size={16} />
@@ -519,7 +519,7 @@ const Monitors = () => {
 
             {loadingConfig ? (
               <div className="p-20 text-center flex flex-col items-center gap-4">
-                <Loader2 size={32} className="animate-spin text-[#2980b9]" />
+                <Loader2 size={32} className="animate-spin text-brand" />
                 <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">Obteniendo parámetros...</p>
               </div>
             ) : (
@@ -529,7 +529,7 @@ const Monitors = () => {
                     <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Rangos de Red Activos</label>
                     <button 
                       onClick={() => setConfigForm(f => ({ ...f, ip_ranges: [...f.ip_ranges, emptyRange()] }))}
-                      className="flex items-center gap-1.5 text-[10px] font-extrabold text-[#2980b9] uppercase"
+                      className="flex items-center gap-1.5 text-[10px] font-extrabold text-brand uppercase"
                     >
                       <Plus size={14} /> Nuevo Rango
                     </button>
@@ -558,7 +558,7 @@ const Monitors = () => {
                               })
                             }));
                           }}
-                          className="cd-input flex-1 !h-11 !bg-slate-50 border-transparent focus:!bg-white focus:!border-[#2980b9] font-mono text-xs" 
+                          className="cd-input flex-1 !h-11 !bg-slate-50 border-transparent focus:!bg-white focus:!border-brand font-mono text-xs" 
                         />
                         <div className="h-px w-4 bg-slate-200" />
                         <input 
@@ -566,7 +566,7 @@ const Monitors = () => {
                           placeholder="IP Fin" 
                           value={range.end}
                           onChange={e => setConfigForm(f => ({ ...f, ip_ranges: f.ip_ranges.map((r, i) => i === idx ? { ...r, end: e.target.value } : r) }))}
-                          className="cd-input flex-1 !h-11 !bg-slate-50 border-transparent focus:!bg-white focus:!border-[#2980b9] font-mono text-xs" 
+                          className="cd-input flex-1 !h-11 !bg-slate-50 border-transparent focus:!bg-white focus:!border-brand font-mono text-xs" 
                         />
                         <button 
                           onClick={() => setConfigForm(f => ({ ...f, ip_ranges: f.ip_ranges.filter((_, i) => i !== idx) }))}
@@ -586,7 +586,7 @@ const Monitors = () => {
                       type="text" 
                       value={configForm.snmp_community}
                       onChange={e => setConfigForm(f => ({ ...f, snmp_community: e.target.value }))}
-                      className="cd-input w-full !h-12 !bg-slate-50 border-transparent focus:!bg-white focus:!border-[#2980b9] font-mono text-xs" 
+                      className="cd-input w-full !h-12 !bg-slate-50 border-transparent focus:!bg-white focus:!border-brand font-mono text-xs" 
                     />
                   </div>
                   <div className="space-y-2">
@@ -597,7 +597,7 @@ const Monitors = () => {
                       max={1440} 
                       value={configForm.scan_interval_minutes}
                       onChange={e => setConfigForm(f => ({ ...f, scan_interval_minutes: Number(e.target.value) }))}
-                      className="cd-input w-full !h-12 !bg-slate-50 border-transparent focus:!bg-white focus:!border-[#2980b9]" 
+                      className="cd-input w-full !h-12 !bg-slate-50 border-transparent focus:!bg-white focus:!border-brand" 
                     />
                   </div>
                 </div>

@@ -89,20 +89,25 @@ const Agents = () => {
   const loadAgents = useCallback(async () => {
     try {
       const data = await api.get<Agent[]>('/agents');
-      setAgents(data);
+      setAgents(Array.isArray(data) ? data : []);
     } catch {
       showToast('Error al cargar agentes', 'error');
     }
   }, [showToast]);
 
-  useEffect(() => {
-    Promise.all([
-      api.get<Agent[]>('/agents').then(data => setAgents(Array.isArray(data) ? data : [])),
-      api.get<Client[]>('/clients').then(data => setClients(Array.isArray(data) ? data : [])),
-    ]).catch(() => {
-      showToast('Error de conexión con el servidor', 'error');
-    }).finally(() => setLoading(false));
+  const loadClients = useCallback(async () => {
+    try {
+      const data = await api.get<Client[]>('/clients');
+      setClients(Array.isArray(data) ? data : []);
+    } catch {
+      showToast('Error al cargar clientes', 'error');
+    }
   }, [showToast]);
+
+  useEffect(() => {
+    Promise.all([loadAgents(), loadClients()])
+      .finally(() => setLoading(false));
+  }, [loadAgents, loadClients]);
 
   // ── Form helpers ──────────────────────────────────────────────────────────────
 
@@ -254,7 +259,7 @@ const Agents = () => {
         <div className="flex gap-3">
           <button
             onClick={loadAgents}
-            className="p-4 bg-white border border-slate-100 text-slate-400 hover:text-[#2980b9] rounded-2xl transition-all shadow-sm active:scale-95"
+            className="p-4 bg-white border border-slate-100 text-slate-400 hover:text-brand rounded-2xl transition-all shadow-sm active:scale-95"
             title="Sincronizar Lista"
           >
             <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
@@ -264,7 +269,7 @@ const Agents = () => {
             className={`flex items-center gap-3 px-8 py-4 rounded-2xl font-black transition-all active:scale-95 shadow-xl ${
               showForm 
                 ? 'bg-slate-100 text-slate-600 hover:bg-slate-200 shadow-slate-200/20' 
-                : 'bg-gradient-to-r from-[#2980b9] to-[#3498db] text-white hover:shadow-blue-900/30'
+                : 'bg-gradient-to-r from-brand to-[#3498db] text-white hover:shadow-blue-900/30'
             }`}
           >
             {showForm ? <X size={20} /> : <Plus size={20} />}
@@ -295,7 +300,7 @@ const Agents = () => {
                   <select
                     value={formClientId}
                     onChange={e => setFormClientId(e.target.value)}
-                    className="cd-input w-full !pl-12 !bg-slate-50 border-transparent focus:!bg-white focus:!border-[#2980b9]"
+                    className="cd-input w-full !pl-12 !bg-slate-50 border-transparent focus:!bg-white focus:!border-brand"
                   >
                     <option value="">Seleccionar cliente destino...</option>
                     {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -312,7 +317,7 @@ const Agents = () => {
                     placeholder="Ej: Servidor de Monitoreo Central"
                     value={formName}
                     onChange={e => setFormName(e.target.value)}
-                    className="cd-input w-full !pl-12 !bg-slate-50 border-transparent focus:!bg-white focus:!border-[#2980b9]"
+                    className="cd-input w-full !pl-12 !bg-slate-50 border-transparent focus:!bg-white focus:!border-brand"
                   />
                 </div>
               </div>
@@ -324,7 +329,7 @@ const Agents = () => {
                 <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] ml-1">Segmentos de Red Permitidos</label>
                 <button
                   onClick={addFormRange}
-                  className="flex items-center gap-2 text-[10px] font-black text-[#2980b9] hover:text-[#2471a3] uppercase tracking-widest transition-colors"
+                  className="flex items-center gap-2 text-[10px] font-black text-brand hover:text-[#2471a3] uppercase tracking-widest transition-colors"
                 >
                   <Plus size={14} /> AGREGAR RANGO
                 </button>
@@ -371,7 +376,7 @@ const Agents = () => {
                   type="text"
                   value={formSnmp}
                   onChange={e => setFormSnmp(e.target.value)}
-                  className="cd-input w-full !bg-slate-50 border-transparent focus:!bg-white focus:!border-[#2980b9] font-mono"
+                  className="cd-input w-full !bg-slate-50 border-transparent focus:!bg-white focus:!border-brand font-mono"
                 />
               </div>
               <div className="space-y-3">
@@ -383,7 +388,7 @@ const Agents = () => {
                     min={1}
                     value={formInterval}
                     onChange={e => setFormInterval(Number(e.target.value))}
-                    className="cd-input w-full !pl-12 !bg-slate-50 border-transparent focus:!bg-white focus:!border-[#2980b9]"
+                    className="cd-input w-full !pl-12 !bg-slate-50 border-transparent focus:!bg-white focus:!border-brand"
                   />
                 </div>
               </div>
@@ -393,7 +398,7 @@ const Agents = () => {
               <button
                 onClick={generateKey}
                 disabled={!formClientId || !formName.trim() || creating}
-                className="bg-[#2980b9] hover:bg-[#2471a3] disabled:opacity-40 text-white rounded-2xl py-5 px-12 text-xs font-black shadow-2xl shadow-blue-900/20 transition-all active:scale-95 flex items-center gap-3"
+                className="bg-brand hover:bg-[#2471a3] disabled:opacity-40 text-white rounded-2xl py-5 px-12 text-xs font-black shadow-2xl shadow-blue-900/20 transition-all active:scale-95 flex items-center gap-3"
               >
                 {creating ? <RefreshCw className="animate-spin" size={18} /> : <Key size={18} />}
                 {creating ? 'GENERANDO CREDENCIALES...' : 'GENERAR LLAVE MAESTRA'}
@@ -445,7 +450,7 @@ const Agents = () => {
       <div className="cd-panel overflow-hidden border-none shadow-xl shadow-blue-900/5">
         <header className="px-10 py-8 border-b border-slate-50 flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white">
           <div className="flex items-center gap-4">
-            <div className="p-3 bg-blue-50 text-[#2980b9] rounded-2xl">
+            <div className="p-3 bg-blue-50 text-brand rounded-2xl">
               <Cpu size={24} />
             </div>
             <div>
@@ -456,7 +461,7 @@ const Agents = () => {
           
           <div className="flex items-center gap-4 flex-1 max-w-md">
             <div className="relative flex-1 group">
-              <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-[#2980b9] transition-colors" />
+              <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-brand transition-colors" />
               <input
                 type="text"
                 placeholder="Buscar nodo..."
@@ -470,7 +475,7 @@ const Agents = () => {
 
         {loading ? (
           <div className="flex flex-col items-center justify-center py-32 animate-pulse">
-            <Loader2 size={48} className="animate-spin text-[#2980b9] mb-4" />
+            <Loader2 size={48} className="animate-spin text-brand mb-4" />
             <p className="text-slate-400 font-black uppercase tracking-[0.2em] text-[10px]">Escaneando infraestructura...</p>
           </div>
         ) : (
@@ -503,7 +508,7 @@ const Agents = () => {
                   <tr key={agent.id} className="group/row transition-colors cursor-default">
                     <td>
                       <div className="flex flex-col">
-                        <span className="font-black text-[#1a2333] group-hover/row:text-[#2980b9] transition-colors uppercase tracking-tight">
+                        <span className="font-black text-[#1a2333] group-hover/row:text-brand transition-colors uppercase tracking-tight">
                           {agent.name}
                         </span>
                         <span className="text-[10px] font-bold text-slate-400 uppercase">Nodo ID: {agent.id.substring(0, 8)}</span>
@@ -514,7 +519,7 @@ const Agents = () => {
                         to={`/clients/${agent.client_id}`}
                         className="flex flex-col group/client"
                       >
-                        <span className="text-xs font-black text-[#2980b9] group-hover/client:text-[#1a2333] transition-colors uppercase tracking-tight">
+                        <span className="text-xs font-black text-brand group-hover/client:text-[#1a2333] transition-colors uppercase tracking-tight">
                           {agent.client_name || 'Desconocido'}
                         </span>
                         <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Ver Expediente</span>
@@ -528,7 +533,7 @@ const Agents = () => {
                     <td className="text-slate-500">
                       <div className="flex items-center gap-3">
                         <div className="p-2 bg-slate-50 rounded-xl group-hover/row:bg-blue-50 transition-colors">
-                          <Clock size={14} className="text-slate-400 group-hover/row:text-[#2980b9]" />
+                          <Clock size={14} className="text-slate-400 group-hover/row:text-brand" />
                         </div>
                         <span className="text-xs font-bold uppercase text-slate-600">{formatLastSeen(agent.last_seen)}</span>
                       </div>
@@ -560,7 +565,7 @@ const Agents = () => {
                         {agent.status !== 'revoked' && (
                           <button
                             onClick={() => openConfigModal(agent)}
-                            className="p-3 bg-blue-50 text-[#2980b9] hover:bg-[#2980b9] hover:text-white rounded-2xl transition-all active:scale-90 shadow-sm"
+                            className="p-3 bg-blue-50 text-brand hover:bg-brand hover:text-white rounded-2xl transition-all active:scale-90 shadow-sm"
                             title="Ajustes Remotos"
                           >
                             <Settings size={20} />
@@ -689,7 +694,7 @@ const Agents = () => {
             <div className="p-12">
               {loadingConfig ? (
                 <div className="py-24 text-center">
-                  <Loader2 size={64} className="animate-spin text-[#2980b9] mx-auto mb-6" />
+                  <Loader2 size={64} className="animate-spin text-brand mx-auto mb-6" />
                   <p className="text-slate-400 font-black uppercase tracking-widest text-[10px]">Sincronizando con Agente...</p>
                 </div>
               ) : (
@@ -700,7 +705,7 @@ const Agents = () => {
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Segmentos IP Activos</label>
                       <button
                         onClick={() => setConfigForm(f => ({ ...f, ip_ranges: [...f.ip_ranges, emptyRange()] }))}
-                        className="flex items-center gap-2 text-[10px] font-black text-[#2980b9] hover:text-[#2471a3] uppercase tracking-widest"
+                        className="flex items-center gap-2 text-[10px] font-black text-brand hover:text-[#2471a3] uppercase tracking-widest"
                       >
                         <Plus size={14} /> ADJUNTAR RANGO
                       </button>
@@ -720,7 +725,7 @@ const Agents = () => {
                             placeholder="IP Inicio"
                             value={range.start}
                             onChange={e => updateConfigRange(idx, 'start', e.target.value)}
-                            className="cd-input w-full !h-12 !text-xs font-mono !bg-white border-transparent focus:!border-[#2980b9]"
+                            className="cd-input w-full !h-12 !text-xs font-mono !bg-white border-transparent focus:!border-brand"
                           />
                           <span className="text-slate-300 font-black">—</span>
                           <input
@@ -728,7 +733,7 @@ const Agents = () => {
                             placeholder="IP Fin"
                             value={range.end}
                             onChange={e => updateConfigRange(idx, 'end', e.target.value)}
-                            className="cd-input w-full !h-12 !text-xs font-mono !bg-white border-transparent focus:!border-[#2980b9]"
+                            className="cd-input w-full !h-12 !text-xs font-mono !bg-white border-transparent focus:!border-brand"
                           />
                           <button
                             onClick={() => setConfigForm(f => ({ ...f, ip_ranges: f.ip_ranges.filter((_, i) => i !== idx) }))}
@@ -748,7 +753,7 @@ const Agents = () => {
                         type="text"
                         value={configForm.snmp_community}
                         onChange={e => setConfigForm(f => ({ ...f, snmp_community: e.target.value }))}
-                        className="cd-input w-full !h-14 !bg-slate-50 border-transparent focus:!border-[#2980b9] focus:!bg-white font-mono"
+                        className="cd-input w-full !h-14 !bg-slate-50 border-transparent focus:!border-brand focus:!bg-white font-mono"
                       />
                     </div>
                     <div className="space-y-3">
@@ -758,7 +763,7 @@ const Agents = () => {
                         min={1}
                         value={configForm.scan_interval_minutes}
                         onChange={e => setConfigForm(f => ({ ...f, scan_interval_minutes: Number(e.target.value) }))}
-                        className="cd-input w-full !h-14 !bg-slate-50 border-transparent focus:!border-[#2980b9] focus:!bg-white"
+                        className="cd-input w-full !h-14 !bg-slate-50 border-transparent focus:!border-brand focus:!bg-white"
                       />
                     </div>
                   </div>

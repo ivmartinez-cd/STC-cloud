@@ -128,10 +128,10 @@ const Clients = () => {
             placeholder="Filtrar por nombre, contacto, país..."
             value={search}
             onChange={e => setSearch(e.target.value)}
-            className="cd-input w-full !pl-12 !h-12 !bg-white shadow-sm border-slate-200 focus:border-[#2980b9]"
+            className="cd-input w-full !pl-12 !h-12 !bg-white shadow-sm border-slate-200 focus:border-brand"
           />
         </div>
-        <div className="cd-panel bg-[#2980b9] border-none p-3 flex items-center justify-center gap-3 text-white">
+        <div className="cd-panel bg-brand border-none p-3 flex items-center justify-center gap-3 text-white">
           <Users size={18} className="opacity-80" />
           <span className="text-sm font-bold uppercase tracking-wider">{filtered.length} Filtrados</span>
         </div>
@@ -141,7 +141,7 @@ const Clients = () => {
       <div className="cd-panel border-slate-200">
         {loading && (
           <div className="flex flex-col items-center justify-center py-20 text-slate-400 gap-3">
-            <Loader2 size={32} className="animate-spin text-[#2980b9]" />
+            <Loader2 size={32} className="animate-spin text-brand" />
             <span className="text-sm font-bold uppercase tracking-widest opacity-50">Sincronizando...</span>
           </div>
         )}
@@ -177,11 +177,11 @@ const Clients = () => {
                   <tr key={client.id} className="hover:bg-blue-50/30 transition-colors group">
                     <td className="px-6 py-4">
                       <Link to={`/clients/${client.id}`} className="flex items-center gap-4">
-                        <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center shrink-0 group-hover:bg-[#2980b9] group-hover:text-white transition-all">
+                        <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center shrink-0 group-hover:bg-brand group-hover:text-white transition-all">
                           <Building2 size={18} />
                         </div>
                         <div className="min-w-0">
-                          <div className="font-bold text-[#1a2333] group-hover:text-[#2980b9] transition-colors truncate">
+                          <div className="font-bold text-[#1a2333] group-hover:text-brand transition-colors truncate">
                             {client.name}
                           </div>
                           {client.country && (
@@ -202,7 +202,7 @@ const Clients = () => {
                           {client.contact_name || <span className="text-slate-300 italic font-medium">Sin asignar</span>}
                         </div>
                         {client.contact_email && (
-                          <div className="flex items-center gap-1.5 text-[10px] text-[#2980b9] font-bold truncate max-w-[200px]">
+                          <div className="flex items-center gap-1.5 text-[10px] text-brand font-bold truncate max-w-[200px]">
                             <Mail size={10} />
                             {client.contact_email}
                           </div>
@@ -210,19 +210,19 @@ const Clients = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 text-center">
-                      <span className="inline-flex items-center justify-center px-2.5 py-1 rounded-lg bg-slate-100 text-xs font-extrabold text-[#2980b9] min-w-[32px]">
+                      <span className="inline-flex items-center justify-center px-2.5 py-1 rounded-lg bg-slate-100 text-xs font-extrabold text-brand min-w-[32px]">
                         {client.monitor_count}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-center">
-                      <span className="inline-flex items-center justify-center px-2.5 py-1 rounded-lg bg-slate-100 text-xs font-extrabold text-[#2980b9] min-w-[32px]">
+                      <span className="inline-flex items-center justify-center px-2.5 py-1 rounded-lg bg-slate-100 text-xs font-extrabold text-brand min-w-[32px]">
                         {client.device_count}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right">
                       <Link 
                         to={`/clients/${client.id}`}
-                        className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-slate-300 group-hover:text-[#2980b9] group-hover:bg-white transition-all shadow-sm"
+                        className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-slate-300 group-hover:text-brand group-hover:bg-white transition-all shadow-sm"
                       >
                         <ChevronRight size={18} />
                       </Link>
@@ -239,7 +239,7 @@ const Clients = () => {
       {showModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300">
           <div className="bg-white rounded-[24px] shadow-2xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-300">
-            <header className="px-8 py-6 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-[#2980b9] to-[#2c3e50] text-white">
+            <header className="px-8 py-6 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-brand to-[#2c3e50] text-white">
               <div>
                 <h2 className="text-xl font-extrabold tracking-tight">Nuevo Cliente</h2>
                 <p className="text-blue-100/70 text-xs font-bold uppercase tracking-wider mt-1">Registro de empresa</p>
@@ -255,7 +255,7 @@ const Clients = () => {
                 <input
                   required
                   type="text"
-                  className="cd-input w-full !h-12 !bg-slate-50 border-transparent focus:!bg-white focus:!border-[#2980b9]"
+                  className="cd-input w-full !h-12 !bg-slate-50 border-transparent focus:!bg-white focus:!border-brand"
                   placeholder="Ej: Canal Directo S.A."
                   value={formData.name}
                   onChange={e => setFormData({ ...formData, name: e.target.value })}
@@ -266,7 +266,7 @@ const Clients = () => {
                 <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest ml-1">Contacto Principal</label>
                 <input
                   type="text"
-                  className="cd-input w-full !h-12 !bg-slate-50 border-transparent focus:!bg-white focus:!border-[#2980b9]"
+                  className="cd-input w-full !h-12 !bg-slate-50 border-transparent focus:!bg-white focus:!border-brand"
                   placeholder="Nombre y Apellido"
                   value={formData.contact_name}
                   onChange={e => setFormData({ ...formData, contact_name: e.target.value })}
@@ -278,7 +278,7 @@ const Clients = () => {
                   <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest ml-1">Teléfono</label>
                   <input
                     type="tel"
-                    className="cd-input w-full !h-12 !bg-slate-50 border-transparent focus:!bg-white focus:!border-[#2980b9]"
+                    className="cd-input w-full !h-12 !bg-slate-50 border-transparent focus:!bg-white focus:!border-brand"
                     placeholder="+54 11 ..."
                     value={formData.contact_phone}
                     onChange={e => setFormData({ ...formData, contact_phone: e.target.value })}
@@ -288,7 +288,7 @@ const Clients = () => {
                   <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest ml-1">Email Corporativo</label>
                   <input
                     type="email"
-                    className="cd-input w-full !h-12 !bg-slate-50 border-transparent focus:!bg-white focus:!border-[#2980b9]"
+                    className="cd-input w-full !h-12 !bg-slate-50 border-transparent focus:!bg-white focus:!border-brand"
                     placeholder="email@empresa.com"
                     value={formData.contact_email}
                     onChange={e => setFormData({ ...formData, contact_email: e.target.value })}

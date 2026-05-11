@@ -89,7 +89,7 @@ const Reports = () => {
       {/* Filters */}
       <div className="cd-panel p-8">
         <div className="flex items-center gap-3 mb-6">
-          <div className="p-2 bg-blue-50 text-[#2980b9] rounded-xl">
+          <div className="p-2 bg-blue-50 text-brand rounded-xl">
             <Filter size={20} />
           </div>
           <h3 className="text-lg font-extrabold text-[#1a2333]">Parámetros de Búsqueda</h3>
@@ -103,7 +103,7 @@ const Reports = () => {
               <select 
                 value={clientId} 
                 onChange={e => setClientId(e.target.value)} 
-                className="cd-input w-full !pl-10 !bg-slate-50 border-transparent focus:!bg-white focus:!border-[#2980b9]"
+                className="cd-input w-full !pl-10 !bg-slate-50 border-transparent focus:!bg-white focus:!border-brand"
               >
                 <option value="">Seleccionar cliente</option>
                 {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -119,7 +119,7 @@ const Reports = () => {
                 value={deviceId} 
                 onChange={e => setDeviceId(e.target.value)}
                 disabled={!clientId} 
-                className="cd-input w-full !pl-10 !bg-slate-50 border-transparent focus:!bg-white focus:!border-[#2980b9] disabled:opacity-40"
+                className="cd-input w-full !pl-10 !bg-slate-50 border-transparent focus:!bg-white focus:!border-brand disabled:opacity-40"
               >
                 <option value="">Seleccionar dispositivo</option>
                 {devices.map(d => <option key={d.id} value={d.id}>{d.brand?.toUpperCase()} — {d.name || d.ip}</option>)}
@@ -135,7 +135,7 @@ const Reports = () => {
                 type="date" 
                 value={from} 
                 onChange={e => setFrom(e.target.value)} 
-                className="cd-input w-full !pl-10 !bg-slate-50 border-transparent focus:!bg-white focus:!border-[#2980b9]" 
+                className="cd-input w-full !pl-10 !bg-slate-50 border-transparent focus:!bg-white focus:!border-brand" 
               />
             </div>
           </div>
@@ -148,7 +148,7 @@ const Reports = () => {
                 type="date" 
                 value={to} 
                 onChange={e => setTo(e.target.value)} 
-                className="cd-input w-full !pl-10 !bg-slate-50 border-transparent focus:!bg-white focus:!border-[#2980b9]" 
+                className="cd-input w-full !pl-10 !bg-slate-50 border-transparent focus:!bg-white focus:!border-brand" 
               />
             </div>
           </div>
@@ -158,7 +158,7 @@ const Reports = () => {
           <button
             onClick={generate}
             disabled={!deviceId || loading}
-            className="flex-1 flex items-center justify-center gap-2 bg-[#2980b9] hover:bg-[#2471a3] disabled:opacity-40 text-white px-8 py-4 rounded-2xl text-sm font-extrabold shadow-lg shadow-blue-900/10 transition-all active:scale-95"
+            className="flex-1 flex items-center justify-center gap-2 bg-brand hover:bg-[#2471a3] disabled:opacity-40 text-white px-8 py-4 rounded-2xl text-sm font-extrabold shadow-lg shadow-blue-900/10 transition-all active:scale-95"
           >
             <Search size={18} />
             {loading ? 'Generando Reporte...' : 'Generar Reporte Detallado'}
@@ -187,7 +187,7 @@ const Reports = () => {
         <div className="cd-panel overflow-hidden animate-in slide-in-from-bottom-4 duration-500">
           <header className="px-8 py-6 border-b border-slate-50 flex items-center justify-between bg-slate-50/30">
             <h3 className="font-extrabold text-[#1a2333] flex items-center gap-3">
-              <div className="p-2 bg-white rounded-xl shadow-sm text-[#2980b9]">
+              <div className="p-2 bg-white rounded-xl shadow-sm text-brand">
                 <FileText size={18} />
               </div>
               Lecturas Encontradas

@@ -73,13 +73,13 @@ const DeviceDetail = () => {
         <div className="flex items-center gap-4">
           <button
             onClick={() => navigate(-1)}
-            className="p-3 bg-white hover:bg-slate-50 border border-slate-100 rounded-2xl transition-all text-slate-400 hover:text-[#2980b9] shadow-sm active:scale-95"
+            className="p-3 bg-white hover:bg-slate-50 border border-slate-100 rounded-2xl transition-all text-slate-400 hover:text-brand shadow-sm active:scale-95"
           >
             <ArrowLeft size={20} />
           </button>
           <div>
             <div className="flex items-center gap-2">
-              <Printer size={16} className="text-[#2980b9]" />
+              <Printer size={16} className="text-brand" />
               <h1 className="text-3xl font-extrabold text-[#1a2333] tracking-tight">Detalle del Dispositivo</h1>
             </div>
             <p className="text-slate-400 text-sm mt-1 font-medium">Análisis de rendimiento y contadores históricos</p>
@@ -88,7 +88,7 @@ const DeviceDetail = () => {
         <button
           onClick={load}
           disabled={loading}
-          className="p-3 bg-white text-slate-400 hover:text-[#2980b9] border border-slate-100 rounded-2xl transition-all shadow-sm active:scale-95 disabled:opacity-40"
+          className="p-3 bg-white text-slate-400 hover:text-brand border border-slate-100 rounded-2xl transition-all shadow-sm active:scale-95 disabled:opacity-40"
         >
           <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
         </button>
@@ -111,7 +111,7 @@ const DeviceDetail = () => {
       {device && (
         <div className="cd-panel p-6 bg-white border-slate-100 flex flex-wrap gap-8 items-center animate-in slide-in-from-top duration-700">
           <div className="flex items-center gap-3">
-             <div className="p-2 bg-slate-50 rounded-xl text-[#2980b9]"><Printer size={20}/></div>
+             <div className="p-2 bg-slate-50 rounded-xl text-brand"><Printer size={20}/></div>
              <div>
                <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Modelo / Marca</p>
                <p className="text-sm font-black text-slate-700 tracking-tight">{device.model} ({device.brand})</p>
@@ -125,7 +125,7 @@ const DeviceDetail = () => {
           <div className="w-px h-8 bg-slate-100 hidden md:block"></div>
           <div>
             <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Dirección IP</p>
-            <p className="text-sm font-black text-[#2980b9] tracking-tight">{device.ip}</p>
+            <p className="text-sm font-black text-brand tracking-tight">{device.ip}</p>
           </div>
           <div className="md:ml-auto flex items-center gap-3">
              <div className="text-right hidden sm:block">
@@ -144,7 +144,7 @@ const DeviceDetail = () => {
             <div className="cd-panel p-8">
               <div className="flex items-center justify-between mb-8">
                 <h3 className="font-extrabold text-[#1a2333] text-lg flex items-center gap-3">
-                  <TrendingUp size={20} className="text-[#2980b9]" />
+                  <TrendingUp size={20} className="text-brand" />
                   Tendencia de Impresión
                 </h3>
                 <div className="flex gap-2">
@@ -203,9 +203,9 @@ const DeviceDetail = () => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="cd-panel p-6 border-l-4 border-l-[#2980b9]">
+              <div className="cd-panel p-6 border-l-4 border-l-brand">
                 <div className="flex items-center gap-4">
-                  <div className="p-3 bg-blue-50 text-[#2980b9] rounded-2xl">
+                  <div className="p-3 bg-blue-50 text-brand rounded-2xl">
                     <Activity size={20} />
                   </div>
                   <div>

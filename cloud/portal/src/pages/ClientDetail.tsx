@@ -180,12 +180,12 @@ const ClientDetail = () => {
     <div className="space-y-8 animate-in fade-in duration-500">
       {/* Breadcrumb */}
       <nav className="flex items-center gap-3 text-xs">
-        <Link to="/clients" className="flex items-center gap-2 text-slate-400 hover:text-[#2980b9] font-bold uppercase tracking-widest transition-colors">
+        <Link to="/clients" className="flex items-center gap-2 text-slate-400 hover:text-brand font-bold uppercase tracking-widest transition-colors">
           <Users size={14} /> Clientes
         </Link>
         <ChevronRight size={14} className="text-slate-300" />
         {client ? (
-          <span className="text-[#2980b9] font-extrabold uppercase tracking-widest">{client.name}</span>
+          <span className="text-brand font-extrabold uppercase tracking-widest">{client.name}</span>
         ) : (
           <div className="h-4 w-24 bg-slate-100 animate-pulse rounded-full" />
         )}
@@ -193,7 +193,7 @@ const ClientDetail = () => {
 
       {loading && (
         <div className="flex flex-col items-center justify-center py-24 gap-4">
-          <Loader2 className="animate-spin text-[#2980b9]" size={40} />
+          <Loader2 className="animate-spin text-brand" size={40} />
           <p className="text-slate-400 font-extrabold uppercase tracking-widest text-[10px]">Cargando expediente del cliente...</p>
         </div>
       )}
@@ -211,8 +211,8 @@ const ClientDetail = () => {
 
             {/* Metrics */}
             <div className="flex flex-col gap-4">
-              <div className="cd-panel p-5 border-l-4 border-l-[#2980b9] flex items-center gap-5">
-                <div className="p-3 bg-blue-50 text-[#2980b9] rounded-2xl">
+              <div className="cd-panel p-5 border-l-4 border-l-brand flex items-center gap-5">
+                <div className="p-3 bg-blue-50 text-brand rounded-2xl">
                   <HardDrive size={24} />
                 </div>
                 <div>
@@ -248,19 +248,19 @@ const ClientDetail = () => {
             <div className="cd-panel p-8 flex flex-col justify-between">
               <div>
                 <div className="flex items-center gap-5 mb-8">
-                  <div className="w-16 h-16 bg-blue-50 text-[#2980b9] rounded-2xl flex items-center justify-center shadow-sm">
+                  <div className="w-16 h-16 bg-blue-50 text-brand rounded-2xl flex items-center justify-center shadow-sm">
                     <Users size={32} />
                   </div>
                   <div>
                     <h1 className="text-2xl font-black text-[#1a2333] tracking-tight">{client.name}</h1>
-                    <span className="text-[10px] font-extrabold text-[#2980b9] uppercase tracking-[0.2em]">Perfil Corporativo</span>
+                    <span className="text-[10px] font-extrabold text-brand uppercase tracking-[0.2em]">Perfil Corporativo</span>
                   </div>
                 </div>
 
                 <div className="space-y-4">
                   {client.contact_name && (
                     <div className="flex items-center gap-4 group">
-                      <div className="p-2 bg-slate-50 text-slate-400 rounded-xl group-hover:bg-blue-50 group-hover:text-[#2980b9] transition-colors">
+                      <div className="p-2 bg-slate-50 text-slate-400 rounded-xl group-hover:bg-blue-50 group-hover:text-brand transition-colors">
                         <Users size={16} />
                       </div>
                       <span className="font-bold text-sm text-[#1a2333]">{client.contact_name}</span>
@@ -269,7 +269,7 @@ const ClientDetail = () => {
                   
                   {client.contact_email && (
                     <div className="flex items-center gap-4 group">
-                      <div className="p-2 bg-slate-50 text-slate-400 rounded-xl group-hover:bg-blue-50 group-hover:text-[#2980b9] transition-colors">
+                      <div className="p-2 bg-slate-50 text-slate-400 rounded-xl group-hover:bg-blue-50 group-hover:text-brand transition-colors">
                         <Mail size={16} />
                       </div>
                       <span className="text-sm text-slate-600 truncate font-medium">{client.contact_email}</span>
@@ -278,7 +278,7 @@ const ClientDetail = () => {
 
                   {client.contact_phone && (
                     <div className="flex items-center gap-4 group">
-                      <div className="p-2 bg-slate-50 text-slate-400 rounded-xl group-hover:bg-blue-50 group-hover:text-[#2980b9] transition-colors">
+                      <div className="p-2 bg-slate-50 text-slate-400 rounded-xl group-hover:bg-blue-50 group-hover:text-brand transition-colors">
                         <Phone size={16} />
                       </div>
                       <span className="text-sm text-slate-600 font-medium">{client.contact_phone}</span>
@@ -287,7 +287,7 @@ const ClientDetail = () => {
 
                   {(client.address || client.country) && (
                     <div className="flex items-center gap-4 group">
-                      <div className="p-2 bg-slate-50 text-slate-400 rounded-xl group-hover:bg-blue-50 group-hover:text-[#2980b9] transition-colors">
+                      <div className="p-2 bg-slate-50 text-slate-400 rounded-xl group-hover:bg-blue-50 group-hover:text-brand transition-colors">
                         <MapPin size={16} />
                       </div>
                       <span className="text-xs text-slate-500 font-medium leading-tight">
@@ -303,7 +303,7 @@ const ClientDetail = () => {
             <div className="cd-panel p-8 flex flex-col justify-between">
               <div>
                 <h3 className="text-sm font-extrabold text-[#1a2333] uppercase tracking-widest flex items-center gap-3 mb-6">
-                  <TrendingUp size={16} className="text-[#2980b9]" />
+                  <TrendingUp size={16} className="text-brand" />
                   Consumo Mensual
                 </h3>
                 {usage.length === 0 ? (
@@ -345,7 +345,7 @@ const ClientDetail = () => {
           <div className="space-y-6 pt-4">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-black text-[#1a2333] tracking-tight flex items-center gap-4">
-                <div className="p-2 bg-blue-50 text-[#2980b9] rounded-xl shadow-sm">
+                <div className="p-2 bg-blue-50 text-brand rounded-xl shadow-sm">
                   <Radio size={20} />
                 </div>
                 Infraestructura de Monitoreo
@@ -355,7 +355,7 @@ const ClientDetail = () => {
               </h2>
               <button
                 onClick={() => setShowMonitorModal(true)}
-                className="bg-[#2980b9] hover:bg-[#2471a3] text-white px-6 py-3 rounded-2xl flex items-center gap-3 text-sm font-extrabold shadow-lg shadow-blue-900/10 transition-all active:scale-95 group"
+                className="bg-brand hover:bg-[#2471a3] text-white px-6 py-3 rounded-2xl flex items-center gap-3 text-sm font-extrabold shadow-lg shadow-blue-900/10 transition-all active:scale-95 group"
               >
                 <Plus size={20} className="group-hover:rotate-90 transition-transform duration-300" />
                 Registrar Nuevo Monitor
@@ -386,10 +386,10 @@ const ClientDetail = () => {
                         <td>
                           <Link to={`/monitors/${m.id}`} className="flex items-center gap-4 group/m">
                             <div className="p-3 bg-slate-50 rounded-2xl group-hover/m:bg-blue-50 transition-colors">
-                              <Radio size={16} className="text-slate-400 group-hover/m:text-[#2980b9]" />
+                              <Radio size={16} className="text-slate-400 group-hover/m:text-brand" />
                             </div>
                             <div>
-                              <p className="font-extrabold text-[#1a2333] group-hover/m:text-[#2980b9] transition-colors">{m.name}</p>
+                              <p className="font-extrabold text-[#1a2333] group-hover/m:text-brand transition-colors">{m.name}</p>
                               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">ID: {m.id.slice(0, 8)}</p>
                             </div>
                           </Link>
@@ -406,7 +406,7 @@ const ClientDetail = () => {
                         <td className="text-center">
                           <Link 
                             to={`/monitors/${m.id}/devices`} 
-                            className="inline-flex items-center justify-center min-w-[40px] h-10 px-3 rounded-2xl bg-slate-100 text-sm font-black text-[#2980b9] hover:bg-[#2980b9] hover:text-white hover:shadow-lg hover:shadow-blue-500/20 transition-all active:scale-90"
+                            className="inline-flex items-center justify-center min-w-[40px] h-10 px-3 rounded-2xl bg-slate-100 text-sm font-black text-brand hover:bg-brand hover:text-white hover:shadow-lg hover:shadow-blue-500/20 transition-all active:scale-90"
                           >
                             {m.device_count}
                           </Link>
@@ -439,7 +439,7 @@ const ClientDetail = () => {
           {showMonitorModal && (
             <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 bg-[#1a2333]/60 backdrop-blur-md animate-in fade-in duration-300">
               <div className="bg-white rounded-[32px] shadow-2xl w-full max-w-xl overflow-hidden animate-in zoom-in-95 duration-300">
-                <header className="px-8 py-8 border-b border-slate-50 flex items-center justify-between bg-gradient-to-r from-[#2980b9] to-[#3498db] text-white">
+                <header className="px-8 py-8 border-b border-slate-50 flex items-center justify-between bg-gradient-to-r from-brand to-[#3498db] text-white">
                   <div className="flex items-center gap-4">
                     <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-sm">
                       <Radio size={24} />
@@ -472,11 +472,11 @@ const ClientDetail = () => {
                         <input
                           readOnly
                           value={activationKey}
-                          className="cd-input w-full font-mono text-sm !bg-slate-50 !py-6 !pl-6 !pr-16 border-transparent focus:!border-[#2980b9] cursor-default"
+                          className="cd-input w-full font-mono text-sm !bg-slate-50 !py-6 !pl-6 !pr-16 border-transparent focus:!border-brand cursor-default"
                         />
                         <button
                           onClick={copyKey}
-                          className="absolute right-4 top-1/2 -translate-y-1/2 p-3 bg-white rounded-xl shadow-md text-[#2980b9] hover:bg-[#2980b9] hover:text-white transition-all active:scale-90"
+                          className="absolute right-4 top-1/2 -translate-y-1/2 p-3 bg-white rounded-xl shadow-md text-brand hover:bg-brand hover:text-white transition-all active:scale-90"
                         >
                           {keyCopied ? <Check size={18} /> : <Copy size={18} />}
                         </button>
@@ -484,7 +484,7 @@ const ClientDetail = () => {
                     </div>
 
                     <div className="bg-blue-50 border border-blue-100 rounded-2xl p-6 flex items-start gap-4">
-                       <Info size={20} className="text-[#2980b9] shrink-0 mt-1" />
+                       <Info size={20} className="text-brand shrink-0 mt-1" />
                        <p className="text-xs text-slate-500 font-medium leading-relaxed">
                          Esta clave es confidencial y solo puede usarse una vez. Una vez activado el agente, el nodo comenzará a reportar métricas automáticamente.
                        </p>
@@ -492,7 +492,7 @@ const ClientDetail = () => {
 
                     <button
                       onClick={closeMonitorModal}
-                      className="w-full py-5 rounded-[24px] bg-[#2980b9] text-white font-black hover:bg-[#2471a3] transition-all shadow-xl shadow-blue-900/10 active:scale-95"
+                      className="w-full py-5 rounded-[24px] bg-brand text-white font-black hover:bg-[#2471a3] transition-all shadow-xl shadow-blue-900/10 active:scale-95"
                     >
                       Entendido, Volver al Cliente
                     </button>
@@ -597,7 +597,7 @@ const ClientDetail = () => {
                       <button
                         type="submit"
                         disabled={monitorSubmitting}
-                        className="flex-1 py-5 rounded-[24px] bg-[#2980b9] text-white font-black hover:bg-[#2471a3] transition-all shadow-xl shadow-blue-900/10 active:scale-95 flex items-center justify-center gap-3 disabled:opacity-50"
+                        className="flex-1 py-5 rounded-[24px] bg-brand text-white font-black hover:bg-[#2471a3] transition-all shadow-xl shadow-blue-900/10 active:scale-95 flex items-center justify-center gap-3 disabled:opacity-50"
                       >
                         {monitorSubmitting ? <Loader2 size={24} className="animate-spin" /> : 'Confirmar Registro'}
                       </button>

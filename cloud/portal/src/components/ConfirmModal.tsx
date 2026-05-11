@@ -41,7 +41,7 @@ const ConfirmModal = ({
 
         <div className="p-8">
           <div className="flex flex-col items-center text-center gap-4 mb-8">
-            <div className={`p-4 rounded-2xl ${isDanger ? 'bg-rose-50 text-rose-500' : 'bg-blue-50 text-[#2980b9]'}`}>
+            <div className={`p-4 rounded-2xl ${isDanger ? 'bg-rose-50 text-rose-500' : 'bg-blue-50 text-brand'}`}>
               <AlertTriangle size={32} />
             </div>
             <p className="text-sm font-medium text-slate-600 leading-relaxed">

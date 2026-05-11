@@ -68,21 +68,21 @@ const MonitorDevices = () => {
     <div className="space-y-8 animate-in fade-in duration-500">
       {/* Breadcrumb */}
       <nav className="flex items-center gap-3 text-xs">
-        <Link to="/clients" className="flex items-center gap-2 text-slate-400 hover:text-[#2980b9] font-bold uppercase tracking-widest transition-colors">
+        <Link to="/clients" className="flex items-center gap-2 text-slate-400 hover:text-brand font-bold uppercase tracking-widest transition-colors">
           <Users size={14} /> Clientes
         </Link>
         <ChevronRight size={14} className="text-slate-300" />
         {monitor ? (
           <>
-            <Link to={`/clients/${monitor.client_id}`} className="text-slate-400 hover:text-[#2980b9] font-bold uppercase tracking-widest transition-colors">
+            <Link to={`/clients/${monitor.client_id}`} className="text-slate-400 hover:text-brand font-bold uppercase tracking-widest transition-colors">
               {monitor.client_name}
             </Link>
             <ChevronRight size={14} className="text-slate-300" />
-            <Link to={`/monitors/${monitor.id}`} className="text-slate-400 hover:text-[#2980b9] font-bold uppercase tracking-widest transition-colors">
+            <Link to={`/monitors/${monitor.id}`} className="text-slate-400 hover:text-brand font-bold uppercase tracking-widest transition-colors">
               {monitor.name}
             </Link>
             <ChevronRight size={14} className="text-slate-300" />
-            <span className="text-[#2980b9] font-extrabold uppercase tracking-widest">Inventario de Dispositivos</span>
+            <span className="text-brand font-extrabold uppercase tracking-widest">Inventario de Dispositivos</span>
           </>
         ) : (
           <div className="h-4 w-48 bg-slate-100 animate-pulse rounded-full" />
@@ -91,7 +91,7 @@ const MonitorDevices = () => {
 
       {loading && (
         <div className="flex flex-col items-center justify-center py-24 gap-4">
-          <Loader2 className="animate-spin text-[#2980b9]" size={40} />
+          <Loader2 className="animate-spin text-brand" size={40} />
           <p className="text-slate-400 font-extrabold uppercase tracking-widest text-[10px]">Cargando inventario del monitor...</p>
         </div>
       )}
@@ -107,7 +107,7 @@ const MonitorDevices = () => {
           {/* Toolbar */}
           <div className="p-8 border-b border-slate-50 flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white">
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-blue-50 text-[#2980b9] rounded-2xl">
+              <div className="p-3 bg-blue-50 text-brand rounded-2xl">
                 <HardDrive size={24} />
               </div>
               <div>
@@ -120,7 +120,7 @@ const MonitorDevices = () => {
 
             <div className="flex items-center gap-4 flex-1 max-w-md">
               <div className="relative flex-1 group">
-                <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-[#2980b9] transition-colors" />
+                <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-brand transition-colors" />
                 <input
                   type="text"
                   placeholder="Buscar por IP, Serie o Modelo..."
@@ -166,9 +166,9 @@ const MonitorDevices = () => {
                       <td>
                         <div className="flex items-center gap-3">
                           <div className="p-2 bg-slate-50 rounded-xl group-hover/row:bg-blue-50 transition-colors">
-                            <FileText size={16} className="text-slate-400 group-hover/row:text-[#2980b9]" />
+                            <FileText size={16} className="text-slate-400 group-hover/row:text-brand" />
                           </div>
-                          <span className="font-extrabold text-[#1a2333] group-hover/row:text-[#2980b9] transition-colors uppercase tracking-tight">
+                          <span className="font-extrabold text-[#1a2333] group-hover/row:text-brand transition-colors uppercase tracking-tight">
                             {d.name || d.ip}
                           </span>
                         </div>
@@ -185,7 +185,7 @@ const MonitorDevices = () => {
                       </td>
                       <td>
                         <div className="flex flex-col">
-                          <span className="text-[10px] font-black text-[#2980b9] uppercase tracking-tighter">
+                          <span className="text-[10px] font-black text-brand uppercase tracking-tighter">
                             {d.brand?.toUpperCase() || 'Genérico'}
                           </span>
                           <span className="text-xs font-bold text-slate-600 truncate max-w-[200px]">
@@ -218,7 +218,7 @@ const MonitorDevices = () => {
 
           <div className="p-6 bg-slate-50/50 border-t border-slate-50 flex items-center justify-between">
             <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Fin del Inventario Corporativo</span>
-            <button className="text-[10px] font-black text-[#2980b9] uppercase tracking-widest hover:underline">
+            <button className="text-[10px] font-black text-brand uppercase tracking-widest hover:underline">
               Exportar Reporte Maestro
             </button>
           </div>

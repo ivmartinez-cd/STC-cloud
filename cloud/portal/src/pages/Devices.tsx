@@ -68,7 +68,7 @@ const Devices = () => {
         </div>
         <div className="flex gap-3">
           <button onClick={load} disabled={loading}
-            className="p-3 bg-white border border-slate-200 text-slate-400 hover:text-[#2980b9] hover:border-[#2980b9] rounded-2xl transition-all shadow-sm active:scale-95 disabled:opacity-40"
+            className="p-3 bg-white border border-slate-200 text-slate-400 hover:text-brand hover:border-brand rounded-2xl transition-all shadow-sm active:scale-95 disabled:opacity-40"
             title="Actualizar">
             <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
           </button>
@@ -77,7 +77,7 @@ const Devices = () => {
 
       {/* Search Bar */}
       <div className="relative group">
-        <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#2980b9] transition-colors" size={20} />
+        <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-brand transition-colors" size={20} />
         <input
           type="text"
           placeholder="Filtrar por IP, serial, marca, modelo o cliente..."
@@ -89,7 +89,7 @@ const Devices = () => {
 
       {loading && (
         <div className="flex flex-col items-center justify-center py-20 animate-pulse">
-          <div className="p-4 bg-blue-50 rounded-full text-[#2980b9] mb-4">
+          <div className="p-4 bg-blue-50 rounded-full text-brand mb-4">
             <RefreshCw size={32} className="animate-spin" />
           </div>
           <p className="text-slate-500 font-bold uppercase tracking-widest text-xs">Cargando inventario...</p>
@@ -122,7 +122,7 @@ const Devices = () => {
       {!loading && !error && Object.values(byClient).map(({ clientName, devices: clientDevices }) => (
         <div key={clientName} className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
           <div className="flex items-center gap-4">
-            <h2 className="text-xs font-extrabold text-[#2980b9] uppercase tracking-[0.2em] whitespace-nowrap">
+            <h2 className="text-xs font-extrabold text-brand uppercase tracking-[0.2em] whitespace-nowrap">
               {clientName} <span className="text-slate-400 font-bold ml-2">({clientDevices.length})</span>
             </h2>
             <div className="h-px bg-slate-100 flex-1" />
@@ -133,10 +133,10 @@ const Devices = () => {
               <Link
                 key={device.id}
                 to={`/devices/${device.id}`}
-                className="cd-panel p-6 group hover:border-[#2980b9]/30 transition-all flex flex-col h-full"
+                className="cd-panel p-6 group hover:border-brand/30 transition-all flex flex-col h-full"
               >
                 <div className="flex items-start justify-between mb-5">
-                  <div className="p-3 bg-blue-50 text-[#2980b9] rounded-2xl group-hover:bg-[#2980b9] group-hover:text-white transition-all duration-300">
+                  <div className="p-3 bg-blue-50 text-brand rounded-2xl group-hover:bg-brand group-hover:text-white transition-all duration-300">
                     <Printer size={20} />
                   </div>
                   {device.active ? (
@@ -153,7 +153,7 @@ const Devices = () => {
                 </div>
 
                 <div className="flex-1">
-                  <h3 className="font-extrabold text-[#1a2333] group-hover:text-[#2980b9] transition-colors truncate">
+                  <h3 className="font-extrabold text-[#1a2333] group-hover:text-brand transition-colors truncate">
                     {device.name || device.ip}
                   </h3>
                   <p className="text-xs font-bold text-slate-400 mt-1 uppercase tracking-wider">
@@ -163,14 +163,14 @@ const Devices = () => {
 
                 <div className="mt-6 pt-5 border-t border-slate-50 flex items-center justify-between">
                   <div className="space-y-1">
-                    <div className="text-[11px] font-mono font-bold text-[#2980b9] bg-blue-50 px-2 py-0.5 rounded-md inline-block">
+                    <div className="text-[11px] font-mono font-bold text-brand bg-blue-50 px-2 py-0.5 rounded-md inline-block">
                       {device.ip}
                     </div>
                     <div className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest truncate max-w-[140px]">
                       {device.monitor_name}
                     </div>
                   </div>
-                  <div className="p-2 bg-slate-50 text-slate-300 rounded-xl group-hover:bg-[#2980b9]/10 group-hover:text-[#2980b9] transition-all">
+                  <div className="p-2 bg-slate-50 text-slate-300 rounded-xl group-hover:bg-brand/10 group-hover:text-brand transition-all">
                     <ChevronRight size={16} />
                   </div>
                 </div>
