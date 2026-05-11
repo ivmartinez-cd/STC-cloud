@@ -15,6 +15,7 @@ export async function uploadPending(): Promise<UploadResult> {
     device_id:   r.device_id,
     ip:          r.ip,
     brand:       r.brand,
+    model:       r.model,
     time:        r.time,
     total_pages: r.total_pages,
     mono_pages:  r.mono_pages,

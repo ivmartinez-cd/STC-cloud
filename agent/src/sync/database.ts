@@ -35,6 +35,7 @@ export function openQueue(): void {
       device_id   TEXT    NOT NULL,
       ip          TEXT,
       brand       TEXT,
+      model       TEXT,
       time        TEXT    NOT NULL,
       total_pages INTEGER,
       mono_pages  INTEGER,
@@ -58,10 +59,10 @@ export function openQueue(): void {
 export function enqueueReading(r: DeviceReading): void {
   db.prepare(`
     INSERT INTO readings_queue
-      (device_id, ip, brand, time, total_pages, mono_pages, color_pages, status)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      (device_id, ip, brand, model, time, total_pages, mono_pages, color_pages, status)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
-    r.serial ?? r.ip, r.ip, r.brand, r.time,
+    r.serial ?? r.ip, r.ip, r.brand, r.model, r.time,
     r.total_pages, r.mono_pages, r.color_pages,
     r.status,
   );
@@ -128,12 +129,13 @@ export class LocalDB {
 
   async addReading(r: any) {
     db.prepare(`
-      INSERT INTO readings_queue (device_id, ip, brand, time, total_pages, mono_pages, color_pages, status)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO readings_queue (device_id, ip, brand, model, time, total_pages, mono_pages, color_pages, status)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       r.serial ?? r.device_id ?? r.ip, 
       r.ip, 
       r.brand, 
+      r.model ?? 'unknown',
       new Date(r.time || Date.now()).toISOString(), 
       r.total_pages, r.mono_pages, r.color_pages, 
       r.status ?? 'idle'
