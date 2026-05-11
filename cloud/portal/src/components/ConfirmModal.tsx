@@ -26,8 +26,8 @@ const ConfirmModal = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300">
-      <div className="bg-white rounded-[24px] shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-300">
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-overlay-in">
+      <div className="bg-white rounded-[24px] shadow-2xl w-full max-w-sm overflow-hidden animate-modal-in">
         <header className={`px-8 py-5 flex items-center justify-between text-white ${
           isDanger ? 'bg-gradient-to-r from-rose-500 to-rose-600' : 'bg-gradient-to-r from-[#2c3e50] to-[#1a2333]'
         }`}>

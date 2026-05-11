@@ -403,8 +403,8 @@ const MonitorDetail = () => {
 
           {/* Edit Modal */}
           {showEditModal && (
-            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 bg-[#1a2333]/60 backdrop-blur-md animate-in fade-in duration-300">
-              <div className="bg-white rounded-[32px] shadow-2xl w-full max-w-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 bg-[#1a2333]/60 backdrop-blur-md animate-overlay-in">
+              <div className="bg-white rounded-[32px] shadow-2xl w-full max-w-2xl overflow-hidden animate-modal-in">
                 <header className="px-8 py-8 border-b border-slate-50 flex items-center justify-between bg-gradient-to-r from-brand to-[#3498db] text-white">
                   <div className="flex items-center gap-4">
                     <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-sm">
@@ -550,8 +550,8 @@ const MonitorDetail = () => {
 
           {/* New Regeneration Key Modal */}
           {regenKey && (
-            <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 backdrop-blur-md bg-slate-900/40 animate-in fade-in duration-300">
-              <div className="bg-white rounded-[40px] shadow-2xl w-full max-w-lg overflow-hidden border border-slate-100 animate-in zoom-in-95 duration-300">
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 backdrop-blur-md bg-slate-900/40 animate-overlay-in">
+              <div className="bg-white rounded-[40px] shadow-2xl w-full max-w-lg overflow-hidden border border-slate-100 animate-modal-in">
                 <div className="bg-gradient-to-br from-amber-500 to-orange-600 p-10 text-white relative">
                   <div className="absolute top-0 right-0 p-8 opacity-10">
                     <Shield size={120} />

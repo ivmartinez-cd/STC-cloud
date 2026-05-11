@@ -505,8 +505,8 @@ const Monitors = () => {
 
       {/* Config modal */}
       {configModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300">
-          <div className="bg-white rounded-[24px] shadow-2xl w-full max-w-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-overlay-in">
+          <div className="bg-white rounded-[24px] shadow-2xl w-full max-w-2xl overflow-hidden animate-modal-in">
             <header className="px-8 py-6 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-[#2c3e50] to-[#1a2333] text-white">
               <div>
                 <h2 className="text-xl font-extrabold tracking-tight">Configuración Remota</h2>

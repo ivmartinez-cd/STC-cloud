@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../lib/api';
 import { useToast } from '../context/ToastContext';
@@ -89,7 +89,7 @@ const Clients = () => {
     }
   };
 
-  const filtered = clients.filter(c => {
+  const filtered = useMemo(() => clients.filter(c => {
     if (!search.trim()) return true;
     const q = search.toLowerCase();
     return (
@@ -99,7 +99,7 @@ const Clients = () => {
       c.address?.toLowerCase().includes(q) ||
       c.country?.toLowerCase().includes(q)
     );
-  });
+  }), [clients, search]);
 
   return (
     <div className="space-y-8">
@@ -220,8 +220,9 @@ const Clients = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <Link 
+                      <Link
                         to={`/clients/${client.id}`}
+                        aria-label={`Ver detalle de ${client.name}`}
                         className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-slate-300 group-hover:text-brand group-hover:bg-white transition-all shadow-sm"
                       >
                         <ChevronRight size={18} />
@@ -237,8 +238,8 @@ const Clients = () => {
 
       {/* Add Client Modal */}
       {showModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300">
-          <div className="bg-white rounded-[24px] shadow-2xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-300">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-overlay-in">
+          <div className="bg-white rounded-[24px] shadow-2xl w-full max-w-lg overflow-hidden animate-modal-in">
             <header className="px-8 py-6 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-brand to-[#2c3e50] text-white">
               <div>
                 <h2 className="text-xl font-extrabold tracking-tight">Nuevo Cliente</h2>

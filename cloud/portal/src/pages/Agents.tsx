@@ -1,9 +1,10 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Key, Plus, ShieldCheck, ShieldOff, RefreshCw, X, Settings, Trash2, Cpu, Activity, Clock, Globe, Copy, Check, Server, Search, Loader2 } from 'lucide-react';
 import { api } from '../lib/api';
 import { useToast } from '../context/ToastContext';
 import ConfirmModal from '../components/ConfirmModal';
+import { useTime } from '../hooks/useTime';
 
 interface Agent {
   id: string;
@@ -28,9 +29,9 @@ interface AgentConfig {
 
 interface Client { id: string; name: string }
 
-function formatLastSeen(ts: string | null) {
+function formatLastSeen(ts: string | null, now: number) {
   if (!ts) return 'Nunca';
-  const min = Math.floor((Date.now() - new Date(ts).getTime()) / 60000);
+  const min = Math.floor((now - new Date(ts).getTime()) / 60000);
   if (min < 2)  return 'Hace un momento';
   if (min < 60) return `Hace ${min} min`;
   const hrs = Math.floor(min / 60);
@@ -85,6 +86,8 @@ const Agents = () => {
   const [regenModal, setRegenModal] = useState<{ agentName: string; key: string; expiresAt: string } | null>(null);
   const [regenLoading, setRegenLoading] = useState<string | null>(null);
   const [keyCopied, setKeyCopied] = useState(false);
+
+  const now = useTime();
 
   const loadAgents = useCallback(async () => {
     try {
@@ -241,11 +244,11 @@ const Agents = () => {
     }
   };
 
-  const filteredAgents = agents.filter(a => 
+  const filteredAgents = useMemo(() => agents.filter(a =>
     a.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (a.hardware_id?.toLowerCase() ?? '').includes(searchTerm.toLowerCase()) ||
     (a.client_name?.toLowerCase() ?? '').includes(searchTerm.toLowerCase())
-  );
+  ), [agents, searchTerm]);
 
   // ── Render ────────────────────────────────────────────────────────────────────
 
@@ -497,9 +500,17 @@ const Agents = () => {
                     <td colSpan={6} className="py-32 text-center bg-white">
                       <div className="flex flex-col items-center">
                         <div className="p-6 bg-slate-50 rounded-full mb-6">
-                          <Activity size={48} className="text-slate-200" />
+                          {agents.length === 0
+                            ? <Server size={48} className="text-slate-200" />
+                            : <Search size={48} className="text-slate-200" />
+                          }
                         </div>
-                        <p className="text-slate-400 font-black uppercase tracking-widest text-xs">Sin agentes que coincidan con la búsqueda</p>
+                        <p className="text-slate-400 font-black uppercase tracking-widest text-xs">
+                          {agents.length === 0
+                            ? 'Sin agentes registrados — despliega el primero con el botón superior'
+                            : 'Sin nodos que coincidan con la búsqueda'
+                          }
+                        </p>
                       </div>
                     </td>
                   </tr>
@@ -535,7 +546,7 @@ const Agents = () => {
                         <div className="p-2 bg-slate-50 rounded-xl group-hover/row:bg-blue-50 transition-colors">
                           <Clock size={14} className="text-slate-400 group-hover/row:text-brand" />
                         </div>
-                        <span className="text-xs font-bold uppercase text-slate-600">{formatLastSeen(agent.last_seen)}</span>
+                        <span className="text-xs font-bold uppercase text-slate-600">{formatLastSeen(agent.last_seen, now)}</span>
                       </div>
                     </td>
                     <td className="text-center">
@@ -565,6 +576,7 @@ const Agents = () => {
                         {agent.status !== 'revoked' && (
                           <button
                             onClick={() => openConfigModal(agent)}
+                            aria-label={`Configurar agente ${agent.name}`}
                             className="p-3 bg-blue-50 text-brand hover:bg-brand hover:text-white rounded-2xl transition-all active:scale-90 shadow-sm"
                             title="Ajustes Remotos"
                           >
@@ -574,6 +586,7 @@ const Agents = () => {
                         <button
                           onClick={() => regenerateKey(agent)}
                           disabled={regenLoading === agent.id}
+                          aria-label={`Regenerar llave de activación de ${agent.name}`}
                           className="p-3 bg-amber-50 text-amber-500 hover:bg-amber-500 hover:text-white rounded-2xl transition-all active:scale-90 shadow-sm disabled:opacity-40"
                           title="Regenerar Llave de Activación"
                         >
@@ -584,7 +597,9 @@ const Agents = () => {
                         {agent.status === 'active' && (
                           <button
                             onClick={() => setAgentToRevoke(agent)}
-                            className="p-3 bg-rose-50 text-rose-500 hover:bg-rose-500 hover:text-white rounded-2xl transition-all active:scale-90 shadow-sm"
+                            disabled={revoking === agent.id}
+                            aria-label={`Revocar licencia de ${agent.name}`}
+                            className="p-3 bg-rose-50 text-rose-500 hover:bg-rose-500 hover:text-white rounded-2xl transition-all active:scale-90 shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
                             title="Revocar Licencia"
                           >
                             <ShieldOff size={20} />
@@ -602,8 +617,8 @@ const Agents = () => {
 
       {/* ── Regenerate Key Modal ───────────────────────────────────────────────── */}
       {regenModal && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 sm:p-6 bg-[#1a2333]/80 backdrop-blur-md animate-in fade-in duration-300">
-          <div className="bg-white rounded-[40px] shadow-2xl w-full max-w-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 sm:p-6 bg-[#1a2333]/80 backdrop-blur-md animate-overlay-in">
+          <div className="bg-white rounded-[40px] shadow-2xl w-full max-w-2xl overflow-hidden animate-modal-in">
             {/* Header */}
             <header className="px-10 py-8 bg-gradient-to-r from-amber-500 to-amber-400 text-white flex justify-between items-center relative overflow-hidden">
               <div className="relative z-10">
@@ -676,8 +691,8 @@ const Agents = () => {
 
       {/* ── Config Modal ──────────────────────────────────────────────────────── */}
       {configModal && (
-        <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 sm:p-6 bg-[#1a2333]/70 backdrop-blur-md animate-in fade-in duration-300">
-          <div className="bg-white rounded-[40px] shadow-2xl w-full max-w-2xl overflow-hidden animate-in zoom-in-95 duration-300 border border-white/20">
+        <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 sm:p-6 bg-[#1a2333]/70 backdrop-blur-md animate-overlay-in">
+          <div className="bg-white rounded-[40px] shadow-2xl w-full max-w-2xl overflow-hidden animate-modal-in border border-white/20">
             <header className="px-10 py-10 bg-gradient-to-r from-[#1a2333] to-[#2c3e50] text-white flex justify-between items-center relative overflow-hidden">
               <div className="relative z-10">
                 <h2 className="text-2xl font-black tracking-tight uppercase">Control Remoto</h2>

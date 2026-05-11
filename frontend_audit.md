@@ -320,12 +320,12 @@ Tareas ordenadas por impacto/esfuerzo. Las marcadas con `⚡` son cambios de <30
 
 ### Bloque 2 — UX PREMIUM (elevan el feel sin romper nada)
 
-- [ ] `⚡` **UX-02** — Agregar empty state visual a `Agents.tsx` cuando no hay agentes
-- [ ] `⚡` **UX-03** — Deshabilitar botón trigger de revoke mientras `revoking === agent.id`
-- [ ] `⚡` **UX-04** — Añadir animación `modalIn` en `index.css` y aplicar a todos los modales
-- [ ] `⚡` **UX-01** — Añadir `aria-label` a botones de acción en tablas (Revocar, Eliminar, Configurar)
-- [ ] **UX-07** — Envolver filtros de búsqueda en `useMemo`
-- [ ] **UX-06** — Implementar `useTime` hook para actualizar `formatLastSeen` en tiempo real
+- [x] `⚡` **UX-02** ~~Agregar empty state visual a `Agents.tsx` cuando no hay agentes~~ — **RESUELTO** Empty state diferenciado: `Server` icon + "Sin agentes registrados" cuando `agents.length === 0`; `Search` icon + "Sin nodos que coincidan" cuando hay agentes pero el filtro no retorna resultados.
+- [x] `⚡` **UX-03** ~~Deshabilitar botón trigger de revoke mientras `revoking === agent.id`~~ — **RESUELTO** `disabled={revoking === agent.id}` + `disabled:cursor-not-allowed` en el botón ShieldOff.
+- [x] `⚡` **UX-04** ~~Añadir animación `modalIn` en `index.css` y aplicar a todos los modales~~ — **RESUELTO** `@keyframes modalIn` (scale + translateY) + `@keyframes overlayIn` en `index.css`. Aplicado `animate-modal-in` / `animate-overlay-in` en 7 modales: `ConfirmModal`, `Agents` (×2), `Clients`, `ClientDetail`, `MonitorDetail` (×2), `Monitors`. Reemplaza `animate-in zoom-in-95` que no tenía efecto real (tailwindcss-animate no instalado).
+- [x] `⚡` **UX-01** ~~Añadir `aria-label` a botones de acción en tablas (Revocar, Eliminar, Configurar)~~ — **RESUELTO** `aria-label` dinámico con nombre del agente en los 3 botones de `Agents.tsx`; `aria-label` en el link chevron de `Clients.tsx`.
+- [x] **UX-07** ~~Envolver filtros de búsqueda en `useMemo`~~ — **RESUELTO** `filteredAgents` en `Agents.tsx` y `filtered` en `Clients.tsx` envueltos en `useMemo([..., searchTerm])`.
+- [x] **UX-06** ~~Implementar `useTime` hook para actualizar `formatLastSeen` en tiempo real~~ — **RESUELTO** Nuevo `src/hooks/useTime.ts` (tick cada 60 s con `setInterval`). `formatLastSeen` acepta `now: number`. `Agents.tsx` llama `useTime()` y pasa `now` a cada celda — el tiempo relativo se actualiza sin polling manual.
 
 ### Bloque 3 — REFACTOR (deuda técnica controlada)
 
