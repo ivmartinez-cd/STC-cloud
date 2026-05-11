@@ -4,7 +4,7 @@ import { api } from '../lib/api';
 import {
   HardDrive, ChevronRight, Users, Radio,
   MapPin, Mail, BarChart2, Plus, X, Loader2, Copy, Check, Trash2, 
-  Layout, Info, TrendingUp, Clock, Shield
+  Layout, Info, TrendingUp, Clock, Shield, Phone
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
@@ -273,6 +273,15 @@ const ClientDetail = () => {
                         <Mail size={16} />
                       </div>
                       <span className="text-sm text-slate-600 truncate font-medium">{client.contact_email}</span>
+                    </div>
+                  )}
+
+                  {client.contact_phone && (
+                    <div className="flex items-center gap-4 group">
+                      <div className="p-2 bg-slate-50 text-slate-400 rounded-xl group-hover:bg-blue-50 group-hover:text-[#2980b9] transition-colors">
+                        <Phone size={16} />
+                      </div>
+                      <span className="text-sm text-slate-600 font-medium">{client.contact_phone}</span>
                     </div>
                   )}
 
