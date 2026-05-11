@@ -17,7 +17,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [checking, setChecking] = useState<boolean>(true);
 
   useEffect(() => {
-    api.get<{ userId: string; role: string }>('/portal/me')
+    // Raw fetch — bypasses the api.ts 401 auto-redirect that would cause
+    // an infinite reload loop while the user is not yet authenticated.
+    fetch('/api/v1/portal/me', { credentials: 'include' })
+      .then(res => {
+        if (!res.ok) throw new Error('not authenticated');
+        return res.json() as Promise<{ userId: string; role: string }>;
+      })
       .then(data => {
         setIsAuthenticated(true);
         setUserEmail(data.userId);

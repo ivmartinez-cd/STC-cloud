@@ -279,9 +279,11 @@ const start = async () => {
       reply.setCookie("stc_session", token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        sameSite: "strict",
+        // 'none' required for cross-origin fetch (Vercel frontend → Render backend).
+        // Falls back to 'lax' in dev (HTTP, where Secure is false and 'none' is invalid).
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
         path: "/",
-        maxAge: 8 * 60 * 60, // 8 horas en segundos
+        maxAge: 8 * 60 * 60,
       });
       return { ok: true };
     });
