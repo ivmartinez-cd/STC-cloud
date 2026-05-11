@@ -40,6 +40,13 @@ async function agentAuth(request: FastifyRequest, reply: FastifyReply) {
     if (!user.agentId) {
       return reply.status(403).send({ error: "Token de portal no puede acceder a esta ruta" });
     }
+
+    // Bug corregido: Verificar que el agente existe y está activo en la DB
+    const agent = await db("agents").where({ id: user.agentId }).select("status").first();
+    if (!agent || agent.status === "revoked") {
+      return reply.status(404).send({ error: "Agente no encontrado o revocado" });
+    }
+
     const blacklisted = await agentService.isBlacklisted(redis, user.agentId);
     if (blacklisted) {
       return reply.status(401).send({ error: "Token revocado" });

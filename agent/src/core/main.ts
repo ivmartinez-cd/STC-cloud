@@ -83,7 +83,7 @@ async function heartbeat(): Promise<void> {
     } else if (res.status === 404) {
       log('ERROR', 'Agente no encontrado en el servidor (posiblemente eliminado). Eliminando identidad local...');
       await ConfigManager.deleteConfig();
-      log('INFO', 'Identidad eliminada. El agente se detendr.');
+      log('INFO', 'Identidad eliminada. El agente se detendrá para permitir re-activación.');
       process.exit(0);
     } else if (res.status === 401 || res.status === 403) {
       log('WARN', `Acceso denegado (HTTP ${res.status}). Suspendiendo escaneos por seguridad.`);
