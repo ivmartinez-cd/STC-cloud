@@ -598,17 +598,27 @@ const start = async () => {
       async (request) => {
         const { id } = request.params as any;
         const result = await db.raw(`
-          SELECT
-            to_char(date_trunc('month', r.time), 'Mon YYYY') AS month,
-            date_trunc('month', r.time) AS month_date,
-            COALESCE(SUM(r.mono_pages),  0)::int AS mono,
-            COALESCE(SUM(r.color_pages), 0)::int AS color
-          FROM readings r
-          JOIN devices d ON r.device_id = d.id
-          JOIN agents  a ON d.agent_id = a.id
-          WHERE a.client_id = ?
-            AND r.time >= NOW() - INTERVAL '4 months'
-          GROUP BY date_trunc('month', r.time)
+          SELECT 
+            to_char(month_date, 'Mon YYYY') AS month,
+            month_date,
+            SUM(max_mono - min_mono)::int as mono,
+            SUM(max_color - min_color)::int as color
+          FROM (
+            SELECT 
+              date_trunc('month', r.time) as month_date,
+              r.device_id,
+              MAX(r.mono_pages) as max_mono,
+              MIN(r.mono_pages) as min_mono,
+              MAX(r.color_pages) as max_color,
+              MIN(r.color_pages) as min_color
+            FROM readings r
+            JOIN devices d ON r.device_id = d.id
+            JOIN agents  a ON d.agent_id = a.id
+            WHERE a.client_id = ?
+              AND r.time >= date_trunc('month', NOW() - INTERVAL '4 months')
+            GROUP BY date_trunc('month', r.time), r.device_id
+          ) sub
+          GROUP BY month_date
           ORDER BY month_date ASC
         `, [id]);
         return result.rows;
@@ -741,11 +751,15 @@ const start = async () => {
         // Total clientes
         db("clients").count("* as c").first(),
 
-        // Volumen del mes actual
-        db("readings")
-          .where("time", ">=", db.raw("date_trunc('month', now())"))
-          .select(db.raw("SUM(total_pages)::bigint as total"))
-          .first(),
+        // Volumen del mes actual (Delta Real: SUM(MAX - MIN) por dispositivo)
+        db.raw(`
+          SELECT SUM(delta)::bigint as total FROM (
+            SELECT (MAX(total_pages) - MIN(total_pages)) as delta
+            FROM readings
+            WHERE time >= date_trunc('month', now())
+            GROUP BY device_id
+          ) sub
+        `).then(r => r.rows[0]),
 
         // Top 5 clientes por cantidad de dispositivos
         db("clients")
