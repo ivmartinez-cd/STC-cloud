@@ -512,11 +512,21 @@ const start = async () => {
           return reply.status(400).send({ error: "ID de agente inválido" });
         }
         try {
-          fastify.log.info({ agentId: id }, "Solicitud de eliminación de agente");
-          const deletedCount = await db("agents").where("id", id).delete();
-          if (deletedCount === 0) {
-            return reply.status(404).send({ error: "Agente no encontrado" });
-          }
+          fastify.log.info({ agentId: id }, "Solicitud de eliminación de agente y cascada");
+          
+          // Eliminación manual en cascada (para asegurar integridad si no hay FK Cascade en DB)
+          await db.transaction(async (trx) => {
+            const devices = await trx("devices").where("agent_id", id).select("id");
+            const deviceIds = devices.map(d => d.id);
+            
+            if (deviceIds.length > 0) {
+              await trx("readings").whereIn("device_id", deviceIds).delete();
+              await trx("devices").where("agent_id", id).delete();
+            }
+            
+            await trx("agents").where("id", id).delete();
+          });
+
           return { status: "deleted" };
         } catch (err: any) {
           fastify.log.error(err, "Error al eliminar agente");
