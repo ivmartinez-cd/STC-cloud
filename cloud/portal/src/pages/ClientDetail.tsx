@@ -245,46 +245,48 @@ const ClientDetail = () => {
             </div>
 
             {/* Profile Info */}
-            <div className="cd-panel p-8 bg-gradient-to-br from-[#1a2333] to-[#2c3e50] text-white border-none shadow-xl shadow-blue-900/20">
-              <div className="flex items-center gap-5 mb-8">
-                <div className="w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center shadow-inner backdrop-blur-sm">
-                  <Users size={32} className="text-blue-300" />
+            <div className="cd-panel p-8 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center gap-5 mb-8">
+                  <div className="w-16 h-16 bg-blue-50 text-[#2980b9] rounded-2xl flex items-center justify-center shadow-sm">
+                    <Users size={32} />
+                  </div>
+                  <div>
+                    <h1 className="text-2xl font-black text-[#1a2333] tracking-tight">{client.name}</h1>
+                    <span className="text-[10px] font-extrabold text-[#2980b9] uppercase tracking-[0.2em]">Perfil Corporativo</span>
+                  </div>
                 </div>
-                <div>
-                  <h1 className="text-2xl font-black tracking-tight">{client.name}</h1>
-                  <span className="text-[10px] font-extrabold text-blue-300/60 uppercase tracking-[0.2em]">Perfil Corporativo</span>
+
+                <div className="space-y-4">
+                  {client.contact_name && (
+                    <div className="flex items-center gap-4 group">
+                      <div className="p-2 bg-slate-50 text-slate-400 rounded-xl group-hover:bg-blue-50 group-hover:text-[#2980b9] transition-colors">
+                        <Users size={16} />
+                      </div>
+                      <span className="font-bold text-sm text-[#1a2333]">{client.contact_name}</span>
+                    </div>
+                  )}
+                  
+                  {client.contact_email && (
+                    <div className="flex items-center gap-4 group">
+                      <div className="p-2 bg-slate-50 text-slate-400 rounded-xl group-hover:bg-blue-50 group-hover:text-[#2980b9] transition-colors">
+                        <Mail size={16} />
+                      </div>
+                      <span className="text-sm text-slate-600 truncate font-medium">{client.contact_email}</span>
+                    </div>
+                  )}
+
+                  {(client.address || client.country) && (
+                    <div className="flex items-center gap-4 group">
+                      <div className="p-2 bg-slate-50 text-slate-400 rounded-xl group-hover:bg-blue-50 group-hover:text-[#2980b9] transition-colors">
+                        <MapPin size={16} />
+                      </div>
+                      <span className="text-xs text-slate-500 font-medium leading-tight">
+                        {[client.address, client.country].filter(Boolean).join(', ')}
+                      </span>
+                    </div>
+                  )}
                 </div>
-              </div>
-
-              <div className="space-y-4">
-                {client.contact_name && (
-                  <div className="flex items-center gap-4 group">
-                    <div className="p-2 bg-white/5 rounded-xl group-hover:bg-white/10 transition-colors">
-                      <Users size={16} className="text-blue-200" />
-                    </div>
-                    <span className="font-bold text-sm text-slate-200">{client.contact_name}</span>
-                  </div>
-                )}
-                
-                {client.contact_email && (
-                  <div className="flex items-center gap-4 group">
-                    <div className="p-2 bg-white/5 rounded-xl group-hover:bg-white/10 transition-colors">
-                      <Mail size={16} className="text-blue-200" />
-                    </div>
-                    <span className="text-sm text-slate-300 truncate font-medium">{client.contact_email}</span>
-                  </div>
-                )}
-
-                {(client.address || client.country) && (
-                  <div className="flex items-center gap-4 group">
-                    <div className="p-2 bg-white/5 rounded-xl group-hover:bg-white/10 transition-colors">
-                      <MapPin size={16} className="text-blue-200" />
-                    </div>
-                    <span className="text-xs text-slate-400 font-medium">
-                      {[client.address, client.country].filter(Boolean).join(', ')}
-                    </span>
-                  </div>
-                )}
               </div>
             </div>
 
