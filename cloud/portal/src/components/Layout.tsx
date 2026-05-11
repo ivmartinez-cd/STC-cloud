@@ -157,17 +157,19 @@ const Layout = () => {
                 flex items-center justify-center shrink-0 transition-all duration-500
                 ${isHovered ? 'w-11 h-11' : 'w-20'}
               `}>
-                <div className="relative">
+                <div className="relative group/avatar">
                   <div className={`
-                    rounded-2xl bg-gradient-to-tr from-orange-500 to-amber-400 flex items-center justify-center text-white font-black shadow-[0_10px_20px_rgba(245,158,11,0.2)]
-                    transition-all duration-500
-                    ${isHovered ? 'w-11 h-11' : 'w-10 h-10'}
+                    bg-gradient-to-tr from-orange-500 to-amber-400 flex items-center justify-center text-white font-black
+                    transition-all duration-500 ring-offset-2 ring-offset-slate-950
+                    ${isHovered 
+                      ? 'w-11 h-11 shadow-[0_10px_20px_rgba(245,158,11,0.25)] rounded-2xl ring-0' 
+                      : 'w-8 h-8 text-[10px] shadow-none rounded-xl ring-1 ring-white/10'}
                   `}>
                     {(email || 'A')[0].toUpperCase()}
                   </div>
                   <div className={`
-                    absolute bg-emerald-500 border-2 border-slate-950 rounded-full transition-all duration-500
-                    ${isHovered ? 'w-3 h-3 -bottom-1 -right-1' : 'w-2.5 h-2.5 -bottom-0.5 -right-0.5'}
+                    absolute bg-emerald-500 border border-slate-950 rounded-full transition-all duration-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]
+                    ${isHovered ? 'w-3 h-3 -bottom-1 -right-1' : 'w-2 h-2 -bottom-0.5 -right-0.5'}
                   `} />
                 </div>
               </div>
