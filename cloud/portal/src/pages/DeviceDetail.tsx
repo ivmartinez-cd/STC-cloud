@@ -235,7 +235,7 @@ const DeviceDetail = () => {
 
           {/* Stats Panel */}
           <div className="space-y-6">
-            <div className="cd-panel p-8 bg-gradient-to-br from-[#1a2333] to-[#2c3e50] text-white border-none shadow-2xl shadow-blue-900/20">
+            <div className="rounded-[24px] p-8 bg-gradient-to-br from-[#1a2333] to-[#2c3e50] text-white shadow-2xl shadow-blue-900/20">
               <div className="flex items-center gap-3 mb-8">
                 <div className="p-2 bg-white/10 rounded-xl backdrop-blur-md">
                   <FileText size={20} className="text-blue-300" />

@@ -416,20 +416,26 @@ const Agents = () => {
                 La llave expira en 24 horas. Use el comando a continuación en la terminal del cliente.
               </p>
               <div className="group relative">
-                <div className="p-8 bg-emerald-900 rounded-[28px] font-mono text-[13px] text-emerald-100 break-all leading-relaxed shadow-inner border border-emerald-800">
-                  <span className="text-emerald-400">$</span> STC-Agent.exe --activate <span className="text-white font-black underline decoration-emerald-500 underline-offset-4">{activationKey}</span> --url {window.location.origin}
+                <div className="p-8 bg-emerald-900 rounded-[28px] font-mono text-center shadow-inner border border-emerald-800">
+                  <p className="text-[10px] text-emerald-400 uppercase tracking-widest mb-2 font-black">Código de Activación Único</p>
+                  <div className="text-2xl md:text-3xl text-white font-black tracking-widest break-all select-all">
+                    {activationKey}
+                  </div>
                 </div>
                 <button 
                   onClick={() => {
-                    navigator.clipboard.writeText(`STC-Agent.exe --activate ${activationKey} --url ${window.location.origin}`);
-                    showToast('Comando de activación copiado', 'success');
+                    navigator.clipboard.writeText(activationKey || '');
+                    showToast('Código copiado al portapapeles', 'success');
                   }}
                   className="absolute right-4 top-4 p-3 bg-white/10 hover:bg-white/20 rounded-2xl text-white transition-all active:scale-90"
-                  title="Copiar Comando"
+                  title="Copiar Código"
                 >
                   <Copy size={20} />
                 </button>
               </div>
+              <p className="mt-4 text-[10px] text-emerald-600/50 font-mono text-center">
+                Comando técnico: STC-Agent.exe --activate {activationKey} --url {window.location.origin}
+              </p>
             </div>
           </div>
         </div>
@@ -622,28 +628,31 @@ const Agents = () => {
                 </div>
               </div>
 
-              {/* Command box */}
+              {/* Activation Key box */}
               <div>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-3 ml-1">Comando de Activación</p>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-3 ml-1">Código de Activación</p>
                 <div className="relative group">
-                  <div className="p-8 bg-[#1a2333] rounded-[28px] font-mono text-[13px] text-emerald-100 break-all leading-relaxed shadow-inner border border-white/5">
-                    <span className="text-emerald-400">$</span> STC-Agent.exe --activate{' '}
-                    <span className="text-white font-black underline decoration-amber-400 underline-offset-4">{regenModal.key}</span>
-                    {' '}--url {window.location.origin}
+                  <div className="p-8 bg-[#1a2333] rounded-[28px] font-mono text-center shadow-inner border border-white/5">
+                    <div className="text-2xl text-white font-black tracking-widest break-all select-all">
+                      {regenModal.key}
+                    </div>
                   </div>
                   <button
                     onClick={() => {
-                      navigator.clipboard.writeText(`STC-Agent.exe --activate ${regenModal.key} --url ${window.location.origin}`);
+                      navigator.clipboard.writeText(regenModal.key);
                       setKeyCopied(true);
-                      showToast('Comando copiado al portapapeles', 'success');
+                      showToast('Código copiado al portapapeles', 'success');
                       setTimeout(() => setKeyCopied(false), 3000);
                     }}
                     className="absolute right-4 top-4 p-3 bg-white/10 hover:bg-white/20 rounded-2xl text-white transition-all active:scale-90 flex items-center gap-2"
-                    title="Copiar Comando"
+                    title="Copiar Código"
                   >
                     {keyCopied ? <Check size={20} className="text-emerald-400" /> : <Copy size={20} />}
                   </button>
                 </div>
+                <p className="mt-4 text-[9px] text-slate-400 font-mono text-center opacity-50">
+                  Comando: STC-Agent.exe --activate {regenModal.key} --url {window.location.origin}
+                </p>
               </div>
 
               {/* Footer action */}

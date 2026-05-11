@@ -186,16 +186,24 @@ export class AgentService {
       let deviceId = device?.id;
 
       if (!deviceId) {
-        // Auto-registrar dispositivo desconocido con los datos del payload
-        deviceId = crypto.randomUUID();
-        await this.db("devices").insert({
-          id: deviceId,
-          agent_id: agentId,
-          ip: r.ip || null,       // null si el agente no mandó IP (antes era IP hardcodeada)
-          serial: r.device_id,
-          name: r.device_id,
-          brand: r.brand || "unknown",
-        });
+        // Upsert: evita duplicados cuando el mismo serial llega varias veces
+        const upserted = await this.db.raw<{ rows: { id: string }[] }>(`
+          INSERT INTO devices (id, agent_id, ip, serial, name, brand)
+          VALUES (?, ?, ?, ?, ?, ?)
+          ON CONFLICT (agent_id, serial) WHERE serial IS NOT NULL
+          DO UPDATE SET
+            ip    = COALESCE(EXCLUDED.ip,    devices.ip),
+            brand = COALESCE(EXCLUDED.brand, devices.brand)
+          RETURNING id
+        `, [
+          crypto.randomUUID(),
+          agentId,
+          r.ip || null,
+          r.device_id,
+          r.device_id,
+          r.brand || "unknown",
+        ]);
+        deviceId = upserted.rows[0].id;
       }
 
       mappedReadings.push({
