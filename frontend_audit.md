@@ -336,7 +336,7 @@ Tareas ordenadas por impacto/esfuerzo. Las marcadas con `⚡` son cambios de <30
 - [x] **REF-04** ~~Crear `src/lib/constants.ts` y mover constantes mágicas~~ — **RESUELTO** Creado `src/lib/constants.ts` con 9 constantes. Conectado en `Dashboard`, `Agents`, `Reports`, `ToastContext`, `useTime`.
 - [x] **REF-05** ~~Definir escala de z-index en `tailwind.config.js`~~ — **RESUELTO** Tailwind v4 no usa config.js. Variables CSS semánticas `--z-sidebar/dropdown/overlay/modal/toast` definidas en `@theme {}` de `index.css`. Los valores `z-[50/100/150/200]` existentes ya coinciden con la escala.
 - [x] **REF-06** ~~Implementar `React.lazy()` para las páginas en `App.tsx`~~ — **RESUELTO** 9 páginas convertidas a `lazy()`. `Suspense` envuelve todas las rutas protegidas. `Login` y `Layout` quedan estáticos (se cargan siempre).
-- [ ] **REF-01** — Fragmentar `Agents.tsx` en sub-componentes (sprint dedicado)
+- [x] **REF-01** — Fragmentar `Agents.tsx` en sub-componentes (sprint dedicado) — **RESUELTO** Extraído a `src/types/agents.ts` (interfaces + utils), `components/agents/AgentTable.tsx`, `CreateAgentModal.tsx`, `ConfigAgentModal.tsx`, `RegenKeyModal.tsx`. Orquestador quedó en ~130 líneas. TypeScript limpio.
 
 ---
 
