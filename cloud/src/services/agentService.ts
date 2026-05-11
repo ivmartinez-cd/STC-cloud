@@ -164,8 +164,8 @@ export class AgentService {
           model: device.model,
           name: device.name,
         })
-        .onConflict("mac")
-        .merge(["ip", "serial", "model", "name", "agent_id"]);
+        .onConflict(["agent_id", "serial"])
+        .merge(["ip", "model", "name", "brand", "mac"]);
     }
   }
 
@@ -188,12 +188,14 @@ export class AgentService {
       if (!deviceId) {
         // Upsert: evita duplicados cuando el mismo serial llega varias veces
         const upserted = await this.db.raw<{ rows: { id: string }[] }>(`
-          INSERT INTO devices (id, agent_id, ip, serial, name, brand)
-          VALUES (?, ?, ?, ?, ?, ?)
+          INSERT INTO devices (id, agent_id, ip, serial, name, brand, model)
+          VALUES (?, ?, ?, ?, ?, ?, ?)
           ON CONFLICT (agent_id, serial) WHERE serial IS NOT NULL
           DO UPDATE SET
             ip    = COALESCE(EXCLUDED.ip,    devices.ip),
-            brand = COALESCE(EXCLUDED.brand, devices.brand)
+            brand = COALESCE(EXCLUDED.brand, devices.brand),
+            model = COALESCE(EXCLUDED.model, devices.model),
+            name  = COALESCE(EXCLUDED.name,  devices.name)
           RETURNING id
         `, [
           crypto.randomUUID(),
@@ -202,6 +204,7 @@ export class AgentService {
           r.device_id,
           r.device_id,
           r.brand || "unknown",
+          r.model || "unknown"
         ]);
         deviceId = upserted.rows[0].id;
       }
