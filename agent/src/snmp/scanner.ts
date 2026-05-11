@@ -27,9 +27,9 @@ export interface DeviceReading {
   sysDescr:   string;
   sysName:    string;
   serial:     string | null;
-  totalPages: number | null;
-  monoPages:  number | null;
-  colorPages: number | null;
+  total_pages: number | null;
+  mono_pages:  number | null;
+  color_pages: number | null,
   status:     string;
   time:       string;
 }
@@ -141,9 +141,9 @@ export async function readDevice(ip: string, community: string): Promise<DeviceR
       sysDescr:   String(sysDescr ?? '').slice(0, 200),
       sysName:    String(sysName  ?? ''),
       serial:     serial ? String(serial).trim() || null : null,
-      totalPages: totalPages !== null ? Number(totalPages) : null,
-      monoPages:  monoPages  !== null ? Number(monoPages)  : null,
-      colorPages: colorPages !== null ? Number(colorPages) : null,
+      total_pages: totalPages !== null ? Number(totalPages) : null,
+      mono_pages:  monoPages  !== null ? Number(monoPages)  : null,
+      color_pages: colorPages !== null ? Number(colorPages) : null,
       status:     hrStatus(hrSt),
       model:      modelName,
       time:       new Date().toISOString(),

@@ -62,7 +62,7 @@ export function enqueueReading(r: DeviceReading): void {
     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     r.serial ?? r.ip, r.ip, r.brand, r.time,
-    r.totalPages, r.monoPages, r.colorPages,
+    r.total_pages, r.mono_pages, r.color_pages,
     r.status,
   );
 }
@@ -126,11 +126,18 @@ export function isRegistered(ip: string): boolean {
 export class LocalDB {
   async init() { openQueue(); }
 
-  async addReading(reading: any) {
+  async addReading(r: any) {
     db.prepare(`
-      INSERT INTO readings_queue (device_id, time, total_pages, status)
-      VALUES (?, ?, ?, ?)
-    `).run(reading.device_id, new Date(reading.time).toISOString(), reading.total_pages, reading.status ?? 'idle');
+      INSERT INTO readings_queue (device_id, ip, brand, time, total_pages, mono_pages, color_pages, status)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      r.serial ?? r.device_id ?? r.ip, 
+      r.ip, 
+      r.brand, 
+      new Date(r.time || Date.now()).toISOString(), 
+      r.total_pages, r.mono_pages, r.color_pages, 
+      r.status ?? 'idle'
+    );
   }
 
   async getUnsynced(limit = 500): Promise<any[]> {
