@@ -147,9 +147,9 @@ const Layout = () => {
         {/* User Profile */}
         <div className={`p-3 relative transition-all duration-500 ${isHovered ? 'p-6' : 'p-2'}`}>
           <div className={`
-            bg-gradient-to-br from-white/[0.05] to-transparent rounded-[2rem] border border-white/5 backdrop-blur-sm relative overflow-hidden group
+            bg-gradient-to-br from-white/[0.05] to-transparent border border-white/5 backdrop-blur-sm relative overflow-hidden group
             transition-all duration-500
-            ${isHovered ? 'p-5' : 'p-0 h-14 w-14 mx-auto flex items-center justify-center'}
+            ${isHovered ? 'p-5 rounded-[2rem]' : 'h-12 w-12 mx-auto flex items-center justify-center rounded-2xl'}
           `}>
             <div className={`flex items-center gap-4 ${isHovered ? 'mb-4' : ''}`}>
               <div className="relative shrink-0">
@@ -173,13 +173,18 @@ const Layout = () => {
               onClick={logout}
               className={`
                 flex items-center justify-center gap-2 rounded-xl bg-white/[0.03] hover:bg-rose-500/10 hover:text-rose-400 text-[11px] font-black uppercase tracking-widest text-slate-400 transition-all duration-300 border border-white/5
-                ${isHovered ? 'w-full py-2.5 px-4' : 'absolute inset-0 opacity-0 group-hover:opacity-100 bg-slate-950/80 backdrop-blur-sm border-none rounded-[2rem]'}
+                ${isHovered ? 'w-full py-2.5 px-4' : 'absolute inset-0 opacity-0 group-hover:opacity-100 bg-slate-950/80 backdrop-blur-sm border-none rounded-2xl'}
               `}
               title="Cerrar Sesión"
             >
               <LogOut size={isHovered ? 14 : 18} />
               {isHovered && "Salir"}
             </button>
+
+            {/* Hover Indicator Pattern */}
+            {!isHovered && (
+              <div className="absolute left-0 top-3 bottom-3 w-1 bg-orange-500 rounded-r-full opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-[0_0_10px_rgba(245,158,11,0.5)]" />
+            )}
           </div>
         </div>
       </aside>
