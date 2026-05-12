@@ -37,7 +37,7 @@ export async function up(knex: Knex): Promise<void> {
 
   // Partial unique index: one device per (agent_id, serial) when serial is known
   await knex.raw(`
-    CREATE UNIQUE INDEX devices_agent_serial_unique
+    CREATE UNIQUE INDEX IF NOT EXISTS devices_agent_serial_unique
     ON devices (agent_id, serial)
     WHERE serial IS NOT NULL
   `);

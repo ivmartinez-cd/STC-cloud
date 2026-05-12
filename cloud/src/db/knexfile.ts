@@ -2,7 +2,7 @@ import type { Knex } from "knex";
 import dotenv from "dotenv";
 import path from "path";
 
-dotenv.config({ path: "../../.env" });
+dotenv.config({ path: path.resolve(__dirname, "../../../.env") });
 
 // Soporta DATABASE_URL (Neon, Render, Railway) o variables individuales (Docker local)
 const connection: Knex.PgConnectionConfig | string = process.env.DATABASE_URL

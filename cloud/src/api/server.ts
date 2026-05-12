@@ -365,11 +365,28 @@ const start = async () => {
       { preHandler: agentAuth },
       async (request) => {
         const { id } = request.params as any;
+        const { logs, commandResults } = request.body as any;
+
+        // Heartbeat y actualización de last_seen
         await agentService.heartbeat(id);
+
+        // Ingesta de logs si vienen en el heartbeat
+        if (logs && Array.isArray(logs)) {
+          await agentService.ingestLogs(id, logs);
+        }
+
+        // Procesar resultados de comandos ejecutados
+        if (commandResults && Array.isArray(commandResults)) {
+          for (const res of commandResults) {
+            await agentService.updateCommandResult(res.id, res.status, res.result);
+          }
+        }
+
         const [config, commands] = await Promise.all([
           agentService.getConfig(id),
-          agentService.getCommands(redis, id)
+          agentService.getPendingCommands(id)
         ]);
+        
         return { status: "received", config, commands };
       }
     );
@@ -451,15 +468,26 @@ const start = async () => {
       }
     );
 
-    // Enviar comando al agente
+    // Enviar comando al agente (vía DB)
     fastify.post(
       "/api/v1/agents/:id/command",
       { preHandler: portalAuth, schema: commandSchema },
       async (request) => {
         const { id } = request.params as any;
         const { type, payload } = request.body as any;
-        await agentService.sendCommand(redis, id, type, payload || {});
-        return { status: "queued" };
+        const command = await agentService.queueCommand(id, type, payload || {});
+        return { status: "queued", commandId: command.id };
+      }
+    );
+
+    // Obtener logs del agente para el portal
+    fastify.get(
+      "/api/v1/agents/:id/logs",
+      { preHandler: portalAuth },
+      async (request) => {
+        const { id } = request.params as any;
+        const { limit } = request.query as any;
+        return await agentService.getLogs(id, parseInt(limit) || 50);
       }
     );
 

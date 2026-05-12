@@ -46,6 +46,8 @@ internal static class AgentService
 
     // ── Status (calls bundle.js --status, parses JSON) ────────────────────────
 
+    public static Task<AgentStatus?> GetStatusAsync() => Task.Run(GetStatus);
+
     public static AgentStatus? GetStatus()
     {
         var nodeExe = FindAgentExe();
@@ -134,6 +136,8 @@ internal static class AgentService
     }
 
     // ── Service control ───────────────────────────────────────────────────────
+
+    public static Task<(bool Ok, string? Error)> StartServiceAsync() => Task.Run(StartService);
 
     public static (bool Ok, string? Error) StartService()
     {

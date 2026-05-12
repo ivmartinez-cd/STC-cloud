@@ -424,10 +424,12 @@ internal sealed class ActivationForm : Form
         }
     }
 
-    private void BtnRefresh_Click(object? sender, EventArgs e)
+    private async void BtnRefresh_Click(object? sender, EventArgs e)
     {
         _btnRefresh.Enabled = false;
-        UpdateDisplay(AgentService.GetStatus());
+        _statusLabel.Text = "Refrescando estado...";
+        var status = await AgentService.GetStatusAsync();
+        UpdateDisplay(status);
         _btnRefresh.Enabled = true;
     }
 
@@ -445,31 +447,42 @@ internal sealed class ActivationForm : Form
         SetActivationUIBusy(true);
         try
         {
+            _lblActivationHint.Text = "Conectando con el servidor de activación...";
             var (ok, error) = await AgentService.ActivateAsync(key, server);
 
             if (ok)
             {
+                _lblActivationHint.Text = "Activado. Configurando servicio de Windows...";
                 AgentService.SetAutoStart();
-                var (svcOk, svcError) = AgentService.StartService();
+                
+                _lblActivationHint.Text = "Iniciando servicio STC Cloud Monitor...";
+                var (svcOk, svcError) = await AgentService.StartServiceAsync();
 
                 if (!svcOk)
                 {
+                    _lblActivationHint.Text = "Esperando estabilización del servicio...";
                     // Verificación final: el servicio puede haberse iniciado justo después del timeout
-                    await Task.Delay(2000);
-                    var finalStatus = AgentService.GetStatus();
+                    await Task.Delay(3000);
+                    var finalStatus = await AgentService.GetStatusAsync();
                     if (finalStatus?.Service == "running")
                         svcOk = true;
                 }
 
                 if (svcOk)
+                {
+                    _lblActivationHint.Text = "¡Agente listo!";
                     MessageBox.Show(
                         "¡Agente activado! Iniciando escaneo de dispositivos inmediato. Los resultados aparecerán en el portal en breve.",
                         "Éxito", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
                 else
+                {
                     MessageBox.Show($"Activado, pero no se pudo iniciar servicio:\n{svcError}", "Advertencia", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
 
-                await Task.Delay(1000);
-                UpdateDisplay(AgentService.GetStatus());
+                await Task.Delay(500);
+                var s = await AgentService.GetStatusAsync();
+                UpdateDisplay(s);
                 _tabControl.SelectedTab = _tabServiceInfo; // Go back to main tab
             }
             else

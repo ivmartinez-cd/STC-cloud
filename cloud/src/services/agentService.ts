@@ -181,6 +181,62 @@ export class AgentService {
     }
   }
 
+  // --- Remote Logs & Commands ---
+
+  async ingestLogs(agentId: string, logs: any[]) {
+    if (!logs || logs.length === 0) return;
+    
+    const rows = logs.map(l => ({
+      agent_id: agentId,
+      level: l.level || 'INFO',
+      message: l.message,
+      timestamp: new Date(l.timestamp || Date.now())
+    }));
+
+    await this.db("agent_logs").insert(rows);
+  }
+
+  async getPendingCommands(agentId: string) {
+    const commands = await this.db("agent_commands")
+      .where({ agent_id: agentId, status: "pending" })
+      .orderBy("created_at", "asc")
+      .select("id", "type", "payload");
+
+    if (commands.length > 0) {
+      const ids = commands.map(c => c.id);
+      await this.db("agent_commands").whereIn("id", ids).update({ status: "running" });
+    }
+
+    return commands;
+  }
+
+  async updateCommandResult(commandId: string, status: string, result: any) {
+    await this.db("agent_commands")
+      .where({ id: commandId })
+      .update({
+        status,
+        result: result ? JSON.stringify(result) : null,
+        executed_at: new Date()
+      });
+  }
+
+  async queueCommand(agentId: string, type: string, payload: any = {}) {
+    const [command] = await this.db("agent_commands").insert({
+      agent_id: agentId,
+      type,
+      payload: JSON.stringify(payload),
+      status: "pending"
+    }).returning("*");
+    return command;
+  }
+
+  async getLogs(agentId: string, limit: number = 50) {
+    return await this.db("agent_logs")
+      .where({ agent_id: agentId })
+      .orderBy("timestamp", "desc")
+      .limit(limit);
+  }
+
   // Bug #4 corregido: se elimina la IP hardcodeada, se usa r.ip del payload
   async syncReadings(redis: any, readings: any[], agentId: string) {
     if (!readings || readings.length === 0) return;
@@ -244,17 +300,6 @@ export class AgentService {
     }
   }
 
-  async sendCommand(redis: any, agentId: string, type: string, payload: any) {
-    const cmd = JSON.stringify({ type, payload, timestamp: new Date() });
-    await redis.lpush(`commands:${agentId}`, cmd);
-    await redis.expire(`commands:${agentId}`, 600); // 10 min TTL
-  }
-
-  async getCommands(redis: any, agentId: string) {
-    const cmds = await redis.lrange(`commands:${agentId}`, 0, -1);
-    await redis.del(`commands:${agentId}`);
-    return cmds.map((c: string) => JSON.parse(c));
-  }
 
   async revokeToken(redis: any, agentId: string, ttlSeconds: number, requestIp?: string) {
     await redis.set(`blacklist:${agentId}`, "true", "EX", ttlSeconds);

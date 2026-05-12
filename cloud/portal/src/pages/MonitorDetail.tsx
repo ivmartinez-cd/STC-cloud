@@ -84,6 +84,13 @@ const MonitorDetail = () => {
     ip_ranges: [] as { start: string, end: string }[]
   });
 
+  // Monitoring
+  const [activeTab, setActiveTab] = useState<'overview' | 'monitoring'>('overview');
+  const [logs, setLogs] = useState<any[]>([]);
+  const [logLimit, setLogLimit] = useState(50);
+  const [logsLoading, setLogsLoading] = useState(false);
+  const [commandLoading, setCommandLoading] = useState<string | null>(null);
+
   const fetchData = useCallback(() => {
     setLoading(true);
     Promise.all([
@@ -167,6 +174,43 @@ const MonitorDetail = () => {
     }
   };
 
+  const fetchLogs = useCallback(async () => {
+    if (activeTab !== 'monitoring') return;
+    setLogsLoading(true);
+    try {
+      const data = await api.get<any[]>(`/agents/${id}/logs?limit=${logLimit}`);
+      setLogs(data);
+    } catch (err: any) {
+      showToast('Error al cargar logs: ' + err.message, 'error');
+    } finally {
+      setLogsLoading(false);
+    }
+  }, [id, logLimit, activeTab, showToast]);
+
+  useEffect(() => {
+    fetchLogs();
+    // Auto-refresh logs every 15s if in monitoring tab
+    let interval: NodeJS.Timeout;
+    if (activeTab === 'monitoring') {
+      interval = setInterval(fetchLogs, 15000);
+    }
+    return () => clearInterval(interval);
+  }, [fetchLogs, activeTab]);
+
+  const sendCommand = async (type: string, payload: any = {}) => {
+    setCommandLoading(type);
+    try {
+      await api.post(`/agents/${id}/command`, { type, payload });
+      showToast(`Comando ${type} enviado a la cola`, 'success');
+      // Esperar un poco y refrescar logs para ver la confirmación si el agente es rápido
+      setTimeout(fetchLogs, 2000);
+    } catch (err: any) {
+      showToast('Error al enviar comando: ' + err.message, 'error');
+    } finally {
+      setCommandLoading(null);
+    }
+  };
+
   const addIpRange = () => setEditForm(prev => ({ ...prev, ip_ranges: [...prev.ip_ranges, { start: '', end: '' }] }));
   const updateIpRange = (index: number, field: 'start' | 'end', value: string) => {
     const newRanges = [...editForm.ip_ranges];
@@ -216,10 +260,37 @@ const MonitorDetail = () => {
         </div>
       )}
 
+      {/* Tab Switcher */}
       {!loading && !error && monitor && (
+        <div className="flex gap-1 p-1 bg-slate-100 rounded-[20px] w-fit mb-4">
+          <button
+            onClick={() => setActiveTab('overview')}
+            className={`px-6 py-3 rounded-[16px] text-xs font-black uppercase tracking-widest transition-all ${
+              activeTab === 'overview' 
+                ? 'bg-white text-brand shadow-sm' 
+                : 'text-slate-400 hover:text-slate-600'
+            }`}
+          >
+            Vista General
+          </button>
+          <button
+            onClick={() => setActiveTab('monitoring')}
+            className={`px-6 py-3 rounded-[16px] text-xs font-black uppercase tracking-widest transition-all ${
+              activeTab === 'monitoring' 
+                ? 'bg-white text-brand shadow-sm' 
+                : 'text-slate-400 hover:text-slate-600'
+            }`}
+          >
+            Monitorización
+          </button>
+        </div>
+      )}
+
+      {!loading && !error && monitor && activeTab === 'overview' && (
         <>
           {/* Main Dashboard Layout */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            {/* ... resto del contenido original de overview ... */}
             
             {/* Left Column: Device Overview */}
             <div className="lg:col-span-4 space-y-6">
@@ -397,9 +468,120 @@ const MonitorDetail = () => {
                     </button>
                   </div>
                 )}
+          </div>
+        </>
+      )}
+
+      {/* Monitoring Tab */}
+      {!loading && !error && monitor && activeTab === 'monitoring' && (
+        <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            
+            {/* Terminal / Logs */}
+            <div className="lg:col-span-8 space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-black text-[#1a2333] uppercase tracking-tight">Consola de Eventos</h3>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Actividad en tiempo real del agente remoto</p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <select 
+                    className="cd-input !py-2 !px-4 text-[10px] font-black uppercase tracking-widest"
+                    value={logLimit}
+                    onChange={(e) => setLogLimit(Number(e.target.value))}
+                  >
+                    {[25, 50, 75, 100, 125].map(v => (
+                      <option key={v} value={v}>Ver {v} líneas</option>
+                    ))}
+                  </select>
+                  <button 
+                    onClick={fetchLogs}
+                    className="p-2 bg-slate-100 text-slate-600 rounded-xl hover:bg-slate-200 transition-colors"
+                  >
+                    <RefreshCw size={16} className={logsLoading ? 'animate-spin' : ''} />
+                  </button>
+                </div>
+              </div>
+
+              <div className="bg-[#0f172a] rounded-[32px] p-6 shadow-2xl border border-slate-800 h-[500px] flex flex-col overflow-hidden">
+                <div className="flex-1 overflow-y-auto font-mono text-xs custom-scrollbar space-y-1 pr-2">
+                  {logs.length === 0 && !logsLoading && (
+                    <div className="h-full flex items-center justify-center text-slate-600 italic">
+                      Esperando flujo de datos del agente...
+                    </div>
+                  )}
+                  {logs.map((log, idx) => (
+                    <div key={idx} className="flex gap-4 group">
+                      <span className="text-slate-600 shrink-0 select-none">{new Date(log.timestamp).toLocaleTimeString()}</span>
+                      <span className={`font-black shrink-0 w-12 ${
+                        log.level === 'ERROR' ? 'text-rose-500' : 
+                        log.level === 'WARN' ? 'text-amber-500' : 'text-emerald-500'
+                      }`}>[{log.level}]</span>
+                      <span className="text-slate-300 break-all">{log.message}</span>
+                    </div>
+                  )).reverse()}
+                  {logsLoading && logs.length > 0 && (
+                    <div className="text-slate-500 animate-pulse">Cargando nuevos eventos...</div>
+                  )}
+                </div>
+                <div className="mt-4 pt-4 border-t border-slate-800 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className={`w-2 h-2 rounded-full animate-pulse ${monitor.status === 'active' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Canal de Telemetría Activo</span>
+                  </div>
+                  <span className="text-[9px] font-bold text-slate-600 uppercase tracking-[0.2em]">STC CLOUD TERMINAL v1.0</span>
+                </div>
               </div>
             </div>
+
+            {/* Remote Commands */}
+            <div className="lg:col-span-4 space-y-6">
+              <div className="cd-panel p-8 space-y-6">
+                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-3">
+                  <Shield size={16} className="text-brand" /> Acciones de Administración
+                </h3>
+
+                <div className="space-y-3">
+                  <button
+                    onClick={() => sendCommand('RESCAN')}
+                    disabled={!!commandLoading}
+                    className="w-full py-4 px-6 bg-blue-50 text-brand border border-blue-100 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-between hover:bg-brand hover:text-white transition-all active:scale-95 disabled:opacity-50"
+                  >
+                    <span>Forzar Re-escaneo SNMP</span>
+                    {commandLoading === 'RESCAN' ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
+                  </button>
+
+                  <button
+                    onClick={() => sendCommand('PING')}
+                    disabled={!!commandLoading}
+                    className="w-full py-4 px-6 bg-slate-50 text-slate-700 border border-slate-200 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-between hover:bg-slate-800 hover:text-white transition-all active:scale-95 disabled:opacity-50"
+                  >
+                    <span>Ping de Diagnóstico</span>
+                    {commandLoading === 'PING' ? <Loader2 size={16} className="animate-spin" /> : <Activity size={16} />}
+                  </button>
+
+                  <button
+                    onClick={() => sendCommand('RESTART')}
+                    disabled={!!commandLoading}
+                    className="w-full py-4 px-6 bg-rose-50 text-rose-600 border border-rose-100 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-between hover:bg-rose-600 hover:text-white transition-all active:scale-95 disabled:opacity-50"
+                  >
+                    <span>Reiniciar Servicio Agente</span>
+                    {commandLoading === 'RESTART' ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
+                  </button>
+                </div>
+
+                <div className="p-4 bg-amber-50 border border-amber-100 rounded-2xl">
+                  <p className="text-[9px] font-black text-amber-800 uppercase tracking-tight mb-1">Información</p>
+                  <p className="text-[10px] text-amber-700/70 font-bold leading-relaxed">
+                    Los comandos se encolan y son procesados por el agente en su próximo ciclo de sincronización (cada 30s aprox).
+                  </p>
+                </div>
+              </div>
+            </div>
+
           </div>
+        </div>
+      )}
 
           {/* Edit Modal */}
           {showEditModal && (

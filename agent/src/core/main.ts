@@ -5,6 +5,7 @@ import { ConfigManager, DATA_DIR, type AgentConfig } from './config';
 import { openQueue, enqueueReading, pendingCount, purgeOld, upsertKnownDevice, isRegistered, getDeviceCount, closeQueue } from '../sync/database';
 import { uploadPending } from '../sync/uploader';
 import { readDevice, type DeviceReading } from '../snmp/scanner';
+import { LogTailer } from './LogTailer';
 
 const VERSION = '1.0.0';
 const LOG_MAX_BYTES = 10 * 1024 * 1024;
@@ -12,6 +13,7 @@ const LOG_MAX_BYTES = 10 * 1024 * 1024;
 // ─── Logger ───────────────────────────────────────────────────────────────────
 
 const LOG_PATH = path.join(DATA_DIR, 'agent.log');
+const logTailer = new LogTailer(LOG_PATH);
 
 function log(level: 'INFO' | 'WARN' | 'ERROR', msg: string): void {
   const now = new Date();
@@ -55,11 +57,15 @@ let scanInterval: NodeJS.Timeout | null = null;
 let lastScanErrors = 0;
 let isScanning = false;
 let isSyncing = false;
+let commandResults: any[] = [];
 
 // ─── Loop 1: Heartbeat (cada 60s) ────────────────────────────────────────────
 
 async function heartbeat(): Promise<void> {
   try {
+    // Obtener logs nuevos
+    const logs = await logTailer.getNewLogs();
+
     const res = await fetch(`${currentConfig.serverUrl}/api/v1/agents/${currentConfig.agentId}/heartbeat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${currentConfig.token}` },
@@ -68,6 +74,8 @@ async function heartbeat(): Promise<void> {
         deviceCount: getDeviceCount(),
         snmpErrors:  lastScanErrors,
         memoryMb:    Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
+        logs,
+        commandResults
       }),
     });
 
@@ -75,9 +83,21 @@ async function heartbeat(): Promise<void> {
       log('WARN', 'Token expirado en heartbeat. Intentando refresh vía Sync...');
     } else if (res.ok) {
       const data = await res.json() as any;
+      
+      // Limpiar resultados enviados satisfactoriamente
+      commandResults = [];
+
       if (data.config) {
         await handleRemoteConfig(data.config);
       }
+
+      if (data.commands && data.commands.length > 0) {
+        for (const cmd of data.commands) {
+          const result = await handleCommand(cmd);
+          commandResults.push(result);
+        }
+      }
+
       log('INFO', 'Heartbeat OK');
     } else if (res.status === 404) {
       log('ERROR', 'Agente no encontrado en el servidor. Eliminando identidad local...');
@@ -89,8 +109,36 @@ async function heartbeat(): Promise<void> {
   } catch (e: any) {
     log('WARN', `Heartbeat error: ${e.message}`);
   } finally {
-    // Re-programar siguiente heartbeat
-    setTimeout(heartbeat, 60_000);
+    // Re-programar siguiente heartbeat (acortado a 30s para mayor responsividad en comandos)
+    setTimeout(heartbeat, 30_000);
+  }
+}
+
+async function handleCommand(cmd: any) {
+  log('INFO', `Ejecutando comando remoto: ${cmd.type}`);
+  try {
+    let result = {};
+    switch (cmd.type) {
+      case 'RESCAN':
+        // No esperamos a que termine el scan
+        snmpScan(currentConfig, false);
+        result = { message: 'Scan iniciado correctamente' };
+        break;
+      case 'PING':
+        result = { message: 'Pong', timestamp: new Date().toISOString() };
+        break;
+      case 'RESTART':
+        log('WARN', 'Reinicio remoto solicitado. Saliendo en 2 segundos...');
+        setTimeout(() => process.exit(0), 2000);
+        result = { message: 'Reiniciando agente...' };
+        break;
+      default:
+        throw new Error(`Comando no soportado: ${cmd.type}`);
+    }
+    return { id: cmd.id, status: 'success', result };
+  } catch (e: any) {
+    log('ERROR', `Error ejecutando comando ${cmd.type}: ${e.message}`);
+    return { id: cmd.id, status: 'error', result: { error: e.message } };
   }
 }
 
