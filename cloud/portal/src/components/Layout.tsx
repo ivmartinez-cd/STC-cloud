@@ -62,9 +62,9 @@ const Layout = () => {
                 alt="STC Cloud" 
                 className={`h-11 w-auto object-contain transition-all duration-500 ${isHovered ? 'opacity-100 scale-100' : 'opacity-0 scale-75 absolute pointer-events-none'}`} 
               />
-              {/* Icon Logo - Shown when collapsed */}
+              {/* Icon Logo - Shown when collapsed (Now using logo.png for orange color) */}
               <img 
-                src="/logo2.png" 
+                src="/logo.png" 
                 alt="STC" 
                 className={`h-10 w-auto object-contain transition-all duration-500 ${!isHovered ? 'opacity-100 scale-110' : 'opacity-0 scale-125 absolute pointer-events-none'}`} 
               />
