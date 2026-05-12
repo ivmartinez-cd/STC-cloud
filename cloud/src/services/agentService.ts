@@ -153,19 +153,31 @@ export class AgentService {
 
   async registerDevices(agentId: string, devices: any[]) {
     for (const device of devices) {
-      await this.db("devices")
-        .insert({
-          id: crypto.randomUUID(),
-          agent_id: agentId,
-          ip: device.ip,
-          mac: device.mac,
-          serial: device.serial,
-          brand: device.brand,
-          model: (device.model || "").slice(0, 100),
-          name: (device.name || "").slice(0, 100),
-        })
-        .onConflict(["agent_id", "serial"])
-        .merge(["ip", "model", "name", "brand", "mac"]);
+      try {
+        await this.db.raw(`
+          INSERT INTO devices (id, agent_id, ip, mac, serial, brand, model, name)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+          ON CONFLICT (agent_id, serial) WHERE serial IS NOT NULL
+          DO UPDATE SET
+            ip    = COALESCE(EXCLUDED.ip,    devices.ip),
+            mac   = COALESCE(EXCLUDED.mac,   devices.mac),
+            brand = COALESCE(EXCLUDED.brand, devices.brand),
+            model = COALESCE(EXCLUDED.model, devices.model),
+            name  = COALESCE(EXCLUDED.name,  devices.name)
+        `, [
+          crypto.randomUUID(),
+          agentId,
+          device.ip,
+          device.mac || null,
+          device.serial || null,
+          device.brand || 'unknown',
+          (device.model || "").slice(0, 100),
+          (device.name || "").slice(0, 100)
+        ]);
+      } catch (e: any) {
+        console.error(`[AGENT_SERVICE] Error registering device ${device.ip}:`, e.message);
+        throw e;
+      }
     }
   }
 

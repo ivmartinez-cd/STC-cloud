@@ -53,6 +53,8 @@ function* ipRange(start: string, end: string): Generator<string> {
 let currentConfig: AgentConfig;
 let scanInterval: NodeJS.Timeout | null = null;
 let lastScanErrors = 0;
+let isScanning = false;
+let isSyncing = false;
 
 // ─── Loop 1: Heartbeat (cada 60s) ────────────────────────────────────────────
 
@@ -126,20 +128,24 @@ async function handleRemoteConfig(remote: any): Promise<void> {
 
   if (triggerImmediateScan) {
     log('INFO', 'Primera configuración de IPs recibida — iniciando scan inmediato.');
-    await snmpScan(currentConfig);
+    // Usamos await para asegurar que termine antes de seguir, pero snmpScan manejará su propio bloqueo
+    await snmpScan(currentConfig, false); 
     log('INFO', 'Scan inmediato completado — sincronizando con el portal.');
-    await syncLoop();
+    await syncLoop(false);
   }
 }
 
 // ─── Loop 2: Scanner SNMP ─────────────────────────────────────────────────────
 
-async function snmpScan(config: AgentConfig): Promise<void> {
-  if (pendingCount() > 10_000) {
-    log('WARN', 'Backpressure activo (>10k lecturas pendientes). Scan omitido.');
-    setTimeout(() => snmpScan(currentConfig), 60_000); // Reintentar en 1 min si hay backpressure
-    return;
-  }
+async function snmpScan(config: AgentConfig, loop = true): Promise<void> {
+  if (isScanning) return;
+  isScanning = true;
+
+  try {
+    if (pendingCount() > 10_000) {
+      log('WARN', 'Backpressure activo (>10k lecturas pendientes). Scan omitido.');
+      return;
+    }
 
   log('INFO', `Iniciando scan de ${config.ipRanges.length} rango(s)`);
   let errors = 0;
@@ -183,10 +189,13 @@ async function snmpScan(config: AgentConfig): Promise<void> {
   
   lastScanErrors = errors;
   log('INFO', `Scan completado. Pendientes en cola: ${pendingCount()} | Errores: ${errors}`);
-  
-  // Programar siguiente escaneo
-  const scanMs = (currentConfig.scanIntervalMinutes ?? 15) * 60_000;
-  setTimeout(() => snmpScan(currentConfig), scanMs);
+} finally {
+    isScanning = false;
+    if (loop) {
+      const scanMs = (currentConfig.scanIntervalMinutes ?? 15) * 60_000;
+      setTimeout(() => snmpScan(currentConfig), scanMs);
+    }
+  }
 }
 
 async function registerDevice(config: AgentConfig, r: DeviceReading): Promise<boolean> {
@@ -214,7 +223,10 @@ async function registerDevice(config: AgentConfig, r: DeviceReading): Promise<bo
 
 // ─── Loop 3: Sincronizador ────────────────────────────────────────────────────
 
-async function syncLoop(): Promise<void> {
+async function syncLoop(loop = true): Promise<void> {
+  if (isSyncing) return;
+  isSyncing = true;
+
   try {
     purgeOld();
     const { uploaded, failed, updatedConfig } = await uploadPending(currentConfig);
@@ -227,8 +239,11 @@ async function syncLoop(): Promise<void> {
   } catch (e: any) {
     log('WARN', `Sync error: ${e.message}`);
   } finally {
-    // Re-programar siguiente sincronización
-    setTimeout(syncLoop, 5 * 60_000);
+    isSyncing = false;
+    if (loop) {
+      // Re-programar siguiente sincronización
+      setTimeout(syncLoop, 5 * 60_000);
+    }
   }
 }
 
