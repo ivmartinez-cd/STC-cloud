@@ -299,8 +299,15 @@ export class AgentService {
 
         const deviceId = upserted.rows[0].id;
 
+        // Parseo seguro de fecha
+        let readingTime = new Date(r.time);
+        if (isNaN(readingTime.getTime())) {
+          readingTime = new Date(); // Fallback a ahora si la fecha es inválida
+        }
+
         mappedReadings.push({
-          time: new Date(r.time),
+          id: crypto.randomUUID(), // Generamos ID en JS para evitar dependencia de extensiones DB
+          time: readingTime,
           device_id: deviceId,
           total_pages: r.total_pages ?? null,
           mono_pages:  r.mono_pages  ?? null,
