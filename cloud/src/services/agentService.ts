@@ -262,8 +262,22 @@ export class AgentService {
           else if (r.model.toLowerCase().includes('xerox')) brand = 'Xerox';
         }
 
-        // Nombre amigable: Usamos la primera parte del modelo si no hay nombre específico
-        const friendlyName = r.name || (r.model ? r.model.split(';')[0].trim() : r.device_id);
+        // ── Fase 5: Estilización Forzada (Backend) ───────────────────────────
+        // Limpiamos el nombre: Tomamos r.name o r.model y cortamos en el primer separador técnico (; | \r \n)
+        const sourceName = r.name || r.model || r.device_id || "Unknown";
+        let friendlyName = sourceName.split(/[;|\r\n]/)[0].trim();
+
+        // Quitar el prefijo de la marca si está presente (ej: "SAMSUNG SL-M..." -> "SL-M...")
+        const bLower = brand.toLowerCase();
+        if (friendlyName.toLowerCase().startsWith(bLower)) {
+          friendlyName = friendlyName.slice(bLower.length).trim();
+        }
+
+        // Si después de limpiar queda vacío o muy corto, usamos el ID
+        if (friendlyName.length < 2) friendlyName = r.device_id;
+
+        // Limpiar también el modelo para que no guarde basura
+        const cleanModel = (r.model || "unknown").split(/[;|\r\n]/)[0].trim();
 
         const upserted = await this.db.raw<{ rows: { id: string }[] }>(`
           INSERT INTO devices (id, agent_id, ip_address, serial_number, name, brand, model, active, last_seen, total_pages, mono_pages, color_pages, last_status)
@@ -274,7 +288,11 @@ export class AgentService {
             brand         = COALESCE(NULLIF(EXCLUDED.brand, 'unknown'), devices.brand),
             model         = COALESCE(EXCLUDED.model, devices.model),
             name          = CASE 
-                              WHEN devices.name IS NULL OR devices.name = devices.serial_number THEN EXCLUDED.name
+                              WHEN devices.name IS NULL 
+                                OR devices.name = devices.serial_number 
+                                OR devices.name LIKE '%;%' 
+                                OR devices.name LIKE '%V4.%' 
+                              THEN EXCLUDED.name
                               ELSE devices.name 
                             END,
             last_seen     = NOW(),
@@ -291,7 +309,7 @@ export class AgentService {
           (r.device_id || "").slice(0, 150), // serial_number
           friendlyName.slice(0, 255),
           brand.slice(0, 100),
-          (r.model || "unknown").slice(0, 255),
+          cleanModel.slice(0, 255),
           parseCount(r.total_pages),
           parseCount(r.mono_pages),
           parseCount(r.color_pages),
