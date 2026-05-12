@@ -527,6 +527,7 @@ const MonitorDetail = () => {
                 <tr className="bg-slate-50/50">
                   <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Dispositivo</th>
                   <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Red</th>
+                  <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Número de Serie</th>
                   <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Contadores (Total / Mono / Color)</th>
                   <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Último Reporte</th>
                 </tr>
@@ -557,10 +558,10 @@ const MonitorDetail = () => {
                       </td>
 
                       <td className="px-8 py-5">
-                        <div className="space-y-1">
-                          <p className="text-xs font-bold text-brand font-mono">{device.ip_address}</p>
-                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">SN: {device.serial_number || 'N/A'}</p>
-                        </div>
+                        <p className="text-xs font-bold text-brand font-mono">{device.ip_address}</p>
+                      </td>
+                      <td className="px-8 py-5">
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{device.serial_number || 'N/A'}</p>
                       </td>
                       <td className="px-8 py-5 text-right">
                         <div className="flex flex-col items-end gap-1">
