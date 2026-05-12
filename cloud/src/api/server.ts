@@ -737,7 +737,7 @@ const start = async () => {
           .where("devices.active", true)
           .select(
             "devices.*",
-            "devices.last_status as status",
+            db.raw("CASE WHEN devices.active = true THEN 'online' ELSE 'offline' END as status"),
             "agents.name as monitor_name",
             "clients.name as client_name"
           )
@@ -754,7 +754,7 @@ const start = async () => {
           .where("devices.id", id)
           .select(
             "devices.*",
-            "devices.last_status as status",
+            db.raw("CASE WHEN devices.active = true THEN 'online' ELSE 'offline' END as status"),
             "agents.name as monitor_name",
             "clients.name as client_name"
           )
@@ -777,7 +777,7 @@ const start = async () => {
           .where("agents.client_id", id)
           .select(
             "devices.*",
-            "devices.last_status as status",
+            db.raw("CASE WHEN devices.active = true THEN 'online' ELSE 'offline' END as status"),
             "agents.name as monitor_name",
             "agents.last_seen as monitor_last_seen"
           )
@@ -801,7 +801,10 @@ const start = async () => {
         if (from) query.where("time", ">=", new Date(from));
         if (to) query.where("time", "<=", new Date(to));
 
-        return await query.select("*");
+        return await query.select(
+          "*",
+          db.raw("CASE WHEN offline = true THEN 'offline' ELSE 'online' END as status")
+        );
       }
     );
 
