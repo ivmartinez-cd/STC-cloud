@@ -57,6 +57,14 @@ const MonitorDetail = () => {
   
   // Modales
   const [showEditModal, setShowEditModal] = useState(false);
+  const [editForm, setEditForm] = useState({
+    name: '',
+    ipStart: '',
+    ipEnd: '',
+    snmp: 'public',
+    interval: 15
+  });
+  const [savingSettings, setSavingSettings] = useState(false);
   const [revoking, setRevoking] = useState(false);
   const [regenKey, setRegenKey] = useState<string | null>(null);
   const [keyCopied, setKeyCopied] = useState(false);
@@ -247,7 +255,22 @@ const MonitorDetail = () => {
             <Download size={18} /> Descargar Logs
           </button>
           <button 
-            onClick={() => setShowEditModal(true)}
+            onClick={() => {
+              const ranges = typeof monitor.config?.ip_ranges === 'string' 
+                ? JSON.parse(monitor.config.ip_ranges) 
+                : (monitor.config?.ip_ranges || []);
+              
+              const firstRange = ranges[0] || { start: '', end: '' };
+              
+              setEditForm({
+                name: monitor.name,
+                ipStart: firstRange.start,
+                ipEnd: firstRange.end,
+                snmp: monitor.config?.snmp_community || 'public',
+                interval: monitor.config?.scan_interval_minutes || 15
+              });
+              setShowEditModal(true);
+            }}
             className="px-6 py-4 bg-white text-[#1a2333] font-black text-[10px] uppercase tracking-widest rounded-2xl shadow-xl shadow-blue-900/5 hover:bg-slate-50 transition-all active:scale-95 flex items-center gap-3"
           >
             <Settings size={18} /> Ajustes
@@ -384,29 +407,18 @@ const MonitorDetail = () => {
                       </div>
                       <div>
                         <p className="text-[10px] font-black text-brand uppercase tracking-widest">Enlace Cifrado Activo</p>
-                        <p className="text-xs font-bold text-blue-900 leading-relaxed">Hardware ID: <span className="font-mono">{monitor.hardware_id}</span></p>
+                        <p className="text-xs font-bold text-blue-900 leading-relaxed uppercase tracking-tighter">Telemetría Segura y Verificada</p>
                       </div>
                     </div>
                   )}
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="p-6 bg-white border border-slate-100 rounded-3xl shadow-sm">
+                                    <div className="p-6 bg-white border border-slate-100 rounded-3xl shadow-sm flex-1">
                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Sincronización</p>
                       <div className="flex items-center gap-3">
                         <div className={`w-2.5 h-2.5 rounded-full ${monitor.status === 'active' ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
                         <span className="text-sm font-black text-slate-700">{formatRelativeTime(monitor.last_seen, now)}</span>
                       </div>
                     </div>
-                    <div className="p-6 bg-white border border-slate-100 rounded-3xl shadow-sm">
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Exportar Diagnóstico</p>
-                      <button 
-                        onClick={exportLogs}
-                        className="flex items-center gap-3 text-brand hover:underline text-sm font-black"
-                      >
-                        <Download size={16} /> Descargar Logs .CSV
-                      </button>
-                    </div>
-                  </div>
+  </div>
                 </div>
               </div>
 
@@ -526,38 +538,121 @@ const MonitorDetail = () => {
         </div>
       )}
 
-      {/* Edit Modal */}
       {showEditModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 bg-[#1a2333]/60 backdrop-blur-md animate-overlay-in">
           <div className="bg-white rounded-[32px] shadow-2xl w-full max-w-2xl overflow-hidden animate-modal-in">
             <header className="px-10 py-10 bg-gradient-to-r from-[#1a2333] to-[#2c3e50] text-white flex justify-between items-center relative overflow-hidden">
               <div className="relative z-10">
-                <h2 className="text-2xl font-black tracking-tight uppercase">Editar Nodo</h2>
-                <p className="text-[10px] font-black text-blue-300 uppercase tracking-[0.2em] mt-1">Configuración del agente</p>
+                <h2 className="text-2xl font-black tracking-tight uppercase">Configuración del Nodo</h2>
+                <p className="text-[10px] font-black text-blue-300 uppercase tracking-[0.2em] mt-1">Ajustes técnicos de escaneo</p>
               </div>
               <button onClick={() => setShowEditModal(false)} className="relative z-10 p-3 hover:bg-white/10 rounded-2xl transition-all active:scale-90">
                 <X size={28} />
               </button>
               <div className="absolute -right-10 -top-10 opacity-10">
-                <Edit2 size={160} />
+                <Settings size={160} />
               </div>
             </header>
-            <div className="p-12 space-y-8">
-                <div className="space-y-3">
+            <form 
+              onSubmit={async (e) => {
+                e.preventDefault();
+                setSavingSettings(true);
+                try {
+                  await api.put(`/agents/${id}/config`, {
+                    name: editForm.name,
+                    ip_ranges: editForm.ipStart && editForm.ipEnd ? [{ start: editForm.ipStart, end: editForm.ipEnd }] : [],
+                    snmp_community: editForm.snmp,
+                    scan_interval_minutes: editForm.interval
+                  });
+                  showToast('Configuración actualizada correctamente', 'success');
+                  setShowEditModal(false);
+                  fetchData();
+                } catch (err: any) {
+                  showToast(err.message, 'error');
+                } finally {
+                  setSavingSettings(false);
+                }
+              }}
+              className="p-12 space-y-8"
+            >
+              <div className="space-y-3">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nombre del Nodo</label>
                 <input
                   type="text"
-                  value={monitor?.name || ''}
+                  required
+                  value={editForm.name}
                   className="cd-input w-full !h-14 !bg-slate-50 border-transparent focus:!border-brand focus:!bg-white"
                   placeholder="Ej: Servidor Central"
-                  onChange={() => {}} 
+                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} 
                 />
               </div>
-              <div className="flex gap-4">
-                <button onClick={() => setShowEditModal(false)} className="flex-1 py-5 rounded-[24px] border border-slate-200 text-slate-500 font-black uppercase tracking-widest text-xs hover:bg-slate-50">Cancelar</button>
-                <button className="flex-1 py-5 bg-brand text-white rounded-[24px] font-black uppercase tracking-widest text-xs shadow-xl shadow-blue-900/20">Guardar Cambios</button>
+
+              <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">IP Inicial</label>
+                  <input
+                    type="text"
+                    value={editForm.ipStart}
+                    className="cd-input w-full !h-14 !bg-slate-50 border-transparent focus:!border-brand focus:!bg-white font-mono"
+                    placeholder="192.168.1.1"
+                    onChange={(e) => setEditForm({ ...editForm, ipStart: e.target.value })} 
+                  />
+                </div>
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">IP Final</label>
+                  <input
+                    type="text"
+                    value={editForm.ipEnd}
+                    className="cd-input w-full !h-14 !bg-slate-50 border-transparent focus:!border-brand focus:!bg-white font-mono"
+                    placeholder="192.168.1.254"
+                    onChange={(e) => setEditForm({ ...editForm, ipEnd: e.target.value })} 
+                  />
+                </div>
               </div>
-            </div>
+
+              <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Comunidad SNMP</label>
+                  <input
+                    type="text"
+                    value={editForm.snmp}
+                    className="cd-input w-full !h-14 !bg-slate-50 border-transparent focus:!border-brand focus:!bg-white"
+                    placeholder="public"
+                    onChange={(e) => setEditForm({ ...editForm, snmp: e.target.value })} 
+                  />
+                </div>
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Intervalo (Minutos)</label>
+                  <select
+                    value={editForm.interval}
+                    className="cd-input w-full !h-14 !bg-slate-50 border-transparent focus:!border-brand focus:!bg-white"
+                    onChange={(e) => setEditForm({ ...editForm, interval: parseInt(e.target.value) })}
+                  >
+                    <option value={15}>Cada 15 min</option>
+                    <option value={30}>Cada 30 min</option>
+                    <option value={60}>Cada 1 hora</option>
+                    <option value={1440}>Cada 24 horas</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex gap-4 pt-4">
+                <button 
+                  type="button"
+                  onClick={() => setShowEditModal(false)} 
+                  className="flex-1 py-5 rounded-[24px] border border-slate-200 text-slate-500 font-black uppercase tracking-widest text-xs hover:bg-slate-50"
+                >
+                  Cancelar
+                </button>
+                <button 
+                  type="submit"
+                  disabled={savingSettings}
+                  className="flex-1 py-5 bg-brand text-white rounded-[24px] font-black uppercase tracking-widest text-xs shadow-xl shadow-blue-900/20 flex items-center justify-center gap-3 disabled:opacity-50"
+                >
+                  {savingSettings ? <Loader2 size={18} className="animate-spin" /> : 'Guardar Cambios'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
