@@ -243,6 +243,12 @@ export class AgentService {
 
     console.log(`[SYNC] Procesando ${readings.length} lecturas para agente ${agentId}`);
     
+    const parseCount = (v: any) => {
+      if (v === null || v === undefined) return null;
+      const n = parseInt(v, 10);
+      return isNaN(n) ? null : n;
+    };
+    
     for (const r of readings) {
       try {
         // Limpiar marca si viene genérica
@@ -305,12 +311,6 @@ export class AgentService {
           readingTime = new Date(); // Fallback a ahora si la fecha es inválida
         }
 
-        // Conversión segura de contadores (pueden venir como string o float)
-        const parseCount = (v: any) => {
-          if (v === null || v === undefined) return null;
-          const n = parseInt(v, 10);
-          return isNaN(n) ? null : n;
-        };
 
         mappedReadings.push({
           id: crypto.randomUUID(), // Generamos ID en JS para evitar dependencia de extensiones DB
