@@ -241,8 +241,11 @@ export class AgentService {
 
     const mappedReadings: any[] = [];
 
+    console.log(`[SYNC] Procesando ${readings.length} lecturas para agente ${agentId}`);
+    
     for (const r of readings) {
-      // Upsert del dispositivo: actualizamos la ficha maestra con la última info detectada
+      try {
+        // Limpiar marca si viene genérica
       // Limpiar marca si viene genérica
       let brand = r.brand || "unknown";
       if (brand.toLowerCase() === 'generic' && r.model) {
@@ -257,54 +260,80 @@ export class AgentService {
       // Nombre amigable: Usamos la primera parte del modelo si no hay nombre específico
       const friendlyName = r.name || (r.model ? r.model.split(';')[0].trim() : r.device_id);
 
-      const upserted = await this.db.raw<{ rows: { id: string }[] }>(`
-        INSERT INTO devices (id, agent_id, ip_address, serial_number, name, brand, model, active, last_seen, total_pages, mono_pages, color_pages, last_status)
-        VALUES (?, ?, ?, ?, ?, ?, ?, true, NOW(), ?, ?, ?, ?)
-        ON CONFLICT (agent_id, serial_number) WHERE serial_number IS NOT NULL
-        DO UPDATE SET
-          ip_address    = EXCLUDED.ip_address,
-          brand         = COALESCE(NULLIF(EXCLUDED.brand, 'unknown'), devices.brand),
-          model         = COALESCE(EXCLUDED.model, devices.model),
-          name          = CASE 
-                            WHEN devices.name IS NULL OR devices.name = devices.serial_number THEN EXCLUDED.name
-                            ELSE devices.name 
-                          END,
-          last_seen     = NOW(),
-          active        = true,
-          total_pages   = EXCLUDED.total_pages,
-          mono_pages    = EXCLUDED.mono_pages,
-          color_pages   = EXCLUDED.color_pages,
-          last_status   = EXCLUDED.last_status
-        RETURNING id
-      `, [
-        crypto.randomUUID(),
-        agentId,
-        r.ip || null,
-        r.device_id, // serial_number
-        friendlyName.slice(0, 255),
-        brand.slice(0, 100),
-        (r.model || "unknown").slice(0, 255),
-        r.total_pages ?? null,
-        r.mono_pages  ?? null,
-        r.color_pages ?? null,
-        r.status || "online"
-      ]);
+        const upserted = await this.db.raw<{ rows: { id: string }[] }>(`
+          INSERT INTO devices (id, agent_id, ip_address, serial_number, name, brand, model, active, last_seen, total_pages, mono_pages, color_pages, last_status)
+          VALUES (?, ?, ?, ?, ?, ?, ?, true, NOW(), ?, ?, ?, ?)
+          ON CONFLICT (agent_id, serial_number) WHERE serial_number IS NOT NULL
+          DO UPDATE SET
+            ip_address    = EXCLUDED.ip_address,
+            brand         = COALESCE(NULLIF(EXCLUDED.brand, 'unknown'), devices.brand),
+            model         = COALESCE(EXCLUDED.model, devices.model),
+            name          = CASE 
+                              WHEN devices.name IS NULL OR devices.name = devices.serial_number THEN EXCLUDED.name
+                              ELSE devices.name 
+                            END,
+            last_seen     = NOW(),
+            active        = true,
+            total_pages   = EXCLUDED.total_pages,
+            mono_pages    = EXCLUDED.mono_pages,
+            color_pages   = EXCLUDED.color_pages,
+            last_status   = EXCLUDED.last_status
+          RETURNING id
+        `, [
+          crypto.randomUUID(),
+          agentId,
+          r.ip || null,
+          r.device_id, // serial_number
+          friendlyName.slice(0, 255),
+          brand.slice(0, 100),
+          (r.model || "unknown").slice(0, 255),
+          r.total_pages ?? null,
+          r.mono_pages  ?? null,
+          r.color_pages ?? null,
+          r.status || "online"
+        ]);
 
-      const deviceId = upserted.rows[0].id;
+        if (!upserted.rows || upserted.rows.length === 0) {
+          throw new Error("Upsert no retornó ID del dispositivo");
+        }
 
-      mappedReadings.push({
-        time: new Date(r.time),
-        device_id: deviceId,
-        total_pages: r.total_pages ?? null,
-        mono_pages:  r.mono_pages  ?? null,
-        color_pages: r.color_pages ?? null,
-        status:      r.status || "idle",
-        offline:     r.offline ?? false,
-      });
+        const deviceId = upserted.rows[0].id;
+
+        mappedReadings.push({
+          time: new Date(r.time),
+          device_id: deviceId,
+          total_pages: r.total_pages ?? null,
+          mono_pages:  r.mono_pages  ?? null,
+          color_pages: r.color_pages ?? null,
+          status:      r.status || "idle",
+          offline:     r.offline ?? false,
+        });
+      } catch (err: any) {
+        console.error(`[SYNC] Error procesando dispositivo ${r.device_id}:`, err.message);
+        // Enviamos el error al log del portal para que el usuario lo vea
+        await this.ingestLogs(agentId, [{
+          time: new Date().toISOString(),
+          level: 'ERROR',
+          message: `Sync Error [${r.ip}]: ${err.message}`
+        }]);
+        throw err; // Re-throw para que el endpoint responda con error
+      }
     }
 
-    // Inserción masiva de lecturas en el historial
-    await this.db("readings").insert(mappedReadings);
+    if (mappedReadings.length > 0) {
+      try {
+        // Inserción masiva de lecturas en el historial
+        await this.db("readings").insert(mappedReadings);
+      } catch (err: any) {
+        console.error("[SYNC] Error al insertar lecturas:", err.message);
+        await this.ingestLogs(agentId, [{
+          time: new Date().toISOString(),
+          level: 'ERROR',
+          message: `Readings Insert Error: ${err.message}`
+        }]);
+        throw err;
+      }
+    }
 
     // Encolar evaluación de alertas de forma asíncrona
     try {
