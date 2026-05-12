@@ -35,27 +35,21 @@ const Login = () => {
       <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-[0.03] pointer-events-none" />
 
       <div className="w-full max-w-[460px] relative z-10">
-        {/* Corporate Header - Matching the provided image structure */}
-        <div className="text-center mb-12 animate-in fade-in slide-in-from-bottom-8 duration-1000">
-          <div className="flex flex-col items-center justify-center mb-0">
-            <div className="relative group mb-2">
-              <div className="absolute inset-0 bg-[#f7931d]/20 blur-3xl rounded-full opacity-40 group-hover:opacity-100 transition-opacity duration-1000" />
-              {/* Logo Icon and Brand Name */}
-              <div className="flex items-center gap-3 relative z-10">
-                <img src="/logo.png" alt="Icon" className="h-16 w-auto object-contain drop-shadow-[0_10px_15px_rgba(247,147,29,0.2)]" />
-                <h1 className="text-3xl font-black tracking-tight text-[#f7931d] uppercase">
-                  CANAL DIRECTO
-                </h1>
-              </div>
+        {/* Corporate Header - Refined to avoid duplication */}
+        <div className="text-center mb-10 animate-in fade-in slide-in-from-bottom-8 duration-1000">
+          <div className="flex flex-col items-center justify-center">
+            <div className="relative group mb-1">
+              <div className="absolute inset-0 bg-[#f7931d]/20 blur-3xl rounded-full opacity-30 group-hover:opacity-60 transition-opacity duration-1000" />
+              {/* Logo Image already contains "CANAL DIRECTO" */}
+              <img src="/logo.png" alt="CANAL DIRECTO" className="h-20 w-auto object-contain relative z-10" />
             </div>
             
-            <div className="flex items-center justify-center mt-[-5px]">
-              <span className="text-2xl font-black tracking-[0.2em] text-[#004a99] uppercase drop-shadow-sm">
+            <div className="flex items-center justify-center mt-[-10px]">
+              <span className="text-2xl font-black tracking-[0.15em] text-[#004a99] uppercase drop-shadow-sm">
                 STC CLOUD
               </span>
             </div>
-            <div className="w-12 h-0.5 bg-[#f7931d]/30 mt-3 rounded-full" />
-            <p className="text-slate-500 text-[9px] font-black uppercase tracking-[0.4em] mt-3 opacity-60">Portal de Gestión de Contadores</p>
+            <p className="text-slate-500 text-[9px] font-black uppercase tracking-[0.4em] mt-4 opacity-50">Portal de Gestión de Contadores</p>
           </div>
         </div>
 
