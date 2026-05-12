@@ -80,8 +80,8 @@ const activateSchema = {
     type: "object",
     required: ["key"],
     properties: {
-      key: { type: "string", minLength: 64, maxLength: 64 },
-      hardwareId: { type: "string", maxLength: 255 },
+      key: { type: "string" },
+      hardwareId: { type: "string" },
     },
   },
 };
@@ -307,10 +307,16 @@ const start = async () => {
     }, async (request, reply) => {
       const body = request.body as any;
       const key = body.key?.trim();
-      const hardwareId = body.hardwareId || "unknown";
+      const hardwareId = body.hardwareId?.trim() || "unknown";
       
+      console.log(`[AUTH] Solicitud de activación recibida. Key: ${key?.substring(0, 8)}... HardwareId: ${hardwareId}`);
+
       try {
         if (!key) throw new Error("La clave de activacion es requerida");
+        if (key.length !== 64) {
+          console.warn(`[AUTH] Clave de activación con longitud inválida: ${key.length}`);
+          throw new Error("La clave de activación debe tener exactamente 64 caracteres");
+        }
         const result = await agentService.activateAgent(key, hardwareId);
         const token = fastify.jwt.sign(
           { agentId: result.agentId, jti: crypto.randomUUID() },
