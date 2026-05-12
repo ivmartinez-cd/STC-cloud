@@ -4,7 +4,7 @@ import {
   ArrowLeft, HardDrive, Shield, Activity, Clock, Search, 
   Settings, RefreshCw, Key, ShieldOff, 
   Check, Copy, AlertTriangle, Loader2,
-  Edit2, X, Cpu, Printer
+  Edit2, X, Cpu, Printer, Download, Zap, Terminal
 } from 'lucide-react';
 import { api } from '../lib/api';
 import { useToast } from '../context/ToastContext';
@@ -72,22 +72,17 @@ const MonitorDetail = () => {
 
   useEffect(() => {
     const tab = searchParams.get('tab');
-    if (tab && ['overview', 'monitoring', 'devices'].includes(tab)) {
+    if (tab && ['overview', 'devices'].includes(tab)) {
       setActiveTab(tab as any);
     }
   }, [searchParams]);
 
-  const handleTabChange = (tab: 'overview' | 'monitoring' | 'devices') => {
+  const handleTabChange = (tab: 'overview' | 'devices') => {
     setActiveTab(tab);
     setSearchParams({ tab });
   };
 
   useEffect(() => {
-    if (activeTab === 'monitoring') {
-      fetchLogs();
-      const logTimer = setInterval(fetchLogs, 30000);
-      return () => clearInterval(logTimer);
-    }
     if (activeTab === 'devices') {
       fetchDevices();
     }
@@ -231,7 +226,7 @@ const MonitorDetail = () => {
         <div className="flex items-center gap-3">
           <button 
             onClick={() => {
-              window.open(`${api.defaults.baseURL}/agents/${id}/logs/export`, '_blank');
+              window.open(`/api/v1/agents/${id}/logs/export`, '_blank');
             }}
             className="px-6 py-4 bg-white text-emerald-600 font-black text-[10px] uppercase tracking-widest rounded-2xl shadow-xl shadow-blue-900/5 hover:bg-emerald-50 transition-all active:scale-95 flex items-center gap-3"
           >
@@ -457,15 +452,9 @@ const MonitorDetail = () => {
               </div>
             </div>
           </div>
-        </>
-      )}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
-      )}
+      </>
+    )}
       
       {/* Devices Tab */}
       {!loading && !error && monitor && activeTab === 'devices' && (
