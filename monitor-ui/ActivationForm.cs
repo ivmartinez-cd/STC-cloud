@@ -160,6 +160,11 @@ internal sealed class ActivationForm : Form
         _btnRefresh = new Button { Text = "Refresh Status", Location = new Point(380, 50), Size = new Size(120, 30), ForeColor = Color.Black };
         _btnRefresh.Click += BtnRefresh_Click;
         gbDiscStatus.Controls.Add(_btnRefresh);
+
+        var btnViewLogs = new Button { Text = "View Local Logs", Location = new Point(250, 50), Size = new Size(120, 30), ForeColor = Color.Black };
+        btnViewLogs.Click += (s, e) => OpenLogs();
+        gbDiscStatus.Controls.Add(btnViewLogs);
+
         _tabServiceInfo.Controls.Add(gbDiscStatus);
 
         // ====================================================================
@@ -385,6 +390,21 @@ internal sealed class ActivationForm : Form
         _txtServer.Enabled = !busy;
         _progressBar.Visible = busy;
         if (busy) _lblActivationHint.Text = "Verificando clave, por favor espere...";
+    }
+
+    private void OpenLogs()
+    {
+        var logPath = AgentService.GetLogPath();
+        if (!File.Exists(logPath))
+        {
+            MessageBox.Show($"Archivo de log no encontrado:\n{logPath}", "STC Cloud Monitor", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
+        try {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(logPath) { UseShellExecute = true });
+        } catch {
+            System.Diagnostics.Process.Start("notepad.exe", logPath);
+        }
     }
 
     protected override void OnFormClosing(FormClosingEventArgs e)

@@ -125,6 +125,15 @@ internal static class AgentService
             DateTime.UtcNow.ToString("O"));
     }
 
+    // ── Log path ──────────────────────────────────────────────────────────────
+
+    public static string GetLogPath()
+    {
+        var status = GetStatus();
+        var dir = status?.DataDir ?? DefaultDataDir;
+        return Path.Combine(dir, "agent.log");
+    }
+
 
     // ── Service control ───────────────────────────────────────────────────────
 
