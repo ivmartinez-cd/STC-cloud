@@ -6,7 +6,7 @@ function hashToken(token: string): string {
 }
 
 export class AgentService {
-  constructor(private db: Knex) {}
+  constructor(private db: Knex, private redis?: any) {}
 
   async createActivationKey(
     clientId: string,
@@ -243,15 +243,32 @@ export class AgentService {
 
     for (const r of readings) {
       // Upsert del dispositivo: actualizamos la ficha maestra con la última info detectada
+      // Limpiar marca si viene genérica
+      let brand = r.brand || "unknown";
+      if (brand.toLowerCase() === 'generic' && r.model) {
+        if (r.model.toLowerCase().includes('samsung')) brand = 'Samsung';
+        else if (r.model.toLowerCase().includes('lexmark')) brand = 'Lexmark';
+        else if (r.model.toLowerCase().includes('hp')) brand = 'HP';
+        else if (r.model.toLowerCase().includes('ricoh')) brand = 'Ricoh';
+        else if (r.model.toLowerCase().includes('brother')) brand = 'Brother';
+        else if (r.model.toLowerCase().includes('xerox')) brand = 'Xerox';
+      }
+
+      // Nombre amigable: Usamos la primera parte del modelo si no hay nombre específico
+      const friendlyName = r.name || (r.model ? r.model.split(';')[0].trim() : r.device_id);
+
       const upserted = await this.db.raw<{ rows: { id: string }[] }>(`
         INSERT INTO devices (id, agent_id, ip_address, serial_number, name, brand, model, active, last_seen, total_pages, mono_pages, color_pages, last_status)
         VALUES (?, ?, ?, ?, ?, ?, ?, true, NOW(), ?, ?, ?, ?)
         ON CONFLICT (agent_id, serial_number) WHERE serial_number IS NOT NULL
         DO UPDATE SET
           ip_address    = EXCLUDED.ip_address,
-          brand         = COALESCE(EXCLUDED.brand, devices.brand),
+          brand         = COALESCE(NULLIF(EXCLUDED.brand, 'unknown'), devices.brand),
           model         = COALESCE(EXCLUDED.model, devices.model),
-          name          = COALESCE(devices.name, EXCLUDED.name),
+          name          = CASE 
+                            WHEN devices.name IS NULL OR devices.name = devices.serial_number THEN EXCLUDED.name
+                            ELSE devices.name 
+                          END,
           last_seen     = NOW(),
           active        = true,
           total_pages   = EXCLUDED.total_pages,
@@ -264,13 +281,13 @@ export class AgentService {
         agentId,
         r.ip || null,
         r.device_id, // serial_number
-        (r.device_id || "").slice(0, 255),
-        (r.brand || "unknown").slice(0, 100),
+        friendlyName.slice(0, 255),
+        brand.slice(0, 100),
         (r.model || "unknown").slice(0, 255),
         r.total_pages ?? null,
         r.mono_pages  ?? null,
         r.color_pages ?? null,
-        r.status || "online" // Cambiado default a online si llega reporte
+        r.status || "online"
       ]);
 
       const deviceId = upserted.rows[0].id;
@@ -292,7 +309,7 @@ export class AgentService {
     // Encolar evaluación de alertas de forma asíncrona
     try {
       const { Queue } = require("bullmq");
-      const readingsQueue = new Queue("readings-queue", { connection: redis });
+      const readingsQueue = new Queue("readings-queue", { connection: this.redis });
       await readingsQueue.add("evaluate-readings", { readings: mappedReadings });
     } catch (e) {
       console.error("[SYNC] BullMQ no disponible:", e);
