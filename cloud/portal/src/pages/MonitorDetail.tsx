@@ -112,13 +112,10 @@ const MonitorDetail = () => {
   const fetchLogs = async () => {
     if (!id) return;
     try {
-      setLogsLoading(true);
-      const data = await api.get<any[]>(`/agents/${id}/logs?limit=${logLimit}`);
+      const data = await api.get<any[]>(`/agents/${id}/logs?limit=20`);
       setLogs(data);
     } catch (err) {
       console.error('Error fetching logs:', err);
-    } finally {
-      setLogsLoading(false);
     }
   };
 
