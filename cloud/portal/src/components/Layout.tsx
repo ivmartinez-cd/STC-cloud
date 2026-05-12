@@ -62,14 +62,25 @@ const Layout = () => {
                 alt="STC Cloud" 
                 className={`h-11 w-auto object-contain transition-all duration-500 ${isHovered ? 'opacity-100 scale-100' : 'opacity-0 scale-75 absolute pointer-events-none'}`} 
               />
-              {/* Icon Logo - Painted Orange via Filter */}
+              {/* High-Precision Orange Filter Definition */}
+              <svg width="0" height="0" className="absolute">
+                <filter id="precise-orange" colorInterpolationFilters="sRGB">
+                  <feColorMatrix 
+                    type="matrix" 
+                    values="0 0 0 0 0.968 
+                            0 0 0 0 0.576 
+                            0 0 0 0 0.113 
+                            0 0 0 1 0" 
+                  />
+                </filter>
+              </svg>
+
+              {/* Icon Logo - Precision Painted */}
               <img 
                 src="/logo2.png" 
                 alt="STC" 
                 className={`h-10 w-auto object-contain transition-all duration-500 ${!isHovered ? 'opacity-100 scale-110' : 'opacity-0 scale-125 absolute pointer-events-none'}`} 
-                style={{ 
-                  filter: 'invert(72%) sepia(34%) saturate(3620%) hue-rotate(345deg) brightness(101%) contrast(95%)' 
-                }}
+                style={{ filter: 'url(#precise-orange)' }}
               />
               <div className="absolute inset-0 bg-blue-500/5 blur-xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
             </div>
