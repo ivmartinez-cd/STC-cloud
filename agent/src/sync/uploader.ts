@@ -6,8 +6,7 @@ export interface UploadResult {
   failed:   number;
 }
 
-export async function uploadPending(): Promise<UploadResult> {
-  let config = await ConfigManager.load();
+export async function uploadPending(config: AgentConfig): Promise<UploadResult & { updatedConfig?: AgentConfig }> {
   const pending = getPendingReadings(500);
   if (!pending.length) return { uploaded: 0, failed: 0 };
 
@@ -24,16 +23,16 @@ export async function uploadPending(): Promise<UploadResult> {
     offline:     true,
   }));
 
-  const res = await postWithAuth(`${config.serverUrl}/api/v1/devices/sync`, { readings }, config);
+  const { res, updatedConfig } = await postWithAuth(`${config.serverUrl}/api/v1/devices/sync`, { readings }, config);
 
   if (res.ok) {
     markSynced(pending.map((r: any) => r.id));
-    return { uploaded: pending.length, failed: 0 };
+    return { uploaded: pending.length, failed: 0, updatedConfig };
   }
-  return { uploaded: 0, failed: pending.length };
+  return { uploaded: 0, failed: pending.length, updatedConfig };
 }
 
-async function postWithAuth(url: string, body: unknown, config: AgentConfig): Promise<Response> {
+async function postWithAuth(url: string, body: unknown, config: AgentConfig): Promise<{ res: Response, updatedConfig?: AgentConfig }> {
   const make = (token: string) =>
     fetch(url, {
       method: 'POST',
@@ -42,15 +41,19 @@ async function postWithAuth(url: string, body: unknown, config: AgentConfig): Pr
     });
 
   let res = await make(config.token);
+  let updatedConfig: AgentConfig | undefined;
 
   if (res.status === 401) {
     const refreshed = await tryRefresh(config);
-    if (refreshed) res = await make(refreshed.token);
+    if (refreshed) {
+      updatedConfig = refreshed;
+      res = await make(refreshed.token);
+    }
   }
-  return res;
+  return { res, updatedConfig };
 }
 
-async function tryRefresh(config: AgentConfig): Promise<{ token: string } | null> {
+async function tryRefresh(config: AgentConfig): Promise<AgentConfig | null> {
   try {
     const res = await fetch(`${config.serverUrl}/api/v1/agents/refresh`, {
       method: 'POST',
@@ -59,8 +62,9 @@ async function tryRefresh(config: AgentConfig): Promise<{ token: string } | null
     });
     if (!res.ok) return null;
     const data = await res.json() as any;
-    await ConfigManager.save({ ...config, token: data.token, refreshToken: data.refresh_token });
-    return { token: data.token };
+    const newConfig = { ...config, token: data.token, refreshToken: data.refresh_token };
+    await ConfigManager.save(newConfig);
+    return newConfig;
   } catch {
     return null;
   }

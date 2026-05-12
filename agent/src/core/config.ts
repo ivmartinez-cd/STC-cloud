@@ -23,38 +23,36 @@ export interface AgentConfig {
 
 // ─── Hardware ID (sección 9.1 del PDF: MAC + UUID de disco) ──────────────────
 
-function getPrimaryMac(): string {
-  const nets = os.networkInterfaces();
-  for (const list of Object.values(nets)) {
-    for (const iface of list ?? []) {
-      if (!iface.internal && iface.mac !== '00:00:00:00:00:00') {
-        return iface.mac.toUpperCase();
-      }
-    }
-  }
-  return 'NO-MAC';
-}
-
-function getDiskSerial(): string {
+function getWindowsHardwareId(): string {
   try {
-    if (process.platform === 'win32') {
-      const out = execSync('powershell -NoProfile -Command "(Get-CimInstance Win32_DiskDrive | Select-Object -First 1).SerialNumber"', {
-        timeout: 5000, encoding: 'utf8', windowsHide: true,
-      });
-      return out.trim() || 'NO-DISK';
-    }
-    // Dev en Linux/Mac
-    const out = execSync('cat /etc/machine-id 2>/dev/null || hostname', {
-      timeout: 3000, encoding: 'utf8',
-    });
-    return out.trim().slice(0, 32);
-  } catch {
-    return 'NO-DISK';
+    // MachineGuid es persistente para la instalacin de Windows
+    const guid = execSync('powershell -NoProfile -Command "(Get-ItemProperty \'Registry::HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Cryptography\').MachineGuid"', {
+      timeout: 5000, encoding: 'utf8', windowsHide: true,
+    }).trim();
+    
+    // Serial de la BIOS es inmutable para el hardware
+    const bios = execSync('powershell -NoProfile -Command "(Get-CimInstance Win32_BIOS).SerialNumber"', {
+      timeout: 5000, encoding: 'utf8', windowsHide: true,
+    }).trim();
+
+    return `${guid}-${bios}`;
+  } catch (e) {
+    // Fallback a hostname si falla (muy improbable en Win10/11)
+    return os.hostname();
   }
 }
 
 export function getHardwareId(): string {
-  const raw = `${getPrimaryMac()}-${getDiskSerial()}`;
+  let raw = '';
+  if (process.platform === 'win32') {
+    raw = getWindowsHardwareId();
+  } else {
+    // Fallback para dev en otros SO (seccin 9.1 del PDF)
+    const out = execSync('cat /etc/machine-id 2>/dev/null || hostname', {
+      timeout: 3000, encoding: 'utf8',
+    });
+    raw = out.trim().slice(0, 32);
+  }
   return crypto.createHash('sha256').update(raw).digest('hex').slice(0, 32);
 }
 

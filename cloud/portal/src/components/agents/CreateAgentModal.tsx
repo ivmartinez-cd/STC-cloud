@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { Key, Plus, ShieldCheck, RefreshCw, Trash2, Clock, Globe, Server, Copy } from 'lucide-react';
 import { api } from '../../lib/api';
 import { useToast } from '../../context/ToastContext';
-import { Client, IpRange, emptyRange } from '../../types/agents';
+import type { Client, IpRange } from '../../types/agents';
+import { emptyRange } from '../../types/agents';
 import { SNMP_DEFAULT_COMMUNITY, SCAN_DEFAULT_INTERVAL } from '../../lib/constants';
 
 interface Props {
@@ -219,9 +220,6 @@ export default function CreateAgentModal({ show, clients, activationKey, onClose
                   <Copy size={20} />
                 </button>
               </div>
-              <p className="mt-4 text-[10px] text-emerald-600/50 font-mono text-center">
-                Comando técnico: STC-Agent.exe --activate {activationKey} --url {window.location.origin}
-              </p>
             </div>
           </div>
         </div>

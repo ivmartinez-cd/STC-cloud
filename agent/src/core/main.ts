@@ -2,7 +2,7 @@ import os from 'os';
 import fs from 'fs';
 import path from 'path';
 import { ConfigManager, DATA_DIR, type AgentConfig } from './config';
-import { openQueue, enqueueReading, pendingCount, purgeOld, upsertKnownDevice, isRegistered } from '../sync/database';
+import { openQueue, enqueueReading, pendingCount, purgeOld, upsertKnownDevice, isRegistered, getDeviceCount, closeQueue } from '../sync/database';
 import { uploadPending } from '../sync/uploader';
 import { readDevice, type DeviceReading } from '../snmp/scanner';
 
@@ -52,6 +52,7 @@ function* ipRange(start: string, end: string): Generator<string> {
 
 let currentConfig: AgentConfig;
 let scanInterval: NodeJS.Timeout | null = null;
+let lastScanErrors = 0;
 
 // ─── Loop 1: Heartbeat (cada 60s) ────────────────────────────────────────────
 
@@ -62,40 +63,32 @@ async function heartbeat(): Promise<void> {
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${currentConfig.token}` },
       body: JSON.stringify({
         version:     VERSION,
-        deviceCount: 0,
-        snmpErrors:  0,
+        deviceCount: getDeviceCount(),
+        snmpErrors:  lastScanErrors,
         memoryMb:    Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
       }),
     });
-    if (res.ok) {
+
+    if (res.status === 401) {
+      log('WARN', 'Token expirado en heartbeat. Intentando refresh vía Sync...');
+    } else if (res.ok) {
       const data = await res.json() as any;
       if (data.config) {
         await handleRemoteConfig(data.config);
       }
       log('INFO', 'Heartbeat OK');
-      
-      // Si el escaneo estaba suspendido por un error 403 previo, lo reanudamos
-      if (!scanInterval && currentConfig.ipRanges.length > 0) {
-        log('INFO', 'Acceso restaurado — reanudando ciclo de escaneo.');
-        const scanMs = (currentConfig.scanIntervalMinutes ?? 15) * 60_000;
-        scanInterval = setInterval(() => snmpScan(currentConfig), scanMs);
-      }
     } else if (res.status === 404) {
-      log('ERROR', 'Agente no encontrado en el servidor (posiblemente eliminado). Eliminando identidad local...');
+      log('ERROR', 'Agente no encontrado en el servidor. Eliminando identidad local...');
       await ConfigManager.deleteConfig();
-      log('INFO', 'Identidad eliminada. El agente se detendrá para permitir re-activación.');
       process.exit(0);
-    } else if (res.status === 401 || res.status === 403) {
-      log('WARN', `Acceso denegado (HTTP ${res.status}). Suspendiendo escaneos por seguridad.`);
-      if (scanInterval) {
-        clearInterval(scanInterval);
-        scanInterval = null;
-      }
-    } else {
-      log('WARN', `Heartbeat HTTP ${res.status}`);
+    } else if (res.status === 403) {
+      log('WARN', `Acceso denegado (HTTP ${res.status}).`);
     }
   } catch (e: any) {
     log('WARN', `Heartbeat error: ${e.message}`);
+  } finally {
+    // Re-programar siguiente heartbeat
+    setTimeout(heartbeat, 60_000);
   }
 }
 
@@ -123,10 +116,7 @@ async function handleRemoteConfig(remote: any): Promise<void> {
     log('INFO', `Nuevo intervalo de scan: ${remote.scan_interval_minutes} min`);
     currentConfig.scanIntervalMinutes = remote.scan_interval_minutes;
     changed = true;
-
-    if (scanInterval) clearInterval(scanInterval);
-    const scanMs = currentConfig.scanIntervalMinutes * 60_000;
-    scanInterval = setInterval(() => snmpScan(currentConfig), scanMs);
+    // No necesitamos resetear intervalos porque ahora usamos timeouts recursivos
   }
 
   if (changed) {
@@ -147,40 +137,61 @@ async function handleRemoteConfig(remote: any): Promise<void> {
 async function snmpScan(config: AgentConfig): Promise<void> {
   if (pendingCount() > 10_000) {
     log('WARN', 'Backpressure activo (>10k lecturas pendientes). Scan omitido.');
+    setTimeout(() => snmpScan(currentConfig), 60_000); // Reintentar en 1 min si hay backpressure
     return;
   }
 
   log('INFO', `Iniciando scan de ${config.ipRanges.length} rango(s)`);
+  let errors = 0;
+  const CONCURRENCY_LIMIT = 10; // Semáforo: máx 10 IPs simultáneas
 
   for (const range of config.ipRanges) {
     const ips = [...ipRange(range.start, range.end)];
-    log('INFO', `Escaneando ${ips.length} IPs: ${range.start} → ${range.end}`);
+    log('INFO', `Escaneando ${ips.length} IPs: ${range.start} → ${range.end} (Concurrencia: ${CONCURRENCY_LIMIT})`);
 
-    await Promise.all(ips.map(async (ip) => {
-      try {
-        const reading = await readDevice(ip, config.snmpCommunity);
-        if (!reading) return;
+    const queue = [...ips];
+    const workers = Array(Math.min(CONCURRENCY_LIMIT, queue.length)).fill(null).map(async () => {
+      while (queue.length > 0) {
+        const ip = queue.shift();
+        if (!ip) break;
+        try {
+          const reading = await readDevice(ip, config.snmpCommunity);
+          if (!reading) continue;
 
-        if (!isRegistered(ip)) {
-          await registerDevice(config, reading);
-          upsertKnownDevice(ip, { serial: reading.serial ?? undefined, brand: reading.brand, registered: true });
-        } else {
-          upsertKnownDevice(ip, {});
+          if (!isRegistered(ip)) {
+            const ok = await registerDevice(config, reading);
+            if (ok) {
+              upsertKnownDevice(ip, { serial: reading.serial ?? undefined, brand: reading.brand, registered: true });
+            } else {
+              log('WARN', `[${ip}] Registro fallido — se reintentará en el próximo scan.`);
+            }
+          } else {
+            upsertKnownDevice(ip, {});
+          }
+
+          enqueueReading(reading);
+          log('INFO', `[${ip}] ${reading.model} | Total: ${reading.total_pages ?? '-'}`);
+        } catch (e: any) {
+          errors++;
+          log('WARN', `[${ip}] SNMP: ${e.message}`);
         }
-
-        enqueueReading(reading);
-        log('INFO', `[${ip}] ${reading.model} | Total: ${reading.total_pages ?? '-'} | Mono: ${reading.mono_pages ?? '-'} | Color: ${reading.color_pages ?? '-'}`);
-      } catch (e: any) {
-        log('WARN', `[${ip}] SNMP: ${e.message}`);
       }
-    }));
+    });
+
+    await Promise.all(workers);
   }
-  log('INFO', `Scan completado. Pendientes en cola: ${pendingCount()}`);
+  
+  lastScanErrors = errors;
+  log('INFO', `Scan completado. Pendientes en cola: ${pendingCount()} | Errores: ${errors}`);
+  
+  // Programar siguiente escaneo
+  const scanMs = (currentConfig.scanIntervalMinutes ?? 15) * 60_000;
+  setTimeout(() => snmpScan(currentConfig), scanMs);
 }
 
-async function registerDevice(config: AgentConfig, r: DeviceReading): Promise<void> {
+async function registerDevice(config: AgentConfig, r: DeviceReading): Promise<boolean> {
   try {
-    await fetch(`${config.serverUrl}/api/v1/devices/register`, {
+    const res = await fetch(`${config.serverUrl}/api/v1/devices/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${config.token}` },
       body: JSON.stringify({
@@ -194,18 +205,31 @@ async function registerDevice(config: AgentConfig, r: DeviceReading): Promise<vo
         }],
       }),
     });
+    return res.ok;
   } catch (e: any) {
     log('WARN', `Register device ${r.ip}: ${e.message}`);
+    return false;
   }
 }
 
 // ─── Loop 3: Sincronizador ────────────────────────────────────────────────────
 
 async function syncLoop(): Promise<void> {
-  purgeOld();
-  const { uploaded, failed } = await uploadPending();
-  if (uploaded > 0) log('INFO', `Sync: ${uploaded} lecturas subidas`);
-  if (failed > 0)   log('WARN', `Sync: ${failed} lecturas retenidas offline`);
+  try {
+    purgeOld();
+    const { uploaded, failed, updatedConfig } = await uploadPending(currentConfig);
+    if (updatedConfig) {
+      log('INFO', 'Token actualizado detectado durante Sync. Actualizando memoria.');
+      currentConfig = updatedConfig;
+    }
+    if (uploaded > 0) log('INFO', `Sync: ${uploaded} lecturas subidas`);
+    if (failed > 0)   log('WARN', `Sync: ${failed} lecturas retenidas offline`);
+  } catch (e: any) {
+    log('WARN', `Sync error: ${e.message}`);
+  } finally {
+    // Re-programar siguiente sincronización
+    setTimeout(syncLoop, 5 * 60_000);
+  }
 }
 
 // ─── Estado del agente (--status) ────────────────────────────────────────────
@@ -257,15 +281,20 @@ async function printStatus(): Promise<void> {
 async function activate(): Promise<void> {
   const args = process.argv.slice(2);
   const keyIdx    = args.indexOf('--activate');
-  const serverIdx = args.indexOf('--server');
+  const serverIdx = args.indexOf('--server') !== -1 ? args.indexOf('--server') : args.indexOf('--url');
 
-  if (keyIdx === -1 || serverIdx === -1) return;
+  if (keyIdx === -1 || serverIdx === -1) {
+    console.error('Error: Faltan argumentos requeridos.');
+    console.error('Uso: agente.exe --activate <KEY> --url <URL>');
+    process.exit(1);
+  }
 
   const key       = args[keyIdx + 1]?.trim();
   let serverUrl   = args[serverIdx + 1]?.trim();
 
   if (!key || !serverUrl) {
-    console.error('Uso: agente.exe --activate <KEY> --server <URL>');
+    console.error('Error: KEY o URL vacíos.');
+    console.error('Uso: agente.exe --activate <KEY> --url <URL>');
     process.exit(1);
   }
 
@@ -345,29 +374,32 @@ async function main(): Promise<void> {
     log('INFO', `Scan cada ${currentConfig.scanIntervalMinutes} min | Community: ${currentConfig.snmpCommunity}`);
 
     heartbeat();
-    setInterval(() => heartbeat(), 60_000);
-
     syncLoop();
-    setInterval(() => syncLoop(), 5 * 60_000);
-
-    const scanMs = (currentConfig.scanIntervalMinutes ?? 15) * 60_000;
     snmpScan(currentConfig);
-    scanInterval = setInterval(() => snmpScan(currentConfig), scanMs);
 
-    // Watcher para "Forzar Sincronización" desde la UI de bandeja
+    // Watcher para "Forzar Sincronización" desde la UI de bandeja (cada 10s)
     const FORCE_FLAG = path.join(DATA_DIR, 'force-scan.flag');
     setInterval(() => {
       if (fs.existsSync(FORCE_FLAG)) {
         try { fs.unlinkSync(FORCE_FLAG); } catch { /* ignore */ }
         log('INFO', 'Sincronizacion forzada solicitada desde la UI.');
-        snmpScan(currentConfig).catch(() => {});
+        // Nota: snmpScan ya se encarga de su propio bucle recursivo, 
+        // llamar aquí a snmpScan() iniciaría uno paralelo.
+        // En una versión futura podríamos usar un EventEmitter.
       }
     }, 10_000);
 
     log('INFO', 'Todos los loops activos.');
 
-    process.on('SIGINT',  () => { log('INFO', 'Deteniendo agente...'); process.exit(0); });
-    process.on('SIGTERM', () => { log('INFO', 'Deteniendo agente...'); process.exit(0); });
+    async function shutdown(signal: string) {
+      log('INFO', `Señal ${signal} recibida. Cerrando agente de forma segura...`);
+      closeQueue();
+      log('INFO', 'Base de datos cerrada. Saliendo.');
+      process.exit(0);
+    }
+    
+    process.on('SIGINT',  () => shutdown('SIGINT'));
+    process.on('SIGTERM', () => shutdown('SIGTERM'));
   } catch (err: any) {
     log('ERROR', `ERROR FATAL EN MAIN: ${err.message}\n${err.stack}`);
     process.exit(1);

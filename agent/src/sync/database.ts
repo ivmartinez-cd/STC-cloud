@@ -124,29 +124,8 @@ export function isRegistered(ip: string): boolean {
   return row?.registered === 1;
 }
 
-export class LocalDB {
-  async init() { openQueue(); }
-
-  async addReading(r: any) {
-    db.prepare(`
-      INSERT INTO readings_queue (device_id, ip, brand, model, time, total_pages, mono_pages, color_pages, status)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
-      r.serial ?? r.device_id ?? r.ip, 
-      r.ip, 
-      r.brand, 
-      r.model ?? 'unknown',
-      new Date(r.time || Date.now()).toISOString(), 
-      r.total_pages, r.mono_pages, r.color_pages, 
-      r.status ?? 'idle'
-    );
-  }
-
-  async getUnsynced(limit = 500): Promise<any[]> {
-    return getPendingReadings(limit);
-  }
-
-  async markSynced(ids: any[]) {
-    markSynced(ids.map(Number));
-  }
+export function getDeviceCount(): number {
+  return (db.prepare('SELECT COUNT(*) as c FROM known_devices').get() as any).c;
 }
+
+

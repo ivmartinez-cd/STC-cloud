@@ -114,16 +114,16 @@ export const RICOH_OIDS: OidMap = {
 };
 
 export const BROTHER_OIDS: OidMap = {
-  totalPages: [],
-  monoPages:  [],
-  colorPages: [],
+  totalPages: ['1.3.6.1.4.1.2435.2.3.9.4.2.1.5.5.10.0'],
+  monoPages:  ['1.3.6.1.4.1.2435.2.3.9.4.2.1.5.5.8.0'],
+  colorPages: ['1.3.6.1.4.1.2435.2.3.9.4.2.1.5.5.9.0'],
   serial:     ['1.3.6.1.4.1.2435.2.3.9.4.2.1.5.5.1.0']
 };
 
 export const XEROX_OIDS: OidMap = {
-  totalPages: [],
-  monoPages:  ['1.3.6.1.4.1.253.8.53.13.2.1.6.1.20.33'], // NOTE: Same provided for mono and color, keeping for mono.
-  colorPages: ['1.3.6.1.4.1.253.8.53.13.2.1.6.1.20.33'],
+  totalPages: ['1.3.6.1.2.1.43.10.2.1.4.1.1'],
+  monoPages:  ['1.3.6.1.4.1.253.8.53.13.2.1.6.1.20.33'],
+  colorPages: ['1.3.6.1.4.1.253.8.53.13.2.1.6.1.20.34'],
   serial:     ['1.3.6.1.4.1.253.8.53.3.2.1.3.1']
 };
 

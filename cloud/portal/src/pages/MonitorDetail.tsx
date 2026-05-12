@@ -567,14 +567,14 @@ const MonitorDetail = () => {
                 
                 <div className="p-10 space-y-8">
                   <div className="space-y-4">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] block">Comando de Activación</label>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] block">Llave de Activación</label>
                     <div className="relative group">
-                      <div className="p-6 bg-slate-900 rounded-3xl font-mono text-xs text-amber-400 break-all leading-relaxed border-2 border-slate-800 group-hover:border-amber-500/30 transition-all">
-                        STC-Agent.exe --activate {regenKey.key} --url {window.location.origin}
+                      <div className="p-6 bg-slate-900 rounded-3xl font-mono text-sm text-amber-400 break-all leading-relaxed border-2 border-slate-800 group-hover:border-amber-500/30 transition-all text-center">
+                        {regenKey.key}
                       </div>
                       <button
                         onClick={() => {
-                          navigator.clipboard.writeText(`STC-Agent.exe --activate ${regenKey.key} --url ${window.location.origin}`);
+                          navigator.clipboard.writeText(regenKey.key);
                           setRegenCopied(true);
                           setTimeout(() => setRegenCopied(false), 2000);
                         }}

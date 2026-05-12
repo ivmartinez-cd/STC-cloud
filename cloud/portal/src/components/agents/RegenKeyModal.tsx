@@ -63,9 +63,6 @@ export default function RegenKeyModal({ modal, onClose }: Props) {
                 {keyCopied ? <Check size={20} className="text-emerald-400" /> : <Copy size={20} />}
               </button>
             </div>
-            <p className="mt-4 text-[9px] text-slate-400 font-mono text-center opacity-50">
-              Comando: STC-Agent.exe --activate {modal.key} --url {window.location.origin}
-            </p>
           </div>
 
           <div className="flex justify-end">

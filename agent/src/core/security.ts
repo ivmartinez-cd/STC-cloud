@@ -49,7 +49,7 @@ export class SecurityUtils {
     const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
     decipher.setAuthTag(tag);
 
-    const decrypted = decipher.update(encrypted) + decipher.final('utf8');
+    const decrypted = Buffer.concat([decipher.update(encrypted), decipher.final()]).toString('utf8');
     return decrypted;
   }
 }
