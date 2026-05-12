@@ -266,8 +266,10 @@ const DeviceDetail = () => {
 
               <div className="mt-10 pt-8 border-t border-white/10 flex flex-col gap-4">
                 <div className="flex justify-between items-center px-2">
-                  <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Lectura realizada el</span>
-                  <span className="text-xs font-bold text-slate-300">{new Date(latest.time).toLocaleDateString()}</span>
+                  <span className="text-[10px] font-extrabold text-white/70 uppercase tracking-widest">Lectura realizada el</span>
+                  <span className="text-xs font-bold text-white">
+                    {new Date(latest.time).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                  </span>
                 </div>
               </div>
             </div>
