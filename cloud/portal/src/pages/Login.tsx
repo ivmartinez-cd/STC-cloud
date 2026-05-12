@@ -34,25 +34,24 @@ const Login = () => {
       {/* Subtle Pattern overlay */}
       <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-[0.02] pointer-events-none" />
 
-      <div className="w-full max-w-[420px] relative z-10">
-        {/* Corporate Header - Optimized for Sharpness */}
-        <div className="text-center mb-8 animate-in fade-in slide-in-from-bottom-8 duration-1000">
+      <div className="w-full max-w-[420px] relative z-10 flex flex-col items-center">
+        {/* Corporate Header - Exact Sidebar Match */}
+        <div className="text-center mb-8 animate-in fade-in slide-in-from-bottom-8 duration-1000 w-full">
           <div className="flex flex-col items-center justify-center">
             <div className="relative mb-2">
-              <img src="/logo.png" alt="CANAL DIRECTO" className="h-18 w-auto object-contain relative z-10" />
+              <img src="/logo.png" alt="CANAL DIRECTO" className="h-11 w-auto object-contain relative z-10" />
             </div>
             
-            <div className="flex items-center justify-center mt-[-12px]">
-              <span className="text-xl font-black tracking-[0.15em] text-[#004a99] uppercase">
-                STC CLOUD
-              </span>
+            <div className="flex items-center justify-center gap-1.5 relative z-10 -mt-2">
+              <span className="font-montserrat font-black text-base tracking-tight text-[#004a99] uppercase">STC</span>
+              <span className="font-montserrat font-black text-base tracking-tight text-[#f7931d] uppercase">CLOUD</span>
             </div>
             <p className="text-slate-400 text-[8px] font-black uppercase tracking-[0.4em] mt-3 opacity-70">Portal de Gestión de Contadores</p>
           </div>
         </div>
 
         {/* Premium Login Card - Compact Version */}
-        <div className="bg-white rounded-[32px] p-10 shadow-[0_20px_50px_rgba(0,0,0,0.03)] border border-slate-200/50 animate-in fade-in slide-in-from-bottom-12 duration-1000 relative overflow-hidden">
+        <div className="bg-white rounded-[32px] p-10 shadow-[0_20px_50px_rgba(0,0,0,0.03)] border border-slate-200/50 animate-in fade-in slide-in-from-bottom-12 duration-1000 relative overflow-hidden w-full">
           <div className="mb-8 relative z-10 text-center sm:text-left">
             <h2 className="text-xl font-black text-slate-900 tracking-tight">Bienvenido</h2>
             <p className="text-slate-500 text-xs font-medium mt-1">Ingrese sus credenciales para continuar</p>
