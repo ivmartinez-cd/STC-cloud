@@ -30,17 +30,15 @@ function App() {
             <Route path="/login" element={<Login />} />
             <Route element={<RequireAuth />}>
               <Route element={<Layout />}>
-                <Suspense fallback={null}>
-                  <Route path="/"              element={<Dashboard />} />
-                  <Route path="/clients"       element={<Clients />} />
-                  <Route path="/clients/:id"   element={<ClientDetail />} />
-                  <Route path="/monitors/:id"  element={<MonitorDetail />} />
-                  <Route path="/monitors/:id/devices" element={<MonitorDevices />} />
-                  <Route path="/agents"        element={<Agents />} />
-                  <Route path="/devices/:id"   element={<DeviceDetail />} />
-                  <Route path="/reports"       element={<Reports />} />
-                  <Route path="/settings"      element={<Settings />} />
-                </Suspense>
+                <Route path="/"              element={<Dashboard />} />
+                <Route path="/clients"       element={<Clients />} />
+                <Route path="/clients/:id"   element={<ClientDetail />} />
+                <Route path="/monitors/:id"  element={<MonitorDetail />} />
+                <Route path="/monitors/:id/devices" element={<MonitorDevices />} />
+                <Route path="/agents"        element={<Agents />} />
+                <Route path="/devices/:id"   element={<DeviceDetail />} />
+                <Route path="/reports"       element={<Reports />} />
+                <Route path="/settings"      element={<Settings />} />
               </Route>
             </Route>
             <Route path="*" element={<Navigate to="/" replace />} />

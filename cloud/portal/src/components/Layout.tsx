@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { Link, useLocation, Outlet } from 'react-router-dom';
 import {
   LayoutDashboard, Users, FileText, LogOut, Search, Settings, Menu, X, ChevronRight, Shield
@@ -243,7 +243,18 @@ const Layout = () => {
         {/* Content */}
         <main className="p-4 md:p-10 flex-1 animate-fade-in bg-[#f8fafc]">
           <div className="max-w-[1400px] mx-auto">
-            <Outlet />
+            <Suspense fallback={
+              <div className="flex items-center justify-center min-h-[400px]">
+                <div className="flex flex-col items-center gap-4">
+                  <div className="w-12 h-12 border-4 border-slate-200 border-t-blue-500 rounded-full animate-spin" />
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] animate-pulse">
+                    Cargando Módulo...
+                  </span>
+                </div>
+              </div>
+            }>
+              <Outlet />
+            </Suspense>
           </div>
         </main>
       </div>
