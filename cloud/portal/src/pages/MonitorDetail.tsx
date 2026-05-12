@@ -4,7 +4,7 @@ import {
   ArrowLeft, HardDrive, Shield, Activity, Clock, Search, 
   Settings, RefreshCw, Key, ShieldOff, 
   Check, Copy, AlertTriangle, Loader2,
-  Edit2, X, Cpu
+  Edit2, X, Cpu, Printer
 } from 'lucide-react';
 import { api } from '../lib/api';
 import { useToast } from '../context/ToastContext';
@@ -22,6 +22,7 @@ interface Device {
   total_pages: number | null;
   mono_pages: number | null;
   color_pages: number | null;
+  brand: string | null;
 }
 
 interface MonitorData {
@@ -48,7 +49,7 @@ const MonitorDetail = () => {
   const [devices, setDevices] = useState<Device[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'monitoring'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'monitoring' | 'devices'>('overview');
   const [now, setNow] = useState(Date.now());
   
   // Monitoring State
@@ -249,6 +250,16 @@ const MonitorDetail = () => {
           }`}
         >
           Monitorización
+        </button>
+        <button
+          onClick={() => setActiveTab('devices')}
+          className={`px-8 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${
+            activeTab === 'devices' 
+              ? 'bg-white text-brand shadow-sm' 
+              : 'text-slate-400 hover:text-slate-600'
+          }`}
+        >
+          Dispositivos
         </button>
       </div>
 
@@ -483,6 +494,91 @@ const MonitorDetail = () => {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Devices Tab */}
+      {!loading && !error && monitor && activeTab === 'devices' && (
+        <div className="cd-panel overflow-hidden border-none shadow-xl shadow-blue-900/5 animate-in slide-in-from-bottom-4 duration-500">
+          <header className="px-8 py-6 bg-white border-b border-slate-100 flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-black text-[#1a2333] uppercase tracking-tight">Parque de Impresión</h3>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Dispositivos descubiertos y monitorizados por este nodo</p>
+            </div>
+            <span className="px-4 py-1.5 bg-slate-100 text-slate-500 rounded-full text-[10px] font-black uppercase tracking-widest">
+              {devices.length} Equipos
+            </span>
+          </header>
+          
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-slate-50/50">
+                  <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Dispositivo</th>
+                  <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Estado</th>
+                  <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Red</th>
+                  <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Contadores (Total / Mono / Color)</th>
+                  <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Último Reporte</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {devices.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="px-8 py-20 text-center">
+                      <div className="flex flex-col items-center gap-3">
+                        <Printer size={48} className="text-slate-100" />
+                        <p className="text-slate-400 font-bold text-xs uppercase tracking-widest">No se han descubierto dispositivos en este segmento</p>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  devices.map((device) => (
+                    <tr key={device.id} className="hover:bg-slate-50/50 transition-colors group">
+                      <td className="px-8 py-5">
+                        <Link to={`/devices/${device.id}`} className="flex items-center gap-4 group/item">
+                          <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400 group-hover/item:bg-brand group-hover/item:text-white transition-all">
+                            <Printer size={18} />
+                          </div>
+                          <div>
+                            <p className="text-xs font-black text-slate-700 uppercase tracking-tight group-hover/item:text-brand transition-colors">{device.model || 'Modelo Genérico'}</p>
+                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{device.brand || 'Marca n/a'}</p>
+                          </div>
+                        </Link>
+                      </td>
+                      <td className="px-8 py-5">
+                        <div className="flex items-center gap-2">
+                          <div className={`w-1.5 h-1.5 rounded-full ${
+                            ['online', 'idle', 'running', 'ok'].includes(device.status?.toLowerCase() || '') ? 'bg-emerald-500' : 'bg-rose-500'
+                          }`} />
+                          <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">{device.status || 'Offline'}</span>
+                        </div>
+                      </td>
+                      <td className="px-8 py-5">
+                        <div className="space-y-1">
+                          <p className="text-xs font-bold text-brand font-mono">{device.ip_address}</p>
+                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">SN: {device.serial_number || 'N/A'}</p>
+                        </div>
+                      </td>
+                      <td className="px-8 py-5 text-right">
+                        <div className="flex flex-col items-end gap-1">
+                          <span className="text-xs font-black text-slate-700">{(device.total_pages || 0).toLocaleString()}</span>
+                          <div className="flex gap-2">
+                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">M: {(device.mono_pages || 0).toLocaleString()}</span>
+                            <span className="text-[9px] font-bold text-amber-500 uppercase tracking-widest">C: {(device.color_pages || 0).toLocaleString()}</span>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-8 py-5">
+                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tight">
+                          {formatRelativeTime(device.last_seen, now)}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
