@@ -263,14 +263,14 @@ export class AgentService {
         crypto.randomUUID(),
         agentId,
         r.ip || null,
-        r.device_id,
-        (r.device_id || "").slice(0, 100),
-        (r.brand || "unknown").slice(0, 50),
-        (r.model || "unknown").slice(0, 100),
+        r.device_id, // serial_number
+        (r.device_id || "").slice(0, 255),
+        (r.brand || "unknown").slice(0, 100),
+        (r.model || "unknown").slice(0, 255),
         r.total_pages ?? null,
         r.mono_pages  ?? null,
         r.color_pages ?? null,
-        r.status || "idle"
+        r.status || "online" // Cambiado default a online si llega reporte
       ]);
 
       const deviceId = upserted.rows[0].id;

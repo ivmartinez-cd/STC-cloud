@@ -405,7 +405,7 @@ const ClientDetail = () => {
                         </td>
                         <td className="text-center">
                           <Link 
-                            to={`/monitors/${m.id}/devices`} 
+                            to={`/monitors/${m.id}?tab=devices`} 
                             className="inline-flex items-center justify-center min-w-[40px] h-10 px-3 rounded-2xl bg-slate-100 text-sm font-black text-brand hover:bg-brand hover:text-white hover:shadow-lg hover:shadow-blue-500/20 transition-all active:scale-90"
                           >
                             {m.device_count}

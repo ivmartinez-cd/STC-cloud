@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { 
   ArrowLeft, HardDrive, Shield, Activity, Clock, Search, 
   Settings, RefreshCw, Key, ShieldOff, 
@@ -49,7 +49,8 @@ const MonitorDetail = () => {
   const [devices, setDevices] = useState<Device[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'monitoring' | 'devices'>('overview');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState<'overview' | 'monitoring' | 'devices'>((searchParams.get('tab') as any) || 'overview');
   const [now, setNow] = useState(Date.now());
   
   // Monitoring State
@@ -69,6 +70,18 @@ const MonitorDetail = () => {
     const timer = setInterval(() => setNow(Date.now()), 30000);
     return () => clearInterval(timer);
   }, [id]);
+
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab && ['overview', 'monitoring', 'devices'].includes(tab)) {
+      setActiveTab(tab as any);
+    }
+  }, [searchParams]);
+
+  const handleTabChange = (tab: 'overview' | 'monitoring' | 'devices') => {
+    setActiveTab(tab);
+    setSearchParams({ tab });
+  };
 
   useEffect(() => {
     if (activeTab === 'monitoring') {
@@ -232,30 +245,30 @@ const MonitorDetail = () => {
       {/* Tabs Layout */}
       <div className="flex gap-1 bg-slate-100/50 p-1.5 rounded-[24px] w-fit">
         <button
-          onClick={() => setActiveTab('overview')}
+          onClick={() => handleTabChange('overview')}
           className={`px-8 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${
             activeTab === 'overview' 
-              ? 'bg-white text-brand shadow-sm' 
+              ? 'bg-white text-brand shadow-sm shadow-blue-900/5' 
               : 'text-slate-400 hover:text-slate-600'
           }`}
         >
-          Vista General
+          Resumen
         </button>
         <button
-          onClick={() => setActiveTab('monitoring')}
+          onClick={() => handleTabChange('monitoring')}
           className={`px-8 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${
             activeTab === 'monitoring' 
-              ? 'bg-white text-brand shadow-sm' 
+              ? 'bg-white text-brand shadow-sm shadow-blue-900/5' 
               : 'text-slate-400 hover:text-slate-600'
           }`}
         >
-          Monitorización
+          Consola Live
         </button>
         <button
-          onClick={() => setActiveTab('devices')}
+          onClick={() => handleTabChange('devices')}
           className={`px-8 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${
             activeTab === 'devices' 
-              ? 'bg-white text-brand shadow-sm' 
+              ? 'bg-white text-brand shadow-sm shadow-blue-900/5' 
               : 'text-slate-400 hover:text-slate-600'
           }`}
         >
