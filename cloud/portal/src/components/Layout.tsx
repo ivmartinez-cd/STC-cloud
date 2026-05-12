@@ -56,24 +56,17 @@ const Layout = () => {
         `}>
           <Link to="/" className="flex flex-col items-center group" onClick={() => setIsMobileMenuOpen(false)}>
             <div className="relative h-14 flex items-center justify-center min-w-[40px]">
-              {/* Logo Full - Expanded */}
               <img 
-                src="/logo1.png" 
+                src="/logo.png" 
                 alt="STC Cloud" 
-                className={`h-11 w-auto object-contain transition-all duration-500 ${isHovered ? 'opacity-100 scale-100' : 'opacity-0 scale-75 absolute pointer-events-none'}`} 
+                className="h-12 w-auto object-contain transition-all duration-500 group-hover:scale-110" 
               />
-              {/* Logo Icon - Rail */}
-              <img 
-                src="/logo2.png" 
-                alt="STC" 
-                className={`h-10 w-auto object-contain transition-all duration-500 ${!isHovered ? 'opacity-100 scale-110' : 'opacity-0 scale-125 absolute pointer-events-none'}`} 
-              />
-              <div className="absolute inset-0 bg-blue-500/10 blur-xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+              <div className="absolute inset-0 bg-blue-500/5 blur-xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
             </div>
             
-            <div className={`flex items-center gap-1.5 relative z-10 transition-all duration-500 -mt-3 ${isHovered ? 'opacity-100' : 'opacity-0 scale-90 h-0 overflow-hidden'}`}>
-              <span className="font-montserrat font-black text-base tracking-tight text-[#004a99]">CANAL</span>
-              <span className="font-montserrat font-black text-base tracking-tight text-[#e67e22]">DIRECTO</span>
+            <div className={`flex items-center gap-1.5 relative z-10 transition-all duration-500 -mt-2 ${isHovered ? 'opacity-100' : 'opacity-0 scale-90 h-0 overflow-hidden'}`}>
+              <span className="font-montserrat font-black text-base tracking-tight text-[#004a99]">STC</span>
+              <span className="font-montserrat font-black text-base tracking-tight text-[#e67e22]">CLOUD</span>
             </div>
           </Link>
           

@@ -410,7 +410,7 @@ const MonitorDetail = () => {
                 </div>
               </div>
 
-              {/* Support Tools (Canal Directo Orange Header) */}
+              {/* Support Tools (STC CLOUD Style) */}
               <div className="cd-panel overflow-hidden border-none shadow-xl shadow-blue-900/5">
                 <div className="cd-header-orange flex items-center gap-3">
                   <Settings size={18} />

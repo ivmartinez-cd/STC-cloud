@@ -38,7 +38,7 @@ const Login = () => {
           <div className="flex justify-center mb-0">
             <div className="relative group">
               <div className="absolute inset-0 bg-blue-500/10 blur-3xl rounded-full opacity-40 group-hover:opacity-100 transition-opacity duration-1000" />
-              <img src="/logo1.png" alt="Canal Directo" className="h-20 w-auto object-contain relative z-10 drop-shadow-[0_10px_10px_rgba(0,0,0,0.3)]" />
+              <img src="/logo.png" alt="STC CLOUD" className="h-20 w-auto object-contain relative z-10 drop-shadow-[0_10px_10px_rgba(0,0,0,0.1)]" />
             </div>
           </div>
           
