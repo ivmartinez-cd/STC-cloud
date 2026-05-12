@@ -53,7 +53,7 @@ async function postWithAuth(url: string, body: unknown, config: AgentConfig): Pr
   return { res, updatedConfig };
 }
 
-async function tryRefresh(config: AgentConfig): Promise<AgentConfig | null> {
+export async function tryRefresh(config: AgentConfig): Promise<AgentConfig | null> {
   try {
     const res = await fetch(`${config.serverUrl}/api/v1/agents/refresh`, {
       method: 'POST',

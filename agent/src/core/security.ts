@@ -31,7 +31,9 @@ export class SecurityUtils {
     const encrypted = Buffer.concat([cipher.update(data, 'utf8'), cipher.final()]);
     const tag = cipher.getAuthTag();
 
-    return Buffer.concat([salt, iv, tag, encrypted]).toString('base64');
+    // Estructura: [salt(16)][iv(12)][tag(16)][payload(...)]
+    const result = Buffer.concat([salt, iv, tag, encrypted]);
+    return result.toString('base64');
   }
 
   /**
@@ -49,7 +51,7 @@ export class SecurityUtils {
     const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
     decipher.setAuthTag(tag);
 
-    const decrypted = Buffer.concat([decipher.update(encrypted), decipher.final()]).toString('utf8');
-    return decrypted;
+    const decrypted = Buffer.concat([decipher.update(encrypted), decipher.final()]);
+    return decrypted.toString('utf8');
   }
 }

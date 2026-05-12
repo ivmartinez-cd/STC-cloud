@@ -1,9 +1,9 @@
 import os from 'os';
 import fs from 'fs';
 import path from 'path';
-import { ConfigManager, DATA_DIR, type AgentConfig } from './config';
+import { ConfigManager, DATA_DIR, getHardwareId, type AgentConfig } from './config';
 import { openQueue, enqueueReading, pendingCount, purgeOld, upsertKnownDevice, isRegistered, getDeviceCount, closeQueue } from '../sync/database';
-import { uploadPending } from '../sync/uploader';
+import { uploadPending, tryRefresh } from '../sync/uploader';
 import { readDevice, type DeviceReading } from '../snmp/scanner';
 import { LogTailer } from './LogTailer';
 
@@ -80,7 +80,14 @@ async function heartbeat(): Promise<void> {
     });
 
     if (res.status === 401) {
-      log('WARN', 'Token expirado en heartbeat. Intentando refresh vía Sync...');
+      log('WARN', 'Token expirado en heartbeat. Intentando refresh...');
+      const refreshed = await tryRefresh(currentConfig);
+      if (refreshed) {
+        currentConfig = refreshed;
+        log('INFO', 'Token renovado exitosamente desde heartbeat.');
+      } else {
+        log('ERROR', 'No se pudo renovar el token. El agente podría estar desvinculado.');
+      }
     } else if (res.ok) {
       const data = await res.json() as any;
       
@@ -215,9 +222,12 @@ async function snmpScan(config: AgentConfig, loop = true): Promise<void> {
           if (!isRegistered(ip)) {
             const ok = await registerDevice(config, reading);
             if (ok) {
+              // Solo marcamos como registrado si el backend respondió OK
               upsertKnownDevice(ip, { serial: reading.serial ?? undefined, brand: reading.brand, registered: true });
             } else {
-              log('WARN', `[${ip}] Registro fallido — se reintentará en el próximo scan.`);
+              log('WARN', `[${ip}] Registro fallido (HTTP Error) — se reintentará en el próximo scan.`);
+              // Guardamos el dispositivo pero sin el flag 'registered'
+              upsertKnownDevice(ip, { serial: reading.serial ?? undefined, brand: reading.brand, registered: false });
             }
           } else {
             upsertKnownDevice(ip, {});
@@ -369,7 +379,7 @@ async function activate(): Promise<void> {
     const res = await fetch(`${serverUrl}/api/v1/agents/activate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ key, hardwareId: os.hostname() }),
+      body: JSON.stringify({ key, hardwareId: getHardwareId() }),
     });
 
     if (!res.ok) {
@@ -414,7 +424,8 @@ async function main(): Promise<void> {
       return;
     }
 
-    if (process.argv.includes('--activate')) {
+    // Soporta tanto --server (original) como --url (generado por el portal)
+    if (process.argv.includes('--activate') || process.argv.includes('--url')) {
       await activate();
       return;
     }
@@ -461,10 +472,14 @@ async function main(): Promise<void> {
       process.exit(0);
     }
     
+    // Captura de señales de terminación para cierre limpio de SQLite
     process.on('SIGINT',  () => shutdown('SIGINT'));
     process.on('SIGTERM', () => shutdown('SIGTERM'));
+    process.on('SIGHUP',  () => shutdown('SIGHUP'));
+    process.on('SIGBREAK', () => shutdown('SIGBREAK')); // Windows Ctrl+Break
   } catch (err: any) {
     log('ERROR', `ERROR FATAL EN MAIN: ${err.message}\n${err.stack}`);
+    try { closeQueue(); } catch { /* ignore */ }
     process.exit(1);
   }
 }

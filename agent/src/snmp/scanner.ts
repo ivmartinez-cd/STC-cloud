@@ -130,22 +130,37 @@ export async function readDevice(ip: string, community: string): Promise<DeviceR
       colorPages = Math.max(0, Number(totalPages) - Number(monoPages));
     }
 
-    let modelName = String(sysDescr ?? '').slice(0, 200);
-    if (brand === 'lexmark' && modelName.includes('X656')) {
+    // ── Fase 5: Limpieza y Estilización de Datos ───────────────────────────
+    let rawModel = String(sysDescr ?? '').trim();
+    
+    // 1. Tomar solo la primera parte antes de un separador común (; , | \n)
+    let modelName = rawModel.split(/[;|\r\n]/)[0].trim();
+
+    // 2. Si el modelo empieza con el nombre de la marca, lo limpiamos para que no sea redundante
+    const brandName = brand.toLowerCase();
+    if (brandName !== 'generic' && modelName.toLowerCase().startsWith(brandName)) {
+      modelName = modelName.slice(brandName.length).trim();
+    }
+
+    // 3. Casos especiales conocidos
+    if (brand === 'lexmark' && rawModel.includes('X656')) {
       modelName = 'X656';
     }
+
+    // 4. Limite de seguridad
+    modelName = modelName.slice(0, 100);
 
     return {
       ip,
       brand,
-      sysDescr:   String(sysDescr ?? '').slice(0, 200),
+      sysDescr:   rawModel.slice(0, 255),
       sysName:    String(sysName  ?? ''),
       serial:     serial ? String(serial).trim() || null : null,
       total_pages: totalPages !== null ? Number(totalPages) : null,
       mono_pages:  monoPages  !== null ? Number(monoPages)  : null,
       color_pages: colorPages !== null ? Number(colorPages) : null,
       status:     hrStatus(hrSt),
-      model:      modelName,
+      model:      modelName || 'Unknown Model',
       time:       new Date().toISOString(),
     };
   } finally {

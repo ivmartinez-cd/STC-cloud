@@ -252,19 +252,18 @@ export class AgentService {
     for (const r of readings) {
       try {
         // Limpiar marca si viene genérica
-      // Limpiar marca si viene genérica
-      let brand = r.brand || "unknown";
-      if (brand.toLowerCase() === 'generic' && r.model) {
-        if (r.model.toLowerCase().includes('samsung')) brand = 'Samsung';
-        else if (r.model.toLowerCase().includes('lexmark')) brand = 'Lexmark';
-        else if (r.model.toLowerCase().includes('hp')) brand = 'HP';
-        else if (r.model.toLowerCase().includes('ricoh')) brand = 'Ricoh';
-        else if (r.model.toLowerCase().includes('brother')) brand = 'Brother';
-        else if (r.model.toLowerCase().includes('xerox')) brand = 'Xerox';
-      }
+        let brand = r.brand || "unknown";
+        if (brand.toLowerCase() === 'generic' && r.model) {
+          if (r.model.toLowerCase().includes('samsung')) brand = 'Samsung';
+          else if (r.model.toLowerCase().includes('lexmark')) brand = 'Lexmark';
+          else if (r.model.toLowerCase().includes('hp')) brand = 'HP';
+          else if (r.model.toLowerCase().includes('ricoh')) brand = 'Ricoh';
+          else if (r.model.toLowerCase().includes('brother')) brand = 'Brother';
+          else if (r.model.toLowerCase().includes('xerox')) brand = 'Xerox';
+        }
 
-      // Nombre amigable: Usamos la primera parte del modelo si no hay nombre específico
-      const friendlyName = r.name || (r.model ? r.model.split(';')[0].trim() : r.device_id);
+        // Nombre amigable: Usamos la primera parte del modelo si no hay nombre específico
+        const friendlyName = r.name || (r.model ? r.model.split(';')[0].trim() : r.device_id);
 
         const upserted = await this.db.raw<{ rows: { id: string }[] }>(`
           INSERT INTO devices (id, agent_id, ip_address, serial_number, name, brand, model, active, last_seen, total_pages, mono_pages, color_pages, last_status)
@@ -289,7 +288,7 @@ export class AgentService {
           crypto.randomUUID(),
           agentId,
           r.ip || null,
-          r.device_id, // serial_number
+          (r.device_id || "").slice(0, 150), // serial_number
           friendlyName.slice(0, 255),
           brand.slice(0, 100),
           (r.model || "unknown").slice(0, 255),
@@ -311,9 +310,8 @@ export class AgentService {
           readingTime = new Date(); // Fallback a ahora si la fecha es inválida
         }
 
-
         mappedReadings.push({
-          id: crypto.randomUUID(), // Generamos ID en JS para evitar dependencia de extensiones DB
+          id: crypto.randomUUID(),
           time: readingTime,
           device_id: deviceId,
           total_pages: parseCount(r.total_pages),
@@ -324,13 +322,12 @@ export class AgentService {
         });
       } catch (err: any) {
         console.error(`[SYNC] Error procesando dispositivo ${r.device_id}:`, err.message);
-        // Enviamos el error al log del portal para que el usuario lo vea
+        // Continuamos con el resto de la tanda para no bloquear todo el agente
         await this.ingestLogs(agentId, [{
           time: new Date().toISOString(),
           level: 'ERROR',
-          message: `Sync Error [${r.ip}]: ${err.message}`
+          message: `Device Sync Fail [${r.ip || r.device_id}]: ${err.message}`
         }]);
-        throw err; // Re-throw para que el endpoint responda con error
       }
     }
 
