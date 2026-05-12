@@ -56,10 +56,17 @@ const Layout = () => {
         `}>
           <Link to="/" className="flex flex-col items-center group" onClick={() => setIsMobileMenuOpen(false)}>
             <div className="relative h-14 flex items-center justify-center min-w-[40px]">
+              {/* Full Logo - Shown when expanded */}
               <img 
                 src="/logo.png" 
                 alt="STC Cloud" 
-                className="h-12 w-auto object-contain transition-all duration-500 group-hover:scale-110" 
+                className={`h-11 w-auto object-contain transition-all duration-500 ${isHovered ? 'opacity-100 scale-100' : 'opacity-0 scale-75 absolute pointer-events-none'}`} 
+              />
+              {/* Icon Logo - Shown when collapsed */}
+              <img 
+                src="/logo2.png" 
+                alt="STC" 
+                className={`h-10 w-auto object-contain transition-all duration-500 ${!isHovered ? 'opacity-100 scale-110' : 'opacity-0 scale-125 absolute pointer-events-none'}`} 
               />
               <div className="absolute inset-0 bg-blue-500/5 blur-xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
             </div>
