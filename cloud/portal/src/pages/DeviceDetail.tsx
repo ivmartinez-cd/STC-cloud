@@ -235,31 +235,31 @@ const DeviceDetail = () => {
 
           {/* Stats Panel */}
           <div className="space-y-6">
-            <div className="rounded-[24px] p-8 bg-gradient-to-br from-[#1a2333] to-[#2c3e50] text-white shadow-2xl shadow-blue-900/20">
+            <div className="rounded-[24px] p-8 bg-gradient-to-br from-[#f7931d] to-[#e67e22] text-white shadow-2xl shadow-orange-500/20">
               <div className="flex items-center gap-3 mb-8">
-                <div className="p-2 bg-white/10 rounded-xl backdrop-blur-md">
-                  <FileText size={20} className="text-blue-300" />
+                <div className="p-2 bg-white/20 rounded-xl backdrop-blur-md">
+                  <FileText size={20} className="text-white" />
                 </div>
                 <h3 className="font-extrabold text-lg tracking-tight">Contadores Actuales</h3>
               </div>
 
               <div className="space-y-6">
                 <div className="space-y-2">
-                  <p className="text-[10px] font-extrabold text-blue-300/60 uppercase tracking-widest ml-1">Total Acumulado</p>
+                  <p className="text-[10px] font-extrabold text-white/70 uppercase tracking-widest ml-1">Total Acumulado</p>
                   <div className="text-5xl font-black tracking-tighter text-white">
                     {(latest.total_pages ?? latest.totalPages ?? 0).toLocaleString()}
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 gap-4 pt-4">
-                  <div className="bg-white/5 border border-white/10 rounded-3xl p-5 backdrop-blur-sm">
-                    <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-1">Monocromo</p>
-                    <p className="text-2xl font-black">{(latest.mono_pages ?? latest.monoPages ?? 0).toLocaleString()}</p>
+                  <div className="bg-white/10 border border-white/20 rounded-3xl p-5 backdrop-blur-sm">
+                    <p className="text-[10px] font-extrabold text-white/60 uppercase tracking-widest mb-1">Monocromo</p>
+                    <p className="text-2xl font-black text-white">{(latest.mono_pages ?? latest.monoPages ?? 0).toLocaleString()}</p>
                   </div>
                   
-                  <div className="bg-gradient-to-r from-[#f7931d]/20 to-transparent border border-[#f7931d]/30 rounded-3xl p-5 backdrop-blur-sm">
-                    <p className="text-[10px] font-extrabold text-[#f39c12] uppercase tracking-widest mb-1">Color</p>
-                    <p className="text-2xl font-black text-[#f39c12]">{(latest.color_pages ?? latest.colorPages ?? 0).toLocaleString()}</p>
+                  <div className="bg-white/20 border border-white/30 rounded-3xl p-5 backdrop-blur-sm">
+                    <p className="text-[10px] font-extrabold text-white uppercase tracking-widest mb-1">Color</p>
+                    <p className="text-2xl font-black text-white">{(latest.color_pages ?? latest.colorPages ?? 0).toLocaleString()}</p>
                   </div>
                 </div>
               </div>
