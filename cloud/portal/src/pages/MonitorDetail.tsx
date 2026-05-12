@@ -98,7 +98,7 @@ const MonitorDetail = () => {
     if (!id) return;
     try {
       setLogsLoading(true);
-      const data = await api.get<any[]>(`/logs?agentId=${id}&limit=${logLimit}`);
+      const data = await api.get<any[]>(`/agents/${id}/logs?limit=${logLimit}`);
       setLogs(data);
     } catch (err) {
       console.error('Error fetching logs:', err);
@@ -111,7 +111,7 @@ const MonitorDetail = () => {
     if (!id) return;
     try {
       setCommandLoading(action);
-      await api.post('/command', { agentId: id, action });
+      await api.post(`/agents/${id}/command`, { type: action, payload: {} });
       showToast(`Comando ${action} encolado correctamente`, 'success');
     } catch (err: any) {
       showToast(err.message || 'Error al enviar comando', 'error');
@@ -131,7 +131,7 @@ const MonitorDetail = () => {
 
   const handleRegen = async () => {
     try {
-      const data = await api.post<any>(`/agents/${id}/regen-key`);
+      const data = await api.post<any>(`/agents/${id}/regenerate-key`);
       setRegenKey(data.activation_key);
       fetchData();
     } catch (err: any) {
@@ -309,88 +309,68 @@ const MonitorDetail = () => {
               </div>
             </div>
 
-            {/* Right Column: Device Inventory */}
             <div className="lg:col-span-8 space-y-6">
-              <div className="cd-panel overflow-hidden">
-                <header className="px-10 py-8 border-b border-slate-50 flex items-center justify-between bg-white">
-                  <div className="flex items-center gap-4">
-                    <div className="p-3 bg-brand/5 text-brand rounded-2xl">
-                      <Search size={20} />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-black text-[#1a2333] tracking-tight">Inventario de Dispositivos</h3>
-                      <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Hardware detectado en la red local</p>
-                    </div>
+              <div className="cd-panel p-8 space-y-6 bg-gradient-to-br from-white to-slate-50/50">
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="p-3 bg-brand/10 text-brand rounded-2xl">
+                    <Shield size={24} />
                   </div>
-                </header>
-
-                <div className="overflow-x-auto">
-                  <table className="cd-table">
-                    <thead>
-                      <tr>
-                        <th>Modelo / IP</th>
-                        <th>Serial</th>
-                        <th className="text-right">Volumen Total</th>
-                        <th className="text-center">Estado</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {devices.length === 0 ? (
-                        <tr>
-                          <td colSpan={4} className="py-24 text-center">
-                            <p className="text-slate-400 font-black uppercase tracking-widest text-xs">No se han detectado dispositivos aún</p>
-                          </td>
-                        </tr>
-                      ) : (
-                        devices.map(device => (
-                          <tr key={device.id} className="group/row">
-                            <td>
-                              <div className="flex flex-col">
-                                <span className="font-black text-[#1a2333] uppercase tracking-tight">{device.model || 'Desconocido'}</span>
-                                <span className="font-mono text-[10px] font-bold text-brand uppercase">{device.ip_address}</span>
-                              </div>
-                            </td>
-                            <td>
-                              <span className="font-mono text-xs font-bold text-slate-500 uppercase tracking-tight">{device.serial_number || '---'}</span>
-                            </td>
-                            <td className="text-right">
-                              <span className="text-sm font-black text-[#1a2333] tracking-tight">{(device.total_pages || 0).toLocaleString()}</span>
-                              <span className="text-[9px] font-bold text-slate-400 uppercase block tracking-widest">Impresiones</span>
-                            </td>
-                            <td className="text-center">
-                              <span className={`inline-flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-full ${
-                                device.status === 'online' ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-400'
-                              }`}>
-                                <div className={`w-1.5 h-1.5 rounded-full ${device.status === 'online' ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`} />
-                                {device.status}
-                              </span>
-                            </td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
+                  <div>
+                    <h3 className="text-lg font-black text-[#1a2333] tracking-tight">Estado de Seguridad</h3>
+                    <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Verificación de enlace encriptado</p>
+                  </div>
                 </div>
 
-                {monitor.activation_key && (
-                  <div className="mx-10 mb-10 p-6 bg-emerald-50 border border-emerald-100 rounded-[24px] flex items-center justify-between group">
-                    <div className="flex items-center gap-4">
-                      <div className="p-3 bg-white rounded-2xl shadow-sm text-emerald-600">
-                        <Shield size={20} />
+                <div className="space-y-6">
+                  {monitor.activation_key ? (
+                    <div className="p-6 bg-emerald-50 border border-emerald-100 rounded-[28px] flex items-center justify-between group">
+                      <div className="flex items-center gap-4">
+                        <div className="p-3 bg-white rounded-2xl shadow-sm text-emerald-600">
+                          <Key size={20} />
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-black text-emerald-700 uppercase tracking-widest">Token de Sesión Pendiente</p>
+                          <p className="font-mono text-xs font-bold text-emerald-900 truncate max-w-[200px] sm:max-w-md">{monitor.activation_key}</p>
+                        </div>
+                      </div>
+                      <button 
+                        onClick={copyKey} 
+                        className="p-4 bg-white text-emerald-600 rounded-2xl shadow-md hover:bg-emerald-600 hover:text-white transition-all active:scale-90"
+                      >
+                        {keyCopied ? <Check size={20} /> : <Copy size={20} />}
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="p-6 bg-blue-50 border border-blue-100 rounded-[28px] flex items-center gap-4">
+                      <div className="p-3 bg-white rounded-2xl shadow-sm text-brand">
+                        <Check size={20} />
                       </div>
                       <div>
-                        <p className="text-[10px] font-black text-emerald-700 uppercase tracking-widest">Token de Seguridad de la Sesión</p>
-                        <p className="font-mono text-xs font-bold text-emerald-900 truncate max-w-[200px] sm:max-w-md">{monitor.activation_key}</p>
+                        <p className="text-[10px] font-black text-brand uppercase tracking-widest">Nodo Vinculado Correctamente</p>
+                        <p className="text-xs font-bold text-blue-900 leading-relaxed">
+                          La comunicación está cifrada con el Hardware ID: <span className="font-mono">{monitor.hardware_id}</span>
+                        </p>
                       </div>
                     </div>
-                    <button 
-                      onClick={copyKey} 
-                      className="p-4 bg-white text-emerald-600 rounded-2xl shadow-md hover:bg-emerald-600 hover:text-white transition-all active:scale-90"
-                    >
-                      {keyCopied ? <Check size={20} /> : <Copy size={20} />}
-                    </button>
+                  )}
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="p-6 bg-white border border-slate-100 rounded-3xl shadow-sm">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Último Latido</p>
+                      <div className="flex items-center gap-3">
+                        <div className={`w-2.5 h-2.5 rounded-full ${monitor.status === 'active' ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
+                        <span className="text-sm font-black text-slate-700">{formatRelativeTime(monitor.last_seen, now)}</span>
+                      </div>
+                    </div>
+                    <div className="p-6 bg-white border border-slate-100 rounded-3xl shadow-sm">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Comunidad SNMP</p>
+                      <div className="flex items-center gap-3">
+                        <Search size={16} className="text-brand" />
+                        <span className="text-sm font-black text-slate-700">{monitor.config?.snmp_community || 'public'}</span>
+                      </div>
+                    </div>
                   </div>
-                )}
+                </div>
               </div>
             </div>
           </div>

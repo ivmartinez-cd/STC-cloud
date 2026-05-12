@@ -23,8 +23,8 @@ interface Device {
   id:           string;
   brand:        string;
   model:        string;
-  serial:       string;
-  ip:           string;
+  serial_number: string;
+  ip_address:   string;
   monitor_name: string;
   client_name:  string;
 }
@@ -120,12 +120,12 @@ const DeviceDetail = () => {
           <div className="w-px h-8 bg-slate-100 hidden md:block"></div>
           <div>
             <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Número de Serie</p>
-            <p className="text-sm font-black text-slate-700 tracking-tight">{device.serial || 'S/N Desconocido'}</p>
+            <p className="text-sm font-black text-slate-700 tracking-tight">{device.serial_number || 'S/N Desconocido'}</p>
           </div>
           <div className="w-px h-8 bg-slate-100 hidden md:block"></div>
           <div>
             <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Dirección IP</p>
-            <p className="text-sm font-black text-brand tracking-tight">{device.ip}</p>
+            <p className="text-sm font-black text-brand tracking-tight">{device.ip_address}</p>
           </div>
           <div className="md:ml-auto flex items-center gap-3">
              <div className="text-right hidden sm:block">

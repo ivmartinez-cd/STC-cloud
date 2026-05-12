@@ -12,12 +12,16 @@ interface MonitorData {
 
 interface Device {
   id: string;
-  ip: string;
-  serial: string | null;
+  ip_address: string;
+  serial_number: string | null;
   brand: string;
   model: string;
   name: string;
   active: boolean;
+  total_pages: number | null;
+  mono_pages: number | null;
+  color_pages: number | null;
+  status: string;
   created_at: string;
 }
 
@@ -58,8 +62,8 @@ const MonitorDevices = () => {
 
   const filteredDevices = devices.filter(d => 
     d.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    d.ip.includes(searchTerm) ||
-    d.serial?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    d.ip_address.includes(searchTerm) ||
+    d.serial_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     d.brand?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     d.model?.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -152,6 +156,7 @@ const MonitorDevices = () => {
                     <th>Nro. Serie</th>
                     <th>Dirección IP</th>
                     <th>Fabricante / Modelo</th>
+                    <th className="text-right">Volumen</th>
                     <th className="text-center">Estado</th>
                     <th className="text-right">Registrado</th>
                   </tr>
@@ -169,18 +174,18 @@ const MonitorDevices = () => {
                             <FileText size={16} className="text-slate-400 group-hover/row:text-brand" />
                           </div>
                           <span className="font-extrabold text-[#1a2333] group-hover/row:text-brand transition-colors uppercase tracking-tight">
-                            {d.name || d.ip}
+                            {d.name || d.ip_address}
                           </span>
                         </div>
                       </td>
                       <td>
                         <span className="font-mono text-xs font-bold text-slate-500 uppercase">
-                          {d.serial || '—'}
+                          {d.serial_number || '—'}
                         </span>
                       </td>
                       <td>
                         <span className="font-mono text-sm font-black text-[#1a2333]">
-                          {d.ip}
+                          {d.ip_address}
                         </span>
                       </td>
                       <td>
@@ -193,16 +198,19 @@ const MonitorDevices = () => {
                           </span>
                         </div>
                       </td>
+                      <td className="text-right">
+                        <div className="flex flex-col items-end">
+                          <span className="text-sm font-black text-[#1a2333]">{(d.total_pages || 0).toLocaleString()}</span>
+                          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Páginas</span>
+                        </div>
+                      </td>
                       <td className="text-center">
-                        {d.active ? (
-                          <span className="inline-flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-wider text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> Activo
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full">
-                            <span className="w-1.5 h-1.5 rounded-full bg-slate-400" /> Inactivo
-                          </span>
-                        )}
+                        <span className={`inline-flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-full ${
+                          d.status === 'online' ? 'text-emerald-600 bg-emerald-50' : 'text-slate-500 bg-slate-100'
+                        }`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${d.status === 'online' ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`} />
+                          {d.status || (d.active ? 'idle' : 'offline')}
+                        </span>
                       </td>
                       <td className="text-right">
                         <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-tighter">

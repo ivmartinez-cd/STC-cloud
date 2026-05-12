@@ -543,6 +543,7 @@ const start = async () => {
         const { id } = request.params as any;
         return await db("devices")
           .where("agent_id", id)
+          .select("*", "last_status as status")
           .orderBy("brand");
       }
     );
@@ -702,6 +703,7 @@ const start = async () => {
           .where("devices.active", true)
           .select(
             "devices.*",
+            "devices.last_status as status",
             "agents.name as monitor_name",
             "clients.name as client_name"
           )
@@ -718,6 +720,7 @@ const start = async () => {
           .where("devices.id", id)
           .select(
             "devices.*",
+            "devices.last_status as status",
             "agents.name as monitor_name",
             "clients.name as client_name"
           )
@@ -740,6 +743,7 @@ const start = async () => {
           .where("agents.client_id", id)
           .select(
             "devices.*",
+            "devices.last_status as status",
             "agents.name as monitor_name",
             "agents.last_seen as monitor_last_seen"
           )
@@ -775,7 +779,7 @@ const start = async () => {
         .select(
           "alerts.*",
           "devices.brand",
-          "devices.ip",
+          "devices.ip_address",
           "devices.name as device_name",
         )
         .orderBy("alerts.created_at", "desc")

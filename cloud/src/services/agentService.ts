@@ -155,20 +155,18 @@ export class AgentService {
     for (const device of devices) {
       try {
         await this.db.raw(`
-          INSERT INTO devices (id, agent_id, ip, mac, serial, brand, model, name)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-          ON CONFLICT (agent_id, serial) WHERE serial IS NOT NULL
+          INSERT INTO devices (id, agent_id, ip_address, serial_number, brand, model, name)
+          VALUES (?, ?, ?, ?, ?, ?, ?)
+          ON CONFLICT (agent_id, serial_number) WHERE serial_number IS NOT NULL
           DO UPDATE SET
-            ip    = COALESCE(EXCLUDED.ip,    devices.ip),
-            mac   = COALESCE(EXCLUDED.mac,   devices.mac),
-            brand = COALESCE(EXCLUDED.brand, devices.brand),
-            model = COALESCE(EXCLUDED.model, devices.model),
-            name  = COALESCE(EXCLUDED.name,  devices.name)
+            ip_address = COALESCE(EXCLUDED.ip_address, devices.ip_address),
+            brand      = COALESCE(EXCLUDED.brand,      devices.brand),
+            model      = COALESCE(EXCLUDED.model,      devices.model),
+            name       = COALESCE(EXCLUDED.name,       devices.name)
         `, [
           crypto.randomUUID(),
           agentId,
           device.ip,
-          device.mac || null,
           device.serial || null,
           device.brand || 'unknown',
           (device.model || "").slice(0, 100),
@@ -237,45 +235,45 @@ export class AgentService {
       .limit(limit);
   }
 
-  // Bug #4 corregido: se elimina la IP hardcodeada, se usa r.ip del payload
+  // Actualiza o crea dispositivos y registra lecturas
   async syncReadings(redis: any, readings: any[], agentId: string) {
     if (!readings || readings.length === 0) return;
 
     const mappedReadings: any[] = [];
 
     for (const r of readings) {
-      let device = await this.db("devices")
-        .where({ agent_id: agentId })
-        .andWhere(function () {
-          this.where("serial", r.device_id).orWhere("ip", r.ip || "");
-        })
-        .first();
+      // Upsert del dispositivo: actualizamos la ficha maestra con la última info detectada
+      const upserted = await this.db.raw<{ rows: { id: string }[] }>(`
+        INSERT INTO devices (id, agent_id, ip_address, serial_number, name, brand, model, active, last_seen, total_pages, mono_pages, color_pages, last_status)
+        VALUES (?, ?, ?, ?, ?, ?, ?, true, NOW(), ?, ?, ?, ?)
+        ON CONFLICT (agent_id, serial_number) WHERE serial_number IS NOT NULL
+        DO UPDATE SET
+          ip_address    = EXCLUDED.ip_address,
+          brand         = COALESCE(EXCLUDED.brand, devices.brand),
+          model         = COALESCE(EXCLUDED.model, devices.model),
+          name          = COALESCE(devices.name, EXCLUDED.name),
+          last_seen     = NOW(),
+          active        = true,
+          total_pages   = EXCLUDED.total_pages,
+          mono_pages    = EXCLUDED.mono_pages,
+          color_pages   = EXCLUDED.color_pages,
+          last_status   = EXCLUDED.last_status
+        RETURNING id
+      `, [
+        crypto.randomUUID(),
+        agentId,
+        r.ip || null,
+        r.device_id,
+        (r.device_id || "").slice(0, 100),
+        (r.brand || "unknown").slice(0, 50),
+        (r.model || "unknown").slice(0, 100),
+        r.total_pages ?? null,
+        r.mono_pages  ?? null,
+        r.color_pages ?? null,
+        r.status || "idle"
+      ]);
 
-      let deviceId = device?.id;
-
-      if (!deviceId) {
-        // Upsert: evita duplicados cuando el mismo serial llega varias veces
-        const upserted = await this.db.raw<{ rows: { id: string }[] }>(`
-          INSERT INTO devices (id, agent_id, ip, serial, name, brand, model)
-          VALUES (?, ?, ?, ?, ?, ?, ?)
-          ON CONFLICT (agent_id, serial) WHERE serial IS NOT NULL
-          DO UPDATE SET
-            ip    = COALESCE(EXCLUDED.ip,    devices.ip),
-            brand = COALESCE(EXCLUDED.brand, devices.brand),
-            model = COALESCE(EXCLUDED.model, devices.model),
-            name  = COALESCE(EXCLUDED.name,  devices.name)
-          RETURNING id
-        `, [
-          crypto.randomUUID(),
-          agentId,
-          r.ip || null,
-          r.device_id,
-          (r.device_id || "").slice(0, 100),
-          (r.brand || "unknown").slice(0, 50),
-          (r.model || "unknown").slice(0, 100)
-        ]);
-        deviceId = upserted.rows[0].id;
-      }
+      const deviceId = upserted.rows[0].id;
 
       mappedReadings.push({
         time: new Date(r.time),
@@ -288,6 +286,7 @@ export class AgentService {
       });
     }
 
+    // Inserción masiva de lecturas en el historial
     await this.db("readings").insert(mappedReadings);
 
     // Encolar evaluación de alertas de forma asíncrona
