@@ -484,15 +484,15 @@ const MonitorDetail = () => {
                   devices.map((device) => (
                     <tr key={device.id} className="group hover:bg-slate-50/50 transition-all">
                       <td className="px-8 py-5">
-                        <div className="flex items-center gap-4">
-                          <div className="w-10 h-10 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-brand/10 group-hover:text-brand transition-all">
+                        <Link to={`/devices/${device.id}`} className="flex items-center gap-4 group/device">
+                          <div className="w-10 h-10 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-400 group-hover/device:bg-brand group-hover/device:text-white transition-all">
                             <Printer size={18} />
                           </div>
                           <div>
-                            <p className="text-sm font-black text-[#1a2333] tracking-tight">{device.model || 'Modelo Genérico'}</p>
+                            <p className="text-sm font-black text-[#1a2333] tracking-tight group-hover/device:text-brand transition-colors">{device.model || 'Modelo Genérico'}</p>
                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{device.brand || 'Marca n/a'}</p>
                           </div>
-                        </div>
+                        </Link>
                       </td>
                       <td className="px-8 py-5">
                         <div className="flex flex-col">
