@@ -805,6 +805,17 @@ const start = async () => {
       }
     );
 
+    // Búsqueda global (Clientes, Dispositivos por Serie/Modelo)
+    fastify.get(
+      "/api/v1/search",
+      { preHandler: portalAuth },
+      async (request) => {
+        const { q } = request.query as any;
+        if (!q || q.length < 2) return { clients: [], devices: [] };
+        return await agentService.globalSearch(q);
+      }
+    );
+
     // Alertas activas (portal)
     fastify.get("/api/v1/alerts", { preHandler: portalAuth }, async (request) => {
       const { resolved } = request.query as any;

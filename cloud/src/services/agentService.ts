@@ -406,4 +406,24 @@ export class AgentService {
     }
     return agent;
   }
+
+  async globalSearch(query: string) {
+    const q = `%${query}%`;
+    
+    const [clients, devices] = await Promise.all([
+      this.db("clients")
+        .where("name", "ILIKE", q)
+        .select("id", "name")
+        .limit(5),
+      this.db("devices")
+        .where("serial_number", "ILIKE", q)
+        .orWhere("brand", "ILIKE", q)
+        .orWhere("model", "ILIKE", q)
+        .orWhere("name", "ILIKE", q)
+        .select("id", "serial_number", "brand", "model", "name")
+        .limit(5)
+    ]);
+
+    return { clients, devices };
+  }
 }

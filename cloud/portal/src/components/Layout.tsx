@@ -1,5 +1,6 @@
-import { useState, Suspense } from 'react';
-import { Link, useLocation, Outlet } from 'react-router-dom';
+import { useState, Suspense, useEffect, useRef } from 'react';
+import { Link, useLocation, Outlet, useNavigate } from 'react-router-dom';
+import { api } from '../lib/api';
 import {
   LayoutDashboard, Users, FileText, LogOut, Search, Settings, Menu, X, ChevronRight, Shield
 } from 'lucide-react';
@@ -13,11 +14,70 @@ const navItems = [
   { name: 'Configuración', path: '/settings',  icon: Settings        },
 ];
 
+const useDebounce = (value: string, delay: number) => {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+  useEffect(() => {
+    const handler = setTimeout(() => setDebouncedValue(value), delay);
+    return () => clearTimeout(handler);
+  }, [value, delay]);
+  return debouncedValue;
+};
+
 const Layout = () => {
   const location = useLocation();
   const { userEmail: email, logout } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+
+  // Search State
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<{ clients: any[], devices: any[] }>({ clients: [], devices: [] });
+  const [isSearching, setIsSearching] = useState(false);
+  const [showResults, setShowResults] = useState(false);
+  const searchRef = useRef<HTMLDivElement>(null);
+  const debouncedSearch = useDebounce(searchQuery, 300);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (debouncedSearch.length >= 2) {
+      const fetchResults = async () => {
+        setIsSearching(true);
+        try {
+          const data = await api.get<{ clients: any[], devices: any[] }>(`/search?q=${debouncedSearch}`);
+          setSearchResults(data);
+          setShowResults(true);
+        } catch (error) {
+          console.error('Search error:', error);
+        } finally {
+          setIsSearching(false);
+        }
+      };
+      fetchResults();
+    } else {
+      setSearchResults({ clients: [], devices: [] });
+      setShowResults(false);
+    }
+  }, [debouncedSearch]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        document.getElementById('global-search')?.focus();
+      }
+    };
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+        setShowResults(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   const isActive = (path: string) =>
     path === '/' ? location.pathname === '/' : location.pathname.startsWith(path);
@@ -234,18 +294,80 @@ const Layout = () => {
           </div>
 
           <div className="flex items-center gap-4">
-            <div className="relative hidden sm:flex items-center group">
+            <div className="relative hidden sm:flex items-center group" ref={searchRef}>
               <div className="absolute left-3.5 text-slate-400 group-focus-within:text-blue-500 transition-colors pointer-events-none">
                 <Search size={16} />
               </div>
               <input
+                id="global-search"
                 type="text"
                 placeholder="Buscar..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onFocus={() => setShowResults(true)}
                 className="cd-input w-64 !pl-11 !pr-10 !bg-slate-100/50 border-transparent focus:!bg-white focus:!border-blue-500/30 h-10 text-sm transition-all rounded-xl"
               />
               <div className="absolute right-3 px-1.5 py-0.5 rounded-md bg-white border border-slate-200 text-[10px] font-bold text-slate-400 pointer-events-none">
                 Ctrl K
               </div>
+
+              {/* Search Results Dropdown */}
+              {showResults && (searchResults.clients.length > 0 || searchResults.devices.length > 0 || isSearching) && (
+                <div className="absolute top-full left-0 right-0 mt-2 bg-white/95 backdrop-blur-xl border border-slate-200 rounded-2xl shadow-[0_20px_40px_rgba(0,0,0,0.1)] overflow-hidden z-[100] animate-in fade-in slide-in-from-top-2 duration-300">
+                  {isSearching && (
+                    <div className="p-4 flex items-center justify-center">
+                      <div className="w-5 h-5 border-2 border-slate-200 border-t-blue-500 rounded-full animate-spin" />
+                    </div>
+                  )}
+                  
+                  {!isSearching && searchResults.clients.length > 0 && (
+                    <div className="p-2">
+                      <div className="px-3 py-1.5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Clientes</div>
+                      {searchResults.clients.map(client => (
+                        <Link
+                          key={client.id}
+                          to={`/clients/${client.id}`}
+                          onClick={() => { setShowResults(false); setSearchQuery(''); }}
+                          className="flex items-center gap-3 px-3 py-2 hover:bg-slate-50 rounded-xl transition-colors group"
+                        >
+                          <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-500 group-hover:bg-blue-500 group-hover:text-white transition-colors">
+                            <Users size={14} />
+                          </div>
+                          <span className="text-sm font-semibold text-slate-700">{client.name}</span>
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+
+                  {!isSearching && searchResults.devices.length > 0 && (
+                    <div className="p-2 border-t border-slate-100">
+                      <div className="px-3 py-1.5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Dispositivos</div>
+                      {searchResults.devices.map(device => (
+                        <Link
+                          key={device.id}
+                          to={`/devices/${device.id}`}
+                          onClick={() => { setShowResults(false); setSearchQuery(''); }}
+                          className="flex items-center gap-3 px-3 py-2 hover:bg-slate-50 rounded-xl transition-colors group"
+                        >
+                          <div className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center text-orange-500 group-hover:bg-orange-500 group-hover:text-white transition-colors">
+                            <Shield size={14} />
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="text-sm font-semibold text-slate-700">{device.serial_number}</span>
+                            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">{device.brand} {device.model}</span>
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                  
+                  {!isSearching && searchQuery.length >= 2 && searchResults.clients.length === 0 && searchResults.devices.length === 0 && (
+                    <div className="p-6 text-center text-slate-400 text-sm italic">
+                      No se encontraron resultados para "{searchQuery}"
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
             
             <button className="p-2.5 text-slate-500 hover:bg-slate-100 rounded-xl transition-all">
