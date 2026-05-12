@@ -68,7 +68,7 @@ const Layout = () => {
                 alt="STC" 
                 className={`h-10 w-auto object-contain transition-all duration-500 ${!isHovered ? 'opacity-100 scale-110' : 'opacity-0 scale-125 absolute pointer-events-none'}`} 
                 style={{ 
-                  filter: 'invert(67%) sepia(80%) saturate(2421%) hue-rotate(338deg) brightness(101%) contrast(96%) drop-shadow(0 2px 4px rgba(247,147,29,0.2))' 
+                  filter: 'invert(72%) sepia(34%) saturate(3620%) hue-rotate(345deg) brightness(101%) contrast(95%)' 
                 }}
               />
               <div className="absolute inset-0 bg-blue-500/5 blur-xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
