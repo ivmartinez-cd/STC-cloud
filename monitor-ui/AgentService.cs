@@ -16,7 +16,6 @@ internal sealed class AgentStatus
     [JsonPropertyName("serverUrl")] public string?  ServerUrl { get; init; }
     [JsonPropertyName("service")]   public string?  Service   { get; init; }
     [JsonPropertyName("dataDir")]   public string?  DataDir   { get; init; }
-    [JsonPropertyName("lastLog")]   public string?  LastLog   { get; init; }
 }
 
 internal static class AgentService
@@ -126,14 +125,6 @@ internal static class AgentService
             DateTime.UtcNow.ToString("O"));
     }
 
-    // ── Log path ──────────────────────────────────────────────────────────────
-
-    public static string GetLogPath()
-    {
-        var status = GetStatus();
-        var dir = status?.DataDir ?? DefaultDataDir;
-        return Path.Combine(dir, "agent.log");
-    }
 
     // ── Service control ───────────────────────────────────────────────────────
 
@@ -202,31 +193,4 @@ internal static class AgentService
         catch { }
     }
 
-    public static string GetFullLogs()
-    {
-        var logPath = GetLogPath();
-        if (!File.Exists(logPath))
-            return "No se encontró el archivo de log en: " + logPath;
-
-        try
-        {
-            // Open with FileShare.ReadWrite so we don't lock it or fail if Node.js is writing
-            using var fs = new FileStream(logPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-            using var sr = new StreamReader(fs, System.Text.Encoding.UTF8);
-            
-            // For simple logs, just read to end. If it's too big, we might want to read only the tail,
-            // but for a monitoring UI, reading the last ~50KB is usually fine.
-            if (fs.Length > 50 * 1024)
-            {
-                fs.Seek(-50 * 1024, SeekOrigin.End);
-                // Read until newline to sync
-                sr.ReadLine();
-            }
-            return sr.ReadToEnd();
-        }
-        catch (Exception ex)
-        {
-            return $"Error al leer el log: {ex.Message}";
-        }
-    }
 }

@@ -13,7 +13,6 @@ internal sealed class ActivationForm : Form
     private readonly TabControl _tabControl;
     private readonly TabPage _tabServiceInfo;
     private readonly TabPage _tabSettings;
-    private readonly TabPage _tabLogs;
     private readonly StatusStrip _statusStrip;
     private readonly ToolStripStatusLabel _statusLabel;
 
@@ -40,11 +39,6 @@ internal sealed class ActivationForm : Form
     private readonly ProgressBar _progressBar;
     private readonly Label _lblActivationHint;
 
-    // ── Logs Tab ──────────────────────────────────────────────────────────────
-    private readonly RichTextBox _rtbLogs;
-    private readonly ComboBox _cboLogLevel;
-    private readonly CheckBox _chkAutoRefresh;
-    private readonly System.Windows.Forms.Timer _logTimer;
 
     private readonly Color _hpBlue = Color.FromArgb(0, 150, 214);
     private readonly Font _titleFont = new Font("Segoe UI", 12f, FontStyle.Bold);
@@ -112,8 +106,6 @@ internal sealed class ActivationForm : Form
         _leftPanel.Controls.Add(new Label { Text = "Environment Settings", Font = _boldFont, Location = new Point(10, 265), AutoSize = true });
         _leftPanel.Controls.Add(new Label { Text = "Configuración del entorno para activar el acceso al Portal.", Location = new Point(10, 285), Size = new Size(200, 45) });
 
-        _leftPanel.Controls.Add(new Label { Text = "Live Logs", Font = _boldFont, Location = new Point(10, 340), AutoSize = true });
-        _leftPanel.Controls.Add(new Label { Text = "Registro de eventos del agente local.", Location = new Point(10, 360), Size = new Size(200, 40) });
 
         Controls.Add(_leftPanel);
 
@@ -127,12 +119,9 @@ internal sealed class ActivationForm : Form
 
         _tabServiceInfo = new TabPage("Service Information");
         _tabSettings = new TabPage("Environment Settings");
-        _tabLogs = new TabPage("Live Logs");
 
         _tabControl.TabPages.Add(_tabServiceInfo);
         _tabControl.TabPages.Add(_tabSettings);
-        _tabControl.TabPages.Add(_tabLogs);
-        _tabControl.SelectedIndexChanged += (s, e) => { if (_tabControl.SelectedTab == _tabLogs) RefreshLogs(); };
 
         Controls.Add(_tabControl);
 
@@ -215,72 +204,6 @@ internal sealed class ActivationForm : Form
         _tabSettings.Controls.Add(_progressBar);
 
 
-        // ====================================================================
-        // TAB: Live Logs
-        // ====================================================================
-        _tabLogs.BackColor = Color.White;
-
-        // Toolbar panel
-        var logToolbar = new Panel
-        {
-            Location = new Point(10, 8),
-            Size = new Size(520, 35),
-            BackColor = Color.FromArgb(245, 245, 245)
-        };
-
-        logToolbar.Controls.Add(new Label { Text = "Nivel:", Location = new Point(8, 8), AutoSize = true, ForeColor = Color.DimGray });
-        _cboLogLevel = new ComboBox
-        {
-            Location = new Point(52, 5),
-            Size = new Size(90, 23),
-            DropDownStyle = ComboBoxStyle.DropDownList
-        };
-        _cboLogLevel.Items.AddRange(new object[] { "Todos", "INFO", "WARN", "ERROR" });
-        _cboLogLevel.SelectedIndex = 0;
-        _cboLogLevel.SelectedIndexChanged += (s, e) => RefreshLogs();
-        logToolbar.Controls.Add(_cboLogLevel);
-
-        _chkAutoRefresh = new CheckBox
-        {
-            Text = "Auto-refresh (5s)",
-            Location = new Point(155, 7),
-            AutoSize = true,
-            Checked = true,
-            ForeColor = Color.DimGray
-        };
-        _chkAutoRefresh.CheckedChanged += (s, e) => _logTimer.Enabled = _chkAutoRefresh.Checked;
-        logToolbar.Controls.Add(_chkAutoRefresh);
-
-        var btnRefreshLogs = new Button { Text = "⟳ Refrescar", Location = new Point(320, 4), Size = new Size(95, 26), FlatStyle = FlatStyle.Flat, ForeColor = Color.DimGray };
-        btnRefreshLogs.FlatAppearance.BorderColor = Color.LightGray;
-        btnRefreshLogs.Click += (s, e) => RefreshLogs();
-        logToolbar.Controls.Add(btnRefreshLogs);
-
-        var btnClearLogs = new Button { Text = "🗑 Limpiar", Location = new Point(420, 4), Size = new Size(90, 26), FlatStyle = FlatStyle.Flat, ForeColor = Color.DimGray };
-        btnClearLogs.FlatAppearance.BorderColor = Color.LightGray;
-        btnClearLogs.Click += (s, e) => _rtbLogs.Clear();
-        logToolbar.Controls.Add(btnClearLogs);
-
-        _tabLogs.Controls.Add(logToolbar);
-
-        _rtbLogs = new RichTextBox
-        {
-            Location = new Point(10, 48),
-            Size = new Size(520, 365),
-            ReadOnly = true,
-            BackColor = Color.FromArgb(25, 25, 35),
-            ForeColor = Color.FromArgb(200, 200, 200),
-            Font = new Font("Consolas", 8.5f),
-            BorderStyle = BorderStyle.None,
-            WordWrap = false,
-            ScrollBars = RichTextBoxScrollBars.Both
-        };
-        _tabLogs.Controls.Add(_rtbLogs);
-
-        // Auto-refresh timer for logs
-        _logTimer = new System.Windows.Forms.Timer { Interval = 5000, Enabled = true };
-        _logTimer.Tick += (s, e) => { if (_tabControl.SelectedTab == _tabLogs) RefreshLogs(); };
-
         ResumeLayout(false);
     }
 
@@ -324,47 +247,6 @@ internal sealed class ActivationForm : Form
         }
     }
 
-    private void RefreshLogs()
-    {
-        var raw = AgentService.GetFullLogs();
-        var filter = _cboLogLevel.SelectedItem?.ToString() ?? "Todos";
-        var lines = raw.Split('\n', StringSplitOptions.RemoveEmptyEntries);
-
-        _rtbLogs.SuspendLayout();
-        _rtbLogs.Clear();
-
-        foreach (var line in lines)
-        {
-            var trimmed = line.TrimEnd('\r');
-
-            // Apply level filter
-            if (filter != "Todos")
-            {
-                if (!trimmed.Contains($"[{filter}]", StringComparison.OrdinalIgnoreCase))
-                    continue;
-            }
-
-            // Determine color based on log level
-            Color lineColor;
-            if (trimmed.Contains("[ERROR]", StringComparison.OrdinalIgnoreCase))
-                lineColor = Color.FromArgb(255, 100, 100);   // Red
-            else if (trimmed.Contains("[WARN]", StringComparison.OrdinalIgnoreCase))
-                lineColor = Color.FromArgb(255, 180, 60);    // Orange
-            else if (trimmed.Contains("[INFO]", StringComparison.OrdinalIgnoreCase))
-                lineColor = Color.FromArgb(100, 200, 130);   // Green
-            else
-                lineColor = Color.FromArgb(180, 180, 190);   // Gray (default)
-
-            _rtbLogs.SelectionStart = _rtbLogs.TextLength;
-            _rtbLogs.SelectionColor = lineColor;
-            _rtbLogs.AppendText(trimmed + "\n");
-        }
-
-        // Scroll to bottom
-        _rtbLogs.SelectionStart = _rtbLogs.TextLength;
-        _rtbLogs.ScrollToCaret();
-        _rtbLogs.ResumeLayout();
-    }
 
     // ── Public API ────────────────────────────────────────────────────────────
     public void UpdateDisplay(AgentStatus? s)
@@ -418,10 +300,6 @@ internal sealed class ActivationForm : Form
             _btnActivate.Text = "Activar Agente";
         }
         
-        if (_tabControl.SelectedTab == _tabLogs)
-        {
-            RefreshLogs();
-        }
     }
 
     private async void BtnRefresh_Click(object? sender, EventArgs e)

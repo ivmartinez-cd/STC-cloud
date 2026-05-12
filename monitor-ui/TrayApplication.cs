@@ -70,8 +70,6 @@ internal sealed class TrayApplication : ApplicationContext
         var itemSync = new ToolStripMenuItem("Forzar Sincronización");
         itemSync.Click += (_, _) => ForceSync();
 
-        var itemLogs = new ToolStripMenuItem("Abrir Logs");
-        itemLogs.Click += (_, _) => OpenLogs();
 
         var itemAbout = new ToolStripMenuItem("Acerca de STC Monitor v1.0");
         itemAbout.Click += (_, _) => ShowAbout();
@@ -84,7 +82,6 @@ internal sealed class TrayApplication : ApplicationContext
             itemStatus,
             new ToolStripSeparator(),
             itemSync,
-            itemLogs,
             itemAbout,
             new ToolStripSeparator(),
             itemExit,
@@ -181,17 +178,6 @@ internal sealed class TrayApplication : ApplicationContext
         }
     }
 
-    private void OpenLogs()
-    {
-        var logPath = AgentService.GetLogPath();
-        if (!File.Exists(logPath))
-        {
-            MessageBox.Show($"Archivo de log no encontrado:\n{logPath}",
-                "STC Cloud Monitor", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-            return;
-        }
-        System.Diagnostics.Process.Start("notepad.exe", logPath);
-    }
 
     private void ShowAbout()
     {
