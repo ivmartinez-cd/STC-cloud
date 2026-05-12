@@ -356,7 +356,7 @@ const start = async () => {
       { preHandler: agentAuth },
       async (request) => {
         const { id } = request.params as any;
-        return await agentService.getCommands(redis, id);
+        return await agentService.getPendingCommands(id);
       }
     );
 
