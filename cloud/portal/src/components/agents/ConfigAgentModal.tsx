@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { X, Settings, Plus, Trash2, Loader2, Check } from 'lucide-react';
 import { api } from '../../lib/api';
 import { useToast } from '../../context/ToastContext';
-import { AgentConfig, emptyRange, defaultConfig } from '../../types/agents';
+import type { AgentConfig } from '../../types/agents';
+import { emptyRange, defaultConfig } from '../../types/agents';
 
 interface Props {
   modal: { id: string; name: string } | null;

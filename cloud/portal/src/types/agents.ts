@@ -1,6 +1,6 @@
 import { OFFLINE_THRESHOLD_MS, SNMP_DEFAULT_COMMUNITY, SCAN_DEFAULT_INTERVAL } from '../lib/constants';
 
-export interface Agent {
+export type Agent = {
   id: string;
   name: string;
   hardware_id: string | null;
@@ -10,12 +10,12 @@ export interface Agent {
   client_name?: string;
 }
 
-export interface IpRange {
+export type IpRange = {
   start: string;
   end: string;
 }
 
-export interface AgentConfig {
+export type AgentConfig = {
   ip_ranges: IpRange[];
   snmp_community: string;
   scan_interval_minutes: number;

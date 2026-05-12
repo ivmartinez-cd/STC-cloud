@@ -1,452 +1,375 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { api } from '../lib/api';
-import {
-  ChevronRight, HardDrive, Wifi, WifiOff, Users, AlertTriangle,
-  Clock, Globe, Settings, Copy, Check, Edit, X, Plus, Trash2, Loader2, Shield, Layout, Info, Activity, MapPin, Key, RefreshCw
+import { 
+  ArrowLeft, HardDrive, Shield, Activity, Clock, Search, 
+  Settings, RefreshCw, Key, ShieldCheck, ShieldOff, 
+  Check, Copy, AlertTriangle, Terminal, Zap, Loader2,
+  Filter, Download, Trash2, Edit2, X
 } from 'lucide-react';
-import ConfirmModal from '../components/ConfirmModal';
+import { api } from '../lib/api';
 import { useToast } from '../context/ToastContext';
+import { formatRelativeTime } from '../lib/formatters';
+import ConfirmModal from '../components/ConfirmModal';
+
+interface Device {
+  id: string;
+  name: string;
+  ip_address: string;
+  serial_number: string | null;
+  status: string;
+  last_seen: string | null;
+  model: string | null;
+  total_pages: number | null;
+  mono_pages: number | null;
+  color_pages: number | null;
+}
 
 interface MonitorData {
   id: string;
   name: string;
-  status: string;
   hardware_id: string | null;
-  ip_ranges: { start: string; end: string }[] | null;
-  snmp_community: string | null;
-  scan_interval_minutes: number | null;
-  last_seen: string | null;
-  created_at: string;
   activation_key: string | null;
-  client_name: string;
+  status: 'pending' | 'active' | 'revoked' | 'offline';
+  last_seen: string | null;
   client_id: string;
-  active_device_count: number;
-  total_device_count: number;
-}
-
-interface Device {
-  id: string;
-  ip: string;
-  serial: string | null;
-  brand: string;
-  model: string;
-  name: string;
-  active: boolean;
-  created_at: string;
-}
-
-function timeAgo(dateStr: string | null): string {
-  if (!dateStr) return 'Nunca';
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return 'Ahora';
-  if (mins < 60) return `hace ${mins}m`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `hace ${hrs}h`;
-  return `hace ${Math.floor(hrs / 24)}d`;
-}
-
-function formatDate(dateStr: string | null): string {
-  if (!dateStr) return '—';
-  return new Date(dateStr).toLocaleString('es-AR', {
-    day: '2-digit', month: 'short', year: 'numeric',
-    hour: '2-digit', minute: '2-digit',
-  });
+  client_name: string;
+  config?: {
+    ip_ranges: { start: string; end: string }[];
+    snmp_community: string;
+    scan_interval_minutes: number;
+  };
 }
 
 const MonitorDetail = () => {
-  const { id } = useParams<{ id: string }>();
+  const { id } = useParams();
   const navigate = useNavigate();
   const { showToast } = useToast();
   const [monitor, setMonitor] = useState<MonitorData | null>(null);
   const [devices, setDevices] = useState<Device[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'overview' | 'monitoring'>('overview');
+  const [now, setNow] = useState(Date.now());
+  
+  // Monitoring State
+  const [logs, setLogs] = useState<any[]>([]);
+  const [logsLoading, setLogsLoading] = useState(false);
+  const [logLimit, setLogLimit] = useState(50);
+  const [commandLoading, setCommandLoading] = useState<string | null>(null);
+  
+  // Modales
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [revoking, setRevoking] = useState(false);
+  const [regenKey, setRegenKey] = useState<string | null>(null);
   const [keyCopied, setKeyCopied] = useState(false);
 
-  // Delete Monitor modal
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [deletingMonitor, setDeletingMonitor] = useState(false);
-
-  // Regenerate key
-  const [regenLoading, setRegenLoading] = useState(false);
-  const [regenKey, setRegenKey] = useState<{ key: string; expiresAt: string } | null>(null);
-  const [regenCopied, setRegenCopied] = useState(false);
-
-  // Edit Configuration Modal
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [editForm, setEditForm] = useState({
-    name: '',
-    snmp_community: 'public',
-    scan_interval_minutes: 15,
-    ip_ranges: [] as { start: string, end: string }[]
-  });
-
-  // Monitoring
-  const [activeTab, setActiveTab] = useState<'overview' | 'monitoring'>('overview');
-  const [logs, setLogs] = useState<any[]>([]);
-  const [logLimit, setLogLimit] = useState(50);
-  const [logsLoading, setLogsLoading] = useState(false);
-  const [commandLoading, setCommandLoading] = useState<string | null>(null);
-
-  const fetchData = useCallback(() => {
-    setLoading(true);
-    Promise.all([
-      api.get<MonitorData>(`/agents/${id}`),
-      api.get<Device[]>(`/agents/${id}/devices`),
-    ])
-      .then(([m, d]) => { setMonitor(m); setDevices(Array.isArray(d) ? d : []); })
-      .catch((e: Error) => setError(e.message))
-      .finally(() => setLoading(false));
+  useEffect(() => {
+    fetchData();
+    const timer = setInterval(() => setNow(Date.now()), 30000);
+    return () => clearInterval(timer);
   }, [id]);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
-
-  const copyKey = () => {
-    if (!monitor?.activation_key) return;
-    navigator.clipboard.writeText(monitor.activation_key);
-    setKeyCopied(true);
-    showToast('Clave de activación copiada', 'success');
-    setTimeout(() => setKeyCopied(false), 2000);
-  };
-
-  const openEditModal = () => {
-    if (!monitor) return;
-    setEditForm({
-      name: monitor.name,
-      snmp_community: monitor.snmp_community || 'public',
-      scan_interval_minutes: monitor.scan_interval_minutes || 15,
-      ip_ranges: monitor.ip_ranges ? [...monitor.ip_ranges] : []
-    });
-    setShowEditModal(true);
-  };
-
-  const handleUpdateConfig = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    try {
-      await api.put(`/agents/${id}/config`, {
-        name: editForm.name,
-        snmp_community: editForm.snmp_community,
-        scan_interval_minutes: editForm.scan_interval_minutes,
-        ip_ranges: editForm.ip_ranges.length > 0 ? editForm.ip_ranges : null
-      });
-      showToast('Configuración actualizada correctamente', 'success');
-      fetchData();
-      setShowEditModal(false);
-    } catch (err: unknown) {
-      showToast('Error al actualizar: ' + (err as Error).message, 'error');
-    } finally {
-      setIsSubmitting(false);
+  useEffect(() => {
+    if (activeTab === 'monitoring') {
+      fetchLogs();
+      const logTimer = setInterval(fetchLogs, 30000);
+      return () => clearInterval(logTimer);
     }
-  };
+  }, [activeTab, logLimit]);
 
-  const confirmDeleteMonitor = async () => {
-    if (!monitor) return;
-    setDeletingMonitor(true);
+  const fetchData = async () => {
     try {
-      await api.delete(`/agents/${id}`);
-      showToast('Monitor eliminado permanentemente', 'success');
-      navigate(`/clients/${monitor.client_id}`);
-    } catch (err: unknown) {
-      showToast('Error al eliminar monitor: ' + (err as Error).message, 'error');
-    } finally {
-      setDeletingMonitor(false);
-      setShowDeleteModal(false);
-    }
-  };
-
-  const handleRegenerateKey = async () => {
-    if (!monitor) return;
-    setRegenLoading(true);
-    try {
-      const data = await api.post<{ key: string; expiresAt: string }>(`/agents/${monitor.id}/regenerate-key`, {});
-      setRegenKey(data);
-      setRegenCopied(false);
-      showToast('Nueva llave generada — válida 24 h', 'success');
-      fetchData();
-    } catch (err: unknown) {
-      showToast('Error al regenerar: ' + (err as Error).message, 'error');
-    } finally {
-      setRegenLoading(false);
-    }
-  };
-
-  const fetchLogs = useCallback(async () => {
-    if (activeTab !== 'monitoring') return;
-    setLogsLoading(true);
-    try {
-      const data = await api.get<any[]>(`/agents/${id}/logs?limit=${logLimit}`);
-      setLogs(data);
+      setLoading(true);
+      const [monitorData, devicesData] = await Promise.all([
+        api.get<MonitorData>(`/agents/${id}`),
+        api.get<Device[]>(`/agents/${id}/devices`)
+      ]);
+      setMonitor(monitorData);
+      setDevices(devicesData);
+      setError(null);
     } catch (err: any) {
-      showToast('Error al cargar logs: ' + err.message, 'error');
+      setError(err.message || 'Error al cargar datos del monitor');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchLogs = async () => {
+    if (!id) return;
+    try {
+      setLogsLoading(true);
+      const data = await api.get<any[]>(`/logs?agentId=${id}&limit=${logLimit}`);
+      setLogs(data);
+    } catch (err) {
+      console.error('Error fetching logs:', err);
     } finally {
       setLogsLoading(false);
     }
-  }, [id, logLimit, activeTab, showToast]);
+  };
 
-  useEffect(() => {
-    fetchLogs();
-    // Auto-refresh logs every 15s if in monitoring tab
-    let interval: NodeJS.Timeout;
-    if (activeTab === 'monitoring') {
-      interval = setInterval(fetchLogs, 15000);
-    }
-    return () => clearInterval(interval);
-  }, [fetchLogs, activeTab]);
-
-  const sendCommand = async (type: string, payload: any = {}) => {
-    setCommandLoading(type);
+  const sendCommand = async (action: string) => {
+    if (!id) return;
     try {
-      await api.post(`/agents/${id}/command`, { type, payload });
-      showToast(`Comando ${type} enviado a la cola`, 'success');
-      // Esperar un poco y refrescar logs para ver la confirmación si el agente es rápido
-      setTimeout(fetchLogs, 2000);
+      setCommandLoading(action);
+      await api.post('/command', { agentId: id, action });
+      showToast(`Comando ${action} encolado correctamente`, 'success');
     } catch (err: any) {
-      showToast('Error al enviar comando: ' + err.message, 'error');
+      showToast(err.message || 'Error al enviar comando', 'error');
     } finally {
       setCommandLoading(null);
     }
   };
 
-  const addIpRange = () => setEditForm(prev => ({ ...prev, ip_ranges: [...prev.ip_ranges, { start: '', end: '' }] }));
-  const updateIpRange = (index: number, field: 'start' | 'end', value: string) => {
-    const newRanges = [...editForm.ip_ranges];
-    newRanges[index][field] = value;
-    setEditForm(prev => ({ ...prev, ip_ranges: newRanges }));
-  };
-  const removeIpRange = (index: number) => {
-    setEditForm(prev => ({ ...prev, ip_ranges: prev.ip_ranges.filter((_, i) => i !== index) }));
+  const copyKey = () => {
+    if (monitor?.activation_key) {
+      navigator.clipboard.writeText(monitor.activation_key);
+      setKeyCopied(true);
+      showToast('Llave copiada al portapapeles', 'success');
+      setTimeout(() => setKeyCopied(false), 2000);
+    }
   };
 
-  const activeDevicesCount = devices.filter(d => d.active).length;
-  const inactiveDevicesCount = devices.filter(d => !d.active).length;
+  const handleRegen = async () => {
+    try {
+      const data = await api.post<any>(`/agents/${id}/regen-key`);
+      setRegenKey(data.activation_key);
+      fetchData();
+    } catch (err: any) {
+      showToast(err.message, 'error');
+    }
+  };
+
+  const handleRevoke = async () => {
+    try {
+      setRevoking(true);
+      await api.post(`/agents/${id}/revoke`);
+      showToast('Licencia revocada', 'success');
+      navigate('/monitoring');
+    } catch (err: any) {
+      showToast(err.message, 'error');
+    } finally {
+      setRevoking(false);
+    }
+  };
+
+  if (loading && !monitor) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-[#f8fafc]">
+        <Loader2 className="animate-spin text-brand mb-6" size={64} />
+        <p className="text-slate-400 font-black uppercase tracking-[0.3em] text-xs">Cifrando Enlace...</p>
+      </div>
+    );
+  }
+
+  if (error || !monitor) {
+    return (
+      <div className="p-10 text-center">
+        <div className="bg-rose-50 border border-rose-100 rounded-[32px] p-12 max-w-xl mx-auto">
+          <ShieldOff size={64} className="text-rose-400 mx-auto mb-6" />
+          <h2 className="text-2xl font-black text-rose-900 mb-4 uppercase">Nodo No Encontrado</h2>
+          <p className="text-rose-700 font-bold mb-8">{error || 'El agente solicitado no existe o no tienes permisos.'}</p>
+          <Link to="/monitoring" className="cd-btn-primary inline-flex items-center gap-3">
+            <ArrowLeft size={20} /> Volver a Infraestructura
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
-      {/* Breadcrumb */}
-      <nav className="flex items-center gap-3 text-xs">
-        <Link to="/clients" className="flex items-center gap-2 text-slate-400 hover:text-brand font-bold uppercase tracking-widest transition-colors">
-          <Users size={14} /> Clientes
-        </Link>
-        <ChevronRight size={14} className="text-slate-300" />
-        {monitor ? (
-          <Link to={`/clients/${monitor.client_id}`} className="text-slate-400 hover:text-brand font-bold uppercase tracking-widest transition-colors">
-            {monitor.client_name}
+    <div className="space-y-8 animate-in fade-in duration-700">
+      {/* Header Premium */}
+      <header className="flex flex-col md:flex-row md:items-end justify-between gap-8 pb-4">
+        <div className="space-y-4">
+          <Link to="/monitoring" className="group flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] hover:text-brand transition-all">
+            <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" /> Volver a Infraestructura
           </Link>
-        ) : (
-          <div className="h-4 w-24 bg-slate-100 animate-pulse rounded-full" />
-        )}
-        <ChevronRight size={14} className="text-slate-300" />
-        {monitor ? (
-          <span className="text-brand font-extrabold uppercase tracking-widest">{monitor.name}</span>
-        ) : (
-          <div className="h-4 w-32 bg-slate-100 animate-pulse rounded-full" />
-        )}
-      </nav>
-
-      {loading && (
-        <div className="flex flex-col items-center justify-center py-24 gap-4">
-          <Loader2 className="animate-spin text-brand" size={40} />
-          <p className="text-slate-400 font-extrabold uppercase tracking-widest text-[10px]">Cargando expediente del monitor...</p>
+          <div className="flex items-center gap-6">
+            <div className="p-5 bg-white shadow-xl shadow-blue-900/5 rounded-[28px] text-brand">
+              <HardDrive size={32} />
+            </div>
+            <div>
+              <div className="flex items-center gap-3 mb-1">
+                <h1 className="text-4xl font-black text-[#1a2333] tracking-tighter uppercase">{monitor.name}</h1>
+                <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${
+                  monitor.status === 'active' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 
+                  monitor.status === 'offline' ? 'bg-amber-50 text-amber-600 border-amber-100' :
+                  'bg-slate-100 text-slate-500 border-slate-200'
+                }`}>
+                  {monitor.status}
+                </span>
+              </div>
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                <Clock size={14} /> Último contacto: {formatRelativeTime(monitor.last_seen, now)}
+              </p>
+            </div>
+          </div>
         </div>
-      )}
-      
-      {error && (
-        <div className="bg-rose-50 border border-rose-100 rounded-[24px] p-8 text-rose-600 font-bold animate-in shake">
-          {error}
-        </div>
-      )}
 
-      {/* Tab Switcher */}
-      {!loading && !error && monitor && (
-        <div className="flex gap-1 p-1 bg-slate-100 rounded-[20px] w-fit mb-4">
-          <button
-            onClick={() => setActiveTab('overview')}
-            className={`px-6 py-3 rounded-[16px] text-xs font-black uppercase tracking-widest transition-all ${
-              activeTab === 'overview' 
-                ? 'bg-white text-brand shadow-sm' 
-                : 'text-slate-400 hover:text-slate-600'
-            }`}
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={() => setShowEditModal(true)}
+            className="px-6 py-4 bg-white text-[#1a2333] font-black text-[10px] uppercase tracking-widest rounded-2xl shadow-xl shadow-blue-900/5 hover:bg-slate-50 transition-all active:scale-95 flex items-center gap-3"
           >
-            Vista General
+            <Settings size={18} /> Ajustes
           </button>
-          <button
-            onClick={() => setActiveTab('monitoring')}
-            className={`px-6 py-3 rounded-[16px] text-xs font-black uppercase tracking-widest transition-all ${
-              activeTab === 'monitoring' 
-                ? 'bg-white text-brand shadow-sm' 
-                : 'text-slate-400 hover:text-slate-600'
-            }`}
+          <button 
+            onClick={handleRegen}
+            className="px-6 py-4 bg-white text-amber-600 font-black text-[10px] uppercase tracking-widest rounded-2xl shadow-xl shadow-blue-900/5 hover:bg-amber-50 transition-all active:scale-95 flex items-center gap-3"
           >
-            Monitorización
+            <RefreshCw size={18} /> Regenerar Llave
+          </button>
+          <button 
+            onClick={() => setRevoking(true)}
+            className="px-6 py-4 bg-rose-50 text-rose-600 font-black text-[10px] uppercase tracking-widest rounded-2xl hover:bg-rose-600 hover:text-white transition-all active:scale-95 flex items-center gap-3"
+          >
+            <ShieldOff size={18} /> Revocar
           </button>
         </div>
-      )}
+      </header>
+
+      {/* Tabs Layout */}
+      <div className="flex gap-1 bg-slate-100/50 p-1.5 rounded-[24px] w-fit">
+        <button
+          onClick={() => setActiveTab('overview')}
+          className={`px-8 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${
+            activeTab === 'overview' 
+              ? 'bg-white text-brand shadow-sm' 
+              : 'text-slate-400 hover:text-slate-600'
+          }`}
+        >
+          Vista General
+        </button>
+        <button
+          onClick={() => setActiveTab('monitoring')}
+          className={`px-8 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${
+            activeTab === 'monitoring' 
+              ? 'bg-white text-brand shadow-sm' 
+              : 'text-slate-400 hover:text-slate-600'
+          }`}
+        >
+          Monitorización
+        </button>
+      </div>
 
       {!loading && !error && monitor && activeTab === 'overview' && (
         <>
           {/* Main Dashboard Layout */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            {/* ... resto del contenido original de overview ... */}
-            
             {/* Left Column: Device Overview */}
             <div className="lg:col-span-4 space-y-6">
               <div className="cd-panel overflow-hidden border-none shadow-xl shadow-blue-900/5 group">
                 <div className="bg-gradient-to-r from-brand to-[#3498db] px-6 py-4 flex items-center justify-between text-white">
                   <div className="flex items-center gap-3">
                     <HardDrive size={18} />
-                    <span className="text-[10px] font-black uppercase tracking-widest">Dispositivos Vinculados</span>
+                    <h3 className="text-xs font-black uppercase tracking-widest">Información Técnica</h3>
                   </div>
-                  <Activity size={16} className="animate-pulse" />
+                  <Cpu size={20} className="opacity-20 group-hover:scale-110 transition-transform" />
                 </div>
-                <div className="p-8 space-y-6 text-center">
-                  <Link to={`/monitors/${monitor.id}/devices`} className="block group/stat">
-                    <div className="text-6xl font-black text-[#1a2333] tracking-tighter group-hover/stat:text-brand transition-colors">
-                      {monitor.total_device_count}
-                    </div>
-                    <div className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mt-2 group-hover/stat:text-[#1a2333]">
-                      Explorar Inventario Detallado
-                    </div>
-                  </Link>
-
-                  <div className="grid grid-cols-2 gap-4 pt-6 border-t border-slate-50">
-                    <div className="text-center">
-                      <div className="text-xl font-black text-emerald-600">{activeDevicesCount}</div>
-                      <div className="text-[9px] font-extrabold text-slate-400 uppercase tracking-widest">En Línea</div>
-                    </div>
-                    <div className="text-center border-l border-slate-50">
-                      <div className="text-xl font-black text-rose-600">{inactiveDevicesCount}</div>
-                      <div className="text-[9px] font-extrabold text-slate-400 uppercase tracking-widest">Offline</div>
+                <div className="p-8 space-y-8">
+                  <div className="space-y-4">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Hardware Identifier</label>
+                    <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 font-mono text-xs font-bold text-slate-600 break-all leading-relaxed">
+                      {monitor.hardware_id || 'SIN VINCULAR'}
                     </div>
                   </div>
-
-                  <div className="relative h-2 bg-slate-100 rounded-full overflow-hidden">
-                    <div 
-                      className="absolute left-0 top-0 h-full bg-gradient-to-r from-emerald-400 to-emerald-600 rounded-full transition-all duration-1000"
-                      style={{ width: `${monitor.total_device_count > 0 ? (activeDevicesCount / monitor.total_device_count) * 100 : 0}%` }}
-                    />
+                  <div className="space-y-4">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Pertenece a Cliente</label>
+                    <Link to={`/clients/${monitor.client_id}`} className="block p-5 bg-blue-50 border border-blue-100 rounded-3xl group/client hover:bg-brand transition-all">
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-2xl bg-white shadow-sm flex items-center justify-center text-brand font-black text-lg">
+                          {monitor.client_name?.charAt(0)}
+                        </div>
+                        <div>
+                          <p className="text-xs font-black text-brand group-hover/client:text-white transition-colors uppercase tracking-tight">{monitor.client_name}</p>
+                          <p className="text-[9px] font-bold text-blue-400 group-hover/client:text-blue-100 transition-colors uppercase tracking-widest">Ver Expediente Completo</p>
+                        </div>
+                      </div>
+                    </Link>
                   </div>
                 </div>
               </div>
 
-              {/* Status Details */}
               <div className="cd-panel p-8 space-y-6">
                 <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-3">
-                  <Info size={16} className="text-brand" /> Diagnóstico del Nodo
+                  <Activity size={16} className="text-brand" /> Estadísticas de Red
                 </h3>
-                
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between py-2 border-b border-slate-50">
-                    <span className="text-xs font-bold text-slate-500 uppercase tracking-tight">Estado de Red</span>
-                    {monitor.status === 'active' || monitor.status === 'online' ? (
-                      <span className="inline-flex items-center gap-2 text-xs font-black text-emerald-600 uppercase">
-                        <Wifi size={14} /> Sincronizado
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-2 text-xs font-black text-rose-500 uppercase">
-                        <WifiOff size={14} /> Desconectado
-                      </span>
-                    )}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-6 bg-slate-50 rounded-[32px] border border-slate-100">
+                    <p className="text-2xl font-black text-[#1a2333] tracking-tighter mb-1">{devices.length}</p>
+                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Printers Activas</p>
                   </div>
-                  <div className="flex items-center justify-between py-2 border-b border-slate-50">
-                    <span className="text-xs font-bold text-slate-500 uppercase tracking-tight">Latencia Relativa</span>
-                    <span className="text-xs font-black text-[#1a2333] uppercase">{timeAgo(monitor.last_seen)}</span>
-                  </div>
-                  <div className="flex items-center justify-between py-2 border-b border-slate-50">
-                    <span className="text-xs font-bold text-slate-500 uppercase tracking-tight">Fecha de Alta</span>
-                    <span className="text-xs font-black text-[#1a2333] uppercase">{formatDate(monitor.created_at)}</span>
-                  </div>
-                  <div className="flex items-center justify-between py-2">
-                    <span className="text-xs font-bold text-slate-500 uppercase tracking-tight">Hardware ID</span>
-                    <span className="text-[10px] font-black text-slate-400 font-mono tracking-tighter uppercase">{monitor.hardware_id || 'SIN VINCULAR'}</span>
+                  <div className="p-6 bg-slate-50 rounded-[32px] border border-slate-100">
+                    <p className="text-2xl font-black text-brand tracking-tighter mb-1">
+                      {devices.filter(d => d.status === 'online').length}
+                    </p>
+                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">En Línea</p>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Right Column: Configuration & Ranges */}
+            {/* Right Column: Device Inventory */}
             <div className="lg:col-span-8 space-y-6">
-              <div className="cd-panel overflow-hidden border-none shadow-xl shadow-blue-900/5">
-                <div className="bg-[#1a2333] px-8 py-6 flex items-center justify-between text-white">
+              <div className="cd-panel overflow-hidden">
+                <header className="px-10 py-8 border-b border-slate-50 flex items-center justify-between bg-white">
                   <div className="flex items-center gap-4">
-                    <div className="p-3 bg-white/10 rounded-2xl">
-                      <Settings size={20} />
+                    <div className="p-3 bg-brand/5 text-brand rounded-2xl">
+                      <Search size={20} />
                     </div>
                     <div>
-                      <h2 className="text-lg font-black tracking-tight uppercase">Parámetros Operativos</h2>
-                      <p className="text-[10px] font-bold text-blue-300/60 uppercase tracking-widest">Configuración de escaneo y SNMP</p>
+                      <h3 className="text-lg font-black text-[#1a2333] tracking-tight">Inventario de Dispositivos</h3>
+                      <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Hardware detectado en la red local</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <button
-                      onClick={openEditModal}
-                      className="p-3 bg-white/5 hover:bg-white/10 rounded-2xl transition-all active:scale-90"
-                      title="Modificar Configuración"
-                    >
-                      <Edit size={18} />
-                    </button>
-                    <button
-                      onClick={handleRegenerateKey}
-                      disabled={regenLoading}
-                      className="p-3 bg-amber-500/20 hover:bg-amber-500/40 text-amber-300 rounded-2xl transition-all active:scale-90 disabled:opacity-40"
-                      title="Regenerar Llave de Activación"
-                    >
-                      {regenLoading ? <RefreshCw size={18} className="animate-spin" /> : <Key size={18} />}
-                    </button>
-                    <button
-                      onClick={() => setShowDeleteModal(true)}
-                      className="p-3 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 rounded-2xl transition-all active:scale-90"
-                      title="Dar de Baja Nodo"
-                    >
-                      <Trash2 size={18} />
-                    </button>
-                  </div>
-                </div>
-                
-                <div className="p-10 grid grid-cols-1 md:grid-cols-2 gap-10">
-                  <div className="space-y-6">
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Comunidad SNMP Activa</label>
-                      <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-[20px] border border-slate-100">
-                        <Shield size={16} className="text-brand" />
-                        <span className="font-mono text-sm font-bold text-[#1a2333]">{monitor.snmp_community || 'public'}</span>
-                      </div>
-                    </div>
+                </header>
 
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Frecuencia de Muestreo</label>
-                      <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-[20px] border border-slate-100">
-                        <Clock size={16} className="text-brand" />
-                        <span className="text-sm font-black text-[#1a2333] uppercase">CADA {monitor.scan_interval_minutes || 15} MINUTOS</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-6">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Segmentos de Red (IP Ranges)</label>
-                    <div className="space-y-3">
-                      {monitor.ip_ranges && monitor.ip_ranges.length > 0 ? (
-                        monitor.ip_ranges.map((r, i) => (
-                          <div key={i} className="flex items-center gap-4 p-4 bg-blue-50/30 rounded-[20px] border border-blue-100/50 group hover:bg-blue-50 transition-colors">
-                            <div className="p-2 bg-white rounded-xl shadow-sm text-brand">
-                              <Globe size={14} />
-                            </div>
-                            <div className="flex-1">
-                              <div className="text-[10px] font-black text-brand uppercase tracking-tighter">Segmento {i + 1}</div>
-                              <div className="font-mono text-xs font-bold text-[#1a2333]">{r.start} — {r.end}</div>
-                            </div>
-                          </div>
-                        ))
+                <div className="overflow-x-auto">
+                  <table className="cd-table">
+                    <thead>
+                      <tr>
+                        <th>Modelo / IP</th>
+                        <th>Serial</th>
+                        <th className="text-right">Volumen Total</th>
+                        <th className="text-center">Estado</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {devices.length === 0 ? (
+                        <tr>
+                          <td colSpan={4} className="py-24 text-center">
+                            <p className="text-slate-400 font-black uppercase tracking-widest text-xs">No se han detectado dispositivos aún</p>
+                          </td>
+                        </tr>
                       ) : (
-                        <div className="text-center py-8 bg-slate-50 rounded-[24px] border border-dashed border-slate-200">
-                           <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Sin rangos definidos</p>
-                        </div>
+                        devices.map(device => (
+                          <tr key={device.id} className="group/row">
+                            <td>
+                              <div className="flex flex-col">
+                                <span className="font-black text-[#1a2333] uppercase tracking-tight">{device.model || 'Desconocido'}</span>
+                                <span className="font-mono text-[10px] font-bold text-brand uppercase">{device.ip_address}</span>
+                              </div>
+                            </td>
+                            <td>
+                              <span className="font-mono text-xs font-bold text-slate-500 uppercase tracking-tight">{device.serial_number || '---'}</span>
+                            </td>
+                            <td className="text-right">
+                              <span className="text-sm font-black text-[#1a2333] tracking-tight">{(device.total_pages || 0).toLocaleString()}</span>
+                              <span className="text-[9px] font-bold text-slate-400 uppercase block tracking-widest">Impresiones</span>
+                            </td>
+                            <td className="text-center">
+                              <span className={`inline-flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-full ${
+                                device.status === 'online' ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-400'
+                              }`}>
+                                <div className={`w-1.5 h-1.5 rounded-full ${device.status === 'online' ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`} />
+                                {device.status}
+                              </span>
+                            </td>
+                          </tr>
+                        ))
                       )}
-                    </div>
-                  </div>
+                    </tbody>
+                  </table>
                 </div>
 
                 {monitor.activation_key && (
@@ -468,6 +391,8 @@ const MonitorDetail = () => {
                     </button>
                   </div>
                 )}
+              </div>
+            </div>
           </div>
         </>
       )}
@@ -578,216 +503,107 @@ const MonitorDetail = () => {
                 </div>
               </div>
             </div>
-
           </div>
         </div>
       )}
 
-          {/* Edit Modal */}
-          {showEditModal && (
-            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 bg-[#1a2333]/60 backdrop-blur-md animate-overlay-in">
-              <div className="bg-white rounded-[32px] shadow-2xl w-full max-w-2xl overflow-hidden animate-modal-in">
-                <header className="px-8 py-8 border-b border-slate-50 flex items-center justify-between bg-gradient-to-r from-brand to-[#3498db] text-white">
-                  <div className="flex items-center gap-4">
-                    <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-sm">
-                      <Settings size={24} />
-                    </div>
-                    <div>
-                      <h2 className="text-xl font-black tracking-tight uppercase">Configurar Nodo</h2>
-                      <p className="text-xs text-blue-100 font-medium">Ajusta los parámetros operativos del agente</p>
-                    </div>
-                  </div>
-                  <button onClick={() => setShowEditModal(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors active:scale-90">
-                    <X size={24} />
-                  </button>
-                </header>
-
-                <form onSubmit={handleUpdateConfig} className="p-10 space-y-8 max-h-[70vh] overflow-y-auto custom-scrollbar">
-                  <div className="space-y-3">
-                    <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest ml-1">Identificador del Nodo *</label>
-                    <div className="relative">
-                      <Layout size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
-                      <input
-                        required
-                        type="text"
-                        className="cd-input w-full !pl-12"
-                        value={editForm.name}
-                        onChange={(e) => setEditForm(prev => ({ ...prev, name: e.target.value }))}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-6">
-                    <div className="space-y-3">
-                      <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest ml-1">Comunidad SNMP</label>
-                      <div className="relative">
-                        <Shield size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
-                        <input
-                          type="text"
-                          required
-                          className="cd-input w-full !pl-12 font-mono text-sm"
-                          value={editForm.snmp_community}
-                          onChange={(e) => setEditForm(prev => ({ ...prev, snmp_community: e.target.value }))}
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-3">
-                      <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest ml-1">Intervalo de Escaneo</label>
-                      <div className="relative">
-                        <Clock size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
-                        <select
-                          className="cd-input w-full !pl-12"
-                          value={editForm.scan_interval_minutes}
-                          onChange={(e) => setEditForm(prev => ({ ...prev, scan_interval_minutes: Number(e.target.value) }))}
-                        >
-                          <option value={15}>Cada 15 min</option>
-                          <option value={30}>Cada 30 min</option>
-                          <option value={60}>Cada 1 hora</option>
-                          <option value={1440}>Cada 24 horas</option>
-                        </select>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest ml-1">Segmentación IP (Whitelist)</label>
-                      <button
-                        type="button"
-                        onClick={addIpRange}
-                        className="flex items-center gap-2 text-[10px] font-black text-brand uppercase tracking-widest hover:text-[#2471a3] transition-colors"
-                      >
-                        <Plus size={14} /> Agregar Rango
-                      </button>
-                    </div>
-                    
-                    <div className="space-y-3">
-                      {editForm.ip_ranges.map((range, idx) => (
-                        <div key={idx} className="flex gap-4 items-center bg-slate-50 p-4 rounded-[24px] border border-slate-100 group animate-in slide-in-from-right-4 duration-300">
-                          <div className="relative flex-1">
-                            <MapPin size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
-                            <input
-                              type="text"
-                              required
-                              placeholder="IP Inicio"
-                              className="cd-input w-full !pl-10 !bg-white font-mono text-xs"
-                              value={range.start}
-                              onChange={(e) => updateIpRange(idx, 'start', e.target.value)}
-                            />
-                          </div>
-                          <div className="relative flex-1">
-                            <MapPin size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
-                            <input
-                              type="text"
-                              required
-                              placeholder="IP Fin"
-                              className="cd-input w-full !pl-10 !bg-white font-mono text-xs"
-                              value={range.end}
-                              onChange={(e) => updateIpRange(idx, 'end', e.target.value)}
-                            />
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => removeIpRange(idx)}
-                            className="p-3 text-slate-300 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all"
-                          >
-                            <Trash2 size={18} />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="pt-6 flex gap-4">
-                    <button
-                      type="button"
-                      onClick={() => setShowEditModal(false)}
-                      className="flex-1 py-5 rounded-[24px] border border-slate-200 text-slate-500 font-extrabold hover:bg-slate-50 transition-all active:scale-95"
-                    >
-                      Cancelar
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={isSubmitting}
-                      className="flex-1 py-5 rounded-[24px] bg-brand text-white font-black hover:bg-[#2471a3] transition-all shadow-xl shadow-blue-900/10 active:scale-95 flex items-center justify-center gap-3 disabled:opacity-50"
-                    >
-                      {isSubmitting ? <Loader2 size={24} className="animate-spin" /> : 'Sincronizar Cambios'}
-                    </button>
-                  </div>
-                </form>
+      {/* Edit Modal */}
+      {showEditModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 bg-[#1a2333]/60 backdrop-blur-md animate-overlay-in">
+          <div className="bg-white rounded-[32px] shadow-2xl w-full max-w-2xl overflow-hidden animate-modal-in">
+            <header className="px-10 py-10 bg-gradient-to-r from-[#1a2333] to-[#2c3e50] text-white flex justify-between items-center relative overflow-hidden">
+              <div className="relative z-10">
+                <h2 className="text-2xl font-black tracking-tight uppercase">Editar Nodo</h2>
+                <p className="text-[10px] font-black text-blue-300 uppercase tracking-[0.2em] mt-1">Configuración del agente</p>
+              </div>
+              <button onClick={() => setShowEditModal(false)} className="relative z-10 p-3 hover:bg-white/10 rounded-2xl transition-all active:scale-90">
+                <X size={28} />
+              </button>
+              <div className="absolute -right-10 -top-10 opacity-10">
+                <Edit2 size={160} />
+              </div>
+            </header>
+            <div className="p-12 space-y-8">
+                <div className="space-y-3">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nombre del Nodo</label>
+                <input
+                  type="text"
+                  value={monitor?.name || ''}
+                  className="cd-input w-full !h-14 !bg-slate-50 border-transparent focus:!border-brand focus:!bg-white"
+                  placeholder="Ej: Servidor Central"
+                  onChange={() => {}} 
+                />
+              </div>
+              <div className="flex gap-4">
+                <button onClick={() => setShowEditModal(false)} className="flex-1 py-5 rounded-[24px] border border-slate-200 text-slate-500 font-black uppercase tracking-widest text-xs hover:bg-slate-50">Cancelar</button>
+                <button className="flex-1 py-5 bg-brand text-white rounded-[24px] font-black uppercase tracking-widest text-xs shadow-xl shadow-blue-900/20">Guardar Cambios</button>
               </div>
             </div>
-          )}
+          </div>
+        </div>
+      )}
 
-          <ConfirmModal
-            isOpen={showDeleteModal}
-            onClose={() => setShowDeleteModal(false)}
-            onConfirm={confirmDeleteMonitor}
-            isLoading={deletingMonitor}
-            isDanger
-            title="Dar de Baja Nodo de Monitoreo"
-            message={`¿Estás seguro de que deseas eliminar permanentemente el nodo "${monitor?.name}"? Esta acción desactivará el agente STC en el servidor del cliente y borrará todo el historial de dispositivos asociados.`}
-            confirmText="Baja Permanente"
-          />
+      <ConfirmModal
+        isOpen={revoking}
+        title="Revocar Licencia"
+        message={`¿Estás seguro de que deseas revocar la licencia de ${monitor?.name}? Esta acción desconectará el agente de forma permanente.`}
+        confirmText="Revocar Ahora"
+        onConfirm={handleRevoke}
+        onCancel={() => setRevoking(false)}
+        variant="danger"
+      />
 
-          {/* New Regeneration Key Modal */}
-          {regenKey && (
-            <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 backdrop-blur-md bg-slate-900/40 animate-overlay-in">
-              <div className="bg-white rounded-[40px] shadow-2xl w-full max-w-lg overflow-hidden border border-slate-100 animate-modal-in">
-                <div className="bg-gradient-to-br from-amber-500 to-orange-600 p-10 text-white relative">
-                  <div className="absolute top-0 right-0 p-8 opacity-10">
-                    <Shield size={120} />
-                  </div>
-                  <div className="relative space-y-4">
-                    <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm">
-                      <Key size={32} />
-                    </div>
-                    <h3 className="text-3xl font-black tracking-tight leading-tight">Nueva Llave de Activación</h3>
-                    <p className="text-amber-50 text-sm font-bold uppercase tracking-widest opacity-80">Seguridad STC Cloud</p>
-                  </div>
-                </div>
-                
-                <div className="p-10 space-y-8">
-                  <div className="space-y-4">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] block">Llave de Activación</label>
-                    <div className="relative group">
-                      <div className="p-6 bg-slate-900 rounded-3xl font-mono text-sm text-amber-400 break-all leading-relaxed border-2 border-slate-800 group-hover:border-amber-500/30 transition-all text-center">
-                        {regenKey.key}
-                      </div>
-                      <button
-                        onClick={() => {
-                          navigator.clipboard.writeText(regenKey.key);
-                          setRegenCopied(true);
-                          setTimeout(() => setRegenCopied(false), 2000);
-                        }}
-                        className="absolute top-4 right-4 p-3 bg-white/10 hover:bg-white/20 text-white rounded-xl transition-all backdrop-blur-sm"
-                      >
-                        {regenCopied ? <Check size={16} className="text-emerald-400" /> : <Copy size={16} />}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="bg-amber-50 rounded-3xl p-6 border border-amber-100 flex gap-4">
-                    <AlertTriangle className="text-amber-600 shrink-0" size={24} />
-                    <div className="space-y-1">
-                      <p className="text-xs font-black text-amber-900 uppercase tracking-tight">Importante</p>
-                      <p className="text-xs text-amber-800/70 font-bold leading-relaxed">
-                        Esta llave expirará en 24 horas. Utilízala para reactivar el agente en el servidor del cliente. El agente anterior será desconectado automáticamente.
-                      </p>
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={() => setRegenKey(null)}
-                    className="w-full py-5 rounded-[24px] bg-[#1a2333] text-white font-black hover:bg-black transition-all shadow-xl shadow-slate-900/20 active:scale-95"
+      {regenKey && (
+        <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 sm:p-6 bg-[#1a2333]/70 backdrop-blur-md animate-overlay-in">
+          <div className="bg-white rounded-[40px] shadow-2xl w-full max-w-lg overflow-hidden animate-modal-in border border-white/20">
+            <header className="px-10 py-10 bg-gradient-to-r from-amber-500 to-orange-600 text-white relative overflow-hidden">
+              <div className="relative z-10">
+                <Key size={48} className="mb-4 text-amber-200" />
+                <h2 className="text-2xl font-black tracking-tight uppercase">Nueva Llave Generada</h2>
+                <p className="text-[10px] font-black text-amber-100 uppercase tracking-[0.2em] mt-1">Vínculo de seguridad actualizado</p>
+              </div>
+              <div className="absolute -right-10 -top-10 opacity-10">
+                <RefreshCw size={160} />
+              </div>
+            </header>
+            <div className="p-12 space-y-8">
+              <div className="space-y-4">
+                <p className="text-xs font-bold text-slate-500 leading-relaxed">
+                  Copia esta llave y pégala en la configuración del agente local para restablecer la comunicación.
+                </p>
+                <div className="p-6 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200 flex items-center justify-between gap-4 group">
+                  <code className="text-brand font-black text-lg tracking-wider break-all">{regenKey}</code>
+                  <button 
+                    onClick={() => {
+                      navigator.clipboard.writeText(regenKey || '');
+                      showToast('Nueva llave copiada', 'success');
+                    }}
+                    className="p-4 bg-white text-brand rounded-2xl shadow-md hover:bg-brand hover:text-white transition-all active:scale-90"
                   >
-                    Entendido
+                    <Copy size={20} />
                   </button>
                 </div>
               </div>
+
+              <div className="bg-amber-50 rounded-3xl p-6 border border-amber-100 flex gap-4">
+                <AlertTriangle className="text-amber-600 shrink-0" size={24} />
+                <div className="space-y-1">
+                  <p className="text-xs font-black text-amber-900 uppercase tracking-tight">Importante</p>
+                  <p className="text-xs text-amber-800/70 font-bold leading-relaxed">
+                    Esta llave expirará en 24 horas. Utilízala para reactivar el agente en el servidor del cliente. El agente anterior será desconectado automáticamente.
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setRegenKey(null)}
+                className="w-full py-5 rounded-[24px] bg-[#1a2333] text-white font-black hover:bg-black transition-all shadow-xl shadow-slate-900/20 active:scale-95"
+              >
+                Entendido
+              </button>
             </div>
-          )}
-        </>
+          </div>
+        </div>
       )}
     </div>
   );
