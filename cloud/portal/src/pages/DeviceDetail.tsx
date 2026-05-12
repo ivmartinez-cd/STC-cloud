@@ -205,13 +205,13 @@ const DeviceDetail = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="cd-panel p-6 border-l-4 border-l-brand">
                 <div className="flex items-center gap-4">
-                  <div className="p-3 bg-blue-50 text-brand rounded-2xl">
+                  <div className={`p-3 rounded-2xl transition-colors ${isOk ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-50 text-slate-400'}`}>
                     <Activity size={20} />
                   </div>
                   <div>
                     <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Estado Operativo</p>
-                    <p className={`text-lg font-extrabold capitalize ${isOk ? 'text-emerald-600' : 'text-slate-600'}`}>
-                      {latest.status || 'Desconocido'}
+                    <p className={`text-lg font-extrabold ${isOk ? 'text-emerald-600' : 'text-slate-400'}`}>
+                      {latest.status === 'online' ? 'En Línea' : 'Fuera de Línea'}
                     </p>
                   </div>
                 </div>
