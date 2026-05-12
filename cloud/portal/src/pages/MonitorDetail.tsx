@@ -49,13 +49,13 @@ const MonitorDetail = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
-  const [activeTab, setActiveTab] = useState<'overview' | 'monitoring' | 'devices'>((searchParams.get('tab') as any) || 'overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'devices'>((searchParams.get('tab') as any) || 'overview');
   const [now, setNow] = useState(Date.now());
   
   // Monitoring State
   const [logs, setLogs] = useState<any[]>([]);
   const [logsLoading, setLogsLoading] = useState(false);
-  const [logLimit, setLogLimit] = useState(50);
+  const [logLimit, setLogLimit] = useState(10); // Solo mostramos los 10 más recientes en el resumen
   const [commandLoading, setCommandLoading] = useState<string | null>(null);
   
   // Modales
@@ -230,6 +230,14 @@ const MonitorDetail = () => {
 
         <div className="flex items-center gap-3">
           <button 
+            onClick={() => {
+              window.open(`${api.defaults.baseURL}/agents/${id}/logs/export`, '_blank');
+            }}
+            className="px-6 py-4 bg-white text-emerald-600 font-black text-[10px] uppercase tracking-widest rounded-2xl shadow-xl shadow-blue-900/5 hover:bg-emerald-50 transition-all active:scale-95 flex items-center gap-3"
+          >
+            <Download size={18} /> Descargar Logs
+          </button>
+          <button 
             onClick={() => setShowEditModal(true)}
             className="px-6 py-4 bg-white text-[#1a2333] font-black text-[10px] uppercase tracking-widest rounded-2xl shadow-xl shadow-blue-900/5 hover:bg-slate-50 transition-all active:scale-95 flex items-center gap-3"
           >
@@ -261,16 +269,6 @@ const MonitorDetail = () => {
           }`}
         >
           Resumen
-        </button>
-        <button
-          onClick={() => handleTabChange('monitoring')}
-          className={`px-8 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${
-            activeTab === 'monitoring' 
-              ? 'bg-white text-brand shadow-sm shadow-blue-900/5' 
-              : 'text-slate-400 hover:text-slate-600'
-          }`}
-        >
-          Consola Live
         </button>
         <button
           onClick={() => handleTabChange('devices')}
@@ -400,115 +398,67 @@ const MonitorDetail = () => {
                       </div>
                     </div>
                   </div>
+
+                  {/* Acciones de Administración Integradas */}
+                  <div className="p-8 bg-slate-50 border border-slate-100 rounded-[32px] space-y-4">
+                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-3">
+                      <Shield size={16} className="text-brand" /> Diagnóstico Remoto
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <button
+                        onClick={() => sendCommand('RESCAN')}
+                        disabled={!!commandLoading}
+                        className="py-3 px-4 bg-white text-brand border border-blue-100 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-brand hover:text-white transition-all active:scale-95 disabled:opacity-50"
+                      >
+                        <RefreshCw size={14} className={commandLoading === 'RESCAN' ? 'animate-spin' : ''} /> Rescan
+                      </button>
+                      <button
+                        onClick={() => sendCommand('PING')}
+                        disabled={!!commandLoading}
+                        className="py-3 px-4 bg-white text-slate-700 border border-slate-200 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-slate-800 hover:text-white transition-all active:scale-95 disabled:opacity-50"
+                      >
+                        <Activity size={14} className={commandLoading === 'PING' ? 'animate-spin' : ''} /> Ping
+                      </button>
+                      <button
+                        onClick={() => sendCommand('RESTART')}
+                        disabled={!!commandLoading}
+                        className="py-3 px-4 bg-white text-rose-600 border border-rose-100 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-rose-600 hover:text-white transition-all active:scale-95 disabled:opacity-50"
+                      >
+                        <Zap size={14} className={commandLoading === 'RESTART' ? 'animate-spin' : ''} /> Reiniciar
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Eventos del Sistema Integrados */}
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-3">
+                        <Terminal size={16} className="text-brand" /> Eventos del Sistema
+                      </h3>
+                      <button onClick={fetchLogs} className="text-[10px] font-black text-brand uppercase hover:underline">Refrescar</button>
+                    </div>
+                    <div className="bg-[#0f172a] rounded-[28px] p-6 shadow-xl border border-slate-800 h-[300px] overflow-y-auto font-mono text-[11px] custom-scrollbar">
+                      {logs.length === 0 ? (
+                        <div className="h-full flex items-center justify-center text-slate-600 italic">No hay eventos críticos reportados.</div>
+                      ) : (
+                        <div className="space-y-2">
+                          {logs.map((log, idx) => (
+                            <div key={idx} className="flex gap-4">
+                              <span className="text-slate-500 shrink-0">{new Date(log.time).toLocaleTimeString()}</span>
+                              <span className={`font-black shrink-0 w-12 ${log.level === 'ERROR' ? 'text-rose-400' : 'text-amber-400'}`}>[{log.level}]</span>
+                              <span className="text-slate-300">{log.message}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         </>
       )}
-
-      {/* Monitoring Tab */}
-      {!loading && !error && monitor && activeTab === 'monitoring' && (
-        <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            
-            {/* Terminal / Logs */}
-            <div className="lg:col-span-8 space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-sm font-black text-[#1a2333] uppercase tracking-tight">Consola de Eventos</h3>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Actividad en tiempo real del agente remoto</p>
-                </div>
-                <div className="flex items-center gap-3">
-                  <select 
-                    className="cd-input !py-2 !px-4 text-[10px] font-black uppercase tracking-widest"
-                    value={logLimit}
-                    onChange={(e) => setLogLimit(Number(e.target.value))}
-                  >
-                    {[25, 50, 75, 100, 125].map(v => (
-                      <option key={v} value={v}>Ver {v} líneas</option>
-                    ))}
-                  </select>
-                  <button 
-                    onClick={fetchLogs}
-                    className="p-2 bg-slate-100 text-slate-600 rounded-xl hover:bg-slate-200 transition-colors"
-                  >
-                    <RefreshCw size={16} className={logsLoading ? 'animate-spin' : ''} />
-                  </button>
-                </div>
-              </div>
-
-              <div className="bg-[#0f172a] rounded-[32px] p-6 shadow-2xl border border-slate-800 h-[500px] flex flex-col overflow-hidden">
-                <div className="flex-1 overflow-y-auto font-mono text-xs custom-scrollbar space-y-1 pr-2">
-                  {logs.length === 0 && !logsLoading && (
-                    <div className="h-full flex items-center justify-center text-slate-600 italic">
-                      Esperando flujo de datos del agente...
-                    </div>
-                  )}
-                  {logs.map((log, idx) => (
-                    <div key={idx} className="flex gap-4 group">
-                      <span className="text-slate-600 shrink-0 select-none">{new Date(log.timestamp).toLocaleTimeString()}</span>
-                      <span className={`font-black shrink-0 w-12 ${
-                        log.level === 'ERROR' ? 'text-rose-500' : 
-                        log.level === 'WARN' ? 'text-amber-500' : 'text-emerald-500'
-                      }`}>[{log.level}]</span>
-                      <span className="text-slate-300 break-all">{log.message}</span>
-                    </div>
-                  )).reverse()}
-                  {logsLoading && logs.length > 0 && (
-                    <div className="text-slate-500 animate-pulse">Cargando nuevos eventos...</div>
-                  )}
-                </div>
-                <div className="mt-4 pt-4 border-t border-slate-800 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className={`w-2 h-2 rounded-full animate-pulse ${monitor.status === 'active' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
-                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Canal de Telemetría Activo</span>
-                  </div>
-                  <span className="text-[9px] font-bold text-slate-600 uppercase tracking-[0.2em]">STC CLOUD TERMINAL v1.0</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Remote Commands */}
-            <div className="lg:col-span-4 space-y-6">
-              <div className="cd-panel p-8 space-y-6">
-                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-3">
-                  <Shield size={16} className="text-brand" /> Acciones de Administración
-                </h3>
-
-                <div className="space-y-3">
-                  <button
-                    onClick={() => sendCommand('RESCAN')}
-                    disabled={!!commandLoading}
-                    className="w-full py-4 px-6 bg-blue-50 text-brand border border-blue-100 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-between hover:bg-brand hover:text-white transition-all active:scale-95 disabled:opacity-50"
-                  >
-                    <span>Forzar Re-escaneo SNMP</span>
-                    {commandLoading === 'RESCAN' ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
-                  </button>
-
-                  <button
-                    onClick={() => sendCommand('PING')}
-                    disabled={!!commandLoading}
-                    className="w-full py-4 px-6 bg-slate-50 text-slate-700 border border-slate-200 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-between hover:bg-slate-800 hover:text-white transition-all active:scale-95 disabled:opacity-50"
-                  >
-                    <span>Ping de Diagnóstico</span>
-                    {commandLoading === 'PING' ? <Loader2 size={16} className="animate-spin" /> : <Activity size={16} />}
-                  </button>
-
-                  <button
-                    onClick={() => sendCommand('RESTART')}
-                    disabled={!!commandLoading}
-                    className="w-full py-4 px-6 bg-rose-50 text-rose-600 border border-rose-100 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-between hover:bg-rose-600 hover:text-white transition-all active:scale-95 disabled:opacity-50"
-                  >
-                    <span>Reiniciar Servicio Agente</span>
-                    {commandLoading === 'RESTART' ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
-                  </button>
-                </div>
-
-                <div className="p-4 bg-amber-50 border border-amber-100 rounded-2xl">
-                  <p className="text-[9px] font-black text-amber-800 uppercase tracking-tight mb-1">Información</p>
-                  <p className="text-[10px] text-amber-700/70 font-bold leading-relaxed">
-                    Los comandos se encolan y son procesados por el agente en su próximo ciclo de sincronización (cada 30s aprox).
                   </p>
                 </div>
               </div>

@@ -50,6 +50,8 @@ export class LogTailer {
       };
     });
 
-    return parsedLogs;
+    // Enterprise Policy: Solo subir WARN y ERROR automáticamente para reducir ruido.
+    // Los INFO se quedan en el archivo local del agente.
+    return parsedLogs.filter(log => ['WARN', 'ERROR'].includes(log.level));
   }
 }

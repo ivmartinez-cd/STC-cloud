@@ -504,6 +504,27 @@ const start = async () => {
       }
     );
 
+    // Exportar logs a CSV
+    fastify.get(
+      "/api/v1/agents/:id/logs/export",
+      { preHandler: portalAuth },
+      async (request, reply) => {
+        const { id } = request.params as any;
+        const logs = await agentService.getLogs(id, 1000); // Exportar los últimos 1000
+        
+        let csv = "Timestamp;Level;Message\n";
+        logs.forEach((l: any) => {
+          const time = new Date(l.time).toLocaleString('es-AR');
+          csv += `${time};${l.level};${l.message}\n`;
+        });
+
+        reply
+          .header("Content-Type", "text/csv")
+          .header("Content-Disposition", `attachment; filename=logs_agent_${id}.csv`)
+          .send(csv);
+      }
+    );
+
     // Leer configuración del agente (ip_ranges, snmp_community, scan_interval_minutes)
     fastify.get(
       "/api/v1/agents/:id/config",
