@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, HardDrive, Shield, Activity, Clock, Search, 
-  Settings, RefreshCw, Key, ShieldCheck, ShieldOff, 
-  Check, Copy, AlertTriangle, Terminal, Zap, Loader2,
-  Filter, Download, Trash2, Edit2, X
+  Settings, RefreshCw, Key, ShieldOff, 
+  Check, Copy, AlertTriangle, Loader2,
+  Edit2, X, Cpu
 } from 'lucide-react';
 import { api } from '../lib/api';
 import { useToast } from '../context/ToastContext';
@@ -549,8 +549,9 @@ const MonitorDetail = () => {
         message={`¿Estás seguro de que deseas revocar la licencia de ${monitor?.name}? Esta acción desconectará el agente de forma permanente.`}
         confirmText="Revocar Ahora"
         onConfirm={handleRevoke}
-        onCancel={() => setRevoking(false)}
-        variant="danger"
+        onClose={() => setRevoking(false)}
+        isDanger={true}
+        isLoading={revoking}
       />
 
       {regenKey && (
