@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { 
   ArrowLeft, HardDrive, Shield, Activity, Clock,
   Settings, RefreshCw, Key, ShieldOff, 
   Check, Copy, AlertTriangle, Loader2,
-  Edit2, X, Printer, Download, Zap
+  X, Printer, Download, Zap
 } from 'lucide-react';
 import { api } from '../lib/api';
 import { useToast } from '../context/ToastContext';
@@ -49,7 +49,10 @@ const MonitorDetail = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
-  const [activeTab, setActiveTab] = useState<'overview' | 'devices'>((searchParams.get('tab') as any) || 'overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'devices'>(() => {
+    const tab = searchParams.get('tab');
+    return (tab === 'overview' || tab === 'devices') ? tab : 'overview';
+  });
   const [now, setNow] = useState(Date.now());
   
   // Monitoring State
@@ -69,18 +72,36 @@ const MonitorDetail = () => {
   const [regenKey, setRegenKey] = useState<string | null>(null);
   const [keyCopied, setKeyCopied] = useState(false);
 
+  const fetchDevices = useCallback(async () => {
+    try {
+      const data = await api.get<Device[]>(`/agents/${id}/devices`);
+      setDevices(data);
+    } catch (err) {
+      console.error('Error fetching devices:', err);
+    }
+  }, [id]);
+
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await api.get<MonitorData>(`/agents/${id}`);
+      setMonitor(data);
+      await fetchDevices();
+      setError(null);
+    } catch (err: unknown) {
+      const error = err as Error;
+      setError(error.message || 'Error al cargar datos del monitor');
+    } finally {
+      setLoading(false);
+    }
+  }, [id, fetchDevices]);
+
   useEffect(() => {
     fetchData();
     const timer = setInterval(() => setNow(Date.now()), 30000);
     return () => clearInterval(timer);
-  }, [id]);
+  }, [id, fetchData]);
 
-  useEffect(() => {
-    const tab = searchParams.get('tab');
-    if (tab && ['overview', 'devices'].includes(tab)) {
-      setActiveTab(tab as any);
-    }
-  }, [searchParams]);
 
   const handleTabChange = (tab: 'overview' | 'devices') => {
     setActiveTab(tab);
@@ -91,30 +112,8 @@ const MonitorDetail = () => {
     if (activeTab === 'devices') {
       fetchDevices();
     }
-  }, [activeTab]);
+  }, [activeTab, fetchDevices]);
 
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      const data = await api.get<MonitorData>(`/agents/${id}`);
-      setMonitor(data);
-      await fetchDevices();
-      setError(null);
-    } catch (err: any) {
-      setError(err.message || 'Error al cargar datos del monitor');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchDevices = async () => {
-    try {
-      const data = await api.get<Device[]>(`/agents/${id}/devices`);
-      setDevices(data);
-    } catch (err) {
-      console.error('Error fetching devices:', err);
-    }
-  };
 
 
 
@@ -124,8 +123,9 @@ const MonitorDetail = () => {
       setCommandLoading(action);
       await api.post(`/agents/${id}/command`, { type: action, payload: {} });
       showToast(`Comando ${action} encolado correctamente`, 'success');
-    } catch (err: any) {
-      showToast(err.message || 'Error al enviar comando', 'error');
+    } catch (err: unknown) {
+      const error = err as Error;
+      showToast(error.message || 'Error al enviar comando', 'error');
     } finally {
       setCommandLoading(null);
     }
@@ -142,41 +142,15 @@ const MonitorDetail = () => {
 
   const handleRegen = async () => {
     try {
-      const data = await api.post<any>(`/agents/${id}/regenerate-key`);
+      const data = await api.post<{ activation_key: string }>(`/agents/${id}/regenerate-key`);
       setRegenKey(data.activation_key);
       fetchData();
-    } catch (err: any) {
-      showToast(err.message, 'error');
+    } catch (err: unknown) {
+      const error = err as Error;
+      showToast(error.message, 'error');
     }
   };
 
-  const exportLogs = async () => {
-    try {
-      const response = await fetch(`/api/monitors/${id}/logs`);
-      const logs = await response.json();
-      
-      const headers = ['Timestamp', 'Level', 'Service', 'Message'];
-      const csvContent = [
-        headers.join(','),
-        ...logs.map((log: any) => [
-          new Date(log.timestamp).toISOString(),
-          log.level,
-          log.service,
-          `"${log.message.replace(/"/g, '""')}"`
-        ].join(','))
-      ].join('\n');
-
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.setAttribute('download', `logs_${monitor?.name || id}_${new Date().toISOString()}.csv`);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    } catch (err) {
-      console.error('Error exporting logs:', err);
-    }
-  };
 
   const handleRevoke = async () => {
     try {
@@ -184,8 +158,9 @@ const MonitorDetail = () => {
       await api.post(`/agents/${id}/revoke`);
       showToast('Licencia revocada', 'success');
       navigate('/monitoring');
-    } catch (err: any) {
-      showToast(err.message, 'error');
+    } catch (err: unknown) {
+      const error = err as Error;
+      showToast(error.message, 'error');
     } finally {
       setRevoking(false);
     }
@@ -418,11 +393,10 @@ const MonitorDetail = () => {
                         <span className="text-sm font-black text-slate-700">{formatRelativeTime(monitor.last_seen, now)}</span>
                       </div>
                     </div>
-  </div>
+                  </div>
                 </div>
-              </div>
 
-              {/* Support Tools (STC CLOUD Style) */}
+                {/* Support Tools (STC CLOUD Style) */}
               <div className="cd-panel overflow-hidden border-none shadow-xl shadow-blue-900/5">
                 <div className="cd-header-orange flex items-center gap-3">
                   <Settings size={18} />
@@ -567,8 +541,9 @@ const MonitorDetail = () => {
                   showToast('Configuración actualizada correctamente', 'success');
                   setShowEditModal(false);
                   fetchData();
-                } catch (err: any) {
-                  showToast(err.message, 'error');
+                } catch (err: unknown) {
+                  const error = err as Error;
+                  showToast(error.message || 'Error al actualizar configuración', 'error');
                 } finally {
                   setSavingSettings(false);
                 }
