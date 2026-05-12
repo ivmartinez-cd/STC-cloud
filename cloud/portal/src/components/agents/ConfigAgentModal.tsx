@@ -167,7 +167,7 @@ export default function ConfigAgentModal({ modal, onClose }: Props) {
                 <button
                   onClick={saveConfig}
                   disabled={savingConfig}
-                  className="flex-2 px-12 py-5 bg-[#e67e22] hover:bg-[#d35400] disabled:opacity-40 text-white text-xs font-black rounded-[24px] shadow-2xl shadow-orange-900/20 transition-all active:scale-95 flex items-center justify-center gap-3 uppercase tracking-widest"
+                  className="flex-2 px-12 py-5 bg-[#f7931d] hover:bg-[#d35400] disabled:opacity-40 text-white text-xs font-black rounded-[24px] shadow-2xl shadow-orange-900/20 transition-all active:scale-95 flex items-center justify-center gap-3 uppercase tracking-widest"
                 >
                   {savingConfig ? <Loader2 className="animate-spin" size={20} /> : <Check size={20} />}
                   {savingConfig ? 'Sincronizando...' : 'APLICAR CONFIGURACIÓN'}

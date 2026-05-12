@@ -242,7 +242,7 @@ const Monitors = () => {
             className={`flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-lg active:scale-95 ${
               showForm 
                 ? 'bg-slate-100 text-slate-600 border border-slate-200' 
-                : 'bg-[#e67e22] text-white shadow-orange-900/20 hover:bg-[#d35400]'
+                : 'bg-[#f7931d] text-white shadow-orange-900/20 hover:bg-[#d35400]'
             }`}
           >
             {showForm ? <X size={18} /> : <Plus size={18} />}
@@ -619,7 +619,7 @@ const Monitors = () => {
                   <button 
                     onClick={saveConfig} 
                     disabled={savingConfig}
-                    className="px-8 py-3 bg-[#e67e22] hover:bg-[#d35400] disabled:opacity-40 text-white text-sm font-extrabold rounded-xl transition-all shadow-lg shadow-orange-900/20 flex items-center gap-2"
+                    className="px-8 py-3 bg-[#f7931d] hover:bg-[#d35400] disabled:opacity-40 text-white text-sm font-extrabold rounded-xl transition-all shadow-lg shadow-orange-900/20 flex items-center gap-2"
                   >
                     {savingConfig ? <Loader2 size={18} className="animate-spin" /> : 'Aplicar Cambios'}
                   </button>

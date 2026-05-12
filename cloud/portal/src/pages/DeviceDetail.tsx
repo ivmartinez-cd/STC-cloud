@@ -257,7 +257,7 @@ const DeviceDetail = () => {
                     <p className="text-2xl font-black">{(latest.mono_pages ?? latest.monoPages ?? 0).toLocaleString()}</p>
                   </div>
                   
-                  <div className="bg-gradient-to-r from-[#e67e22]/20 to-transparent border border-[#e67e22]/30 rounded-3xl p-5 backdrop-blur-sm">
+                  <div className="bg-gradient-to-r from-[#f7931d]/20 to-transparent border border-[#f7931d]/30 rounded-3xl p-5 backdrop-blur-sm">
                     <p className="text-[10px] font-extrabold text-[#f39c12] uppercase tracking-widest mb-1">Color</p>
                     <p className="text-2xl font-black text-[#f39c12]">{(latest.color_pages ?? latest.colorPages ?? 0).toLocaleString()}</p>
                   </div>

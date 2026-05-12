@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 @theme {
-  --color-brand: #e67e22;   /* Canal Directo Orange */
+  --color-brand: #f7931d;   /* Canal Directo Orange */
   --color-primary: #004a99; /* Canal Directo Blue */
 
   /* Z-index scale — single source of truth */
@@ -16,7 +16,7 @@
   /* Brand Colors — Canal Directo Premium Palette */
   --color-primary: #004a99;       /* Corporate Blue */
   --color-primary-dark: #003366;
-  --color-accent: #e67e22;        /* Corporate Orange */
+  --color-accent: #f7931d;        /* Corporate Orange */
   --color-bg: #f4f7fa;            /* Light Professional Gray */
   --color-panel: #ffffff;
   --color-text: #1a2333;

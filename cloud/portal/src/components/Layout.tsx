@@ -68,7 +68,7 @@ const Layout = () => {
                 alt="STC" 
                 className={`h-10 w-auto object-contain transition-all duration-500 ${!isHovered ? 'opacity-100 scale-110' : 'opacity-0 scale-125 absolute pointer-events-none'}`} 
                 style={{ 
-                  filter: 'invert(52%) sepia(97%) saturate(1378%) hue-rotate(341deg) brightness(95%) contrast(93%) drop-shadow(0 2px 4px rgba(230,126,34,0.15))' 
+                  filter: 'invert(67%) sepia(80%) saturate(2421%) hue-rotate(338deg) brightness(101%) contrast(96%) drop-shadow(0 2px 4px rgba(247,147,29,0.2))' 
                 }}
               />
               <div className="absolute inset-0 bg-blue-500/5 blur-xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
@@ -76,7 +76,7 @@ const Layout = () => {
             
             <div className={`flex items-center gap-1.5 relative z-10 transition-all duration-500 -mt-2 ${isHovered ? 'opacity-100' : 'opacity-0 scale-90 h-0 overflow-hidden'}`}>
               <span className="font-montserrat font-black text-base tracking-tight text-[#004a99]">STC</span>
-              <span className="font-montserrat font-black text-base tracking-tight text-[#e67e22]">CLOUD</span>
+              <span className="font-montserrat font-black text-base tracking-tight text-[#f7931d]">CLOUD</span>
             </div>
           </Link>
           
@@ -138,7 +138,7 @@ const Layout = () => {
                 {/* Active Indicator - Canal Directo Style */}
                 {active && (
                   <div className={`
-                    absolute left-0 bg-[#e67e22] rounded-r-full transition-all duration-500 shadow-[0_0_15px_rgba(230,126,34,0.4)]
+                    absolute left-0 bg-[#f7931d] rounded-r-full transition-all duration-500 shadow-[0_0_15px_rgba(230,126,34,0.4)]
                     ${isHovered ? 'w-1.5 top-3 bottom-3' : 'w-2 top-4 bottom-4'}
                   `} />
                 )}

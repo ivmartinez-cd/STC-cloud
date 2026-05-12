@@ -63,7 +63,7 @@ const ConfirmModal = ({
               className={`flex-1 px-6 py-3 rounded-xl text-white font-extrabold transition-all shadow-lg text-sm disabled:opacity-50 flex items-center justify-center gap-2 ${
                 isDanger 
                   ? 'bg-rose-500 hover:bg-rose-600 shadow-rose-900/20' 
-                  : 'bg-[#e67e22] hover:bg-[#d35400] shadow-orange-900/20'
+                  : 'bg-[#f7931d] hover:bg-[#d35400] shadow-orange-900/20'
               }`}
             >
               {isLoading ? <Loader2 size={18} className="animate-spin" /> : confirmText}

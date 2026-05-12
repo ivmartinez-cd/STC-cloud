@@ -112,7 +112,7 @@ const Clients = () => {
         </div>
         <button
           onClick={() => setShowModal(true)}
-          className="bg-[#e67e22] hover:bg-[#d35400] text-white px-5 py-2.5 rounded-xl flex items-center justify-center gap-2 text-sm font-bold shadow-lg shadow-orange-900/20 transition-all active:scale-95 whitespace-nowrap"
+          className="bg-[#f7931d] hover:bg-[#d35400] text-white px-5 py-2.5 rounded-xl flex items-center justify-center gap-2 text-sm font-bold shadow-lg shadow-orange-900/20 transition-all active:scale-95 whitespace-nowrap"
         >
           <Plus size={18} />
           Nuevo Cliente
@@ -308,7 +308,7 @@ const Clients = () => {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="flex-1 px-6 py-3 rounded-xl bg-[#e67e22] text-white font-extrabold hover:bg-[#d35400] transition-all disabled:opacity-50 flex items-center justify-center gap-2 text-sm shadow-lg shadow-orange-900/20"
+                  className="flex-1 px-6 py-3 rounded-xl bg-[#f7931d] text-white font-extrabold hover:bg-[#d35400] transition-all disabled:opacity-50 flex items-center justify-center gap-2 text-sm shadow-lg shadow-orange-900/20"
                 >
                   {isSubmitting ? <Loader2 size={20} className="animate-spin" /> : 'Registrar Cliente'}
                 </button>

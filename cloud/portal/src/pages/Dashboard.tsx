@@ -72,7 +72,7 @@ const StatCard = ({
   </div>
 );
 
-const BRAND_COLORS = ['#2980b9', '#3498db', '#1abc9c', '#f1c40f', '#e67e22', '#e74c3c'];
+const BRAND_COLORS = ['#2980b9', '#3498db', '#1abc9c', '#f1c40f', '#f7931d', '#e74c3c'];
 
 const Dashboard = () => {
   const [data, setData] = useState<DashboardData | null>(null);
