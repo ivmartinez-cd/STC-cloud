@@ -118,19 +118,19 @@ const syncSchema = {
         maxItems: 500,
         items: {
           type: "object",
-          required: ["device_id", "time", "total_pages"],
+          required: ["device_id", "time"],
           properties: {
             device_id: { type: "string" },
             ip: { type: "string" },
             brand: { type: "string" },
             time: { type: "string" },
-            total_pages: { type: "integer", minimum: 0 },
-            mono_pages: { type: "integer", minimum: 0 },
-            color_pages: { type: "integer", minimum: 0 },
-            toner_black: { type: "integer", minimum: 0, maximum: 100 },
-            toner_cyan: { type: "integer", minimum: 0, maximum: 100 },
-            toner_magenta: { type: "integer", minimum: 0, maximum: 100 },
-            toner_yellow: { type: "integer", minimum: 0, maximum: 100 },
+            total_pages: { type: ["integer", "number", "string"], nullable: true },
+            mono_pages: { type: ["integer", "number", "string"], nullable: true },
+            color_pages: { type: ["integer", "number", "string"], nullable: true },
+            toner_black: { type: ["integer", "number", "string"], nullable: true },
+            toner_cyan: { type: ["integer", "number", "string"], nullable: true },
+            toner_magenta: { type: ["integer", "number", "string"], nullable: true },
+            toner_yellow: { type: ["integer", "number", "string"], nullable: true },
             status: { type: "string" },
             offline: { type: "boolean" },
           },
@@ -393,7 +393,20 @@ const start = async () => {
 
     fastify.post(
       "/api/v1/devices/sync",
-      { preHandler: agentAuth, schema: syncSchema },
+      { 
+        preHandler: agentAuth, 
+        schema: syncSchema,
+        preValidation: async (request) => {
+          // Log temporal para ver qué está mandando el agente y por qué falla la validación
+          const body = request.body as any;
+          if (body && body.readings) {
+            console.log(`[SYNC_RAW] Agente ${request.user ? (request.user as any).agentId : 'unknown'} mandando ${body.readings.length} lecturas`);
+            if (body.readings.length > 0) {
+              console.log(`[SYNC_SAMPLE]`, JSON.stringify(body.readings[0]));
+            }
+          }
+        }
+      },
       async (request, reply) => {
         const { readings } = request.body as any;
         const { agentId } = request.user as any;

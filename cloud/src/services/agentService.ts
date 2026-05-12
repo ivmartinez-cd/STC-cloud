@@ -287,9 +287,9 @@ export class AgentService {
           friendlyName.slice(0, 255),
           brand.slice(0, 100),
           (r.model || "unknown").slice(0, 255),
-          r.total_pages ?? null,
-          r.mono_pages  ?? null,
-          r.color_pages ?? null,
+          parseCount(r.total_pages),
+          parseCount(r.mono_pages),
+          parseCount(r.color_pages),
           r.status || "online"
         ]);
 
@@ -305,13 +305,20 @@ export class AgentService {
           readingTime = new Date(); // Fallback a ahora si la fecha es inválida
         }
 
+        // Conversión segura de contadores (pueden venir como string o float)
+        const parseCount = (v: any) => {
+          if (v === null || v === undefined) return null;
+          const n = parseInt(v, 10);
+          return isNaN(n) ? null : n;
+        };
+
         mappedReadings.push({
           id: crypto.randomUUID(), // Generamos ID en JS para evitar dependencia de extensiones DB
           time: readingTime,
           device_id: deviceId,
-          total_pages: r.total_pages ?? null,
-          mono_pages:  r.mono_pages  ?? null,
-          color_pages: r.color_pages ?? null,
+          total_pages: parseCount(r.total_pages),
+          mono_pages:  parseCount(r.mono_pages),
+          color_pages: parseCount(r.color_pages),
           status:      r.status || "idle",
           offline:     r.offline ?? false,
         });
