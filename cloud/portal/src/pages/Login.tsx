@@ -26,64 +26,70 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4 relative overflow-hidden font-sans">
-      {/* Background decoration - Design Spells: Ambient Glow */}
-      <div className="absolute top-[-10%] right-[-10%] w-[60%] h-[60%] bg-blue-600/10 blur-[120px] rounded-full pointer-events-none" />
-      <div className="absolute bottom-[-10%] left-[-10%] w-[60%] h-[60%] bg-blue-900/10 blur-[120px] rounded-full pointer-events-none" />
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-[0.02] pointer-events-none" />
+    <div className="min-h-screen bg-[#0a0f18] flex items-center justify-center p-4 relative overflow-hidden font-sans">
+      {/* Premium Background Decoration - Corporate Glows */}
+      <div className="absolute top-[-10%] right-[-10%] w-[70%] h-[70%] bg-[#f7931d]/5 blur-[150px] rounded-full pointer-events-none animate-pulse duration-[10s]" />
+      <div className="absolute bottom-[-10%] left-[-10%] w-[60%] h-[60%] bg-[#004a99]/10 blur-[120px] rounded-full pointer-events-none" />
+      
+      {/* Grid Pattern overlay */}
+      <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-[0.03] pointer-events-none" />
 
-      <div className="w-full max-w-[440px] relative z-10">
-        {/* Logo and Header */}
-        <div className="text-center mb-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
-          <div className="flex justify-center mb-0">
-            <div className="relative group">
-              <div className="absolute inset-0 bg-blue-500/10 blur-3xl rounded-full opacity-40 group-hover:opacity-100 transition-opacity duration-1000" />
-              <img src="/logo.png" alt="STC CLOUD" className="h-20 w-auto object-contain relative z-10 drop-shadow-[0_10px_10px_rgba(0,0,0,0.1)]" />
+      <div className="w-full max-w-[460px] relative z-10">
+        {/* Corporate Header - Matching the provided image structure */}
+        <div className="text-center mb-12 animate-in fade-in slide-in-from-bottom-8 duration-1000">
+          <div className="flex flex-col items-center justify-center mb-0">
+            <div className="relative group mb-2">
+              <div className="absolute inset-0 bg-[#f7931d]/20 blur-3xl rounded-full opacity-40 group-hover:opacity-100 transition-opacity duration-1000" />
+              {/* Logo Icon and Brand Name */}
+              <div className="flex items-center gap-3 relative z-10">
+                <img src="/logo.png" alt="Icon" className="h-16 w-auto object-contain drop-shadow-[0_10px_15px_rgba(247,147,29,0.2)]" />
+                <h1 className="text-3xl font-black tracking-tight text-[#f7931d] uppercase">
+                  CANAL DIRECTO
+                </h1>
+              </div>
             </div>
+            
+            <div className="flex items-center justify-center mt-[-5px]">
+              <span className="text-2xl font-black tracking-[0.2em] text-[#004a99] uppercase drop-shadow-sm">
+                STC CLOUD
+              </span>
+            </div>
+            <div className="w-12 h-0.5 bg-[#f7931d]/30 mt-3 rounded-full" />
+            <p className="text-slate-500 text-[9px] font-black uppercase tracking-[0.4em] mt-3 opacity-60">Portal de Gestión de Contadores</p>
           </div>
-          
-          <div className="flex items-center justify-center gap-2 -mt-4 mb-1">
-            <span className="text-3xl font-montserrat font-black tracking-tighter text-white opacity-90">
-              STC
-            </span>
-            <span className="text-3xl font-montserrat font-black tracking-tighter text-blue-500">
-              Cloud
-            </span>
-          </div>
-          <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.3em] opacity-80">Portal de Gestión de Contadores</p>
         </div>
 
-        {/* Login Card - Glassmorphism Pattern */}
-        <div className="bg-white/[0.03] backdrop-blur-2xl rounded-[2.5rem] p-10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-white/10 animate-in fade-in slide-in-from-bottom-8 duration-1000 relative overflow-hidden">
-          {/* Subtle internal glow */}
-          <div className="absolute -top-24 -left-24 w-48 h-48 bg-blue-500/5 rounded-full blur-3xl pointer-events-none" />
+        {/* Premium Login Card - Modern Glassmorphism */}
+        <div className="bg-white/[0.02] backdrop-blur-3xl rounded-[3rem] p-12 shadow-[0_40px_100px_rgba(0,0,0,0.6)] border border-white/5 animate-in fade-in slide-in-from-bottom-12 duration-1000 relative overflow-hidden group">
+          {/* Animated Internal Glow */}
+          <div className="absolute -top-32 -left-32 w-64 h-64 bg-[#f7931d]/5 rounded-full blur-[80px] pointer-events-none group-hover:bg-[#f7931d]/10 transition-all duration-1000" />
           
-          <div className="mb-10 relative z-10">
+          <div className="mb-10 relative z-10 text-center sm:text-left">
             <h2 className="text-2xl font-black text-white tracking-tight">Bienvenido</h2>
             <p className="text-slate-400 text-sm font-medium mt-1">Ingrese sus credenciales para continuar</p>
           </div>
 
           {error && (
             <div className="flex items-center gap-3 bg-rose-500/10 border border-rose-500/20 rounded-2xl p-4 mb-8 animate-in shake duration-300">
-              <div className="bg-rose-500 text-white p-1 rounded-full shrink-0 shadow-[0_0_15px_rgba(244,63,94,0.3)]">
+              <div className="bg-rose-500 text-white p-1 rounded-full shrink-0 shadow-[0_0_20px_rgba(244,63,94,0.4)]">
                 <AlertCircle size={14} />
               </div>
-              <p className="text-[11px] text-rose-400 font-bold uppercase tracking-wide">{error}</p>
+              <p className="text-[11px] text-rose-400 font-bold uppercase tracking-wide leading-none">{error}</p>
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-7 relative z-10">
-            <div className="space-y-2.5">
-              <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] ml-1">Usuario</label>
-              <div className="relative group">
-                <div className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-blue-400 transition-colors duration-300">
-                  <User size={19} />
+          <form onSubmit={handleSubmit} className="space-y-8 relative z-10">
+            <div className="space-y-3">
+              <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.25em] ml-2">Usuario</label>
+              <div className="relative group/input">
+                <div className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within/input:text-[#f7931d] transition-colors duration-300">
+                  <User size={20} />
                 </div>
                 <input
                   type="text"
                   value={username}
                   onChange={e => setUsername(e.target.value)}
-                  className="w-full h-14 pl-14 pr-6 bg-white/[0.02] border border-white/5 rounded-2xl text-white text-sm transition-all duration-300 focus:bg-white/[0.05] focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/10 outline-none placeholder:text-slate-600"
+                  className="w-full h-16 pl-16 pr-6 bg-white/[0.03] border border-white/10 rounded-[20px] text-white text-sm transition-all duration-500 focus:bg-white/[0.07] focus:border-[#f7931d]/50 focus:ring-[12px] focus:ring-[#f7931d]/5 outline-none placeholder:text-slate-700 font-medium"
                   placeholder="admin"
                   required
                   autoFocus
@@ -91,17 +97,17 @@ const Login = () => {
               </div>
             </div>
 
-            <div className="space-y-2.5">
-              <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] ml-1">Contraseña</label>
-              <div className="relative group">
-                <div className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-blue-400 transition-colors duration-300">
-                  <Lock size={19} />
+            <div className="space-y-3">
+              <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.25em] ml-2">Contraseña</label>
+              <div className="relative group/input">
+                <div className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within/input:text-[#f7931d] transition-colors duration-300">
+                  <Lock size={20} />
                 </div>
                 <input
                   type="password"
                   value={password}
                   onChange={e => setPassword(e.target.value)}
-                  className="w-full h-14 pl-14 pr-6 bg-white/[0.02] border border-white/5 rounded-2xl text-white text-sm transition-all duration-300 focus:bg-white/[0.05] focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/10 outline-none placeholder:text-slate-600"
+                  className="w-full h-16 pl-16 pr-6 bg-white/[0.03] border border-white/10 rounded-[20px] text-white text-sm transition-all duration-500 focus:bg-white/[0.07] focus:border-[#f7931d]/50 focus:ring-[12px] focus:ring-[#f7931d]/5 outline-none placeholder:text-slate-700 font-medium"
                   placeholder="••••••••"
                   required
                 />
@@ -111,27 +117,38 @@ const Login = () => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full h-15 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-2xl text-xs font-black uppercase tracking-[0.2em] shadow-[0_10px_25px_rgba(249,115,22,0.3)] hover:shadow-[0_15px_35px_rgba(249,115,22,0.4)] transition-all active:scale-[0.98] flex items-center justify-center gap-3 mt-6 border border-white/10"
+              className="w-full h-16 bg-[#f7931d] hover:bg-[#ff9d2b] disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-[20px] text-[11px] font-black uppercase tracking-[0.25em] shadow-[0_15px_40px_rgba(247,147,29,0.25)] hover:shadow-[0_20px_50px_rgba(247,147,29,0.35)] transition-all duration-500 active:scale-[0.97] flex items-center justify-center gap-4 mt-10"
             >
-              {loading ? <Loader2 size={18} className="animate-spin" /> : <ShieldCheck size={18} />}
+              {loading ? <Loader2 size={20} className="animate-spin" /> : <ShieldCheck size={20} />}
               {loading ? 'Verificando...' : 'Acceder al Portal'}
             </button>
           </form>
         </div>
 
         {/* Footer info */}
-        <div className="text-center mt-12 space-y-5">
-          <p className="text-[10px] text-slate-600 font-bold uppercase tracking-[0.3em]">
+        <div className="text-center mt-16 animate-in fade-in duration-[2000ms]">
+          <p className="text-[10px] text-slate-600 font-black uppercase tracking-[0.4em]">
             Canal Directo S.A. — © {new Date().getFullYear()}
           </p>
-          <div className="flex items-center justify-center gap-3">
-            <div className="h-px w-10 bg-white/5" />
-            <div className="w-1.5 h-1.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]" />
-            <div className="w-1.5 h-1.5 rounded-full bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.5)]" />
-            <div className="h-px w-10 bg-white/5" />
+          <div className="flex items-center justify-center gap-4 mt-6">
+            <div className="h-px w-12 bg-white/5" />
+            <div className="w-2 h-2 rounded-full bg-[#004a99] shadow-[0_0_15px_rgba(0,74,153,0.4)]" />
+            <div className="w-2 h-2 rounded-full bg-[#f7931d] shadow-[0_0_15px_rgba(247,147,29,0.4)]" />
+            <div className="h-px w-12 bg-white/5" />
           </div>
         </div>
       </div>
+
+      <style dangerouslySetInnerHTML={{ __html: `
+        @keyframes shake {
+          0%, 100% { transform: translateX(0); }
+          25% { transform: translateX(-5px); }
+          75% { transform: translateX(5px); }
+        }
+        .animate-shake {
+          animation: shake 0.3s ease-in-out;
+        }
+      `}} />
     </div>
   );
 };
