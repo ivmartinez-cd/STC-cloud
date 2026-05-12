@@ -54,8 +54,6 @@ const MonitorDetail = () => {
   
   // Monitoring State
   const [logs, setLogs] = useState<any[]>([]);
-  const [logsLoading, setLogsLoading] = useState(false);
-  const [logLimit, setLogLimit] = useState(10); // Solo mostramos los 10 más recientes en el resumen
   const [commandLoading, setCommandLoading] = useState<string | null>(null);
   
   // Modales
@@ -86,7 +84,7 @@ const MonitorDetail = () => {
     if (activeTab === 'devices') {
       fetchDevices();
     }
-  }, [activeTab, logLimit]);
+  }, [activeTab]);
 
   const fetchData = async () => {
     try {
@@ -452,9 +450,8 @@ const MonitorDetail = () => {
               </div>
             </div>
           </div>
-        </div>
-      </>
-    )}
+        </>
+      )}
       
       {/* Devices Tab */}
       {!loading && !error && monitor && activeTab === 'devices' && (
