@@ -4,7 +4,7 @@ import {
   ArrowLeft, HardDrive, Shield, Activity, Clock, Search, 
   Settings, RefreshCw, Key, ShieldOff, 
   Check, Copy, AlertTriangle, Loader2,
-  Edit2, X, Cpu, Printer, Download, Zap, Terminal
+  Edit2, X, Cpu, Printer, Download, Zap
 } from 'lucide-react';
 import { api } from '../lib/api';
 import { useToast } from '../context/ToastContext';
@@ -53,7 +53,6 @@ const MonitorDetail = () => {
   const [now, setNow] = useState(Date.now());
   
   // Monitoring State
-  const [logs, setLogs] = useState<any[]>([]);
   const [commandLoading, setCommandLoading] = useState<string | null>(null);
   
   // Modales
@@ -109,15 +108,7 @@ const MonitorDetail = () => {
     }
   };
 
-  const fetchLogs = async () => {
-    if (!id) return;
-    try {
-      const data = await api.get<any[]>(`/agents/${id}/logs?limit=20`);
-      setLogs(data);
-    } catch (err) {
-      console.error('Error fetching logs:', err);
-    }
-  };
+
 
   const sendCommand = async (action: string) => {
     if (!id) return;
@@ -417,34 +408,7 @@ const MonitorDetail = () => {
                         <Zap size={14} className={commandLoading === 'RESTART' ? 'animate-spin' : ''} /> Reiniciar
                       </button>
                     </div>
-                  </div>
-
-                  {/* Eventos del Sistema Integrados */}
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-3">
-                        <Terminal size={16} className="text-brand" /> Eventos del Sistema
-                      </h3>
-                      <button onClick={fetchLogs} className="text-[10px] font-black text-brand uppercase hover:underline">Refrescar</button>
-                    </div>
-                    <div className="bg-[#0f172a] rounded-[28px] p-6 shadow-xl border border-slate-800 h-[300px] overflow-y-auto font-mono text-[11px] custom-scrollbar">
-                      {logs.length === 0 ? (
-                        <div className="h-full flex items-center justify-center text-slate-600 italic">No hay eventos críticos reportados.</div>
-                      ) : (
-                        <div className="space-y-2">
-                          {logs.map((log, idx) => (
-                            <div key={idx} className="flex gap-4">
-                              <span className="text-slate-500 shrink-0">
-                                {log.timestamp ? new Date(log.timestamp).toLocaleTimeString() : '---'}
-                              </span>
-                              <span className={`font-black shrink-0 w-12 ${log.level === 'ERROR' ? 'text-rose-400' : 'text-amber-400'}`}>[{log.level}]</span>
-                              <span className="text-slate-300">{log.message}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                     </div>
                 </div>
               </div>
             </div>
