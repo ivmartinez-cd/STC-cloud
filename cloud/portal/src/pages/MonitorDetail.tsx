@@ -434,7 +434,9 @@ const MonitorDetail = () => {
                         <div className="space-y-2">
                           {logs.map((log, idx) => (
                             <div key={idx} className="flex gap-4">
-                              <span className="text-slate-500 shrink-0">{new Date(log.time).toLocaleTimeString()}</span>
+                              <span className="text-slate-500 shrink-0">
+                                {log.timestamp ? new Date(log.timestamp).toLocaleTimeString() : '---'}
+                              </span>
                               <span className={`font-black shrink-0 w-12 ${log.level === 'ERROR' ? 'text-rose-400' : 'text-amber-400'}`}>[{log.level}]</span>
                               <span className="text-slate-300">{log.message}</span>
                             </div>
