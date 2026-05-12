@@ -62,11 +62,14 @@ const Layout = () => {
                 alt="STC Cloud" 
                 className={`h-11 w-auto object-contain transition-all duration-500 ${isHovered ? 'opacity-100 scale-100' : 'opacity-0 scale-75 absolute pointer-events-none'}`} 
               />
-              {/* Icon Logo - Shown when collapsed (Now using logo.png for orange color) */}
+              {/* Icon Logo - Painted Orange via Filter */}
               <img 
-                src="/logo.png" 
+                src="/logo2.png" 
                 alt="STC" 
                 className={`h-10 w-auto object-contain transition-all duration-500 ${!isHovered ? 'opacity-100 scale-110' : 'opacity-0 scale-125 absolute pointer-events-none'}`} 
+                style={{ 
+                  filter: 'invert(60%) sepia(85%) saturate(1500%) hue-rotate(342deg) brightness(95%) contrast(95%) drop-shadow(0 2px 4px rgba(230,126,34,0.2))' 
+                }}
               />
               <div className="absolute inset-0 bg-blue-500/5 blur-xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
             </div>
