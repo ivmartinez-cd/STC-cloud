@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState } from 'react'; // v1.0.1-ui-fix
 import { X, Key, Clock, Copy, Check } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
 
