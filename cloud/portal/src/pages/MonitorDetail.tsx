@@ -88,22 +88,31 @@ const MonitorDetail = () => {
       const logTimer = setInterval(fetchLogs, 30000);
       return () => clearInterval(logTimer);
     }
+    if (activeTab === 'devices') {
+      fetchDevices();
+    }
   }, [activeTab, logLimit]);
 
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [monitorData, devicesData] = await Promise.all([
-        api.get<MonitorData>(`/agents/${id}`),
-        api.get<Device[]>(`/agents/${id}/devices`)
-      ]);
-      setMonitor(monitorData);
-      setDevices(devicesData);
+      const data = await api.get<MonitorData>(`/agents/${id}`);
+      setMonitor(data);
+      await fetchDevices();
       setError(null);
     } catch (err: any) {
       setError(err.message || 'Error al cargar datos del monitor');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchDevices = async () => {
+    try {
+      const data = await api.get<Device[]>(`/agents/${id}/devices`);
+      setDevices(data);
+    } catch (err) {
+      console.error('Error fetching devices:', err);
     }
   };
 
