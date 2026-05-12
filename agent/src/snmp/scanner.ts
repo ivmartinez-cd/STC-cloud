@@ -30,7 +30,6 @@ export interface DeviceReading {
   total_pages: number | null;
   mono_pages:  number | null;
   color_pages: number | null;
-  status:     string;
   time:       string;
 }
 
@@ -102,10 +101,9 @@ export async function readDevice(ip: string, community: string): Promise<DeviceR
     const oidMap = OID_MAPS[brand];
 
     // ── Fase 4: Consulta de Datos ───────────────────────────────────────────
-    const [sysDescr, sysName, hrSt] = await Promise.all([
+    const [sysDescr, sysName] = await Promise.all([
       snmpGet(session, SYS_OIDS.sysDescr),
       snmpGet(session, SYS_OIDS.sysName),
-      snmpGet(session, SYS_OIDS.hrStatus),
     ]);
 
     const serialOids = brand !== 'generic' ? oidMap.serial : GENERIC_OIDS.serial;
@@ -159,7 +157,6 @@ export async function readDevice(ip: string, community: string): Promise<DeviceR
       total_pages: totalPages !== null ? Number(totalPages) : null,
       mono_pages:  monoPages  !== null ? Number(monoPages)  : null,
       color_pages: colorPages !== null ? Number(colorPages) : null,
-      status:     hrStatus(hrSt),
       model:      modelName || 'Unknown Model',
       time:       new Date().toISOString(),
     };

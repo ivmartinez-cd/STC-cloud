@@ -19,7 +19,6 @@ export async function uploadPending(config: AgentConfig): Promise<UploadResult &
     total_pages: r.total_pages,
     mono_pages:  r.mono_pages,
     color_pages: r.color_pages,
-    status:      r.status,
     offline:     true,
   }));
 

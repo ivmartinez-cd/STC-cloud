@@ -40,7 +40,6 @@ export function openQueue(): void {
       total_pages INTEGER,
       mono_pages  INTEGER,
       color_pages INTEGER,
-      status      TEXT    DEFAULT 'idle',
       synced      INTEGER DEFAULT 0,
       created_at  TEXT    DEFAULT (datetime('now'))
     );
@@ -59,12 +58,11 @@ export function openQueue(): void {
 export function enqueueReading(r: DeviceReading): void {
   db.prepare(`
     INSERT INTO readings_queue
-      (device_id, ip, brand, model, time, total_pages, mono_pages, color_pages, status)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      (device_id, ip, brand, model, time, total_pages, mono_pages, color_pages)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     r.serial ?? r.ip, r.ip, r.brand, r.model, r.time,
-    r.total_pages, r.mono_pages, r.color_pages,
-    r.status,
+    r.total_pages, r.mono_pages, r.color_pages
   );
 }
 

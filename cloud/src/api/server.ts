@@ -132,7 +132,6 @@ const syncSchema = {
             toner_cyan:  { type: ["integer", "number", "string"], nullable: true },
             toner_magenta: { type: ["integer", "number", "string"], nullable: true },
             toner_yellow: { type: ["integer", "number", "string"], nullable: true },
-            status:      { type: "string", nullable: true },
             offline:     { type: "boolean" },
           },
         },
@@ -557,7 +556,7 @@ const start = async () => {
         const { id } = request.params as any;
         return await db("devices")
           .where("agent_id", id)
-          .select("*", "last_status as status")
+          .select("*")
           .orderBy("brand");
       }
     );

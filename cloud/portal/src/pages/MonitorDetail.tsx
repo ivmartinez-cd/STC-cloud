@@ -16,7 +16,6 @@ interface Device {
   name: string;
   ip_address: string;
   serial_number: string | null;
-  status: string;
   last_seen: string | null;
   model: string | null;
   total_pages: number | null;
@@ -323,11 +322,9 @@ const MonitorDetail = () => {
                     <p className="text-2xl font-black text-[#1a2333] tracking-tighter mb-1">{devices.length}</p>
                     <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Printers Activas</p>
                   </div>
-                  <div className="p-6 bg-slate-50 rounded-[32px] border border-slate-100">
-                    <p className="text-2xl font-black text-brand tracking-tighter mb-1">
-                      {devices.filter(d => d.status === 'online').length}
-                    </p>
-                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">En Línea</p>
+                  <div className="p-6 bg-slate-50 rounded-[32px] border border-slate-100 flex flex-col justify-center items-center">
+                    <Printer size={24} className="text-brand/20 mb-2" />
+                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest text-center">Infraestructura Verificada</p>
                   </div>
                 </div>
               </div>
@@ -529,7 +526,6 @@ const MonitorDetail = () => {
               <thead>
                 <tr className="bg-slate-50/50">
                   <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Dispositivo</th>
-                  <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Estado</th>
                   <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Red</th>
                   <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Contadores (Total / Mono / Color)</th>
                   <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Último Reporte</th>
@@ -559,14 +555,7 @@ const MonitorDetail = () => {
                           </div>
                         </Link>
                       </td>
-                      <td className="px-8 py-5">
-                        <div className="flex items-center gap-2">
-                          <div className={`w-1.5 h-1.5 rounded-full ${
-                            ['online', 'idle', 'running', 'ok'].includes(device.status?.toLowerCase() || '') ? 'bg-emerald-500' : 'bg-rose-500'
-                          }`} />
-                          <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">{device.status || 'Offline'}</span>
-                        </div>
-                      </td>
+
                       <td className="px-8 py-5">
                         <div className="space-y-1">
                           <p className="text-xs font-bold text-brand font-mono">{device.ip_address}</p>

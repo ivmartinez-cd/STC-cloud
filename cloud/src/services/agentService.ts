@@ -280,8 +280,8 @@ export class AgentService {
         const cleanModel = (r.model || "unknown").split(/[;|\r\n]/)[0].trim();
 
         const upserted = await this.db.raw<{ rows: { id: string }[] }>(`
-          INSERT INTO devices (id, agent_id, ip_address, serial_number, name, brand, model, active, last_seen, total_pages, mono_pages, color_pages, last_status)
-          VALUES (?, ?, ?, ?, ?, ?, ?, true, NOW(), ?, ?, ?, ?)
+          INSERT INTO devices (id, agent_id, ip_address, serial_number, name, brand, model, active, last_seen, total_pages, mono_pages, color_pages)
+          VALUES (?, ?, ?, ?, ?, ?, ?, true, NOW(), ?, ?, ?)
           ON CONFLICT (agent_id, serial_number) WHERE serial_number IS NOT NULL
           DO UPDATE SET
             ip_address    = EXCLUDED.ip_address,
@@ -299,8 +299,7 @@ export class AgentService {
             active        = true,
             total_pages   = EXCLUDED.total_pages,
             mono_pages    = EXCLUDED.mono_pages,
-            color_pages   = EXCLUDED.color_pages,
-            last_status   = EXCLUDED.last_status
+            color_pages   = EXCLUDED.color_pages
           RETURNING id
         `, [
           crypto.randomUUID(),
@@ -312,8 +311,7 @@ export class AgentService {
           cleanModel.slice(0, 255),
           parseCount(r.total_pages),
           parseCount(r.mono_pages),
-          parseCount(r.color_pages),
-          r.status || "online"
+          parseCount(r.color_pages)
         ]);
 
         if (!upserted.rows || upserted.rows.length === 0) {
@@ -335,7 +333,6 @@ export class AgentService {
           total_pages: parseCount(r.total_pages),
           mono_pages:  parseCount(r.mono_pages),
           color_pages: parseCount(r.color_pages),
-          status:      r.status || "idle",
           offline:     r.offline ?? false,
         });
       } catch (err: any) {
