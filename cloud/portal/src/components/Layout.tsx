@@ -1,5 +1,5 @@
 import { useState, Suspense, useEffect, useRef } from 'react';
-import { Link, useLocation, Outlet, useNavigate } from 'react-router-dom';
+import { Link, useLocation, Outlet } from 'react-router-dom';
 import { api } from '../lib/api';
 import {
   LayoutDashboard, Users, FileText, LogOut, Search, Settings, Menu, X, ChevronRight, Shield
@@ -36,7 +36,6 @@ const Layout = () => {
   const [showResults, setShowResults] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
   const debouncedSearch = useDebounce(searchQuery, 300);
-  const navigate = useNavigate();
 
   useEffect(() => {
     if (debouncedSearch.length >= 2) {
