@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { 
-  ArrowLeft, HardDrive, Shield, Activity, Clock, Search, 
+  ArrowLeft, HardDrive, Shield, Activity, Clock,
   Settings, RefreshCw, Key, ShieldOff, 
   Check, Copy, AlertTriangle, Loader2,
-  Edit2, X, Cpu, Printer, Download, Zap
+  Edit2, X, Printer, Download, Zap
 } from 'lucide-react';
 import { api } from '../lib/api';
 import { useToast } from '../context/ToastContext';
@@ -142,6 +142,34 @@ const MonitorDetail = () => {
     }
   };
 
+  const exportLogs = async () => {
+    try {
+      const response = await fetch(`/api/monitors/${id}/logs`);
+      const logs = await response.json();
+      
+      const headers = ['Timestamp', 'Level', 'Service', 'Message'];
+      const csvContent = [
+        headers.join(','),
+        ...logs.map((log: any) => [
+          new Date(log.timestamp).toISOString(),
+          log.level,
+          log.service,
+          `"${log.message.replace(/"/g, '""')}"`
+        ].join(','))
+      ].join('\n');
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.setAttribute('download', `logs_${monitor?.name || id}_${new Date().toISOString()}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      console.error('Error exporting logs:', err);
+    }
+  };
+
   const handleRevoke = async () => {
     try {
       setRevoking(true);
@@ -269,13 +297,11 @@ const MonitorDetail = () => {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
             {/* Left Column: Device Overview */}
             <div className="lg:col-span-4 space-y-6">
-              <div className="cd-panel overflow-hidden border-none shadow-xl shadow-blue-900/5 group">
-                <div className="bg-gradient-to-r from-brand to-[#3498db] px-6 py-4 flex items-center justify-between text-white">
-                  <div className="flex items-center gap-3">
-                    <HardDrive size={18} />
-                    <h3 className="text-xs font-black uppercase tracking-widest">Información Técnica</h3>
-                  </div>
-                  <Cpu size={20} className="opacity-20 group-hover:scale-110 transition-transform" />
+              {/* Technical Info Panel */}
+              <div className="cd-panel overflow-hidden border-none shadow-xl shadow-blue-900/5">
+                <div className="cd-header-blue flex items-center gap-3">
+                  <HardDrive size={18} />
+                  Información Técnica
                 </div>
                 <div className="p-8 space-y-8">
                   <div className="space-y-4">
@@ -285,7 +311,7 @@ const MonitorDetail = () => {
                     </div>
                   </div>
                   <div className="space-y-4">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Pertenece a Cliente</label>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Cliente Asociado</label>
                     <Link to={`/clients/${monitor.client_id}`} className="block p-5 bg-blue-50 border border-blue-100 rounded-3xl group/client hover:bg-brand transition-all">
                       <div className="flex items-center gap-4">
                         <div className="w-10 h-10 rounded-2xl bg-white shadow-sm flex items-center justify-center text-brand font-black text-lg">
@@ -293,7 +319,7 @@ const MonitorDetail = () => {
                         </div>
                         <div>
                           <p className="text-xs font-black text-brand group-hover/client:text-white transition-colors uppercase tracking-tight">{monitor.client_name}</p>
-                          <p className="text-[9px] font-bold text-blue-400 group-hover/client:text-blue-100 transition-colors uppercase tracking-widest">Ver Expediente Completo</p>
+                          <p className="text-[9px] font-bold text-blue-400 group-hover/client:text-blue-100 transition-colors uppercase tracking-widest">Ver Cliente</p>
                         </div>
                       </div>
                     </Link>
@@ -301,36 +327,41 @@ const MonitorDetail = () => {
                 </div>
               </div>
 
-              <div className="cd-panel p-8 space-y-6">
-                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-3">
-                  <Activity size={16} className="text-brand" /> Estadísticas de Red
-                </h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="p-6 bg-slate-50 rounded-[32px] border border-slate-100">
-                    <p className="text-2xl font-black text-[#1a2333] tracking-tighter mb-1">{devices.length}</p>
-                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Printers Activas</p>
-                  </div>
-                  <div className="p-6 bg-slate-50 rounded-[32px] border border-slate-100 flex flex-col justify-center items-center">
-                    <Printer size={24} className="text-brand/20 mb-2" />
-                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest text-center">Infraestructura Verificada</p>
+              {/* Quick Stats Panel */}
+              <div className="cd-panel overflow-hidden border-none shadow-xl shadow-blue-900/5">
+                <div className="p-8 space-y-6">
+                  <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-3">
+                    <Activity size={16} className="text-brand" /> Estadísticas de Red
+                  </h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="p-6 bg-slate-50 rounded-[32px] border border-slate-100">
+                      <p className="text-2xl font-black text-[#1a2333] tracking-tighter mb-1">{devices.length}</p>
+                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Equipos</p>
+                    </div>
+                    <div className="p-6 bg-slate-50 rounded-[32px] border border-slate-100 flex flex-col justify-center items-center">
+                      <Printer size={24} className="text-brand/20 mb-2" />
+                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest text-center">Activos</p>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
 
+            {/* Right Column: Security & Actions */}
             <div className="lg:col-span-8 space-y-6">
-              <div className="cd-panel p-8 space-y-6 bg-gradient-to-br from-white to-slate-50/50">
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="p-3 bg-brand/10 text-brand rounded-2xl">
-                    <Shield size={24} />
+              {/* Main Actions Panel */}
+              <div className="cd-panel overflow-hidden border-none shadow-xl shadow-blue-900/5 bg-gradient-to-br from-white to-slate-50/50">
+                <div className="p-8 space-y-8">
+                  <div className="flex items-center gap-4 mb-4">
+                    <div className="p-3 bg-brand/10 text-brand rounded-2xl">
+                      <Shield size={24} />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-black text-[#1a2333] tracking-tight">Seguridad y Enlace</h3>
+                      <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Estado del túnel de telemetría</p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="text-lg font-black text-[#1a2333] tracking-tight">Estado de Seguridad</h3>
-                    <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Verificación de enlace encriptado</p>
-                  </div>
-                </div>
 
-                <div className="space-y-6">
                   {monitor.activation_key ? (
                     <div className="p-6 bg-emerald-50 border border-emerald-100 rounded-[28px] flex items-center justify-between group">
                       <div className="flex items-center gap-4">
@@ -338,14 +369,11 @@ const MonitorDetail = () => {
                           <Key size={20} />
                         </div>
                         <div>
-                          <p className="text-[10px] font-black text-emerald-700 uppercase tracking-widest">Token de Sesión Pendiente</p>
-                          <p className="font-mono text-xs font-bold text-emerald-900 truncate max-w-[200px] sm:max-w-md">{monitor.activation_key}</p>
+                          <p className="text-[10px] font-black text-emerald-700 uppercase tracking-widest">Clave de Activación</p>
+                          <p className="font-mono text-xs font-bold text-emerald-900">{monitor.activation_key}</p>
                         </div>
                       </div>
-                      <button 
-                        onClick={copyKey} 
-                        className="p-4 bg-white text-emerald-600 rounded-2xl shadow-md hover:bg-emerald-600 hover:text-white transition-all active:scale-90"
-                      >
+                      <button onClick={copyKey} className="p-4 bg-white text-emerald-600 rounded-2xl shadow-md hover:bg-emerald-600 hover:text-white transition-all active:scale-90">
                         {keyCopied ? <Check size={20} /> : <Copy size={20} />}
                       </button>
                     </div>
@@ -355,60 +383,63 @@ const MonitorDetail = () => {
                         <Check size={20} />
                       </div>
                       <div>
-                        <p className="text-[10px] font-black text-brand uppercase tracking-widest">Nodo Vinculado Correctamente</p>
-                        <p className="text-xs font-bold text-blue-900 leading-relaxed">
-                          La comunicación está cifrada con el Hardware ID: <span className="font-mono">{monitor.hardware_id}</span>
-                        </p>
+                        <p className="text-[10px] font-black text-brand uppercase tracking-widest">Enlace Cifrado Activo</p>
+                        <p className="text-xs font-bold text-blue-900 leading-relaxed">Hardware ID: <span className="font-mono">{monitor.hardware_id}</span></p>
                       </div>
                     </div>
                   )}
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="p-6 bg-white border border-slate-100 rounded-3xl shadow-sm">
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Último Latido</p>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Sincronización</p>
                       <div className="flex items-center gap-3">
                         <div className={`w-2.5 h-2.5 rounded-full ${monitor.status === 'active' ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
                         <span className="text-sm font-black text-slate-700">{formatRelativeTime(monitor.last_seen, now)}</span>
                       </div>
                     </div>
                     <div className="p-6 bg-white border border-slate-100 rounded-3xl shadow-sm">
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Comunidad SNMP</p>
-                      <div className="flex items-center gap-3">
-                        <Search size={16} className="text-brand" />
-                        <span className="text-sm font-black text-slate-700">{monitor.config?.snmp_community || 'public'}</span>
-                      </div>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Exportar Diagnóstico</p>
+                      <button 
+                        onClick={exportLogs}
+                        className="flex items-center gap-3 text-brand hover:underline text-sm font-black"
+                      >
+                        <Download size={16} /> Descargar Logs .CSV
+                      </button>
                     </div>
                   </div>
+                </div>
+              </div>
 
-                  {/* Acciones de Administración Integradas */}
-                  <div className="p-8 bg-slate-50 border border-slate-100 rounded-[32px] space-y-4">
-                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-3">
-                      <Shield size={16} className="text-brand" /> Diagnóstico Remoto
-                    </h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                      <button
-                        onClick={() => sendCommand('RESCAN')}
-                        disabled={!!commandLoading}
-                        className="py-3 px-4 bg-white text-brand border border-blue-100 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-brand hover:text-white transition-all active:scale-95 disabled:opacity-50"
-                      >
-                        <RefreshCw size={14} className={commandLoading === 'RESCAN' ? 'animate-spin' : ''} /> Rescan
-                      </button>
-                      <button
-                        onClick={() => sendCommand('PING')}
-                        disabled={!!commandLoading}
-                        className="py-3 px-4 bg-white text-slate-700 border border-slate-200 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-slate-800 hover:text-white transition-all active:scale-95 disabled:opacity-50"
-                      >
-                        <Activity size={14} className={commandLoading === 'PING' ? 'animate-spin' : ''} /> Ping
-                      </button>
-                      <button
-                        onClick={() => sendCommand('RESTART')}
-                        disabled={!!commandLoading}
-                        className="py-3 px-4 bg-white text-rose-600 border border-rose-100 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-rose-600 hover:text-white transition-all active:scale-95 disabled:opacity-50"
-                      >
-                        <Zap size={14} className={commandLoading === 'RESTART' ? 'animate-spin' : ''} /> Reiniciar
-                      </button>
-                    </div>
-                     </div>
+              {/* Support Tools (Canal Directo Orange Header) */}
+              <div className="cd-panel overflow-hidden border-none shadow-xl shadow-blue-900/5">
+                <div className="cd-header-orange flex items-center gap-3">
+                  <Settings size={18} />
+                  Herramientas de Soporte Remoto
+                </div>
+                <div className="p-8">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <button
+                      onClick={() => sendCommand('RESCAN')}
+                      disabled={!!commandLoading}
+                      className="py-3 px-4 bg-white text-brand border border-blue-100 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-brand hover:text-white transition-all active:scale-95 disabled:opacity-50"
+                    >
+                      <RefreshCw size={14} className={commandLoading === 'RESCAN' ? 'animate-spin' : ''} /> Rescan
+                    </button>
+                    <button
+                      onClick={() => sendCommand('PING')}
+                      disabled={!!commandLoading}
+                      className="py-3 px-4 bg-white text-slate-700 border border-slate-200 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-slate-800 hover:text-white transition-all active:scale-95 disabled:opacity-50"
+                    >
+                      <Activity size={14} className={commandLoading === 'PING' ? 'animate-spin' : ''} /> Ping
+                    </button>
+                    <button
+                      onClick={() => sendCommand('RESTART')}
+                      disabled={!!commandLoading}
+                      className="py-3 px-4 bg-white text-rose-600 border border-rose-100 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-rose-600 hover:text-white transition-all active:scale-95 disabled:opacity-50"
+                    >
+                      <Zap size={14} className={commandLoading === 'RESTART' ? 'animate-spin' : ''} /> Reiniciar
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -430,60 +461,61 @@ const MonitorDetail = () => {
           </header>
           
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+            <table className="cd-table">
               <thead>
-                <tr className="bg-slate-50/50">
-                  <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Dispositivo</th>
-                  <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Red</th>
-                  <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Número de Serie</th>
-                  <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Contadores (Total / Mono / Color)</th>
-                  <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Último Reporte</th>
+                <tr>
+                  <th className="!bg-[#004a99] !text-white !rounded-tl-2xl">Dispositivo</th>
+                  <th className="!bg-[#004a99] !text-white">Red</th>
+                  <th className="!bg-[#004a99] !text-white">Número de Serie</th>
+                  <th className="!bg-[#004a99] !text-white !text-right !rounded-tr-2xl">Contadores (Total / Mono / Color)</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody>
                 {devices.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-8 py-20 text-center">
+                    <td colSpan={4} className="px-8 py-20 text-center">
                       <div className="flex flex-col items-center gap-3">
-                        <Printer size={48} className="text-slate-100" />
+                        <Printer size={48} className="text-slate-200" />
                         <p className="text-slate-400 font-bold text-xs uppercase tracking-widest">No se han descubierto dispositivos en este segmento</p>
                       </div>
                     </td>
                   </tr>
                 ) : (
                   devices.map((device) => (
-                    <tr key={device.id} className="hover:bg-slate-50/50 transition-colors group">
+                    <tr key={device.id} className="group hover:bg-slate-50/50 transition-all">
                       <td className="px-8 py-5">
-                        <Link to={`/devices/${device.id}`} className="flex items-center gap-4 group/item">
-                          <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400 group-hover/item:bg-brand group-hover/item:text-white transition-all">
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-brand/10 group-hover:text-brand transition-all">
                             <Printer size={18} />
                           </div>
                           <div>
-                            <p className="text-xs font-black text-slate-700 uppercase tracking-tight group-hover/item:text-brand transition-colors">{device.model || 'Modelo Genérico'}</p>
-                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{device.brand || 'Marca n/a'}</p>
-                          </div>
-                        </Link>
-                      </td>
-
-                      <td className="px-8 py-5">
-                        <p className="text-xs font-bold text-brand font-mono">{device.ip_address}</p>
-                      </td>
-                      <td className="px-8 py-5">
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{device.serial_number || 'N/A'}</p>
-                      </td>
-                      <td className="px-8 py-5 text-right">
-                        <div className="flex flex-col items-end gap-1">
-                          <span className="text-xs font-black text-slate-700">{(device.total_pages || 0).toLocaleString()}</span>
-                          <div className="flex gap-2">
-                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">M: {(device.mono_pages || 0).toLocaleString()}</span>
-                            <span className="text-[9px] font-bold text-amber-500 uppercase tracking-widest">C: {(device.color_pages || 0).toLocaleString()}</span>
+                            <p className="text-sm font-black text-[#1a2333] tracking-tight">{device.model || 'Modelo Genérico'}</p>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{device.brand || 'Marca n/a'}</p>
                           </div>
                         </div>
                       </td>
                       <td className="px-8 py-5">
-                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tight">
-                          {formatRelativeTime(device.last_seen, now)}
+                        <div className="flex flex-col">
+                          <span className="text-xs font-bold text-slate-600 font-mono">{device.ip_address}</span>
+                          <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">Conexión OK</span>
+                        </div>
+                      </td>
+                      <td className="px-8 py-5">
+                        <span className="px-3 py-1 bg-slate-100 text-slate-600 rounded-lg font-mono text-xs font-bold border border-slate-200">
+                          {device.serial_number || 'N/A'}
                         </span>
+                      </td>
+                      <td className="px-8 py-5 text-right">
+                        <div className="flex flex-col items-end gap-1">
+                          <p className="text-sm font-black text-[#1a2333] tabular-nums">
+                            {(device.total_pages || 0).toLocaleString()} <span className="text-[10px] text-slate-400 font-bold uppercase">Total</span>
+                          </p>
+                          <div className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-widest text-slate-400">
+                            <span>{(device.mono_pages || 0).toLocaleString()} M</span>
+                            <span className="w-1 h-1 bg-slate-200 rounded-full" />
+                            <span className="text-brand">{(device.color_pages || 0).toLocaleString()} C</span>
+                          </div>
+                        </div>
                       </td>
                     </tr>
                   ))

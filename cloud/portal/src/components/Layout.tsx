@@ -39,14 +39,14 @@ const Layout = () => {
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
         className={`
-          fixed inset-y-0 left-0 bg-slate-950 text-white flex flex-col z-[70] transition-all duration-500 cubic-bezier(0.4, 0, 0.2, 1)
-          ${isHovered ? 'w-72 shadow-[20px_0_50px_rgba(0,0,0,0.3)]' : 'md:w-20 w-0 -translate-x-full md:translate-x-0 border-r border-white/5'}
-          ${isMobileMenuOpen ? 'w-72 translate-x-0' : ''}
+          fixed inset-y-0 left-0 bg-white border-r border-slate-200 text-slate-700 flex flex-col z-[70] transition-all duration-500 cubic-bezier(0.4, 0, 0.2, 1)
+          ${isHovered ? 'w-72 shadow-[20px_0_50px_rgba(0,0,0,0.05)]' : 'md:w-20 w-0 -translate-x-full md:translate-x-0'}
+          ${isMobileMenuOpen ? 'w-72 translate-x-0 shadow-2xl' : ''}
           overflow-hidden
         `}
       >
-        {/* Subtle Ambient Glow */}
-        <div className="absolute top-0 left-0 w-full h-64 bg-blue-500/10 blur-[100px] pointer-events-none" />
+        {/* Subtle Ambient Glow (Orange) */}
+        <div className="absolute top-0 left-0 w-full h-64 bg-orange-500/5 blur-[100px] pointer-events-none" />
 
         {/* Brand Header */}
         <div className={`
@@ -72,8 +72,8 @@ const Layout = () => {
             </div>
             
             <div className={`flex items-center gap-1.5 relative z-10 transition-all duration-500 -mt-3 ${isHovered ? 'opacity-100' : 'opacity-0 scale-90 h-0 overflow-hidden'}`}>
-              <span className="font-montserrat font-black text-base tracking-tight text-white">STC</span>
-              <span className="font-montserrat font-black text-base tracking-tight text-blue-500">Cloud</span>
+              <span className="font-montserrat font-black text-base tracking-tight text-[#004a99]">CANAL</span>
+              <span className="font-montserrat font-black text-base tracking-tight text-[#e67e22]">DIRECTO</span>
             </div>
           </Link>
           
@@ -132,11 +132,11 @@ const Layout = () => {
                   {active && isHovered && <ChevronRight size={14} className="ml-auto mr-4 text-blue-400/50" />}
                 </div>
 
-                {/* Active Indicator - Senior UI Pattern */}
+                {/* Active Indicator - Canal Directo Style */}
                 {active && (
                   <div className={`
-                    absolute left-0 bg-blue-500 rounded-r-full transition-all duration-500 shadow-[0_0_15px_rgba(59,130,246,0.6)]
-                    ${isHovered ? 'w-1 top-3 bottom-3' : 'w-1.5 top-4 bottom-4'}
+                    absolute left-0 bg-[#e67e22] rounded-r-full transition-all duration-500 shadow-[0_0_15px_rgba(230,126,34,0.4)]
+                    ${isHovered ? 'w-1.5 top-3 bottom-3' : 'w-2 top-4 bottom-4'}
                   `} />
                 )}
               </Link>
@@ -183,8 +183,8 @@ const Layout = () => {
             <button
               onClick={logout}
               className={`
-                flex items-center justify-center gap-2 rounded-xl bg-white/[0.03] hover:bg-rose-500/10 hover:text-rose-400 text-[11px] font-black uppercase tracking-widest text-slate-400 transition-all duration-300 border border-white/5
-                ${isHovered ? 'w-full py-2.5 px-4' : 'absolute inset-0 opacity-0 group-hover:opacity-100 bg-slate-950/80 backdrop-blur-sm border-none rounded-2xl'}
+                flex items-center justify-center gap-2 rounded-xl bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-[11px] font-black uppercase tracking-widest text-slate-500 transition-all duration-300 border border-slate-200
+                ${isHovered ? 'w-full py-2.5 px-4' : 'absolute inset-0 opacity-0 group-hover:opacity-100 bg-white/95 backdrop-blur-sm border border-slate-200 rounded-2xl'}
               `}
               title="Cerrar Sesión"
             >

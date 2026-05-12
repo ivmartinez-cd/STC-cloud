@@ -1,7 +1,8 @@
 @import "tailwindcss";
 
 @theme {
-  --color-brand: #2980b9;
+  --color-brand: #e67e22;   /* Canal Directo Orange */
+  --color-primary: #004a99; /* Canal Directo Blue */
 
   /* Z-index scale — single source of truth */
   --z-sidebar: 50;
@@ -13,14 +14,14 @@
 
 :root {
   /* Brand Colors — Canal Directo Premium Palette */
-  --color-primary: #2980b9;       /* STC Brand Blue */
-  --color-primary-dark: #1a5f88;
-  --color-accent: #f59e0b;        /* Amber */
-  --color-bg: #f8fafc;
+  --color-primary: #004a99;       /* Corporate Blue */
+  --color-primary-dark: #003366;
+  --color-accent: #e67e22;        /* Corporate Orange */
+  --color-bg: #f4f7fa;            /* Light Professional Gray */
   --color-panel: #ffffff;
-  --color-text: #0f172a;
+  --color-text: #1a2333;
   --color-text-muted: #64748b;
-  --color-border: #f1f5f9;
+  --color-border: #e2e8f0;
 
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   color: var(--color-text);
@@ -58,8 +59,30 @@ body {
 }
 
 .cd-panel:hover {
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
-  border-color: rgba(41, 128, 185, 0.1);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.04), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+}
+
+/* Header Variations (from Canal Directo screenshots) */
+.cd-header-blue {
+  background: var(--color-primary);
+  color: white;
+  padding: 1rem 1.5rem;
+  border-radius: 24px 24px 0 0;
+  font-weight: 800;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.cd-header-orange {
+  background: var(--color-accent);
+  color: white;
+  padding: 1rem 1.5rem;
+  border-radius: 24px 24px 0 0;
+  font-weight: 800;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
 }
 
 /* High-End Table System */
