@@ -14,6 +14,7 @@ import knexConfig from "../db/knexfile";
 import { AgentService } from "../services/agentService";
 import "../jobs/heartbeatMonitor";
 import "../jobs/alertWorker"; // Inicia el worker de alertas (BullMQ)
+import { registerWebSocket, broadcastToPortal } from "../ws";
 
 dotenv.config({ path: path.join(__dirname, "../../../.env") });
 
@@ -24,6 +25,7 @@ if (!process.env.JWT_SECRET) {
 }
 
 const fastify = Fastify({ logger: true });
+registerWebSocket(fastify);
 
 const db = knex(knexConfig.development);
 const redis = new Redis(process.env.REDIS_URL || "redis://localhost:6379", {
@@ -426,6 +428,14 @@ const start = async () => {
         if (commandResults && Array.isArray(commandResults)) {
           for (const res of commandResults) {
             await agentService.updateCommandResult(res.id, res.status, res.result);
+            
+            // Notificar al portal en tiempo real
+            broadcastToPortal("command_result", {
+              agentId: id,
+              commandId: res.id,
+              status: res.status,
+              result: res.result
+            });
           }
         }
 
