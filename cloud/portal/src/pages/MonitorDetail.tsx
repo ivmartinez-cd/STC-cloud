@@ -270,32 +270,35 @@ const MonitorDetail = () => {
       <div className="flex gap-1 bg-slate-100/50 p-1.5 rounded-[24px] w-fit">
         <button
           onClick={() => handleTabChange('overview')}
-          className={`px-8 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${
+          className={`px-8 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${
             activeTab === 'overview' 
               ? 'bg-white text-brand shadow-sm shadow-blue-900/5' 
               : 'text-slate-400 hover:text-slate-600'
           }`}
         >
+          <Activity size={14} />
           Resumen
         </button>
         <button
           onClick={() => handleTabChange('devices')}
-          className={`px-8 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${
+          className={`px-8 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${
             activeTab === 'devices' 
               ? 'bg-white text-brand shadow-sm shadow-blue-900/5' 
               : 'text-slate-400 hover:text-slate-600'
           }`}
         >
+          <HardDrive size={14} />
           Dispositivos
         </button>
         <button
           onClick={() => handleTabChange('console')}
-          className={`px-8 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${
+          className={`px-8 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${
             activeTab === 'console' 
               ? 'bg-white text-brand shadow-sm shadow-blue-900/5' 
               : 'text-slate-400 hover:text-slate-600'
           }`}
         >
+          <TerminalIcon size={14} />
           Consola
         </button>
       </div>

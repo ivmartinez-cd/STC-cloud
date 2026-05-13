@@ -38,7 +38,10 @@ function checkIcons(dir) {
     // Find lucide-react imports
     const importMatch = content.match(/import \{([^}]+)\} from 'lucide-react'/);
     const importedIcons = importMatch 
-      ? importMatch[1].split(',').map(i => i.trim().split(' as ')[0]) 
+      ? importMatch[1].split(',').map(i => {
+          const parts = i.trim().split(' as ');
+          return parts[parts.length - 1];
+        }) 
       : [];
 
     // Find used icons in JSX (uppercase tags)
