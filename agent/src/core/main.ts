@@ -462,24 +462,12 @@ async function main(): Promise<void> {
     // ─── Iniciar Loops ───────────────────────────────────────────────────────
     log('INFO', `Scan cada ${currentConfig.scanIntervalMinutes} min | Community: ${currentConfig.snmpCommunity}`);
     
-    heartbeat(); // Primer latido
-    setInterval(heartbeat, 60000); // Latido de respaldo cada 60s
+    heartbeat(); // Inicia la cadena de latidos (se auto-programa cada 5 min)
 
     syncLoop(); // Primer sync
-    setInterval(syncLoop, 30000); // Sync de datos cada 30s
+    setInterval(syncLoop, 60000); // Sincronización de datos cada 60s
 
     snmpScan(currentConfig); // Iniciar bucle de escaneo
-
-    const FORCE_FLAG = path.join(DATA_DIR, 'force-scan.flag');
-    setInterval(() => {
-      if (fs.existsSync(FORCE_FLAG)) {
-        try { fs.unlinkSync(FORCE_FLAG); } catch { /* ignore */ }
-        log('INFO', 'Sincronizacion forzada solicitada desde la UI.');
-        // Nota: snmpScan ya se encarga de su propio bucle recursivo, 
-        // llamar aquí a snmpScan() iniciaría uno paralelo.
-        // En una versión futura podríamos usar un EventEmitter.
-      }
-    }, 10_000);
 
     log('INFO', 'Todos los loops activos.');
 
