@@ -522,18 +522,28 @@ const start = async () => {
         const { id } = request.params as any;
         const logs = await agentService.getLogs(id, 1000); // Exportar los últimos 1000
         
-        const pad = (n: number) => n.toString().padStart(2, '0');
         const formatDate = (date: Date) => {
-          // Ajuste de zona horaria: El servidor está en UTC, restamos 3 horas para UTC-3
-          const localDate = new Date(date.getTime() - (3 * 60 * 60 * 1000));
-          
-          const d = pad(localDate.getDate());
-          const m = pad(localDate.getMonth() + 1);
-          const y = localDate.getFullYear();
-          const h = pad(localDate.getHours());
-          const min = pad(localDate.getMinutes());
-          const s = pad(localDate.getSeconds());
-          return `${d}/${m}/${y} ${h}:${min}:${s}`;
+          try {
+            // Usamos el formateador oficial para Argentina (esto maneja el DD/MM y el UTC-3 automáticamente)
+            const formatter = new Intl.DateTimeFormat('es-AR', {
+              day: '2-digit',
+              month: '2-digit',
+              year: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit',
+              second: '2-digit',
+              hour12: false,
+              timeZone: 'America/Argentina/Buenos_Aires'
+            });
+            
+            const parts = formatter.formatToParts(date);
+            const get = (type: string) => parts.find(p => p.type === type)?.value;
+            
+            return `${get('day')}/${get('month')}/${get('year')} ${get('hour')}:${get('minute')}:${get('second')}`;
+          } catch (e) {
+            // Fallback básico por si falla la zona horaria en el entorno del servidor
+            return date.toISOString();
+          }
         };
 
         const agentName = logs.length > 0 ? (logs[0] as any).agent_name || id : id;
