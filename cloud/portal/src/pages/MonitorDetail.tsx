@@ -4,7 +4,7 @@ import {
   ArrowLeft, HardDrive, Shield, Activity, Clock,
   Settings, RefreshCw, Key, ShieldOff, 
   Check, Copy, AlertTriangle, Loader2,
-  X, Printer, Download, Zap, Command, Terminal
+  X, Printer, Download, Zap, Command, Terminal as TerminalIcon
 } from 'lucide-react';
 import { api } from '../lib/api';
 import { useToast } from '../context/ToastContext';
