@@ -382,12 +382,13 @@ export class AgentService {
   }
 
   async addCommand(agentId: string, type: string, payload: any = {}) {
-    await this.db("agent_commands").insert({
+    const [command] = await this.db("agent_commands").insert({
       agent_id: agentId,
       type,
       payload: JSON.stringify(payload),
       status: "pending",
-    });
+    }).returning("*");
+    return command;
   }
 
   async getPendingCommands(agentId: string) {
@@ -437,6 +438,15 @@ export class AgentService {
     return !!val;
   }
 
+
+  async heartbeat(agentId: string) {
+    await this.db("agents")
+      .where({ id: agentId })
+      .update({ 
+        last_seen: new Date(),
+        status: this.db.raw("CASE WHEN status = 'offline' THEN 'active' ELSE status END")
+      });
+  }
 
   async getConfig(agentId: string) {
     const agent = await this.db("agents")

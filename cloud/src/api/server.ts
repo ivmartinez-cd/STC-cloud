@@ -518,7 +518,7 @@ const start = async () => {
       async (request) => {
         const { id } = request.params as any;
         const { type, payload } = request.body as any;
-        const command = await agentService.queueCommand(id, type, payload || {});
+        const command = await agentService.addCommand(id, type, payload || {});
         return { status: "queued", commandId: command.id };
       }
     );
