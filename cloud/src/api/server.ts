@@ -14,7 +14,7 @@ import knexConfig from "../db/knexfile";
 import { AgentService } from "../services/agentService";
 import "../jobs/heartbeatMonitor";
 import "../jobs/alertWorker"; // Inicia el worker de alertas (BullMQ)
-import { registerWebSocket, broadcastToPortal } from "../ws";
+import { registerWebSocket, broadcastToPortal, sendCommandToAgent } from "../ws/index";
 
 dotenv.config({ path: path.join(__dirname, "../../../.env") });
 
@@ -555,7 +555,7 @@ const start = async () => {
       }
     );
 
-    // Enviar comando al agente (vía DB)
+    // Enviar comando al agente (vía DB y WSS si está online)
     fastify.post(
       "/api/v1/agents/:id/command",
       { preHandler: portalAuth, schema: commandSchema },
@@ -563,10 +563,19 @@ const start = async () => {
         const { id } = request.params as any;
         const { type, payload } = request.body as any;
         const user = (request as any).user;
-        const commandId = await agentService.addCommand(id, type, payload, user.userId);
-        fastify.log.info({ agentId: id, type, commandId }, "Comando remoto registrado y pendiente");
         
-        return { success: true, commandId };
+        // 1. Guardar en DB (siempre, por si el agente está offline)
+        const command = await agentService.addCommand(id, type, payload || {}, user?.userId);
+        fastify.log.info({ agentId: id, type, commandId: command.id }, "Comando remoto registrado y pendiente");
+        
+        // 2. Intentar empujar por WebSocket para ejecución instantánea
+        const sentViaWss = sendCommandToAgent(id, type, payload || {});
+        
+        if (sentViaWss) {
+          fastify.log.info({ agentId: id }, "Comando empujado instantáneamente vía WSS");
+        }
+
+        return { success: true, commandId: command.id, instant: sentViaWss };
       }
     );
 
