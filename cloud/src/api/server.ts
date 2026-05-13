@@ -12,7 +12,9 @@ import crypto from "crypto";
 
 import knexConfig from "../db/knexfile";
 import { AgentService } from "../services/agentService";
-import "../jobs/heartbeatMonitor"; // Inicia el monitor de heartbeat al arrancar
+import { registerWebSocket } from "./ws";
+import "../jobs/heartbeatMonitor";
+import "../jobs/alertWorker"; // Inicia el worker de alertas (BullMQ)
 
 dotenv.config({ path: path.join(__dirname, "../../../.env") });
 
@@ -78,6 +80,9 @@ async function portalAuth(request: FastifyRequest, reply: FastifyReply) {
     return reply.status(401).send({ error: "Token inválido o expirado" });
   }
 }
+
+// Registro de WebSockets
+registerWebSocket(fastify);
 
 // ─── Schemas de validación ───────────────────────────────────────────────────
 
