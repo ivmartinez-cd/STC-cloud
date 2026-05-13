@@ -524,13 +524,16 @@ const start = async () => {
         
         const pad = (n: number) => n.toString().padStart(2, '0');
         const formatDate = (date: Date) => {
-          const d = pad(date.getDate());
-          const m = pad(date.getMonth() + 1);
-          const y = date.getFullYear();
-          const h = pad(date.getHours());
-          const min = pad(date.getMinutes());
-          const s = pad(date.getSeconds());
-          return `${d}/${m}/${y} ${h}-${min}-${s}`;
+          // Ajuste de zona horaria: El servidor está en UTC, restamos 3 horas para UTC-3
+          const localDate = new Date(date.getTime() - (3 * 60 * 60 * 1000));
+          
+          const d = pad(localDate.getDate());
+          const m = pad(localDate.getMonth() + 1);
+          const y = localDate.getFullYear();
+          const h = pad(localDate.getHours());
+          const min = pad(localDate.getMinutes());
+          const s = pad(localDate.getSeconds());
+          return `${d}/${m}/${y} ${h}:${min}:${s}`;
         };
 
         const agentName = logs.length > 0 ? (logs[0] as any).agent_name || id : id;
