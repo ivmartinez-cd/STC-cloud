@@ -228,6 +228,11 @@ const start = async () => {
       }
     } catch (e) {}
 
+    try {
+      const applied = await db("knex_migrations").select("name");
+      console.log(`[DB] Migraciones en DB: ${applied.map(m => m.name).join(", ")}`);
+    } catch (e) {}
+
     await db.migrate.latest({
       directory: path.join(__dirname, "../db/migrations"),
       loadExtensions: process.env.NODE_ENV === "production" ? [".js"] : [".js", ".ts"]
