@@ -521,6 +521,8 @@ const MonitorDetail = () => {
             </table>
           </div>
         </div>
+      )}
+
       {/* Console Tab */}
       {!loading && !error && monitor && activeTab === 'console' && (
         <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
