@@ -27,20 +27,31 @@ export async function registerWebSocket(fastify: FastifyInstance) {
     // 1. Identificación y Autenticación
     let agentId: string | null = null;
     try {
+      fastify.log.info(`Handshake WSS iniciado desde IP: ${request.ip}`);
+      
+      // Verificar si el token viene en los headers
+      const authHeader = request.headers.authorization;
+      if (!authHeader) {
+        fastify.log.warn('Conexión WSS rechazada: Falta cabecera Authorization');
+        socket.close(4001, 'Token requerido');
+        return;
+      }
+
       // Intentar verificar si es un Agente vía JWT
       await request.jwtVerify();
       const user = request.user as any;
       const tid = user.agentId as string;
+      
       if (tid) {
         agentId = tid;
         agentClients.set(tid, socket);
-        fastify.log.info(`Agente ${tid} conectado vía WSS`);
+        fastify.log.info(`Agente ${tid} autenticado y conectado vía WSS`);
       } else {
         portalClients.add(socket);
-        fastify.log.info(`Cliente de Portal conectado vía WSS`);
+        fastify.log.info(`Cliente de Portal autenticado y conectado vía WSS`);
       }
-    } catch (e) {
-      fastify.log.warn('Conexión WSS rechazada: No se pudo verificar identidad');
+    } catch (e: any) {
+      fastify.log.error(`Error en autenticación WSS: ${e.message}`);
       socket.close(4001, 'No autorizado');
       return;
     }

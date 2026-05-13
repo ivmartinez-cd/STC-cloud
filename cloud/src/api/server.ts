@@ -12,7 +12,6 @@ import crypto from "crypto";
 
 import knexConfig from "../db/knexfile";
 import { AgentService } from "../services/agentService";
-import { registerWebSocket } from "../ws";
 import "../jobs/heartbeatMonitor";
 import "../jobs/alertWorker"; // Inicia el worker de alertas (BullMQ)
 
@@ -83,8 +82,6 @@ async function portalAuth(request: FastifyRequest, reply: FastifyReply) {
   }
 }
 
-// Registro de WebSockets
-registerWebSocket(fastify);
 
 // ─── Schemas de validación ───────────────────────────────────────────────────
 
@@ -254,8 +251,9 @@ const start = async () => {
       const { registerWebSocket } = await import("../ws/index");
       await registerWebSocket(fastify);
       fastify.log.info("WebSocket hub activo en /ws");
-    } catch {
-      fastify.log.warn("@fastify/websocket no instalado — WebSocket desactivado");
+    } catch (err: any) {
+      fastify.log.error(`Error cargando @fastify/websocket: ${err.message}`);
+      fastify.log.warn("@fastify/websocket no instalado o falló la carga — WebSocket desactivado");
     }
 
     // ─── Rutas públicas ───────────────────────────────────────────────────────
