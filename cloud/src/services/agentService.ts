@@ -192,12 +192,31 @@ export class AgentService {
   async ingestLogs(agentId: string, logs: any[]) {
     if (!logs || logs.length === 0) return;
     
-    const rows = logs.map(l => ({
-      agent_id: agentId,
-      level: l.level || 'INFO',
-      message: l.message,
-      timestamp: new Date(l.timestamp || Date.now())
-    }));
+    const rows = logs.map(l => {
+      let ts: Date;
+      const raw = l.timestamp || l.time; // Soportar ambos nombres de campo
+      
+      if (raw) {
+        // Heurística para detectar DD/MM/YYYY HH:mm:ss (formato común de agentes locales)
+        const parts = String(raw).match(/(\d{2})\/(\d{2})\/(\d{4})/);
+        if (parts) {
+          // Si parece DD/MM/YYYY, lo rearmamos a YYYY-MM-DD para que el constructor de Date no se confunda
+          const timePart = String(raw).split(' ')[1] || '00:00:00';
+          ts = new Date(`${parts[3]}-${parts[2]}-${parts[1]}T${timePart}`);
+        } else {
+          ts = new Date(raw);
+        }
+      } else {
+        ts = new Date();
+      }
+
+      return {
+        agent_id: agentId,
+        level: l.level || 'INFO',
+        message: l.message,
+        timestamp: isNaN(ts.getTime()) ? new Date() : ts
+      };
+    });
 
     await this.db("agent_logs").insert(rows);
   }
@@ -328,10 +347,20 @@ export class AgentService {
 
         const deviceId = upserted.rows[0].id;
 
-        // Parseo seguro de fecha
-        let readingTime = new Date(r.time);
+        // Parseo seguro de fecha (detectar DD/MM/YYYY)
+        let readingTime: Date;
+        const rawTime = r.time || "";
+        const dateParts = String(rawTime).match(/(\d{2})\/(\d{2})\/(\d{4})/);
+        
+        if (dateParts) {
+          const timePart = String(rawTime).split(' ')[1] || '00:00:00';
+          readingTime = new Date(`${dateParts[3]}-${dateParts[2]}-${dateParts[1]}T${timePart}`);
+        } else {
+          readingTime = new Date(rawTime);
+        }
+
         if (isNaN(readingTime.getTime())) {
-          readingTime = new Date(); // Fallback a ahora si la fecha es inválida
+          readingTime = new Date(); 
         }
 
         mappedReadings.push({
