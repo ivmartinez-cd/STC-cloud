@@ -56,8 +56,7 @@ cloud/scratch/
 cloud/check_key.js
 
 # ─── Documentos internos de desarrollo AI ────────────────────────────────────
-ANTIGRAVITY_SKILLS.md
-PROJECT_GUIDELINES.md
+# Los archivos de desarrollo ahora se encuentran en docs/dev/ y son trackeables
 
 # ─── Env ────────────────────────────────────
 env
