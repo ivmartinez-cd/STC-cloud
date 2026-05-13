@@ -25,7 +25,6 @@ if (!process.env.JWT_SECRET) {
 }
 
 const fastify = Fastify({ logger: true });
-registerWebSocket(fastify);
 
 const db = knex(knexConfig.development);
 const redis = new Redis(process.env.REDIS_URL || "redis://localhost:6379", {
