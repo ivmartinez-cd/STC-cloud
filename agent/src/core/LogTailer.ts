@@ -34,18 +34,19 @@ export class LogTailer {
     const lines = content.split('\n').filter(l => l.trim() !== '');
 
     const parsedLogs = lines.map(line => {
-      // Formato esperado: 13/05/2026 09:40:46     INFO     Mensaje
-      const match = line.match(/^(\d{2}\/\d{2}\/\d{4} \d{2}:\d{2}:\d{2})\s+([A-Z]+)\s+(.*)$/);
+      // Regex ultra-flexible: Fecha, Hora, Nivel (sin corchetes), Mensaje
+      const match = line.match(/^(\d{2}\/\d{2}\/\d{4})\s+(\d{2}:\d{2}:\d{2})\s+(\w+)\s+(.+)$/);
+      
       if (match) {
-        const [d, t] = match[1].split(' ');
-        const [day, month, year] = d.split('/');
+        const [_, date, time, level, message] = match;
+        const [day, month, year] = date.split('/');
         // Forzamos el envío en formato ISO con el offset de Argentina para evitar ambigüedades en el servidor
-        const isoTimestamp = `${year}-${month}-${day}T${t}-03:00`;
+        const isoTimestamp = `${year}-${month}-${day}T${time}-03:00`;
         
         return {
           timestamp: isoTimestamp,
-          level: match[2].trim(),
-          message: match[3]
+          level: level.trim(),
+          message: message
         };
       }
       return {
@@ -55,8 +56,6 @@ export class LogTailer {
       };
     });
 
-    // Enterprise Policy: Solo subir WARN y ERROR automáticamente para reducir ruido.
-    // Los INFO se quedan en el archivo local del agente.
-    return parsedLogs.filter(log => ['WARN', 'ERROR'].includes(log.level));
+    return parsedLogs;
   }
 }
