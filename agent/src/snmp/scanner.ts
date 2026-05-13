@@ -129,6 +129,9 @@ export async function readDevice(ip: string, community: string): Promise<DeviceR
     }
 
     // ── Fase 5: Limpieza de "Basura" (Fabricante + Modelo únicamente) ────────
+    // 🛑 IMPORTANTE: Esta lógica de limpieza y detección de marca ha sido validada
+    // y NO debe ser modificada, "optimizada" o alterada a menos que el usuario
+    // lo pida EXPLÍCITAMENTE. El objetivo es mantener el formato: [Marca] [Modelo].
     const raw = String(sysDescr ?? '').trim();
     
     // 1. Cortar en el primer separador o palabra clave técnica
