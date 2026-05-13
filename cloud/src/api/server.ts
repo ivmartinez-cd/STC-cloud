@@ -514,7 +514,7 @@ const start = async () => {
       }
     );
 
-    // Exportar logs a CSV
+    // Exportar logs a un formato legible (.log)
     fastify.get(
       "/api/v1/agents/:id/logs/export",
       { preHandler: portalAuth },
@@ -522,16 +522,43 @@ const start = async () => {
         const { id } = request.params as any;
         const logs = await agentService.getLogs(id, 1000); // Exportar los últimos 1000
         
-        let csv = "Timestamp;Level;Message\n";
+        const pad = (n: number) => n.toString().padStart(2, '0');
+        const formatDate = (date: Date) => {
+          const d = pad(date.getDate());
+          const m = pad(date.getMonth() + 1);
+          const y = date.getFullYear();
+          const h = pad(date.getHours());
+          const min = pad(date.getMinutes());
+          const s = pad(date.getSeconds());
+          return `${d}/${m}/${y} ${h}-${min}-${s}`;
+        };
+
+        const agentName = logs.length > 0 ? (logs[0] as any).agent_name || id : id;
+        
+        let report = "================================================================================\n";
+        report += "STC CLOUD - REPORTE DE AUDITORÍA DE AGENTE\n";
+        report += "================================================================================\n";
+        report += `Agente ID: ${id}\n`;
+        report += `Generado:  ${formatDate(new Date())}\n`;
+        report += "--------------------------------------------------------------------------------\n\n";
+        report += "[ FECHA Y HORA ]        [ NIVEL ]   [ MENSAJE ]\n";
+        report += "--------------------------------------------------------------------------------\n";
+
         logs.forEach((l: any) => {
-          const time = new Date(l.time).toLocaleString('es-AR');
-          csv += `${time};${l.level};${l.message}\n`;
+          // El campo en DB es 'timestamp', no 'time'
+          const dateObj = new Date(l.timestamp);
+          const time = isNaN(dateObj.getTime()) ? "---" : formatDate(dateObj);
+          const level = (l.level || "INFO").padEnd(8);
+          report += `${time.padEnd(23)} ${level} ${l.message}\n`;
         });
 
+        report += "\n--------------------------------------------------------------------------------\n";
+        report += "Fin del reporte - STC Cloud Monitor\n";
+
         reply
-          .header("Content-Type", "text/csv")
-          .header("Content-Disposition", `attachment; filename=logs_agent_${id}.csv`)
-          .send(csv);
+          .header("Content-Type", "text/plain; charset=utf-8")
+          .header("Content-Disposition", `attachment; filename=log_${id}.txt`)
+          .send(report);
       }
     );
 
