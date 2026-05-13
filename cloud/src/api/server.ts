@@ -27,7 +27,9 @@ if (!process.env.JWT_SECRET) {
 const fastify = Fastify({ logger: true });
 
 const db = knex(knexConfig.development);
-const redis = new Redis(process.env.REDIS_URL || "redis://localhost:6379");
+const redis = new Redis(process.env.REDIS_URL || "redis://localhost:6379", {
+  maxRetriesPerRequest: null,
+});
 const agentService = new AgentService(db, redis);
 
 // JWT de 30 días para agentes, 8 horas para portal (mismo secret, distinto payload)

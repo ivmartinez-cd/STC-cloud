@@ -4,7 +4,9 @@ import knex from 'knex';
 import knexConfig from '../db/knexfile';
 
 const db    = knex(knexConfig.development);
-const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
+const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379', {
+  maxRetriesPerRequest: null,
+});
 
 interface MappedReading {
   device_id: string;
