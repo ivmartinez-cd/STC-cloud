@@ -413,6 +413,34 @@ export class AgentService {
     await this.heartbeat(agentId);
   }
 
+  async addCommand(agentId: string, type: string, payload: any = {}) {
+    await this.db("agent_commands").insert({
+      agent_id: agentId,
+      type,
+      payload: JSON.stringify(payload),
+      status: "pending",
+    });
+  }
+
+  async getPendingCommands(agentId: string) {
+    const commands = await this.db("agent_commands")
+      .where({ agent_id: agentId, status: "pending" })
+      .select("id", "type", "payload");
+
+    if (commands.length > 0) {
+      // Marcar como enviados para que no se repitan
+      await this.db("agent_commands")
+        .whereIn("id", commands.map(c => c.id))
+        .update({ status: "sent", sent_at: new Date() });
+    }
+
+    return commands.map(c => ({
+      id: c.id,
+      type: c.type,
+      payload: typeof c.payload === "string" ? JSON.parse(c.payload) : c.payload,
+    }));
+  }
+
 
   async revokeToken(redis: any, agentId: string, ttlSeconds: number, requestIp?: string) {
     await redis.set(`blacklist:${agentId}`, "true", "EX", ttlSeconds);

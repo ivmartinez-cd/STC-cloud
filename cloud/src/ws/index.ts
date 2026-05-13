@@ -30,10 +30,11 @@ export async function registerWebSocket(fastify: FastifyInstance) {
       // Intentar verificar si es un Agente vía JWT
       await request.jwtVerify();
       const user = request.user as any;
-      if (user.agentId) {
-        agentId = user.agentId;
-        agentClients.set(agentId, socket);
-        fastify.log.info(`Agente ${agentId} conectado vía WSS`);
+      const tid = user.agentId as string;
+      if (tid) {
+        agentId = tid;
+        agentClients.set(tid, socket);
+        fastify.log.info(`Agente ${tid} conectado vía WSS`);
       } else {
         portalClients.add(socket);
         fastify.log.info(`Cliente de Portal conectado vía WSS`);
