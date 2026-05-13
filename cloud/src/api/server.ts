@@ -898,10 +898,15 @@ const start = async () => {
           .orderBy("count", "desc")
           .limit(5),
 
-        // Agentes offline con nombre de cliente
+        // Agentes offline o pendientes con nombre de cliente
         db("agents")
           .join("clients", "agents.client_id", "clients.id")
-          .where("agents.last_seen", "<", fiveMinsAgo)
+          .where((builder) => {
+            builder.where("agents.last_seen", "<", fiveMinsAgo)
+                   .orWhereNull("agents.last_seen")
+                   .orWhere("agents.status", "offline");
+          })
+          .whereNot("agents.status", "revoked")
           .select("agents.id", "agents.name", "clients.name as client_name", "agents.last_seen")
           .orderBy("agents.last_seen", "desc")
           .limit(10),

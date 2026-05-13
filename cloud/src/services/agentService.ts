@@ -73,7 +73,8 @@ export class AgentService {
   // Bug #1 corregido: ahora valida el agentId + hash del refresh_token
   async refreshAgentToken(agentId: string, refreshToken: string) {
     const agent = await this.db("agents")
-      .where({ id: agentId, status: "active" })
+      .where({ id: agentId })
+      .whereIn("status", ["active", "offline"])
       .first();
 
     if (!agent) {
@@ -93,6 +94,7 @@ export class AgentService {
       .update({
         refresh_token_hash: newRefreshTokenHash,
         last_seen: new Date(),
+        status: "active",
       });
 
     return { agentId, refreshToken: newRefreshToken };
@@ -369,6 +371,9 @@ export class AgentService {
     } catch (e) {
       console.error("[SYNC] BullMQ no disponible:", e);
     }
+
+    // Actualizar también el heartbeat del agente al sincronizar
+    await this.heartbeat(agentId);
   }
 
 
@@ -392,7 +397,10 @@ export class AgentService {
   async heartbeat(agentId: string) {
     await this.db("agents")
       .where({ id: agentId })
-      .update({ last_seen: new Date() });
+      .update({ 
+        last_seen: new Date(),
+        status: this.db.raw("CASE WHEN status = 'offline' THEN 'active' ELSE status END")
+      });
   }
 
   async getConfig(agentId: string) {
