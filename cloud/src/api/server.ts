@@ -12,7 +12,7 @@ import crypto from "crypto";
 
 import knexConfig from "../db/knexfile";
 import { AgentService } from "../services/agentService";
-import { registerWebSocket } from "./ws";
+import { registerWebSocket } from "../ws";
 import "../jobs/heartbeatMonitor";
 import "../jobs/alertWorker"; // Inicia el worker de alertas (BullMQ)
 
