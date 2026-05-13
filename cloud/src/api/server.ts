@@ -204,8 +204,21 @@ const start = async () => {
   try {
     // Ejecutar migraciones automáticamente al arrancar
     console.log("[DB] Verificando y ejecutando migraciones...");
+    
+    // Hack: Si estamos en producción (JS), Knex se queja si las migraciones en la DB tienen .ts
+    // Normalizamos las extensiones en la tabla knex_migrations
+    try {
+      const hasTable = await db.schema.hasTable("knex_migrations");
+      if (hasTable) {
+        await db.raw(`UPDATE knex_migrations SET name = REPLACE(name, '.ts', '.js') WHERE name LIKE '%.ts'`);
+      }
+    } catch (e) {
+      console.warn("[DB] No se pudo normalizar knex_migrations (posiblemente primera ejecución)");
+    }
+
     await db.migrate.latest({
-      directory: path.join(__dirname, "../db/migrations")
+      directory: path.join(__dirname, "../db/migrations"),
+      loadExtensions: [".js", ".ts"]
     });
     console.log("[DB] Migraciones al día.");
 
