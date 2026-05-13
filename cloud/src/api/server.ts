@@ -429,6 +429,7 @@ const start = async () => {
             await agentService.updateCommandResult(res.id, res.status, res.result);
             
             // Notificar al portal en tiempo real
+            fastify.log.info({ agentId: id, commandId: res.id }, `[WSS] Reenviando resultado de comando al portal`);
             broadcastToPortal("command_result", {
               agentId: id,
               commandId: res.id,
@@ -562,8 +563,10 @@ const start = async () => {
         const { id } = request.params as any;
         const { type, payload } = request.body as any;
         const user = (request as any).user;
-        const command = await agentService.addCommand(id, type, payload || {}, user?.userId);
-        return { status: "queued", commandId: command.id };
+        const commandId = await agentService.addCommand(id, type, payload, user.userId);
+        fastify.log.info({ agentId: id, type, commandId }, "Comando remoto registrado y pendiente");
+        
+        return { success: true, commandId };
       }
     );
 
