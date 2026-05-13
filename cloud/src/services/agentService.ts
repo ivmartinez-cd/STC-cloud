@@ -29,6 +29,12 @@ export class AgentService {
       scan_interval_minutes: config?.scan_interval_minutes ?? 15,
     });
 
+    await this.db("audit_logs").insert({
+      action: "AGENT_CREATED",
+      target_id: agentId,
+      metadata: JSON.stringify({ clientId, name }),
+    });
+
     return { agentId, key, expiresAt };
   }
 

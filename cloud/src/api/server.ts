@@ -42,6 +42,12 @@ async function agentAuth(request: FastifyRequest, reply: FastifyReply) {
       return reply.status(403).send({ error: "Token de portal no puede acceder a esta ruta" });
     }
 
+    // Security fix: If there's an :id in the params, it MUST match the token's agentId
+    const { id } = request.params as any;
+    if (id && id !== user.agentId) {
+      return reply.status(403).send({ error: "No tiene permisos para acceder a este agente" });
+    }
+
     // Bug corregido: Verificar que el agente existe y está activo en la DB
     const agent = await db("agents").where({ id: user.agentId }).select("status").first();
     if (!agent || agent.status === "revoked") {
