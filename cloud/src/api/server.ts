@@ -216,9 +216,21 @@ const start = async () => {
       console.warn("[DB] No se pudo normalizar knex_migrations (posiblemente primera ejecución)");
     }
 
+    try {
+      const fs = require("fs");
+      const migDir = path.join(__dirname, "../db/migrations");
+      console.log(`[DB] Directorio de migraciones: ${migDir}`);
+      if (fs.existsSync(migDir)) {
+        const files = fs.readdirSync(migDir);
+        console.log(`[DB] Archivos encontrados: ${files.join(", ")}`);
+      } else {
+        console.error(`[DB] ERROR: El directorio de migraciones NO existe: ${migDir}`);
+      }
+    } catch (e) {}
+
     await db.migrate.latest({
       directory: path.join(__dirname, "../db/migrations"),
-      loadExtensions: [".js", ".ts"]
+      loadExtensions: process.env.NODE_ENV === "production" ? [".js"] : [".js", ".ts"]
     });
     console.log("[DB] Migraciones al día.");
 

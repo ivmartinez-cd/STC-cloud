@@ -23,7 +23,7 @@ const config: { [key: string]: Knex.Config } = {
     connection,
     migrations: {
       directory: "./migrations",
-      extension: "ts",
+      loadExtensions: [".js", ".ts"],
     },
     pool: {
       min: 0,
