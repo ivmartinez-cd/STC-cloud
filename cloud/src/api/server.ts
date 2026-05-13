@@ -155,7 +155,7 @@ const commandSchema = {
     type: "object",
     required: ["type"],
     properties: {
-      type: { type: "string", enum: ["FORCE_SCAN", "RESTART", "UPDATE_CONFIG", "PING"] },
+      type: { type: "string", enum: ["FORCE_SCAN", "RESTART", "UPDATE_CONFIG", "PING", "STC_CONSOLE"] },
       payload: { type: "object" },
     },
   },
@@ -516,7 +516,8 @@ const start = async () => {
       async (request) => {
         const { id } = request.params as any;
         const { type, payload } = request.body as any;
-        const command = await agentService.addCommand(id, type, payload || {});
+        const user = (request as any).user;
+        const command = await agentService.addCommand(id, type, payload || {}, user?.userId);
         return { status: "queued", commandId: command.id };
       }
     );

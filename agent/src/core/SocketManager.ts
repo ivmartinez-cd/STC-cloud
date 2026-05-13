@@ -71,9 +71,13 @@ export class SocketManager {
     }, 30000);
   }
 
-  send(type: string, payload: any) {
-    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify({ type, payload }));
+  isConnected() {
+    return this.ws && this.ws.readyState === WebSocket.OPEN;
+  }
+
+  send(event: string, data: any) {
+    if (this.isConnected()) {
+      this.ws?.send(JSON.stringify({ event, data }));
     }
   }
 

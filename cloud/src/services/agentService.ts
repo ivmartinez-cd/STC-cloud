@@ -381,12 +381,13 @@ export class AgentService {
     await this.heartbeat(agentId);
   }
 
-  async addCommand(agentId: string, type: string, payload: any = {}) {
+  async addCommand(agentId: string, type: string, payload: any = {}, createdBy?: string) {
     const [command] = await this.db("agent_commands").insert({
       agent_id: agentId,
       type,
       payload: JSON.stringify(payload),
       status: "pending",
+      created_by: createdBy || null,
     }).returning("*");
     return command;
   }

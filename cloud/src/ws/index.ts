@@ -66,7 +66,14 @@ export async function registerWebSocket(fastify: FastifyInstance) {
     socket.on('message', (raw: Buffer) => {
       try {
         const msg = JSON.parse(raw.toString());
-        // Manejar Pings/Eventos si es necesario
+        
+        // Si un agente envía el resultado de un comando, lo retransmitimos al portal
+        if (agentId && msg.event === 'command_result') {
+          broadcastToPortal('command_result', {
+            agentId,
+            ...msg.data
+          });
+        }
       } catch {
         // ignorar mensajes malformados
       }

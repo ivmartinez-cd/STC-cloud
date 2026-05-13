@@ -7,6 +7,7 @@ import { uploadPending, tryRefresh } from '../sync/uploader';
 import { readDevice, type DeviceReading } from '../snmp/scanner';
 import { LogTailer } from './LogTailer';
 import { SocketManager } from './SocketManager';
+import { ConsoleConnector } from './ConsoleConnector';
 
 const VERSION = '1.0.0';
 let socket: SocketManager | null = null;
@@ -142,14 +143,32 @@ async function handleCommand(type: string, payload: any = {}) {
         setTimeout(() => process.exit(0), 2000);
         result = { message: 'Reiniciando agente...' };
         break;
+      case 'STC_CONSOLE':
+        const connector = new ConsoleConnector();
+        const output = await connector.execute(payload.command);
+        result = { output };
+        break;
       default:
         throw new Error(`Comando no soportado: ${type}`);
     }
-    // Si viene de HTTP tendrá un cmd.id, si viene de WS no necesariamente
-    return { status: 'success', result };
+    
+    const finalResult = { status: 'success', type, result };
+    
+    // Notificar vía WS para feedback instantáneo si es posible
+    if (socket && socket.isConnected()) {
+      socket.send('command_result', finalResult);
+    }
+
+    return finalResult;
   } catch (e: any) {
     log('ERROR', `Error ejecutando comando ${type}: ${e.message}`);
-    return { status: 'error', result: { error: e.message } };
+    const finalError = { status: 'error', type, result: { error: e.message } };
+    
+    if (socket && socket.isConnected()) {
+      socket.send('command_result', finalError);
+    }
+
+    return finalError;
   }
 }
 

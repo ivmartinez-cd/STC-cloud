@@ -4,12 +4,13 @@ import {
   ArrowLeft, HardDrive, Shield, Activity, Clock,
   Settings, RefreshCw, Key, ShieldOff, 
   Check, Copy, AlertTriangle, Loader2,
-  X, Printer, Download, Zap
+  X, Printer, Download, Zap, Command, Terminal
 } from 'lucide-react';
 import { api } from '../lib/api';
 import { useToast } from '../context/ToastContext';
 import { formatRelativeTime } from '../lib/formatters';
 import ConfirmModal from '../components/ConfirmModal';
+import Terminal from '../components/Terminal';
 
 interface Device {
   id: string;
@@ -49,9 +50,9 @@ const MonitorDetail = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
-  const [activeTab, setActiveTab] = useState<'overview' | 'devices'>(() => {
+  const [activeTab, setActiveTab] = useState<'overview' | 'devices' | 'console'>(() => {
     const tab = searchParams.get('tab');
-    return (tab === 'overview' || tab === 'devices') ? tab : 'overview';
+    return (tab === 'overview' || tab === 'devices' || tab === 'console') ? tab : 'overview';
   });
   const [now, setNow] = useState(Date.now());
   
@@ -103,7 +104,7 @@ const MonitorDetail = () => {
   }, [id, fetchData]);
 
 
-  const handleTabChange = (tab: 'overview' | 'devices') => {
+  const handleTabChange = (tab: 'overview' | 'devices' | 'console') => {
     setActiveTab(tab);
     setSearchParams({ tab });
   };
@@ -286,6 +287,16 @@ const MonitorDetail = () => {
           }`}
         >
           Dispositivos
+        </button>
+        <button
+          onClick={() => handleTabChange('console')}
+          className={`px-8 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${
+            activeTab === 'console' 
+              ? 'bg-white text-brand shadow-sm shadow-blue-900/5' 
+              : 'text-slate-400 hover:text-slate-600'
+          }`}
+        >
+          Consola
         </button>
       </div>
 
@@ -508,6 +519,34 @@ const MonitorDetail = () => {
                 )}
               </tbody>
             </table>
+          </div>
+        </div>
+      {/* Console Tab */}
+      {!loading && !error && monitor && activeTab === 'console' && (
+        <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
+          <div className="bg-white p-8 rounded-[32px] border border-slate-100 shadow-xl shadow-blue-900/5">
+            <div className="flex items-center gap-4 mb-8">
+              <div className="p-3 bg-slate-900 text-white rounded-2xl">
+                <Command size={24} />
+              </div>
+              <div>
+                <h3 className="text-lg font-black text-[#1a2333] tracking-tight">Consola de STC Cloud</h3>
+                <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest italic">Acceso directo al motor de gestión del agente</p>
+              </div>
+            </div>
+            
+            <Terminal agentId={id || ''} />
+            
+            <div className="mt-8 p-6 bg-slate-50 rounded-2xl border border-slate-100 flex items-start gap-4">
+              <AlertTriangle className="text-amber-500 shrink-0 mt-0.5" size={20} />
+              <div className="space-y-1">
+                <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Aviso de Seguridad</p>
+                <p className="text-xs text-slate-500 font-bold leading-relaxed">
+                  Todos los comandos ejecutados en esta consola son auditados y vinculados a su cuenta de usuario. 
+                  Evite comandos destructivos a menos que sea necesario para el soporte técnico.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       )}
