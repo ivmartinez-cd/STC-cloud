@@ -38,7 +38,6 @@ function fakeReading(ip: string, totalPages = 1000): DeviceReading {
     total_pages: totalPages,
     mono_pages: totalPages - 100,
     color_pages: 100,
-    status: 'idle',
     time: new Date().toISOString(),
   };
 }

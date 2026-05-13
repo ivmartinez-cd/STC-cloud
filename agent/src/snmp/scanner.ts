@@ -1,6 +1,6 @@
 import snmp from 'net-snmp';
 import {
-  detectBrandFromOid, OID_MAPS, GENERIC_OIDS, SYS_OIDS, HR_STATUS_MAP, HR_DEVICE_PRINTER, type Brand,
+  detectBrandFromOid, detectBrandFromText, OID_MAPS, GENERIC_OIDS, SYS_OIDS, HR_STATUS_MAP, HR_DEVICE_PRINTER, type Brand,
 } from './oids';
 
 const TIMEOUT_MS     = 3000;
@@ -128,36 +128,31 @@ export async function readDevice(ip: string, community: string): Promise<DeviceR
       colorPages = Math.max(0, Number(totalPages) - Number(monoPages));
     }
 
-    // ── Fase 5: Limpieza y Estilización de Datos ───────────────────────────
-    let rawModel = String(sysDescr ?? '').trim();
+    // ── Fase 5: Limpieza de "Basura" (Fabricante + Modelo únicamente) ────────
+    const raw = String(sysDescr ?? '').trim();
     
-    // 1. Tomar solo la primera parte antes de un separador común (; , | \n)
-    let modelName = rawModel.split(/[;|\r\n]/)[0].trim();
+    // 1. Cortar en el primer separador o palabra clave técnica
+    let cleaned = raw.split(/[;|\r\n,]/)[0].trim();
+    
+    // Limpiar descriptores de versión/kernel que a veces vienen pegados
+    cleaned = cleaned.split(/version|kernel|firmware/i)[0].trim();
 
-    // 2. Si el modelo empieza con el nombre de la marca, lo limpiamos para que no sea redundante
-    const brandName = brand.toLowerCase();
-    if (brandName !== 'generic' && modelName.toLowerCase().startsWith(brandName)) {
-      modelName = modelName.slice(brandName.length).trim();
+    // 2. Intentar detectar marca por texto si el OID falló
+    let finalBrand = brand;
+    if (finalBrand === 'generic') {
+      finalBrand = detectBrandFromText(raw);
     }
-
-    // 3. Casos especiales conocidos
-    if (brand === 'lexmark' && rawModel.includes('X656')) {
-      modelName = 'X656';
-    }
-
-    // 4. Limite de seguridad
-    modelName = modelName.slice(0, 100);
 
     return {
       ip,
-      brand,
-      sysDescr:   rawModel.slice(0, 255),
+      brand: finalBrand,
+      sysDescr:   raw.slice(0, 255),
       sysName:    String(sysName  ?? ''),
       serial:     serial ? String(serial).trim() || null : null,
       total_pages: totalPages !== null ? Number(totalPages) : null,
       mono_pages:  monoPages  !== null ? Number(monoPages)  : null,
       color_pages: colorPages !== null ? Number(colorPages) : null,
-      model:      modelName || 'Unknown Model',
+      model:      cleaned.slice(0, 100), // Solo Fabricante + Modelo
       time:       new Date().toISOString(),
     };
   } finally {

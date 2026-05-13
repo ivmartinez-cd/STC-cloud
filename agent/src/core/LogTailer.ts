@@ -37,8 +37,13 @@ export class LogTailer {
       // Formato esperado: 13/05/2026 09:40:46     INFO     Mensaje
       const match = line.match(/^(\d{2}\/\d{2}\/\d{4} \d{2}:\d{2}:\d{2})\s+([A-Z]+)\s+(.*)$/);
       if (match) {
+        const [d, t] = match[1].split(' ');
+        const [day, month, year] = d.split('/');
+        // Forzamos el envío en formato ISO con el offset de Argentina para evitar ambigüedades en el servidor
+        const isoTimestamp = `${year}-${month}-${day}T${t}-03:00`;
+        
         return {
-          timestamp: match[1],
+          timestamp: isoTimestamp,
           level: match[2].trim(),
           message: match[3]
         };

@@ -20,6 +20,17 @@ export function detectBrandFromOid(sysObjectId: string): Brand {
   return 'generic';
 }
 
+export function detectBrandFromText(text: string): Brand {
+  const t = text.toLowerCase();
+  if (t.includes('hp') || t.includes('hewlett')) return 'hp';
+  if (t.includes('lexmark')) return 'lexmark';
+  if (t.includes('samsung')) return 'samsung';
+  if (t.includes('ricoh')) return 'ricoh';
+  if (t.includes('brother')) return 'brother';
+  if (t.includes('xerox')) return 'xerox';
+  return 'generic';
+}
+
 // ─── Estructura de OIDs por marca ────────────────────────────────────────────
 
 export interface OidMap {
