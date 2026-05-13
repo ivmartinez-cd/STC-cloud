@@ -202,6 +202,13 @@ const createAgentSchema = {
 
 const start = async () => {
   try {
+    // Ejecutar migraciones automáticamente al arrancar
+    console.log("[DB] Verificando y ejecutando migraciones...");
+    await db.migrate.latest({
+      directory: path.join(__dirname, "../db/migrations")
+    });
+    console.log("[DB] Migraciones al día.");
+
     // CORS: acepta portal desde Vercel, dominio propio y localhost (dev)
     const allowedOrigins = [
       process.env.PORTAL_ORIGIN,                 // URL de Vercel o dominio propio
