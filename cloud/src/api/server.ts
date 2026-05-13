@@ -290,13 +290,11 @@ const start = async () => {
       reply.setCookie("stc_session", token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        // 'none' required for cross-origin fetch (Vercel frontend → Render backend).
-        // Falls back to 'lax' in dev (HTTP, where Secure is false and 'none' is invalid).
         sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
         path: "/",
         maxAge: 8 * 60 * 60,
       });
-      return { ok: true };
+      return { ok: true, token };
     });
 
     // Logout del portal — elimina la cookie de sesión
@@ -308,7 +306,8 @@ const start = async () => {
     // Verificar sesión activa (usado por el frontend al cargar)
     fastify.get("/api/v1/portal/me", { preHandler: portalAuth }, async (request) => {
       const user = request.user as any;
-      return { userId: user.userId, role: user.role };
+      const token = request.cookies.stc_session;
+      return { userId: user.userId, role: user.role, token };
     });
 
     // Activar agente con one-time key

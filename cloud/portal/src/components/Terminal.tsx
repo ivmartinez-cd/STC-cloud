@@ -30,10 +30,20 @@ const Terminal: React.FC<TerminalProps> = ({ agentId }) => {
 
   // WebSocket for real-time results
   useEffect(() => {
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/ws`;
-    
     const connect = () => {
+      // Determine WebSocket URL
+      let wsUrl = '';
+      const token = sessionStorage.getItem('stc_ws_token');
+      
+      if (window.location.hostname.includes('vercel.app')) {
+        // Vercel doesn't proxy WebSockets. Connect directly to Render backend.
+        wsUrl = `wss://stc-cloud.onrender.com/ws${token ? `?token=${token}` : ''}`;
+      } else {
+        // Local or same-domain deployment
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        wsUrl = `${protocol}//${window.location.host}/ws${token ? `?token=${token}` : ''}`;
+      }
+
       const socket = new WebSocket(wsUrl);
       wsRef.current = socket;
 

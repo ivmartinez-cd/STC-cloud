@@ -27,6 +27,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .then(data => {
         setIsAuthenticated(true);
         setUserEmail(data.userId);
+        if (data.token) {
+          sessionStorage.setItem('stc_ws_token', data.token);
+        }
       })
       .catch(() => setIsAuthenticated(false))
       .finally(() => setChecking(false));
@@ -39,16 +42,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       credentials: 'include',
       body: JSON.stringify({ username, password }),
     });
+    const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error((err as { error?: string }).error || 'Credenciales inválidas');
+      throw new Error(data.error || 'Credenciales inválidas');
     }
+    
+    // Save token for WS fallback (browsers on Vercel)
+    if (data.token) {
+      sessionStorage.setItem('stc_ws_token', data.token);
+    }
+
     setIsAuthenticated(true);
     setUserEmail(username);
   }, []);
 
   const logout = useCallback(async () => {
     await api.post('/portal/logout').catch(() => {});
+    sessionStorage.removeItem('stc_ws_token');
     setIsAuthenticated(false);
     setUserEmail('');
     window.location.replace('/login');
