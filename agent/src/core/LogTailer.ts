@@ -34,12 +34,12 @@ export class LogTailer {
     const lines = content.split('\n').filter(l => l.trim() !== '');
 
     const parsedLogs = lines.map(line => {
-      // Formato esperado: [12/05/2026, 09:40:46] [INFO] Mensaje
-      const match = line.match(/^\[(.*?)\] \[(.*?)\] (.*)$/);
+      // Formato esperado: 13/05/2026 09:40:46     INFO     Mensaje
+      const match = line.match(/^(\d{2}\/\d{2}\/\d{4} \d{2}:\d{2}:\d{2})\s+([A-Z]+)\s+(.*)$/);
       if (match) {
         return {
           timestamp: match[1],
-          level: match[2],
+          level: match[2].trim(),
           message: match[3]
         };
       }

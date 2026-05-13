@@ -17,12 +17,12 @@ const logTailer = new LogTailer(LOG_PATH);
 
 function log(level: 'INFO' | 'WARN' | 'ERROR', msg: string): void {
   const now = new Date();
-  const timestamp = now.toLocaleString('es-AR', {
-    day: '2-digit', month: '2-digit', year: 'numeric',
-    hour: '2-digit', minute: '2-digit', second: '2-digit',
-    hour12: false
-  });
-  const line = `[${timestamp}] [${level}] ${msg}`;
+  const date = now.toLocaleDateString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires', day: '2-digit', month: '2-digit', year: 'numeric' });
+  const time = now.toLocaleTimeString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+  const timestamp = `${date} ${time}`;
+
+  const levelPadded = level.padEnd(8);
+  const line = `${timestamp}     ${levelPadded} ${msg}`;
   console.log(line);
   try {
     fs.appendFileSync(LOG_PATH, line + '\n');

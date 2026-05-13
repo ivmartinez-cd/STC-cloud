@@ -202,7 +202,8 @@ export class AgentService {
         if (parts) {
           // Si parece DD/MM/YYYY, lo rearmamos a YYYY-MM-DD para que el constructor de Date no se confunda
           const timePart = String(raw).split(' ')[1] || '00:00:00';
-          ts = new Date(`${parts[3]}-${parts[2]}-${parts[1]}T${timePart}`);
+          // Forzamos offset -03:00 para asegurar que se interprete como hora local de Argentina
+          ts = new Date(`${parts[3]}-${parts[2]}-${parts[1]}T${timePart}-03:00`);
         } else {
           ts = new Date(raw);
         }
@@ -354,7 +355,8 @@ export class AgentService {
         
         if (dateParts) {
           const timePart = String(rawTime).split(' ')[1] || '00:00:00';
-          readingTime = new Date(`${dateParts[3]}-${dateParts[2]}-${dateParts[1]}T${timePart}`);
+          // Forzamos offset -03:00 para asegurar que se interprete como hora local de Argentina
+          readingTime = new Date(`${dateParts[3]}-${dateParts[2]}-${dateParts[1]}T${timePart}-03:00`);
         } else {
           readingTime = new Date(rawTime);
         }
