@@ -521,6 +521,7 @@ const start = async () => {
       async (request, reply) => {
         const { id } = request.params as any;
         const logs = await agentService.getLogs(id, 1000); // Exportar los últimos 1000
+        logs.reverse(); // Invertir para que el reporte sea cronológico (viejo -> nuevo)
         
         const formatDate = (date: Date) => {
           try {
