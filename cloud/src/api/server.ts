@@ -440,6 +440,26 @@ const start = async () => {
       }
     );
 
+    fastify.post(
+      "/api/v1/agents/:id/scan",
+      { preHandler: portalAuth },
+      async (request) => {
+        const { id } = request.params as any;
+        
+        // 1. Intentar envío instantáneo vía WebSocket (Estilo HP SDS)
+        const { sendCommandToAgent } = require("../ws");
+        const sentInstant = sendCommandToAgent(id, "RESCAN");
+
+        // 2. Guardar en base de datos como respaldo (para el próximo heartbeat)
+        await agentService.addCommand(id, "RESCAN");
+
+        return { 
+          status: "success", 
+          message: sentInstant ? "Comando enviado instantáneamente vía WSS" : "Agente offline. Comando encolado para próximo latido." 
+        };
+      }
+    );
+
     // ─── Rutas autenticadas — PORTAL ─────────────────────────────────────────
 
     // Crear cliente

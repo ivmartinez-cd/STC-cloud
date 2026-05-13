@@ -6,8 +6,10 @@ import { openQueue, enqueueReading, pendingCount, purgeOld, upsertKnownDevice, i
 import { uploadPending, tryRefresh } from '../sync/uploader';
 import { readDevice, type DeviceReading } from '../snmp/scanner';
 import { LogTailer } from './LogTailer';
+import { SocketManager } from './SocketManager';
 
 const VERSION = '1.0.0';
+let socket: SocketManager | null = null;
 const LOG_MAX_BYTES = 10 * 1024 * 1024;
 
 // ─── Logger ───────────────────────────────────────────────────────────────────
@@ -100,8 +102,8 @@ async function heartbeat(): Promise<void> {
 
       if (data.commands && data.commands.length > 0) {
         for (const cmd of data.commands) {
-          const result = await handleCommand(cmd);
-          commandResults.push(result);
+          const result = await handleCommand(cmd.type, cmd.payload);
+          commandResults.push({ id: cmd.id, ...result });
         }
       }
 
@@ -116,17 +118,18 @@ async function heartbeat(): Promise<void> {
   } catch (e: any) {
     log('WARN', `Heartbeat error: ${e.message}`);
   } finally {
-    // Re-programar siguiente heartbeat (acortado a 30s para mayor responsividad en comandos)
-    setTimeout(heartbeat, 30_000);
+    // Re-programar siguiente heartbeat (ahora 5 min porque tenemos WebSocket para comandos)
+    setTimeout(heartbeat, 5 * 60_000);
   }
 }
 
-async function handleCommand(cmd: any) {
-  log('INFO', `Ejecutando comando remoto: ${cmd.type}`);
+async function handleCommand(type: string, payload: any = {}) {
+  log('INFO', `Ejecutando comando remoto: ${type}`);
   try {
     let result = {};
-    switch (cmd.type) {
+    switch (type) {
       case 'RESCAN':
+      case 'FORCE_SCAN':
         // No esperamos a que termine el scan
         snmpScan(currentConfig, false);
         result = { message: 'Scan iniciado correctamente' };
@@ -140,12 +143,13 @@ async function handleCommand(cmd: any) {
         result = { message: 'Reiniciando agente...' };
         break;
       default:
-        throw new Error(`Comando no soportado: ${cmd.type}`);
+        throw new Error(`Comando no soportado: ${type}`);
     }
-    return { id: cmd.id, status: 'success', result };
+    // Si viene de HTTP tendrá un cmd.id, si viene de WS no necesariamente
+    return { status: 'success', result };
   } catch (e: any) {
-    log('ERROR', `Error ejecutando comando ${cmd.type}: ${e.message}`);
-    return { id: cmd.id, status: 'error', result: { error: e.message } };
+    log('ERROR', `Error ejecutando comando ${type}: ${e.message}`);
+    return { status: 'error', result: { error: e.message } };
   }
 }
 
@@ -430,6 +434,7 @@ async function main(): Promise<void> {
       return;
     }
 
+    // ─── Inicio del Agente ───────────────────────────────────────────────────
     log('INFO', `STC Cloud Agent v${VERSION} iniciando...`);
     
     log('INFO', 'Abriendo base de datos local...');
@@ -439,19 +444,32 @@ async function main(): Promise<void> {
     try {
       currentConfig = await ConfigManager.load();
     } catch (e: any) {
-      log('ERROR', `Error crtico al cargar configuracin: ${e.message}`);
-      log('ERROR', 'El agente no puede continuar sin una configuracin vlida. Por favor, realice la activacin de nuevo.');
+      log('ERROR', `Error crítico al cargar configuración: ${e.message}`);
       process.exit(1);
     }
 
     log('INFO', `ID: ${currentConfig.agentId} | Servidor: ${currentConfig.serverUrl}`);
+
+    // ─── Conexión WebSocket (Estilo HP SDS) ──────────────────────────────────
+    socket = new SocketManager(
+      currentConfig.serverUrl,
+      currentConfig.token,
+      (type, payload) => handleCommand(type, payload),
+      (level, msg) => log(level as any, msg)
+    );
+    socket.connect();
+
+    // ─── Iniciar Loops ───────────────────────────────────────────────────────
     log('INFO', `Scan cada ${currentConfig.scanIntervalMinutes} min | Community: ${currentConfig.snmpCommunity}`);
+    
+    heartbeat(); // Primer latido
+    setInterval(heartbeat, 60000); // Latido de respaldo cada 60s
 
-    heartbeat();
-    syncLoop();
-    snmpScan(currentConfig);
+    syncLoop(); // Primer sync
+    setInterval(syncLoop, 30000); // Sync de datos cada 30s
 
-    // Watcher para "Forzar Sincronización" desde la UI de bandeja (cada 10s)
+    snmpScan(currentConfig); // Iniciar bucle de escaneo
+
     const FORCE_FLAG = path.join(DATA_DIR, 'force-scan.flag');
     setInterval(() => {
       if (fs.existsSync(FORCE_FLAG)) {
