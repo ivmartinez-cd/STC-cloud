@@ -26,33 +26,49 @@ export async function registerWebSocket(fastify: FastifyInstance) {
   fastify.get('/ws', { websocket: true } as any, async (connection: any, request: any) => {
     const { socket } = connection;
     
-    // 1. Identificación y Autenticación
-    let agentId: string | null = null;
-    try {
-      fastify.log.info(`Handshake WSS iniciado desde IP: ${request.ip}`);
-      
-      // Verificar si el token viene en los headers
-      const authHeader = request.headers.authorization;
-      if (!authHeader) {
-        fastify.log.warn('Conexión WSS rechazada: Falta cabecera Authorization');
-        socket.close(4001, 'Token requerido');
-        return;
-      }
+      // 1. Identificación y Autenticación
+      let agentId: string | null = null;
+      let user: any = null;
 
-      // Intentar verificar si es un Agente vía JWT
-      await request.jwtVerify();
-      const user = request.user as any;
-      const tid = user.agentId as string;
-      
-      if (tid) {
-        agentId = tid;
-        agentClients.set(tid, socket);
-        fastify.log.info(`Agente ${tid} autenticado y conectado vía WSS`);
-      } else {
-        portalClients.add(socket);
-        fastify.log.info(`Cliente de Portal autenticado y conectado vía WSS`);
-      }
-    } catch (e: any) {
+      try {
+        fastify.log.info(`Handshake WSS iniciado desde IP: ${request.ip}`);
+        
+        // El token puede venir en:
+        // 1. Header Authorization (Agentes)
+        // 2. Cookie stc_session (Portal)
+        // 3. Query Parameter token (Navegadores fallback)
+        
+        const authHeader = request.headers.authorization;
+        const cookieToken = request.cookies?.stc_session;
+        const queryToken = (request.query as any)?.token;
+
+        if (authHeader) {
+          await request.jwtVerify();
+          user = request.user;
+        } else if (cookieToken) {
+          user = fastify.jwt.verify(cookieToken);
+        } else if (queryToken) {
+          user = fastify.jwt.verify(queryToken);
+        }
+
+        if (!user) {
+          fastify.log.warn('Conexión WSS rechazada: No se encontró token válido');
+          socket.close(4001, 'Token requerido');
+          return;
+        }
+
+        if (user.agentId) {
+          agentId = user.agentId;
+          agentClients.set(agentId!, socket);
+          fastify.log.info(`Agente ${agentId} conectado vía WSS`);
+        } else if (user.role === 'portal') {
+          portalClients.add(socket);
+          fastify.log.info(`Cliente de Portal (${user.userId}) conectado vía WSS`);
+        } else {
+          socket.close(4003, 'Rol no permitido');
+          return;
+        }
+      } catch (e: any) {
       fastify.log.error(`Error en autenticación WSS: ${e.message}`);
       socket.close(4001, 'No autorizado');
       return;
