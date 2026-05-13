@@ -267,8 +267,8 @@ async function registerDevice(config: AgentConfig, r: DeviceReading): Promise<bo
           mac:    null,
           serial: r.serial,
           brand:  r.brand,
-          model:  r.model,
-          name:   r.model,
+          model:  (r.model || r.brand || "Unknown").slice(0, 100),
+          name:   (r.model || r.ip || "Unknown Device").slice(0, 100),
         }],
       }),
     });
