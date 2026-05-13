@@ -222,39 +222,7 @@ export class AgentService {
     await this.db("agent_logs").insert(rows);
   }
 
-  async getPendingCommands(agentId: string) {
-    const commands = await this.db("agent_commands")
-      .where({ agent_id: agentId, status: "pending" })
-      .orderBy("created_at", "asc")
-      .select("id", "type", "payload");
-
-    if (commands.length > 0) {
-      const ids = commands.map(c => c.id);
-      await this.db("agent_commands").whereIn("id", ids).update({ status: "running" });
-    }
-
-    return commands;
-  }
-
-  async updateCommandResult(commandId: string, status: string, result: any) {
-    await this.db("agent_commands")
-      .where({ id: commandId })
-      .update({
-        status,
-        result: result ? JSON.stringify(result) : null,
-        executed_at: new Date()
-      });
-  }
-
-  async queueCommand(agentId: string, type: string, payload: any = {}) {
-    const [command] = await this.db("agent_commands").insert({
-      agent_id: agentId,
-      type,
-      payload: JSON.stringify(payload),
-      status: "pending"
-    }).returning("*");
-    return command;
-  }
+  // --- Remote Logs & Commands (Consolidados abajo) ---
 
   async getLogs(agentId: string, limit: number = 50) {
     return await this.db("agent_logs")
@@ -441,6 +409,16 @@ export class AgentService {
     }));
   }
 
+  async updateCommandResult(commandId: string, status: string, result: any) {
+    await this.db("agent_commands")
+      .where({ id: commandId })
+      .update({
+        status,
+        result: result ? JSON.stringify(result) : null,
+        executed_at: new Date()
+      });
+  }
+
 
   async revokeToken(redis: any, agentId: string, ttlSeconds: number, requestIp?: string) {
     await redis.set(`blacklist:${agentId}`, "true", "EX", ttlSeconds);
@@ -459,14 +437,6 @@ export class AgentService {
     return !!val;
   }
 
-  async heartbeat(agentId: string) {
-    await this.db("agents")
-      .where({ id: agentId })
-      .update({ 
-        last_seen: new Date(),
-        status: this.db.raw("CASE WHEN status = 'offline' THEN 'active' ELSE status END")
-      });
-  }
 
   async getConfig(agentId: string) {
     const agent = await this.db("agents")
