@@ -249,7 +249,7 @@ export class AgentService {
 
     const mappedReadings: any[] = [];
 
-    console.log(`[SYNC] Procesando ${readings.length} lecturas para agente ${agentId}`);
+    // Procesando lecturas (log removido por ruido en producción)
     
     const parseCount = (v: any) => {
       if (v === null || v === undefined) return null;

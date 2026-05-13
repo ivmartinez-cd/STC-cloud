@@ -315,7 +315,7 @@ const start = async () => {
       const key = body.key?.trim();
       const hardwareId = body.hardwareId?.trim() || "unknown";
       
-      console.log(`[AUTH] Solicitud de activación recibida. Key: ${key?.substring(0, 8)}... HardwareId: ${hardwareId}`);
+      request.log.info(`[AUTH] Solicitud de activación recibida. Key: ${key?.substring(0, 8)}... HardwareId: ${hardwareId}`);
 
       try {
         if (!key) throw new Error("La clave de activacion es requerida");
@@ -406,10 +406,7 @@ const start = async () => {
           // Log temporal para ver qué está mandando el agente y por qué falla la validación
           const body = request.body as any;
           if (body && body.readings) {
-            console.log(`[SYNC_RAW] Agente ${request.user ? (request.user as any).agentId : 'unknown'} mandando ${body.readings.length} lecturas`);
-            if (body.readings.length > 0) {
-              console.log(`[SYNC_SAMPLE]`, JSON.stringify(body.readings[0]));
-            }
+            // Eliminados logs ruidosos de sincronización masiva para producción
           }
         }
       },
@@ -946,7 +943,7 @@ const start = async () => {
 
     const port = Number(process.env.PORT) || 3000;
     await fastify.listen({ port, host: "0.0.0.0" });
-    console.log(`Servidor listo en http://0.0.0.0:${port}`);
+    fastify.log.info(`Servidor listo en http://0.0.0.0:${port}`);
   } catch (err) {
     fastify.log.error(err);
     process.exit(1);

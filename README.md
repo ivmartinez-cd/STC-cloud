@@ -272,20 +272,17 @@ cd agent && npm run snmp:sim -- --brand hp
 | Prioridad | Mejora |
 |-----------|--------|
 | 🔴 Alta | Integración con HP SDS API |
-| 🔴 Alta | Exportación automática a ERP (webhook/CSV) |
-| 🟡 Media | Soporte SNMPv3 |
-| 🟡 Media | Soporte Xerox y Canon |
-| 🟡 Media | App móvil (React Native) |
-| 🟢 Baja | Machine Learning (predicción toner) |
-| 🟢 Baja | White-label del portal |
+| 🔴 Alta | Exportación automática a ERP (Webhook) |
+| 🟡 Media | Soporte SNMPv3 para entornos de alta seguridad |
+| 🟡 Media | Expansión de diccionario de OIDs (Canon/Xerox) |
 
 ---
 
 ## 📄 Documentación
 
-- [ESTADO_PROYECTO.md](ESTADO_PROYECTO.md) — Estado detallado por fase
-- [GUIA_PRUEBAS.md](GUIA_PRUEBAS.md) — Guía completa de testing
-- [CONTRIBUTING.md](CONTRIBUTING.md) — Guía de contribución
+- [SECURITY_AUDIT.md](SECURITY_AUDIT.md) — **Informe de Auditoría de Seguridad (Lectura Obligatoria para IT)**
+- [docs/security/](docs/security/) — Historial de auditorías internas (Frontend y Agente)
+- [CONTRIBUTING.md](CONTRIBUTING.md) — Guía de estándares de codificación y contribución
 
 ---
 
