@@ -23,7 +23,9 @@ export function sendCommandToAgent(agentId: string, commandType: string, payload
 }
 
 export async function registerWebSocket(fastify: FastifyInstance) {
-  fastify.get('/ws', { websocket: true } as any, async (socket: any, request: any) => {
+  fastify.get('/ws', { websocket: true } as any, async (connection: any, request: any) => {
+    const { socket } = connection;
+    
     // 1. Identificación y Autenticación
     let agentId: string | null = null;
     try {
@@ -73,9 +75,11 @@ export async function registerWebSocket(fastify: FastifyInstance) {
     socket.on('close', () => {
       if (agentId) agentClients.delete(agentId);
       else portalClients.delete(socket);
+      fastify.log.info(`WSS: Conexión cerrada (${agentId || 'portal'})`);
     });
 
-    socket.on('error', () => {
+    socket.on('error', (err: any) => {
+      fastify.log.error(`WSS Error: ${err.message}`);
       if (agentId) agentClients.delete(agentId);
       else portalClients.delete(socket);
     });
