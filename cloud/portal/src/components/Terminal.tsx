@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Terminal as TerminalIcon, Send, Trash2, Command, ShieldCheck, ChevronRight, Loader2 } from 'lucide-react';
+import { Terminal as TerminalIcon, Send, Trash2, ShieldCheck, ChevronRight, Loader2 } from 'lucide-react';
 import { api } from '../lib/api';
 
 interface TerminalProps {
