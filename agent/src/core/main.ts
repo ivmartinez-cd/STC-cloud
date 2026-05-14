@@ -1,4 +1,4 @@
-import os from 'os';
+﻿import os from 'os';
 import fs from 'fs';
 import path from 'path';
 import { ConfigManager, DATA_DIR, getHardwareId, type AgentConfig } from './config';
@@ -10,11 +10,11 @@ import { SocketManager } from './SocketManager';
 import { ConsoleConnector } from './ConsoleConnector';
 import { ConsoleEngine } from './ConsoleEngine';
 
-const VERSION = '1.4.0';
+const VERSION = '1.5.0';
 let socket: SocketManager | null = null;
 const LOG_MAX_BYTES = 10 * 1024 * 1024;
 
-// ─── Logger ───────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Logger â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const LOG_PATH = path.join(DATA_DIR, 'agent.log');
 const logTailer = new LogTailer(LOG_PATH);
@@ -33,7 +33,7 @@ function log(level: 'INFO' | 'WARN' | 'ERROR', msg: string): void {
     if (fs.existsSync(LOG_PATH) && fs.statSync(LOG_PATH).size > LOG_MAX_BYTES) {
       fs.renameSync(LOG_PATH, LOG_PATH + '.1');
     }
-  } catch { /* log no crítico */ }
+  } catch { /* log no crÃ­tico */ }
 }
 
 // Captura de errores fatales antes de que el proceso muera
@@ -46,7 +46,7 @@ process.on('unhandledRejection', (reason) => {
   log('ERROR', `RECHAZO DE PROMESA NO CAPTURADO: ${reason}`);
 });
 
-// ─── Generador de IPs ─────────────────────────────────────────────────────────
+// â”€â”€â”€ Generador de IPs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function* ipRange(start: string, end: string): Generator<string> {
   const toN  = (ip: string) => ip.split('.').reduce((a, p) => (a << 8) + +p, 0);
@@ -54,7 +54,7 @@ function* ipRange(start: string, end: string): Generator<string> {
   for (let i = toN(start); i <= toN(end); i++) yield toIp(i >>> 0);
 }
 
-// ─── Variables de Estado ──────────────────────────────────────────────────────
+// â”€â”€â”€ Variables de Estado â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 let currentConfig: AgentConfig;
 let scanInterval: NodeJS.Timeout | null = null;
@@ -63,7 +63,7 @@ let isScanning = false;
 let isSyncing = false;
 let commandResults: any[] = [];
 
-// ─── Loop 1: Heartbeat (cada 60s) ────────────────────────────────────────────
+// â”€â”€â”€ Loop 1: Heartbeat (cada 60s) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 async function heartbeat(): Promise<void> {
   try {
@@ -90,7 +90,7 @@ async function heartbeat(): Promise<void> {
         currentConfig = refreshed;
         log('INFO', 'Token renovado exitosamente desde heartbeat.');
       } else {
-        log('ERROR', 'No se pudo renovar el token. El agente podría estar desvinculado.');
+        log('ERROR', 'No se pudo renovar el token. El agente podrÃ­a estar desvinculado.');
       }
     } else if (res.ok) {
       const data = await res.json() as any;
@@ -155,7 +155,7 @@ async function handleCommand(type: string, payload: any = {}) {
     
     const finalResult = { status: 'success', type, result };
     
-    // Notificar vía WS para feedback instantáneo si es posible
+    // Notificar vÃ­a WS para feedback instantÃ¡neo si es posible
     if (socket && socket.isConnected()) {
       socket.send('command_result', finalResult);
     }
@@ -179,7 +179,7 @@ async function handleRemoteConfig(remote: any): Promise<void> {
 
   if (remote.ip_ranges && JSON.stringify(remote.ip_ranges) !== JSON.stringify(currentConfig.ipRanges)) {
     log('INFO', `Nuevo rango de IPs detectado: ${JSON.stringify(remote.ip_ranges)}`);
-    // Dispara scan inmediato si llegaron rangos donde antes no había ninguno
+    // Dispara scan inmediato si llegaron rangos donde antes no habÃ­a ninguno
     if (currentConfig.ipRanges.length === 0 && remote.ip_ranges.length > 0) {
       triggerImmediateScan = true;
     }
@@ -202,19 +202,19 @@ async function handleRemoteConfig(remote: any): Promise<void> {
 
   if (changed) {
     await ConfigManager.save(currentConfig);
-    log('INFO', 'Configuración actualizada y guardada localmente.');
+    log('INFO', 'ConfiguraciÃ³n actualizada y guardada localmente.');
   }
 
   if (triggerImmediateScan) {
-    log('INFO', 'Primera configuración de IPs recibida — iniciando scan inmediato.');
-    // Usamos await para asegurar que termine antes de seguir, pero snmpScan manejará su propio bloqueo
+    log('INFO', 'Primera configuraciÃ³n de IPs recibida â€” iniciando scan inmediato.');
+    // Usamos await para asegurar que termine antes de seguir, pero snmpScan manejarÃ¡ su propio bloqueo
     await snmpScan(currentConfig, false); 
-    log('INFO', 'Scan inmediato completado — sincronizando con el portal.');
+    log('INFO', 'Scan inmediato completado â€” sincronizando con el portal.');
     await syncLoop(false);
   }
 }
 
-// ─── Loop 2: Scanner SNMP ─────────────────────────────────────────────────────
+// â”€â”€â”€ Loop 2: Scanner SNMP â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 async function snmpScan(config: AgentConfig, loop = true): Promise<void> {
   if (isScanning) return;
@@ -228,11 +228,11 @@ async function snmpScan(config: AgentConfig, loop = true): Promise<void> {
 
   log('INFO', `Iniciando scan de ${config.ipRanges.length} rango(s)`);
   let errors = 0;
-  const CONCURRENCY_LIMIT = 10; // Semáforo: máx 10 IPs simultáneas
+  const CONCURRENCY_LIMIT = 10; // SemÃ¡foro: mÃ¡x 10 IPs simultÃ¡neas
 
   for (const range of config.ipRanges) {
     const ips = [...ipRange(range.start, range.end)];
-    log('INFO', `Escaneando ${ips.length} IPs: ${range.start} → ${range.end} (Concurrencia: ${CONCURRENCY_LIMIT})`);
+    log('INFO', `Escaneando ${ips.length} IPs: ${range.start} â†’ ${range.end} (Concurrencia: ${CONCURRENCY_LIMIT})`);
 
     const queue = [...ips];
     const workers = Array(Math.min(CONCURRENCY_LIMIT, queue.length)).fill(null).map(async () => {
@@ -246,10 +246,10 @@ async function snmpScan(config: AgentConfig, loop = true): Promise<void> {
           if (!isRegistered(ip)) {
             const ok = await registerDevice(config, reading);
             if (ok) {
-              // Solo marcamos como registrado si el backend respondió OK
+              // Solo marcamos como registrado si el backend respondiÃ³ OK
               upsertKnownDevice(ip, { serial: reading.serial ?? undefined, brand: reading.brand, registered: true });
             } else {
-              log('WARN', `[${ip}] Registro fallido (HTTP Error) — se reintentará en el próximo scan.`);
+              log('WARN', `[${ip}] Registro fallido (HTTP Error) â€” se reintentarÃ¡ en el prÃ³ximo scan.`);
               // Guardamos el dispositivo pero sin el flag 'registered'
               upsertKnownDevice(ip, { serial: reading.serial ?? undefined, brand: reading.brand, registered: false });
             }
@@ -303,7 +303,7 @@ async function registerDevice(config: AgentConfig, r: DeviceReading): Promise<bo
   }
 }
 
-// ─── Loop 3: Sincronizador ────────────────────────────────────────────────────
+// â”€â”€â”€ Loop 3: Sincronizador â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 async function syncLoop(loop = true): Promise<void> {
   if (isSyncing) return;
@@ -323,20 +323,20 @@ async function syncLoop(loop = true): Promise<void> {
   } finally {
     isSyncing = false;
     if (loop) {
-      // Re-programar siguiente sincronización
+      // Re-programar siguiente sincronizaciÃ³n
       setTimeout(syncLoop, 5 * 60_000);
     }
   }
 }
 
-// ─── Auto-update del agente ───────────────────────────────────────────────────
-// El servidor expone GET /api/v1/agents/version → { version, url }.
-// Si la versión remota difiere de VERSION, descarga el nuevo bundle.js,
-// lo reemplaza de forma atómica y sale (NSSM reinicia con el nuevo binario).
+// â”€â”€â”€ Auto-update del agente â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// El servidor expone GET /api/v1/agents/version â†’ { version, url }.
+// Si la versiÃ³n remota difiere de VERSION, descarga el nuevo bundle.js,
+// lo reemplaza de forma atÃ³mica y sale (NSSM reinicia con el nuevo binario).
 
 function getBundlePath(): string | null {
   const arg = process.argv[1];
-  // En dev (tsx), argv[1] apunta a main.ts — skip update en ese caso
+  // En dev (tsx), argv[1] apunta a main.ts â€” skip update en ese caso
   if (!arg || !arg.endsWith('.js')) return null;
   if (!fs.existsSync(arg)) return null;
   return arg;
@@ -344,7 +344,7 @@ function getBundlePath(): string | null {
 
 async function checkForUpdate(serverUrl: string): Promise<void> {
   const bundlePath = getBundlePath();
-  if (!bundlePath) return; // modo dev — no actualizar
+  if (!bundlePath) return; // modo dev â€” no actualizar
 
   try {
     const res = await fetch(`${serverUrl}/api/v1/agents/version`, {
@@ -354,28 +354,30 @@ async function checkForUpdate(serverUrl: string): Promise<void> {
 
     const data = await res.json() as { version: string; url: string | null };
     if (!data.url || data.version === VERSION) return;
+    const newer = (a: string, b: string) => a.split('.').map(Number).reduce((r, n, i) => r !== 0 ? r : n - b.split('.').map(Number)[i], 0) > 0;
+    if (!newer(data.version, VERSION)) return;
 
-    log('INFO', `Nueva versión disponible: v${data.version} (actual: v${VERSION}). Descargando...`);
+    log('INFO', `Nueva versiÃ³n disponible: v${data.version} (actual: v${VERSION}). Descargando...`);
 
     const dlRes = await fetch(data.url, { signal: AbortSignal.timeout(120_000) });
     if (!dlRes.ok) {
-      log('WARN', `Descarga de actualización falló: HTTP ${dlRes.status}`);
+      log('WARN', `Descarga de actualizaciÃ³n fallÃ³: HTTP ${dlRes.status}`);
       return;
     }
 
     const buffer = Buffer.from(await dlRes.arrayBuffer());
     const tempPath = bundlePath + '.update';
     fs.writeFileSync(tempPath, buffer);
-    fs.renameSync(tempPath, bundlePath); // atómico — sobreescribe bundle.js en ejecución
+    fs.renameSync(tempPath, bundlePath); // atÃ³mico â€” sobreescribe bundle.js en ejecuciÃ³n
 
-    log('INFO', `Actualización aplicada (v${data.version}). Reiniciando para aplicar cambios...`);
-    setTimeout(() => process.exit(0), 1_000); // NSSM reinicia el servicio automáticamente
+    log('INFO', `ActualizaciÃ³n aplicada (v${data.version}). Reiniciando para aplicar cambios...`);
+    setTimeout(() => process.exit(0), 1_000); // NSSM reinicia el servicio automÃ¡ticamente
   } catch (e: any) {
     log('WARN', `Auto-update: ${e.message}`);
   }
 }
 
-// ─── Verificación de conectividad con Exponential Backoff ────────────────────
+// â”€â”€â”€ VerificaciÃ³n de conectividad con Exponential Backoff â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Bloquea el arranque hasta que el servidor responda. Evita inundar el API
 // con heartbeats fallidos en el momento en que el proxy/firewall bloquea 443.
 
@@ -390,7 +392,7 @@ async function waitForConnectivity(serverUrl: string): Promise<void> {
         log('INFO', 'Servidor alcanzable. Iniciando loops.');
         return;
       }
-      log('WARN', `Servidor respondió HTTP ${res.status}. Reintentando en ${delay / 1000}s...`);
+      log('WARN', `Servidor respondiÃ³ HTTP ${res.status}. Reintentando en ${delay / 1000}s...`);
     } catch {
       log('WARN', `Servidor no alcanzable (puerto 443). Reintentando en ${delay / 1000}s (Exponential Backoff)...`);
     }
@@ -399,7 +401,7 @@ async function waitForConnectivity(serverUrl: string): Promise<void> {
   }
 }
 
-// ─── Estado del agente (--status) ────────────────────────────────────────────
+// â”€â”€â”€ Estado del agente (--status) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 async function printStatus(): Promise<void> {
   const { execSync } = await import('child_process');
@@ -444,7 +446,7 @@ async function printStatus(): Promise<void> {
   process.exit(0);
 }
 
-// ─── Proxy ───────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Proxy â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 async function setProxy(): Promise<void> {
   const args = process.argv.slice(2);
@@ -457,8 +459,8 @@ async function setProxy(): Promise<void> {
       delete config.proxyUrl;
       console.log('Proxy eliminado.');
     } else {
-      // Validación básica de formato
-      new URL(proxyUrl); // lanza si la URL es inválida
+      // ValidaciÃ³n bÃ¡sica de formato
+      new URL(proxyUrl); // lanza si la URL es invÃ¡lida
       config.proxyUrl = proxyUrl;
       console.log(`Proxy configurado: ${proxyUrl}`);
     }
@@ -470,7 +472,7 @@ async function setProxy(): Promise<void> {
   }
 }
 
-// ─── Activación ──────────────────────────────────────────────────────────────
+// â”€â”€â”€ ActivaciÃ³n â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 async function activate(): Promise<void> {
   const args = process.argv.slice(2);
@@ -487,7 +489,7 @@ async function activate(): Promise<void> {
   let serverUrl   = args[serverIdx + 1]?.trim();
 
   if (!key || !serverUrl) {
-    console.error('Error: KEY o URL vacíos.');
+    console.error('Error: KEY o URL vacÃ­os.');
     console.error('Uso: agente.exe --activate <KEY> --url <URL>');
     process.exit(1);
   }
@@ -534,7 +536,7 @@ async function activate(): Promise<void> {
   }
 }
 
-// ─── Main ─────────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Main â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 async function main(): Promise<void> {
   try {
@@ -556,24 +558,24 @@ async function main(): Promise<void> {
       return;
     }
 
-    // ─── Inicio del Agente ───────────────────────────────────────────────────
+    // â”€â”€â”€ Inicio del Agente â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     log('INFO', `STC Cloud Agent v${VERSION} iniciando...`);
 
     log('INFO', 'Abriendo base de datos local...');
     openQueue();
 
-    log('INFO', 'Cargando configuración...');
+    log('INFO', 'Cargando configuraciÃ³n...');
     try {
       currentConfig = await ConfigManager.load();
     } catch (e: any) {
-      log('ERROR', `Error crítico al cargar configuración: ${e.message}`);
+      log('ERROR', `Error crÃ­tico al cargar configuraciÃ³n: ${e.message}`);
       process.exit(1);
     }
 
     log('INFO', `ID: ${currentConfig.agentId} | Servidor: ${currentConfig.serverUrl}`);
 
-    // ─── Proxy HTTP corporativo (opcional) ───────────────────────────────────
-    // undici está integrado en Node 18+ — no requiere paquete adicional.
+    // â”€â”€â”€ Proxy HTTP corporativo (opcional) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // undici estÃ¡ integrado en Node 18+ â€” no requiere paquete adicional.
     if (currentConfig.proxyUrl) {
       try {
         // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -585,14 +587,14 @@ async function main(): Promise<void> {
       }
     }
 
-    // ─── Verificación de conectividad al arrancar (HP SDS behavior) ──────────
+    // â”€â”€â”€ VerificaciÃ³n de conectividad al arrancar (HP SDS behavior) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     await waitForConnectivity(currentConfig.serverUrl);
 
-    // ─── Auto-update: verificar al arrancar y cada 4 horas ───────────────────
+    // â”€â”€â”€ Auto-update: verificar al arrancar y cada 4 horas â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     await checkForUpdate(currentConfig.serverUrl);
     setInterval(() => checkForUpdate(currentConfig.serverUrl), 4 * 60 * 60_000);
 
-    // ─── Conexión WebSocket (Estilo HP SDS) ──────────────────────────────────
+    // â”€â”€â”€ ConexiÃ³n WebSocket (Estilo HP SDS) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     socket = new SocketManager(
       currentConfig.serverUrl,
       currentConfig.token,
@@ -602,30 +604,30 @@ async function main(): Promise<void> {
     );
     socket.connect();
 
-    // ─── Motor de Consola Local (Bridge) ─────────────────────────────────────
+    // â”€â”€â”€ Motor de Consola Local (Bridge) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     const engine = new ConsoleEngine(8000);
     engine.start();
 
-    // ─── Iniciar Loops ───────────────────────────────────────────────────────
+    // â”€â”€â”€ Iniciar Loops â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     log('INFO', `Scan cada ${currentConfig.scanIntervalMinutes} min | Community: ${currentConfig.snmpCommunity}`);
     
     heartbeat(); // Inicia la cadena de latidos (se auto-programa cada 5 min)
 
     syncLoop(); // Primer sync
-    setInterval(syncLoop, 60000); // Sincronización de datos cada 60s
+    setInterval(syncLoop, 60000); // SincronizaciÃ³n de datos cada 60s
 
     snmpScan(currentConfig); // Iniciar bucle de escaneo
 
     log('INFO', 'Todos los loops activos.');
 
     async function shutdown(signal: string) {
-      log('INFO', `Señal ${signal} recibida. Cerrando agente de forma segura...`);
+      log('INFO', `SeÃ±al ${signal} recibida. Cerrando agente de forma segura...`);
       closeQueue();
       log('INFO', 'Base de datos cerrada. Saliendo.');
       process.exit(0);
     }
     
-    // Captura de señales de terminación para cierre limpio de SQLite
+    // Captura de seÃ±ales de terminaciÃ³n para cierre limpio de SQLite
     process.on('SIGINT',  () => shutdown('SIGINT'));
     process.on('SIGTERM', () => shutdown('SIGTERM'));
     process.on('SIGHUP',  () => shutdown('SIGHUP'));
