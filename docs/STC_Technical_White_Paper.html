@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>STC Cloud - Technical White Paper</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #004a99;
+            --secondary: #f7931d;
+            --text: #2d3748;
+            --light-bg: #f7fafc;
+            --border: #e2e8f0;
+        }
+
+        @media print {
+            .page-break { page-break-before: always; }
+            body { margin: 0; padding: 0; }
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            line-height: 1.6;
+            color: var(--text);
+            margin: 0;
+            padding: 0;
+            background: #fff;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px;
+        }
+
+        header {
+            border-bottom: 2px solid var(--primary);
+            padding-bottom: 20px;
+            margin-bottom: 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-weight: 700;
+            font-size: 24px;
+            color: var(--primary);
+        }
+
+        .doc-type {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: #718096;
+        }
+
+        h1 {
+            font-size: 42px;
+            color: var(--primary);
+            margin-bottom: 10px;
+            line-height: 1.1;
+        }
+
+        .subtitle {
+            font-size: 18px;
+            color: var(--secondary);
+            font-weight: 400;
+            margin-bottom: 30px;
+        }
+
+        .cover-image {
+            width: 100%;
+            border-radius: 8px;
+            margin-bottom: 40px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+
+        .section {
+            margin-bottom: 40px;
+        }
+
+        h2 {
+            font-size: 24px;
+            color: var(--primary);
+            border-left: 4px solid var(--secondary);
+            padding-left: 15px;
+            margin-bottom: 20px;
+        }
+
+        p {
+            margin-bottom: 15px;
+            text-align: justify;
+        }
+
+        .info-box {
+            background: var(--light-bg);
+            border: 1px solid var(--border);
+            padding: 20px;
+            border-radius: 6px;
+            margin: 20px 0;
+        }
+
+        .info-box h3 {
+            margin-top: 0;
+            font-size: 16px;
+            color: var(--primary);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        th, td {
+            padding: 12px;
+            border: 1px solid var(--border);
+            text-align: left;
+        }
+
+        th {
+            background: var(--light-bg);
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        footer {
+            margin-top: 60px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border);
+            font-size: 12px;
+            color: #a0aec0;
+            text-align: center;
+        }
+
+        .diagram {
+            border: 1px solid var(--border);
+            padding: 30px;
+            border-radius: 8px;
+            background: #fff;
+            margin: 30px 0;
+            text-align: center;
+        }
+
+        .node {
+            display: inline-block;
+            padding: 10px 20px;
+            border: 2px solid var(--primary);
+            border-radius: 4px;
+            margin: 10px;
+            font-weight: 600;
+        }
+
+        .arrow {
+            font-size: 20px;
+            color: var(--secondary);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">STC CLOUD</div>
+            <div class="doc-type">TECHNICAL WHITE PAPER</div>
+        </header>
+
+        <h1>Arquitectura y Seguridad del Ecosistema STC</h1>
+        <div class="subtitle">Monitoreo Proactivo de Dispositivos de Impresión en Entornos Enterprise</div>
+
+        <img src="stc_white_paper_cover_1778765926506.png" class="cover-image" alt="STC Cloud Cover">
+
+        <div class="section">
+            <h2>1. Introducción</h2>
+            <p>
+                STC Cloud representa la evolución en la gestión de flotas de impresión. Este documento detalla la infraestructura tecnológica que permite la recolección de datos, el diagnóstico en tiempo real y la seguridad de la información, garantizando una operatividad continua sin comprometer la integridad de la red corporativa.
+            </p>
+        </div>
+
+        <div class="section">
+            <h2>2. Arquitectura de Comunicación</h2>
+            <p>
+                El sistema se basa en un modelo de Agente Inteligente (DCA) que opera de forma silenciosa dentro de la infraestructura del cliente. La comunicación se realiza mediante protocolos de última generación que minimizan el tráfico de red.
+            </p>
+            
+            <div class="diagram">
+                <div class="node">Agente STC</div>
+                <span class="arrow">↔</span>
+                <div class="node" style="border-color: var(--secondary)">WebSocket (WSS)</div>
+                <span class="arrow">↔</span>
+                <div class="node">STC Cloud API</div>
+            </div>
+
+            <div class="info-box">
+                <h3>Bucle de Monitoreo Adaptativo</h3>
+                <p>Nuestra arquitectura utiliza ciclos de sincronización optimizados:</p>
+                <ul>
+                    <li><strong>Heartbeat (60s):</strong> Validación de salud y latencia.</li>
+                    <li><strong>Metrics Cycle (15m):</strong> Recolección profunda de contadores SNMP.</li>
+                    <li><strong>Instant Commands:</strong> Ejecución inmediata vía WebSockets.</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="page-break"></div>
+
+        <div class="section">
+            <h2>3. Seguridad de Grado Enterprise</h2>
+            <p>
+                La seguridad es el pilar de STC Cloud. Implementamos múltiples capas de protección para asegurar que los datos viajen de forma cifrada y solo sean accesibles por personal autorizado.
+            </p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Capa</th>
+                        <th>Tecnología</th>
+                        <th>Propósito</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Transporte</td>
+                        <td>TLS 1.2+ / WSS</td>
+                        <td>Cifrado de datos en tránsito</td>
+                    </tr>
+                    <tr>
+                        <td>Autenticación</td>
+                        <td>JWT / OAuth2</td>
+                        <td>Validación de identidad de agentes</td>
+                    </tr>
+                    <tr>
+                        <td>Local Data</td>
+                        <td>SQLite Encrypted</td>
+                        <td>Protección de cola de datos local</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="section">
+            <h2>4. Diagnóstico Remoto Avanzado</h2>
+            <p>
+                El comando <strong>SNMP-Check</strong> propietario permite una visibilidad sin precedentes sobre el hardware, abstrayendo la complejidad de múltiples fabricantes en una interfaz unificada. Esto permite identificar fallas de hardware antes de que afecten la productividad.
+            </p>
+        </div>
+
+        <footer>
+            © 2026 STC Cloud | Tecnología para la Eficiencia Operativa | Confidencial
+        </footer>
+    </div>
+</body>
+</html>

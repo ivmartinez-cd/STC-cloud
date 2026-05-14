@@ -1,0 +1,62 @@
+{
+  "title": "STC Cloud - Documentación Maestra",
+  "name": "stc-cloud-wiki",
+  "items": [
+    {
+      "title": "🚀 Onboarding",
+      "name": "onboarding",
+      "prompt": "Guía de inicio para nuevos desarrolladores y administradores de STC Cloud.",
+      "children": [
+        {
+          "title": "Principal-Level Guide",
+          "name": "principal-guide",
+          "prompt": "Visión arquitectónica profunda para perfiles Senior/Principal. [cloud/src/api/server.ts:1]"
+        },
+        {
+          "title": "Zero-to-Hero Path",
+          "name": "learning-path",
+          "prompt": "Ruta de aprendizaje desde cero para dominar el ecosistema STC. [agent/src/core/main.ts:1]"
+        }
+      ]
+    },
+    {
+      "title": "🛠️ Arquitectura Técnica",
+      "name": "architecture",
+      "prompt": "Detalle de los componentes internos y su interacción.",
+      "children": [
+        {
+          "title": "Agente Local (DCA)",
+          "name": "agent-arch",
+          "prompt": "Motor de escaneo SNMP y bridge de consola. [agent/src/core/ConsoleEngine.ts:1]"
+        },
+        {
+          "title": "Sincronización y Real-time",
+          "name": "sync-wss",
+          "prompt": "Gestión de WebSockets y colas de datos. [agent/src/core/SocketManager.ts:1]"
+        },
+        {
+          "title": "Seguridad y Auth",
+          "name": "security",
+          "prompt": "Implementación de JWT, Cifrado y Firewalls. [cloud/src/api/server.ts:41]"
+        }
+      ]
+    },
+    {
+      "title": "📦 Despliegue y Ops",
+      "name": "ops",
+      "prompt": "Guías para puesta en marcha y mantenimiento.",
+      "children": [
+        {
+          "title": "Producción Readiness",
+          "name": "prod-readiness",
+          "prompt": "Checklist y validaciones técnicas para salida a producción. [docs/PROD_READINESS_GUIDE.md]"
+        },
+        {
+          "title": "Propuesta de Valor",
+          "name": "value-prop",
+          "prompt": "Material comercial para clientes finales. [docs/CLIENT_VALUE_PROPOSITION.md]"
+        }
+      ]
+    }
+  ]
+}

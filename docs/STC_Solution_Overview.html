@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>STC Cloud - Solution Overview</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #004a99;
+            --secondary: #f7931d;
+            --accent: #ebf4ff;
+            --text: #1a202c;
+            --gray: #718096;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            margin: 0;
+            padding: 0;
+            color: var(--text);
+            background: #fff;
+        }
+
+        .container {
+            max-width: 850px;
+            margin: 0 auto;
+            padding: 50px;
+        }
+
+        .hero {
+            position: relative;
+            margin-bottom: 40px;
+            overflow: hidden;
+            border-radius: 12px;
+        }
+
+        .hero-img {
+            width: 100%;
+            display: block;
+        }
+
+        .hero-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(transparent, rgba(0,74,153,0.9));
+            padding: 40px;
+            color: #fff;
+        }
+
+        h1 {
+            font-size: 36px;
+            margin: 0;
+            font-weight: 700;
+        }
+
+        .tagline {
+            font-size: 18px;
+            opacity: 0.9;
+        }
+
+        .content-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 40px;
+        }
+
+        h2 {
+            color: var(--primary);
+            font-size: 28px;
+            margin-top: 0;
+        }
+
+        .feature-card {
+            background: var(--accent);
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border-left: 5px solid var(--secondary);
+        }
+
+        .feature-card h3 {
+            margin: 0 0 10px 0;
+            color: var(--primary);
+            font-size: 18px;
+        }
+
+        .sidebar {
+            background: var(--primary);
+            color: #fff;
+            padding: 30px;
+            border-radius: 12px;
+            height: fit-content;
+        }
+
+        .sidebar h3 {
+            color: var(--secondary);
+            margin-top: 0;
+        }
+
+        .stat {
+            margin-bottom: 25px;
+        }
+
+        .stat-val {
+            font-size: 32px;
+            font-weight: 700;
+            display: block;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            opacity: 0.8;
+        }
+
+        .footer {
+            margin-top: 50px;
+            text-align: center;
+            border-top: 1px solid #edf2f7;
+            padding-top: 20px;
+            color: var(--gray);
+            font-size: 14px;
+        }
+
+        .highlight {
+            color: var(--secondary);
+            font-weight: 600;
+        }
+
+        @media print {
+            .container { padding: 20px; }
+            .sidebar { background: #eee !important; color: #000 !important; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="hero">
+            <img src="stc_solution_overview_cover_1778765971636.png" class="hero-img" alt="STC Solution Overview">
+            <div class="hero-overlay">
+                <h1>STC Cloud Monitor</h1>
+                <div class="tagline">Transformando la gestión de impresión en inteligencia de negocio.</div>
+            </div>
+        </div>
+
+        <div class="content-grid">
+            <div class="main-content">
+                <h2>¿Por qué elegir STC Cloud?</h2>
+                <p>En el entorno empresarial actual, el tiempo de inactividad no es una opción. STC Cloud ofrece una visibilidad sin precedentes sobre su flota de impresión, permitiéndole tomar decisiones basadas en datos reales.</p>
+
+                <div class="feature-card">
+                    <h3>🔍 Diagnóstico Remoto Avanzado</h3>
+                    <p>Nuestra tecnología <strong>Deep Scan</strong> permite auditar el estado físico de los equipos sin interrumpir el trabajo de sus empleados.</p>
+                </div>
+
+                <div class="feature-card">
+                    <h3>⚡ Respuesta en Tiempo Real</h3>
+                    <p>Utilizamos WebSockets para una comunicación bidireccional instantánea. Si un equipo reporta una alerta, su equipo técnico lo sabrá en segundos.</p>
+                </div>
+
+                <div class="feature-card">
+                    <h3>🔐 Seguridad por Diseño</h3>
+                    <p>Protegemos su red con los mismos estándares de cifrado utilizados por las instituciones financieras más importantes del mundo.</p>
+                </div>
+            </div>
+
+            <div class="sidebar">
+                <h3>Impacto de Negocio</h3>
+                
+                <div class="stat">
+                    <span class="stat-val">40%</span>
+                    <span class="stat-label">Reducción en visitas de soporte técnico reactivo.</span>
+                </div>
+
+                <div class="stat">
+                    <span class="stat-val">100%</span>
+                    <span class="stat-label">Precisión en la lectura de contadores para facturación.</span>
+                </div>
+
+                <div class="stat">
+                    <span class="stat-val">&lt; 1 min</span>
+                    <span class="stat-label">Tiempo de respuesta ante alertas críticas.</span>
+                </div>
+
+                <p style="font-size: 13px; font-style: italic; margin-top: 40px;">
+                    "STC Cloud no solo monitorea impresoras, protege la productividad de su empresa."
+                </p>
+            </div>
+        </div>
+
+        <div class="footer">
+            <strong>STC Cloud</strong> | Tecnología Argentina | stc-cloud.com.ar
+        </div>
+    </div>
+</body>
+</html>
