@@ -300,6 +300,14 @@ const start = async () => {
     fastify.get("/", async () => ({ status: "ok", service: "stc-cloud-api" }));
     fastify.get("/health", async () => ({ status: "ok", version: "1.0.0" }));
 
+    // Versión del agente — los agentes consultan esto para auto-update.
+    // AGENT_VERSION y AGENT_DOWNLOAD_URL se configuran como env vars en Render
+    // cada vez que se publica una nueva versión del agente.
+    fastify.get("/api/v1/agents/version", async () => ({
+      version: process.env.AGENT_VERSION ?? "1.0.0",
+      url:     process.env.AGENT_DOWNLOAD_URL ?? null,
+    }));
+
     // Evitar que el servidor crashee si Redis se desconecta temporalmente
     redis.on("error", (err) => {
       console.error("[Redis] Error de conexión:", err.message);

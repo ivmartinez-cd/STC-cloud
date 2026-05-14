@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>STC Cloud - System Requirements v1.4</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --stc-blue: #004a99;
+            --stc-orange: #f7931d;
+            --text-dark: #1a2333;
+            --text-gray: #64748b;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            background: white;
+            color: var(--text-dark);
+        }
+
+        .page {
+            width: 210mm;
+            min-height: 297mm;
+            padding: 25mm;
+            margin: 0 auto;
+            box-sizing: border-box;
+            position: relative;
+            background: white;
+        }
+
+        @media print {
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            .page { margin: 0; padding: 20mm; page-break-after: always; }
+        }
+
+        .cover-top-bar {
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 80mm;
+        }
+
+        .small-logo { height: 25px; }
+
+        .top-title {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--stc-blue);
+            letter-spacing: 0.05em;
+        }
+
+        .cover-main { text-align: left; padding-left: 10mm; }
+
+        .large-logo { width: 320px; margin-bottom: 50px; }
+
+        .stc-cloud-brand {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 60px;
+        }
+
+        .brand-stc {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 900;
+            font-size: 42px;
+            color: var(--stc-blue);
+            letter-spacing: -0.02em;
+        }
+
+        .brand-cloud {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 900;
+            font-size: 42px;
+            color: var(--stc-orange);
+            letter-spacing: -0.02em;
+        }
+
+        .main-title {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 38px;
+            font-weight: 700;
+            color: var(--stc-blue);
+            margin: 0;
+            line-height: 1.1;
+            text-transform: uppercase;
+        }
+
+        .main-subtitle {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 38px;
+            font-weight: 400;
+            color: var(--stc-blue);
+            margin: 5px 0 60px 0;
+            text-transform: uppercase;
+        }
+
+        .version-tag {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text-gray);
+            letter-spacing: 0.1em;
+        }
+
+        .internal-header {
+            border-bottom: 3px solid var(--stc-blue);
+            padding-bottom: 8px;
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+
+        .internal-brand {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 900;
+            font-size: 18px;
+            color: var(--stc-blue);
+        }
+
+        .internal-doc-type {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-gray);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        h2 {
+            font-family: 'Montserrat', sans-serif;
+            color: var(--stc-blue);
+            font-size: 22px;
+            border-bottom: 1px solid #f1f5f9;
+            padding-bottom: 8px;
+            margin-top: 40px;
+        }
+
+        h3 {
+            font-family: 'Montserrat', sans-serif;
+            color: var(--stc-orange);
+            font-size: 16px;
+            margin-top: 25px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        p { font-size: 14px; color: #334155; line-height: 1.7; }
+
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+
+        th, td { border: 1px solid #e2e8f0; padding: 14px; text-align: left; font-size: 13px; }
+
+        th {
+            background-color: #f8fafc;
+            color: var(--stc-blue);
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: 0.05em;
+        }
+
+        .note-callout {
+            background: #fff7ed;
+            border-left: 4px solid var(--stc-orange);
+            padding: 20px;
+            margin: 30px 0;
+            font-size: 13px;
+            color: #9a3412;
+        }
+
+        .new-badge {
+            display: inline-block;
+            background: var(--stc-orange);
+            color: white;
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            padding: 2px 6px;
+            border-radius: 3px;
+            vertical-align: middle;
+            margin-left: 6px;
+            text-transform: uppercase;
+        }
+
+        .footer {
+            position: absolute;
+            bottom: 20mm;
+            left: 25mm;
+            right: 25mm;
+            border-top: 1px solid #e2e8f0;
+            padding-top: 15px;
+            font-size: 10px;
+            color: #94a3b8;
+            text-align: center;
+        }
+
+        .toc-container { margin-top: 20px; }
+
+        .toc-item {
+            display: flex;
+            align-items: baseline;
+            margin-bottom: 12px;
+            font-size: 14px;
+            color: #1a2333;
+            text-decoration: none;
+        }
+
+        .toc-item:hover .toc-text { color: var(--stc-orange); }
+
+        .toc-link {
+            text-decoration: none;
+            color: inherit;
+            display: flex;
+            width: 100%;
+            align-items: baseline;
+        }
+
+        .toc-text { flex-shrink: 0; padding-right: 5px; }
+        .toc-dots { flex-grow: 1; border-bottom: 1px dotted #94a3b8; margin: 0 5px; position: relative; top: -4px; }
+        .toc-page { flex-shrink: 0; padding-left: 5px; font-weight: 600; }
+        .indent { padding-left: 30px; font-size: 13px; }
+
+        ul { padding-left: 20px; }
+        li { font-size: 14px; color: #334155; margin-bottom: 8px; }
+
+        .changelog {
+            background: #f0f9ff;
+            border-left: 4px solid var(--stc-blue);
+            padding: 16px 20px;
+            margin: 25px 0;
+            font-size: 13px;
+        }
+        .changelog strong { color: var(--stc-blue); }
+    </style>
+</head>
+<body>
+
+    <!-- PÁGINA 1: PORTADA -->
+    <div class="page">
+        <div class="cover-top-bar">
+            <img src="logo_corporativo.png" class="small-logo" alt="Canal Directo Logo">
+            <div class="top-title">STC CLOUD – REQUISITOS DEL SISTEMA</div>
+        </div>
+
+        <div class="cover-main">
+            <img src="logo_corporativo.png" class="large-logo" alt="Canal Directo Main Logo">
+
+            <div class="stc-cloud-brand">
+                <span class="brand-stc">STC</span>
+                <span class="brand-cloud">CLOUD</span>
+            </div>
+
+            <h1 class="main-title">STC CLOUD –</h1>
+            <h1 class="main-subtitle">REQUISITOS DEL SISTEMA</h1>
+
+            <div class="version-tag">VERSIÓN 1.4</div>
+        </div>
+
+        <div class="footer">
+            © 2026 CANAL DIRECTO | STC CLOUD | CONFIDENCIAL
+        </div>
+    </div>
+
+    <!-- PÁGINA 2: ÍNDICE -->
+    <div class="page">
+        <div class="internal-header">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <img src="logo_corporativo.png" style="height: 20px;">
+                <div class="internal-brand" style="font-size: 14px; color: #475569;">STC CLOUD – SYSTEM REQUIREMENTS</div>
+            </div>
+        </div>
+
+        <h2 style="border: none; margin-bottom: 30px;">Contents</h2>
+
+        <div class="toc-container">
+            <a href="#introduccion" class="toc-item">
+                <span class="toc-text">Introducción</span>
+                <span class="toc-dots"></span>
+                <span class="toc-page">3</span>
+            </a>
+            <a href="#so" class="toc-item">
+                <span class="toc-text">Sistemas operativos</span>
+                <span class="toc-dots"></span>
+                <span class="toc-page">3</span>
+            </a>
+            <a href="#hardware" class="toc-item">
+                <span class="toc-text">Hardware</span>
+                <span class="toc-dots"></span>
+                <span class="toc-page">3</span>
+            </a>
+            <a href="#preparacion" class="toc-item">
+                <span class="toc-text">Preparando el entorno</span>
+                <span class="toc-dots"></span>
+                <span class="toc-page">4</span>
+            </a>
+            <a href="#proxy" class="toc-item indent">
+                <span class="toc-text">Soporte de proxy HTTP corporativo <span class="new-badge">nuevo en v1.4</span></span>
+                <span class="toc-dots"></span>
+                <span class="toc-page">4</span>
+            </a>
+            <a href="#puertos" class="toc-item">
+                <span class="toc-text">Apéndice 1: información detallada del puerto para STC Monitor</span>
+                <span class="toc-dots"></span>
+                <span class="toc-page">5</span>
+            </a>
+            <a href="#urls" class="toc-item">
+                <span class="toc-text">Información de la URL del monitor STC</span>
+                <span class="toc-dots"></span>
+                <span class="toc-page">6</span>
+            </a>
+            <a href="#autoupdate" class="toc-item indent">
+                <span class="toc-text">Actualización automática del agente <span class="new-badge">nuevo en v1.4</span></span>
+                <span class="toc-dots"></span>
+                <span class="toc-page">6</span>
+            </a>
+            <a href="#endpoints" class="toc-item">
+                <span class="toc-text">Apéndice 2: STC Cloud Service Endpoints utilizados por los dispositivos</span>
+                <span class="toc-dots"></span>
+                <span class="toc-page">7</span>
+            </a>
+            <a href="#endpoints" class="toc-item indent">
+                <span class="toc-text">Cloud Signalling and On-Going Communication</span>
+                <span class="toc-dots"></span>
+                <span class="toc-page">7</span>
+            </a>
+            <a href="#certificaciones" class="toc-item">
+                <span class="toc-text">Apéndice 3 – Acreditaciones y Certificaciones</span>
+                <span class="toc-dots"></span>
+                <span class="toc-page">8</span>
+            </a>
+        </div>
+
+        <div class="changelog">
+            <strong>Cambios en v1.4 (Mayo 2026):</strong><br>
+            Soporte de proxy HTTP corporativo con autenticación Basic · Actualización automática del agente (auto-update) ·
+            Pre-verificación TCP multi-puerto antes del escaneo SNMP · Exponential Backoff en reconexión WSS y chequeo de conectividad inicial.
+        </div>
+
+        <div class="footer">
+            PÁGINA 2 | STC CLOUD – REQUISITOS DEL SISTEMA
+        </div>
+    </div>
+
+    <!-- PÁGINA 3: INTRODUCCIÓN Y ESPECIFICACIONES -->
+    <div class="page">
+        <div class="internal-header">
+            <div class="internal-brand">STC CLOUD</div>
+            <div class="internal-doc-type">Requisitos del Sistema</div>
+        </div>
+
+        <h2 id="introduccion">Introducción</h2>
+        <p>
+            STC Cloud es una solución de gestión de flotas de impresión de nivel empresarial. La arquitectura se basa en el despliegue de micro-agentes (STC Cloud Monitor) que interactúan con los dispositivos mediante protocolos estándar de la industria, garantizando una recolección de datos precisa y en tiempo real.
+        </p>
+        <p>
+            La solución consta de dos componentes: el <strong>STC Cloud Portal</strong> (interfaz web de gestión centralizada) y el <strong>STC Cloud Monitor</strong> (agente ligero instalado en cada site). El agente opera de forma autónoma, con resiliencia ante pérdida de conectividad, y se actualiza automáticamente desde el servidor central sin intervención del administrador.
+        </p>
+
+        <h2 id="so">Sistemas operativos</h2>
+        <ul>
+            <li>Windows Server 2016 / 2019 / 2022 (Todas las ediciones)</li>
+            <li>Windows 10 / 11 Pro / Enterprise (64-bit)</li>
+        </ul>
+        <p style="font-size: 13px; color: #64748b;">
+            <strong>Nota:</strong> El agente se instala y ejecuta como servicio Windows bajo la cuenta "LocalSystem". Compatible con entornos virtualizados (VMware, Hyper-V). Se admite la instalación en hosts con múltiples interfaces de red (multi-NIC); Windows determina qué NIC utiliza el agente para el tráfico saliente.
+        </p>
+
+        <h2 id="hardware">Hardware</h2>
+        <p>El Agente STC Cloud es un servicio ligero diseñado para ejecutarse con un impacto mínimo en los recursos.</p>
+        <table>
+            <thead>
+                <tr>
+                    <th>Componente</th>
+                    <th>Requisito Mínimo</th>
+                    <th>Configuración Recomendada</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Procesador</td>
+                    <td>Dual Core 2.0 GHz</td>
+                    <td>Quad Core (Intel i3 / Xeon)</td>
+                </tr>
+                <tr>
+                    <td>Memoria RAM</td>
+                    <td>2 GB</td>
+                    <td>4 GB</td>
+                </tr>
+                <tr>
+                    <td>Almacenamiento</td>
+                    <td>200 MB Libre</td>
+                    <td>1 GB (Para persistencia de logs)</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="footer">
+            PÁGINA 3 | STC CLOUD – REQUISITOS DEL SISTEMA
+        </div>
+    </div>
+
+    <!-- PÁGINA 4: PREPARANDO EL ENTORNO -->
+    <div class="page">
+        <div class="internal-header">
+            <div class="internal-brand">STC CLOUD</div>
+            <div class="internal-doc-type">Configuración de Seguridad</div>
+        </div>
+
+        <h2 id="preparacion">Preparando el entorno</h2>
+        <p>Antes de la instalación del Agente STC Cloud, asegúrese de que el entorno cumpla con las siguientes políticas de seguridad y acceso:</p>
+
+        <h3>Privilegios de Ejecución</h3>
+        <ul>
+            <li>El agente debe instalarse con privilegios de Administrador Local.</li>
+            <li>El servicio se ejecuta bajo la cuenta "LocalSystem" para garantizar persistencia y acceso al hardware.</li>
+        </ul>
+
+        <h3>Seguridad de Datos (Cifrado)</h3>
+        <p>STC Cloud utiliza un sistema de cifrado de grado militar para proteger la identidad del agente y su configuración:</p>
+        <ul>
+            <li><strong>AES-256-GCM:</strong> Utilizado para el almacenamiento de tokens de acceso y configuración de red local. La clave se deriva mediante PBKDF2-SHA256 con 100.000 iteraciones.</li>
+            <li><strong>Hardware Binding:</strong> La clave de cifrado se deriva de atributos físicos del servidor (MachineGuid y BIOS Serial), impidiendo la clonación del agente entre máquinas.</li>
+        </ul>
+
+        <h3>Directorio de Trabajo</h3>
+        <p>El agente requiere permisos de lectura/escritura en el siguiente directorio:</p>
+        <div class="note-callout" style="font-family: monospace; background: #f1f5f9; border-color: #475569; color: #1e293b;">
+            C:\ProgramData\STCCloudMonitor\
+        </div>
+
+        <h3 id="proxy">Soporte de Proxy HTTP Corporativo <span class="new-badge">nuevo en v1.4</span></h3>
+        <p>
+            En entornos donde el acceso a Internet está restringido por un servidor proxy corporativo, el agente puede configurarse para enrutar todas sus comunicaciones (HTTPS y WebSockets) a través de dicho proxy.
+        </p>
+        <ul>
+            <li><strong>Configuración:</strong> vía la pestaña <em>"Network / Proxy"</em> en la consola STC Cloud Monitor Console, o mediante el flag CLI <code>--set-proxy</code>.</li>
+            <li><strong>Formato de URL:</strong> <code>http://[usuario:contraseña@]host:puerto</code></li>
+            <li><strong>Autenticación:</strong> Basic Authentication (RFC 7235) — las credenciales se almacenan cifradas con AES-256-GCM junto al resto de la configuración del agente.</li>
+            <li><strong>Protocolo de túnel:</strong> el agente establece un túnel CONNECT hacia el servidor proxy para encapsular tanto el tráfico HTTPS como las conexiones WebSocket (WSS).</li>
+        </ul>
+        <div class="note-callout">
+            <strong>Nota para administradores:</strong> Si se usan credenciales de proxy, asegúrese de que las políticas de seguridad (restablecimientos de contraseña, expiración de sesión) no interrumpan la conexión del servicio. Se recomienda usar una cuenta de servicio dedicada con contraseña sin expiración.
+        </div>
+
+        <div class="footer">
+            PÁGINA 4 | STC CLOUD – REQUISITOS DEL SISTEMA
+        </div>
+    </div>
+
+    <!-- PÁGINA 5: APÉNDICE 1 - PUERTOS -->
+    <div class="page">
+        <div class="internal-header">
+            <div class="internal-brand">STC CLOUD</div>
+            <div class="internal-doc-type">Apéndice 1: Puertos</div>
+        </div>
+
+        <h2 id="puertos">Apéndice 1: información detallada del puerto para STC Monitor</h2>
+        <p>El monitor STC requiere las siguientes aperturas de puerto para una funcionalidad completa:</p>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Puerto</th>
+                    <th>Protocolo</th>
+                    <th>Dirección</th>
+                    <th>Descripción</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>443</strong></td>
+                    <td>TCP (HTTPS)</td>
+                    <td>Saliente — Internet</td>
+                    <td>Comunicación segura con la API Cloud: telemetría, heartbeat y activación.</td>
+                </tr>
+                <tr>
+                    <td><strong>443</strong></td>
+                    <td>TCP (WSS)</td>
+                    <td>Saliente — Internet</td>
+                    <td>Canal de control en tiempo real (WebSockets sobre TLS). Reconexión con Exponential Backoff.</td>
+                </tr>
+                <tr>
+                    <td><strong>161</strong></td>
+                    <td>UDP (SNMP)</td>
+                    <td>Saliente — LAN</td>
+                    <td>Descubrimiento y lectura de contadores de impresoras (SNMP v2c).</td>
+                </tr>
+                <tr>
+                    <td>9100 / 80 / 443</td>
+                    <td>TCP</td>
+                    <td>Saliente — LAN</td>
+                    <td>Pre-verificación de alcanzabilidad TCP antes del escaneo SNMP. El agente prueba estos tres puertos en paralelo (JetDirect, HTTP EWS, HTTPS EWS). Si al menos uno responde, se procede con SNMP. No se requieren los tres; basta con que uno sea accesible.</td>
+                </tr>
+                <tr>
+                    <td>8000</td>
+                    <td>TCP</td>
+                    <td>Localhost</td>
+                    <td>Bridge para diagnóstico de terminal remota (Consola). Solo escucha en 127.0.0.1.</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="note-callout">
+            <strong>Arquitectura Zero-Inbound:</strong> No se requieren puertos de entrada (Inbound) desde Internet. El agente inicia todas las conexiones hacia la nube. El puerto 8000 solo acepta conexiones locales (loopback).
+        </div>
+
+        <p style="font-size: 13px; color: #64748b;">
+            Los puertos <strong>9100 / 80 / 443</strong> hacia la LAN son utilizados únicamente para la pre-verificación de alcanzabilidad. Esta verificación reduce el tiempo de escaneo al descartar IPs vacías (timeout de 500 ms vs. 3 segundos de SNMP). Si el firewall interno bloquea los tres puertos hacia las impresoras, el agente omitirá la pre-verificación e intentará SNMP directamente.
+        </p>
+
+        <div class="footer">
+            PÁGINA 5 | STC CLOUD – REQUISITOS DEL SISTEMA
+        </div>
+    </div>
+
+    <!-- PÁGINA 6: URLS + CONECTIVIDAD + AUTO-UPDATE -->
+    <div class="page">
+        <div class="internal-header">
+            <div class="internal-brand">STC CLOUD</div>
+            <div class="internal-doc-type">Información de URL</div>
+        </div>
+
+        <h2 id="urls">Información de la URL del monitor STC</h2>
+        <p>El agente debe tener acceso a los siguientes dominios para operar correctamente. Se recomienda añadirlos a la lista de permitidos (Allowlist) de su Firewall/Proxy:</p>
+
+        <h3>Endpoints Principales</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>URL / Dominio</th>
+                    <th>Función</th>
+                    <th>Frecuencia</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>stc-cloud-portal.vercel.app</td>
+                    <td>Portal de Gestión (Acceso Web)</td>
+                    <td>Bajo demanda</td>
+                </tr>
+                <tr>
+                    <td>stc-cloud-api.onrender.com</td>
+                    <td>API de Datos, Telemetría y Control</td>
+                    <td>Cada 60 s (Heartbeat)</td>
+                </tr>
+                <tr>
+                    <td>stc-cloud-api.onrender.com<br><code style="font-size:11px;">/api/v1/agents/version</code></td>
+                    <td>Consulta de versión para auto-update</td>
+                    <td>Al iniciar + cada 4 h</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>Validación de Conectividad al Inicio</h3>
+        <p>
+            Al iniciar el servicio, el agente realiza una prueba de conectividad HTTPS contra el endpoint <code>/api/v1/health</code> antes de arrancar los loops de monitoreo. Si el servidor no es alcanzable, el agente entra en modo de reintento automático con <strong>Exponential Backoff</strong>: primer reintento a los 10 s, duplicando el intervalo en cada intento hasta un máximo de 5 minutos. Este comportamiento previene la sobrecarga del servidor y el consumo innecesario de recursos durante interrupciones de red o configuración incorrecta del proxy.
+        </p>
+
+        <h3 id="autoupdate">Actualización Automática del Agente <span class="new-badge">nuevo en v1.4</span></h3>
+        <p>
+            El agente consulta el endpoint <code>GET /api/v1/agents/version</code> al arrancar y cada 4 horas. Si el servidor reporta una versión más reciente, el agente descarga el nuevo bundle de forma transparente, lo aplica de forma atómica (escritura en archivo temporal seguida de renombrado) y se reinicia. El gestor de servicios (NSSM) reini­cia el proceso automáticamente con el nuevo binario, sin intervención del administrador.
+        </p>
+        <p>
+            El administrador del servidor debe configurar las siguientes variables de entorno en la plataforma de hosting para gestionar las distribuciones:
+        </p>
+        <table>
+            <thead>
+                <tr>
+                    <th>Variable de entorno</th>
+                    <th>Descripción</th>
+                    <th>Ejemplo</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>AGENT_VERSION</code></td>
+                    <td>Versión actual del agente publicada</td>
+                    <td><code>1.4.0</code></td>
+                </tr>
+                <tr>
+                    <td><code>AGENT_DOWNLOAD_URL</code></td>
+                    <td>URL pública del bundle.js a descargar</td>
+                    <td><code>https://github.com/.../releases/download/v1.4.0/bundle.js</code></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="footer">
+            PÁGINA 6 | STC CLOUD – REQUISITOS DEL SISTEMA
+        </div>
+    </div>
+
+    <!-- PÁGINA 7: APÉNDICE 2 -->
+    <div class="page">
+        <div class="internal-header">
+            <div class="internal-brand">STC CLOUD</div>
+            <div class="internal-doc-type">Apéndice 2: Endpoints</div>
+        </div>
+
+        <h2 id="endpoints">Apéndice 2: STC Cloud Service Endpoints</h2>
+        <p>Detalle de los servicios utilizados para la señalización y comunicación continua.</p>
+
+        <h3>Cloud Signalling and On-Going Communication</h3>
+        <p>
+            STC Cloud utiliza tecnología de WebSockets persistentes (WSS sobre TLS 1.2+) para permitir la gestión remota sin latencia. El canal implementa reconexión automática con <strong>Exponential Backoff</strong>: primer reintento a los 5 s, duplicando el intervalo en cada intento hasta un máximo de 300 s (5 minutos). Al restablecer la conexión, el intervalo se resetea. Esto permite realizar acciones como:
+        </p>
+        <ul>
+            <li>Consulta de estado de agente en tiempo real.</li>
+            <li>Escaneo de red forzado bajo demanda.</li>
+            <li>Actualización remota de parámetros de configuración.</li>
+            <li>Reinicio del servicio del agente desde el portal.</li>
+        </ul>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Servicio</th>
+                    <th>Tecnología</th>
+                    <th>Seguridad</th>
+                    <th>Resiliencia</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Ingesta de Datos</td>
+                    <td>REST API / JSON</td>
+                    <td>TLS 1.2+</td>
+                    <td>Cola SQLite offline + reintentos</td>
+                </tr>
+                <tr>
+                    <td>Comando y Control</td>
+                    <td>WebSockets (WSS)</td>
+                    <td>TLS 1.2+ / JWT Auth</td>
+                    <td>Exponential Backoff (5 s → 300 s)</td>
+                </tr>
+                <tr>
+                    <td>Auto-Update</td>
+                    <td>HTTPS / JSON + descarga binaria</td>
+                    <td>TLS 1.2+</td>
+                    <td>Escritura atómica, fallo silencioso</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>Comportamiento Offline</h3>
+        <p>
+            Cuando el agente pierde conectividad con la nube, las lecturas SNMP continúan almacenándose localmente en una base de datos SQLite (<code>C:\ProgramData\STCCloudMonitor\queue.db</code>). Al restablecer la conexión, los datos acumulados se sincronizan automáticamente en lotes de hasta 500 lecturas por ciclo, garantizando que no se pierda ninguna medición.
+        </p>
+
+        <div class="footer">
+            PÁGINA 7 | STC CLOUD – REQUISITOS DEL SISTEMA
+        </div>
+    </div>
+
+    <!-- PÁGINA 8: APÉNDICE 3 -->
+    <div class="page">
+        <div class="internal-header">
+            <div class="internal-brand">STC CLOUD</div>
+            <div class="internal-doc-type">Apéndice 3: Certificaciones</div>
+        </div>
+
+        <h2 id="certificaciones">Apéndice 3 – Acreditaciones y Certificaciones</h2>
+        <p>STC Cloud ha sido desarrollado bajo estrictos estándares de calidad y seguridad de la información, asegurando el cumplimiento con las normativas corporativas vigentes.</p>
+
+        <h3>Privacidad y Cumplimiento</h3>
+        <ul>
+            <li><strong>GDPR / LGPD:</strong> No se recolectan datos personales de los usuarios. Solo se procesa telemetría técnica de hardware (contadores, niveles de tóner, alertas de estado).</li>
+            <li><strong>Seguridad de Red:</strong> Arquitectura Zero-Inbound (No requiere apertura de puertos de entrada desde Internet).</li>
+            <li><strong>ISO 27001 Ready:</strong> Procesos de desarrollo alineados con las mejores prácticas de gestión de seguridad de la información.</li>
+            <li><strong>Cifrado en Reposo:</strong> Toda la configuración sensible del agente (tokens, URL del servidor, credenciales de proxy) se almacena cifrada con AES-256-GCM + Hardware Binding. Nunca se almacena información sensible en texto plano.</li>
+        </ul>
+
+        <h3>Resumen de Características de Seguridad v1.4</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Característica</th>
+                    <th>Implementación</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Cifrado de config</td>
+                    <td>AES-256-GCM · PBKDF2-SHA256 (100k iter) · Hardware Binding</td>
+                </tr>
+                <tr>
+                    <td>Autenticación cloud</td>
+                    <td>JWT RS256 · 30 días para agentes · Refresh Tokens (SHA-256)</td>
+                </tr>
+                <tr>
+                    <td>Transporte</td>
+                    <td>TLS 1.2+ en todas las conexiones salientes</td>
+                </tr>
+                <tr>
+                    <td>Proxy corporativo</td>
+                    <td>HTTP CONNECT tunnel · Basic Auth cifrada en reposo</td>
+                </tr>
+                <tr>
+                    <td>Auto-update</td>
+                    <td>Descarga HTTPS · escritura atómica (temp + rename)</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3 style="margin-top: 50px; color: var(--stc-blue); border: none; text-align: center;">CONTACTO TÉCNICO</h3>
+        <p style="text-align: center; font-size: 16px; font-weight: 700; color: var(--stc-orange);">soporte@stccloud.com</p>
+        <p style="text-align: center; font-size: 14px;">Canal Directo | STC Cloud Argentina</p>
+
+        <div class="footer">
+            PÁGINA 8 | STC CLOUD – REQUISITOS DEL SISTEMA
+        </div>
+    </div>
+
+</body>
+</html>

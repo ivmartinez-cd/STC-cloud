@@ -10,7 +10,7 @@ import { SocketManager } from './SocketManager';
 import { ConsoleConnector } from './ConsoleConnector';
 import { ConsoleEngine } from './ConsoleEngine';
 
-const VERSION = '1.0.0';
+const VERSION = '1.4.0';
 let socket: SocketManager | null = null;
 const LOG_MAX_BYTES = 10 * 1024 * 1024;
 
@@ -109,7 +109,7 @@ async function heartbeat(): Promise<void> {
         }
       }
 
-      log('INFO', 'Heartbeat OK');
+      // handleCommands y handleRemoteConfig ya generan sus propios logs si es necesario
     } else if (res.status === 404) {
       log('ERROR', 'Agente no encontrado en el servidor. Eliminando identidad local...');
       await ConfigManager.deleteConfig();
@@ -120,8 +120,8 @@ async function heartbeat(): Promise<void> {
   } catch (e: any) {
     log('WARN', `Heartbeat error: ${e.message}`);
   } finally {
-    // Re-programar siguiente heartbeat (ahora 5 min porque tenemos WebSocket para comandos)
-    setTimeout(heartbeat, 5 * 60_000);
+    // Re-programar siguiente heartbeat cada 60 segundos
+    setTimeout(heartbeat, 60_000);
   }
 }
 
@@ -329,6 +329,76 @@ async function syncLoop(loop = true): Promise<void> {
   }
 }
 
+// ─── Auto-update del agente ───────────────────────────────────────────────────
+// El servidor expone GET /api/v1/agents/version → { version, url }.
+// Si la versión remota difiere de VERSION, descarga el nuevo bundle.js,
+// lo reemplaza de forma atómica y sale (NSSM reinicia con el nuevo binario).
+
+function getBundlePath(): string | null {
+  const arg = process.argv[1];
+  // En dev (tsx), argv[1] apunta a main.ts — skip update en ese caso
+  if (!arg || !arg.endsWith('.js')) return null;
+  if (!fs.existsSync(arg)) return null;
+  return arg;
+}
+
+async function checkForUpdate(serverUrl: string): Promise<void> {
+  const bundlePath = getBundlePath();
+  if (!bundlePath) return; // modo dev — no actualizar
+
+  try {
+    const res = await fetch(`${serverUrl}/api/v1/agents/version`, {
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (!res.ok) return;
+
+    const data = await res.json() as { version: string; url: string | null };
+    if (!data.url || data.version === VERSION) return;
+
+    log('INFO', `Nueva versión disponible: v${data.version} (actual: v${VERSION}). Descargando...`);
+
+    const dlRes = await fetch(data.url, { signal: AbortSignal.timeout(120_000) });
+    if (!dlRes.ok) {
+      log('WARN', `Descarga de actualización falló: HTTP ${dlRes.status}`);
+      return;
+    }
+
+    const buffer = Buffer.from(await dlRes.arrayBuffer());
+    const tempPath = bundlePath + '.update';
+    fs.writeFileSync(tempPath, buffer);
+    fs.renameSync(tempPath, bundlePath); // atómico — sobreescribe bundle.js en ejecución
+
+    log('INFO', `Actualización aplicada (v${data.version}). Reiniciando para aplicar cambios...`);
+    setTimeout(() => process.exit(0), 1_000); // NSSM reinicia el servicio automáticamente
+  } catch (e: any) {
+    log('WARN', `Auto-update: ${e.message}`);
+  }
+}
+
+// ─── Verificación de conectividad con Exponential Backoff ────────────────────
+// Bloquea el arranque hasta que el servidor responda. Evita inundar el API
+// con heartbeats fallidos en el momento en que el proxy/firewall bloquea 443.
+
+async function waitForConnectivity(serverUrl: string): Promise<void> {
+  const url = `${serverUrl}/api/v1/health`;
+  let delay = 10_000; // Arranca en 10s, dobla cada intento, techo 5 min
+
+  for (;;) {
+    try {
+      const res = await fetch(url, { signal: AbortSignal.timeout(8_000) });
+      if (res.ok) {
+        log('INFO', 'Servidor alcanzable. Iniciando loops.');
+        return;
+      }
+      log('WARN', `Servidor respondió HTTP ${res.status}. Reintentando en ${delay / 1000}s...`);
+    } catch {
+      log('WARN', `Servidor no alcanzable (puerto 443). Reintentando en ${delay / 1000}s (Exponential Backoff)...`);
+    }
+    await new Promise(r => setTimeout(r, delay));
+    delay = Math.min(delay * 2, 300_000);
+  }
+}
+
 // ─── Estado del agente (--status) ────────────────────────────────────────────
 
 async function printStatus(): Promise<void> {
@@ -366,11 +436,38 @@ async function printStatus(): Promise<void> {
     serverUrl: config?.serverUrl ?? null,
     service:   serviceStatus,
     dataDir:   DATA_DIR,
+    proxyUrl:  config?.proxyUrl  ?? null,
     lastLog,
   };
 
   process.stdout.write(JSON.stringify(status, null, 2) + '\n');
   process.exit(0);
+}
+
+// ─── Proxy ───────────────────────────────────────────────────────────────────
+
+async function setProxy(): Promise<void> {
+  const args = process.argv.slice(2);
+  const idx = args.indexOf('--set-proxy');
+  const proxyUrl = args[idx + 1]?.trim() ?? '';
+
+  try {
+    const config = await ConfigManager.load();
+    if (proxyUrl === '' || proxyUrl.toLowerCase() === 'none') {
+      delete config.proxyUrl;
+      console.log('Proxy eliminado.');
+    } else {
+      // Validación básica de formato
+      new URL(proxyUrl); // lanza si la URL es inválida
+      config.proxyUrl = proxyUrl;
+      console.log(`Proxy configurado: ${proxyUrl}`);
+    }
+    await ConfigManager.save(config);
+    process.exit(0);
+  } catch (e: any) {
+    console.error(`Error al configurar proxy: ${e.message}`);
+    process.exit(1);
+  }
 }
 
 // ─── Activación ──────────────────────────────────────────────────────────────
@@ -448,6 +545,11 @@ async function main(): Promise<void> {
       return;
     }
 
+    if (process.argv.includes('--set-proxy')) {
+      await setProxy();
+      return;
+    }
+
     // Soporta tanto --server (original) como --url (generado por el portal)
     if (process.argv.includes('--activate') || process.argv.includes('--url')) {
       await activate();
@@ -456,7 +558,7 @@ async function main(): Promise<void> {
 
     // ─── Inicio del Agente ───────────────────────────────────────────────────
     log('INFO', `STC Cloud Agent v${VERSION} iniciando...`);
-    
+
     log('INFO', 'Abriendo base de datos local...');
     openQueue();
 
@@ -470,12 +572,33 @@ async function main(): Promise<void> {
 
     log('INFO', `ID: ${currentConfig.agentId} | Servidor: ${currentConfig.serverUrl}`);
 
+    // ─── Proxy HTTP corporativo (opcional) ───────────────────────────────────
+    // undici está integrado en Node 18+ — no requiere paquete adicional.
+    if (currentConfig.proxyUrl) {
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const undici = require('undici') as any;
+        undici.setGlobalDispatcher(new undici.ProxyAgent(currentConfig.proxyUrl));
+        log('INFO', `Proxy HTTP configurado: ${currentConfig.proxyUrl}`);
+      } catch (e: any) {
+        log('WARN', `No se pudo configurar el proxy: ${e.message}`);
+      }
+    }
+
+    // ─── Verificación de conectividad al arrancar (HP SDS behavior) ──────────
+    await waitForConnectivity(currentConfig.serverUrl);
+
+    // ─── Auto-update: verificar al arrancar y cada 4 horas ───────────────────
+    await checkForUpdate(currentConfig.serverUrl);
+    setInterval(() => checkForUpdate(currentConfig.serverUrl), 4 * 60 * 60_000);
+
     // ─── Conexión WebSocket (Estilo HP SDS) ──────────────────────────────────
     socket = new SocketManager(
       currentConfig.serverUrl,
       currentConfig.token,
       (type, payload) => handleCommand(type, payload),
-      (level, msg) => log(level as any, msg)
+      (level, msg) => log(level as any, msg),
+      currentConfig.proxyUrl,
     );
     socket.connect();
 

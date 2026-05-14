@@ -13,6 +13,7 @@ internal sealed class ActivationForm : Form
     private readonly TabControl _tabControl;
     private readonly TabPage _tabServiceInfo;
     private readonly TabPage _tabSettings;
+    private readonly TabPage _tabProxy;
     private readonly StatusStrip _statusStrip;
     private readonly ToolStripStatusLabel _statusLabel;
 
@@ -38,6 +39,11 @@ internal sealed class ActivationForm : Form
     private readonly Button _btnActivate;
     private readonly ProgressBar _progressBar;
     private readonly Label _lblActivationHint;
+
+    // ── Proxy Tab ─────────────────────────────────────────────────────────────
+    private readonly TextBox _txtProxyUrl;
+    private readonly Label _lblProxyStatus;
+    private readonly Button _btnSaveProxy;
 
 
     private readonly Color _hpBlue = Color.FromArgb(0, 150, 214);
@@ -106,6 +112,9 @@ internal sealed class ActivationForm : Form
         _leftPanel.Controls.Add(new Label { Text = "Environment Settings", Font = _boldFont, Location = new Point(10, 265), AutoSize = true });
         _leftPanel.Controls.Add(new Label { Text = "Configuración del entorno para activar el acceso al Portal.", Location = new Point(10, 285), Size = new Size(200, 45) });
 
+        _leftPanel.Controls.Add(new Label { Text = "Network / Proxy", Font = _boldFont, Location = new Point(10, 340), AutoSize = true });
+        _leftPanel.Controls.Add(new Label { Text = "Proxy HTTP para redes corporativas con acceso restringido.", Location = new Point(10, 360), Size = new Size(200, 45) });
+
 
         Controls.Add(_leftPanel);
 
@@ -118,10 +127,12 @@ internal sealed class ActivationForm : Form
         };
 
         _tabServiceInfo = new TabPage("Service Information");
-        _tabSettings = new TabPage("Environment Settings");
+        _tabSettings    = new TabPage("Environment Settings");
+        _tabProxy       = new TabPage("Network / Proxy");
 
         _tabControl.TabPages.Add(_tabServiceInfo);
         _tabControl.TabPages.Add(_tabSettings);
+        _tabControl.TabPages.Add(_tabProxy);
 
         Controls.Add(_tabControl);
 
@@ -208,6 +219,86 @@ internal sealed class ActivationForm : Form
         _progressBar = new ProgressBar { Location = new Point(20, 240), Size = new Size(500, 5), Style = ProgressBarStyle.Marquee, Visible = false };
         _tabSettings.Controls.Add(_progressBar);
 
+        // ====================================================================
+        // TAB: Network / Proxy
+        // ====================================================================
+        _tabProxy.BackColor = Color.White;
+
+        _tabProxy.Controls.Add(new Label
+        {
+            Text = "Configuración de Proxy de Red",
+            Font = _titleFont,
+            Location = new Point(20, 20),
+            AutoSize = true,
+            ForeColor = _hpBlue
+        });
+
+        _tabProxy.Controls.Add(new Label
+        {
+            Text = "Configure un proxy HTTP/HTTPS para entornos corporativos con acceso a Internet restringido.",
+            Location = new Point(20, 60),
+            Size = new Size(500, 20)
+        });
+
+        var gbProxy = new GroupBox
+        {
+            Text = "Proxy HTTP",
+            Location = new Point(20, 95),
+            Size = new Size(510, 160),
+            ForeColor = Color.Blue
+        };
+
+        gbProxy.Controls.Add(new Label { Text = "URL del Proxy:", Location = new Point(15, 35), Size = new Size(120, 20) });
+        _txtProxyUrl = new TextBox
+        {
+            Location = new Point(140, 32),
+            Size = new Size(340, 23),
+            PlaceholderText = "http://proxy.empresa.com:8080"
+        };
+        gbProxy.Controls.Add(_txtProxyUrl);
+
+        gbProxy.Controls.Add(new Label
+        {
+            Text = "Formato: http://[usuario:contraseña@]host:puerto\nDejar vacío para quitar el proxy.",
+            Location = new Point(140, 62),
+            Size = new Size(340, 35),
+            ForeColor = Color.Gray,
+            Font = new Font("Segoe UI", 8f)
+        });
+
+        _lblProxyStatus = new Label
+        {
+            Text = "Estado: sin proxy configurado.",
+            Location = new Point(15, 105),
+            Size = new Size(370, 20),
+            ForeColor = Color.Gray
+        };
+        gbProxy.Controls.Add(_lblProxyStatus);
+
+        _btnSaveProxy = new Button
+        {
+            Text = "Guardar",
+            Location = new Point(390, 100),
+            Size = new Size(100, 30),
+            BackColor = _hpBlue,
+            ForeColor = Color.White,
+            FlatStyle = FlatStyle.Flat,
+            Font = _boldFont
+        };
+        _btnSaveProxy.FlatAppearance.BorderSize = 0;
+        _btnSaveProxy.Click += BtnSaveProxy_Click;
+        gbProxy.Controls.Add(_btnSaveProxy);
+
+        _tabProxy.Controls.Add(gbProxy);
+
+        _tabProxy.Controls.Add(new Label
+        {
+            Text = "Nota: después de guardar, el servicio se reiniciará automáticamente para aplicar los cambios.",
+            Location = new Point(20, 270),
+            Size = new Size(500, 35),
+            ForeColor = Color.Gray,
+            Font = new Font("Segoe UI", 8f)
+        });
 
         ResumeLayout(false);
     }
@@ -288,6 +379,19 @@ internal sealed class ActivationForm : Form
 
         _valDevicesResponding.Text = "Monitoreando (ver portal)";
 
+        // Sincronizar pestaña Proxy con el estado actual del agente
+        if (!string.IsNullOrEmpty(s.ProxyUrl))
+        {
+            _txtProxyUrl.Text = s.ProxyUrl;
+            _lblProxyStatus.Text = $"Estado: proxy activo → {s.ProxyUrl}";
+            _lblProxyStatus.ForeColor = Color.DarkGreen;
+        }
+        else
+        {
+            _lblProxyStatus.Text = "Estado: sin proxy configurado.";
+            _lblProxyStatus.ForeColor = Color.Gray;
+        }
+
         if (s.Activated)
         {
             _lblActivationHint.Text = "El agente ya se encuentra activado correctamente.";
@@ -305,6 +409,45 @@ internal sealed class ActivationForm : Form
             _btnActivate.Text = "Activar Agente";
         }
         
+    }
+
+    private async void BtnSaveProxy_Click(object? sender, EventArgs e)
+    {
+        _btnSaveProxy.Enabled = false;
+        _lblProxyStatus.Text = "Guardando...";
+        _lblProxyStatus.ForeColor = Color.Gray;
+
+        try
+        {
+            var proxyUrl = _txtProxyUrl.Text.Trim();
+            var (ok, error) = await AgentService.SetProxyAsync(proxyUrl);
+
+            if (ok)
+            {
+                _lblProxyStatus.Text = string.IsNullOrEmpty(proxyUrl)
+                    ? "Estado: proxy eliminado correctamente."
+                    : $"Estado: proxy configurado → {proxyUrl}";
+                _lblProxyStatus.ForeColor = Color.DarkGreen;
+
+                // Reiniciar el servicio para que el agente cargue la nueva config
+                AgentService.RestartService();
+                _statusLabel.Text = "Proxy guardado. Servicio reiniciado.";
+            }
+            else
+            {
+                _lblProxyStatus.Text = $"Error: {error}";
+                _lblProxyStatus.ForeColor = Color.Red;
+            }
+        }
+        catch (Exception ex)
+        {
+            _lblProxyStatus.Text = $"Error: {ex.Message}";
+            _lblProxyStatus.ForeColor = Color.Red;
+        }
+        finally
+        {
+            _btnSaveProxy.Enabled = true;
+        }
     }
 
     private async void BtnRefresh_Click(object? sender, EventArgs e)

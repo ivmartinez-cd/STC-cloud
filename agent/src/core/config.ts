@@ -19,6 +19,7 @@ export interface AgentConfig {
   snmpCommunity: string;
   snmpVersion: 1 | 2;
   scanIntervalMinutes: number;
+  proxyUrl?: string; // http://user:pass@proxy:8080 — opcional, para redes con proxy corporativo
 }
 
 // ─── Hardware ID (sección 9.1 del PDF: MAC + UUID de disco) ──────────────────

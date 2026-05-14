@@ -1,11 +1,13 @@
 import snmp from 'net-snmp';
+import net from 'net';
 import {
   detectBrandFromOid, detectBrandFromText, OID_MAPS, GENERIC_OIDS, SYS_OIDS, HR_STATUS_MAP, HR_DEVICE_PRINTER, type Brand,
 } from './oids';
 
-const TIMEOUT_MS     = 3000;
-const RETRIES        = 1;
-const MAX_CONCURRENT = 20;
+const TIMEOUT_MS      = 3000;
+const RETRIES         = 1;
+const MAX_CONCURRENT  = 20;
+const REACH_TIMEOUT   = 500; // ms para el pre-check TCP (vs 3000ms de SNMP timeout)
 
 class Semaphore {
   private current = 0;
@@ -19,6 +21,38 @@ class Semaphore {
 }
 
 const sem = new Semaphore(MAX_CONCURRENT);
+
+// Pre-check TCP multi-puerto: prueba 9100 (JetDirect), 80 (HTTP EWS) y 443 (HTTPS EWS)
+// en paralelo. El host se considera activo si cualquiera responde (connect OK o ECONNREFUSED).
+// Usar 3 puertos evita falsos negativos cuando el firewall bloquea 9100 pero el dispositivo
+// tiene interfaz web activa, situación común en redes enterprise segmentadas.
+// Nota: no usa ICMP para compatibilidad con redes que bloquean ping.
+const PRINTER_PORTS = [9100, 80, 443];
+
+function tryPort(ip: string, port: number): Promise<boolean> {
+  return new Promise(resolve => {
+    const socket = new net.Socket();
+    let settled = false;
+
+    const finish = (result: boolean) => {
+      if (settled) return;
+      settled = true;
+      socket.destroy();
+      resolve(result);
+    };
+
+    socket.setTimeout(REACH_TIMEOUT);
+    socket.once('connect',  () => finish(true));
+    socket.once('timeout',  () => finish(false));
+    socket.once('error', (err: NodeJS.ErrnoException) => finish(err.code === 'ECONNREFUSED'));
+    socket.connect(port, ip);
+  });
+}
+
+async function isHostReachable(ip: string): Promise<boolean> {
+  const results = await Promise.all(PRINTER_PORTS.map(p => tryPort(ip, p)));
+  return results.some(Boolean);
+}
 
 export interface DeviceReading {
   ip:         string;
@@ -69,6 +103,10 @@ export function hrStatus(val: unknown): string {
 }
 
 export async function readDevice(ip: string, community: string): Promise<DeviceReading | null> {
+  // Pre-check fuera del semáforo: descarta IPs sin respuesta en 500ms
+  // antes de ocupar un slot de concurrencia SNMP con un timeout de 3s.
+  if (!await isHostReachable(ip)) return null;
+
   await sem.acquire();
   const session = createSession(ip, community);
   try {

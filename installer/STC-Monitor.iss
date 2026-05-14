@@ -3,10 +3,10 @@
 ;  Requiere: Inno Setup 6.x (https://jrsoftware.org/isinfo.php)
 ;
 ;  Instalación interactiva:
-;    STC-Monitor-Setup-v1.0.0.exe
+;    STC-Monitor-Setup-v1.4.0.exe
 ;
 ;  Instalación silenciosa (GPO / scripts):
-;    STC-Monitor-Setup-v1.0.0.exe /VERYSILENT /SUPPRESSMSGBOXES /KEY=xxxxxxxxxxxx /SERVER=https://stc-cloud.onrender.com
+;    STC-Monitor-Setup-v1.4.0.exe /VERYSILENT /SUPPRESSMSGBOXES /KEY=xxxxxxxxxxxx /SERVER=https://stc-cloud.onrender.com
 ;
 ;  Estructura de archivos esperada antes de compilar:
 ;    installer/
@@ -20,7 +20,7 @@
 ; ============================================================================
 
 #define MyAppName      "STC Cloud Monitor"
-#define MyAppVersion   "1.0.0"
+#define MyAppVersion   "1.4.0"
 #define MyAppPublisher "STC Cloud"
 #define MyAppExeName   "stc-node.exe"
 #define ServiceName    "STCCloudMonitor"

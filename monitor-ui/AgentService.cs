@@ -16,6 +16,7 @@ internal sealed class AgentStatus
     [JsonPropertyName("serverUrl")] public string?  ServerUrl { get; init; }
     [JsonPropertyName("service")]   public string?  Service   { get; init; }
     [JsonPropertyName("dataDir")]   public string?  DataDir   { get; init; }
+    [JsonPropertyName("proxyUrl")]  public string?  ProxyUrl  { get; init; }
 }
 
 internal static class AgentService
@@ -104,6 +105,48 @@ internal static class AgentService
 
             if (proc.ExitCode == 0) return (true, null);
 
+            var detail = !string.IsNullOrWhiteSpace(stderr) ? stderr.Trim()
+                       : !string.IsNullOrWhiteSpace(stdout) ? stdout.Trim()
+                       : $"Código de salida {proc.ExitCode}";
+            return (false, detail);
+        }
+        catch (Exception ex)
+        {
+            return (false, ex.Message);
+        }
+    }
+
+    // ── Proxy configuration (calls bundle.js --set-proxy <url>) ──────────────
+
+    public static Task<(bool Ok, string? Error)> SetProxyAsync(string proxyUrl) =>
+        Task.Run(() => SetProxy(proxyUrl));
+
+    private static (bool Ok, string? Error) SetProxy(string proxyUrl)
+    {
+        var nodeExe = FindAgentExe();
+        if (nodeExe is null) return (false, "Ejecutable del agente no encontrado.");
+        var bundlePath = FindBundlePath(nodeExe);
+        if (bundlePath is null) return (false, "Bundle del agente no encontrado.");
+
+        // Pasar "none" si el usuario dejó el campo vacío (quitar proxy)
+        var arg = string.IsNullOrWhiteSpace(proxyUrl) ? "none" : proxyUrl.Trim();
+
+        try
+        {
+            var psi = new ProcessStartInfo(nodeExe, $"\"{bundlePath}\" --set-proxy {arg}")
+            {
+                UseShellExecute        = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError  = true,
+                CreateNoWindow         = true,
+                WindowStyle            = ProcessWindowStyle.Hidden,
+            };
+            using var proc = Process.Start(psi)!;
+            var stdout = proc.StandardOutput.ReadToEnd();
+            var stderr = proc.StandardError.ReadToEnd();
+            proc.WaitForExit(10_000);
+
+            if (proc.ExitCode == 0) return (true, null);
             var detail = !string.IsNullOrWhiteSpace(stderr) ? stderr.Trim()
                        : !string.IsNullOrWhiteSpace(stdout) ? stdout.Trim()
                        : $"Código de salida {proc.ExitCode}";
