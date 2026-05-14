@@ -154,32 +154,31 @@ if "!GITHUB_TOKEN!"=="" (
 )
 
 set PS_GH=%TEMP%\stc_gh_%RANDOM%.ps1
-(
-echo param^($Version, $Repo, $BundlePath^)
-echo $token = $env:GITHUB_TOKEN
-echo $hdr = @{ Authorization = "token $token"; Accept = 'application/vnd.github+json'; 'X-GitHub-Api-Version' = '2022-11-28' }
-echo.
-echo # Si ya existe el release, lo elimina para poder recrearlo limpio
-echo try {
-echo     $ex = Invoke-RestMethod "https://api.github.com/repos/$Repo/releases/tags/v$Version" -Headers $hdr -ErrorAction Stop
-echo     Write-Host "  Eliminando release anterior id=$^($ex.id^)..."
-echo     Invoke-RestMethod "https://api.github.com/repos/$Repo/releases/$^($ex.id^)" -Method Delete -Headers $hdr ^| Out-Null
-echo     Start-Sleep -Seconds 3
-echo } catch {}
-echo.
-echo # Crear el release
-echo $body = @{ tag_name = "v$Version"; target_commitish = 'main'; name = "v$Version"; body = "Release generado automaticamente por build-installer.bat"; draft = $false; prerelease = $false } ^| ConvertTo-Json
-echo $rel = Invoke-RestMethod "https://api.github.com/repos/$Repo/releases" -Method Post -Headers $hdr -Body $body -ContentType 'application/json'
-echo Write-Host "  Release creado id=$^($rel.id^)"
-echo.
-echo # Subir bundle.js como asset
-echo $uploadUrl = ^($rel.upload_url -replace '\{.*\}', ''^) + '?name=bundle.js'
-echo $aHdr = @{ Authorization = "token $token"; 'Content-Type' = 'application/octet-stream' }
-echo $bytes = [IO.File]::ReadAllBytes^($BundlePath^)
-echo Invoke-RestMethod $uploadUrl -Method Post -Headers $aHdr -Body $bytes ^| Out-Null
-echo $kb = [math]::Round^($bytes.Length / 1KB^)
-echo Write-Host "  bundle.js subido ^($kb KB^)"
-) > "!PS_GH!"
+echo param^($Version, $Repo, $BundlePath^) > "!PS_GH!"
+echo $token = $env:GITHUB_TOKEN >> "!PS_GH!"
+echo $hdr = @{ Authorization = "token $token"; Accept = 'application/vnd.github+json'; 'X-GitHub-Api-Version' = '2022-11-28' } >> "!PS_GH!"
+echo. >> "!PS_GH!"
+echo try { >> "!PS_GH!"
+echo     $ex = Invoke-RestMethod "https://api.github.com/repos/$Repo/releases/tags/v$Version" -Headers $hdr -ErrorAction Stop >> "!PS_GH!"
+echo     $exId = $ex.id >> "!PS_GH!"
+echo     Write-Host "  Eliminando release anterior id=$exId..." >> "!PS_GH!"
+echo     Invoke-RestMethod "https://api.github.com/repos/$Repo/releases/$exId" -Method Delete -Headers $hdr ^| Out-Null >> "!PS_GH!"
+echo     Invoke-RestMethod "https://api.github.com/repos/$Repo/git/refs/tags/v$Version" -Method Delete -Headers $hdr -ErrorAction SilentlyContinue >> "!PS_GH!"
+echo     Start-Sleep -Seconds 3 >> "!PS_GH!"
+echo } catch {} >> "!PS_GH!"
+echo. >> "!PS_GH!"
+echo $body = @{ tag_name = "v$Version"; target_commitish = 'main'; name = "v$Version"; body = "Release generado por build-installer.bat"; draft = $false; prerelease = $false } ^| ConvertTo-Json >> "!PS_GH!"
+echo $rel = Invoke-RestMethod "https://api.github.com/repos/$Repo/releases" -Method Post -Headers $hdr -Body $body -ContentType 'application/json' >> "!PS_GH!"
+echo $relId = $rel.id >> "!PS_GH!"
+echo Write-Host "  Release creado id=$relId" >> "!PS_GH!"
+echo. >> "!PS_GH!"
+echo $rawUpload = $rel.upload_url >> "!PS_GH!"
+echo $uploadUrl = ^($rawUpload -replace '\{.*\}', ''^) + '?name=bundle.js' >> "!PS_GH!"
+echo $aHdr = @{ Authorization = "token $token"; 'Content-Type' = 'application/octet-stream' } >> "!PS_GH!"
+echo $bytes = [IO.File]::ReadAllBytes^($BundlePath^) >> "!PS_GH!"
+echo Invoke-RestMethod $uploadUrl -Method Post -Headers $aHdr -Body $bytes ^| Out-Null >> "!PS_GH!"
+echo $kb = [math]::Round^($bytes.Length / 1KB^) >> "!PS_GH!"
+echo Write-Host "  bundle.js subido ($kb KB)" >> "!PS_GH!"
 
 powershell -NoProfile -ExecutionPolicy Bypass -File "!PS_GH!" -Version "!APP_VERSION!" -Repo "!GITHUB_REPO!" -BundlePath "!AGENT_DIR!\dist\bundle.js"
 set GH_EXIT=!errorlevel!
@@ -210,23 +209,19 @@ if "!RENDER_SERVICE_ID!"=="" (
 
 set DLURL=https://github.com/!GITHUB_REPO!/releases/download/v!APP_VERSION!/bundle.js
 set PS_RND=%TEMP%\stc_rnd_%RANDOM%.ps1
-(
-echo param^($ServiceId, $Version, $DownloadUrl^)
-echo $apiKey = $env:RENDER_API_KEY
-echo $hdr = @{ Authorization = "Bearer $apiKey"; Accept = 'application/json'; 'Content-Type' = 'application/json' }
-echo.
-echo # Obtener env vars actuales y filtrar las que vamos a pisar
-echo $current = Invoke-RestMethod "https://api.render.com/v1/services/$ServiceId/env-vars" -Headers $hdr
-echo $updated = @^($current ^| Where-Object { $_.key -notin @^('AGENT_VERSION', 'AGENT_DOWNLOAD_URL'^) }^)
-echo $updated += @{ key = 'AGENT_VERSION';    value = $Version }
-echo $updated += @{ key = 'AGENT_DOWNLOAD_URL'; value = $DownloadUrl }
-echo.
-echo $body = $updated ^| ConvertTo-Json -AsArray
-echo Invoke-RestMethod "https://api.render.com/v1/services/$ServiceId/env-vars" -Method Put -Headers $hdr -Body $body -ContentType 'application/json' ^| Out-Null
-echo Write-Host "  AGENT_VERSION=$Version"
-echo Write-Host "  AGENT_DOWNLOAD_URL=$DownloadUrl"
-echo Write-Host "  Render iniciara redeploy automaticamente."
-) > "!PS_RND!"
+echo param^($ServiceId, $Version, $DownloadUrl^) > "!PS_RND!"
+echo $apiKey = $env:RENDER_API_KEY >> "!PS_RND!"
+echo $hdr = @{ Authorization = "Bearer $apiKey"; Accept = 'application/json'; 'Content-Type' = 'application/json' } >> "!PS_RND!"
+echo. >> "!PS_RND!"
+echo $current = Invoke-RestMethod "https://api.render.com/v1/services/$ServiceId/env-vars" -Headers $hdr >> "!PS_RND!"
+echo $filtered = @^($current ^| ForEach-Object { @{ key = $_.key; value = $_.value } } ^| Where-Object { $_.key -notin @^('AGENT_VERSION', 'AGENT_DOWNLOAD_URL'^) }^) >> "!PS_RND!"
+echo $filtered += @{ key = 'AGENT_VERSION'; value = $Version } >> "!PS_RND!"
+echo $filtered += @{ key = 'AGENT_DOWNLOAD_URL'; value = $DownloadUrl } >> "!PS_RND!"
+echo $body = ConvertTo-Json @^($filtered^) -Depth 3 >> "!PS_RND!"
+echo Invoke-RestMethod "https://api.render.com/v1/services/$ServiceId/env-vars" -Method Put -Headers $hdr -Body $body -ContentType 'application/json' ^| Out-Null >> "!PS_RND!"
+echo Write-Host "  AGENT_VERSION=$Version" >> "!PS_RND!"
+echo Write-Host "  AGENT_DOWNLOAD_URL=$DownloadUrl" >> "!PS_RND!"
+echo Write-Host "  Render iniciara redeploy automaticamente." >> "!PS_RND!"
 
 powershell -NoProfile -ExecutionPolicy Bypass -File "!PS_RND!" -ServiceId "!RENDER_SERVICE_ID!" -Version "!APP_VERSION!" -DownloadUrl "!DLURL!"
 set RND_EXIT=!errorlevel!
