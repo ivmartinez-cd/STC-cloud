@@ -60,40 +60,6 @@ export class ConsoleEngine {
             }
             break;
 
-          case 'check-printer':
-          case 'ping-printer':
-            if (args.length > 0) {
-              const target = args[0];
-              if (!/^[a-zA-Z0-9.-]+$/.test(target)) {
-                response = '❌ IP inválida';
-              } else {
-                let isOnline = false;
-                try {
-                  await execAsync(`ping -n 1 ${target}`);
-                  isOnline = true;
-                } catch {}
-
-                response = `🔍 DIAGNÓSTICO: ${target}\n`;
-                response += `📡 RED: ${isOnline ? '✅ ONLINE' : '❌ OFFLINE'}\n`;
-                response += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-                
-                const ports = [
-                  { p: 9100, n: 'IMPRESIÓN' },
-                  { p: 80,   n: 'WEB CONFIG' },
-                  { p: 161,  n: 'SNMP' }
-                ];
-
-                for (const portInfo of ports) {
-                  const isOpen = await this.checkPort(target, portInfo.p);
-                  response += `${isOpen ? '🟢' : '⚪'} ${portInfo.n.padEnd(12)}: ${isOpen ? 'OK' : 'OFF'}\n`;
-                }
-                response += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
-              }
-            } else {
-              response = '❌ Uso: check-printer <ip>';
-            }
-            break;
-
           case 'snmp-check':
             if (args.length > 0) {
               const target = args[0];
@@ -120,7 +86,7 @@ export class ConsoleEngine {
                     response += `⚫ MONO:    ${data.mono_pages ?? 'N/D'}\n`;
                     response += `🌈 COLOR:   ${data.color_pages ?? 'N/D'}\n`;
                     response += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-                    response += `✅ Datos IMIL recuperados correctamente.`;
+                    response += `✅ Datos STC recuperados correctamente.`;
                   }
                 } catch (error: any) {
                   response = `❌ Error SNMP: ${error.message}`;
@@ -135,7 +101,6 @@ export class ConsoleEngine {
             response = `Comandos de STC Console:
  - status: Estado del motor
  - ping <ip>: Test de red rápido
- - check-printer <ip>: Test de red + puertos
  - snmp-check <ip>: Lectura de contadores/serial
  - clear: Limpiar consola
  - help: Ver esta ayuda`;
