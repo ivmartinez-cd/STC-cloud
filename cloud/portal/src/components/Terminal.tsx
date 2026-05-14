@@ -156,24 +156,6 @@ const Terminal: React.FC<TerminalProps> = ({ agentId }) => {
         ref={scrollRef}
         className="flex-1 overflow-y-auto p-8 font-mono text-sm space-y-3 custom-scrollbar"
       >
-        {lines.length === 0 && (
-          <div className="flex flex-col items-center justify-center h-full text-slate-600 space-y-4 opacity-50">
-            <Command size={48} strokeWidth={1} />
-            <p className="text-[10px] font-black uppercase tracking-[0.2em]">Esperando instrucciones...</p>
-            <div className="flex gap-2">
-              {commonCommands.map(c => (
-                <button 
-                  key={c.cmd}
-                  onClick={() => { setInputValue(c.cmd); inputRef.current?.focus(); }}
-                  className="px-3 py-1.5 border border-slate-800 rounded-lg hover:bg-slate-800 hover:text-slate-300 transition-all text-[10px]"
-                >
-                  {c.label}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-        
         {lines.map((line) => (
           <div key={line.id} className={`flex gap-3 animate-in fade-in slide-in-from-left-2 duration-300 ${
             line.type === 'input' ? 'text-slate-200' : 
@@ -202,6 +184,18 @@ const Terminal: React.FC<TerminalProps> = ({ agentId }) => {
       </div>
 
       {/* Input Area */}
+      <div className="px-8 py-2 flex gap-2 overflow-x-auto bg-slate-900/50 border-t border-slate-800/30 custom-scrollbar">
+        {commonCommands.map(c => (
+          <button 
+            key={c.cmd}
+            onClick={() => { setInputValue(c.cmd); inputRef.current?.focus(); }}
+            className="px-3 py-1 bg-slate-800/50 border border-slate-700/50 rounded-lg hover:bg-brand/20 hover:border-brand/30 hover:text-brand transition-all text-[9px] font-bold text-slate-400 whitespace-nowrap"
+          >
+            {c.label}
+          </button>
+        ))}
+      </div>
+
       <form 
         onSubmit={handleExecute}
         className="px-8 py-6 bg-slate-900/30 border-t border-slate-800/50 flex items-center gap-4 group"
