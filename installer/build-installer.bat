@@ -39,7 +39,7 @@ set /p NEW_VERSION=  Nueva version ^(Enter para mantener !APP_VERSION!^):
 if "!NEW_VERSION!"=="" set NEW_VERSION=!APP_VERSION!
 
 :: Validar formato x.y.z
-echo !NEW_VERSION! | findstr /r "^[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*$" >nul
+powershell -NoProfile -Command "if ('!NEW_VERSION!' -match '^[0-9]+\.[0-9]+\.[0-9]+$') { exit 0 } else { exit 1 }" >nul 2>&1
 if !errorlevel! neq 0 (
     echo [ERROR] Formato invalido. Use x.y.z ^(ej: 1.5.0^)
     pause & exit /b 1
