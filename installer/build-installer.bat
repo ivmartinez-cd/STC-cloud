@@ -26,13 +26,33 @@ set OUTPUT_DIR=%SCRIPT_DIR%output
 set INNO_DEFAULT="C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
 set GITHUB_REPO=ivmartinez-cd/STC-cloud
 
-:: ── Extraer version del .iss ──────────────────────────────────────────────────
+:: ── Extraer version actual del .iss ──────────────────────────────────────────
 for /f "usebackq delims=" %%v in (`powershell -NoProfile -Command "(Select-String '%SCRIPT_DIR%STC-Monitor.iss' -Pattern '([0-9]+\.[0-9]+\.[0-9]+)').Matches[0].Groups[1].Value"`) do set APP_VERSION=%%v
 if "!APP_VERSION!"=="" (
     echo [ERROR] No se pudo extraer la version de STC-Monitor.iss
     pause & exit /b 1
 )
-echo   Version detectada: !APP_VERSION!
+
+:: ── Preguntar version ─────────────────────────────────────────────────────────
+echo   Version actual: !APP_VERSION!
+set /p NEW_VERSION=  Nueva version ^(Enter para mantener !APP_VERSION!^):
+if "!NEW_VERSION!"=="" set NEW_VERSION=!APP_VERSION!
+
+:: Validar formato x.y.z
+echo !NEW_VERSION! | findstr /r "^[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*$" >nul
+if !errorlevel! neq 0 (
+    echo [ERROR] Formato invalido. Use x.y.z ^(ej: 1.5.0^)
+    pause & exit /b 1
+)
+set APP_VERSION=!NEW_VERSION!
+
+:: Actualizar ambos archivos si la version cambio
+powershell -NoProfile -Command ^
+    "(Get-Content '%SCRIPT_DIR%STC-Monitor.iss') -replace '#define MyAppVersion\s+""[0-9.]+""', '#define MyAppVersion   ""!APP_VERSION!""' | Set-Content '%SCRIPT_DIR%STC-Monitor.iss' -Encoding UTF8"
+powershell -NoProfile -Command ^
+    "(Get-Content '!AGENT_DIR!\src\core\main.ts') -replace 'const VERSION = ''[0-9.]+''', 'const VERSION = ''!APP_VERSION!''' | Set-Content '!AGENT_DIR!\src\core\main.ts' -Encoding UTF8"
+
+echo   Version a buildear: !APP_VERSION!
 echo.
 
 :: ── Paso 0: .NET SDK ──────────────────────────────────────────────────────────
