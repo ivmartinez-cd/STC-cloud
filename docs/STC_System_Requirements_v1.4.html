@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>STC Cloud - System Requirements v1.4</title>
+    <title>STC Cloud - System Requirements</title>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Inter:wght@400;600&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -174,20 +174,6 @@
             color: #9a3412;
         }
 
-        .new-badge {
-            display: inline-block;
-            background: var(--stc-orange);
-            color: white;
-            font-size: 9px;
-            font-weight: 700;
-            letter-spacing: 0.08em;
-            padding: 2px 6px;
-            border-radius: 3px;
-            vertical-align: middle;
-            margin-left: 6px;
-            text-transform: uppercase;
-        }
-
         .footer {
             position: absolute;
             bottom: 20mm;
@@ -228,15 +214,6 @@
 
         ul { padding-left: 20px; }
         li { font-size: 14px; color: #334155; margin-bottom: 8px; }
-
-        .changelog {
-            background: #f0f9ff;
-            border-left: 4px solid var(--stc-blue);
-            padding: 16px 20px;
-            margin: 25px 0;
-            font-size: 13px;
-        }
-        .changelog strong { color: var(--stc-blue); }
     </style>
 </head>
 <body>
@@ -259,7 +236,7 @@
             <h1 class="main-title">STC CLOUD –</h1>
             <h1 class="main-subtitle">REQUISITOS DEL SISTEMA</h1>
 
-            <div class="version-tag">VERSIÓN 1.4</div>
+            <div class="version-tag">Mayo 2026</div>
         </div>
 
         <div class="footer">
@@ -300,7 +277,7 @@
                 <span class="toc-page">4</span>
             </a>
             <a href="#proxy" class="toc-item indent">
-                <span class="toc-text">Soporte de proxy HTTP corporativo <span class="new-badge">nuevo en v1.4</span></span>
+                <span class="toc-text">Soporte de proxy HTTP corporativo</span>
                 <span class="toc-dots"></span>
                 <span class="toc-page">4</span>
             </a>
@@ -315,7 +292,7 @@
                 <span class="toc-page">6</span>
             </a>
             <a href="#autoupdate" class="toc-item indent">
-                <span class="toc-text">Actualización automática del agente <span class="new-badge">nuevo en v1.4</span></span>
+                <span class="toc-text">Actualización automática del agente</span>
                 <span class="toc-dots"></span>
                 <span class="toc-page">6</span>
             </a>
@@ -336,12 +313,6 @@
             </a>
         </div>
 
-        <div class="changelog">
-            <strong>Cambios en v1.4 (Mayo 2026):</strong><br>
-            Soporte de proxy HTTP corporativo con autenticación Basic · Actualización automática del agente (auto-update) ·
-            Pre-verificación TCP multi-puerto antes del escaneo SNMP · Exponential Backoff en reconexión WSS y chequeo de conectividad inicial.
-        </div>
-
         <div class="footer">
             PÁGINA 2 | STC CLOUD – REQUISITOS DEL SISTEMA
         </div>
@@ -359,7 +330,7 @@
             STC Cloud es una solución de gestión de flotas de impresión de nivel empresarial. La arquitectura se basa en el despliegue de micro-agentes (STC Cloud Monitor) que interactúan con los dispositivos mediante protocolos estándar de la industria, garantizando una recolección de datos precisa y en tiempo real.
         </p>
         <p>
-            La solución consta de dos componentes: el <strong>STC Cloud Portal</strong> (interfaz web de gestión centralizada) y el <strong>STC Cloud Monitor</strong> (agente ligero instalado en cada site). El agente opera de forma autónoma, con resiliencia ante pérdida de conectividad, y se actualiza automáticamente desde el servidor central sin intervención del administrador.
+            La solución consta de dos componentes: el <strong>STC Cloud Portal</strong> (interfaz web de gestión centralizada) y el <strong>STC Cloud Monitor</strong> (agente ligero instalado en cada site). El agente opera de forma autónoma, con resiliencia ante pérdida de conectividad, soporte de proxy HTTP corporativo, y se actualiza automáticamente desde el servidor central sin intervención del administrador.
         </p>
 
         <h2 id="so">Sistemas operativos</h2>
@@ -434,7 +405,7 @@
             C:\ProgramData\STCCloudMonitor\
         </div>
 
-        <h3 id="proxy">Soporte de Proxy HTTP Corporativo <span class="new-badge">nuevo en v1.4</span></h3>
+        <h3 id="proxy">Soporte de Proxy HTTP Corporativo</h3>
         <p>
             En entornos donde el acceso a Internet está restringido por un servidor proxy corporativo, el agente puede configurarse para enrutar todas sus comunicaciones (HTTPS y WebSockets) a través de dicho proxy.
         </p>
@@ -442,7 +413,7 @@
             <li><strong>Configuración:</strong> vía la pestaña <em>"Network / Proxy"</em> en la consola STC Cloud Monitor Console, o mediante el flag CLI <code>--set-proxy</code>.</li>
             <li><strong>Formato de URL:</strong> <code>http://[usuario:contraseña@]host:puerto</code></li>
             <li><strong>Autenticación:</strong> Basic Authentication (RFC 7235) — las credenciales se almacenan cifradas con AES-256-GCM junto al resto de la configuración del agente.</li>
-            <li><strong>Protocolo de túnel:</strong> el agente establece un túnel CONNECT hacia el servidor proxy para encapsular tanto el tráfico HTTPS como las conexiones WebSocket (WSS).</li>
+            <li><strong>Protocolo de túnel:</strong> el agente establece un túnel CONNECT hacia el servidor proxy para encapsular tanto el tráfico HTTPS como las conexiones WebSocket (WSS). Implementado sin dependencias externas adicionales.</li>
         </ul>
         <div class="note-callout">
             <strong>Nota para administradores:</strong> Si se usan credenciales de proxy, asegúrese de que las políticas de seguridad (restablecimientos de contraseña, expiración de sesión) no interrumpan la conexión del servicio. Se recomienda usar una cuenta de servicio dedicada con contraseña sin expiración.
@@ -495,7 +466,7 @@
                     <td>9100 / 80 / 443</td>
                     <td>TCP</td>
                     <td>Saliente — LAN</td>
-                    <td>Pre-verificación de alcanzabilidad TCP antes del escaneo SNMP. El agente prueba estos tres puertos en paralelo (JetDirect, HTTP EWS, HTTPS EWS). Si al menos uno responde, se procede con SNMP. No se requieren los tres; basta con que uno sea accesible.</td>
+                    <td>Pre-verificación de alcanzabilidad TCP antes del escaneo SNMP. El agente prueba estos tres puertos en paralelo (JetDirect, HTTP EWS, HTTPS EWS) con timeout de 500 ms. Si al menos uno responde, se procede con SNMP. No se requieren los tres; basta con que uno sea accesible.</td>
                 </tr>
                 <tr>
                     <td>8000</td>
@@ -562,9 +533,9 @@
             Al iniciar el servicio, el agente realiza una prueba de conectividad HTTPS contra el endpoint <code>/api/v1/health</code> antes de arrancar los loops de monitoreo. Si el servidor no es alcanzable, el agente entra en modo de reintento automático con <strong>Exponential Backoff</strong>: primer reintento a los 10 s, duplicando el intervalo en cada intento hasta un máximo de 5 minutos. Este comportamiento previene la sobrecarga del servidor y el consumo innecesario de recursos durante interrupciones de red o configuración incorrecta del proxy.
         </p>
 
-        <h3 id="autoupdate">Actualización Automática del Agente <span class="new-badge">nuevo en v1.4</span></h3>
+        <h3 id="autoupdate">Actualización Automática del Agente</h3>
         <p>
-            El agente consulta el endpoint <code>GET /api/v1/agents/version</code> al arrancar y cada 4 horas. Si el servidor reporta una versión más reciente, el agente descarga el nuevo bundle de forma transparente, lo aplica de forma atómica (escritura en archivo temporal seguida de renombrado) y se reinicia. El gestor de servicios (NSSM) reini­cia el proceso automáticamente con el nuevo binario, sin intervención del administrador.
+            El agente consulta el endpoint <code>GET /api/v1/agents/version</code> al arrancar y cada 4 horas. Si el servidor reporta una versión <strong>estrictamente mayor</strong> (comparación semver) a la versión instalada, el agente descarga el nuevo bundle de forma transparente, lo aplica de forma atómica (escritura en archivo temporal seguida de renombrado) y se reinicia. El gestor de servicios (NSSM) reinicia el proceso automáticamente con el nuevo binario, sin intervención del administrador. El agente nunca se degrada a una versión anterior.
         </p>
         <p>
             El administrador del servidor debe configurar las siguientes variables de entorno en la plataforma de hosting para gestionar las distribuciones:
@@ -581,15 +552,18 @@
                 <tr>
                     <td><code>AGENT_VERSION</code></td>
                     <td>Versión actual del agente publicada</td>
-                    <td><code>1.4.0</code></td>
+                    <td><code>1.0.0</code></td>
                 </tr>
                 <tr>
                     <td><code>AGENT_DOWNLOAD_URL</code></td>
                     <td>URL pública del bundle.js a descargar</td>
-                    <td><code>https://github.com/.../releases/download/v1.4.0/bundle.js</code></td>
+                    <td><code>https://github.com/.../releases/download/v1.0.0/bundle.js</code></td>
                 </tr>
             </tbody>
         </table>
+        <p style="font-size: 13px; color: #64748b;">
+            Ambas variables se actualizan automáticamente al ejecutar el script de build (<code>build-installer.bat</code>), que compila el agente, genera el instalador Windows, publica el release en GitHub y actualiza Render en un solo paso.
+        </p>
 
         <div class="footer">
             PÁGINA 6 | STC CLOUD – REQUISITOS DEL SISTEMA
@@ -643,7 +617,7 @@
                     <td>Auto-Update</td>
                     <td>HTTPS / JSON + descarga binaria</td>
                     <td>TLS 1.2+</td>
-                    <td>Escritura atómica, fallo silencioso</td>
+                    <td>Escritura atómica · solo versiones mayores</td>
                 </tr>
             </tbody>
         </table>
@@ -676,7 +650,7 @@
             <li><strong>Cifrado en Reposo:</strong> Toda la configuración sensible del agente (tokens, URL del servidor, credenciales de proxy) se almacena cifrada con AES-256-GCM + Hardware Binding. Nunca se almacena información sensible en texto plano.</li>
         </ul>
 
-        <h3>Resumen de Características de Seguridad v1.4</h3>
+        <h3>Resumen de Características de Seguridad</h3>
         <table>
             <thead>
                 <tr>
@@ -703,7 +677,7 @@
                 </tr>
                 <tr>
                     <td>Auto-update</td>
-                    <td>Descarga HTTPS · escritura atómica (temp + rename)</td>
+                    <td>Descarga HTTPS · escritura atómica · solo versiones mayores (semver)</td>
                 </tr>
             </tbody>
         </table>
