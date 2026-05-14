@@ -298,7 +298,8 @@ const start = async () => {
 
     // Manejador para el health check de Render en la raíz
     fastify.get("/", async () => ({ status: "ok", service: "stc-cloud-api" }));
-    fastify.get("/health", async () => ({ status: "ok", version: "1.0.0" }));
+    fastify.get("/health",         async () => ({ status: "ok", version: "1.0.0" }));
+    fastify.get("/api/v1/health",  async () => ({ status: "ok", version: "1.0.0" }));
 
     // Versión del agente — los agentes consultan esto para auto-update.
     // AGENT_VERSION y AGENT_DOWNLOAD_URL se configuran como env vars en Render
