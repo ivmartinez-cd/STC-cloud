@@ -32,6 +32,7 @@ if "!APP_VERSION!"=="" (
     echo [ERROR] No se pudo extraer la version de STC-Monitor.iss
     pause & exit /b 1
 )
+set OLD_VERSION=!APP_VERSION!
 
 :: ── Preguntar version ─────────────────────────────────────────────────────────
 echo   Version actual: !APP_VERSION!
@@ -46,11 +47,24 @@ if !errorlevel! neq 0 (
 )
 set APP_VERSION=!NEW_VERSION!
 
-:: Actualizar ambos archivos si la version cambio
-powershell -NoProfile -Command ^
-    "(Get-Content '%SCRIPT_DIR%STC-Monitor.iss') -replace '#define MyAppVersion\s+""[0-9.]+""', '#define MyAppVersion   ""!APP_VERSION!""' | Set-Content '%SCRIPT_DIR%STC-Monitor.iss' -Encoding UTF8"
-powershell -NoProfile -Command ^
-    "(Get-Content '!AGENT_DIR!\src\core\main.ts') -replace 'const VERSION = ''[0-9.]+''', 'const VERSION = ''!APP_VERSION!''' | Set-Content '!AGENT_DIR!\src\core\main.ts' -Encoding UTF8"
+:: Actualizar ambos archivos via PS1 temporal (evita problemas de escaping con comillas)
+set PS_VER=%TEMP%\stc_ver_%RANDOM%.ps1
+echo param^($OldV, $NewV, $IssPath, $MainPath^) > "!PS_VER!"
+echo $dq = [char]34 >> "!PS_VER!"
+echo $sq = [char]39 >> "!PS_VER!"
+echo $issOld = $dq + $OldV + $dq >> "!PS_VER!"
+echo $issNew = $dq + $NewV + $dq >> "!PS_VER!"
+echo $mainOld = $sq + $OldV + $sq >> "!PS_VER!"
+echo $mainNew = $sq + $NewV + $sq >> "!PS_VER!"
+echo (Get-Content $IssPath) -replace [regex]::Escape^($issOld^), $issNew ^| Set-Content $IssPath -Encoding UTF8 >> "!PS_VER!"
+echo (Get-Content $MainPath) -replace [regex]::Escape^($mainOld^), $mainNew ^| Set-Content $MainPath -Encoding UTF8 >> "!PS_VER!"
+powershell -NoProfile -ExecutionPolicy Bypass -File "!PS_VER!" -OldV "!OLD_VERSION!" -NewV "!APP_VERSION!" -IssPath "!SCRIPT_DIR!STC-Monitor.iss" -MainPath "!AGENT_DIR!\src\core\main.ts"
+set VER_EXIT=!errorlevel!
+del "!PS_VER!" 2>nul
+if !VER_EXIT! neq 0 (
+    echo [ERROR] Fallo al actualizar la version en los archivos.
+    pause & exit /b 1
+)
 
 echo   Version a buildear: !APP_VERSION!
 echo.

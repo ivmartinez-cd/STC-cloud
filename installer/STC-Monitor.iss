@@ -1,11 +1,11 @@
-; ============================================================================
-;  STC Cloud Monitor — Instalador para Windows
+﻿; ============================================================================
+;  STC Cloud Monitor â€” Instalador para Windows
 ;  Requiere: Inno Setup 6.x (https://jrsoftware.org/isinfo.php)
 ;
-;  Instalación interactiva:
+;  InstalaciÃ³n interactiva:
 ;    STC-Monitor-Setup-v1.4.0.exe
 ;
-;  Instalación silenciosa (GPO / scripts):
+;  InstalaciÃ³n silenciosa (GPO / scripts):
 ;    STC-Monitor-Setup-v1.4.0.exe /VERYSILENT /SUPPRESSMSGBOXES /KEY=xxxxxxxxxxxx /SERVER=https://stc-cloud.onrender.com
 ;
 ;  Estructura de archivos esperada antes de compilar:
@@ -20,14 +20,14 @@
 ; ============================================================================
 
 #define MyAppName      "STC Cloud Monitor"
-#define MyAppVersion   "1.4.0"
+#define MyAppVersion   "1.5.0"
 #define MyAppPublisher "STC Cloud"
 #define MyAppExeName   "stc-node.exe"
 #define ServiceName    "STCCloudMonitor"
 #define DataDir        "C:\ProgramData\STCCloudMonitor"
 #define DefaultServer  "https://stc-cloud.onrender.com"
 
-; ─── Configuración general ───────────────────────────────────────────────────
+; â”€â”€â”€ ConfiguraciÃ³n general â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 [Setup]
 AppId={{D3A7C2F1-8B4E-4F6A-9D0C-E5B123456789}
 AppName={#MyAppName}
@@ -52,49 +52,49 @@ SetupMutex=STC-Monitor-Setup-Mutex
 CloseApplications=yes
 RestartApplications=no
 
-; ─── Idioma ──────────────────────────────────────────────────────────────────
+; â”€â”€â”€ Idioma â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 [Languages]
 Name: "spanish"; MessagesFile: "compiler:Languages\Spanish.isl"
 
-; ─── Archivos a instalar ─────────────────────────────────────────────────────
+; â”€â”€â”€ Archivos a instalar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 [Files]
 ; Runtime de Node.js (copia privada del node.exe actual)
 Source: "..\agent\dist\stc-node.exe";             DestDir: "{app}"; Flags: ignoreversion
-; Código del agente (esbuild bundle)
+; CÃ³digo del agente (esbuild bundle)
 Source: "..\agent\dist\bundle.js";               DestDir: "{app}"; Flags: ignoreversion
-; Módulo nativo SQLite — debe estar junto a stc-node.exe para que nativeBinding lo encuentre
+; MÃ³dulo nativo SQLite â€” debe estar junto a stc-node.exe para que nativeBinding lo encuentre
 Source: "..\node_modules\better-sqlite3\build\Release\better_sqlite3.node"; DestDir: "{app}"; Flags: ignoreversion
 Source: "tools\nssm.exe";                         DestDir: "{app}"; Flags: ignoreversion
-; Consola de gestión (WinForms tray app — self-contained, sin dependencias)
+; Consola de gestiÃ³n (WinForms tray app â€” self-contained, sin dependencias)
 Source: "..\monitor-ui\publish\STC.Monitor.UI.exe"; DestDir: "{app}"; Flags: ignoreversion
 
-; ─── Directorio de datos ─────────────────────────────────────────────────────
+; â”€â”€â”€ Directorio de datos â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 [Dirs]
 Name: "{#DataDir}"; Permissions: everyone-full
 
-; ─── Accesos directos ────────────────────────────────────────────────────────
+; â”€â”€â”€ Accesos directos â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 [Icons]
-Name: "{group}\{#MyAppName} — Consola de Estado"; Filename: "{app}\STC.Monitor.UI.exe"
+Name: "{group}\{#MyAppName} â€” Consola de Estado"; Filename: "{app}\STC.Monitor.UI.exe"
 Name: "{group}\Desinstalar {#MyAppName}";           Filename: "{uninstallexe}"
 Name: "{commondesktop}\{#MyAppName}";               Filename: "{app}\STC.Monitor.UI.exe"; Tasks: desktopicon
 
 [Tasks]
 Name: "desktopicon"; Description: "Crear acceso directo en el &escritorio"; GroupDescription: "Opciones adicionales:"
 
-; ─── Lanzar consola de gestión al finalizar (sin ventana de consola) ─────────
+; â”€â”€â”€ Lanzar consola de gestiÃ³n al finalizar (sin ventana de consola) â”€â”€â”€â”€â”€â”€â”€â”€â”€
 [Run]
-; Crear tarea programada ONLOGON con privilegios elevados — evita UAC en cada reinicio (igual que HP SDS DCA)
+; Crear tarea programada ONLOGON con privilegios elevados â€” evita UAC en cada reinicio (igual que HP SDS DCA)
 ; Usamos ""\""{app}\...\"""" para que schtasks reciba la ruta entre comillas y no falle con espacios.
 Filename: "schtasks.exe"; Parameters: "/Create /SC ONLOGON /TN ""STC-Monitor-UI"" /TR ""\""{app}\STC.Monitor.UI.exe\"""" /RL HIGHEST /F"; Flags: runhidden; StatusMsg: "Configurando inicio automtico en bandeja..."
 ; Ajustamos la tarea para que funcione en laptops (batera) y no se detenga sola
 Filename: "powershell.exe"; Parameters: "-NoProfile -WindowStyle Hidden -Command ""$t = Get-ScheduledTask -TaskName 'STC-Monitor-UI'; $t.Settings.StopIfGoingOnBatteries = $false; $t.Settings.DisallowStartIfOnBatteries = $false; $t.Settings.ExecutionTimeLimit = 'PT0S'; Set-ScheduledTask -InputObject $t"""; Flags: runhidden; StatusMsg: "Optimizando tarea programada para laptops..."
 Filename: "{app}\STC.Monitor.UI.exe"; Description: "Iniciar consola de monitoreo STC"; Flags: postinstall nowait skipifsilent shellexec; StatusMsg: "Iniciando consola de monitoreo..."
 
-; ─── Desinstalación ──────────────────────────────────────────────────────────
+; â”€â”€â”€ DesinstalaciÃ³n â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 [UninstallRun]
-; 1. Forzar cierre de la consola de bandeja si el usuario la dejó abierta
+; 1. Forzar cierre de la consola de bandeja si el usuario la dejÃ³ abierta
 Filename: "taskkill.exe";    Parameters: "/F /IM STC.Monitor.UI.exe /T";  Flags: runhidden skipifdoesntexist; RunOnceId: "KillUI"
-; 2. Eliminar tarea programada de inicio automático
+; 2. Eliminar tarea programada de inicio automÃ¡tico
 Filename: "schtasks.exe";    Parameters: "/Delete /TN ""STC-Monitor-UI"" /F";  Flags: runhidden; RunOnceId: "DeleteTask"
 ; 3. Detener y remover el servicio
 Filename: "net.exe";         Parameters: "stop {#ServiceName}";           Flags: runhidden; RunOnceId: "StopSvc"
@@ -102,27 +102,27 @@ Filename: "{app}\nssm.exe";  Parameters: "remove {#ServiceName} confirm";  Flags
 
 [UninstallDelete]
 ; Limpiar datos del agente (config cifrada, logs) al desinstalar
-; Borrar archivos internos primero asegura que la carpeta quede vacía para poder ser borrada
+; Borrar archivos internos primero asegura que la carpeta quede vacÃ­a para poder ser borrada
 Type: files; Name: "{#DataDir}\*"
 Type: filesandordirs; Name: "{#DataDir}"
 
-; ─── Código Pascal ───────────────────────────────────────────────────────────
+; â”€â”€â”€ CÃ³digo Pascal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 [Code]
 
-// ── Inicialización: verificar instalación previa ─────────────────────────────
+// â”€â”€ InicializaciÃ³n: verificar instalaciÃ³n previa â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function InitializeSetup: Boolean;
 var
   ResultCode: Integer;
 begin
   Result := True;
 
-  // Detectar instalación previa
+  // Detectar instalaciÃ³n previa
   if Exec('sc.exe', 'query {#ServiceName}', '', SW_HIDE, ewWaitUntilTerminated, ResultCode) then begin
     if ResultCode = 0 then begin
       if MsgBox(
-        'Se detectó una instalación previa del servicio "' + ExpandConstant('{#ServiceName}') + '".' + #13#10 +
-        'La reinstalación detendrá y reemplazará el servicio existente.' + #13#10#13#10 +
-        '¿Desea continuar?',
+        'Se detectÃ³ una instalaciÃ³n previa del servicio "' + ExpandConstant('{#ServiceName}') + '".' + #13#10 +
+        'La reinstalaciÃ³n detendrÃ¡ y reemplazarÃ¡ el servicio existente.' + #13#10#13#10 +
+        'Â¿Desea continuar?',
         mbConfirmation, MB_YESNO) = IDNO then
       begin
         Result := False;
@@ -135,7 +135,7 @@ begin
   end;
 end;
 
-// ── Registrar el servicio (DEMAND_START: arranque manual hasta que el agente sea activado) ──
+// â”€â”€ Registrar el servicio (DEMAND_START: arranque manual hasta que el agente sea activado) â”€â”€
 procedure RegisterService;
 var
   NssmExe: String;
@@ -161,8 +161,8 @@ begin
        '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
   Exec(NssmExe, 'set {#ServiceName} Description "STC Cloud - Servicio de monitoreo de impresoras multimarca via SNMP"',
        '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
-  // DEMAND_START: el agente necesita activación antes de poder correr.
-  // La UI de bandeja cambia esto a AUTO_START luego de la activación exitosa.
+  // DEMAND_START: el agente necesita activaciÃ³n antes de poder correr.
+  // La UI de bandeja cambia esto a AUTO_START luego de la activaciÃ³n exitosa.
   Exec(NssmExe, 'set {#ServiceName} Start SERVICE_DEMAND_START',
        '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
   Exec(NssmExe, 'set {#ServiceName} AppThrottle 60000',
@@ -179,7 +179,7 @@ begin
        '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
 end;
 
-// ── Utilidades para parámetros de consola ────────────────────────────────────
+// â”€â”€ Utilidades para parÃ¡metros de consola â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function GetParam(ParamName: String): String;
 var
   i: Integer;
@@ -197,7 +197,7 @@ begin
   end;
 end;
 
-// ── Activar el agente si se pasan parámetros /KEY y /SERVER ──────────────────
+// â”€â”€ Activar el agente si se pasan parÃ¡metros /KEY y /SERVER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 procedure ActivateAgent;
 var
   ActivationKey: String;
@@ -221,11 +221,11 @@ begin
     begin
       if ResultCode = 0 then
       begin
-        // Si activó bien, ponemos el servicio en AUTO_START de una vez
+        // Si activÃ³ bien, ponemos el servicio en AUTO_START de una vez
         Exec(ExpandConstant('{app}\nssm.exe'), 'set {#ServiceName} Start SERVICE_AUTO_START', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
-        Log('Activación exitosa durante la instalación.');
+        Log('ActivaciÃ³n exitosa durante la instalaciÃ³n.');
       end else begin
-        Log('Fallo la activación automática. Código: ' + IntToStr(ResultCode));
+        Log('Fallo la activaciÃ³n automÃ¡tica. CÃ³digo: ' + IntToStr(ResultCode));
       end;
     end;
   end;
