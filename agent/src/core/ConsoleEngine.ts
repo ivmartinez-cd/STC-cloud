@@ -45,17 +45,18 @@ export class ConsoleEngine {
             if (args.length > 0) {
               const target = args[0];
               if (!/^[a-zA-Z0-9.-]+$/.test(target)) {
-                response = 'Error: Dirección IP o Hostname inválido.';
+                response = '❌ IP inválida';
               } else {
                 try {
-                  const { stdout } = await execAsync(`ping -n 4 ${target}`);
-                  response = stdout;
+                  const { stdout } = await execAsync(`ping -n 2 ${target}`);
+                  const hasResponse = stdout.toLowerCase().includes('respuesta') || stdout.toLowerCase().includes('reply');
+                  response = `Respuesta: ${hasResponse ? '✅ ONLINE' : '❌ OFFLINE'}`;
                 } catch (error: any) {
-                  response = `Error haciendo ping a ${target}:\n${error.stdout || error.message}`;
+                  response = `Respuesta: ❌ OFFLINE`;
                 }
               }
             } else {
-              response = `ACK - ${this.engineName} operativo y respondiendo.`;
+              response = `💡 Uso: ping <ip>`;
             }
             break;
 
@@ -64,51 +65,84 @@ export class ConsoleEngine {
             if (args.length > 0) {
               const target = args[0];
               if (!/^[a-zA-Z0-9.-]+$/.test(target)) {
-                response = 'Error: Dirección IP o Hostname inválido.';
+                response = '❌ IP inválida';
               } else {
-                response = `DIAGNÓSTICO DE IMPRESORA: ${target}\n`;
-                response += `------------------------------------------\n`;
-                
-                // 1. Ping
+                let isOnline = false;
                 try {
-                  const { stdout } = await execAsync(`ping -n 2 ${target}`);
-                  response += `[+] Red: El dispositivo responde a PING.\n`;
-                } catch {
-                  response += `[-] Red: El dispositivo NO responde a PING.\n`;
-                }
+                  await execAsync(`ping -n 1 ${target}`);
+                  isOnline = true;
+                } catch {}
 
-                // 2. Puertos comunes
+                response = `🔍 DIAGNÓSTICO: ${target}\n`;
+                response += `📡 RED: ${isOnline ? '✅ ONLINE' : '❌ OFFLINE'}\n`;
+                response += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+                
                 const ports = [
-                  { p: 9100, n: 'RAW/JetDirect' },
-                  { p: 80,   n: 'Web (HTTP)' },
-                  { p: 443,  n: 'Web (HTTPS)' },
+                  { p: 9100, n: 'IMPRESIÓN' },
+                  { p: 80,   n: 'WEB CONFIG' },
                   { p: 161,  n: 'SNMP' }
                 ];
 
                 for (const portInfo of ports) {
                   const isOpen = await this.checkPort(target, portInfo.p);
-                  response += `[${isOpen ? '+' : '-'}] Puerto ${portInfo.p} (${portInfo.n}): ${isOpen ? 'ABIERTO' : 'CERRADO'}\n`;
+                  response += `${isOpen ? '🟢' : '⚪'} ${portInfo.n.padEnd(12)}: ${isOpen ? 'OK' : 'OFF'}\n`;
                 }
-
-                response += `------------------------------------------\n`;
-                response += `Diagnóstico finalizado.`;
+                response += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
               }
             } else {
-              response = 'Error: Se requiere una dirección IP para diagnosticar. Ejemplo: check-printer 192.168.1.50';
+              response = '❌ Uso: check-printer <ip>';
+            }
+            break;
+
+          case 'snmp-check':
+            if (args.length > 0) {
+              const target = args[0];
+              const community = args[1] || 'public';
+              if (!/^[a-zA-Z0-9.-]+$/.test(target)) {
+                response = '❌ IP inválida';
+              } else {
+                try {
+                  const { readDevice } = require('../snmp/scanner');
+                  response = `📡 [CONSULTA SNMP] -> ${target}\n`;
+                  response += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+                  
+                  const data = await readDevice(target, community);
+                  
+                  if (!data) {
+                    response += `❌ El dispositivo no respondió a SNMP v2c\n`;
+                    response += `💡 Tip: Verifica que la comunidad sea '${community}' y el puerto 161 esté abierto.`;
+                  } else {
+                    response += `🏷️  Marca:   ${data.brand.toUpperCase()}\n`;
+                    response += `📦 Modelo:  ${data.model}\n`;
+                    response += `🔢 Serial:  ${data.serial || 'No disponible'}\n`;
+                    response += `----------------------------\n`;
+                    response += `📄 TOTAL:   ${data.total_pages ?? 'N/D'}\n`;
+                    response += `⚫ MONO:    ${data.mono_pages ?? 'N/D'}\n`;
+                    response += `🌈 COLOR:   ${data.color_pages ?? 'N/D'}\n`;
+                    response += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+                    response += `✅ Datos IMIL recuperados correctamente.`;
+                  }
+                } catch (error: any) {
+                  response = `❌ Error SNMP: ${error.message}`;
+                }
+              }
+            } else {
+              response = '❌ Uso: snmp-check <ip> [comunidad]';
             }
             break;
 
           case 'help':
             response = `Comandos de STC Console:
- - status: Información del motor local
- - ping [ip]: Realiza un ping estándar
- - check-printer [ip]: Diagnóstico completo de puertos de impresora
- - clear: Limpia la pantalla (solo en portal)
- - help: Muestra esta ayuda`;
+ - status: Estado del motor
+ - ping <ip>: Test de red rápido
+ - check-printer <ip>: Test de red + puertos
+ - snmp-check <ip>: Lectura de contadores/serial
+ - clear: Limpiar consola
+ - help: Ver esta ayuda`;
             break;
 
           default:
-            response = `Error: El comando '${command}' no es reconocido. Use 'help' para ver los comandos disponibles.`;
+            response = `❌ Comando no reconocido. Usa 'help'.`;
             break;
         }
 
