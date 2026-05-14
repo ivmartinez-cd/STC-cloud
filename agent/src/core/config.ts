@@ -79,14 +79,7 @@ export class ConfigManager {
       const json = await SecurityUtils.decrypt(encrypted, getHardwareId());
       return JSON.parse(json) as AgentConfig;
     } catch (error: any) {
-      // Si la desencriptacin falla (ej. por corrupcin tras un crash), respaldamos el archivo y avisamos
-      const backupPath = `${CONFIG_PATH}.corrupt-${Date.now()}`;
-      try {
-        fs.renameSync(CONFIG_PATH, backupPath);
-      } catch (e) {
-        // Ignorar si no se puede renombrar
-      }
-      throw new Error(`Error al cargar configuracin (posible corrupcin): ${error.message}. Se ha respaldado en ${path.basename(backupPath)}`);
+      throw new Error(`Error al cargar configuración: ${error.message}`);
     }
   }
 

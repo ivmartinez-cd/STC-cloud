@@ -8,6 +8,7 @@ import { readDevice, type DeviceReading } from '../snmp/scanner';
 import { LogTailer } from './LogTailer';
 import { SocketManager } from './SocketManager';
 import { ConsoleConnector } from './ConsoleConnector';
+import { ConsoleEngine } from './ConsoleEngine';
 
 const VERSION = '1.0.0';
 let socket: SocketManager | null = null;
@@ -477,6 +478,10 @@ async function main(): Promise<void> {
       (level, msg) => log(level as any, msg)
     );
     socket.connect();
+
+    // ─── Motor de Consola Local (Bridge) ─────────────────────────────────────
+    const engine = new ConsoleEngine(8000);
+    engine.start();
 
     // ─── Iniciar Loops ───────────────────────────────────────────────────────
     log('INFO', `Scan cada ${currentConfig.scanIntervalMinutes} min | Community: ${currentConfig.snmpCommunity}`);
