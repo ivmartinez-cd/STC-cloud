@@ -118,9 +118,9 @@ const Terminal: React.FC<TerminalProps> = ({ agentId }) => {
 
   const commonCommands = [
     { label: 'Status', cmd: 'status' },
-    { label: 'Dispositivos', cmd: 'list devices' },
-    { label: 'Discovery', cmd: 'list disc' },
-    { label: 'Logs', cmd: 'list logs' },
+    { label: 'Ping', cmd: 'ping ' },
+    { label: 'Check Impresora', cmd: 'check-printer ' },
+    { label: 'Ayuda', cmd: 'help' },
   ];
 
   return (
