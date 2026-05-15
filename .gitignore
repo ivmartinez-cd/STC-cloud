@@ -24,6 +24,10 @@ installer/output/
 !.env.production.example
 config.enc
 local_db.json
+installer/signing.key
+installer/stc-update.zip
+installer/update_temp/
+installer/*.sig
 
 # ─── Datos locales ───────────────────────────────────────────────────────────
 *.sqlite

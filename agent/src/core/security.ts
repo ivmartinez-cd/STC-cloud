@@ -8,7 +8,7 @@ const ITERATIONS = 100000;
 
 export class SecurityUtils {
   /**
-   * Deriva una clave fuerte a partir de un Hardware ID usando PBKDF2 (Sección 9.1)
+   * Deriva una clave fuerte a partir de un Hardware ID usando PBKDF2 (Seccion 9.1)
    */
   static async deriveKey(hardwareId: string, salt: Buffer): Promise<Buffer> {
     return new Promise((resolve, reject) => {

@@ -15,7 +15,7 @@ export function openQueue(): void {
   const dbPath = path.join(currentDir, 'local.db');
   fs.mkdirSync(currentDir, { recursive: true });
 
-  // Truco para pkg: buscar la librería nativa fuera del .exe si es necesario
+  // Truco para pkg: buscar la libreria nativa fuera del .exe si es necesario
   let options = {};
   const exeDir = path.dirname(process.execPath);
   const nativePath = path.join(exeDir, 'better_sqlite3.node');

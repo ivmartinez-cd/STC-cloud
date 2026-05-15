@@ -2,7 +2,7 @@
 
 export type Brand = 'hp' | 'lexmark' | 'samsung' | 'ricoh' | 'brother' | 'xerox' | 'generic';
 
-// ─── Detección de fabricante por sysObjectID (sección 6.3) ──────────────────
+// ─── Deteccion de fabricante por sysObjectID (seccion 6.3) ──────────────────
 
 const ENTERPRISE_PREFIXES: Array<[string, Brand]> = [
   ['1.3.6.1.4.1.11.',   'hp'],       // Hewlett-Packard (enterprise 11)
@@ -148,7 +148,7 @@ export const OID_MAPS: Record<Brand, OidMap> = {
   generic: GENERIC_OIDS,
 };
 
-// OIDs de sistema — universales para identificación inicial
+// OIDs de sistema — universales para identificacion inicial
 export const SYS_OIDS = {
   sysDescr:     '1.3.6.1.2.1.1.1.0',
   sysObjectID:  '1.3.6.1.2.1.1.2.0',

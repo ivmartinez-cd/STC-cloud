@@ -7,7 +7,7 @@ const execAsync = promisify(exec);
 
 /**
  * STC Cloud Console - Diagnostic Engine
- * Motor local para ejecución de comandos técnicos avanzados.
+ * Motor local para ejecucion de comandos tecnicos avanzados.
  */
 export class ConsoleEngine {
   private server: net.Server;
@@ -45,7 +45,7 @@ export class ConsoleEngine {
             if (args.length > 0) {
               const target = args[0];
               if (!/^[a-zA-Z0-9.-]+$/.test(target)) {
-                response = '❌ IP inválida';
+                response = '❌ IP invalida';
               } else {
                 try {
                   const { stdout } = await execAsync(`ping -n 2 ${target}`);
@@ -65,7 +65,7 @@ export class ConsoleEngine {
               const target = args[0];
               const community = args[1] || 'public';
               if (!/^[a-zA-Z0-9.-]+$/.test(target)) {
-                response = '❌ IP inválida';
+                response = '❌ IP invalida';
               } else {
                 try {
                   const { readDevice } = require('../snmp/scanner');
@@ -75,8 +75,8 @@ export class ConsoleEngine {
                   const data = await readDevice(target, community);
                   
                   if (!data) {
-                    response += `❌ El dispositivo no respondió a SNMP v2c\n`;
-                    response += `💡 Tip: Verifica que la comunidad sea '${community}' y el puerto 161 esté abierto.`;
+                    response += `❌ El dispositivo no respondio a SNMP v2c\n`;
+                    response += `💡 Tip: Verifica que la comunidad sea '${community}' y el puerto 161 este abierto.`;
                   } else {
                     response += `🏷️  Marca:   ${data.brand.toUpperCase()}\n`;
                     response += `📦 Modelo:  ${data.model}\n`;
@@ -100,7 +100,7 @@ export class ConsoleEngine {
           case 'help':
             response = `Comandos de STC Console:
  - status: Estado del motor
- - ping <ip>: Test de red rápido
+ - ping <ip>: Test de red rapido
  - snmp-check <ip>: Lectura de contadores/serial
  - clear: Limpiar consola
  - help: Ver esta ayuda`;
@@ -138,7 +138,7 @@ export class ConsoleEngine {
         console.warn(`[${this.engineName}] Puerto ${this.port} en uso. Reintentando en 30s...`);
         setTimeout(() => this.start(), 30000);
       } else {
-        console.error(`[${this.engineName}] Error crítico: ${err.message}`);
+        console.error(`[${this.engineName}] Error critico: ${err.message}`);
       }
     });
 

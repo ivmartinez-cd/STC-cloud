@@ -19,14 +19,14 @@ export interface AgentConfig {
   snmpCommunity: string;
   snmpVersion: 1 | 2;
   scanIntervalMinutes: number;
-  proxyUrl?: string; // http://user:pass@proxy:8080 — opcional, para redes con proxy corporativo
+  proxyUrl?: string; // http://user:pass@proxy:8080 - opcional, para redes con proxy corporativo
 }
 
-// ─── Hardware ID (sección 9.1 del PDF: MAC + UUID de disco) ──────────────────
+// --- Hardware ID (seccion 9.1 del PDF: MAC + UUID de disco) ---
 
 function getWindowsHardwareId(): string {
   try {
-    // MachineGuid es persistente para la instalacin de Windows
+    // MachineGuid es persistente para la instalacion de Windows
     const guid = execSync('powershell -NoProfile -Command "(Get-ItemProperty \'Registry::HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Cryptography\').MachineGuid"', {
       timeout: 5000, encoding: 'utf8', windowsHide: true,
     }).trim();
@@ -48,7 +48,7 @@ export function getHardwareId(): string {
   if (process.platform === 'win32') {
     raw = getWindowsHardwareId();
   } else {
-    // Fallback para dev en otros SO (seccin 9.1 del PDF)
+    // Fallback para dev en otros SO (seccion 9.1 del PDF)
     const out = execSync('cat /etc/machine-id 2>/dev/null || hostname', {
       timeout: 3000, encoding: 'utf8',
     });
@@ -57,7 +57,7 @@ export function getHardwareId(): string {
   return crypto.createHash('sha256').update(raw).digest('hex').slice(0, 32);
 }
 
-// ─── Config cifrada en disco (AES-256-GCM) ───────────────────────────────────
+// --- Config cifrada en disco (AES-256-GCM) ---
 
 export const get_DATA_DIR = () =>
   process.env.AGENT_DATA_DIR ??
@@ -80,7 +80,7 @@ export class ConfigManager {
       const json = await SecurityUtils.decrypt(encrypted, getHardwareId());
       return JSON.parse(json) as AgentConfig;
     } catch (error: any) {
-      throw new Error(`Error al cargar configuración: ${error.message}`);
+      throw new Error(`Error al cargar configuracion: ${error.message}`);
     }
   }
 
@@ -88,7 +88,7 @@ export class ConfigManager {
     fs.mkdirSync(DATA_DIR, { recursive: true });
     const encrypted = await SecurityUtils.encrypt(JSON.stringify(config), getHardwareId());
     
-    // Escritura atmica: escribir en temporal y luego renombrar
+    // Escritura atomica: escribir en temporal y luego renombrar
     const tempPath = `${CONFIG_PATH}.tmp`;
     fs.writeFileSync(tempPath, encrypted, { encoding: 'utf8', mode: 0o600 });
     fs.renameSync(tempPath, CONFIG_PATH);

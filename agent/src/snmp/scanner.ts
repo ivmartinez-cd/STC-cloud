@@ -7,7 +7,7 @@ import {
 const TIMEOUT_MS      = 3000;
 const RETRIES         = 1;
 const MAX_CONCURRENT  = 20;
-const REACH_TIMEOUT   = 500; // ms para el pre-check TCP (vs 3000ms de SNMP timeout)
+const REACH_TIMEOUT   = 500; // ms para el pre-check TCP
 
 class Semaphore {
   private current = 0;
@@ -22,10 +22,6 @@ class Semaphore {
 
 const sem = new Semaphore(MAX_CONCURRENT);
 
-// Pre-check TCP multi-puerto: prueba 9100 (JetDirect), 80 (HTTP EWS) y 443 (HTTPS EWS)
-// en paralelo. El host se considera activo si cualquiera responde (connect OK o ECONNREFUSED).
-// Usar 3 puertos evita falsos negativos cuando el firewall bloquea 9100 pero el dispositivo
-// tiene interfaz web activa, situación común en redes enterprise segmentadas.
 // Nota: no usa ICMP para compatibilidad con redes que bloquean ping.
 const PRINTER_PORTS = [9100, 80, 443];
 
@@ -102,7 +98,7 @@ function snmpGet(session: any, oid: string): Promise<number | string | null> {
 async function snmpGetFirstValid(session: any, oids: string[]): Promise<number | string | null> {
   for (const oid of oids) {
     const val = await snmpGet(session, oid);
-    // IMPORTANTE: 0 es un valor válido para contadores, no debemos saltarlo
+    // IMPORTANTE: 0 es un valor valido para contadores, no debemos saltarlo
     if (val !== null && val !== undefined) return val;
   }
   return null;
@@ -113,19 +109,19 @@ export function hrStatus(val: unknown): string {
 }
 
 export async function readDevice(ip: string, community: string): Promise<DeviceReading | null> {
-  // Pre-check fuera del semáforo: descarta IPs sin respuesta en 500ms
+  // Pre-check fuera del semaforo: descarta IPs sin respuesta en 500ms
   // antes de ocupar un slot de concurrencia SNMP con un timeout de 3s.
   if (!await isHostReachable(ip)) return null;
 
   await sem.acquire();
   const session = createSession(ip, community);
   try {
-    // ── Fase 1: Filtro rápido por hrDeviceType ──────────────────────────────
+    // ── Fase 1: Filtro rapido por hrDeviceType ──────────────────────────────
     // Si el dispositivo responde hrDeviceType y NO es impresora → descartar.
     // Si no responde (null) → pasar a Fase 2.
     const deviceType = await snmpGet(session, SYS_OIDS.hrDeviceType);
     if (deviceType !== null && String(deviceType) !== HR_DEVICE_PRINTER) {
-      // Definitivamente NO es una impresora (PC, servidor, switch con HR-MIB)
+      // Definitivamente NO es una impresora
       return null;
     }
 
@@ -136,19 +132,19 @@ export async function readDevice(ip: string, community: string): Promise<DeviceR
     if (deviceType === null) {
       const printerMibProbe = await snmpGet(session, '1.3.6.1.2.1.43.5.1.1.1.1');
       if (printerMibProbe === null) {
-        // No tiene HR-MIB ni Printer-MIB → definitivamente no es impresora
+        // No tiene HR-MIB ni Printer-MIB - definitivamente no es impresora
         return null;
       }
     }
 
-    // ── Fase 3: Identificar Fabricante ───────────────────────────────────────
+    // --- Fase 3: Identificar Fabricante ---
     const sysOid = await snmpGet(session, SYS_OIDS.sysObjectID);
     if (!sysOid) return null;
 
     const brand  = detectBrandFromOid(String(sysOid));
     const oidMap = OID_MAPS[brand];
 
-    // ── Fase 4: Consulta de Datos ───────────────────────────────────────────
+    // --- Fase 4: Consulta de Datos ---
     const [sysDescr, sysName] = await Promise.all([
       snmpGet(session, SYS_OIDS.sysDescr),
       snmpGet(session, SYS_OIDS.sysName),
@@ -167,7 +163,7 @@ export async function readDevice(ip: string, community: string): Promise<DeviceR
       snmpGetFirstValid(session, colorOids) as Promise<number | null>,
     ]);
 
-    // Inferir contadores faltantes usando aritmética básica (Total = Mono + Color)
+    // Inferir contadores faltantes usando aritmetica basica (Total = Mono + Color)
     if (totalPages === null && monoPages !== null && colorPages !== null) {
       totalPages = Number(monoPages) + Number(colorPages);
     } else if (totalPages !== null && colorPages !== null && monoPages === null) {
@@ -176,19 +172,16 @@ export async function readDevice(ip: string, community: string): Promise<DeviceR
       colorPages = Math.max(0, Number(totalPages) - Number(monoPages));
     }
 
-    // ── Fase 5: Limpieza de "Basura" (Fabricante + Modelo únicamente) ────────
-    // 🛑 IMPORTANTE: Esta lógica de limpieza y detección de marca ha sido validada
-    // y NO debe ser modificada, "optimizada" o alterada a menos que el usuario
-    // lo pida EXPLÍCITAMENTE. El objetivo es mantener el formato: [Marca] [Modelo].
+    // --- Fase 5: Limpieza de "Basura" ---
     const raw = String(sysDescr ?? '').trim();
     
-    // 1. Cortar en el primer separador o palabra clave técnica
+    // 1. Cortar en el primer separador o palabra clave tecnica
     let cleaned = raw.split(/[;|\r\n,]/)[0].trim();
     
-    // Limpiar descriptores de versión/kernel que a veces vienen pegados
+    // Limpiar descriptores de version/kernel que a veces vienen pegados
     cleaned = cleaned.split(/version|kernel|firmware/i)[0].trim();
 
-    // 2. Intentar detectar marca por texto si el OID falló
+    // 2. Intentar detectar marca por texto si el OID fallo
     let finalBrand = brand;
     if (finalBrand === 'generic') {
       finalBrand = detectBrandFromText(raw);

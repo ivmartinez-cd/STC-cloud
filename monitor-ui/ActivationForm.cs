@@ -247,8 +247,8 @@ internal sealed class ActivationForm : Form
         {
             Text = "Proxy HTTP",
             Location = new Point(20, 95),
-            Size = new Size(510, 170),
-            ForeColor = Color.Blue
+            Size = new Size(510, 180),
+            ForeColor = Color.Gray
         };
 
         gbProxy.Controls.Add(new Label { Text = "Servidor:", Location = new Point(15, 35), Size = new Size(70, 20), ForeColor = Color.Black });
@@ -307,14 +307,17 @@ internal sealed class ActivationForm : Form
         _btnSaveProxy = new Button
         {
             Text = "Guardar",
-            Location = new Point(390, 135),
-            Size = new Size(100, 30),
+            Location = new Point(385, 135),
+            Size = new Size(110, 32),
             BackColor = _hpBlue,
             ForeColor = Color.White,
             FlatStyle = FlatStyle.Flat,
-            Font = _boldFont
+            Font = _boldFont,
+            Cursor = Cursors.Hand
         };
         _btnSaveProxy.FlatAppearance.BorderSize = 0;
+        _btnSaveProxy.FlatAppearance.MouseOverBackColor = Color.FromArgb(0, 120, 190); // Azul mas oscuro al pasar
+        _btnSaveProxy.FlatAppearance.MouseDownBackColor = Color.FromArgb(0, 100, 170); // Aun mas oscuro al click
         _btnSaveProxy.Click += BtnSaveProxy_Click;
         gbProxy.Controls.Add(_btnSaveProxy);
 

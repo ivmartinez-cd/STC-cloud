@@ -304,9 +304,10 @@ const start = async () => {
     // Versión del agente — los agentes consultan esto para auto-update.
     // AGENT_VERSION y AGENT_DOWNLOAD_URL se configuran como env vars en Render
     // cada vez que se publica una nueva versión del agente.
-    fastify.get("/api/v1/agents/version", async () => ({
+    fastify.get("/api/v1/agents/version", { preHandler: agentAuth }, async () => ({
       version: process.env.AGENT_VERSION ?? "1.0.0",
       url:     process.env.AGENT_DOWNLOAD_URL ?? null,
+      hash:    process.env.AGENT_HASH ?? null,
     }));
 
     // Evitar que el servidor crashee si Redis se desconecta temporalmente

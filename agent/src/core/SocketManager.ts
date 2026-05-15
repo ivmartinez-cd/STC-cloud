@@ -4,8 +4,8 @@ import https from 'https';
 import tls from 'tls';
 import net from 'net';
 
-// Crea un HTTPS agent que tuneliza WSS a través de un proxy HTTP CONNECT.
-// Soporta autenticación Basic embebida en la URL: http://user:pass@proxy:8080
+// Crea un HTTPS agent que tuneliza WSS a traves de un proxy HTTP CONNECT.
+// Soporta autenticacion Basic embebida en la URL: http://user:pass@proxy:8080
 function createProxyAgent(proxyUrl: string): https.Agent {
   const proxy = new URL(proxyUrl);
   const agent = new https.Agent();
@@ -102,7 +102,7 @@ export class SocketManager {
           this.onCommand(msg.commandType, msg.payload);
         }
       } catch {
-        this.onLog('WARN', 'Mensaje WSS inválido recibido.');
+        this.onLog('WARN', 'Mensaje WSS invalido recibido.');
       }
     });
 

@@ -16,7 +16,7 @@ export class LogTailer {
 
     const stats = fs.statSync(this.logFile);
     
-    // Si el archivo se achicó (rotación), reseteamos
+    // Si el archivo se achico (rotacion), reseteamos
     if (stats.size < this.lastPosition) {
       this.lastPosition = 0;
     }
@@ -40,7 +40,7 @@ export class LogTailer {
       if (match) {
         const [_, date, time, level, message] = match;
         const [day, month, year] = date.split('/');
-        // Forzamos el envío en formato ISO con el offset de Argentina para evitar ambigüedades en el servidor
+        // Forzamos el envio en formato ISO con el offset de Argentina para evitar ambigüedades en el servidor
         const isoTimestamp = `${year}-${month}-${day}T${time}-03:00`;
         
         return {

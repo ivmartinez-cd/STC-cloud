@@ -1,8 +1,8 @@
 import net from 'net';
 
 /**
- * Conector para el motor de diagnóstico local de STC Cloud.
- * Se comunica con el proceso de gestión local para ejecutar comandos técnicos.
+ * Conector para el motor de diagnostico local de STC Cloud.
+ * Se comunica con el proceso de gestion local para ejecutar comandos tecnicos.
  */
 export class ConsoleConnector {
   private host: string;
@@ -36,7 +36,7 @@ export class ConsoleConnector {
         output += data.toString();
       });
 
-      // Pequeño retardo para capturar ráfagas de datos
+      // Pequeno retardo para capturar rafagas de datos
       client.on('end', () => {
         clearTimeout(timeout);
         if (idleTimeout) clearTimeout(idleTimeout);
@@ -48,10 +48,10 @@ export class ConsoleConnector {
         clearTimeout(timeout);
         if (idleTimeout) clearTimeout(idleTimeout);
         resolved = true;
-        reject(new Error(`Error de conexión con servicio local: ${err.message}`));
+        reject(new Error(`Error de conexion con servicio local: ${err.message}`));
       });
 
-      // Si después de 2 segundos de recibir el último dato no llega nada más, cerramos
+      // Si despues de 2 segundos de recibir el ultimo dato no llega nada mas, cerramos
       client.on('data', () => {
         if (idleTimeout) clearTimeout(idleTimeout);
         idleTimeout = setTimeout(() => {
