@@ -21,6 +21,13 @@ const Terminal: React.FC<TerminalProps> = ({ agentId }) => {
   const inputRef = useRef<HTMLInputElement>(null);
   const wsRef = useRef<WebSocket | null>(null);
 
+  // Auto-focus input without scrolling the page
+  useEffect(() => {
+    if (inputRef.current) {
+      inputRef.current.focus({ preventScroll: true });
+    }
+  }, []);
+
   // Auto-scroll
   useEffect(() => {
     if (scrollRef.current) {
@@ -209,7 +216,6 @@ const Terminal: React.FC<TerminalProps> = ({ agentId }) => {
           disabled={isExecuting}
           placeholder="Escribe un comando de STC Cloud (ej: status)..."
           className="flex-1 bg-transparent border-none outline-none text-slate-200 font-mono text-sm placeholder:text-slate-600 disabled:opacity-50"
-          autoFocus
         />
         <button 
           type="submit"
