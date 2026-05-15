@@ -509,7 +509,7 @@ async function checkForUpdate(serverUrl: string, force = false): Promise<boolean
       log('WARN', 'Servidor no proporciono hash SHA256. Actualizacion instalada sin verificacion de integridad.');
     }
 
-    if (UPDATE_PUBLIC_KEY_HEX === 'PLACEHOLDER_RUN_GEN_KEYS_FIRST') {
+    if ((UPDATE_PUBLIC_KEY_HEX as string) === 'PLACEHOLDER_RUN_GEN_KEYS_FIRST') {
       log('WARN', 'SEGURIDAD: firma Ed25519 no configurada — ejecutar installer/gen-keys.js y rebuild.');
     } else {
       try {
