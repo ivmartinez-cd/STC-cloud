@@ -515,34 +515,54 @@ const MonitorDetail = () => {
                 <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Herramientas de Soporte Remoto</h4>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-                <button
-                  onClick={() => sendCommand('RESCAN')}
-                  title="Escanea la red local en busca de nuevos dispositivos"
-                  className="py-3 px-4 bg-white text-brand border border-blue-100 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-brand hover:text-white transition-all active:scale-95 disabled:opacity-50"
-                >
-                  <RefreshCw size={14} className={commandLoading === 'RESCAN' ? 'animate-spin' : ''} /> Rescan
-                </button>
-                <button
-                  onClick={() => sendCommand('PING')}
-                  title="Verifica la latencia y conectividad con el agente"
-                  className="py-3 px-4 bg-white text-slate-700 border border-slate-200 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-slate-800 hover:text-white transition-all active:scale-95 disabled:opacity-50"
-                >
-                  <Activity size={14} className={commandLoading === 'PING' ? 'animate-spin' : ''} /> Ping
-                </button>
-                <button
-                  onClick={() => sendCommand('RESTART')}
-                  title="Reinicia el servicio del agente de forma remota"
-                  className="py-3 px-4 bg-white text-rose-600 border border-rose-100 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-rose-600 hover:text-white transition-all active:scale-95 disabled:opacity-50"
-                >
-                  <Zap size={14} className={commandLoading === 'RESTART' ? 'animate-spin' : ''} /> Reiniciar
-                </button>
-                <button
-                  onClick={() => sendCommand('FORCE_UPDATE')}
-                  title="Fuerza la descarga e instalación de la última versión"
-                  className="py-3 px-4 bg-white text-emerald-600 border border-emerald-100 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-emerald-600 hover:text-white transition-all active:scale-95 disabled:opacity-50"
-                >
-                  <Download size={14} className={commandLoading === 'FORCE_UPDATE' ? 'animate-spin' : ''} /> Actualizar
-                </button>
+                <div className="relative group">
+                  <button
+                    onClick={() => sendCommand('RESCAN')}
+                    className="w-full py-3 px-4 bg-white text-brand border border-blue-100 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-brand hover:text-white transition-all active:scale-95 disabled:opacity-50"
+                  >
+                    <RefreshCw size={14} className={commandLoading === 'RESCAN' ? 'animate-spin' : ''} /> Rescan
+                  </button>
+                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-slate-900 text-white text-[10px] font-bold rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none whitespace-nowrap z-50 shadow-xl border border-slate-700/50 translate-y-1 group-hover:translate-y-0">
+                    Escanea la red local en busca de nuevos dispositivos
+                    <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-slate-900"></div>
+                  </div>
+                </div>
+                <div className="relative group">
+                  <button
+                    onClick={() => sendCommand('PING')}
+                    className="w-full py-3 px-4 bg-white text-slate-700 border border-slate-200 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-slate-800 hover:text-white transition-all active:scale-95 disabled:opacity-50"
+                  >
+                    <Activity size={14} className={commandLoading === 'PING' ? 'animate-spin' : ''} /> Ping
+                  </button>
+                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-slate-900 text-white text-[10px] font-bold rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none whitespace-nowrap z-50 shadow-xl border border-slate-700/50 translate-y-1 group-hover:translate-y-0">
+                    Verifica la latencia y conectividad con el agente
+                    <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-slate-900"></div>
+                  </div>
+                </div>
+                <div className="relative group">
+                  <button
+                    onClick={() => sendCommand('RESTART')}
+                    className="w-full py-3 px-4 bg-white text-rose-600 border border-rose-100 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-rose-600 hover:text-white transition-all active:scale-95 disabled:opacity-50"
+                  >
+                    <Zap size={14} className={commandLoading === 'RESTART' ? 'animate-spin' : ''} /> Reiniciar
+                  </button>
+                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-slate-900 text-white text-[10px] font-bold rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none whitespace-nowrap z-50 shadow-xl border border-slate-700/50 translate-y-1 group-hover:translate-y-0">
+                    Reinicia el servicio del agente de forma remota
+                    <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-slate-900"></div>
+                  </div>
+                </div>
+                <div className="relative group">
+                  <button
+                    onClick={() => sendCommand('FORCE_UPDATE')}
+                    className="w-full py-3 px-4 bg-white text-emerald-600 border border-emerald-100 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-emerald-600 hover:text-white transition-all active:scale-95 disabled:opacity-50"
+                  >
+                    <Download size={14} className={commandLoading === 'FORCE_UPDATE' ? 'animate-spin' : ''} /> Actualizar
+                  </button>
+                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-slate-900 text-white text-[10px] font-bold rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none whitespace-nowrap z-50 shadow-xl border border-slate-700/50 translate-y-1 group-hover:translate-y-0">
+                    Fuerza la descarga e instalación de la última versión
+                    <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-slate-900"></div>
+                  </div>
+                </div>
               </div>
             </div>
             
