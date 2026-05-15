@@ -41,7 +41,10 @@ internal sealed class ActivationForm : Form
     private readonly Label _lblActivationHint;
 
     // ── Proxy Tab ─────────────────────────────────────────────────────────────
-    private readonly TextBox _txtProxyUrl;
+    private readonly TextBox _txtProxyHost;
+    private readonly TextBox _txtProxyPort;
+    private readonly TextBox _txtProxyUser;
+    private readonly TextBox _txtProxyPass;
     private readonly Label _lblProxyStatus;
     private readonly Button _btnSaveProxy;
 
@@ -244,24 +247,50 @@ internal sealed class ActivationForm : Form
         {
             Text = "Proxy HTTP",
             Location = new Point(20, 95),
-            Size = new Size(510, 160),
+            Size = new Size(510, 170),
             ForeColor = Color.Blue
         };
 
-        gbProxy.Controls.Add(new Label { Text = "URL del Proxy:", Location = new Point(15, 35), Size = new Size(120, 20) });
-        _txtProxyUrl = new TextBox
+        gbProxy.Controls.Add(new Label { Text = "Servidor:", Location = new Point(15, 35), Size = new Size(70, 20), ForeColor = Color.Black });
+        _txtProxyHost = new TextBox
         {
-            Location = new Point(140, 32),
-            Size = new Size(340, 23),
-            PlaceholderText = "http://proxy.empresa.com:8080"
+            Location = new Point(90, 32),
+            Size = new Size(240, 23),
+            PlaceholderText = "proxy.empresa.com"
         };
-        gbProxy.Controls.Add(_txtProxyUrl);
+        gbProxy.Controls.Add(_txtProxyHost);
+
+        gbProxy.Controls.Add(new Label { Text = "Puerto:", Location = new Point(340, 35), Size = new Size(55, 20), ForeColor = Color.Black });
+        _txtProxyPort = new TextBox
+        {
+            Location = new Point(395, 32),
+            Size = new Size(85, 23),
+            PlaceholderText = "8080"
+        };
+        gbProxy.Controls.Add(_txtProxyPort);
+
+        gbProxy.Controls.Add(new Label { Text = "Usuario:", Location = new Point(15, 75), Size = new Size(70, 20), ForeColor = Color.Black });
+        _txtProxyUser = new TextBox
+        {
+            Location = new Point(90, 72),
+            Size = new Size(150, 23)
+        };
+        gbProxy.Controls.Add(_txtProxyUser);
+
+        gbProxy.Controls.Add(new Label { Text = "Contraseña:", Location = new Point(255, 75), Size = new Size(80, 20), ForeColor = Color.Black });
+        _txtProxyPass = new TextBox
+        {
+            Location = new Point(330, 72),
+            Size = new Size(150, 23),
+            UseSystemPasswordChar = true
+        };
+        gbProxy.Controls.Add(_txtProxyPass);
 
         gbProxy.Controls.Add(new Label
         {
-            Text = "Formato: http://[usuario:contraseña@]host:puerto\nDejar vacío para quitar el proxy.",
-            Location = new Point(140, 62),
-            Size = new Size(340, 35),
+            Text = "Deje usuario y contraseña en blanco si el proxy no requiere autenticación.\nDeje todos los campos en blanco para quitar el proxy.",
+            Location = new Point(15, 105),
+            Size = new Size(465, 35),
             ForeColor = Color.Gray,
             Font = new Font("Segoe UI", 8f)
         });
@@ -269,7 +298,7 @@ internal sealed class ActivationForm : Form
         _lblProxyStatus = new Label
         {
             Text = "Estado: sin proxy configurado.",
-            Location = new Point(15, 105),
+            Location = new Point(15, 140),
             Size = new Size(370, 20),
             ForeColor = Color.Gray
         };
@@ -278,7 +307,7 @@ internal sealed class ActivationForm : Form
         _btnSaveProxy = new Button
         {
             Text = "Guardar",
-            Location = new Point(390, 100),
+            Location = new Point(390, 135),
             Size = new Size(100, 30),
             BackColor = _hpBlue,
             ForeColor = Color.White,
@@ -294,7 +323,7 @@ internal sealed class ActivationForm : Form
         _tabProxy.Controls.Add(new Label
         {
             Text = "Nota: después de guardar, el servicio se reiniciará automáticamente para aplicar los cambios.",
-            Location = new Point(20, 270),
+            Location = new Point(20, 280),
             Size = new Size(500, 35),
             ForeColor = Color.Gray,
             Font = new Font("Segoe UI", 8f)
@@ -382,12 +411,37 @@ internal sealed class ActivationForm : Form
         // Sincronizar pestaña Proxy con el estado actual del agente
         if (!string.IsNullOrEmpty(s.ProxyUrl))
         {
-            _txtProxyUrl.Text = s.ProxyUrl;
             _lblProxyStatus.Text = $"Estado: proxy activo → {s.ProxyUrl}";
             _lblProxyStatus.ForeColor = Color.DarkGreen;
+            try
+            {
+                var uri = new Uri(s.ProxyUrl);
+                _txtProxyHost.Text = uri.Host;
+                _txtProxyPort.Text = uri.Port > 0 ? uri.Port.ToString() : "";
+                
+                if (!string.IsNullOrEmpty(uri.UserInfo))
+                {
+                    var parts = uri.UserInfo.Split(':', 2);
+                    _txtProxyUser.Text = parts[0];
+                    if (parts.Length > 1) _txtProxyPass.Text = Uri.UnescapeDataString(parts[1]);
+                }
+                else
+                {
+                    _txtProxyUser.Text = "";
+                    _txtProxyPass.Text = "";
+                }
+            }
+            catch
+            {
+                // Si falla el parsing, dejamos lo que esté
+            }
         }
         else
         {
+            _txtProxyHost.Text = "";
+            _txtProxyPort.Text = "";
+            _txtProxyUser.Text = "";
+            _txtProxyPass.Text = "";
             _lblProxyStatus.Text = "Estado: sin proxy configurado.";
             _lblProxyStatus.ForeColor = Color.Gray;
         }
@@ -419,14 +473,47 @@ internal sealed class ActivationForm : Form
 
         try
         {
-            var proxyUrl = _txtProxyUrl.Text.Trim();
+            string proxyUrl = "";
+            var host = _txtProxyHost.Text.Trim();
+            var port = _txtProxyPort.Text.Trim();
+            
+            if (!string.IsNullOrEmpty(host))
+            {
+                var user = Uri.EscapeDataString(_txtProxyUser.Text.Trim());
+                var pass = Uri.EscapeDataString(_txtProxyPass.Text);
+                
+                string auth = (!string.IsNullOrEmpty(user) || !string.IsNullOrEmpty(pass)) ? $"{user}:{pass}@" : "";
+                string portStr = !string.IsNullOrEmpty(port) ? $":{port}" : "";
+                
+                // Si el host ya empieza con http, no lo duplicamos
+                if (!host.StartsWith("http://") && !host.StartsWith("https://"))
+                {
+                    proxyUrl = $"http://{auth}{host}{portStr}";
+                }
+                else
+                {
+                    // Si el usuario pegó la URL completa en el host (ej. http://proxy:80), usamos el UriBuilder
+                    var ub = new UriBuilder(host);
+                    if (!string.IsNullOrEmpty(port)) ub.Port = int.Parse(port);
+                    if (!string.IsNullOrEmpty(user)) ub.UserName = user;
+                    if (!string.IsNullOrEmpty(pass)) ub.Password = pass;
+                    proxyUrl = ub.Uri.ToString();
+                }
+            }
+
             var (ok, error) = await AgentService.SetProxyAsync(proxyUrl);
 
             if (ok)
             {
+                string displayUrl = proxyUrl;
+                if (!string.IsNullOrEmpty(_txtProxyPass.Text))
+                {
+                    displayUrl = proxyUrl.Replace(Uri.EscapeDataString(_txtProxyPass.Text), "***");
+                }
+
                 _lblProxyStatus.Text = string.IsNullOrEmpty(proxyUrl)
                     ? "Estado: proxy eliminado correctamente."
-                    : $"Estado: proxy configurado → {proxyUrl}";
+                    : $"Estado: proxy configurado → {displayUrl}";
                 _lblProxyStatus.ForeColor = Color.DarkGreen;
 
                 // Reiniciar el servicio para que el agente cargue la nueva config

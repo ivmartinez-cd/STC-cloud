@@ -26,8 +26,11 @@ set OUTPUT_DIR=%SCRIPT_DIR%output
 set INNO_DEFAULT="C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
 set GITHUB_REPO=ivmartinez-cd/STC-cloud
 
-:: ── Extraer version actual del .iss ──────────────────────────────────────────
-for /f "usebackq delims=" %%v in (`powershell -NoProfile -Command "(Select-String '%SCRIPT_DIR%STC-Monitor.iss' -Pattern '([0-9]+\.[0-9]+\.[0-9]+)').Matches[0].Groups[1].Value"`) do set APP_VERSION=%%v
+:: ── Extraer version actual del .iss (buscando específicamente la línea #define MyAppVersion) ──
+for /f "usebackq tokens=3" %%v in (`findstr /C:"#define MyAppVersion" "%SCRIPT_DIR%STC-Monitor.iss"`) do (
+    set RAW_VER=%%v
+    set APP_VERSION=!RAW_VER:"=!
+)
 if "!APP_VERSION!"=="" (
     echo [ERROR] No se pudo extraer la version de STC-Monitor.iss
     pause & exit /b 1
