@@ -30,7 +30,7 @@ const sem = new Semaphore(MAX_CONCURRENT);
 const PRINTER_PORTS = [9100, 80, 443];
 
 function tryPort(ip: string, port: number): Promise<boolean> {
-  return new Promise(resolve => {
+  return new Promise((resolve, reject) => {
     const socket = new net.Socket();
     let settled = false;
 
@@ -44,7 +44,17 @@ function tryPort(ip: string, port: number): Promise<boolean> {
     socket.setTimeout(REACH_TIMEOUT);
     socket.once('connect',  () => finish(true));
     socket.once('timeout',  () => finish(false));
-    socket.once('error', (err: NodeJS.ErrnoException) => finish(err.code === 'ECONNREFUSED'));
+    socket.once('error', (err: NodeJS.ErrnoException) => {
+      if (err.code === 'ENETUNREACH' || err.code === 'EHOSTDOWN') {
+        if (!settled) {
+          settled = true;
+          socket.destroy();
+          reject(err);
+        }
+      } else {
+        finish(err.code === 'ECONNREFUSED');
+      }
+    });
     socket.connect(port, ip);
   });
 }

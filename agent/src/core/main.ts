@@ -342,43 +342,68 @@ function getBundlePath(): string | null {
   return arg;
 }
 
-async function checkForUpdate(serverUrl: string): Promise<void> {
+let isUpdating = false;
+
+function isNewerVersion(remote: string, local: string): boolean {
+  if (remote === local) return false;
+  const rParts = remote.replace(/^v/, '').split('.').map(Number);
+  const lParts = local.replace(/^v/, '').split('.').map(Number);
+  for (let i = 0; i < Math.max(rParts.length, lParts.length); i++) {
+    const r = rParts[i] || 0;
+    const l = lParts[i] || 0;
+    if (r > l) return true;
+    if (r < l) return false;
+  }
+  return false;
+}
+
+async function checkForUpdate(serverUrl: string): Promise<boolean> {
   const bundlePath = getBundlePath();
-  if (!bundlePath) return; // modo dev â€” no actualizar
+  if (!bundlePath || isUpdating) return false;
 
   try {
     const res = await fetch(`${serverUrl}/api/v1/agents/version`, {
       signal: AbortSignal.timeout(10_000),
     });
-    if (!res.ok) return;
+    if (!res.ok) return false;
 
     const data = await res.json() as { version: string; url: string | null };
-    if (!data.url || data.version === VERSION) return;
-    const newer = (a: string, b: string) => a.split('.').map(Number).reduce((r, n, i) => r !== 0 ? r : n - b.split('.').map(Number)[i], 0) > 0;
-    if (!newer(data.version, VERSION)) return;
+    if (!data.url || !data.version) return false;
+    
+    if (!isNewerVersion(data.version, VERSION)) return false;
 
-    log('INFO', `Nueva versiÃ³n disponible: v${data.version} (actual: v${VERSION}). Descargando...`);
+    isUpdating = true;
+    log('INFO', `Nueva versión disponible: v${data.version} (actual: v${VERSION}). Descargando...`);
 
     const dlRes = await fetch(data.url, { signal: AbortSignal.timeout(120_000) });
     if (!dlRes.ok) {
-      log('WARN', `Descarga de actualizaciÃ³n fallÃ³: HTTP ${dlRes.status}`);
-      return;
+      log('WARN', `Descarga de actualización falló: HTTP ${dlRes.status}`);
+      isUpdating = false;
+      return false;
     }
 
     const buffer = Buffer.from(await dlRes.arrayBuffer());
     const tempPath = bundlePath + '.update';
+    
+    if (buffer.length < 50_000) {
+       log('WARN', 'El bundle descargado es muy pequeño, descartando actualización.');
+       isUpdating = false;
+       return false;
+    }
+    
     fs.writeFileSync(tempPath, buffer);
-    fs.renameSync(tempPath, bundlePath); // atÃ³mico â€” sobreescribe bundle.js en ejecuciÃ³n
+    fs.renameSync(tempPath, bundlePath);
 
-    log('INFO', `ActualizaciÃ³n aplicada (v${data.version}). Reiniciando para aplicar cambios...`);
-    setTimeout(() => process.exit(0), 1_000); // NSSM reinicia el servicio automÃ¡ticamente
+    log('INFO', `Actualización aplicada (v${data.version}). Reiniciando para aplicar cambios...`);
+    setTimeout(() => process.exit(0), 1_000);
+    return true;
   } catch (e: any) {
     log('WARN', `Auto-update: ${e.message}`);
+    isUpdating = false;
+    return false;
   }
 }
 
-// â”€â”€â”€ VerificaciÃ³n de conectividad con Exponential Backoff â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// Bloquea el arranque hasta que el servidor responda. Evita inundar el API
 // con heartbeats fallidos en el momento en que el proxy/firewall bloquea 443.
 
 async function waitForConnectivity(serverUrl: string): Promise<void> {
@@ -591,7 +616,11 @@ async function main(): Promise<void> {
     await waitForConnectivity(currentConfig.serverUrl);
 
     // â”€â”€â”€ Auto-update: verificar al arrancar y cada 4 horas â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    await checkForUpdate(currentConfig.serverUrl);
+    const isUpdatingNow = await checkForUpdate(currentConfig.serverUrl);
+    if (isUpdatingNow) {
+      log('INFO', 'El agente se está actualizando. Pausando inicio de loops...');
+      return;
+    }
     setInterval(() => checkForUpdate(currentConfig.serverUrl), 4 * 60 * 60_000);
 
     // â”€â”€â”€ ConexiÃ³n WebSocket (Estilo HP SDS) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
