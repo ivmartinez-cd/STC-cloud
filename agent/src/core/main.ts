@@ -1,4 +1,4 @@
-﻿import os from 'os';
+import os from 'os';
 import fs from 'fs';
 import path from 'path';
 import { ConfigManager, DATA_DIR, getHardwareId, type AgentConfig } from './config';
@@ -303,7 +303,7 @@ async function registerDevice(config: AgentConfig, r: DeviceReading): Promise<bo
   }
 }
 
-// â”€â”€â”€ Loop 3: Sincronizador â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ——— Loop 3: Sincronizador —————————————————————————————————————————————————————
 
 async function syncLoop(loop = true): Promise<void> {
   if (isSyncing) return;
@@ -323,26 +323,46 @@ async function syncLoop(loop = true): Promise<void> {
   } finally {
     isSyncing = false;
     if (loop) {
-      // Re-programar siguiente sincronizaciÃ³n
+      // Re-programar siguiente sincronización
       setTimeout(syncLoop, 5 * 60_000);
     }
   }
 }
 
-// â”€â”€â”€ Auto-update del agente â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// El servidor expone GET /api/v1/agents/version â†’ { version, url }.
-// Si la versiÃ³n remota difiere de VERSION, descarga el nuevo bundle.js,
-// lo reemplaza de forma atÃ³mica y sale (NSSM reinicia con el nuevo binario).
+// ——— Auto-update del agente ———————————————————————————————————————————————————
+// El servidor expone GET /api/v1/agents/version → { version, url }.
+// Si la versión remota difiere de VERSION, descarga el nuevo bundle.js,
+// lo reemplaza de forma atómica y sale (NSSM reinicia con el nuevo binario).
 
 function getBundlePath(): string | null {
   const arg = process.argv[1];
-  // En dev (tsx), argv[1] apunta a main.ts â€” skip update en ese caso
+  // En dev (tsx), argv[1] apunta a main.ts — skip update en ese caso
   if (!arg || !arg.endsWith('.js')) return null;
   if (!fs.existsSync(arg)) return null;
   return arg;
 }
 
 let isUpdating = false;
+
+async function checkFlags(): Promise<void> {
+  try {
+    const forceScanFlag = path.join(DATA_DIR, 'force-scan.flag');
+    if (fs.existsSync(forceScanFlag)) {
+      log('INFO', 'Flag detectado: Forzando escaneo inmediato...');
+      fs.unlinkSync(forceScanFlag);
+      snmpScan(currentConfig, false);
+    }
+
+    const forceUpdateFlag = path.join(DATA_DIR, 'force-update.flag');
+    if (fs.existsSync(forceUpdateFlag)) {
+      log('INFO', 'Flag detectado: Forzando verificación de actualización...');
+      fs.unlinkSync(forceUpdateFlag);
+      await checkForUpdate(currentConfig.serverUrl, true);
+    }
+  } catch (e: any) {
+    // Silencio en caso de error de acceso a archivos
+  }
+}
 
 function isNewerVersion(remote: string, local: string): boolean {
   if (remote === local) return false;
@@ -357,22 +377,34 @@ function isNewerVersion(remote: string, local: string): boolean {
   return false;
 }
 
-async function checkForUpdate(serverUrl: string): Promise<boolean> {
-  const bundlePath = getBundlePath();
-  if (!bundlePath || isUpdating) return false;
+async function checkForUpdate(serverUrl: string, force = false): Promise<boolean> {
+  if (isUpdating) return false;
+  isUpdating = true;
 
   try {
-    const res = await fetch(`${serverUrl}/api/v1/agents/version`, {
-      signal: AbortSignal.timeout(10_000),
-    });
-    if (!res.ok) return false;
+    const bundlePath = getBundlePath();
+    if (!bundlePath) {
+      isUpdating = false;
+      return false;
+    }
 
-    const data = await res.json() as { version: string; url: string | null };
-    if (!data.url || !data.version) return false;
+    const res = await fetch(`${serverUrl}/api/v1/agents/version`);
+    if (!res.ok) {
+      isUpdating = false;
+      return false;
+    }
     
-    if (!isNewerVersion(data.version, VERSION)) return false;
+    const data = await res.json() as any;
+    if (!data.version || !data.url) {
+       isUpdating = false;
+       return false;
+    }
 
-    isUpdating = true;
+    if (!force && !isNewerVersion(data.version, VERSION)) {
+      isUpdating = false;
+      return false;
+    }
+
     log('INFO', `Nueva versión disponible: v${data.version} (actual: v${VERSION}). Descargando...`);
 
     const dlRes = await fetch(data.url, { signal: AbortSignal.timeout(120_000) });
@@ -637,13 +669,15 @@ async function main(): Promise<void> {
     const engine = new ConsoleEngine(8000);
     engine.start();
 
-    // â”€â”€â”€ Iniciar Loops â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————
     log('INFO', `Scan cada ${currentConfig.scanIntervalMinutes} min | Community: ${currentConfig.snmpCommunity}`);
     
     heartbeat(); // Inicia la cadena de latidos (se auto-programa cada 5 min)
+    
+    setInterval(checkFlags, 10_000); // Verificar flags de la UI (scan, update) cada 10s
 
     syncLoop(); // Primer sync
-    setInterval(syncLoop, 60000); // SincronizaciÃ³n de datos cada 60s
+    setInterval(syncLoop, 60000); // Sincronización de datos cada 60s
 
     snmpScan(currentConfig); // Iniciar bucle de escaneo
 

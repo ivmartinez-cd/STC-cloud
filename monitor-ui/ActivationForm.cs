@@ -353,7 +353,7 @@ internal sealed class ActivationForm : Form
         {
             Text = "Acciones de Diagnóstico",
             Location = new Point(20, 70),
-            Size = new Size(510, 250),
+            Size = new Size(510, 300),
             ForeColor = Color.Blue
         };
 
@@ -381,6 +381,12 @@ internal sealed class ActivationForm : Form
                 _statusLabel.Text = "Servicio reiniciado.";
             }
         }, Color.Crimson);
+
+        // --- Botón UPDATE ---
+        AddSupportTool(gbSupport, "🚀  ACTUALIZAR", "Forzar búsqueda de actualizaciones del agente en GitHub.", 230, (s, e) => {
+            AgentService.ForceUpdate();
+            MessageBox.Show("Se ha enviado la señal de actualización forzada.\nEl agente verificará si hay nuevas versiones en GitHub en unos instantes.", "STC Update", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        });
 
         _tabSupport.Controls.Add(gbSupport);
 

@@ -168,6 +168,14 @@ internal static class AgentService
             DateTime.UtcNow.ToString("O"));
     }
 
+    public static void ForceUpdate()
+    {
+        Directory.CreateDirectory(DefaultDataDir);
+        File.WriteAllText(
+            Path.Combine(DefaultDataDir, "force-update.flag"),
+            DateTime.UtcNow.ToString("O"));
+    }
+
     // ── Log path ──────────────────────────────────────────────────────────────
 
     public static string GetLogPath()
