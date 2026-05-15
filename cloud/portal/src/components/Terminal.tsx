@@ -214,7 +214,7 @@ const Terminal: React.FC<TerminalProps> = ({ agentId }) => {
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
           disabled={isExecuting}
-          placeholder="Escribe un comando de STC Cloud (ej: status)..."
+          placeholder="Escribir comando..."
           className="flex-1 bg-transparent border-none outline-none text-slate-200 font-mono text-sm placeholder:text-slate-600 disabled:opacity-50"
         />
         <button 

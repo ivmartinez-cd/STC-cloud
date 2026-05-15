@@ -507,7 +507,7 @@ const ClientDetail = () => {
                           required
                           type="text"
                           className="cd-input w-full !pl-12"
-                          placeholder="Ej: Sede Central - Planta Alta"
+                          placeholder=""
                           value={monitorForm.name}
                           onChange={e => setMonitorForm({ ...monitorForm, name: e.target.value })}
                         />
@@ -522,7 +522,7 @@ const ClientDetail = () => {
                           <input
                             type="text"
                             className="cd-input w-full !pl-12 font-mono text-sm"
-                            placeholder="192.168.1.10"
+                            placeholder=""
                             value={monitorForm.ipStart}
                             onChange={e => {
                               const val = e.target.value;
@@ -542,7 +542,7 @@ const ClientDetail = () => {
                           <input
                             type="text"
                             className="cd-input w-full !pl-12 font-mono text-sm"
-                            placeholder="192.168.1.250"
+                            placeholder=""
                             value={monitorForm.ipEnd}
                             onFocus={e => {
                               const val = e.target.value;
@@ -562,7 +562,7 @@ const ClientDetail = () => {
                           <input
                             type="text"
                             className="cd-input w-full !pl-12"
-                            placeholder="public"
+                            placeholder=""
                             value={monitorForm.snmp_community}
                             onChange={e => setMonitorForm({ ...monitorForm, snmp_community: e.target.value })}
                           />

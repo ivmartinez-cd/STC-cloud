@@ -257,7 +257,7 @@ const Clients = () => {
                   required
                   type="text"
                   className="cd-input w-full !h-12 !bg-slate-50 border-transparent focus:!bg-white focus:!border-brand"
-                  placeholder="Ej: STC CLOUD S.A."
+                  placeholder=""
                   value={formData.name}
                   onChange={e => setFormData({ ...formData, name: e.target.value })}
                 />

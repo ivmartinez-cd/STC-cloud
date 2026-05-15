@@ -278,7 +278,7 @@ const Monitors = () => {
                 <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest ml-1">Etiqueta del Monitor *</label>
                 <input
                   type="text"
-                  placeholder="Ej: Sucursal Centro / Depósito A"
+                  placeholder=""
                   value={formName}
                   onChange={e => setFormName(e.target.value)}
                   className="cd-input w-full !h-12 !bg-white border-slate-200 focus:border-brand"

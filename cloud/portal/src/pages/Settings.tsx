@@ -59,7 +59,7 @@ const Settings = () => {
               value={thresholds.monitorOfflineMinutes}
               onChange={e => setThresholds({ monitorOfflineMinutes: Number(e.target.value) })}
               className="cd-input w-full !pl-12 !bg-white border-transparent focus:!border-brand"
-              placeholder="Ej: 10"
+              placeholder=""
             />
           </div>
           <div className="mt-4 flex items-start gap-2 px-1">
@@ -105,7 +105,7 @@ const Settings = () => {
                   type={type || 'text'}
                   value={smtp[key as keyof typeof smtp]}
                   onChange={e => setSmtp(p => ({ ...p, [key]: e.target.value }))}
-                  placeholder={placeholder}
+                  placeholder=""
                   className="cd-input w-full !pl-10 !bg-slate-50/50 border-transparent focus:!bg-white focus:!border-brand"
                 />
               </div>

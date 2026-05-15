@@ -78,7 +78,7 @@ const Login = () => {
                   value={username}
                   onChange={e => setUsername(e.target.value)}
                   className="w-full h-14 pl-14 pr-6 bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 text-sm transition-all duration-300 focus:bg-white focus:border-[#f7931d]/50 focus:ring-[10px] focus:ring-[#f7931d]/5 outline-none placeholder:text-slate-300 font-medium"
-                  placeholder="admin"
+                  placeholder=""
                   required
                   autoFocus
                 />

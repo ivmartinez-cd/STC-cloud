@@ -505,7 +505,6 @@ const MonitorDetail = () => {
               </div>
               <div>
                 <h3 className="text-lg font-black text-[#1a2333] tracking-tight">Consola de STC Cloud</h3>
-                <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest italic">Acceso directo al motor de gestión del agente</p>
               </div>
             </div>
 
@@ -518,28 +517,28 @@ const MonitorDetail = () => {
               <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
                 <button
                   onClick={() => sendCommand('RESCAN')}
-                  disabled={!!commandLoading}
+                  title="Escanea la red local en busca de nuevos dispositivos"
                   className="py-3 px-4 bg-white text-brand border border-blue-100 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-brand hover:text-white transition-all active:scale-95 disabled:opacity-50"
                 >
                   <RefreshCw size={14} className={commandLoading === 'RESCAN' ? 'animate-spin' : ''} /> Rescan
                 </button>
                 <button
                   onClick={() => sendCommand('PING')}
-                  disabled={!!commandLoading}
+                  title="Verifica la latencia y conectividad con el agente"
                   className="py-3 px-4 bg-white text-slate-700 border border-slate-200 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-slate-800 hover:text-white transition-all active:scale-95 disabled:opacity-50"
                 >
                   <Activity size={14} className={commandLoading === 'PING' ? 'animate-spin' : ''} /> Ping
                 </button>
                 <button
                   onClick={() => sendCommand('RESTART')}
-                  disabled={!!commandLoading}
+                  title="Reinicia el servicio del agente de forma remota"
                   className="py-3 px-4 bg-white text-rose-600 border border-rose-100 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-rose-600 hover:text-white transition-all active:scale-95 disabled:opacity-50"
                 >
                   <Zap size={14} className={commandLoading === 'RESTART' ? 'animate-spin' : ''} /> Reiniciar
                 </button>
                 <button
                   onClick={() => sendCommand('FORCE_UPDATE')}
-                  disabled={!!commandLoading}
+                  title="Fuerza la descarga e instalación de la última versión"
                   className="py-3 px-4 bg-white text-emerald-600 border border-emerald-100 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-emerald-600 hover:text-white transition-all active:scale-95 disabled:opacity-50"
                 >
                   <Download size={14} className={commandLoading === 'FORCE_UPDATE' ? 'animate-spin' : ''} /> Actualizar
@@ -608,7 +607,7 @@ const MonitorDetail = () => {
                   required
                   value={editForm.name}
                   className="cd-input w-full !h-14 !bg-slate-50 border-transparent focus:!border-brand focus:!bg-white"
-                  placeholder="Ej: Servidor Central"
+                  placeholder=""
                   onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} 
                 />
               </div>
@@ -620,7 +619,7 @@ const MonitorDetail = () => {
                     type="text"
                     value={editForm.ipStart}
                     className="cd-input w-full !h-14 !bg-slate-50 border-transparent focus:!border-brand focus:!bg-white font-mono"
-                    placeholder="192.168.1.1"
+                    placeholder=""
                     onChange={(e) => setEditForm({ ...editForm, ipStart: e.target.value })} 
                   />
                 </div>
@@ -630,7 +629,7 @@ const MonitorDetail = () => {
                     type="text"
                     value={editForm.ipEnd}
                     className="cd-input w-full !h-14 !bg-slate-50 border-transparent focus:!border-brand focus:!bg-white font-mono"
-                    placeholder="192.168.1.254"
+                    placeholder=""
                     onChange={(e) => setEditForm({ ...editForm, ipEnd: e.target.value })} 
                   />
                 </div>
@@ -643,7 +642,7 @@ const MonitorDetail = () => {
                     type="text"
                     value={editForm.snmp}
                     className="cd-input w-full !h-14 !bg-slate-50 border-transparent focus:!border-brand focus:!bg-white"
-                    placeholder="public"
+                    placeholder=""
                     onChange={(e) => setEditForm({ ...editForm, snmp: e.target.value })} 
                   />
                 </div>
