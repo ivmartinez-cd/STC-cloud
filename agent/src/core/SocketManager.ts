@@ -51,13 +51,13 @@ export class SocketManager {
   private readonly maxReconnectDelay = 300_000; // Techo: 5 minutos
   private reconnectTimer: NodeJS.Timeout | null = null;
   private pingInterval: NodeJS.Timeout | null = null;
-  private onCommand: (type: string, payload: any) => void;
+  private onCommand: (type: string, payload: any, id?: string) => void;
   private onLog: (level: string, msg: string) => void;
 
   constructor(
     serverUrl: string,
     token: string,
-    onCommand: (type: string, payload: any) => void,
+    onCommand: (type: string, payload: any, id?: string) => void,
     onLog: (level: string, msg: string) => void,
     proxyUrl?: string,
   ) {
@@ -99,7 +99,7 @@ export class SocketManager {
       try {
         const msg = JSON.parse(data.toString());
         if (msg.type === 'command') {
-          this.onCommand(msg.commandType, msg.payload);
+          this.onCommand(msg.commandType, msg.payload, msg.id);
         }
       } catch {
         this.onLog('WARN', 'Mensaje WSS invalido recibido.');

@@ -287,7 +287,7 @@ const start = async () => {
       const wsPlugin = require("@fastify/websocket");
       await fastify.register(wsPlugin);
       const { registerWebSocket } = await import("../ws/index");
-      await registerWebSocket(fastify);
+      await registerWebSocket(fastify, agentService);
       fastify.log.info("WebSocket hub activo en /ws");
     } catch (err: any) {
       fastify.log.error(`Error cargando @fastify/websocket: ${err.message}`);
@@ -579,7 +579,7 @@ const start = async () => {
         fastify.log.info({ agentId: id, type, commandId: command.id }, "Comando remoto registrado y pendiente");
         
         // 2. Intentar empujar por WebSocket para ejecución instantánea
-        const sentViaWss = sendCommandToAgent(id, type, payload || {});
+        const sentViaWss = sendCommandToAgent(id, type, payload || {}, command.id);
         
         if (sentViaWss) {
           fastify.log.info({ agentId: id }, "Comando empujado instantáneamente vía WSS");

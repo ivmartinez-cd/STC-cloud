@@ -13,16 +13,16 @@ export function broadcastToPortal(event: string, data: unknown) {
   }
 }
 
-export function sendCommandToAgent(agentId: string, commandType: string, payload: any = {}) {
+export function sendCommandToAgent(agentId: string, commandType: string, payload: any = {}, commandId?: string) {
   const socket = agentClients.get(agentId);
   if (socket && socket.readyState === 1) {
-    socket.send(JSON.stringify({ type: 'command', commandType, payload }));
+    socket.send(JSON.stringify({ type: 'command', id: commandId, commandType, payload }));
     return true;
   }
   return false;
 }
 
-export async function registerWebSocket(fastify: FastifyInstance) {
+export async function registerWebSocket(fastify: FastifyInstance, agentService: any) {
   fastify.get('/ws', { websocket: true } as any, async (connection: any, request: any) => {
     const { socket } = connection;
     
@@ -85,6 +85,15 @@ export async function registerWebSocket(fastify: FastifyInstance) {
         
         // Si un agente envía el resultado de un comando, lo retransmitimos al portal
         if (agentId && msg.event === 'command_result') {
+          // Si el resultado trae ID, marcar como completado en DB para evitar duplicidad vía heartbeat
+          if (msg.data && msg.data.id) {
+            agentService.updateCommandResult(
+              msg.data.id, 
+              msg.data.status === 'success' ? 'completed' : 'error', 
+              msg.data.result
+            ).catch((e: any) => fastify.log.error(`[WS] Error actualizando comando ${msg.data.id}: ${e.message}`));
+          }
+
           broadcastToPortal('command_result', {
             agentId,
             ...msg.data
