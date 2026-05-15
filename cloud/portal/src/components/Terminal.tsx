@@ -117,8 +117,8 @@ const Terminal: React.FC<TerminalProps> = ({ agentId }) => {
         payload: { command: cmd }
       });
       // El resultado llegará vía WebSocket
-    } catch (err: any) {
-      addLog('error', `Error al enviar comando: ${err.message}`);
+    } catch (err) {
+      addLog('error', `Error al enviar comando: ${err instanceof Error ? err.message : String(err)}`);
       setIsExecuting(false);
     }
   };

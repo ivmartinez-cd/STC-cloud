@@ -6,6 +6,10 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
+type SearchClient = { id: string; name: string };
+type SearchDevice = { id: string; serial_number: string; brand: string; model: string };
+type SearchResults = { clients: SearchClient[]; devices: SearchDevice[] };
+
 const navItems = [
   { name: 'Dashboard',     path: '/',          icon: LayoutDashboard },
   { name: 'Clientes',      path: '/clients',   icon: Users           },
@@ -31,7 +35,7 @@ const Layout = () => {
 
   // Search State
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<{ clients: any[], devices: any[] }>({ clients: [], devices: [] });
+  const [searchResults, setSearchResults] = useState<SearchResults>({ clients: [], devices: [] });
   const [isSearching, setIsSearching] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
@@ -42,7 +46,7 @@ const Layout = () => {
       const fetchResults = async () => {
         setIsSearching(true);
         try {
-          const data = await api.get<{ clients: any[], devices: any[] }>(`/search?q=${debouncedSearch}`);
+          const data = await api.get<SearchResults>(`/search?q=${debouncedSearch}`);
           setSearchResults(data);
           setShowResults(true);
         } catch (error) {
