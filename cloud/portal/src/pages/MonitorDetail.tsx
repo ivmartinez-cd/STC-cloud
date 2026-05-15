@@ -410,38 +410,7 @@ const MonitorDetail = () => {
                   </div>
                 </div>
 
-                {/* Support Tools (STC CLOUD Style) */}
-              <div className="cd-panel overflow-hidden border-none shadow-xl shadow-blue-900/5">
-                <div className="cd-header-orange flex items-center gap-3">
-                  <Settings size={18} />
-                  Herramientas de Soporte Remoto
-                </div>
-                <div className="p-8">
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <button
-                      onClick={() => sendCommand('RESCAN')}
-                      disabled={!!commandLoading}
-                      className="py-3 px-4 bg-white text-brand border border-blue-100 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-brand hover:text-white transition-all active:scale-95 disabled:opacity-50"
-                    >
-                      <RefreshCw size={14} className={commandLoading === 'RESCAN' ? 'animate-spin' : ''} /> Rescan
-                    </button>
-                    <button
-                      onClick={() => sendCommand('PING')}
-                      disabled={!!commandLoading}
-                      className="py-3 px-4 bg-white text-slate-700 border border-slate-200 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-slate-800 hover:text-white transition-all active:scale-95 disabled:opacity-50"
-                    >
-                      <Activity size={14} className={commandLoading === 'PING' ? 'animate-spin' : ''} /> Ping
-                    </button>
-                    <button
-                      onClick={() => sendCommand('RESTART')}
-                      disabled={!!commandLoading}
-                      className="py-3 px-4 bg-white text-rose-600 border border-rose-100 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-rose-600 hover:text-white transition-all active:scale-95 disabled:opacity-50"
-                    >
-                      <Zap size={14} className={commandLoading === 'RESTART' ? 'animate-spin' : ''} /> Reiniciar
-                    </button>
-                  </div>
-                </div>
-              </div>
+
             </div>
           </div>
         </>
@@ -537,6 +506,44 @@ const MonitorDetail = () => {
               <div>
                 <h3 className="text-lg font-black text-[#1a2333] tracking-tight">Consola de STC Cloud</h3>
                 <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest italic">Acceso directo al motor de gestión del agente</p>
+              </div>
+            </div>
+
+            {/* Support Tools (STC CLOUD Style) - Moved here */}
+            <div className="mb-8 p-6 bg-slate-50 rounded-3xl border border-slate-100">
+              <div className="flex items-center gap-3 mb-6">
+                <Settings size={16} className="text-brand" />
+                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Herramientas de Soporte Remoto</h4>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                <button
+                  onClick={() => sendCommand('RESCAN')}
+                  disabled={!!commandLoading}
+                  className="py-3 px-4 bg-white text-brand border border-blue-100 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-brand hover:text-white transition-all active:scale-95 disabled:opacity-50"
+                >
+                  <RefreshCw size={14} className={commandLoading === 'RESCAN' ? 'animate-spin' : ''} /> Rescan
+                </button>
+                <button
+                  onClick={() => sendCommand('PING')}
+                  disabled={!!commandLoading}
+                  className="py-3 px-4 bg-white text-slate-700 border border-slate-200 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-slate-800 hover:text-white transition-all active:scale-95 disabled:opacity-50"
+                >
+                  <Activity size={14} className={commandLoading === 'PING' ? 'animate-spin' : ''} /> Ping
+                </button>
+                <button
+                  onClick={() => sendCommand('RESTART')}
+                  disabled={!!commandLoading}
+                  className="py-3 px-4 bg-white text-rose-600 border border-rose-100 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-rose-600 hover:text-white transition-all active:scale-95 disabled:opacity-50"
+                >
+                  <Zap size={14} className={commandLoading === 'RESTART' ? 'animate-spin' : ''} /> Reiniciar
+                </button>
+                <button
+                  onClick={() => sendCommand('FORCE_UPDATE')}
+                  disabled={!!commandLoading}
+                  className="py-3 px-4 bg-white text-emerald-600 border border-emerald-100 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-emerald-600 hover:text-white transition-all active:scale-95 disabled:opacity-50"
+                >
+                  <Download size={14} className={commandLoading === 'FORCE_UPDATE' ? 'animate-spin' : ''} /> Actualizar
+                </button>
               </div>
             </div>
             

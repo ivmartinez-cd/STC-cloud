@@ -14,7 +14,6 @@ internal sealed class ActivationForm : Form
     private readonly TabPage _tabServiceInfo;
     private readonly TabPage _tabSettings;
     private readonly TabPage _tabProxy;
-    private readonly TabPage _tabSupport;
     private readonly StatusStrip _statusStrip;
     private readonly ToolStripStatusLabel _statusLabel;
 
@@ -119,9 +118,6 @@ internal sealed class ActivationForm : Form
         _leftPanel.Controls.Add(new Label { Text = "Network / Proxy", Font = _boldFont, Location = new Point(10, 340), AutoSize = true });
         _leftPanel.Controls.Add(new Label { Text = "Proxy HTTP para redes corporativas con acceso restringido.", Location = new Point(10, 360), Size = new Size(200, 45) });
 
-        _leftPanel.Controls.Add(new Label { Text = "Remote Support", Font = _boldFont, Location = new Point(10, 415), AutoSize = true });
-        _leftPanel.Controls.Add(new Label { Text = "Herramientas de diagnóstico y soporte técnico remoto.", Location = new Point(10, 435), Size = new Size(200, 45) });
-
 
         Controls.Add(_leftPanel);
 
@@ -136,12 +132,10 @@ internal sealed class ActivationForm : Form
         _tabServiceInfo = new TabPage("Service Information");
         _tabSettings    = new TabPage("Environment Settings");
         _tabProxy       = new TabPage("Network / Proxy");
-        _tabSupport     = new TabPage("Remote Support");
 
         _tabControl.TabPages.Add(_tabServiceInfo);
         _tabControl.TabPages.Add(_tabSettings);
         _tabControl.TabPages.Add(_tabProxy);
-        _tabControl.TabPages.Add(_tabSupport);
 
         Controls.Add(_tabControl);
 
@@ -335,121 +329,7 @@ internal sealed class ActivationForm : Form
             Font = new Font("Segoe UI", 8f)
         });
 
-        // ====================================================================
-        // TAB: Remote Support
-        // ====================================================================
-        _tabSupport.BackColor = Color.White;
-
-        _tabSupport.Controls.Add(new Label
-        {
-            Text = "Herramientas de Soporte Remoto",
-            Font = _titleFont,
-            Location = new Point(20, 20),
-            AutoSize = true,
-            ForeColor = Color.FromArgb(247, 147, 29) // STC Orange
-        });
-
-        var gbSupport = new GroupBox
-        {
-            Text = "Acciones de Diagnóstico",
-            Location = new Point(20, 70),
-            Size = new Size(510, 300),
-            ForeColor = Color.Blue
-        };
-
-        // --- Botón RESCAN ---
-        AddSupportTool(gbSupport, "🔄  RESCAN", "Solicitar escaneo inmediato de dispositivos SNMP.", 35, (s, e) => {
-            AgentService.ForceScan();
-            MessageBox.Show("Se ha enviado la señal de escaneo inmediato.\nEl agente procesará la red en unos segundos.", "STC Support", MessageBoxButtons.OK, MessageBoxIcon.Information);
-        });
-
-        // --- Botón PING ---
-        AddSupportTool(gbSupport, "⚡  PING TEST", "Verificar latencia y conectividad con el Portal STC Cloud.", 100, async (s, e) => {
-            _statusLabel.Text = "Ejecutando ping al servidor...";
-            var (ok, msg) = await TestPingAsync();
-            MessageBox.Show(msg, "Resultado de Conectividad", MessageBoxButtons.OK, ok ? MessageBoxIcon.Information : MessageBoxIcon.Error);
-            _statusLabel.Text = "Ping completado.";
-        });
-
-        // --- Botón RESTART ---
-        AddSupportTool(gbSupport, "🔥  REINICIAR", "Reiniciar el servicio de Windows STC Cloud Monitor.", 165, (s, e) => {
-            if (MessageBox.Show("¿Está seguro de que desea reiniciar el servicio del agente?", "Confirmación", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
-            {
-                _statusLabel.Text = "Reiniciando servicio...";
-                AgentService.RestartService();
-                MessageBox.Show("El servicio se ha reiniciado correctamente.", "Éxito", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                _statusLabel.Text = "Servicio reiniciado.";
-            }
-        }, Color.Crimson);
-
-        // --- Botón UPDATE ---
-        AddSupportTool(gbSupport, "🚀  ACTUALIZAR", "Forzar búsqueda de actualizaciones del agente en GitHub.", 230, (s, e) => {
-            AgentService.ForceUpdate();
-            MessageBox.Show("Se ha enviado la señal de actualización forzada.\nEl agente verificará si hay nuevas versiones en GitHub en unos instantes.", "STC Update", MessageBoxButtons.OK, MessageBoxIcon.Information);
-        });
-
-        _tabSupport.Controls.Add(gbSupport);
-
-        _tabSupport.Controls.Add(new Label
-        {
-            Text = "Estas herramientas permiten forzar acciones que normalmente el agente realiza de forma automática según su ciclo de escaneo (cada 15 min).",
-            Location = new Point(20, 330),
-            Size = new Size(500, 45),
-            ForeColor = Color.Gray,
-            Font = new Font("Segoe UI", 8f)
-        });
-
         ResumeLayout(false);
-    }
-
-    // Helper para el botón de Soporte (con label)
-    private void AddSupportTool(Control parent, string text, string hint, int y, EventHandler onClick, Color? fore = null)
-    {
-        var btn = new Button
-        {
-            Text = text,
-            Location = new Point(20, y),
-            Size = new Size(160, 45),
-            Font = _boldFont,
-            FlatStyle = FlatStyle.Flat,
-            BackColor = Color.WhiteSmoke,
-            ForeColor = fore ?? Color.Black
-        };
-        btn.FlatAppearance.BorderColor = Color.LightGray;
-        btn.Click += onClick;
-
-        var lbl = new Label
-        {
-            Text = hint,
-            Location = new Point(190, y + 12),
-            Size = new Size(300, 20),
-            ForeColor = Color.DimGray
-        };
-
-        parent.Controls.Add(btn);
-        parent.Controls.Add(lbl);
-    }
-
-    private async Task<(bool, string)> TestPingAsync()
-    {
-        try {
-            var status = await AgentService.GetStatusAsync();
-            var server = status?.ServerUrl ?? "stc-cloud.onrender.com";
-            
-            // Limpiar URL si tiene http/https
-            var host = server.Replace("https://", "").Replace("http://", "").Split('/')[0].Split(':')[0];
-            
-            using var ping = new System.Net.NetworkInformation.Ping();
-            var reply = await ping.SendPingAsync(host, 4000);
-            
-            if (reply.Status == System.Net.NetworkInformation.IPStatus.Success)
-                return (true, $"✅ Conexión exitosa con {host}\nTiempo de respuesta: {reply.RoundtripTime}ms");
-            else
-                return (false, $"❌ Error de red: {reply.Status}\nEl servidor {host} no responde al ping.");
-        }
-        catch (Exception ex) {
-            return (false, $"❌ Error al ejecutar ping: {ex.Message}");
-        }
     }
 
     // ── UI Helpers ────────────────────────────────────────────────────────────

@@ -149,6 +149,10 @@ async function handleCommand(type: string, payload: any = {}) {
         const output = await connector.execute(payload.command);
         result = { output };
         break;
+      case 'FORCE_UPDATE':
+        checkForUpdate(currentConfig.serverUrl, true);
+        result = { message: 'Verificando actualización...' };
+        break;
       default:
         throw new Error(`Comando no soportado: ${type}`);
     }
