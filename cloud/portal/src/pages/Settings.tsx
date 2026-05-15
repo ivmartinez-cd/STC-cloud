@@ -91,12 +91,12 @@ const Settings = () => {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {[
-            { label: 'Servidor SMTP', key: 'host', placeholder: 'smtp.ejemplo.com', icon: SettingsIcon },
-            { label: 'Puerto',        key: 'port', placeholder: '587', icon: SettingsIcon },
-            { label: 'Usuario',       key: 'user', placeholder: 'notif@empresa.com', icon: Mail },
-            { label: 'Contraseña',    key: 'pass', placeholder: '••••••••', type: 'password', icon: Shield },
-            { label: 'Remitente',     key: 'from', placeholder: 'STC Cloud <noreply@cd.com>', icon: User },
-          ].map(({ label, key, placeholder, type, icon: Icon }) => (
+            { label: 'Servidor SMTP', key: 'host', icon: SettingsIcon },
+            { label: 'Puerto',        key: 'port', icon: SettingsIcon },
+            { label: 'Usuario',       key: 'user', icon: Mail },
+            { label: 'Contraseña',    key: 'pass', type: 'password', icon: Shield },
+            { label: 'Remitente',     key: 'from', icon: User },
+          ].map(({ label, key, type, icon: Icon }) => (
             <div key={key} className="space-y-2">
               <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest ml-1">{label}</label>
               <div className="relative">
