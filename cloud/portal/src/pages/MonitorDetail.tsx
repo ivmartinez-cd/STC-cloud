@@ -514,7 +514,7 @@ const MonitorDetail = () => {
                 <Settings size={16} className="text-brand" />
                 <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Herramientas de Soporte Remoto</h4>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="relative group">
                   <button
                     onClick={() => sendCommand('RESCAN')}
@@ -527,18 +527,7 @@ const MonitorDetail = () => {
                     <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-slate-900"></div>
                   </div>
                 </div>
-                <div className="relative group">
-                  <button
-                    onClick={() => sendCommand('PING')}
-                    className="w-full py-3 px-4 bg-white text-slate-700 border border-slate-200 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-slate-800 hover:text-white transition-all active:scale-95 disabled:opacity-50"
-                  >
-                    <Activity size={14} className={commandLoading === 'PING' ? 'animate-spin' : ''} /> Ping
-                  </button>
-                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-slate-900 text-white text-[10px] font-bold rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none whitespace-nowrap z-50 shadow-xl border border-slate-700/50 translate-y-1 group-hover:translate-y-0">
-                    Verifica la latencia y conectividad con el agente
-                    <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-slate-900"></div>
-                  </div>
-                </div>
+
                 <div className="relative group">
                   <button
                     onClick={() => sendCommand('RESTART')}

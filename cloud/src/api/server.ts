@@ -156,7 +156,7 @@ const commandSchema = {
     type: "object",
     required: ["type"],
     properties: {
-      type: { type: "string", enum: ["FORCE_SCAN", "RESTART", "UPDATE_CONFIG", "PING", "STC_CONSOLE", "FORCE_UPDATE"] },
+      type: { type: "string", enum: ["FORCE_SCAN", "RESTART", "UPDATE_CONFIG", "STC_CONSOLE", "FORCE_UPDATE"] },
       payload: { type: "object" },
     },
   },

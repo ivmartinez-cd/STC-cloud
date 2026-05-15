@@ -1,4 +1,4 @@
-﻿import os from 'os';
+import os from 'os';
 import fs from 'fs';
 import path from 'path';
 import { exec, spawn } from 'child_process';
@@ -139,9 +139,6 @@ async function handleCommand(type: string, payload: any = {}) {
         // No esperamos a que termine el scan
         snmpScan(currentConfig, false);
         result = { message: 'Scan iniciado correctamente' };
-        break;
-      case 'PING':
-        result = { message: 'Pong', timestamp: new Date().toISOString() };
         break;
       case 'RESTART':
         log('WARN', 'Reinicio remoto solicitado. Saliendo en 2 segundos...');
