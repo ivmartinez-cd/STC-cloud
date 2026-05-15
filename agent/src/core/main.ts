@@ -122,7 +122,7 @@ async function heartbeat(): Promise<void> {
           }
 
           const result = await handleCommand(cmd.type, cmd.payload, cmd.id);
-          commandResults.push({ id: cmd.id, ...result });
+          commandResults.push(result);
         }
       }
 

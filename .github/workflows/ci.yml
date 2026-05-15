@@ -1,0 +1,77 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ─── Portal (React + Vite) ─────────────────────────────────────────────────
+  portal:
+    name: Portal — lint, typecheck, build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: cloud/portal
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: cloud/portal/package-lock.json
+
+      - run: npm ci
+      - run: npm run check    # ESLint + TypeScript + icon validation
+      - run: npm run build
+
+  # ─── API (Fastify + TypeScript) ────────────────────────────────────────────
+  api:
+    name: API — typecheck & build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - run: npm ci
+      - run: npm run build -w cloud
+
+  # ─── Agent (SNMP scanner → Windows .exe) ──────────────────────────────────
+  agent:
+    name: Agent — build, test, package exe
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - run: npm ci
+      - run: npm run build -w agent
+      - run: npm run test:queue -w agent    # offline SQLite queue tests only
+
+      - name: Package Windows executable
+        if: github.ref == 'refs/heads/main'
+        run: npm run build:agent
+
+      - name: Upload STCCloudMonitor.exe
+        if: github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: STCCloudMonitor-${{ github.sha }}
+          path: dist/STCCloudMonitor.exe
+          retention-days: 30
