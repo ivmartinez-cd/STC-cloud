@@ -28,6 +28,13 @@ installer/stc-update.zip
 installer/update_temp/
 installer/*.sig
 
+# ─── Code Signing — certificados y claves privadas ───────────────────────────
+*.pfx
+*.p12
+*.pvk
+*.spc
+agent/certs/
+
 # ─── Datos locales ───────────────────────────────────────────────────────────
 *.sqlite
 *.sqlite3

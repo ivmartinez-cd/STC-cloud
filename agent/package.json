@@ -13,7 +13,8 @@
     "test": "npx tsx --test src/tests/scanner.test.ts src/tests/queue.test.ts",
     "test:scanner": "npx tsx --test src/tests/scanner.test.ts",
     "test:queue": "npx tsx --test src/tests/queue.test.ts",
-    "snmp:sim": "npx tsx src/tests/snmpSimulator.ts"
+    "snmp:sim": "npx tsx src/tests/snmpSimulator.ts",
+    "sign": "powershell -ExecutionPolicy Bypass -File scripts/sign_agent.ps1"
   },
   "dependencies": {
     "better-sqlite3": "^12.9.0",

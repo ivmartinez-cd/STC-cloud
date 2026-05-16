@@ -428,7 +428,29 @@
             <li><strong>Cuentas de Servicio:</strong> Se recomienda el uso de una cuenta de servicio con contraseña que no expire para evitar interrupciones de monitoreo.</li>
         </ul>
 
-        <h2 id="despliegue">6. Instalación y Despliegue Masivo</h2>
+        <h2 id="firma">6. Transparencia sobre Firma Digital y Verificación de Integridad</h2>
+
+        <div class="note-callout" style="border-left: 4px solid #d97706; background: #fffbeb; padding: 16px 20px; border-radius: 6px; margin-bottom: 20px;">
+            <strong>Nota de Transparencia:</strong> El software STC Cloud Monitor se entrega actualmente
+            <strong>sin firma de código digital</strong> (Code Signing Certificate) para optimizar los costos
+            de distribución. Esto puede generar alertas de Windows SmartScreen en el primer despliegue,
+            las cuales son esperadas y gestionables. Se recomienda validar la integridad del instalador
+            comparando su hash SHA-256 con el valor oficial publicado por STC Cloud antes de ejecutar
+            la instalación en cualquier equipo.
+        </div>
+
+        <h3>Verificación de Hash SHA-256</h3>
+        <p>El paquete de distribución incluye el script <code>verify_hash.ps1</code>. Ejecutar desde PowerShell:</p>
+        <div class="note-callout" style="font-family: monospace; background: #f1f5f9; border-color: #475569; color: #1e293b;">
+            .\verify_hash.ps1 -FilePath "STC-Monitor-Setup.exe" -ExpectedHash "&lt;HASH_OFICIAL_STC&gt;"
+        </div>
+        <p style="font-size: 13px; color: #64748b;">
+            El hash SHA-256 oficial de cada versión se publica en el portal STC Cloud y en las notas de
+            lanzamiento. Para gestión de alertas de SmartScreen/Defender, consultar la sección 9 del
+            <em>Manual del Administrador IT v1.5</em>.
+        </p>
+
+        <h2 id="despliegue">7. Instalación y Despliegue Masivo</h2>
         <p>Para entornos con múltiples sites, el instalador soporta parámetros de línea de comandos para despliegues desatendidos vía GPO, Microsoft Intune o scripts de PowerShell.</p>
 
         <h3>Ejemplo de Instalación Silenciosa</h3>

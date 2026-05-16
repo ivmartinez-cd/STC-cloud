@@ -1007,5 +1007,92 @@ Flags: runhidden waituntilterminated;
     </div>
 </div>
 
+<!-- ==================== PÁGINA 9 ==================== -->
+<div class="page">
+    <div class="page-header">
+        <div>
+            <div class="section-label">Manual del Administrador IT</div>
+            <div class="internal-doc-type">Gestión de Falsos Positivos</div>
+        </div>
+    </div>
+
+    <h2>9. Gestión de Falsos Positivos y Confianza del Sistema</h2>
+
+    <p>
+        El binario <code>agente.exe</code> es un ejecutable nativo de Windows empaquetado con Node.js mediante
+        <strong>pkg</strong>. Esta técnica de empaquetado puede generar alertas en Windows SmartScreen o
+        Windows Defender en equipos donde el software no haya sido visto previamente. Las siguientes
+        secciones describen los procedimientos validados para gestionar estas alertas en entornos corporativos.
+    </p>
+
+    <h3>9.1 Desbloqueo de SmartScreen (Instalador)</h3>
+    <p>Si al ejecutar <code>STC-Monitor-Setup.exe</code> aparece la pantalla azul de SmartScreen:</p>
+    <ol style="font-size:13.5px; color:#334155; line-height:2;">
+        <li>Hacer clic en <strong>"Más información"</strong> (enlace debajo del mensaje de advertencia).</li>
+        <li>Hacer clic en el botón <strong>"Ejecutar de todas formas"</strong> que aparece.</li>
+        <li>Continuar con la instalación normalmente.</li>
+    </ol>
+
+    <p>Para desbloquear un archivo descargado desde el Explorador de Windows (sin ejecutarlo):</p>
+    <ol style="font-size:13.5px; color:#334155; line-height:2;">
+        <li>Hacer clic derecho sobre <code>STC-Monitor-Setup.exe</code> → <strong>Propiedades</strong>.</li>
+        <li>En la pestaña <strong>General</strong>, marcar la casilla <strong>"Desbloquear"</strong> en la sección de seguridad.</li>
+        <li>Hacer clic en <strong>Aceptar</strong> y ejecutar el instalador.</li>
+    </ol>
+
+    <p>O bien desde PowerShell (requiere privilegios de administrador):</p>
+    <pre style="background:#0f172a;color:#e2e8f0;padding:12px 16px;border-radius:6px;font-size:12px;overflow-x:auto;">Unblock-File -Path "C:\Descargas\STC-Monitor-Setup.exe"</pre>
+
+    <h3>9.2 Exclusión en Windows Defender (Post-instalación)</h3>
+    <p>
+        Para evitar que Windows Defender interrumpa la ejecución del agente como servicio, añadir
+        una exclusión de ruta permanente. Ejecutar en PowerShell <strong>como Administrador</strong>:
+    </p>
+    <pre style="background:#0f172a;color:#e2e8f0;padding:12px 16px;border-radius:6px;font-size:12px;overflow-x:auto;"># Excluir el directorio de instalación del agente
+Add-MpPreference -ExclusionPath "C:\Program Files\STC Cloud Monitor"
+
+# Excluir también el directorio de datos (opcional, recomendado)
+Add-MpPreference -ExclusionPath "C:\ProgramData\STCCloudMonitor"
+
+# Verificar que las exclusiones quedaron registradas
+Get-MpPreference | Select-Object -ExpandProperty ExclusionPath</pre>
+
+    <div class="note-callout" style="border-left-color:#d97706; background:#fffbeb;">
+        <strong>Nota de seguridad:</strong> Las exclusiones de Windows Defender deben aplicarse únicamente
+        a las rutas específicas del agente, nunca a unidades completas o directorios de sistema.
+        Documentar la exclusión en el registro de cambios de seguridad de la organización.
+    </div>
+
+    <h3>9.3 Despliegue vía GPO (Exclusión Centralizada)</h3>
+    <p>
+        Para entornos con múltiples equipos, la exclusión puede distribuirse mediante
+        <strong>Group Policy</strong>:
+    </p>
+    <ol style="font-size:13.5px; color:#334155; line-height:2;">
+        <li>Abrir <strong>Group Policy Management</strong> en el Domain Controller.</li>
+        <li>Crear o editar una GPO vinculada a la OU con los equipos monitoreados.</li>
+        <li>Navegar a: <em>Computer Configuration → Administrative Templates → Windows Components → Microsoft Defender Antivirus → Exclusions → Path Exclusions</em>.</li>
+        <li>Añadir <code>C:\Program Files\STC Cloud Monitor</code> como valor de exclusión.</li>
+        <li>Forzar actualización de política: <code>gpupdate /force</code></li>
+    </ol>
+
+    <h3>9.4 Verificación de Integridad (SHA-256)</h3>
+    <p>
+        Antes de instalar, cualquier equipo de seguridad puede verificar que el binario descargado
+        coincide exactamente con el publicado por STC Cloud, usando el script de verificación incluido:
+    </p>
+    <pre style="background:#0f172a;color:#e2e8f0;padding:12px 16px;border-radius:6px;font-size:12px;overflow-x:auto;"># Ejecutar desde PowerShell en el directorio de descarga
+.\verify_hash.ps1 -FilePath "STC-Monitor-Setup.exe" -ExpectedHash "&lt;HASH_OFICIAL&gt;"</pre>
+    <p>
+        El script <code>verify_hash.ps1</code> se distribuye junto al instalador y calcula el hash
+        SHA-256 localmente sin enviar datos a ningún servidor externo.
+    </p>
+
+    <div class="footer">
+        <span>STC Cloud Monitor — Manual del Administrador IT v1.5</span>
+        <span>Página 9</span>
+    </div>
+</div>
+
 </body>
 </html>

@@ -48,6 +48,9 @@ SetupIconFile=..\Assets\favicon.ico
 UninstallDisplayIcon={app}\STC.Monitor.UI.exe
 MinVersion=10.0
 ArchitecturesInstallIn64BitMode=x64compatible
+; Firma digital del instalador — requiere configurar "MsSign" en Tools > Configure Sign Tools
+; Ver installer/READ_SIGNING.md para instrucciones de configuracion
+SignTool=MsSign $f
 SetupMutex=STC-Monitor-Setup-Mutex
 CloseApplications=yes
 RestartApplications=no
