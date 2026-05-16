@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>STC Cloud - Data Collection Inventory v1.5</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --stc-blue: #004a99;
+            --stc-orange: #f7931d;
+            --text-dark: #1a2333;
+            --text-gray: #64748b;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            background: white;
+            color: var(--text-dark);
+        }
+
+        .page {
+            width: 210mm;
+            min-height: 297mm;
+            padding: 25mm;
+            margin: 0 auto;
+            box-sizing: border-box;
+            position: relative;
+            background: white;
+        }
+
+        @media print {
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            .page { margin: 0; padding: 20mm; page-break-after: always; }
+        }
+
+        /* ── Portada ─────────────────────────────────────────────── */
+        .cover-top-bar {
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 70mm;
+        }
+
+        .top-title {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--stc-blue);
+            letter-spacing: 0.05em;
+        }
+
+        .cover-main { text-align: left; padding-left: 10mm; }
+
+        .stc-cloud-brand {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 18px;
+        }
+
+        .brand-dot {
+            width: 10px;
+            height: 10px;
+            background: var(--stc-orange);
+            border-radius: 50%;
+        }
+
+        .brand-text {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--stc-blue);
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+        }
+
+        .cover-doc-type {
+            font-family: 'Inter', sans-serif;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--stc-orange);
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            margin-bottom: 10px;
+        }
+
+        .cover-title {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 32px;
+            font-weight: 900;
+            color: var(--stc-blue);
+            line-height: 1.15;
+            margin-bottom: 6px;
+        }
+
+        .cover-subtitle {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text-gray);
+            margin-bottom: 30px;
+        }
+
+        .cover-executive-box {
+            background: #f0f7ff;
+            border-left: 4px solid var(--stc-blue);
+            padding: 16px 20px;
+            margin-bottom: 30px;
+            border-radius: 0 6px 6px 0;
+        }
+
+        .cover-executive-box p {
+            margin: 0;
+            font-size: 12px;
+            color: var(--text-dark);
+            line-height: 1.6;
+        }
+
+        .cover-executive-box strong { color: var(--stc-blue); }
+
+        .cover-meta {
+            display: flex;
+            gap: 24px;
+            flex-wrap: wrap;
+        }
+
+        .meta-item {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .meta-label {
+            font-size: 9px;
+            font-weight: 600;
+            color: var(--text-gray);
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+        }
+
+        .meta-value {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-dark);
+        }
+
+        /* ── Páginas de contenido ────────────────────────────────── */
+        .page-header {
+            border-bottom: 2px solid var(--stc-blue);
+            padding-bottom: 10px;
+            margin-bottom: 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+
+        .page-header-title {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--stc-blue);
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+        }
+
+        .page-header-page {
+            font-size: 10px;
+            color: var(--text-gray);
+        }
+
+        .section-title {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--stc-blue);
+            margin-top: 28px;
+            margin-bottom: 10px;
+            border-left: 3px solid var(--stc-orange);
+            padding-left: 10px;
+        }
+
+        .section-subtitle {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin-top: 18px;
+            margin-bottom: 8px;
+        }
+
+        p {
+            font-size: 11px;
+            line-height: 1.7;
+            color: var(--text-dark);
+            margin: 0 0 10px 0;
+        }
+
+        /* ── Tablas ──────────────────────────────────────────────── */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 16px;
+            font-size: 10px;
+        }
+
+        thead th {
+            background: var(--stc-blue);
+            color: white;
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 700;
+            font-size: 9px;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            padding: 7px 8px;
+            text-align: left;
+        }
+
+        tbody tr:nth-child(even) { background: #f8fafc; }
+        tbody tr:nth-child(odd)  { background: white; }
+
+        tbody td {
+            padding: 7px 8px;
+            border-bottom: 1px solid #e2e8f0;
+            vertical-align: top;
+            line-height: 1.5;
+        }
+
+        .tag {
+            display: inline-block;
+            padding: 2px 7px;
+            border-radius: 10px;
+            font-size: 9px;
+            font-weight: 600;
+        }
+
+        .tag-none    { background: #dcfce7; color: #166534; }
+        .tag-low     { background: #fef9c3; color: #854d0e; }
+        .tag-medium  { background: #ffedd5; color: #9a3412; }
+        .tag-high    { background: #fee2e2; color: #991b1b; }
+        .tag-yes     { background: #dbeafe; color: #1e40af; }
+        .tag-no      { background: #f1f5f9; color: #475569; }
+
+        /* ── Diagrama de flujo ───────────────────────────────────── */
+        .flow-box {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 16px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 10px;
+            line-height: 1.8;
+            color: var(--text-dark);
+            white-space: pre;
+        }
+
+        /* ── Callouts ────────────────────────────────────────────── */
+        .callout {
+            border-left: 4px solid var(--stc-orange);
+            background: #fff7ed;
+            padding: 12px 16px;
+            border-radius: 0 6px 6px 0;
+            margin: 14px 0;
+        }
+
+        .callout p { margin: 0; font-size: 11px; }
+
+        .callout-blue {
+            border-left-color: var(--stc-blue);
+            background: #eff6ff;
+        }
+
+        .callout-green {
+            border-left-color: #16a34a;
+            background: #f0fdf4;
+        }
+
+        /* ── Footer ──────────────────────────────────────────────── */
+        .page-footer {
+            position: absolute;
+            bottom: 15mm;
+            left: 25mm;
+            right: 25mm;
+            border-top: 1px solid #e2e8f0;
+            padding-top: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .footer-text {
+            font-size: 9px;
+            color: var(--text-gray);
+        }
+
+        .footer-confidential {
+            font-size: 9px;
+            font-weight: 600;
+            color: var(--stc-blue);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+    </style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════ PORTADA -->
+<div class="page">
+    <div class="cover-top-bar">
+        <div class="top-title">STC CLOUD MONITOR · AGENT v1.5</div>
+        <div class="footer-text">Documento de Privacidad y Auditoría</div>
+    </div>
+
+    <div class="cover-main">
+        <div class="stc-cloud-brand">
+            <div class="brand-dot"></div>
+            <div class="brand-text">STC Cloud</div>
+        </div>
+
+        <div class="cover-doc-type">Inventario de Recopilación de Datos</div>
+        <div class="cover-title">Data Collection<br>Inventory</div>
+        <div class="cover-subtitle">Auditoría de Privacidad · Versión 1.5</div>
+
+        <div class="cover-executive-box">
+            <p><strong>Conclusión Ejecutiva:</strong> El agente STC Cloud Monitor recopila exclusivamente métricas operativas de impresoras (contadores de páginas, fabricante, modelo, número de serie). <strong>No recopila, procesa ni transmite ningún dato de usuarios, documentos, credenciales de red ni Información de Identificación Personal (PII).</strong> Todos los datos de configuración se almacenan cifrados con AES-256-GCM ligado al hardware del equipo.</p>
+        </div>
+
+        <div class="cover-meta">
+            <div class="meta-item">
+                <div class="meta-label">Versión</div>
+                <div class="meta-value">1.5</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Fecha</div>
+                <div class="meta-value">Mayo 2026</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Clasificación</div>
+                <div class="meta-value">Público / Auditoría IT</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Normativas aplicables</div>
+                <div class="meta-value">GDPR · LGPD · Leyes locales</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="page-footer">
+        <div class="footer-text">STC Cloud Monitor · Data Collection Inventory v1.5</div>
+        <div class="footer-confidential">Público</div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ PÁGINA 1 -->
+<div class="page">
+    <div class="page-header">
+        <div class="page-header-title">Data Collection Inventory · STC Cloud Monitor v1.5</div>
+        <div class="page-header-page">Página 1</div>
+    </div>
+
+    <div class="section-title">1. Datos Recopilados vía SNMP de Impresoras</div>
+
+    <p>El agente escanea rangos IP configurados por el administrador IT y consulta impresoras via SNMP (UDP puerto 161, lectura solamente). La siguiente tabla detalla cada campo recopilado:</p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Campo</th>
+                <th>Tipo</th>
+                <th>Origen (OID SNMP)</th>
+                <th>Propósito</th>
+                <th>Sensibilidad</th>
+                <th>¿Se transmite?</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>1</td>
+                <td><code>ip</code></td>
+                <td>String IPv4</td>
+                <td>Dirección de destino del scan</td>
+                <td>Identificar la impresora en la red del cliente</td>
+                <td><span class="tag tag-medium">Media</span></td>
+                <td><span class="tag tag-yes">Sí</span></td>
+            </tr>
+            <tr>
+                <td>2</td>
+                <td><code>brand</code></td>
+                <td>Enum</td>
+                <td><code>sysObjectID</code> (1.3.6.1.2.1.1.2.0)</td>
+                <td>Selección de OIDs correctos para la marca</td>
+                <td><span class="tag tag-low">Baja</span></td>
+                <td><span class="tag tag-yes">Sí</span></td>
+            </tr>
+            <tr>
+                <td>3</td>
+                <td><code>model</code></td>
+                <td>String (máx. 100 chars)</td>
+                <td><code>sysDescr</code> — truncado</td>
+                <td>Identificación del modelo para reportes</td>
+                <td><span class="tag tag-low">Baja</span></td>
+                <td><span class="tag tag-yes">Sí</span></td>
+            </tr>
+            <tr>
+                <td>4</td>
+                <td><code>sysDescr</code></td>
+                <td>String (máx. 255 chars)</td>
+                <td><code>1.3.6.1.2.1.1.1.0</code></td>
+                <td>Descripción técnica del dispositivo</td>
+                <td><span class="tag tag-low">Baja</span></td>
+                <td><span class="tag tag-no">Solo local</span></td>
+            </tr>
+            <tr>
+                <td>5</td>
+                <td><code>sysName</code></td>
+                <td>String</td>
+                <td><code>1.3.6.1.2.1.1.5.0</code></td>
+                <td>Nombre del dispositivo en la red</td>
+                <td><span class="tag tag-low">Baja</span></td>
+                <td><span class="tag tag-no">Solo local</span></td>
+            </tr>
+            <tr>
+                <td>6</td>
+                <td><code>serial</code></td>
+                <td>String</td>
+                <td>OID específico por fabricante</td>
+                <td>Identificador único del dispositivo físico (usado como <code>device_id</code>)</td>
+                <td><span class="tag tag-medium">Media</span></td>
+                <td><span class="tag tag-yes">Sí</span></td>
+            </tr>
+            <tr>
+                <td>7</td>
+                <td><code>total_pages</code></td>
+                <td>Integer</td>
+                <td>OID contador por marca</td>
+                <td>Facturación de páginas totales impresas</td>
+                <td><span class="tag tag-low">Baja</span></td>
+                <td><span class="tag tag-yes">Sí</span></td>
+            </tr>
+            <tr>
+                <td>8</td>
+                <td><code>mono_pages</code></td>
+                <td>Integer</td>
+                <td>OID contador por marca</td>
+                <td>Facturación de páginas monocromo</td>
+                <td><span class="tag tag-low">Baja</span></td>
+                <td><span class="tag tag-yes">Sí</span></td>
+            </tr>
+            <tr>
+                <td>9</td>
+                <td><code>color_pages</code></td>
+                <td>Integer</td>
+                <td>OID contador por marca</td>
+                <td>Facturación de páginas color</td>
+                <td><span class="tag tag-low">Baja</span></td>
+                <td><span class="tag tag-yes">Sí</span></td>
+            </tr>
+            <tr>
+                <td>10</td>
+                <td><code>time</code></td>
+                <td>ISO 8601</td>
+                <td>Reloj del sistema Windows</td>
+                <td>Timestamp de la lectura SNMP</td>
+                <td><span class="tag tag-low">Baja</span></td>
+                <td><span class="tag tag-yes">Sí</span></td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="callout callout-blue">
+        <p><strong>Nota técnica SNMP:</strong> El agente realiza consultas SNMP de solo lectura (GET). No utiliza SetRequest ni operaciones de escritura. El protocolo opera en UDP puerto 161 sobre la red local del cliente. No existe tráfico SNMP saliente a Internet.</p>
+    </div>
+
+    <div class="section-title">2. Payload Transmitido al Servidor STC</div>
+
+    <p>El endpoint receptor es <code>POST {serverUrl}/api/v1/devices/sync</code>. La transmisión usa HTTPS (TLS 1.2+) con autenticación Bearer JWT. El payload contiene exactamente estos campos:</p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Campo</th>
+                <th>Contenido</th>
+                <th>Sensibilidad</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><code>device_id</code></td>
+                <td>Número de serie de la impresora; si no disponible, su IP</td>
+                <td><span class="tag tag-medium">Media</span></td>
+            </tr>
+            <tr>
+                <td><code>ip</code></td>
+                <td>Dirección IP local de la impresora (no ruteable externamente)</td>
+                <td><span class="tag tag-medium">Media</span></td>
+            </tr>
+            <tr>
+                <td><code>brand</code></td>
+                <td>Fabricante detectado (hp / lexmark / samsung / ricoh / brother / xerox / generic)</td>
+                <td><span class="tag tag-low">Baja</span></td>
+            </tr>
+            <tr>
+                <td><code>model</code></td>
+                <td>Modelo del dispositivo (string, máx. 100 chars)</td>
+                <td><span class="tag tag-low">Baja</span></td>
+            </tr>
+            <tr>
+                <td><code>time</code></td>
+                <td>Timestamp ISO 8601 de la lectura</td>
+                <td><span class="tag tag-low">Baja</span></td>
+            </tr>
+            <tr>
+                <td><code>total_pages</code></td>
+                <td>Contador entero de páginas totales</td>
+                <td><span class="tag tag-low">Baja</span></td>
+            </tr>
+            <tr>
+                <td><code>mono_pages</code></td>
+                <td>Contador entero de páginas monocromo</td>
+                <td><span class="tag tag-low">Baja</span></td>
+            </tr>
+            <tr>
+                <td><code>color_pages</code></td>
+                <td>Contador entero de páginas color</td>
+                <td><span class="tag tag-low">Baja</span></td>
+            </tr>
+            <tr>
+                <td><code>offline</code></td>
+                <td>Flag booleano, siempre <code>true</code> (constante hardcoded)</td>
+                <td><span class="tag tag-low">Baja</span></td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="page-footer">
+        <div class="footer-text">STC Cloud Monitor · Data Collection Inventory v1.5</div>
+        <div class="footer-confidential">Público</div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ PÁGINA 2 -->
+<div class="page">
+    <div class="page-header">
+        <div class="page-header-title">Data Collection Inventory · STC Cloud Monitor v1.5</div>
+        <div class="page-header-page">Página 2</div>
+    </div>
+
+    <div class="section-title">3. Almacenamiento Local</div>
+
+    <p>Ubicación: <code>C:\ProgramData\STCCloudMonitor\</code> — accesible solo por la cuenta de servicio Windows.</p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Tabla / Archivo</th>
+                <th>Campos almacenados</th>
+                <th>Retención</th>
+                <th>Propósito</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><code>local.db</code> → <code>readings_queue</code></td>
+                <td>device_id, ip, brand, model, time, total_pages, mono_pages, color_pages, synced, created_at</td>
+                <td>7 días (purga automática)</td>
+                <td>Cola de envío con soporte offline. Datos se eliminan tras sincronización o vencimiento.</td>
+            </tr>
+            <tr>
+                <td><code>local.db</code> → <code>known_devices</code></td>
+                <td>ip, serial, brand, model, registered, last_seen</td>
+                <td>Catálogo persistente</td>
+                <td>Evitar re-registro de dispositivos ya conocidos. No contiene contadores.</td>
+            </tr>
+            <tr>
+                <td><code>config.enc</code></td>
+                <td>Ver Sección 4 (cifrado AES-256-GCM)</td>
+                <td>Indefinida</td>
+                <td>Configuración operativa del agente.</td>
+            </tr>
+            <tr>
+                <td><code>agent.log</code></td>
+                <td>Eventos operativos con timestamp (sin datos de impresoras)</td>
+                <td>Rotación por tamaño</td>
+                <td>Diagnóstico y auditoría de operación del servicio.</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="section-title">4. Configuración Cifrada (config.enc)</div>
+
+    <p>La configuración se almacena en <code>C:\ProgramData\STCCloudMonitor\config.enc</code> con cifrado AES-256-GCM. La clave se deriva con PBKDF2 (SHA-256, 100.000 iteraciones, salt único) a partir del Hardware ID del equipo. <strong>Ningún campo de configuración se transmite al servidor.</strong></p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Campo</th>
+                <th>Contenido</th>
+                <th>Sensibilidad</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><code>serverUrl</code></td>
+                <td>URL del portal STC Cloud</td>
+                <td><span class="tag tag-low">Baja</span></td>
+            </tr>
+            <tr>
+                <td><code>agentId</code></td>
+                <td>UUID asignado al agente en la activación</td>
+                <td><span class="tag tag-low">Baja</span></td>
+            </tr>
+            <tr>
+                <td><code>token</code></td>
+                <td>JWT de autenticación Bearer</td>
+                <td><span class="tag tag-high">Alta</span></td>
+            </tr>
+            <tr>
+                <td><code>refreshToken</code></td>
+                <td>Token de refresco JWT</td>
+                <td><span class="tag tag-high">Alta</span></td>
+            </tr>
+            <tr>
+                <td><code>ipRanges</code></td>
+                <td>Array de rangos IP a escanear (definidos por el administrador)</td>
+                <td><span class="tag tag-medium">Media</span></td>
+            </tr>
+            <tr>
+                <td><code>snmpCommunity</code></td>
+                <td>Community string SNMP (típicamente "public")</td>
+                <td><span class="tag tag-medium">Media</span></td>
+            </tr>
+            <tr>
+                <td><code>snmpVersion</code></td>
+                <td>Versión SNMP (1 ó 2c)</td>
+                <td><span class="tag tag-low">Baja</span></td>
+            </tr>
+            <tr>
+                <td><code>scanIntervalMinutes</code></td>
+                <td>Frecuencia de escaneo en minutos</td>
+                <td><span class="tag tag-low">Baja</span></td>
+            </tr>
+            <tr>
+                <td><code>proxyUrl</code></td>
+                <td>URL del proxy corporativo (opcional; puede incluir credenciales)</td>
+                <td><span class="tag tag-medium">Media</span></td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="callout callout-green">
+        <p><strong>Hardware ID:</strong> La clave de cifrado se deriva del MachineGuid (registro de Windows) + Serial de BIOS, procesados con SHA-256. Este valor <strong>nunca se almacena en texto claro ni se transmite</strong>. Su único propósito es ligar la configuración al hardware físico del equipo, impidiendo su uso en otro dispositivo.</p>
+    </div>
+
+    <div class="section-title">5. Datos Explícitamente NO Recopilados</div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Categoría</th>
+                <th>Ejemplos</th>
+                <th>Confirmación técnica</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>PII de usuarios</td>
+                <td>Nombres, emails, DNI, cuentas de AD</td>
+                <td>No existe código de acceso a AD/LDAP/SAM en el agente</td>
+            </tr>
+            <tr>
+                <td>Contenido de documentos</td>
+                <td>Archivos impresos, texto de documentos</td>
+                <td>SNMP solo expone contadores numéricos, no spools de impresión</td>
+            </tr>
+            <tr>
+                <td>Actividad de usuario</td>
+                <td>Capturas de pantalla, historial de aplicaciones</td>
+                <td>Agente corre como servicio de sistema sin acceso a sesiones de usuario</td>
+            </tr>
+            <tr>
+                <td>Contraseñas de red</td>
+                <td>Credenciales de dominio, WiFi, otras aplicaciones</td>
+                <td>No existe acceso al Credential Manager de Windows</td>
+            </tr>
+            <tr>
+                <td>Inventario de software</td>
+                <td>Aplicaciones instaladas en el equipo host</td>
+                <td>Solo accede a Registry para leer MachineGuid (derivación de clave)</td>
+            </tr>
+            <tr>
+                <td>Tráfico de red</td>
+                <td>Contenido de paquetes, DNS queries, navegación</td>
+                <td>Solo genera tráfico SNMP saliente a los rangos IP configurados por el admin</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="page-footer">
+        <div class="footer-text">STC Cloud Monitor · Data Collection Inventory v1.5</div>
+        <div class="footer-confidential">Público</div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ PÁGINA 3 -->
+<div class="page">
+    <div class="page-header">
+        <div class="page-header-title">Data Collection Inventory · STC Cloud Monitor v1.5</div>
+        <div class="page-header-page">Página 3</div>
+    </div>
+
+    <div class="section-title">6. Diagrama de Flujo de Datos</div>
+
+    <div class="flow-box">Impresoras en red local del cliente
+(SNMP UDP puerto 161 — solo lectura)
+        │
+        ▼ Contadores de páginas + metadatos de dispositivo
+┌─────────────────────────────────────────────────┐
+│         STC Cloud Monitor Agent                 │
+│   C:\ProgramData\STCCloudMonitor\               │
+│   ├── local.db  (SQLite, retención 7 días)      │
+│   └── config.enc (AES-256-GCM, ligado al HW)   │
+└─────────────────────────────────────────────────┘
+        │
+        │  HTTPS POST /api/v1/devices/sync
+        │  Bearer JWT · TLS 1.2+
+        │  Payload: contadores + identificadores de impresoras
+        ▼
+┌─────────────────────────────────────────────────┐
+│              Portal STC Cloud                   │
+│          (servidor del proveedor STC)           │
+└─────────────────────────────────────────────────┘
+
+DATOS QUE ENTRAN:  Respuestas SNMP de impresoras
+DATOS QUE SALEN:   Contadores de páginas + identificadores
+DATOS QUE NUNCA SALEN: Hardware ID · Configuración ·
+                        Credenciales JWT · Topología de red</div>
+
+    <div class="section-title">7. Clasificación de Riesgo de Privacidad</div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Vector de Riesgo</th>
+                <th>Nivel</th>
+                <th>Justificación</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Exposición de PII</td>
+                <td><span class="tag tag-none">Ninguno</span></td>
+                <td>El agente no accede ni procesa datos de personas físicas</td>
+            </tr>
+            <tr>
+                <td>Exposición de datos de negocio sensibles</td>
+                <td><span class="tag tag-low">Bajo</span></td>
+                <td>Solo contadores numéricos de páginas — sin contenido de documentos</td>
+            </tr>
+            <tr>
+                <td>Exposición de topología de red</td>
+                <td><span class="tag tag-low">Bajo</span></td>
+                <td>Las IPs de impresoras son privadas (RFC 1918); los rangos de escaneo no se transmiten</td>
+            </tr>
+            <tr>
+                <td>Credenciales comprometidas</td>
+                <td><span class="tag tag-low">Bajo</span></td>
+                <td>JWT cifrado con AES-256-GCM ligado al Hardware ID — inutilizable en otro equipo</td>
+            </tr>
+            <tr>
+                <td>Pérdida de datos</td>
+                <td><span class="tag tag-low">Bajo</span></td>
+                <td>Retención local máxima 7 días; los contadores son datos replicables desde las impresoras</td>
+            </tr>
+            <tr>
+                <td>Intercepción en tránsito</td>
+                <td><span class="tag tag-low">Bajo</span></td>
+                <td>HTTPS obligatorio con TLS 1.2+; soporte de proxy corporativo configurable</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="section-title">8. Responsabilidades y Contacto</div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Rol</th>
+                <th>Responsabilidad sobre los datos</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Proveedor (STC)</strong></td>
+                <td>Custodio de los datos recibidos en el portal. Responsable de su almacenamiento, procesamiento y cumplimiento normativo en el servidor.</td>
+            </tr>
+            <tr>
+                <td><strong>Cliente (IT Admin)</strong></td>
+                <td>Define los rangos IP de escaneo y administra el equipo host. Propietario de la base de datos local. Puede auditar logs en <code>C:\ProgramData\STCCloudMonitor\agent.log</code>.</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="callout callout-blue">
+        <p><strong>Para auditores:</strong> Los logs de auditoría de integridad Ed25519 del agente registran cada actualización automática con timestamp ISO, versión y firma verificada. Accesible mediante <code>stc-monitor --status</code> (campo <code>lastLog</code>) o directamente en el archivo de log.</p>
+    </div>
+
+    <div class="section-title">9. Control de Versiones del Documento</div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Versión</th>
+                <th>Fecha</th>
+                <th>Cambios</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>1.5</td>
+                <td>Mayo 2026</td>
+                <td>Documento inicial. Cubre agente v1.5 con hardening enterprise (--status CLI, exit codes, Ed25519 audit logs, PBKDF2 config).</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="page-footer">
+        <div class="footer-text">STC Cloud Monitor · Data Collection Inventory v1.5 · Mayo 2026</div>
+        <div class="footer-confidential">Público</div>
+    </div>
+</div>
+
+</body>
+</html>
