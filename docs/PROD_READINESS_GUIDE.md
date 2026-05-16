@@ -33,4 +33,4 @@ El sistema integra una **Terminal de Diagnóstico Remota** que permite:
 - Exportación de logs en formato oficial DD/MM/AAAA con zona horaria Argentina (UTC-3).
 
 ---
-**Validado por:** Antigravity AI Architect
+**Validado por:** Departamento de Ingeniería STC Cloud

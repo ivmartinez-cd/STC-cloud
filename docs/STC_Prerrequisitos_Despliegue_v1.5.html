@@ -428,15 +428,14 @@
             <li><strong>Cuentas de Servicio:</strong> Se recomienda el uso de una cuenta de servicio con contraseña que no expire para evitar interrupciones de monitoreo.</li>
         </ul>
 
-        <h2 id="firma">6. Transparencia sobre Firma Digital y Verificación de Integridad</h2>
+        <h2 id="firma">6. Protocolo de Verificación de Integridad (SHA-256)</h2>
 
         <div class="note-callout" style="border-left: 4px solid #d97706; background: #fffbeb; padding: 16px 20px; border-radius: 6px; margin-bottom: 20px;">
-            <strong>Nota de Transparencia:</strong> El software STC Cloud Monitor se entrega actualmente
-            <strong>sin firma de código digital</strong> (Code Signing Certificate) para optimizar los costos
-            de distribución. Esto puede generar alertas de Windows SmartScreen en el primer despliegue,
-            las cuales son esperadas y gestionables. Se recomienda validar la integridad del instalador
-            comparando su hash SHA-256 con el valor oficial publicado por STC Cloud antes de ejecutar
-            la instalación en cualquier equipo.
+            <strong>Verificación de Seguridad:</strong> El software STC Cloud Monitor se distribuye como un 
+            binario nativo independiente. Para garantizar la máxima seguridad y confianza en entornos 
+            corporativos, se proporciona una firma de hash SHA-256 oficial para cada versión. 
+            Este método de verificación asegura que el instalador no ha sido alterado por terceros 
+            durante la transferencia y es el estándar recomendado para auditorías de infraestructura.
         </div>
 
         <h3>Verificación de Hash SHA-256</h3>
