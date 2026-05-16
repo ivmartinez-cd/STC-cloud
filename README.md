@@ -280,8 +280,9 @@ cd agent && npm run snmp:sim -- --brand hp
 
 ## 📄 Documentación
 
-- [SECURITY_AUDIT.md](SECURITY_AUDIT.md) — **Informe de Auditoría de Seguridad (Lectura Obligatoria para IT)**
-- [docs/security/](docs/security/) — Historial de auditorías internas (Frontend y Agente)
+- [docs/STC_Prerrequisitos_Despliegue_v1.5.html](docs/STC_Prerrequisitos_Despliegue_v1.5.html) — **Guía de requisitos para el cliente (Despliegue)**
+- [docs/STC_Manifiesto_Seguridad_v1.5.html](docs/STC_Manifiesto_Seguridad_v1.5.html) — **Especificaciones técnicas de seguridad para Auditoría IT**
+- [SECURITY_AUDIT.md](SECURITY_AUDIT.md) — Informe de Auditoría de Seguridad (Resumen Ejecutivo)
 - [CONTRIBUTING.md](CONTRIBUTING.md) — Guía de estándares de codificación y contribución
 
 ---

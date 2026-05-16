@@ -80,7 +80,17 @@ export class ConfigManager {
       const json = await SecurityUtils.decrypt(encrypted, getHardwareId());
       return JSON.parse(json) as AgentConfig;
     } catch (error: any) {
-      throw new Error(`Error al cargar configuracion: ${error.message}`);
+      const msg: string = error.message ?? '';
+      // AES-256-GCM auth-tag failure = HWID del equipo cambió desde la activación
+      if (
+        msg.includes('Unsupported state') ||
+        msg.includes('BAD_DECRYPT') ||
+        msg.includes('unable to authenticate data') ||
+        msg.includes('Invalid authentication tag')
+      ) {
+        throw new Error(`HWID_MISMATCH: El Hardware ID actual no coincide con el registrado en la activacion. El agente debe reactivarse en este equipo. Detalle: ${msg}`);
+      }
+      throw new Error(`Error al cargar configuracion: ${msg}`);
     }
   }
 

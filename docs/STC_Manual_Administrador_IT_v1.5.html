@@ -1,0 +1,1011 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>STC Cloud - Manual del Administrador IT v1.5</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Inter:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --stc-blue: #004a99;
+            --stc-orange: #f7931d;
+            --text-dark: #1a2333;
+            --text-gray: #64748b;
+            --green: #16a34a;
+            --red: #dc2626;
+            --yellow: #d97706;
+            --code-bg: #0f172a;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            background: white;
+            color: var(--text-dark);
+        }
+
+        .page {
+            width: 210mm;
+            min-height: 297mm;
+            padding: 25mm;
+            margin: 0 auto;
+            box-sizing: border-box;
+            position: relative;
+            background: white;
+        }
+
+        @media print {
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            .page { margin: 0; padding: 20mm; page-break-after: always; }
+        }
+
+        /* === PORTADA === */
+        .cover-top-bar {
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 70mm;
+        }
+
+        .top-title {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--stc-blue);
+            letter-spacing: 0.05em;
+        }
+
+        .cover-main { text-align: left; padding-left: 10mm; }
+
+        .stc-cloud-brand {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 60px;
+        }
+
+        .brand-stc {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 900;
+            font-size: 42px;
+            color: var(--stc-blue);
+        }
+
+        .brand-cloud {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 900;
+            font-size: 42px;
+            color: var(--stc-orange);
+        }
+
+        .main-title {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 34px;
+            font-weight: 700;
+            color: var(--stc-blue);
+            margin: 0;
+            text-transform: uppercase;
+        }
+
+        .main-subtitle {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 34px;
+            font-weight: 400;
+            color: var(--stc-blue);
+            margin: 5px 0 20px 0;
+            text-transform: uppercase;
+        }
+
+        .cover-desc {
+            font-size: 15px;
+            color: var(--text-gray);
+            margin-bottom: 50px;
+            line-height: 1.6;
+        }
+
+        .version-tag {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text-gray);
+            letter-spacing: 0.1em;
+        }
+
+        .cover-meta {
+            margin-top: 60mm;
+            display: flex;
+            gap: 40px;
+        }
+
+        .cover-meta-item { font-size: 12px; color: var(--text-gray); }
+        .cover-meta-item strong { display: block; color: var(--text-dark); font-size: 13px; margin-bottom: 2px; }
+
+        /* === HEADER INTERNO === */
+        .internal-header {
+            border-bottom: 3px solid var(--stc-blue);
+            padding-bottom: 8px;
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+
+        .internal-brand {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 900;
+            font-size: 18px;
+            color: var(--stc-blue);
+        }
+
+        .internal-brand span { color: var(--stc-orange); }
+
+        .internal-doc-type {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-gray);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        /* === TIPOGRAFÍA === */
+        h2 {
+            font-family: 'Montserrat', sans-serif;
+            color: var(--stc-blue);
+            font-size: 20px;
+            border-bottom: 1px solid #f1f5f9;
+            padding-bottom: 8px;
+            margin-top: 40px;
+        }
+
+        h3 {
+            font-family: 'Montserrat', sans-serif;
+            color: var(--stc-orange);
+            font-size: 14px;
+            margin-top: 25px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        p { font-size: 13.5px; color: #334155; line-height: 1.75; }
+
+        /* === TABLAS === */
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+
+        th, td { border: 1px solid #e2e8f0; padding: 12px 14px; text-align: left; font-size: 13px; }
+
+        th {
+            background-color: var(--stc-blue);
+            color: white;
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: 0.05em;
+        }
+
+        tr:nth-child(even) td { background: #f8fafc; }
+
+        td.code {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            color: var(--stc-blue);
+            font-weight: 600;
+        }
+
+        td.exit-0 { border-left: 4px solid var(--green); }
+        td.exit-1 { border-left: 4px solid var(--yellow); }
+        td.exit-2 { border-left: 4px solid var(--red); }
+        td.exit-3 { border-left: 4px solid #7c3aed; }
+
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 700;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .badge-ok    { background: #dcfce7; color: #15803d; }
+        .badge-warn  { background: #fef3c7; color: #92400e; }
+        .badge-error { background: #fee2e2; color: #991b1b; }
+        .badge-info  { background: #dbeafe; color: #1d4ed8; }
+
+        /* === CALLOUTS === */
+        .note-callout {
+            background: #f1f5f9;
+            border-left: 4px solid var(--stc-blue);
+            padding: 16px 20px;
+            margin: 25px 0;
+            font-size: 13px;
+            color: #1e293b;
+            line-height: 1.6;
+        }
+
+        .warn-callout {
+            background: #fffbeb;
+            border-left: 4px solid var(--stc-orange);
+            padding: 16px 20px;
+            margin: 25px 0;
+            font-size: 13px;
+            color: #78350f;
+            line-height: 1.6;
+        }
+
+        .danger-callout {
+            background: #fff1f2;
+            border-left: 4px solid var(--red);
+            padding: 16px 20px;
+            margin: 25px 0;
+            font-size: 13px;
+            color: #7f1d1d;
+            line-height: 1.6;
+        }
+
+        /* === BLOQUES DE CÓDIGO === */
+        .code-block {
+            background: var(--code-bg);
+            border-radius: 8px;
+            padding: 20px 24px;
+            margin: 20px 0;
+            overflow-x: auto;
+        }
+
+        .code-block-label {
+            font-size: 10px;
+            font-weight: 700;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 10px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .code-block pre {
+            margin: 0;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            line-height: 1.7;
+            color: #e2e8f0;
+            white-space: pre-wrap;
+        }
+
+        .code-block .kw  { color: #c084fc; }   /* keywords */
+        .code-block .fn  { color: #60a5fa; }   /* functions */
+        .code-block .str { color: #86efac; }   /* strings */
+        .code-block .cmt { color: #4b5563; font-style: italic; } /* comments */
+        .code-block .num { color: #fb923c; }   /* numbers */
+        .code-block .var { color: #fde68a; }   /* variables */
+        .code-block .key { color: #67e8f9; }   /* JSON keys */
+
+        /* === JSON SCHEMA === */
+        .schema-field {
+            display: grid;
+            grid-template-columns: 200px 100px 1fr;
+            gap: 12px;
+            padding: 10px 0;
+            border-bottom: 1px solid #f1f5f9;
+            font-size: 13px;
+        }
+
+        .schema-field:last-child { border-bottom: none; }
+        .schema-name { font-family: 'JetBrains Mono', monospace; color: var(--stc-blue); font-weight: 600; font-size: 12px; }
+        .schema-type { font-family: 'JetBrains Mono', monospace; color: var(--text-gray); font-size: 11px; }
+        .schema-desc { color: #334155; }
+
+        /* === TOC === */
+        .toc-container { margin-top: 20px; }
+
+        .toc-item {
+            display: flex;
+            align-items: baseline;
+            margin-bottom: 12px;
+            font-size: 14px;
+            color: #1a2333;
+        }
+
+        .toc-text { flex-shrink: 0; padding-right: 5px; }
+        .toc-dots { flex-grow: 1; border-bottom: 1px dotted #94a3b8; margin: 0 5px; position: relative; top: -4px; }
+        .toc-page { flex-shrink: 0; padding-left: 5px; font-weight: 600; color: var(--stc-blue); }
+
+        /* === FOOTER === */
+        .footer {
+            position: absolute;
+            bottom: 20mm;
+            left: 25mm;
+            right: 25mm;
+            border-top: 1px solid #e2e8f0;
+            padding-top: 12px;
+            font-size: 10px;
+            color: #94a3b8;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        ul { padding-left: 20px; }
+        li { font-size: 13.5px; color: #334155; margin-bottom: 8px; line-height: 1.6; }
+
+        .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 20px 0; }
+        .stat-box {
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 16px;
+            text-align: center;
+        }
+        .stat-num { font-family: 'Montserrat', sans-serif; font-size: 36px; font-weight: 900; color: var(--stc-blue); }
+        .stat-label { font-size: 12px; color: var(--text-gray); text-transform: uppercase; letter-spacing: 0.05em; }
+    </style>
+</head>
+<body>
+
+<!-- ================================================================
+     PORTADA
+     ================================================================ -->
+<div class="page">
+    <div class="cover-top-bar">
+        <div class="top-title">STC CLOUD · USO INTERNO</div>
+        <div class="version-tag">REV. 1.5 — MAYO 2026</div>
+    </div>
+
+    <div class="cover-main">
+        <div class="stc-cloud-brand">
+            <span class="brand-stc">STC</span>
+            <span class="brand-cloud">Cloud</span>
+        </div>
+
+        <p class="main-title">Manual del</p>
+        <p class="main-subtitle">Administrador IT</p>
+
+        <p class="cover-desc">
+            Guía técnica de referencia para el despliegue, diagnóstico y operación del<br>
+            <strong>STC Cloud Monitor Agent v1.5</strong> en entornos corporativos Windows.<br>
+            Cubre activación silenciosa, códigos de salida, interfaz de diagnóstico <code>--status</code><br>
+            e integración con Inno Setup, Microsoft Intune y herramientas de monitoreo.
+        </p>
+
+        <div class="cover-meta">
+            <div class="cover-meta-item">
+                <strong>Versión del Agente</strong>
+                1.5.6
+            </div>
+            <div class="cover-meta-item">
+                <strong>Clasificación</strong>
+                Confidencial — Uso Interno
+            </div>
+            <div class="cover-meta-item">
+                <strong>Plataforma</strong>
+                Windows 10 / 11 (x64)
+            </div>
+            <div class="cover-meta-item">
+                <strong>Fecha</strong>
+                Mayo 2026
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <span>STC Cloud Monitor — Manual del Administrador IT v1.5</span>
+        <span>Página 1</span>
+    </div>
+</div>
+
+
+<!-- ================================================================
+     TABLA DE CONTENIDOS
+     ================================================================ -->
+<div class="page">
+    <div class="internal-header">
+        <div class="internal-brand">STC<span>Cloud</span></div>
+        <div class="internal-doc-type">Manual del Administrador IT · v1.5</div>
+    </div>
+
+    <h2>Tabla de Contenidos</h2>
+
+    <div class="toc-container">
+        <div class="toc-item">
+            <span class="toc-text">1. Activación Silenciosa del Agente</span>
+            <span class="toc-dots"></span>
+            <span class="toc-page">3</span>
+        </div>
+        <div class="toc-item">
+            <span class="toc-text">2. Tabla de Códigos de Salida (<code>Exit Codes</code>)</span>
+            <span class="toc-dots"></span>
+            <span class="toc-page">3</span>
+        </div>
+        <div class="toc-item">
+            <span class="toc-text">3. Interfaz de Diagnóstico <code>--status</code></span>
+            <span class="toc-dots"></span>
+            <span class="toc-page">4</span>
+        </div>
+        <div class="toc-item">
+            <span class="toc-text">4. Esquema JSON de Respuesta de <code>--status</code></span>
+            <span class="toc-dots"></span>
+            <span class="toc-page">5</span>
+        </div>
+        <div class="toc-item">
+            <span class="toc-text">5. Integración con Inno Setup</span>
+            <span class="toc-dots"></span>
+            <span class="toc-page">6</span>
+        </div>
+        <div class="toc-item">
+            <span class="toc-text">6. Integración con Microsoft Intune / SCCM (PowerShell)</span>
+            <span class="toc-dots"></span>
+            <span class="toc-page">7</span>
+        </div>
+        <div class="toc-item">
+            <span class="toc-text">7. Interpretación de Errores de Seguridad en Logs</span>
+            <span class="toc-dots"></span>
+            <span class="toc-page">8</span>
+        </div>
+        <div class="toc-item">
+            <span class="toc-text">8. Procedimiento de Reactivación por HWID Mismatch</span>
+            <span class="toc-dots"></span>
+            <span class="toc-page">8</span>
+        </div>
+    </div>
+
+    <div class="note-callout" style="margin-top:40px;">
+        <strong>Prerequisito:</strong> Este manual asume que el administrador ha leído el
+        <em>Manifiesto de Seguridad STC Cloud v1.5</em> y la
+        <em>Guía de Prerrequisitos de Despliegue v1.5</em>.
+        El agente debe instalarse únicamente en equipos que cumplan los requisitos de hardware y OS allí especificados.
+    </div>
+
+    <div class="footer">
+        <span>STC Cloud Monitor — Manual del Administrador IT v1.5</span>
+        <span>Página 2</span>
+    </div>
+</div>
+
+
+<!-- ================================================================
+     SECCIÓN 1 + 2: ACTIVACIÓN Y EXIT CODES
+     ================================================================ -->
+<div class="page">
+    <div class="internal-header">
+        <div class="internal-brand">STC<span>Cloud</span></div>
+        <div class="internal-doc-type">Manual del Administrador IT · v1.5</div>
+    </div>
+
+    <h2>1. Activación Silenciosa del Agente</h2>
+
+    <p>
+        El agente se activa mediante un único comando no interactivo. No se presentarán diálogos ni prompts al usuario.
+        Todos los errores se reportan exclusivamente vía <strong>código de salida</strong> y mensaje en <code>STDERR</code>.
+    </p>
+
+    <div class="code-block">
+        <div class="code-block-label">CMD / PowerShell — Activación</div>
+        <pre>agente.exe <span class="kw">--activate</span> <span class="str">&lt;CLAVE_DE_ACTIVACION&gt;</span> <span class="kw">--url</span> <span class="str">https://portal.empresa.com</span></pre>
+    </div>
+
+    <div class="code-block">
+        <div class="code-block-label">PowerShell — Captura del resultado</div>
+        <pre><span class="var">$proc</span> = <span class="fn">Start-Process</span> <span class="str">"agente.exe"</span> <span class="kw">-ArgumentList</span> <span class="str">"--activate CLAVE --url https://portal.empresa.com"</span> <span class="kw">-Wait -PassThru -WindowStyle Hidden</span>
+<span class="fn">Write-Host</span> <span class="str">"Exit code: $($proc.ExitCode)"</span></pre>
+    </div>
+
+    <h2>2. Tabla de Códigos de Salida</h2>
+
+    <p>
+        El agente utiliza <strong>códigos de salida diferenciados</strong> para permitir que herramientas de despliegue
+        automático (Inno Setup, Microsoft Intune, SCCM, PowerShell DSC) identifiquen con precisión la causa del fallo
+        sin necesidad de parsear mensajes de texto.
+    </p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Código</th>
+                <th>Comando(s)</th>
+                <th>Significado</th>
+                <th>Acción Recomendada</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td class="code exit-0"><span class="badge badge-ok">0 — OK</span></td>
+                <td><code>--activate</code>, <code>--status</code>, <code>--set-proxy</code></td>
+                <td>Operación completada con éxito. El agente está operativo y en buen estado.</td>
+                <td>Ninguna. Continuar flujo de instalación.</td>
+            </tr>
+            <tr>
+                <td class="code exit-1"><span class="badge badge-warn">1 — ERROR GENÉRICO</span></td>
+                <td><code>--activate</code>, <code>--status</code></td>
+                <td>
+                    Error no clasificado: argumentos faltantes, error del servidor (HTTP 5xx),
+                    o en <code>--status</code>: agente activo pero sin conectividad al portal,
+                    o fallo de descifrado de configuración no relacionado con HWID.
+                </td>
+                <td>Revisar <code>STDERR</code> para el detalle. Verificar URL del portal y estado de red.</td>
+            </tr>
+            <tr>
+                <td class="code exit-2"><span class="badge badge-error">2 — CLAVE INVÁLIDA</span></td>
+                <td><code>--activate</code></td>
+                <td>
+                    El servidor rechazó la clave de activación (HTTP 400, 401 ó 403).
+                    La clave puede ser incorrecta, expirada, ya utilizada o no corresponder a este tenant.
+                </td>
+                <td>
+                    Verificar la clave en el portal STC Cloud.
+                    Generar una nueva clave de activación si expiró.
+                    No reintentar con la misma clave.
+                </td>
+            </tr>
+            <tr>
+                <td class="code exit-3"><span class="badge" style="background:#ede9fe;color:#5b21b6;">3 — ERROR DE RED</span></td>
+                <td><code>--activate</code></td>
+                <td>
+                    El agente no pudo establecer conexión TCP con el servidor portal.
+                    Causas: DNS no resuelve, firewall bloquea el puerto 443, proxy no configurado,
+                    o timeout de conexión.
+                </td>
+                <td>
+                    Verificar conectividad al portal desde el equipo objetivo.
+                    Revisar reglas de firewall (puerto 443 saliente).
+                    Si hay proxy corporativo, configurar previamente con <code>--set-proxy</code>.
+                </td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="warn-callout">
+        <strong>Nota para Inno Setup:</strong> Los códigos 2 y 3 permiten mostrar mensajes de error específicos
+        en el wizard del instalador usando <code>ResultCode</code> en la sección <code>[Run]</code>.
+        Ver Sección 5 para el ejemplo completo.
+    </div>
+
+    <div class="footer">
+        <span>STC Cloud Monitor — Manual del Administrador IT v1.5</span>
+        <span>Página 3</span>
+    </div>
+</div>
+
+
+<!-- ================================================================
+     SECCIÓN 3: --status
+     ================================================================ -->
+<div class="page">
+    <div class="internal-header">
+        <div class="internal-brand">STC<span>Cloud</span></div>
+        <div class="internal-doc-type">Manual del Administrador IT · v1.5</div>
+    </div>
+
+    <h2>3. Interfaz de Diagnóstico <code>--status</code></h2>
+
+    <p>
+        El flag <code>--status</code> emite un objeto JSON en <code>STDOUT</code> con el estado completo del agente
+        en el momento de la consulta. Está diseñado para ser consumido por scripts de monitoreo, herramientas MDM
+        y dashboards de operaciones sin interpretación de logs de texto.
+    </p>
+
+    <div class="code-block">
+        <div class="code-block-label">CMD / PowerShell — Consulta de estado</div>
+        <pre>agente.exe <span class="kw">--status</span></pre>
+    </div>
+
+    <h3>Código de Salida de <code>--status</code></h3>
+
+    <p>
+        <code>--status</code> retorna <span class="badge badge-ok">exit 0</span> si el agente está en buen estado,
+        o <span class="badge badge-warn">exit 1</span> si se detecta alguna de las siguientes condiciones críticas:
+    </p>
+
+    <ul>
+        <li><code>hardware_binding_integrity</code> es <code>"hwid-mismatch"</code> — el HWID del equipo cambió.</li>
+        <li><code>hardware_binding_integrity</code> es <code>"decrypt-error"</code> — la configuración está corrupta.</li>
+        <li>El agente está <strong>activado</strong> pero <code>cloud_connectivity.reachable</code> es <code>false</code>.</li>
+    </ul>
+
+    <div class="note-callout">
+        Un agente <strong>no activado</strong> (<code>"activated": false</code>) retorna <span class="badge badge-ok">exit 0</span>
+        porque la falta de activación no es un error operativo: el equipo aún no ha sido enrolado.
+        El sistema de inventario puede usar este estado para identificar equipos pendientes de activación.
+    </div>
+
+    <h3>Ejemplo de Respuesta — Estado Saludable</h3>
+
+    <div class="code-block">
+        <div class="code-block-label">JSON — agente activo y en buen estado (exit 0)</div>
+        <pre>{
+  <span class="key">"version"</span>:                    <span class="str">"1.5.6"</span>,
+  <span class="key">"timestamp"</span>:                  <span class="str">"2026-05-16T14:30:00.000Z"</span>,
+  <span class="key">"activated"</span>:                  <span class="num">true</span>,
+  <span class="key">"agentId"</span>:                    <span class="str">"agt_a1b2c3d4"</span>,
+  <span class="key">"serverUrl"</span>:                  <span class="str">"https://portal.empresa.com"</span>,
+  <span class="key">"service_status"</span>:             <span class="str">"running"</span>,
+  <span class="key">"cloud_connectivity"</span>: {
+    <span class="key">"reachable"</span>:  <span class="num">true</span>,
+    <span class="key">"latencyMs"</span>: <span class="num">142</span>,
+    <span class="key">"httpStatus"</span>: <span class="num">200</span>
+  },
+  <span class="key">"hardware_binding_integrity"</span>: <span class="str">"ok"</span>,
+  <span class="key">"dataDir"</span>:                    <span class="str">"C:\\ProgramData\\STCCloudMonitor"</span>,
+  <span class="key">"proxyUrl"</span>:                   <span class="num">null</span>,
+  <span class="key">"lastLog"</span>:                    <span class="str">"[2026-05-16T14:29:55Z] [INFO] Ciclo de escaneo completado. 24 dispositivos."</span>
+}</pre>
+    </div>
+
+    <h3>Ejemplo de Respuesta — HWID Mismatch (exit 1)</h3>
+
+    <div class="code-block">
+        <div class="code-block-label">JSON — hardware reemplazado, reactivación requerida (exit 1)</div>
+        <pre>{
+  <span class="key">"version"</span>:                    <span class="str">"1.5.6"</span>,
+  <span class="key">"timestamp"</span>:                  <span class="str">"2026-05-16T14:30:01.000Z"</span>,
+  <span class="key">"activated"</span>:                  <span class="num">false</span>,
+  <span class="key">"agentId"</span>:                    <span class="num">null</span>,
+  <span class="key">"service_status"</span>:             <span class="str">"running"</span>,
+  <span class="key">"cloud_connectivity"</span>: {
+    <span class="key">"reachable"</span>:  <span class="num">false</span>,
+    <span class="key">"error"</span>:      <span class="str">"not-activated"</span>
+  },
+  <span class="key">"hardware_binding_integrity"</span>: <span class="str">"hwid-mismatch"</span>,
+  ...
+}</pre>
+    </div>
+
+    <div class="footer">
+        <span>STC Cloud Monitor — Manual del Administrador IT v1.5</span>
+        <span>Página 4</span>
+    </div>
+</div>
+
+
+<!-- ================================================================
+     SECCIÓN 4: ESQUEMA JSON
+     ================================================================ -->
+<div class="page">
+    <div class="internal-header">
+        <div class="internal-brand">STC<span>Cloud</span></div>
+        <div class="internal-doc-type">Manual del Administrador IT · v1.5</div>
+    </div>
+
+    <h2>4. Esquema JSON de Respuesta de <code>--status</code></h2>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Campo</th>
+                <th>Tipo</th>
+                <th>Descripción y valores posibles</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td class="code">version</td>
+                <td><code>string</code></td>
+                <td>Versión del binario del agente (ej. <code>"1.5.6"</code>).</td>
+            </tr>
+            <tr>
+                <td class="code">timestamp</td>
+                <td><code>string</code> (ISO 8601)</td>
+                <td>Momento exacto UTC en que se ejecutó <code>--status</code>. Permite detectar resultados cacheados o desfasados.</td>
+            </tr>
+            <tr>
+                <td class="code">activated</td>
+                <td><code>boolean</code></td>
+                <td><code>true</code> si existe configuración cifrada válida y descifrable con el HWID actual.</td>
+            </tr>
+            <tr>
+                <td class="code">agentId</td>
+                <td><code>string | null</code></td>
+                <td>Identificador único del agente en el portal. <code>null</code> si no está activado.</td>
+            </tr>
+            <tr>
+                <td class="code">serverUrl</td>
+                <td><code>string | null</code></td>
+                <td>URL del portal STC Cloud configurado. <code>null</code> si no está activado.</td>
+            </tr>
+            <tr>
+                <td class="code">service_status</td>
+                <td><code>string</code></td>
+                <td>
+                    Estado del servicio Windows <code>STCCloudMonitor</code>:<br>
+                    <code>"running"</code>, <code>"stopped"</code>, <code>"starting"</code>,
+                    <code>"unknown"</code>, <code>"not-installed"</code>.
+                </td>
+            </tr>
+            <tr>
+                <td class="code">cloud_connectivity</td>
+                <td><code>object</code></td>
+                <td>
+                    Resultado del health check al endpoint <code>/api/v1/health</code> del portal (timeout 5s).<br>
+                    Campos: <code>reachable</code> (bool), <code>latencyMs</code> (número, solo si reachable),
+                    <code>httpStatus</code> (código HTTP, solo si hay respuesta), <code>error</code> (string, solo si falla).
+                    Valor especial de <code>error</code>: <code>"not-activated"</code> cuando el agente no tiene URL configurada.
+                </td>
+            </tr>
+            <tr>
+                <td class="code">hardware_binding_integrity</td>
+                <td><code>string</code></td>
+                <td>
+                    Estado del enlace criptográfico entre configuración y hardware:<br>
+                    <span class="badge badge-ok"><code>ok</code></span> — Config descifrada correctamente con HWID actual.<br>
+                    <span class="badge badge-warn"><code>config-missing</code></span> — No existe archivo de configuración (agente nunca activado).<br>
+                    <span class="badge badge-error"><code>hwid-mismatch</code></span> — El HWID del equipo no coincide con el de activación (placa base o BIOS reemplazada). Requiere reactivación.<br>
+                    <span class="badge badge-error"><code>decrypt-error</code></span> — Error al descifrar por causa distinta al HWID. Posible corrupción del archivo de configuración.
+                </td>
+            </tr>
+            <tr>
+                <td class="code">dataDir</td>
+                <td><code>string</code></td>
+                <td>Ruta del directorio de datos del agente (por defecto <code>C:\ProgramData\STCCloudMonitor</code>).</td>
+            </tr>
+            <tr>
+                <td class="code">proxyUrl</td>
+                <td><code>string | null</code></td>
+                <td>URL del proxy HTTP configurado. <code>null</code> si conexión directa.</td>
+            </tr>
+            <tr>
+                <td class="code">lastLog</td>
+                <td><code>string | null</code></td>
+                <td>Última línea del archivo <code>agent.log</code>. Útil para diagnóstico rápido sin acceso directo al equipo.</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="footer">
+        <span>STC Cloud Monitor — Manual del Administrador IT v1.5</span>
+        <span>Página 5</span>
+    </div>
+</div>
+
+
+<!-- ================================================================
+     SECCIÓN 5: INNO SETUP
+     ================================================================ -->
+<div class="page">
+    <div class="internal-header">
+        <div class="internal-brand">STC<span>Cloud</span></div>
+        <div class="internal-doc-type">Manual del Administrador IT · v1.5</div>
+    </div>
+
+    <h2>5. Integración con Inno Setup</h2>
+
+    <p>
+        El instalador Inno Setup puede capturar el código de salida de la activación y mostrar un mensaje
+        de error específico al técnico de campo, o abortar silenciosamente la instalación con un log
+        para análisis posterior.
+    </p>
+
+    <div class="code-block">
+        <div class="code-block-label">Inno Setup Script (.iss) — Sección [Run] con manejo de exit codes</div>
+        <pre><span class="cmt">; Paso 1: Activar el agente (no interactivo)</span>
+[Run]
+Filename: <span class="str">"{app}\agente.exe"</span>;
+Parameters: <span class="str">"--activate {code:GetActivationKey} --url {code:GetServerUrl}"</span>;
+StatusMsg: <span class="str">"Activando el agente STC Cloud..."</span>;
+Flags: runhidden waituntilterminated;
+
+<span class="cmt">; Paso 2: Verificar resultado en código Pascal</span>
+[Code]
+<span class="kw">var</span>
+  ActivationResult: Integer;
+
+<span class="kw">function</span> <span class="fn">NextButtonClick</span>(CurPageID: Integer): Boolean;
+<span class="kw">begin</span>
+  Result := True;
+  <span class="kw">if</span> CurPageID = wpFinished <span class="kw">then</span>
+  <span class="kw">begin</span>
+    <span class="cmt">{ Leer exit code almacenado por el paso Run }</span>
+    <span class="kw">case</span> ActivationResult <span class="kw">of</span>
+      <span class="num">0</span>: <span class="cmt">{ Éxito — no hacer nada }</span>;
+      <span class="num">2</span>: <span class="fn">MsgBox</span>(<span class="str">'Error: La clave de activación es inválida o ha expirado.'#13#10
+               'Solicite una nueva clave en el portal STC Cloud.'</span>,
+               mbError, MB_OK);
+      <span class="num">3</span>: <span class="fn">MsgBox</span>(<span class="str">'Error: No se pudo conectar al servidor STC Cloud.'#13#10
+               'Verifique conectividad de red y reglas de firewall (puerto 443).'</span>,
+               mbError, MB_OK);
+    <span class="kw">else</span>
+      <span class="fn">MsgBox</span>(<span class="str">'Error de activación (' + IntToStr(ActivationResult) + ').'#13#10
+             'Revise el log en C:\ProgramData\STCCloudMonitor\agent.log'</span>,
+             mbError, MB_OK);
+    <span class="kw">end</span>;
+  <span class="kw">end</span>;
+<span class="kw">end</span>;</pre>
+    </div>
+
+    <div class="warn-callout">
+        <strong>Importante:</strong> El flag <code>runhidden</code> es obligatorio para garantizar que la activación
+        sea completamente silenciosa. Sin él, el proceso podría mostrar una ventana de consola al usuario final.
+    </div>
+
+    <h3>Verificación Post-Instalación</h3>
+
+    <p>
+        Se recomienda agregar un paso adicional de verificación al final del instalador usando <code>--status</code>
+        y comprobando que <code>hardware_binding_integrity</code> sea <code>"ok"</code>:
+    </p>
+
+    <div class="code-block">
+        <div class="code-block-label">PowerShell — Verificación post-instalación embebida en Inno Setup</div>
+        <pre><span class="var">$raw</span>    = & <span class="str">"C:\Program Files\STCCloudMonitor\agente.exe"</span> <span class="kw">--status</span>
+<span class="var">$status</span> = <span class="var">$raw</span> | <span class="fn">ConvertFrom-Json</span>
+
+<span class="kw">if</span> (<span class="var">$status</span>.hardware_binding_integrity <span class="kw">-ne</span> <span class="str">'ok'</span>) {
+    <span class="fn">Write-Error</span> <span class="str">"HWID integrity: $($status.hardware_binding_integrity)"</span>
+    <span class="kw">exit</span> <span class="num">1</span>
+}
+<span class="fn">Write-Host</span> <span class="str">"Agent OK. ID: $($status.agentId)"</span>
+<span class="kw">exit</span> <span class="num">0</span></pre>
+    </div>
+
+    <div class="footer">
+        <span>STC Cloud Monitor — Manual del Administrador IT v1.5</span>
+        <span>Página 6</span>
+    </div>
+</div>
+
+
+<!-- ================================================================
+     SECCIÓN 6: INTUNE / SCCM
+     ================================================================ -->
+<div class="page">
+    <div class="internal-header">
+        <div class="internal-brand">STC<span>Cloud</span></div>
+        <div class="internal-doc-type">Manual del Administrador IT · v1.5</div>
+    </div>
+
+    <h2>6. Integración con Microsoft Intune / SCCM (PowerShell)</h2>
+
+    <p>
+        Los scripts de detección de Intune y SCCM pueden usar <code>--status</code> para verificar
+        la salud del agente de forma estándar, sin acceder a archivos de log.
+    </p>
+
+    <h3>Script de Detección (Intune Win32 App)</h3>
+
+    <div class="code-block">
+        <div class="code-block-label">PowerShell — Detection script para Intune (exit 0 = instalado y sano)</div>
+        <pre><span class="cmt"># Intune detection: exit 0 = app present and healthy, exit 1 = not detected</span>
+<span class="var">$agente</span> = <span class="str">"C:\Program Files\STCCloudMonitor\agente.exe"</span>
+
+<span class="kw">if</span> (-<span class="fn">not</span> (<span class="fn">Test-Path</span> <span class="var">$agente</span>)) { <span class="kw">exit</span> <span class="num">1</span> }
+
+<span class="kw">try</span> {
+    <span class="var">$raw</span>    = & <span class="var">$agente</span> <span class="kw">--status</span> 2><span class="var">$null</span>
+    <span class="var">$status</span> = <span class="var">$raw</span> | <span class="fn">ConvertFrom-Json</span>
+
+    <span class="kw">if</span> (<span class="var">$status</span>.activated <span class="kw">-and</span>
+        <span class="var">$status</span>.hardware_binding_integrity <span class="kw">-eq</span> <span class="str">'ok'</span> <span class="kw">-and</span>
+        <span class="var">$status</span>.service_status <span class="kw">-eq</span> <span class="str">'running'</span>) {
+        <span class="fn">Write-Host</span> <span class="str">"STC Agent OK: $($status.agentId)"</span>
+        <span class="kw">exit</span> <span class="num">0</span>
+    }
+    <span class="kw">exit</span> <span class="num">1</span>
+} <span class="kw">catch</span> { <span class="kw">exit</span> <span class="num">1</span> }</pre>
+    </div>
+
+    <h3>Script de Remediación (Intune)</h3>
+
+    <div class="code-block">
+        <div class="code-block-label">PowerShell — Remediation script: reactivar si HWID mismatch</div>
+        <pre><span class="var">$agente</span>  = <span class="str">"C:\Program Files\STCCloudMonitor\agente.exe"</span>
+<span class="var">$clave</span>   = <span class="str">"&lt;CLAVE_DESDE_SECRET_VAULT&gt;"</span>
+<span class="var">$portal</span>  = <span class="str">"https://portal.empresa.com"</span>
+
+<span class="var">$raw</span>     = & <span class="var">$agente</span> <span class="kw">--status</span> 2><span class="var">$null</span>
+<span class="var">$status</span>  = <span class="var">$raw</span> | <span class="fn">ConvertFrom-Json</span>
+
+<span class="kw">if</span> (<span class="var">$status</span>.hardware_binding_integrity <span class="kw">-eq</span> <span class="str">'hwid-mismatch'</span>) {
+    <span class="cmt"># Hardware reemplazado: borrar config antigua y reactivar</span>
+    <span class="fn">Remove-Item</span> <span class="str">"C:\ProgramData\STCCloudMonitor\config.enc"</span> <span class="kw">-Force</span> -<span class="fn">ErrorAction</span> SilentlyContinue
+    & <span class="var">$agente</span> <span class="kw">--activate</span> <span class="var">$clave</span> <span class="kw">--url</span> <span class="var">$portal</span>
+    <span class="kw">if</span> (<span class="var">$LASTEXITCODE</span> <span class="kw">-ne</span> <span class="num">0</span>) {
+        <span class="fn">Write-Error</span> <span class="str">"Reactivacion fallida (exit $LASTEXITCODE)"</span>
+        <span class="kw">exit</span> <span class="num">1</span>
+    }
+}
+
+<span class="fn">Start-Service</span> <span class="str">"STCCloudMonitor"</span> -<span class="fn">ErrorAction</span> SilentlyContinue
+<span class="kw">exit</span> <span class="num">0</span></pre>
+    </div>
+
+    <div class="note-callout">
+        <strong>Seguridad de credenciales:</strong> Nunca almacene la clave de activación en el script en texto plano.
+        Use Azure Key Vault, SCCM Secrets, o una variable de entorno protegida inyectada por Intune
+        en tiempo de ejecución.
+    </div>
+
+    <div class="footer">
+        <span>STC Cloud Monitor — Manual del Administrador IT v1.5</span>
+        <span>Página 7</span>
+    </div>
+</div>
+
+
+<!-- ================================================================
+     SECCIÓN 7 + 8: SEGURIDAD Y HWID
+     ================================================================ -->
+<div class="page">
+    <div class="internal-header">
+        <div class="internal-brand">STC<span>Cloud</span></div>
+        <div class="internal-doc-type">Manual del Administrador IT · v1.5</div>
+    </div>
+
+    <h2>7. Interpretación de Errores de Seguridad en Logs</h2>
+
+    <p>
+        El agente registra eventos de seguridad con nivel <code>[ERROR]</code> en el archivo
+        <code>C:\ProgramData\STCCloudMonitor\agent.log</code>. Los siguientes mensajes requieren
+        atención inmediata por parte del equipo de seguridad:
+    </p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Fragmento del mensaje</th>
+                <th>Significado</th>
+                <th>Severidad</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td class="code" style="font-size:11px;">VIOLACION DE INTEGRIDAD [Ed25519]: La firma del paquete de actualizacion NO es valida</td>
+                <td>
+                    El paquete de auto-actualización descargado del servidor no tiene una firma Ed25519
+                    válida. El agente rechazó la actualización. Posibles causas: paquete manipulado en
+                    tránsito (MITM), compromiso del servidor de actualizaciones, o archivo corrupto.
+                </td>
+                <td><span class="badge badge-error">CRÍTICO</span></td>
+            </tr>
+            <tr>
+                <td class="code" style="font-size:11px;">VIOLACION DE INTEGRIDAD [Ed25519]: Error al verificar firma del paquete</td>
+                <td>
+                    Error técnico al leer o procesar el archivo de firma (<code>.sig</code>).
+                    El agente rechazó la actualización por precaución.
+                    Puede ser un error transitorio de red o un problema en el servidor.
+                </td>
+                <td><span class="badge badge-warn">ALTO</span></td>
+            </tr>
+            <tr>
+                <td class="code" style="font-size:11px;">HWID_MISMATCH</td>
+                <td>
+                    El Hardware ID del equipo ha cambiado desde la activación. La configuración
+                    cifrada no es descifrable con el hardware actual. El agente está inoperativo
+                    hasta que se reactive.
+                </td>
+                <td><span class="badge badge-warn">MEDIO</span></td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="danger-callout">
+        <strong>Protocolo ante VIOLACION DE INTEGRIDAD [Ed25519]:</strong> Aísle el equipo de la red corporativa,
+        notifique al equipo de seguridad, y audite los servidores de distribución de actualizaciones.
+        Este evento no debe ocurrir en operación normal y puede indicar un ataque activo.
+    </div>
+
+    <h2>8. Procedimiento de Reactivación por HWID Mismatch</h2>
+
+    <p>
+        Este escenario ocurre cuando se reemplaza la placa base, la BIOS o se migra el sistema operativo
+        a nuevo hardware. La configuración cifrada queda ligada al hardware antiguo y no puede descifrarse.
+    </p>
+
+    <ol style="font-size:13.5px; color:#334155; line-height:2;">
+        <li>Verificar el estado con <code>agente.exe --status</code> y confirmar <code>"hardware_binding_integrity": "hwid-mismatch"</code>.</li>
+        <li>Detener el servicio: <code>net stop STCCloudMonitor</code></li>
+        <li>Eliminar la configuración antigua: <code>del "C:\ProgramData\STCCloudMonitor\config.enc"</code></li>
+        <li>Generar una nueva clave de activación para este equipo en el portal STC Cloud (el agente anterior quedará marcado como inactivo).</li>
+        <li>Reactivar: <code>agente.exe --activate &lt;NUEVA_CLAVE&gt; --url https://portal.empresa.com</code></li>
+        <li>Verificar el exit code (debe ser <code>0</code>) e iniciar el servicio: <code>net start STCCloudMonitor</code></li>
+        <li>Confirmar con <code>agente.exe --status</code> que <code>"hardware_binding_integrity"</code> es <code>"ok"</code>.</li>
+    </ol>
+
+    <div class="note-callout">
+        <strong>Backup de configuración:</strong> No se recomienda hacer backup del archivo <code>config.enc</code>
+        ya que está criptográficamente ligado al Hardware ID del equipo original. Restaurarlo en hardware diferente
+        resultará siempre en HWID mismatch.
+    </div>
+
+    <div class="footer">
+        <span>STC Cloud Monitor — Manual del Administrador IT v1.5</span>
+        <span>Página 8</span>
+    </div>
+</div>
+
+</body>
+</html>

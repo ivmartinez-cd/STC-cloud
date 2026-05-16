@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>STC Cloud - Manifiesto de Seguridad v1.5</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --stc-blue: #004a99;
+            --stc-orange: #f7931d;
+            --text-dark: #1a2333;
+            --text-gray: #64748b;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            background: white;
+            color: var(--text-dark);
+        }
+
+        .page {
+            width: 210mm;
+            min-height: 297mm;
+            padding: 25mm;
+            margin: 0 auto;
+            box-sizing: border-box;
+            position: relative;
+            background: white;
+        }
+
+        @media print {
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            .page { margin: 0; padding: 20mm; page-break-after: always; }
+        }
+
+        .cover-top-bar {
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 80mm;
+        }
+
+        .top-title {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--stc-blue);
+            letter-spacing: 0.05em;
+        }
+
+        .cover-main { text-align: left; padding-left: 10mm; }
+
+        .stc-cloud-brand {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 60px;
+        }
+
+        .brand-stc {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 900;
+            font-size: 42px;
+            color: var(--stc-blue);
+        }
+
+        .brand-cloud {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 900;
+            font-size: 42px;
+            color: var(--stc-orange);
+        }
+
+        .main-title {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 38px;
+            font-weight: 700;
+            color: var(--stc-blue);
+            margin: 0;
+            text-transform: uppercase;
+        }
+
+        .main-subtitle {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 38px;
+            font-weight: 400;
+            color: var(--stc-blue);
+            margin: 5px 0 60px 0;
+            text-transform: uppercase;
+        }
+
+        .version-tag {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text-gray);
+            letter-spacing: 0.1em;
+        }
+
+        .internal-header {
+            border-bottom: 3px solid var(--stc-blue);
+            padding-bottom: 8px;
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+
+        .internal-brand {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 900;
+            font-size: 18px;
+            color: var(--stc-blue);
+        }
+
+        .internal-doc-type {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-gray);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        h2 {
+            font-family: 'Montserrat', sans-serif;
+            color: var(--stc-blue);
+            font-size: 22px;
+            border-bottom: 1px solid #f1f5f9;
+            padding-bottom: 8px;
+            margin-top: 40px;
+        }
+
+        h3 {
+            font-family: 'Montserrat', sans-serif;
+            color: var(--stc-orange);
+            font-size: 16px;
+            margin-top: 25px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        p { font-size: 14px; color: #334155; line-height: 1.7; }
+
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+
+        th, td { border: 1px solid #e2e8f0; padding: 14px; text-align: left; font-size: 13px; }
+
+        th {
+            background-color: #f8fafc;
+            color: var(--stc-blue);
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 11px;
+        }
+
+        .note-callout {
+            background: #f1f5f9;
+            border-left: 4px solid var(--stc-blue);
+            padding: 20px;
+            margin: 30px 0;
+            font-size: 13px;
+            color: #1e293b;
+        }
+
+        .footer {
+            position: absolute;
+            bottom: 20mm;
+            left: 25mm;
+            right: 25mm;
+            border-top: 1px solid #e2e8f0;
+            padding-top: 15px;
+            font-size: 10px;
+            color: #94a3b8;
+            text-align: center;
+        }
+
+        .toc-container { margin-top: 20px; }
+
+        .toc-item {
+            display: flex;
+            align-items: baseline;
+            margin-bottom: 12px;
+            font-size: 14px;
+            color: #1a2333;
+            text-decoration: none;
+        }
+
+        .toc-text { flex-shrink: 0; padding-right: 5px; }
+        .toc-dots { flex-grow: 1; border-bottom: 1px dotted #94a3b8; margin: 0 5px; position: relative; top: -4px; }
+        .toc-page { flex-shrink: 0; padding-left: 5px; font-weight: 600; }
+
+        ul { padding-left: 20px; }
+        li { font-size: 14px; color: #334155; margin-bottom: 8px; }
+    </style>
+</head>
+<body>
+
+    <!-- PÁGINA 1: PORTADA -->
+    <div class="page">
+        <div class="cover-top-bar">
+            <div class="top-title">STC CLOUD – MANIFIESTO DE SEGURIDAD TÉCNICA</div>
+        </div>
+
+        <div class="cover-main">
+            <div class="stc-cloud-brand">
+                <span class="brand-stc">STC</span>
+                <span class="brand-cloud">CLOUD</span>
+            </div>
+
+            <h1 class="main-title">MANIFIESTO DE</h1>
+            <h1 class="main-subtitle">SEGURIDAD TÉCNICA</h1>
+
+            <div class="version-tag">Auditoría IT & CISO | v1.5 | Mayo 2026</div>
+        </div>
+
+        <div class="footer">
+            © 2026 CANAL DIRECTO | STC CLOUD | CONFIDENCIAL
+        </div>
+    </div>
+
+    <!-- PÁGINA 2: ÍNDICE -->
+    <div class="page">
+        <div class="internal-header">
+            <div class="internal-brand">STC CLOUD – SEGURIDAD</div>
+        </div>
+
+        <h2 style="border: none; margin-bottom: 30px;">Contenidos</h2>
+
+        <div class="toc-container">
+            <a href="#criptografia" class="toc-item">
+                <span class="toc-text">Arquitectura Criptográfica</span>
+                <span class="toc-dots"></span>
+                <span class="toc-page">3</span>
+            </a>
+            <a href="#binding" class="toc-item">
+                <span class="toc-text">Hardware Binding y Anti-Clonación</span>
+                <span class="toc-dots"></span>
+                <span class="toc-page">3</span>
+            </a>
+            <a href="#comunicaciones" class="toc-item">
+                <span class="toc-text">Seguridad en Comunicaciones</span>
+                <span class="toc-dots"></span>
+                <span class="toc-page">4</span>
+            </a>
+            <a href="#actualizaciones" class="toc-item">
+                <span class="toc-text">Integridad de Actualizaciones (Ed25519)</span>
+                <span class="toc-dots"></span>
+                <span class="toc-page">5</span>
+            </a>
+            <a href="#persistencia" class="toc-item">
+                <span class="toc-text">Protección de Datos en Reposo</span>
+                <span class="toc-dots"></span>
+                <span class="toc-page">6</span>
+            </a>
+        </div>
+
+        <div class="footer">
+            PÁGINA 2 | STC CLOUD – MANIFIESTO DE SEGURIDAD
+        </div>
+    </div>
+
+    <!-- PÁGINA 3: CRIPTOGRAFÍA -->
+    <div class="page">
+        <div class="internal-header">
+            <div class="internal-brand">STC CLOUD</div>
+            <div class="internal-doc-type">Detalles Técnicos de Cifrado</div>
+        </div>
+
+        <h2 id="criptografia">1. Arquitectura Criptográfica</h2>
+        <p>
+            STC Cloud implementa una arquitectura de seguridad basada en el principio de <em>Defensa en Profundidad</em>. Los secretos del agente (tokens de API, credenciales de proxy) nunca se almacenan en texto plano.
+        </p>
+
+        <h3>Cifrado Simétrico</h3>
+        <ul>
+            <li><strong>Algoritmo:</strong> AES-256-GCM (Advanced Encryption Standard en modo Galois/Counter Mode).</li>
+            <li><strong>Autenticación:</strong> El modo GCM garantiza tanto la confidencialidad como la integridad del payload cifrado mediante un tag de autenticación de 128 bits.</li>
+            <li><strong>Vectores de Inicialización (IV):</strong> Se generan 12 bytes aleatorios por cada operación de cifrado para prevenir ataques de diccionario.</li>
+        </ul>
+
+        <h3>Derivación de Clave (KDF)</h3>
+        <ul>
+            <li><strong>Algoritmo:</strong> PBKDF2-SHA256 (Password-Based Key Derivation Function 2).</li>
+            <li><strong>Iteraciones:</strong> 100,000 iteraciones para dificultar ataques de fuerza bruta.</li>
+            <li><strong>Salt:</strong> Se utiliza un salt único derivado de la identidad del host.</li>
+        </ul>
+
+        <h2 id="binding">2. Hardware Binding (Anti-Clonación)</h2>
+        <p>
+            Para prevenir que un agente sea movido o clonado entre servidores, la clave de cifrado se vincula físicamente al hardware del host mediante la concatenación de:
+        </p>
+        <ol>
+            <li><strong>Windows MachineGuid:</strong> Identificador único de la instalación del SO.</li>
+            <li><strong>BIOS Serial Number:</strong> Identificador físico de la placa base/firmware.</li>
+        </ol>
+        <p>
+            Si se intenta mover el archivo de configuración a una máquina diferente, el proceso de derivación resultará en una clave distinta y el descifrado de los secretos fallará, invalidando el acceso del agente.
+        </p>
+
+        <div class="footer">
+            PÁGINA 3 | STC CLOUD – MANIFIESTO DE SEGURIDAD
+        </div>
+    </div>
+
+    <!-- PÁGINA 4: COMUNICACIONES -->
+    <div class="page">
+        <div class="internal-header">
+            <div class="internal-brand">STC CLOUD</div>
+            <div class="internal-doc-type">Seguridad de Tráfico</div>
+        </div>
+
+        <h2 id="comunicaciones">3. Seguridad en Comunicaciones</h2>
+        
+        <h3>Transporte Seguro</h3>
+        <p>Toda la comunicación externa (API REST y WebSockets) se realiza forzosamente sobre TLS 1.2 o superior utilizando suites de cifrado modernas con <em>Forward Secrecy</em>.</p>
+
+        <h3>Autenticación Basada en Tokens</h3>
+        <ul>
+            <li><strong>Mecanismo:</strong> JSON Web Tokens (JWT).</li>
+            <li><strong>Firma:</strong> Algoritmo asimétrico RS256 (RSA con SHA-256).</li>
+            <li><strong>Vigencia:</strong> Los tokens tienen una validez de 30 días, tras los cuales el agente debe re-validar su Hardware ID con el servidor.</li>
+        </ul>
+
+        <h3>Aislamiento de Red</h3>
+        <p>El agente solo requiere visibilidad de red hacia las impresoras (SNMP) y salida HTTPS a la nube. No escucha en ninguna interfaz de red externa (Inbound ports: 0).</p>
+
+        <div class="footer">
+            PÁGINA 4 | STC CLOUD – MANIFIESTO DE SEGURIDAD
+        </div>
+    </div>
+
+    <!-- PÁGINA 5: ACTUALIZACIONES -->
+    <div class="page">
+        <div class="internal-header">
+            <div class="internal-brand">STC CLOUD</div>
+            <div class="internal-doc-type">Integridad de Binarios</div>
+        </div>
+
+        <h2 id="actualizaciones">4. Integridad de Actualizaciones (Ed25519)</h2>
+        <p>
+            El sistema de auto-update implementa una cadena de confianza para prevenir ataques de tipo <em>Supply Chain</em>.
+        </p>
+
+        <h3>Firma Digital de Paquetes</h3>
+        <p>
+            Cada paquete de actualización (`bundle.js`) se distribuye junto a una firma criptográfica externa. El agente no aplicará ninguna actualización que no pase la validación:
+        </p>
+        <ul>
+            <li><strong>Algoritmo de Firma:</strong> Ed25519 (Criptografía de Curva Elíptica).</li>
+            <li><strong>Proceso de Verificación:</strong> El agente posee la llave pública SPKI (`UPDATE_PUBLIC_KEY_HEX`) integrada en su binario original. Al descargar una actualización, se descarga su archivo `.sig` correspondiente y se verifica la integridad del buffer antes de su escritura en disco.</li>
+            <li><strong>Hash de Integridad:</strong> Adicionalmente, se realiza una validación de hash SHA-256 proporcionada por la API central.</li>
+        </ul>
+
+        <div class="note-callout">
+            <strong>Protección ante Tampering:</strong> Si un atacante intercepta la conexión o el almacenamiento de actualizaciones y modifica un solo byte del paquete, la firma Ed25519 será inválida y el agente rechazará la instalación automáticamente.
+        </div>
+
+        <div class="footer">
+            PÁGINA 5 | STC CLOUD – MANIFIESTO DE SEGURIDAD
+        </div>
+    </div>
+
+    <!-- PÁGINA 6: PERSISTENCIA -->
+    <div class="page">
+        <div class="internal-header">
+            <div class="internal-brand">STC CLOUD</div>
+            <div class="internal-doc-type">Privacidad de Datos</div>
+        </div>
+
+        <h2 id="persistencia">5. Protección de Datos en Reposo</h2>
+        
+        <h3>Base de Datos Local</h3>
+        <p>
+            El agente utiliza SQLite para la cola de mensajes offline. 
+            <strong>Importante:</strong> Solo se almacenan datos técnicos de dispositivos (lecturas de contadores, niveles de suministros). No se almacena información sensible de usuarios finales ni nombres de documentos impresos.
+        </p>
+
+        <h3>Privacidad (GDPR/Compliance)</h3>
+        <p>
+            El agente está diseñado bajo el principio de <em>Privacidad desde el Diseño</em>. La telemetría recolectada es puramente técnica y no permite la identificación de personas físicas, cumpliendo con los estándares internacionales de protección de datos.
+        </p>
+
+        <h3 style="margin-top: 50px; color: var(--stc-blue); border: none; text-align: center;">APROBACIÓN TÉCNICA</h3>
+        <p style="text-align: center; font-size: 14px; color: var(--text-gray);">Departamento de Arquitectura y Seguridad</p>
+        <p style="text-align: center; font-size: 14px; font-weight: bold;">STC Cloud Enterprise Edition</p>
+
+        <div class="footer">
+            PÁGINA 6 | STC CLOUD – MANIFIESTO DE SEGURIDAD
+        </div>
+    </div>
+
+</body>
+</html>
