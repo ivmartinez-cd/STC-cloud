@@ -11,6 +11,7 @@ import {
 } from 'recharts';
 import ConfirmModal from '../components/ConfirmModal';
 import { useToast } from '../context/ToastContext';
+import { OFFLINE_THRESHOLD_MS } from '../lib/constants';
 
 interface Client {
   id: string;
@@ -39,19 +40,28 @@ interface UsageMonth {
   color: number;
 }
 
-function MonitorStatusBadge({ status }: { status: string }) {
-  const isOnline = status === 'online' || status === 'active' || status === 'ok';
+function MonitorStatusBadge({ status, last_seen }: { status: string; last_seen: string | null }) {
+  const isOnline = (status === 'active') &&
+    last_seen !== null &&
+    (Date.now() - new Date(last_seen).getTime() <= OFFLINE_THRESHOLD_MS);
   
-  if (isOnline) {
+  if (status === 'active' && isOnline) {
     return (
       <span className="inline-flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-wider text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full">
         <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> Activo
       </span>
     );
   }
+  if (status === 'active' && !isOnline) {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-wider text-amber-600 bg-amber-50 px-2.5 py-1 rounded-full">
+        <span className="w-1.5 h-1.5 rounded-full bg-amber-400" /> Sin Contacto
+      </span>
+    );
+  }
   return (
     <span className="inline-flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-wider text-rose-600 bg-rose-50 px-2.5 py-1 rounded-full">
-      <span className="w-1.5 h-1.5 rounded-full bg-rose-500" /> Offline
+      <span className="w-1.5 h-1.5 rounded-full bg-rose-500" /> {status === 'pending' ? 'Pendiente' : 'Offline'}
     </span>
   );
 }
@@ -171,7 +181,11 @@ const ClientDetail = () => {
     }
   };
 
-  const onlineMonitors  = monitors.filter(m => m.status === 'online' || m.status === 'active' || m.status === 'ok').length;
+  const onlineMonitors = monitors.filter(m =>
+    m.status === 'active' &&
+    m.last_seen !== null &&
+    (Date.now() - new Date(m.last_seen).getTime() <= OFFLINE_THRESHOLD_MS)
+  ).length;
   const totalPagesMonth = usage.length > 0
     ? usage[usage.length - 1].mono + usage[usage.length - 1].color
     : 0;
@@ -395,7 +409,7 @@ const ClientDetail = () => {
                           </Link>
                         </td>
                         <td>
-                          <MonitorStatusBadge status={m.status} />
+                          <MonitorStatusBadge status={m.status} last_seen={m.last_seen} />
                         </td>
                         <td className="hidden md:table-cell">
                           <div className="flex items-center gap-2 text-slate-500 font-bold text-xs">
