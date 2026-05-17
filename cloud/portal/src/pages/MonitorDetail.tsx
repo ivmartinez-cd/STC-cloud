@@ -879,7 +879,7 @@ const MonitorDetail = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setShowExportModal(false)}>
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
           <div
-            className="relative bg-white rounded-[32px] shadow-2xl shadow-black/20 w-full max-w-md p-8 animate-in zoom-in-95 duration-200"
+            className="relative bg-white rounded-[32px] shadow-2xl shadow-black/20 w-full max-w-sm p-8 animate-in zoom-in-95 duration-200"
             onClick={e => e.stopPropagation()}
           >
             <div className="flex items-center gap-4 mb-6">
@@ -888,49 +888,29 @@ const MonitorDetail = () => {
               </div>
               <div>
                 <h3 className="text-base font-black text-[#1a2333] tracking-tight">Exportar Contadores</h3>
-                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Configuración del CSV</p>
+                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">¿Discriminar mono / color?</p>
               </div>
             </div>
 
-            <p className="text-sm font-bold text-slate-600 mb-2">
-              ¿Discriminar mono de color en equipos de color?
-            </p>
-            <p className="text-xs text-slate-400 mb-6 leading-relaxed">
-              Los equipos <span className="font-bold text-slate-600">solo mono</span> siempre exportan con clase <span className="font-mono font-bold">10</span>.<br />
-              Para equipos de <span className="font-bold text-slate-600">color</span> con ambos contadores:
-            </p>
-
-            <div className="flex flex-col gap-3 mb-6">
+            <div className="flex flex-col gap-3 mb-4">
               <button
                 onClick={() => exportCountersCSV(true)}
-                className="flex items-start gap-4 p-4 rounded-2xl border-2 border-emerald-200 bg-emerald-50 hover:bg-emerald-100 transition-colors text-left group"
+                className="w-full py-4 rounded-2xl border-2 border-emerald-200 bg-emerald-50 hover:bg-emerald-100 transition-colors text-sm font-black text-emerald-700"
               >
-                <div className="w-5 h-5 rounded-full bg-emerald-500 flex-shrink-0 mt-0.5 flex items-center justify-center">
-                  <Check size={11} className="text-white" />
-                </div>
-                <div>
-                  <p className="text-sm font-black text-emerald-700">Sí, discriminar</p>
-                  <p className="text-[11px] text-emerald-600 font-mono mt-0.5">...;10;[mono];20;[color];;</p>
-                </div>
+                Sí, discriminar
               </button>
 
               <button
                 onClick={() => exportCountersCSV(false)}
-                className="flex items-start gap-4 p-4 rounded-2xl border-2 border-slate-200 bg-slate-50 hover:bg-slate-100 transition-colors text-left group"
+                className="w-full py-4 rounded-2xl border-2 border-slate-200 bg-slate-50 hover:bg-slate-100 transition-colors text-sm font-black text-slate-700"
               >
-                <div className="w-5 h-5 rounded-full bg-slate-400 flex-shrink-0 mt-0.5 flex items-center justify-center">
-                  <X size={11} className="text-white" />
-                </div>
-                <div>
-                  <p className="text-sm font-black text-slate-700">No, usar total</p>
-                  <p className="text-[11px] text-slate-500 font-mono mt-0.5">...;20;[total];;;;</p>
-                </div>
+                No
               </button>
             </div>
 
             <button
               onClick={() => setShowExportModal(false)}
-              className="w-full py-3 rounded-2xl text-slate-500 text-sm font-bold hover:bg-slate-50 transition-colors"
+              className="w-full py-3 rounded-2xl text-slate-400 text-xs font-bold hover:bg-slate-50 transition-colors"
             >
               Cancelar
             </button>
