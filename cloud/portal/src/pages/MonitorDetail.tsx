@@ -311,165 +311,172 @@ const MonitorDetail = () => {
       {!loading && !error && monitor && activeTab === 'overview' && (
         <>
           {/* Main Dashboard Layout */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            {/* Left Column: Device Overview */}
-            <div className="lg:col-span-4 space-y-6">
-              {/* Technical Info Panel */}
-              <div className="cd-panel overflow-hidden border-none shadow-xl shadow-blue-900/5 relative bg-white">
-                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-brand via-blue-400 to-indigo-500"></div>
-                <div className="cd-header-blue flex items-center gap-3 bg-slate-50/50 border-b border-slate-100 px-8 py-6 text-brand">
-                  <TerminalIcon size={18} />
-                  <span className="font-black uppercase tracking-widest text-sm text-[#1a2333]">Información Técnica del Nodo</span>
+          {/* Main Dashboard Layout (3 Columns) */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            {/* Column 1: Parque de Impresión (Dispositivos) */}
+            <div className="space-y-6">
+              <div className="cd-panel overflow-hidden border-none shadow-xl shadow-blue-900/5 relative bg-white h-full">
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-400 to-teal-500"></div>
+                <div className="cd-header-blue flex items-center justify-between bg-slate-50/50 border-b border-slate-100 px-6 py-5">
+                  <div className="flex items-center gap-3 text-emerald-600">
+                    <Printer size={18} />
+                    <span className="font-black uppercase tracking-widest text-sm text-[#1a2333]">Dispositivos</span>
+                  </div>
+                  <span className="text-[10px] font-bold text-slate-400 border border-slate-200 px-2 py-1 rounded-md">{devices.length} Total</span>
                 </div>
-                <div className="p-8 space-y-6">
-                  {/* Hardware ID Block */}
-                  <div className="group space-y-3">
-                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
-                      <HardDrive size={12} /> Hardware Identifier
-                    </label>
-                    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-50 to-slate-100/50 border border-slate-200 group-hover:border-brand/30 transition-colors">
-                      <div className="p-4 flex items-center justify-between">
-                        <span className="font-mono text-[11px] font-bold text-slate-700 break-all tracking-tight">
-                          {monitor.hardware_id || 'SIN VINCULAR'}
-                        </span>
-                        {monitor.hardware_id && (
-                          <button 
-                            onClick={() => {
-                              navigator.clipboard.writeText(monitor.hardware_id!);
-                              showToast('Hardware ID copiado', 'success');
-                            }}
-                            className="p-2 bg-white text-slate-400 hover:text-brand rounded-xl shadow-sm border border-slate-100 transition-all active:scale-95"
-                          >
-                            <Copy size={14} />
-                          </button>
-                        )}
+                <div className="p-6 space-y-6">
+                  {/* List Stats */}
+                  <ul className="space-y-3">
+                    <li className="flex justify-between items-center text-xs">
+                      <span className="font-bold text-slate-500 uppercase tracking-widest">Activos</span>
+                      <span className="font-black text-emerald-600 text-sm">{devices.length}</span>
+                    </li>
+                    <li className="flex justify-between items-center text-xs">
+                      <span className="font-bold text-slate-500 uppercase tracking-widest">Offline / No Gestionados</span>
+                      <span className="font-black text-slate-400 text-sm">0</span>
+                    </li>
+                    <li className="flex justify-between items-center text-xs pt-3 border-t border-slate-100">
+                      <span className="font-black text-[#1a2333] uppercase tracking-widest">Total</span>
+                      <span className="font-black text-brand text-lg">{devices.length}</span>
+                    </li>
+                  </ul>
+
+                  {/* Visual Chart (Donut) */}
+                  <div className="flex justify-center py-4">
+                    <div className="relative w-32 h-32 flex items-center justify-center">
+                      <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                        {/* Background Circle */}
+                        <circle cx="50" cy="50" r="40" fill="transparent" stroke="#f1f5f9" strokeWidth="12" />
+                        {/* Active Circle (100% for now) */}
+                        <circle cx="50" cy="50" r="40" fill="transparent" stroke="#10b981" strokeWidth="12" strokeDasharray="251.2" strokeDashoffset={devices.length === 0 ? "251.2" : "0"} className="transition-all duration-1000 ease-out" />
+                      </svg>
+                      <div className="absolute inset-0 flex flex-col items-center justify-center">
+                        <span className="text-2xl font-black text-[#1a2333]">{devices.length}</span>
+                        <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Equipos</span>
                       </div>
-                    </div>
-                  </div>
-
-                  {/* System Specs List */}
-                  <div className="bg-slate-50/80 rounded-3xl p-2 border border-slate-100/50">
-                    <ul className="divide-y divide-slate-100/50">
-                      <li className="flex justify-between items-center px-4 py-3 hover:bg-white rounded-2xl transition-all group">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Aplicación Remota</span>
-                        <span className="text-xs font-black text-[#1a2333]">STC Cloud Agent</span>
-                      </li>
-                      <li className="flex justify-between items-center px-4 py-3 hover:bg-white rounded-2xl transition-all group">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Versión</span>
-                        <span className="text-xs font-black text-[#1a2333] px-2 py-0.5 bg-slate-100 rounded-md font-mono border border-slate-200">{monitor.version || 'v1.5.2-stable'}</span>
-                      </li>
-                      <li className="flex justify-between items-center px-4 py-3 hover:bg-white rounded-2xl transition-all group">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Nombre del Host</span>
-                        <span className="text-xs font-black text-[#1a2333] tracking-tight">{monitor.host_name || 'NO DISPONIBLE'}</span>
-                      </li>
-                      <li className="flex justify-between items-center px-4 py-3 hover:bg-white rounded-2xl transition-all group">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Sistema Operativo</span>
-                        <span className="text-xs font-black text-[#1a2333] flex items-center gap-1">
-                          {monitor.host_os || 'Windows (x64)'}
-                        </span>
-                      </li>
-                      <li className="flex justify-between items-center px-4 py-3 hover:bg-white rounded-2xl transition-all group">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Dirección IP Local</span>
-                        <span className="text-xs font-black text-blue-600 font-mono tracking-tighter">{monitor.host_ip || '---.---.---.---'}</span>
-                      </li>
-                      <li className="flex justify-between items-center px-4 py-3 hover:bg-white rounded-2xl transition-all group">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Último Reinicio</span>
-                        <span className="text-xs font-bold text-slate-500">{monitor.uptime || '--/--/----'}</span>
-                      </li>
-                    </ul>
-                  </div>
-
-                  {/* Client Badge */}
-                  <div className="pt-2">
-                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-3 block">Organización Vinculada</label>
-                    <Link to={`/clients/${monitor.client_id}`} className="block p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-3xl group hover:shadow-lg hover:shadow-blue-900/10 transition-all hover:-translate-y-0.5 relative overflow-hidden">
-                      <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 rounded-full blur-2xl -mr-8 -mt-8 group-hover:bg-blue-500/10 transition-colors"></div>
-                      <div className="flex items-center gap-4 relative z-10">
-                        <div className="w-12 h-12 rounded-[20px] bg-white shadow-sm flex items-center justify-center text-brand font-black text-xl border border-blue-100/50 group-hover:scale-105 transition-transform">
-                          {monitor.client_name?.charAt(0)}
-                        </div>
-                        <div>
-                          <p className="text-sm font-black text-brand uppercase tracking-tight">{monitor.client_name}</p>
-                          <p className="text-[10px] font-bold text-blue-500 uppercase tracking-widest group-hover:text-blue-600 transition-colors">Ver Perfil del Cliente &rarr;</p>
-                        </div>
-                      </div>
-                    </Link>
-                  </div>
-                </div>
-              </div>
-
-              {/* Quick Stats Panel */}
-              <div className="cd-panel overflow-hidden border-none shadow-xl shadow-blue-900/5">
-                <div className="p-8 space-y-6">
-                  <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-3">
-                    <Activity size={16} className="text-brand" /> Estadísticas de Red
-                  </h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="p-6 bg-slate-50 rounded-[32px] border border-slate-100">
-                      <p className="text-2xl font-black text-[#1a2333] tracking-tighter mb-1">{devices.length}</p>
-                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Equipos</p>
-                    </div>
-                    <div className="p-6 bg-slate-50 rounded-[32px] border border-slate-100 flex flex-col justify-center items-center">
-                      <Printer size={24} className="text-brand/20 mb-2" />
-                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest text-center">Activos</p>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Right Column: Security & Actions */}
-            <div className="lg:col-span-8 space-y-6">
-              {/* Main Actions Panel */}
-              <div className="cd-panel overflow-hidden border-none shadow-xl shadow-blue-900/5 bg-gradient-to-br from-white to-slate-50/50">
-                <div className="p-8 space-y-8">
-                  <div className="flex items-center gap-4 mb-4">
-                    <div className="p-3 bg-brand/10 text-brand rounded-2xl">
-                      <Shield size={24} />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-black text-[#1a2333] tracking-tight">Seguridad y Enlace</h3>
-                      <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Estado del túnel de telemetría</p>
+            {/* Column 2: Estado del Monitor (Información Técnica) */}
+            <div className="space-y-6">
+              <div className="cd-panel overflow-hidden border-none shadow-xl shadow-blue-900/5 relative bg-white h-full">
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-brand via-blue-400 to-indigo-500"></div>
+                <div className="cd-header-blue flex items-center gap-3 bg-slate-50/50 border-b border-slate-100 px-6 py-5 text-brand">
+                  <TerminalIcon size={18} />
+                  <span className="font-black uppercase tracking-widest text-sm text-[#1a2333]">Estado del Monitor</span>
+                </div>
+                <div className="p-6">
+                  <div className="bg-slate-50/80 rounded-3xl p-1 border border-slate-100/50">
+                    <ul className="divide-y divide-slate-100/50">
+                      <li className="flex justify-between items-center px-4 py-3.5 hover:bg-white rounded-2xl transition-all group">
+                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Aplicación Remota</span>
+                        <span className="text-[11px] font-black text-[#1a2333]">STC Cloud Agent</span>
+                      </li>
+                      <li className="flex justify-between items-center px-4 py-3.5 hover:bg-white rounded-2xl transition-all group">
+                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Versión</span>
+                        <span className="text-[11px] font-black text-[#1a2333] px-2 py-0.5 bg-slate-100 rounded-md font-mono border border-slate-200">{monitor.version || 'v1.5.2-stable'}</span>
+                      </li>
+                      <li className="flex justify-between items-center px-4 py-3.5 hover:bg-white rounded-2xl transition-all group">
+                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Estado</span>
+                        <div className="flex items-center gap-2">
+                          <span className={`w-2 h-2 rounded-full ${monitor.status === 'active' ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`}></span>
+                          <span className="text-[11px] font-black text-[#1a2333] uppercase">{monitor.status}</span>
+                        </div>
+                      </li>
+                      <li className="flex flex-col gap-1 px-4 py-3.5 hover:bg-white rounded-2xl transition-all group">
+                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Nombre del Host</span>
+                        <span className="text-[11px] font-black text-[#1a2333] tracking-tight">{monitor.host_name || 'NO DISPONIBLE'}</span>
+                      </li>
+                      <li className="flex flex-col gap-1 px-4 py-3.5 hover:bg-white rounded-2xl transition-all group">
+                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Sistema Operativo</span>
+                        <span className="text-[11px] font-black text-[#1a2333]">
+                          {monitor.host_os || 'Windows (x64)'}
+                        </span>
+                      </li>
+                      <li className="flex justify-between items-center px-4 py-3.5 hover:bg-white rounded-2xl transition-all group">
+                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Dirección IP</span>
+                        <span className="text-[11px] font-black text-blue-600 font-mono tracking-tighter">{monitor.host_ip || '---.---.---.---'}</span>
+                      </li>
+                      <li className="flex justify-between items-center px-4 py-3.5 hover:bg-white rounded-2xl transition-all group">
+                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Último Contacto</span>
+                        <span className="text-[11px] font-bold text-slate-500">{formatRelativeTime(monitor.last_seen, now)}</span>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Column 3: Detalles de la Licencia & Seguridad */}
+            <div className="space-y-6">
+              <div className="cd-panel overflow-hidden border-none shadow-xl shadow-blue-900/5 bg-white h-full relative">
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-amber-400 to-orange-500"></div>
+                <div className="cd-header-blue flex items-center gap-3 bg-slate-50/50 border-b border-slate-100 px-6 py-5 text-amber-600">
+                  <Shield size={18} />
+                  <span className="font-black uppercase tracking-widest text-sm text-[#1a2333]">Detalles de la Licencia</span>
+                </div>
+                
+                <div className="p-6 space-y-6">
+                  {/* Client Info */}
+                  <div>
+                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2 block">Organización Vinculada</label>
+                    <Link to={`/clients/${monitor.client_id}`} className="block p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-3xl group hover:shadow-lg hover:shadow-blue-900/10 transition-all hover:-translate-y-0.5 relative overflow-hidden">
+                      <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 rounded-full blur-2xl -mr-8 -mt-8 group-hover:bg-blue-500/10 transition-colors"></div>
+                      <div className="flex items-center gap-3 relative z-10">
+                        <div className="w-10 h-10 rounded-2xl bg-white shadow-sm flex items-center justify-center text-brand font-black text-lg border border-blue-100/50 group-hover:scale-105 transition-transform">
+                          {monitor.client_name?.charAt(0)}
+                        </div>
+                        <div>
+                          <p className="text-xs font-black text-brand uppercase tracking-tight">{monitor.client_name}</p>
+                          <p className="text-[9px] font-bold text-blue-500 uppercase tracking-widest group-hover:text-blue-600 transition-colors">Ver Perfil &rarr;</p>
+                        </div>
+                      </div>
+                    </Link>
+                  </div>
+
+                  {/* Hardware ID Block */}
+                  <div className="group space-y-2">
+                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
+                      <HardDrive size={12} /> Hardware Identifier
+                    </label>
+                    <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between group-hover:border-brand/30 transition-colors">
+                      <span className="font-mono text-[10px] font-bold text-slate-700 break-all">
+                        {monitor.hardware_id || 'SIN VINCULAR'}
+                      </span>
                     </div>
                   </div>
 
+                  {/* Activation Key Block */}
                   {monitor.activation_key ? (
-                    <div className="p-6 bg-emerald-50 border border-emerald-100 rounded-[28px] flex items-center justify-between group">
-                      <div className="flex items-center gap-4">
-                        <div className="p-3 bg-white rounded-2xl shadow-sm text-emerald-600">
-                          <Key size={20} />
+                    <div className="p-5 bg-emerald-50 border border-emerald-100 rounded-3xl group">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2 text-emerald-700">
+                          <Key size={14} />
+                          <p className="text-[9px] font-black uppercase tracking-widest">Clave de Activación</p>
                         </div>
-                        <div>
-                          <p className="text-[10px] font-black text-emerald-700 uppercase tracking-widest">Clave de Activación</p>
-                          <p className="font-mono text-xs font-bold text-emerald-900">{monitor.activation_key}</p>
-                        </div>
+                        <button onClick={copyKey} className="p-1.5 bg-white text-emerald-600 rounded-lg shadow-sm hover:bg-emerald-600 hover:text-white transition-all active:scale-90">
+                          {keyCopied ? <Check size={14} /> : <Copy size={14} />}
+                        </button>
                       </div>
-                      <button onClick={copyKey} className="p-4 bg-white text-emerald-600 rounded-2xl shadow-md hover:bg-emerald-600 hover:text-white transition-all active:scale-90">
-                        {keyCopied ? <Check size={20} /> : <Copy size={20} />}
-                      </button>
+                      <p className="font-mono text-xs font-bold text-emerald-900 break-all bg-white/50 p-2 rounded-xl">{monitor.activation_key}</p>
                     </div>
                   ) : (
-                    <div className="p-6 bg-blue-50 border border-blue-100 rounded-[28px] flex items-center gap-4">
-                      <div className="p-3 bg-white rounded-2xl shadow-sm text-brand">
-                        <Check size={20} />
+                    <div className="p-5 bg-blue-50 border border-blue-100 rounded-3xl flex items-center gap-3">
+                      <div className="p-2 bg-white rounded-xl shadow-sm text-brand">
+                        <Check size={16} />
                       </div>
                       <div>
-                        <p className="text-[10px] font-black text-brand uppercase tracking-widest">Enlace Cifrado Activo</p>
-                        <p className="text-xs font-bold text-blue-900 leading-relaxed uppercase tracking-tighter">Telemetría Segura y Verificada</p>
+                        <p className="text-[9px] font-black text-brand uppercase tracking-widest">Enlace Cifrado</p>
+                        <p className="text-[10px] font-bold text-blue-900 uppercase">Telemetría Activa</p>
                       </div>
                     </div>
                   )}
-                                    <div className="p-6 bg-white border border-slate-100 rounded-3xl shadow-sm flex-1">
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Sincronización</p>
-                      <div className="flex items-center gap-3">
-                        <div className={`w-2.5 h-2.5 rounded-full ${monitor.status === 'active' ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
-                        <span className="text-sm font-black text-slate-700">{formatRelativeTime(monitor.last_seen, now)}</span>
-                      </div>
-                    </div>
-                  </div>
                 </div>
-
-
+              </div>
             </div>
           </div>
         </>
