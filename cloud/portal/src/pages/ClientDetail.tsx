@@ -32,6 +32,7 @@ interface Monitor {
   last_seen: string | null;
   device_count: number;
   scan_interval_minutes: number;
+  hardware_id: string | null;
 }
 
 interface UsageMonth {
@@ -404,7 +405,9 @@ const ClientDetail = () => {
                             </div>
                             <div>
                               <p className="font-extrabold text-[#1a2333] group-hover/m:text-brand transition-colors">{m.name}</p>
-                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">ID: {m.id.slice(0, 8)}</p>
+                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter font-mono">
+                                {m.hardware_id ?? 'Sin vincular'}
+                              </p>
                             </div>
                           </Link>
                         </td>
