@@ -16,9 +16,9 @@ export function createAgentController(
 
     heartbeat: async (request: FastifyRequest) => {
       const { id } = request.params as any;
-      const { logs, commandResults } = request.body as any;
+      const { logs, commandResults, system_info } = request.body as any;
 
-      await agentService.heartbeat(id);
+      await agentService.heartbeat(id, system_info);
 
       if (logs && Array.isArray(logs)) {
         await agentService.ingestLogs(id, logs);

@@ -440,13 +440,23 @@ export class AgentService {
   }
 
 
-  async heartbeat(agentId: string) {
+  async heartbeat(agentId: string, systemInfo?: any) {
+    const updateData: any = {
+      last_seen: new Date(),
+      status: this.db.raw("CASE WHEN status = 'offline' THEN 'active' ELSE status END")
+    };
+    
+    if (systemInfo) {
+      if (systemInfo.version !== undefined) updateData.version = systemInfo.version;
+      if (systemInfo.host_name !== undefined) updateData.host_name = systemInfo.host_name;
+      if (systemInfo.host_os !== undefined) updateData.host_os = systemInfo.host_os;
+      if (systemInfo.host_ip !== undefined) updateData.host_ip = systemInfo.host_ip;
+      if (systemInfo.uptime !== undefined) updateData.uptime = systemInfo.uptime;
+    }
+
     await this.db("agents")
       .where({ id: agentId })
-      .update({ 
-        last_seen: new Date(),
-        status: this.db.raw("CASE WHEN status = 'offline' THEN 'active' ELSE status END")
-      });
+      .update(updateData);
   }
 
   async getConfig(agentId: string) {
