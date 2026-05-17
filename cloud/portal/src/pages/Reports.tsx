@@ -15,6 +15,7 @@ interface Reading {
   mono_pages:  number | null;
   color_pages: number | null;
   status:      string;
+  offline?:    boolean;
 }
 
 interface ConsolidatedDeviceData {
@@ -119,6 +120,7 @@ const Reports = () => {
         const printedTotal = Math.max(0, finalR.total_pages - initialR.total_pages);
         const printedMono = Math.max(0, (finalR.mono_pages ?? 0) - (initialR.mono_pages ?? 0));
         const printedColor = Math.max(0, (finalR.color_pages ?? 0) - (initialR.color_pages ?? 0));
+        const isOffline = finalR.offline || finalR.status === 'offline';
         return {
           device,
           initialTotal: initialR.total_pages,
@@ -126,7 +128,7 @@ const Reports = () => {
           printedTotal,
           printedMono,
           printedColor,
-          status: finalR.status || 'ok',
+          status: isOffline ? 'offline' : (finalR.status || 'ok'),
         };
       });
 

@@ -52,7 +52,7 @@ export function createDeviceController(db: Knex) {
       return await query.select(
         "*",
         db.raw(
-          "CASE WHEN offline = true AND total_pages IS NULL THEN 'offline' ELSE 'online' END as status"
+          "CASE WHEN offline = true THEN 'offline' ELSE 'online' END as status"
         )
       );
     },
