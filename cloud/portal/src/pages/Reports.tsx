@@ -160,7 +160,7 @@ const Reports = () => {
       totalPrinted += item.printedTotal;
       totalMono += item.printedMono;
       totalColor += item.printedColor;
-      if (item.status === 'ok') onlineCount++;
+      if (item.status === 'online' || item.status === 'ok') onlineCount++;
 
       if (!topDevice || item.printedTotal > topDevice.printedTotal) {
         topDevice = item;
@@ -414,7 +414,7 @@ const Reports = () => {
                         </td>
                         <td>
                           <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider ${
-                            r.status === 'ok' ? 'bg-emerald-50 text-emerald-600' : 
+                            (r.status === 'online' || r.status === 'ok') ? 'bg-emerald-50 text-emerald-600' : 
                             r.status === 'sin lecturas' ? 'bg-slate-100 text-slate-400' : 'bg-rose-50 text-rose-600'
                           }`}>
                             {r.status}
