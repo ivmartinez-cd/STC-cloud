@@ -39,6 +39,11 @@ interface MonitorData {
     snmp_community: string;
     scan_interval_minutes: number;
   };
+  version?: string;
+  host_name?: string;
+  host_os?: string;
+  host_ip?: string;
+  uptime?: string;
 }
 
 const MonitorDetail = () => {
@@ -310,28 +315,82 @@ const MonitorDetail = () => {
             {/* Left Column: Device Overview */}
             <div className="lg:col-span-4 space-y-6">
               {/* Technical Info Panel */}
-              <div className="cd-panel overflow-hidden border-none shadow-xl shadow-blue-900/5">
-                <div className="cd-header-blue flex items-center gap-3">
-                  <HardDrive size={18} />
-                  Información Técnica
+              <div className="cd-panel overflow-hidden border-none shadow-xl shadow-blue-900/5 relative bg-white">
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-brand via-blue-400 to-indigo-500"></div>
+                <div className="cd-header-blue flex items-center gap-3 bg-slate-50/50 border-b border-slate-100 px-8 py-6 text-brand">
+                  <TerminalIcon size={18} />
+                  <span className="font-black uppercase tracking-widest text-sm text-[#1a2333]">Información Técnica del Nodo</span>
                 </div>
-                <div className="p-8 space-y-8">
-                  <div className="space-y-4">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Hardware Identifier</label>
-                    <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 font-mono text-xs font-bold text-slate-600 break-all leading-relaxed">
-                      {monitor.hardware_id || 'SIN VINCULAR'}
+                <div className="p-8 space-y-6">
+                  {/* Hardware ID Block */}
+                  <div className="group space-y-3">
+                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
+                      <HardDrive size={12} /> Hardware Identifier
+                    </label>
+                    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-50 to-slate-100/50 border border-slate-200 group-hover:border-brand/30 transition-colors">
+                      <div className="p-4 flex items-center justify-between">
+                        <span className="font-mono text-[11px] font-bold text-slate-700 break-all tracking-tight">
+                          {monitor.hardware_id || 'SIN VINCULAR'}
+                        </span>
+                        {monitor.hardware_id && (
+                          <button 
+                            onClick={() => {
+                              navigator.clipboard.writeText(monitor.hardware_id!);
+                              showToast('Hardware ID copiado', 'success');
+                            }}
+                            className="p-2 bg-white text-slate-400 hover:text-brand rounded-xl shadow-sm border border-slate-100 transition-all active:scale-95"
+                          >
+                            <Copy size={14} />
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
-                  <div className="space-y-4">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Cliente Asociado</label>
-                    <Link to={`/clients/${monitor.client_id}`} className="block p-5 bg-blue-50 border border-blue-100 rounded-3xl group/client hover:bg-brand transition-all">
-                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-2xl bg-white shadow-sm flex items-center justify-center text-brand font-black text-lg">
+
+                  {/* System Specs List */}
+                  <div className="bg-slate-50/80 rounded-3xl p-2 border border-slate-100/50">
+                    <ul className="divide-y divide-slate-100/50">
+                      <li className="flex justify-between items-center px-4 py-3 hover:bg-white rounded-2xl transition-all group">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Aplicación Remota</span>
+                        <span className="text-xs font-black text-[#1a2333]">STC Cloud Agent</span>
+                      </li>
+                      <li className="flex justify-between items-center px-4 py-3 hover:bg-white rounded-2xl transition-all group">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Versión</span>
+                        <span className="text-xs font-black text-[#1a2333] px-2 py-0.5 bg-slate-100 rounded-md font-mono border border-slate-200">{monitor.version || 'v1.5.2-stable'}</span>
+                      </li>
+                      <li className="flex justify-between items-center px-4 py-3 hover:bg-white rounded-2xl transition-all group">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Nombre del Host</span>
+                        <span className="text-xs font-black text-[#1a2333] tracking-tight">{monitor.host_name || 'NO DISPONIBLE'}</span>
+                      </li>
+                      <li className="flex justify-between items-center px-4 py-3 hover:bg-white rounded-2xl transition-all group">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Sistema Operativo</span>
+                        <span className="text-xs font-black text-[#1a2333] flex items-center gap-1">
+                          {monitor.host_os || 'Windows (x64)'}
+                        </span>
+                      </li>
+                      <li className="flex justify-between items-center px-4 py-3 hover:bg-white rounded-2xl transition-all group">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Dirección IP Local</span>
+                        <span className="text-xs font-black text-blue-600 font-mono tracking-tighter">{monitor.host_ip || '---.---.---.---'}</span>
+                      </li>
+                      <li className="flex justify-between items-center px-4 py-3 hover:bg-white rounded-2xl transition-all group">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Último Reinicio</span>
+                        <span className="text-xs font-bold text-slate-500">{monitor.uptime || '--/--/----'}</span>
+                      </li>
+                    </ul>
+                  </div>
+
+                  {/* Client Badge */}
+                  <div className="pt-2">
+                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-3 block">Organización Vinculada</label>
+                    <Link to={`/clients/${monitor.client_id}`} className="block p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-3xl group hover:shadow-lg hover:shadow-blue-900/10 transition-all hover:-translate-y-0.5 relative overflow-hidden">
+                      <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 rounded-full blur-2xl -mr-8 -mt-8 group-hover:bg-blue-500/10 transition-colors"></div>
+                      <div className="flex items-center gap-4 relative z-10">
+                        <div className="w-12 h-12 rounded-[20px] bg-white shadow-sm flex items-center justify-center text-brand font-black text-xl border border-blue-100/50 group-hover:scale-105 transition-transform">
                           {monitor.client_name?.charAt(0)}
                         </div>
                         <div>
-                          <p className="text-xs font-black text-brand group-hover/client:text-white transition-colors uppercase tracking-tight">{monitor.client_name}</p>
-                          <p className="text-[9px] font-bold text-blue-400 group-hover/client:text-blue-100 transition-colors uppercase tracking-widest">Ver Cliente</p>
+                          <p className="text-sm font-black text-brand uppercase tracking-tight">{monitor.client_name}</p>
+                          <p className="text-[10px] font-bold text-blue-500 uppercase tracking-widest group-hover:text-blue-600 transition-colors">Ver Perfil del Cliente &rarr;</p>
                         </div>
                       </div>
                     </Link>
