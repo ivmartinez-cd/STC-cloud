@@ -24,6 +24,7 @@ interface DashboardData {
     };
     clients: number;
     volume: number;
+    deviceTrend?: string | null;
   };
   topClients: Array<{
     id: string;
@@ -139,7 +140,7 @@ const Dashboard = () => {
           subtitle="Impresoras Monitoreadas"
           icon={HardDrive} 
           color="blue" 
-          trend="+12% este mes"
+          trend={data?.stats?.deviceTrend || undefined}
         />
         <StatCard 
           title="Monitores" 

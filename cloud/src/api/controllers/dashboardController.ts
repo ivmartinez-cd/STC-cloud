@@ -15,6 +15,7 @@ export function createDashboardController(db: Knex, agentService: AgentService) 
         topClients,
         brandStats,
         offlineAgents,
+        newDevicesCount,
       ] = await Promise.all([
         db("devices").where({ active: true }).count("* as c").first(),
 
@@ -75,19 +76,32 @@ export function createDashboardController(db: Knex, agentService: AgentService) 
           .orderBy("agents.last_seen", "desc")
           .limit(10),
 
-        // Runs in parallel but result is not used directly (re-queried below for lastSync)
-        db("readings").orderBy("time", "desc").select("time").first(),
+        db("devices")
+          .where({ active: true })
+          .where("created_at", ">=", new Date(Date.now() - 30 * 24 * 60 * 60 * 1000))
+          .count("* as c")
+          .first(),
       ]);
+
+      const total = Number(devicesCount?.c || 0);
+      const added = Number(newDevicesCount?.c || 0);
+      const previousTotal = total - added;
+      let deviceTrend: string | null = null;
+      if (added > 0) {
+        const pct = previousTotal > 0 ? Math.round((added / previousTotal) * 100) : 100;
+        deviceTrend = `+${pct}% este mes`;
+      }
 
       return {
         stats: {
-          devices: Number(devicesCount?.c || 0),
+          devices: total,
           agents: {
             total: agentsStats?.total || 0,
             online: agentsStats?.online || 0,
           },
           clients: Number(clientsCount?.c || 0),
           volume: Number(monthlyVolume?.total || 0),
+          deviceTrend,
         },
         topClients: topClients.map((c: any) => ({ ...c, device_count: Number(c.device_count) })),
         brands: brandStats.map((b: any) => ({ ...b, count: Number(b.count) })),
