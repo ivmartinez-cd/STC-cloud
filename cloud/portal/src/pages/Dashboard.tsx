@@ -1,57 +1,20 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  HardDrive, Activity, Radio, Users, ChevronRight, 
-  WifiOff, BarChart3, PieChart as PieChartIcon, 
-  Plus, FileText, Settings, ShieldAlert, Cpu, 
-  ArrowUpRight, Building2
-} from 'lucide-react';
-import { api } from '../lib/api';
-import { useToast } from '../context/ToastContext';
-import { DASHBOARD_POLL_MS } from '../lib/constants';
 import {
-  Tooltip,
-  ResponsiveContainer, Cell,
-  PieChart, Pie
-} from 'recharts';
+  HardDrive, Activity, Radio, Users, ChevronRight,
+  WifiOff, BarChart3, PieChart as PieChartIcon,
+  Plus, FileText, Settings, ShieldAlert, Cpu, ArrowUpRight, Building2
+} from 'lucide-react';
+import { useDashboard } from '../hooks/useDashboard';
+import { Tooltip, ResponsiveContainer, Cell, PieChart, Pie } from 'recharts';
 
-interface DashboardData {
-  stats: {
-    devices: number;
-    agents: {
-      total: number;
-      online: number;
-    };
-    clients: number;
-    volume: number;
-    deviceTrend?: string | null;
-  };
-  topClients: Array<{
-    id: string;
-    name: string;
-    device_count: number;
-  }>;
-  brands: Array<{
-    brand: string;
-    count: number;
-  }>;
-  offlineAgents: Array<{
-    id: string;
-    name: string;
-    client_name: string;
-    last_seen: string;
-  }>;
-  systemHealth: {
-    status: 'healthy' | 'degraded' | 'error';
-    uptime: number;
-    lastSync: string | null;
-  };
-}
+const BRAND_COLORS = ['#2980b9', '#3498db', '#1abc9c', '#f1c40f', '#f7931d', '#e74c3c'];
 
 const StatCard = ({
   title, value, subtitle, icon: Icon, color, trend
 }: {
-  title: string; value: string | number; subtitle?: string; icon: React.ElementType; color: string; trend?: string;
+  title: string; value: string | number; subtitle?: string;
+  icon: React.ElementType; color: string; trend?: string;
 }) => (
   <div className="cd-panel p-6 relative overflow-hidden group hover:shadow-2xl hover:shadow-blue-900/5 transition-all duration-500">
     <div className={`absolute top-0 right-0 w-24 h-24 -mr-8 -mt-8 bg-${color}-500/5 rounded-full blur-2xl group-hover:bg-${color}-500/10 transition-colors duration-500`} />
@@ -73,29 +36,8 @@ const StatCard = ({
   </div>
 );
 
-const BRAND_COLORS = ['#2980b9', '#3498db', '#1abc9c', '#f1c40f', '#f7931d', '#e74c3c'];
-
 const Dashboard = () => {
-  const [data, setData] = useState<DashboardData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const { showToast } = useToast();
-
-  const load = useCallback(async () => {
-    try {
-      const res = await api.get<DashboardData>('/dashboard');
-      setData(res);
-    } catch {
-      showToast('Error al actualizar panel global', 'error');
-    } finally {
-      setLoading(false);
-    }
-  }, [showToast]);
-
-  useEffect(() => {
-    load();
-    const t = setInterval(load, DASHBOARD_POLL_MS);
-    return () => clearInterval(t);
-  }, [load]);
+  const { data, loading } = useDashboard();
 
   if (loading && !data) {
     return (
@@ -105,8 +47,6 @@ const Dashboard = () => {
       </div>
     );
   }
-
-
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -121,7 +61,6 @@ const Dashboard = () => {
             <p className="text-slate-400 text-xs font-bold uppercase tracking-wide">Visión estratégica de la infraestructura global</p>
           </div>
         </div>
-
         <div className="flex items-center gap-3">
           <Link to="/clients" className="flex items-center gap-2 px-5 py-3 bg-white text-[#1a2333] font-black text-xs uppercase tracking-widest rounded-2xl border border-slate-200 hover:border-blue-500 transition-all active:scale-95">
             <Plus size={16} /> Nuevo Cliente
@@ -132,41 +71,15 @@ const Dashboard = () => {
         </div>
       </header>
 
-      {/* Primary Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard 
-          title="Parque Global" 
-          value={data?.stats?.devices?.toLocaleString() ?? '0'} 
-          subtitle="Impresoras Monitoreadas"
-          icon={HardDrive} 
-          color="blue" 
-          trend={data?.stats?.deviceTrend || undefined}
-        />
-        <StatCard 
-          title="Monitores" 
-          value={`${data?.stats?.agents?.online ?? 0}/${data?.stats?.agents?.total ?? 0}`} 
-          subtitle="Nodos en línea"
-          icon={Radio} 
-          color="emerald" 
-        />
-        <StatCard 
-          title="Clientes" 
-          value={data?.stats?.clients?.toLocaleString() ?? '0'} 
-          subtitle="Empresas Registradas"
-          icon={Users} 
-          color="indigo" 
-        />
-        <StatCard 
-          title="Volumen Mensual" 
-          value={data?.stats?.volume?.toLocaleString() ?? '0'} 
-          subtitle="Páginas Procesadas"
-          icon={BarChart3} 
-          color="orange" 
-        />
+        <StatCard title="Parque Global" value={data?.stats?.devices?.toLocaleString() ?? '0'} subtitle="Impresoras Monitoreadas" icon={HardDrive} color="blue" trend={data?.stats?.deviceTrend || undefined} />
+        <StatCard title="Monitores" value={`${data?.stats?.agents?.online ?? 0}/${data?.stats?.agents?.total ?? 0}`} subtitle="Nodos en línea" icon={Radio} color="emerald" />
+        <StatCard title="Clientes" value={data?.stats?.clients?.toLocaleString() ?? '0'} subtitle="Empresas Registradas" icon={Users} color="indigo" />
+        <StatCard title="Volumen Mensual" value={data?.stats?.volume?.toLocaleString() ?? '0'} subtitle="Páginas Procesadas" icon={BarChart3} color="orange" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Infrastructure Health & Distribution */}
+        {/* Brand Distribution */}
         <div className="cd-panel p-8 flex flex-col space-y-10">
           <div>
             <h3 className="text-lg font-black text-[#1a2333] tracking-tight flex items-center gap-3">
@@ -174,7 +87,6 @@ const Dashboard = () => {
             </h3>
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Composición del parque activo</p>
           </div>
-          
           <div className="flex-1 flex flex-col items-center justify-center min-h-[250px]">
             {data?.brands.length === 0 ? (
               <div className="text-center py-10 opacity-20"><Activity size={48} className="mx-auto" /></div>
@@ -183,24 +95,12 @@ const Dashboard = () => {
                 <div className="w-48 h-48 shrink-0">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
-                      <Pie
-                        data={data?.brands}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={50}
-                        outerRadius={80}
-                        paddingAngle={5}
-                        dataKey="count"
-                        nameKey="brand"
-                      >
+                      <Pie data={data?.brands} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={5} dataKey="count" nameKey="brand">
                         {data?.brands.map((_, index) => (
                           <Cell key={`cell-${index}`} fill={BRAND_COLORS[index % BRAND_COLORS.length]} />
                         ))}
                       </Pie>
-                      <Tooltip 
-                        contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.1)', padding: '12px' }}
-                        itemStyle={{ fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase' }}
-                      />
+                      <Tooltip contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.1)', padding: '12px' }} itemStyle={{ fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase' }} />
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
@@ -220,7 +120,7 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Top Clients by Fleet Size */}
+        {/* Top Clients */}
         <div className="cd-panel p-8">
           <div className="flex items-center justify-between mb-8">
             <div>
@@ -233,7 +133,6 @@ const Dashboard = () => {
               <ChevronRight size={18} className="text-slate-300" />
             </Link>
           </div>
-
           <div className="space-y-4">
             {data?.topClients.map((c, i) => (
               <Link to={`/clients/${c.id}`} key={c.id} className="flex items-center gap-4 p-4 rounded-3xl hover:bg-slate-50 border border-transparent hover:border-slate-100 transition-all group">
@@ -250,7 +149,7 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Critical Alerts - Offline Agents */}
+        {/* Offline Agents */}
         <div className="cd-panel p-8 border-rose-500/10">
           <div className="flex items-center justify-between mb-8">
             <div>
@@ -259,13 +158,12 @@ const Dashboard = () => {
               </h3>
               <p className="text-[10px] font-black text-rose-400 uppercase tracking-widest mt-1">Atención inmediata requerida</p>
             </div>
-            {data?.offlineAgents.length !== 0 && (
+            {(data?.offlineAgents.length ?? 0) > 0 && (
               <span className="px-3 py-1 bg-rose-500 text-white text-[10px] font-black rounded-full shadow-lg shadow-rose-900/20">
                 {data?.offlineAgents.length}
               </span>
             )}
           </div>
-
           <div className="space-y-4">
             {data?.offlineAgents.length === 0 ? (
               <div className="h-64 flex flex-col items-center justify-center text-emerald-500/50 bg-emerald-50/50 rounded-3xl border border-emerald-100 border-dashed">
@@ -274,14 +172,16 @@ const Dashboard = () => {
               </div>
             ) : (
               data?.offlineAgents.map((a) => (
-                <div key={a.id} className="flex flex-col p-4 rounded-3xl bg-rose-50/50 border border-rose-100/50 hover:bg-rose-50 hover:border-rose-200 transition-all group">
+                <div key={a.id} className="flex flex-col p-4 rounded-3xl bg-rose-50/50 border border-rose-100/50 hover:bg-rose-50 hover:border-rose-200 transition-all">
                   <div className="flex items-center justify-between">
                     <span className="text-[11px] font-black text-[#1a2333] uppercase tracking-tight truncate flex-1">{a.client_name}</span>
                     <WifiOff size={14} className="text-rose-500" />
                   </div>
                   <div className="flex items-center justify-between mt-3">
                     <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{a.name}</span>
-                    <span className="text-[9px] font-black text-rose-600/60 uppercase">Visto hace {Math.round((Date.now() - new Date(a.last_seen).getTime()) / 60000)}m</span>
+                    <span className="text-[9px] font-black text-rose-600/60 uppercase">
+                      Visto hace {Math.round((Date.now() - new Date(a.last_seen).getTime()) / 60000)}m
+                    </span>
                   </div>
                 </div>
               ))
@@ -290,7 +190,7 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Quick Access Grid */}
+      {/* Quick Access */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4">
         <Link to="/reports" className="flex items-center gap-4 p-6 bg-white border border-slate-200 rounded-[2.5rem] hover:border-blue-500 hover:shadow-2xl hover:shadow-blue-900/5 transition-all group">
           <div className="p-4 bg-blue-50 text-blue-600 rounded-3xl group-hover:scale-110 transition-transform">
@@ -313,7 +213,7 @@ const Dashboard = () => {
         <div className="p-6 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-[2.5rem] shadow-xl shadow-blue-900/20 text-white relative overflow-hidden group flex items-center justify-between">
           <div className="relative z-10">
             <div className="flex items-center gap-2">
-              <div className={`w-2 h-2 rounded-full ${data?.systemHealth.status === 'healthy' ? 'bg-emerald-400 animate-pulse' : 'bg-rose-400'} `} />
+              <div className={`w-2 h-2 rounded-full ${data?.systemHealth.status === 'healthy' ? 'bg-emerald-400 animate-pulse' : 'bg-rose-400'}`} />
               <h4 className="text-sm font-black uppercase tracking-tight">Estado del Sistema</h4>
             </div>
             <div className="flex flex-col mt-1">
@@ -334,4 +234,3 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
-
