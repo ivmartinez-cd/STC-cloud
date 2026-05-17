@@ -12,6 +12,8 @@ export function createDeviceController(db: Knex) {
           "devices.*",
           db.raw("CASE WHEN devices.active = true THEN 'online' ELSE 'offline' END as status"),
           "agents.name as monitor_name",
+          "agents.status as agent_status",
+          "agents.last_seen as agent_last_seen",
           "clients.name as client_name"
         )
         .orderBy("clients.name"),
@@ -24,6 +26,8 @@ export function createDeviceController(db: Knex) {
           "devices.*",
           db.raw("CASE WHEN devices.active = true THEN 'online' ELSE 'offline' END as status"),
           "agents.name as monitor_name",
+          "agents.status as agent_status",
+          "agents.last_seen as agent_last_seen",
           "clients.name as client_name"
         )
         .join("agents", "agents.id", "devices.agent_id")

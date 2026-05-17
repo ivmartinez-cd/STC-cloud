@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
 import { ArrowLeft, Printer, RefreshCw, FileText, Clock, TrendingUp, Activity } from 'lucide-react';
+import { OFFLINE_THRESHOLD_MS } from '../lib/constants';
 import {
   Line, XAxis, YAxis, Tooltip,
   ResponsiveContainer, CartesianGrid, Area, AreaChart
@@ -27,6 +28,8 @@ interface Device {
   ip_address:   string;
   monitor_name: string;
   client_name:  string;
+  agent_status?: string;
+  agent_last_seen?: string | null;
 }
 
 const DeviceDetail = () => {
@@ -132,7 +135,11 @@ const DeviceDetail = () => {
                <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Cliente / Monitor</p>
                <p className="text-xs font-bold text-slate-500">{device.client_name} · {device.monitor_name}</p>
              </div>
-             <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+             {device.agent_status === 'active' && device.agent_last_seen && (Date.now() - new Date(device.agent_last_seen).getTime() <= OFFLINE_THRESHOLD_MS) ? (
+               <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" title="Agente en línea" />
+             ) : (
+               <div className="w-2 h-2 rounded-full bg-amber-400" title="Agente sin contacto" />
+             )}
           </div>
         </div>
       )}
@@ -275,18 +282,26 @@ const DeviceDetail = () => {
             </div>
 
             <div className="cd-panel p-6 bg-slate-50 border-slate-100">
-               <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-4">Registro de Sistema</p>
-               <div className="space-y-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/50"></div>
-                    <p className="text-xs font-bold text-slate-600">Dispositivo autorizado para red</p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500 shadow-sm shadow-blue-500/50"></div>
-                    <p className="text-xs font-bold text-slate-600">Integridad de datos verificada</p>
-                  </div>
+             <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-4">Registro de Sistema</p>
+             <div className="space-y-4">
+               <div className="flex items-center gap-3">
+                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/50"></div>
+                 <p className="text-xs font-bold text-slate-600">Dispositivo registrado en red</p>
                </div>
-            </div>
+               <div className="flex items-center gap-3">
+                 {device.agent_status === 'active' && device.agent_last_seen && (Date.now() - new Date(device.agent_last_seen).getTime() <= OFFLINE_THRESHOLD_MS) ? (
+                   <div className="w-1.5 h-1.5 rounded-full bg-blue-500 shadow-sm shadow-blue-500/50" />
+                 ) : (
+                   <div className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                 )}
+                 <p className="text-xs font-bold text-slate-600">
+                   {device.agent_status === 'active' && device.agent_last_seen && (Date.now() - new Date(device.agent_last_seen).getTime() <= OFFLINE_THRESHOLD_MS)
+                     ? 'Integridad de datos verificada'
+                     : 'Agente sin contacto — datos pueden no ser actuales'}
+                 </p>
+               </div>
+             </div>
+          </div>
           </div>
         </div>
       )}

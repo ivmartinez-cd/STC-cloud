@@ -11,6 +11,7 @@ import { useToast } from '../context/ToastContext';
 import { formatRelativeTime } from '../lib/formatters';
 import ConfirmModal from '../components/ConfirmModal';
 import Terminal from '../components/Terminal';
+import { OFFLINE_THRESHOLD_MS } from '../lib/constants';
 
 interface Device {
   id: string;
@@ -532,7 +533,11 @@ const MonitorDetail = () => {
                       <td className="px-8 py-5">
                         <div className="flex flex-col">
                           <span className="text-xs font-bold text-slate-600 font-mono">{device.ip_address}</span>
-                          <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">Conexión OK</span>
+                          {monitor.status === 'active' && monitor.last_seen && (Date.now() - new Date(monitor.last_seen).getTime() <= OFFLINE_THRESHOLD_MS) ? (
+                            <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">Conexión OK</span>
+                          ) : (
+                            <span className="text-[9px] font-black text-amber-500 uppercase tracking-widest">Sin Contacto</span>
+                          )}
                         </div>
                       </td>
                       <td className="px-8 py-5">
