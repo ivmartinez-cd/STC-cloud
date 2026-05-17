@@ -8,7 +8,7 @@ import {
 import { REPORT_RECORD_LIMIT } from '../lib/constants';
 
 interface Client  { id: string; name: string }
-interface Device  { id: string; name: string; ip: string; brand: string; serial?: string }
+interface Device  { id: string; name: string; ip_address: string; brand: string; serial_number?: string }
 interface Reading {
   time:        string;
   total_pages: number;
@@ -34,9 +34,9 @@ function toConsolidatedCSV(rows: ConsolidatedDeviceData[], clientName: string, f
   const header = 'SERIE;DISPOSITIVO;IP;MARCA;CONTADOR INICIAL;CONTADOR FINAL;TOTAL IMPRESO;MONOCROMO;COLOR;ESTADO';
   const lines = rows.map(r =>
     [
-      r.device.serial || 'S/N',
+      r.device.serial_number || 'S/N',
       r.device.name || 'Sin Nombre',
-      r.device.ip,
+      r.device.ip_address,
       r.device.brand?.toUpperCase(),
       r.initialTotal,
       r.finalTotal,
@@ -299,7 +299,7 @@ const Reports = () => {
                 <p className="text-slate-500 font-bold text-xs leading-relaxed uppercase tracking-wider">
                   Un <span className="text-[#1a2333]">{execMetrics.monoPct}%</span> de la actividad fue en monocromo y un <span className="text-emerald-600">{execMetrics.colorPct}%</span> a color. 
                   {execMetrics.topDevice && execMetrics.topDevice.printedTotal > 0 && (
-                    <> El equipo más activo fue <span className="text-brand">{execMetrics.topDevice.device.name || execMetrics.topDevice.device.ip}</span> ({execMetrics.topDevice.device.brand?.toUpperCase()}) registrando <span className="text-[#1a2333]">{execMetrics.topDevice.printedTotal.toLocaleString()}</span> impresiones.</>
+                    <> El equipo más activo fue <span className="text-brand">{execMetrics.topDevice.device.name || execMetrics.topDevice.device.ip_address}</span> ({execMetrics.topDevice.device.brand?.toUpperCase()}) registrando <span className="text-[#1a2333]">{execMetrics.topDevice.printedTotal.toLocaleString()}</span> impresiones.</>
                   )}
                 </p>
               </div>
@@ -386,13 +386,13 @@ const Reports = () => {
                     {consolidatedData.map((r, i) => (
                       <tr key={i} className="hover:bg-slate-50/50 transition-colors">
                         <td className="font-medium text-slate-500 whitespace-nowrap text-xs">
-                          {r.device.serial || 'S/N'}
+                          {r.device.serial_number || 'S/N'}
                         </td>
                         <td className="font-extrabold text-[#1a2333]">
                           {r.device.name || 'Sin Nombre'}
                         </td>
                         <td className="font-semibold text-slate-500 text-xs">
-                          {r.device.ip}
+                          {r.device.ip_address}
                         </td>
                         <td className="font-bold text-slate-400 text-[10px] uppercase tracking-wider">
                           {r.device.brand?.toUpperCase()}
