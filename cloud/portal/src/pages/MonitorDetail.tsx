@@ -366,37 +366,54 @@ const MonitorDetail = () => {
                   <span className="text-[10px] font-bold text-white border border-white/30 bg-white/10 px-2 py-1 rounded-md shadow-sm">{devices.length} Total</span>
                 </div>
                 <div className="p-6 space-y-6">
-                  {/* List Stats */}
-                  <ul className="space-y-3">
-                    <li className="flex justify-between items-center text-xs">
-                      <span className="font-bold text-slate-500 uppercase tracking-widest">Activos</span>
-                      <span className="font-black text-emerald-600 text-sm">{devices.length}</span>
-                    </li>
-                    <li className="flex justify-between items-center text-xs">
-                      <span className="font-bold text-slate-500 uppercase tracking-widest">Offline / No Gestionados</span>
-                      <span className="font-black text-slate-400 text-sm">0</span>
-                    </li>
-                    <li className="flex justify-between items-center text-xs pt-3 border-t border-slate-100">
-                      <span className="font-black text-[#1a2333] uppercase tracking-widest">Total</span>
-                      <span className="font-black text-brand text-lg">{devices.length}</span>
-                    </li>
-                  </ul>
+                  {(() => {
+                    const agentOnline = monitor.status === 'active' && monitor.last_seen !== null &&
+                      (Date.now() - new Date(monitor.last_seen).getTime() <= OFFLINE_THRESHOLD_MS);
+                    const activeCount = agentOnline ? devices.length : 0;
+                    const offlineCount = agentOnline ? 0 : devices.length;
+                    const ringColor = agentOnline ? '#10b981' : '#f59e0b';
+                    return (
+                      <>
+                        {/* List Stats */}
+                        <ul className="space-y-3">
+                          <li className="flex justify-between items-center text-xs">
+                            <span className="font-bold text-slate-500 uppercase tracking-widest">Activos</span>
+                            <span className="font-black text-emerald-600 text-sm">{activeCount}</span>
+                          </li>
+                          <li className="flex justify-between items-center text-xs">
+                            <span className="font-bold text-slate-500 uppercase tracking-widest">Offline / No Gestionados</span>
+                            <span className="font-black text-amber-500 text-sm">{offlineCount}</span>
+                          </li>
+                          <li className="flex justify-between items-center text-xs pt-3 border-t border-slate-100">
+                            <span className="font-black text-[#1a2333] uppercase tracking-widest">Total</span>
+                            <span className="font-black text-brand text-lg">{devices.length}</span>
+                          </li>
+                        </ul>
 
-                  {/* Visual Chart (Donut) */}
-                  <div className="flex justify-center py-4">
-                    <div className="relative w-32 h-32 flex items-center justify-center">
-                      <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-                        {/* Background Circle */}
-                        <circle cx="50" cy="50" r="40" fill="transparent" stroke="#f1f5f9" strokeWidth="12" />
-                        {/* Active Circle (100% for now) */}
-                        <circle cx="50" cy="50" r="40" fill="transparent" stroke="#10b981" strokeWidth="12" strokeDasharray="251.2" strokeDashoffset={devices.length === 0 ? "251.2" : "0"} className="transition-all duration-1000 ease-out" />
-                      </svg>
-                      <div className="absolute inset-0 flex flex-col items-center justify-center">
-                        <span className="text-2xl font-black text-[#1a2333]">{devices.length}</span>
-                        <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Equipos</span>
-                      </div>
-                    </div>
-                  </div>
+                        {/* Visual Chart (Donut) */}
+                        <div className="flex justify-center py-4">
+                          <div className="relative w-32 h-32 flex items-center justify-center">
+                            <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                              <circle cx="50" cy="50" r="40" fill="transparent" stroke="#f1f5f9" strokeWidth="12" />
+                              <circle cx="50" cy="50" r="40" fill="transparent" stroke={ringColor} strokeWidth="12"
+                                strokeDasharray="251.2"
+                                strokeDashoffset={devices.length === 0 ? '251.2' : agentOnline ? '0' : '251.2'}
+                                className="transition-all duration-1000 ease-out" />
+                              {!agentOnline && devices.length > 0 && (
+                                <circle cx="50" cy="50" r="40" fill="transparent" stroke={ringColor} strokeWidth="12"
+                                  strokeDasharray="251.2" strokeDashoffset="0"
+                                  className="transition-all duration-1000 ease-out" />
+                              )}
+                            </svg>
+                            <div className="absolute inset-0 flex flex-col items-center justify-center">
+                              <span className="text-2xl font-black text-[#1a2333]">{devices.length}</span>
+                              <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Equipos</span>
+                            </div>
+                          </div>
+                        </div>
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
             </div>
