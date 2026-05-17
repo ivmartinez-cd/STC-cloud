@@ -378,7 +378,7 @@ const MonitorDetail = () => {
                       </li>
                       <li className="flex justify-between items-center px-4 py-3.5 hover:bg-white rounded-2xl transition-all group">
                         <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Versión</span>
-                        <span className="text-[11px] font-black text-[#1a2333] px-2 py-0.5 bg-slate-100 rounded-md font-mono border border-slate-200">{monitor.version || 'v1.5.2-stable'}</span>
+                        <span className="text-[11px] font-black text-[#1a2333] px-2 py-0.5 bg-slate-100 rounded-md font-mono border border-slate-200">{monitor.version || '---'}</span>
                       </li>
                       <li className="flex justify-between items-center px-4 py-3.5 hover:bg-white rounded-2xl transition-all group">
                         <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Estado</span>
@@ -389,17 +389,17 @@ const MonitorDetail = () => {
                       </li>
                       <li className="flex flex-col gap-1 px-4 py-3.5 hover:bg-white rounded-2xl transition-all group">
                         <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Nombre del Host</span>
-                        <span className="text-[11px] font-black text-[#1a2333] tracking-tight">{monitor.host_name || 'NO DISPONIBLE'}</span>
+                        <span className="text-[11px] font-black text-[#1a2333] tracking-tight">{monitor.host_name || '---'}</span>
                       </li>
                       <li className="flex flex-col gap-1 px-4 py-3.5 hover:bg-white rounded-2xl transition-all group">
                         <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Sistema Operativo</span>
                         <span className="text-[11px] font-black text-[#1a2333]">
-                          {monitor.host_os || 'Windows (x64)'}
+                          {monitor.host_os || '---'}
                         </span>
                       </li>
                       <li className="flex justify-between items-center px-4 py-3.5 hover:bg-white rounded-2xl transition-all group">
                         <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Dirección IP</span>
-                        <span className="text-[11px] font-black text-blue-600 font-mono tracking-tighter">{monitor.host_ip || '---.---.---.---'}</span>
+                        <span className="text-[11px] font-black text-blue-600 font-mono tracking-tighter">{monitor.host_ip || '---'}</span>
                       </li>
                       <li className="flex justify-between items-center px-4 py-3.5 hover:bg-white rounded-2xl transition-all group">
                         <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Último Contacto</span>
