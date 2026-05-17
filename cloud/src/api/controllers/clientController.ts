@@ -56,6 +56,7 @@ export function createClientController(db: Knex) {
           "agents.status",
           "agents.last_seen",
           "agents.hardware_id",
+          "agents.host_name",
           "agents.ip_ranges",
           "agents.scan_interval_minutes",
           db.raw(
