@@ -301,7 +301,7 @@ const Reports = () => {
                 <p className="text-slate-500 font-bold text-xs leading-relaxed uppercase tracking-wider">
                   Un <span className="text-[#1a2333]">{execMetrics.monoPct}%</span> de la actividad fue en monocromo y un <span className="text-emerald-600">{execMetrics.colorPct}%</span> a color. 
                   {execMetrics.topDevice && execMetrics.topDevice.printedTotal > 0 && (
-                    <> El equipo más activo fue <span className="text-brand">{execMetrics.topDevice.device.name || execMetrics.topDevice.device.ip_address}</span> ({execMetrics.topDevice.device.brand?.toUpperCase()}) registrando <span className="text-[#1a2333]">{execMetrics.topDevice.printedTotal.toLocaleString()}</span> impresiones.</>
+                    <> El equipo más activo fue <span className="text-brand">{execMetrics.topDevice.device.name || execMetrics.topDevice.device.ip_address}</span> (S/N: <span className="text-brand">{execMetrics.topDevice.device.serial_number || 'S/N'}</span>) registrando <span className="text-[#1a2333]">{execMetrics.topDevice.printedTotal.toLocaleString()}</span> impresiones.</>
                   )}
                 </p>
               </div>
