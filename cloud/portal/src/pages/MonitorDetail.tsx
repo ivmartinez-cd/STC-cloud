@@ -61,8 +61,9 @@ const MonitorDetail = () => {
     return (tab === 'overview' || tab === 'devices' || tab === 'console') ? tab : 'overview';
   });
   const [now, setNow] = useState(Date.now());
+  const [showExportModal, setShowExportModal] = useState(false);
 
-  const exportCountersCSV = () => {
+  const exportCountersCSV = (discriminate: boolean) => {
     const today = new Date().toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
     const monitorName = monitor?.name ?? 'monitor';
     const rows: string[] = [
@@ -70,10 +71,24 @@ const MonitorDetail = () => {
     ];
     for (const d of devices) {
       const serie = d.serial_number ?? 'S/N';
-      const tipo = [d.brand, d.model].filter(Boolean).join(' ') || 'Impresora';
       const mono = d.mono_pages ?? 0;
       const color = d.color_pages ?? 0;
-      rows.push(`${serie};${today};${tipo};MONO;${mono};COLOR;${color};;`);
+      const total = d.total_pages ?? (mono + color);
+      const isColor = color > 0;
+      let row: string;
+      if (isColor) {
+        if (discriminate) {
+          // Discrimina: CLASE 10 = mono, CLASE 20 = color
+          row = `${serie};${today};7;10;${mono};20;${color};;`;
+        } else {
+          // No discrimina: solo clase 20 con el total
+          row = `${serie};${today};7;20;${total};;;;`;
+        }
+      } else {
+        // Equipo solo mono: siempre clase 10
+        row = `${serie};${today};7;10;${mono};;;;`;
+      }
+      rows.push(row);
     }
     const csv = rows.join('\r\n');
     const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
@@ -83,7 +98,9 @@ const MonitorDetail = () => {
     a.download = `contadores_${monitorName.replace(/\s+/g, '_')}_${today.replace(/\//g, '-')}.csv`;
     a.click();
     URL.revokeObjectURL(url);
+    setShowExportModal(false);
   };
+
   // Monitoring State
   const [commandLoading, setCommandLoading] = useState<string | null>(null);
   
@@ -516,7 +533,7 @@ const MonitorDetail = () => {
             <div className="flex items-center gap-3">
               {devices.length > 0 && (
                 <button
-                  onClick={exportCountersCSV}
+                  onClick={() => setShowExportModal(true)}
                   className="flex items-center gap-2 px-4 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl text-[11px] font-black uppercase tracking-wider transition-colors border border-emerald-200"
                 >
                   <Download size={13} />
@@ -855,6 +872,68 @@ const MonitorDetail = () => {
                 Entendido
               </button>
             </div>
+          </div>
+        </div>
+      )}
+      {showExportModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setShowExportModal(false)}>
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+          <div
+            className="relative bg-white rounded-[32px] shadow-2xl shadow-black/20 w-full max-w-md p-8 animate-in zoom-in-95 duration-200"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-4 mb-6">
+              <div className="p-3 bg-emerald-50 rounded-2xl">
+                <Download size={22} className="text-emerald-600" />
+              </div>
+              <div>
+                <h3 className="text-base font-black text-[#1a2333] tracking-tight">Exportar Contadores</h3>
+                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Configuración del CSV</p>
+              </div>
+            </div>
+
+            <p className="text-sm font-bold text-slate-600 mb-2">
+              ¿Discriminar mono de color en equipos de color?
+            </p>
+            <p className="text-xs text-slate-400 mb-6 leading-relaxed">
+              Los equipos <span className="font-bold text-slate-600">solo mono</span> siempre exportan con clase <span className="font-mono font-bold">10</span>.<br />
+              Para equipos de <span className="font-bold text-slate-600">color</span> con ambos contadores:
+            </p>
+
+            <div className="flex flex-col gap-3 mb-6">
+              <button
+                onClick={() => exportCountersCSV(true)}
+                className="flex items-start gap-4 p-4 rounded-2xl border-2 border-emerald-200 bg-emerald-50 hover:bg-emerald-100 transition-colors text-left group"
+              >
+                <div className="w-5 h-5 rounded-full bg-emerald-500 flex-shrink-0 mt-0.5 flex items-center justify-center">
+                  <Check size={11} className="text-white" />
+                </div>
+                <div>
+                  <p className="text-sm font-black text-emerald-700">Sí, discriminar</p>
+                  <p className="text-[11px] text-emerald-600 font-mono mt-0.5">...;10;[mono];20;[color];;</p>
+                </div>
+              </button>
+
+              <button
+                onClick={() => exportCountersCSV(false)}
+                className="flex items-start gap-4 p-4 rounded-2xl border-2 border-slate-200 bg-slate-50 hover:bg-slate-100 transition-colors text-left group"
+              >
+                <div className="w-5 h-5 rounded-full bg-slate-400 flex-shrink-0 mt-0.5 flex items-center justify-center">
+                  <X size={11} className="text-white" />
+                </div>
+                <div>
+                  <p className="text-sm font-black text-slate-700">No, usar total</p>
+                  <p className="text-[11px] text-slate-500 font-mono mt-0.5">...;20;[total];;;;</p>
+                </div>
+              </button>
+            </div>
+
+            <button
+              onClick={() => setShowExportModal(false)}
+              className="w-full py-3 rounded-2xl text-slate-500 text-sm font-bold hover:bg-slate-50 transition-colors"
+            >
+              Cancelar
+            </button>
           </div>
         </div>
       )}
