@@ -68,7 +68,11 @@ const DeviceDetail = () => {
     Color: r.color_pages ?? r.colorPages ?? 0,
   }));
 
-  const isOk = latest && ['idle', 'online', 'ok', 'running'].includes(latest.status.toLowerCase());
+  const isAgentOnline = device !== null
+    && device.agent_status === 'active'
+    && device.agent_last_seen !== null
+    && device.agent_last_seen !== undefined
+    && (Date.now() - new Date(device.agent_last_seen).getTime() <= OFFLINE_THRESHOLD_MS);
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -212,13 +216,13 @@ const DeviceDetail = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="cd-panel p-6 border-l-4 border-l-brand">
                 <div className="flex items-center gap-4">
-                  <div className={`p-3 rounded-2xl transition-colors ${isOk ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-50 text-slate-400'}`}>
+                  <div className={`p-3 rounded-2xl transition-colors ${isAgentOnline ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-500'}`}>
                     <Activity size={20} />
                   </div>
                   <div>
                     <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Estado Operativo</p>
-                    <p className={`text-lg font-extrabold ${isOk ? 'text-emerald-600' : 'text-slate-400'}`}>
-                      {latest.status === 'online' ? 'En Línea' : 'Fuera de Línea'}
+                    <p className={`text-lg font-extrabold ${isAgentOnline ? 'text-emerald-600' : 'text-amber-500'}`}>
+                      {isAgentOnline ? 'En Línea' : 'Sin Contacto'}
                     </p>
                   </div>
                 </div>
