@@ -16,7 +16,10 @@ export function createClientController(db: Knex) {
           db.raw(
             "COUNT(DISTINCT CASE WHEN a.status != 'revoked' THEN a.id END)::int AS monitor_count"
           ),
-          db.raw("COUNT(DISTINCT CASE WHEN d.active = true THEN d.id END)::int AS device_count")
+          db.raw("COUNT(DISTINCT CASE WHEN d.active = true THEN d.id END)::int AS device_count"),
+          db.raw(
+            "COUNT(DISTINCT CASE WHEN a.status = 'active' AND a.last_seen > NOW() - INTERVAL '5 minutes' THEN a.id END)::int AS active_monitor_count"
+          )
         )
         .leftJoin("agents as a", "a.client_id", "clients.id")
         .leftJoin("devices as d", "d.agent_id", "a.id")
@@ -32,7 +35,10 @@ export function createClientController(db: Knex) {
           db.raw(
             "COUNT(DISTINCT CASE WHEN a.status != 'revoked' THEN a.id END)::int AS monitor_count"
           ),
-          db.raw("COUNT(DISTINCT CASE WHEN d.active = true THEN d.id END)::int AS device_count")
+          db.raw("COUNT(DISTINCT CASE WHEN d.active = true THEN d.id END)::int AS device_count"),
+          db.raw(
+            "COUNT(DISTINCT CASE WHEN a.status = 'active' AND a.last_seen > NOW() - INTERVAL '5 minutes' THEN a.id END)::int AS active_monitor_count"
+          )
         )
         .leftJoin("agents as a", "a.client_id", "clients.id")
         .leftJoin("devices as d", "d.agent_id", "a.id")

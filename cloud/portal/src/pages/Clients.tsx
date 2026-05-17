@@ -14,10 +14,11 @@ interface Client {
   created_at: string;
   monitor_count: number;
   device_count: number;
+  active_monitor_count: number;
 }
 
-function StatusBadge({ monitors, devices }: { monitors: number; devices: number }) {
-  if (devices > 0) {
+function StatusBadge({ activeMonitors, devices }: { activeMonitors: number; devices: number }) {
+  if (activeMonitors > 0) {
     return (
       <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-emerald-600 bg-emerald-50 px-2 py-1 rounded-md border border-emerald-100">
         <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -25,11 +26,11 @@ function StatusBadge({ monitors, devices }: { monitors: number; devices: number 
       </span>
     );
   }
-  if (monitors > 0) {
+  if (devices > 0) {
     return (
       <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-amber-600 bg-amber-50 px-2 py-1 rounded-md border border-amber-100">
         <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-        Sin dispositivos
+        Sin Contacto
       </span>
     );
   }
@@ -194,7 +195,7 @@ const Clients = () => {
                       </Link>
                     </td>
                     <td className="px-6 py-4">
-                      <StatusBadge monitors={client.monitor_count} devices={client.device_count} />
+                      <StatusBadge activeMonitors={client.active_monitor_count} devices={client.device_count} />
                     </td>
                     <td className="px-6 py-4 hidden md:table-cell">
                       <div className="flex flex-col gap-1">
