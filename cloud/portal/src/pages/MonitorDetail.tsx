@@ -61,7 +61,29 @@ const MonitorDetail = () => {
     return (tab === 'overview' || tab === 'devices' || tab === 'console') ? tab : 'overview';
   });
   const [now, setNow] = useState(Date.now());
-  
+
+  const exportCountersCSV = () => {
+    const today = new Date().toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    const monitorName = monitor?.name ?? 'monitor';
+    const rows: string[] = [
+      'SERIE;FECHA;TIPO;CLASE;CONTADOR;CLASE;CONTADOR;MOTIVO;OBSERVACIONES'
+    ];
+    for (const d of devices) {
+      const serie = d.serial_number ?? 'S/N';
+      const tipo = [d.brand, d.model].filter(Boolean).join(' ') || 'Impresora';
+      const mono = d.mono_pages ?? 0;
+      const color = d.color_pages ?? 0;
+      rows.push(`${serie};${today};${tipo};MONO;${mono};COLOR;${color};;`);
+    }
+    const csv = rows.join('\r\n');
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `contadores_${monitorName.replace(/\s+/g, '_')}_${today.replace(/\//g, '-')}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
   // Monitoring State
   const [commandLoading, setCommandLoading] = useState<string | null>(null);
   
@@ -491,9 +513,20 @@ const MonitorDetail = () => {
               <h3 className="text-sm font-black text-[#1a2333] uppercase tracking-tight">Parque de Impresión</h3>
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Dispositivos descubiertos y monitorizados por este nodo</p>
             </div>
-            <span className="px-4 py-1.5 bg-slate-100 text-slate-500 rounded-full text-[10px] font-black uppercase tracking-widest">
-              {devices.length} Equipos
-            </span>
+            <div className="flex items-center gap-3">
+              {devices.length > 0 && (
+                <button
+                  onClick={exportCountersCSV}
+                  className="flex items-center gap-2 px-4 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl text-[11px] font-black uppercase tracking-wider transition-colors border border-emerald-200"
+                >
+                  <Download size={13} />
+                  Exportar CSV
+                </button>
+              )}
+              <span className="px-4 py-1.5 bg-slate-100 text-slate-500 rounded-full text-[10px] font-black uppercase tracking-widest">
+                {devices.length} Equipos
+              </span>
+            </div>
           </header>
           
           <div className="overflow-x-auto">
