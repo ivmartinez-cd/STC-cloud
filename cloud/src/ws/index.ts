@@ -24,7 +24,7 @@ export function sendCommandToAgent(agentId: string, commandType: string, payload
 
 export async function registerWebSocket(fastify: FastifyInstance, agentService: any) {
   fastify.get('/ws', { websocket: true } as any, async (connection: any, request: any) => {
-    const { socket } = connection;
+    const socket = connection; // @fastify/websocket v11: connection IS the WebSocket directly
 
     let agentId: string | null = null;
     let user: any = null;
