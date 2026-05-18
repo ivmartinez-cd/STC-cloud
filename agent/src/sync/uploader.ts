@@ -11,16 +11,20 @@ export async function uploadPending(config: AgentConfig): Promise<UploadResult &
   if (!pending.length) return { uploaded: 0, failed: 0 };
 
   const readings = pending.map(r => ({
-    device_id:   r.device_id,
-    ip:          r.ip,
-    brand:       r.brand,
-    model:       r.model,
-    time:        r.time,
-    total_pages: r.total_pages,
-    mono_pages:  r.mono_pages,
-    color_pages: r.color_pages,
-    poll_method: r.poll_method ?? 'snmp',
-    offline:     true,
+    device_id:     r.device_id,
+    ip:            r.ip,
+    brand:         r.brand,
+    model:         r.model,
+    time:          r.time,
+    total_pages:   r.total_pages,
+    mono_pages:    r.mono_pages,
+    color_pages:   r.color_pages,
+    toner_black:   r.toner_black   ?? null,
+    toner_cyan:    r.toner_cyan    ?? null,
+    toner_magenta: r.toner_magenta ?? null,
+    toner_yellow:  r.toner_yellow  ?? null,
+    poll_method:   r.poll_method ?? 'snmp',
+    offline:       true,
   }));
 
   const { res, updatedConfig } = await postWithAuth(`${config.serverUrl}/api/v1/devices/sync`, { readings }, config);

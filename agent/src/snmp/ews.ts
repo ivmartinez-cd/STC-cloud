@@ -5,12 +5,16 @@ import { detectBrandFromText, type Brand } from './oids';
 const EWS_TIMEOUT = 4000;
 
 export interface EwsData {
-  brand:       Brand;
-  model:       string | null;
-  serial:      string | null;
-  totalPages:  number | null;
-  monoPages:   number | null;
-  colorPages:  number | null;
+  brand:          Brand;
+  model:          string | null;
+  serial:         string | null;
+  totalPages:     number | null;
+  monoPages:      number | null;
+  colorPages:     number | null;
+  tonerBlack?:    number | null;
+  tonerCyan?:     number | null;
+  tonerMagenta?:  number | null;
+  tonerYellow?:   number | null;
 }
 
 // ─── URL candidates ordered by reliability ───────────────────────────────────
@@ -21,29 +25,32 @@ interface EwsCandidate { path: string; protocol: 'http' | 'https'; parse: Parser
 
 const CANDIDATES: EwsCandidate[] = [
   // Samsung Solution Web Service (newer models, e.g. X4300LX)
-  { path: '/sws.application/home/homeDeviceInfo.sws',               protocol: 'http',  parse: parseSamsungSolutionHome     },
-  { path: '/sws.application/information/countersView.sws',           protocol: 'http',  parse: parseSamsungSolutionCounters },
-  // Samsung SyncThru: home (model + serial), identity (model + serial), then counters (page count)
-  { path: '/sws/app/information/home/home.json',                   protocol: 'http',  parse: parseSamsungHome     },
-  { path: '/sws/app/information/identity/identity.json',           protocol: 'http',  parse: parseSamsungIdentity },
-  { path: '/sws/app/information/counters/counters.json',           protocol: 'http',  parse: parseSamsungCounters },
+  { path: '/sws.application/home/homeDeviceInfo.sws',                   protocol: 'http', parse: parseSamsungSolutionHome      },
+  { path: '/sws.application/information/suppliesView.sws',               protocol: 'http', parse: parseSamsungSolutionSupplies  },
+  { path: '/sws.application/information/countersView.sws',               protocol: 'http', parse: parseSamsungSolutionCounters  },
+  // Samsung SyncThru: home (model + serial), identity (model + serial), supplies (toner), counters (page count)
+  { path: '/sws/app/information/home/home.json',                        protocol: 'http', parse: parseSamsungHome              },
+  { path: '/sws/app/information/identity/identity.json',                protocol: 'http', parse: parseSamsungIdentity          },
+  { path: '/sws/app/information/supplies/supplies.json',                protocol: 'http', parse: parseSamsungSyncThruSupplies  },
+  { path: '/sws/app/information/counters/counters.json',                protocol: 'http', parse: parseSamsungCounters          },
   // Lexmark config/deviceinfo
-  { path: '/cgi-bin/dynamic/printer/config/reports/deviceinfo.html', protocol: 'http',  parse: parseLexmarkEws      },
-  // HP: XML > HTML (XML is more stable across firmware updates)
-  { path: '/DevMgmt/ProductUsageDyn.xml',                          protocol: 'http',  parse: parseHpXml   },
-  { path: '/hp/device/InternalPages/Index?id=UsagePage',           protocol: 'http',  parse: parseHpHtml  },
+  { path: '/cgi-bin/dynamic/printer/config/reports/deviceinfo.html',    protocol: 'http', parse: parseLexmarkEws               },
+  // HP: supplies first (toner levels), then XML > HTML for page counters
+  { path: '/hp/device/InternalPages/Index?id=SuppliesStatus',           protocol: 'http', parse: parseHpSupplies               },
+  { path: '/DevMgmt/ProductUsageDyn.xml',                               protocol: 'http', parse: parseHpXml                    },
+  { path: '/hp/device/InternalPages/Index?id=UsagePage',                protocol: 'http', parse: parseHpHtml                   },
   // Ricoh
-  { path: '/web/entry.cgi?func=STR_PRTCNT',                        protocol: 'http',  parse: parseGeneric },
+  { path: '/web/entry.cgi?func=STR_PRTCNT',                             protocol: 'http', parse: parseGeneric                  },
   // Brother
-  { path: '/general/status.html',                                  protocol: 'http',  parse: parseGeneric },
+  { path: '/general/status.html',                                        protocol: 'http', parse: parseGeneric                  },
   // Epson
-  { path: '/PRESENTATION/HTML/TOP/PRTINFO.HTML',                   protocol: 'http',  parse: parseGeneric },
+  { path: '/PRESENTATION/HTML/TOP/PRTINFO.HTML',                        protocol: 'http', parse: parseGeneric                  },
   // Canon
-  { path: '/English/pages/cnc_status.html',                        protocol: 'http',  parse: parseGeneric },
+  { path: '/English/pages/cnc_status.html',                             protocol: 'http', parse: parseGeneric                  },
   // Konica Minolta
-  { path: '/wcd/index.html',                                        protocol: 'http',  parse: parseGeneric },
+  { path: '/wcd/index.html',                                             protocol: 'http', parse: parseGeneric                  },
   // Xerox
-  { path: '/cgi-bin/cgix/xerox/printerStat.cgi',                   protocol: 'http',  parse: parseGeneric },
+  { path: '/cgi-bin/cgix/xerox/printerStat.cgi',                        protocol: 'http', parse: parseGeneric                  },
 ];
 
 export async function readDeviceViaEWS(ip: string): Promise<EwsData | null> {
@@ -58,12 +65,16 @@ export async function readDeviceViaEWS(ip: string): Promise<EwsData | null> {
       const parsed = c.parse(body);
 
       // Merge: only overwrite with a better (non-undefined) value
-      if (parsed.brand      !== undefined) acc.brand      = parsed.brand;
-      if (parsed.model      !== undefined) acc.model      = parsed.model;
-      if (parsed.serial     !== undefined) acc.serial     = parsed.serial;
-      if (parsed.totalPages !== undefined) acc.totalPages = parsed.totalPages;
-      if (parsed.monoPages  !== undefined) acc.monoPages  = parsed.monoPages;
-      if (parsed.colorPages !== undefined) acc.colorPages = parsed.colorPages;
+      if (parsed.brand        !== undefined) acc.brand        = parsed.brand;
+      if (parsed.model        !== undefined) acc.model        = parsed.model;
+      if (parsed.serial       !== undefined) acc.serial       = parsed.serial;
+      if (parsed.totalPages   !== undefined) acc.totalPages   = parsed.totalPages;
+      if (parsed.monoPages    !== undefined) acc.monoPages    = parsed.monoPages;
+      if (parsed.colorPages   !== undefined) acc.colorPages   = parsed.colorPages;
+      if (parsed.tonerBlack   !== undefined) acc.tonerBlack   = parsed.tonerBlack;
+      if (parsed.tonerCyan    !== undefined) acc.tonerCyan    = parsed.tonerCyan;
+      if (parsed.tonerMagenta !== undefined) acc.tonerMagenta = parsed.tonerMagenta;
+      if (parsed.tonerYellow  !== undefined) acc.tonerYellow  = parsed.tonerYellow;
 
       // Stop as soon as we have page counters (no need to probe more endpoints)
       if (acc.totalPages !== undefined) break;
@@ -75,11 +86,15 @@ export async function readDeviceViaEWS(ip: string): Promise<EwsData | null> {
   const brand = acc.brand ?? (acc.model ? detectBrandFromText(acc.model) : 'generic');
   return {
     brand,
-    model:      acc.model      ?? null,
-    serial:     acc.serial     ?? null,
-    totalPages: acc.totalPages ?? null,
-    monoPages:  acc.monoPages  ?? null,
-    colorPages: acc.colorPages ?? null,
+    model:        acc.model        ?? null,
+    serial:       acc.serial       ?? null,
+    totalPages:   acc.totalPages   ?? null,
+    monoPages:    acc.monoPages    ?? null,
+    colorPages:   acc.colorPages   ?? null,
+    tonerBlack:   acc.tonerBlack   ?? null,
+    tonerCyan:    acc.tonerCyan    ?? null,
+    tonerMagenta: acc.tonerMagenta ?? null,
+    tonerYellow:  acc.tonerYellow  ?? null,
   };
 }
 
@@ -354,7 +369,107 @@ function parseGeneric(html: string): Partial<EwsData> {
   };
 }
 
+// ─── HP FutureSmart Supplies Status parser ────────────────────────────────────
+
+function parseHpSupplies(html: string): Partial<EwsData> {
+  const extractById = (pattern: RegExp): number | null => {
+    const m = html.match(pattern);
+    if (!m) return null;
+    const pct = parseInt(m[1].replace(/[%\s]/g, ''), 10);
+    return isNaN(pct) ? null : Math.min(100, Math.max(0, pct));
+  };
+
+  // Modern HP FutureSmart: id="BlackCartridge1-Header_Level">15%
+  const black   = extractById(/id="[^"]*Black[^"]*(?:Level|Remaining)[^"]*"[^>]*>\s*([\d]+)\s*%/i)
+               ?? htmlTonerPct(html, /black\s*(?:toner|cartridge|ink)/i);
+  const cyan    = extractById(/id="[^"]*Cyan[^"]*(?:Level|Remaining)[^"]*"[^>]*>\s*([\d]+)\s*%/i)
+               ?? htmlTonerPct(html, /cyan\s*(?:toner|cartridge|ink)/i);
+  const magenta = extractById(/id="[^"]*Magenta[^"]*(?:Level|Remaining)[^"]*"[^>]*>\s*([\d]+)\s*%/i)
+               ?? htmlTonerPct(html, /magenta\s*(?:toner|cartridge|ink)/i);
+  const yellow  = extractById(/id="[^"]*Yellow[^"]*(?:Level|Remaining)[^"]*"[^>]*>\s*([\d]+)\s*%/i)
+               ?? htmlTonerPct(html, /yellow\s*(?:toner|cartridge|ink)/i);
+
+  if (black === null && cyan === null && magenta === null && yellow === null) return {};
+  return { brand: 'hp', tonerBlack: black, tonerCyan: cyan, tonerMagenta: magenta, tonerYellow: yellow };
+}
+
+// ─── Samsung SyncThru supplies.json parser ────────────────────────────────────
+
+function parseSamsungSyncThruSupplies(body: string): Partial<EwsData> {
+  const extract = (pattern: RegExp): number | null => {
+    const m = body.match(pattern);
+    if (!m) return null;
+    const v = parseInt(m[1], 10);
+    return isNaN(v) ? null : Math.min(100, Math.max(0, v));
+  };
+
+  // V4 JS-style variables
+  const black   = extract(/GXI_TONER_BLACK_REMAIN_CNT\s*:\s*(\d+)/i)
+               ?? extract(/"color"\s*:\s*"black"[^}]*"remaining"\s*:\s*(\d+)/i)
+               ?? extract(/"remaining"\s*:\s*(\d+)[^}]*"color"\s*:\s*"black"/i);
+  const cyan    = extract(/GXI_TONER_CYAN_REMAIN_CNT\s*:\s*(\d+)/i)
+               ?? extract(/"color"\s*:\s*"cyan"[^}]*"remaining"\s*:\s*(\d+)/i)
+               ?? extract(/"remaining"\s*:\s*(\d+)[^}]*"color"\s*:\s*"cyan"/i);
+  const magenta = extract(/GXI_TONER_MAGENTA_REMAIN_CNT\s*:\s*(\d+)/i)
+               ?? extract(/"color"\s*:\s*"magenta"[^}]*"remaining"\s*:\s*(\d+)/i)
+               ?? extract(/"remaining"\s*:\s*(\d+)[^}]*"color"\s*:\s*"magenta"/i);
+  const yellow  = extract(/GXI_TONER_YELLOW_REMAIN_CNT\s*:\s*(\d+)/i)
+               ?? extract(/"color"\s*:\s*"yellow"[^}]*"remaining"\s*:\s*(\d+)/i)
+               ?? extract(/"remaining"\s*:\s*(\d+)[^}]*"color"\s*:\s*"yellow"/i);
+
+  if (black === null && cyan === null && magenta === null && yellow === null) return {};
+  return { brand: 'samsung', tonerBlack: black, tonerCyan: cyan, tonerMagenta: magenta, tonerYellow: yellow };
+}
+
+// ─── Samsung Solution Web Service supplies parser ─────────────────────────────
+
+function parseSamsungSolutionSupplies(html: string): Partial<EwsData> {
+  const trRegex = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
+  const tdRegex = /<td[^>]*>([\s\S]*?)<\/td>/gi;
+
+  let black: number | null = null;
+  let cyan:  number | null = null;
+  let magenta: number | null = null;
+  let yellow: number | null = null;
+
+  let trMatch;
+  while ((trMatch = trRegex.exec(html)) !== null) {
+    const rowHtml = trMatch[1];
+    const tds: string[] = [];
+    let tdMatch;
+    while ((tdMatch = tdRegex.exec(rowHtml)) !== null) {
+      tds.push(tdMatch[1].replace(/<[^>]*>/g, '').trim());
+    }
+    if (tds.length < 2) continue;
+    const label  = tds[0];
+    const pctStr = tds[tds.length - 1];
+    const raw    = parseInt(pctStr.replace('%', '').replace(/[,\.]/g, '').trim(), 10);
+    if (isNaN(raw)) continue;
+    const pct = Math.min(100, Math.max(0, raw));
+
+    if (/(?:흑백|Black|Negro)\s*(?:토너|Toner|Tóner)?/i.test(label) && !/Total|총합/i.test(label)) {
+      black = pct;
+    } else if (/(?:시안|Cyan)/i.test(label)) {
+      cyan = pct;
+    } else if (/(?:마젠타|Magenta)/i.test(label)) {
+      magenta = pct;
+    } else if (/(?:노란|Yellow|Amarillo)/i.test(label)) {
+      yellow = pct;
+    }
+  }
+
+  if (black === null && cyan === null && magenta === null && yellow === null) return {};
+  return { brand: 'samsung', tonerBlack: black, tonerCyan: cyan, tonerMagenta: magenta, tonerYellow: yellow };
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function htmlTonerPct(html: string, label: RegExp): number | null {
+  const m = html.match(new RegExp(label.source + '[^<]{0,200}(\\d+)\\s*%', 'i'));
+  if (!m) return null;
+  const pct = parseInt(m[1], 10);
+  return isNaN(pct) ? null : Math.min(100, Math.max(0, pct));
+}
 
 function htmlCounter(html: string, label: RegExp): number | null {
   const m = html.match(new RegExp(

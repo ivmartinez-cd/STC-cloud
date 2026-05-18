@@ -68,17 +68,21 @@ async function checkOpenPorts(ip: string): Promise<Set<number>> {
 }
 
 export interface DeviceReading {
-  ip:          string;
-  brand:       Brand;
-  model:       string;
-  sysDescr:    string;
-  sysName:     string;
-  serial:      string | null;
-  total_pages: number | null;
-  mono_pages:  number | null;
-  color_pages: number | null;
-  time:        string;
-  poll_method: PollMethod;
+  ip:             string;
+  brand:          Brand;
+  model:          string;
+  sysDescr:       string;
+  sysName:        string;
+  serial:         string | null;
+  total_pages:    number | null;
+  mono_pages:     number | null;
+  color_pages:    number | null;
+  toner_black?:   number | null;
+  toner_cyan?:    number | null;
+  toner_magenta?: number | null;
+  toner_yellow?:  number | null;
+  time:           string;
+  poll_method:    PollMethod;
 }
 
 function createSession(ip: string, community: string) {
@@ -173,16 +177,20 @@ async function readViaEWS(ip: string): Promise<DeviceReading | null> {
   if (!data) return null;
   return {
     ip,
-    brand:       data.brand,
-    model:       (data.model ?? data.brand).slice(0, 100),
-    sysDescr:    '',
-    sysName:     '',
-    serial:      data.serial ?? null,
-    total_pages: data.totalPages,
-    mono_pages:  data.monoPages,
-    color_pages: data.colorPages,
-    time:        new Date().toISOString(),
-    poll_method: 'ews',
+    brand:         data.brand,
+    model:         (data.model ?? data.brand).slice(0, 100),
+    sysDescr:      '',
+    sysName:       '',
+    serial:        data.serial ?? null,
+    total_pages:   data.totalPages,
+    mono_pages:    data.monoPages,
+    color_pages:   data.colorPages,
+    toner_black:   data.tonerBlack   ?? null,
+    toner_cyan:    data.tonerCyan    ?? null,
+    toner_magenta: data.tonerMagenta ?? null,
+    toner_yellow:  data.tonerYellow  ?? null,
+    time:          new Date().toISOString(),
+    poll_method:   'ews',
   };
 }
 
@@ -195,16 +203,74 @@ async function readViaPJL(ip: string): Promise<DeviceReading | null> {
   return {
     ip,
     brand,
-    model:       (data.model ?? brand).slice(0, 100),
-    sysDescr:    '',
-    sysName:     '',
-    serial:      data.serial ?? null,
-    total_pages: data.totalPages,
-    mono_pages:  null,
-    color_pages: null,
-    time:        new Date().toISOString(),
-    poll_method: 'pjl',
+    model:         (data.model ?? brand).slice(0, 100),
+    sysDescr:      '',
+    sysName:       '',
+    serial:        data.serial ?? null,
+    total_pages:   data.totalPages,
+    mono_pages:    null,
+    color_pages:   null,
+    toner_black:   null,
+    toner_cyan:    null,
+    toner_magenta: null,
+    toner_yellow:  null,
+    time:          new Date().toISOString(),
+    poll_method:   'pjl',
   };
+}
+
+// ─── Toner via Printer-MIB prtMarkerSuppliesTable (RFC 3805) ─────────────────
+
+const SUPPLY_DESC  = '1.3.6.1.2.1.43.11.1.1.6.1';
+const SUPPLY_MAX   = '1.3.6.1.2.1.43.11.1.1.8.1';
+const SUPPLY_LEVEL = '1.3.6.1.2.1.43.11.1.1.9.1';
+
+interface TonerLevels {
+  toner_black:   number | null;
+  toner_cyan:    number | null;
+  toner_magenta: number | null;
+  toner_yellow:  number | null;
+}
+
+async function readTonerViaSNMP(session: any): Promise<TonerLevels> {
+  const result: TonerLevels = { toner_black: null, toner_cyan: null, toner_magenta: null, toner_yellow: null };
+
+  // Read all supply descriptions in parallel (indices 1-6 covers most printers)
+  const descs = await Promise.all(
+    Array.from({ length: 6 }, (_, i) =>
+      snmpGet(session, `${SUPPLY_DESC}.${i + 1}`).then(v => ({ idx: i + 1, v })),
+    ),
+  );
+
+  const candidates = descs
+    .filter(({ v }) => v !== null)
+    .map(({ idx, v }) => {
+      const s = String(v!).toLowerCase();
+      let key: keyof TonerLevels | null = null;
+      if      (/black|negro|noir|schwarz|nero|blk/i.test(s)) key = 'toner_black';
+      else if (/cyan|cian/i.test(s))                          key = 'toner_cyan';
+      else if (/magenta/i.test(s))                            key = 'toner_magenta';
+      else if (/yellow|amarillo|jaune|gelb|giallo|yel/i.test(s)) key = 'toner_yellow';
+      return key ? { idx, key } : null;
+    })
+    .filter(Boolean) as Array<{ idx: number; key: keyof TonerLevels }>;
+
+  await Promise.all(
+    candidates.map(async ({ idx, key }) => {
+      if (result[key] !== null) return;
+      const [max, level] = await Promise.all([
+        snmpGet(session, `${SUPPLY_MAX}.${idx}`),
+        snmpGet(session, `${SUPPLY_LEVEL}.${idx}`),
+      ]);
+      if (max === null || level === null) return;
+      const maxN = Number(max); const lvlN = Number(level);
+      if (lvlN === -3 && maxN > 0) { result[key] = 100; return; }
+      if (lvlN < 0 || maxN <= 0) return;
+      result[key] = Math.min(100, Math.max(0, Math.round((lvlN / maxN) * 100)));
+    }),
+  );
+
+  return result;
 }
 
 // ─── Method 3: SNMP v2c (port 161 UDP) ───────────────────────────────────────
@@ -268,18 +334,25 @@ async function readViaSNMP(ip: string, community: string): Promise<DeviceReading
     let finalBrand = brand;
     if (finalBrand === 'generic') finalBrand = detectBrandFromText(raw);
 
+    let toner: TonerLevels = { toner_black: null, toner_cyan: null, toner_magenta: null, toner_yellow: null };
+    try { toner = await readTonerViaSNMP(session); } catch { /* supply table unavailable */ }
+
     return {
       ip,
-      brand:       finalBrand,
-      sysDescr:    raw.slice(0, 255),
-      sysName:     String(sysName ?? ''),
-      serial:      serial ? String(serial).trim() || null : null,
-      total_pages: totalPages !== null ? Number(totalPages) : null,
-      mono_pages:  monoPages  !== null ? Number(monoPages)  : null,
-      color_pages: colorPages !== null ? Number(colorPages) : null,
-      model:       cleaned.slice(0, 100),
-      time:        new Date().toISOString(),
-      poll_method: 'snmp',
+      brand:         finalBrand,
+      sysDescr:      raw.slice(0, 255),
+      sysName:       String(sysName ?? ''),
+      serial:        serial ? String(serial).trim() || null : null,
+      total_pages:   totalPages !== null ? Number(totalPages) : null,
+      mono_pages:    monoPages  !== null ? Number(monoPages)  : null,
+      color_pages:   colorPages !== null ? Number(colorPages) : null,
+      toner_black:   toner.toner_black,
+      toner_cyan:    toner.toner_cyan,
+      toner_magenta: toner.toner_magenta,
+      toner_yellow:  toner.toner_yellow,
+      model:         cleaned.slice(0, 100),
+      time:          new Date().toISOString(),
+      poll_method:   'snmp',
     };
   } finally {
     session.close();
@@ -296,15 +369,19 @@ async function readViaIPP(ip: string): Promise<DeviceReading | null> {
   return {
     ip,
     brand,
-    model:       (data.model ?? data.name ?? brand).slice(0, 100),
-    sysDescr:    '',
-    sysName:     data.name ?? '',
-    serial:      data.serial ?? null,
-    total_pages: null,
-    mono_pages:  null,
-    color_pages: null,
-    time:        new Date().toISOString(),
-    poll_method: 'ipp',
+    model:         (data.model ?? data.name ?? brand).slice(0, 100),
+    sysDescr:      '',
+    sysName:       data.name ?? '',
+    serial:        data.serial ?? null,
+    total_pages:   null,
+    mono_pages:    null,
+    color_pages:   null,
+    toner_black:   null,
+    toner_cyan:    null,
+    toner_magenta: null,
+    toner_yellow:  null,
+    time:          new Date().toISOString(),
+    poll_method:   'ipp',
   };
 }
 

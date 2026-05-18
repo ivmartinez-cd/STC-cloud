@@ -1,4 +1,4 @@
-﻿; ============================================================================
+; ============================================================================
 ;  STC Cloud Monitor ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Instalador para Windows
 ;  Requiere: Inno Setup 6.x (https://jrsoftware.org/isinfo.php)
 ;
@@ -20,7 +20,7 @@
 ; ============================================================================
 
 #define MyAppName      "STC Cloud Monitor"
-#define MyAppVersion   "1.6.5"
+#define MyAppVersion   "1.6.6"
 #define MyAppPublisher "STC Cloud"
 #define MyAppExeName   "stc-node.exe"
 #define ServiceName    "STCCloudMonitor"

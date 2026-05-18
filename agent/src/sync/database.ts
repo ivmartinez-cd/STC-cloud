@@ -31,18 +31,22 @@ export function openQueue(): void {
 
   db.exec(`
     CREATE TABLE IF NOT EXISTS readings_queue (
-      id          INTEGER PRIMARY KEY AUTOINCREMENT,
-      device_id   TEXT    NOT NULL,
-      ip          TEXT,
-      brand       TEXT,
-      model       TEXT,
-      time        TEXT    NOT NULL,
-      total_pages INTEGER,
-      mono_pages  INTEGER,
-      color_pages INTEGER,
-      poll_method TEXT    DEFAULT 'snmp',
-      synced      INTEGER DEFAULT 0,
-      created_at  TEXT    DEFAULT (datetime('now'))
+      id            INTEGER PRIMARY KEY AUTOINCREMENT,
+      device_id     TEXT    NOT NULL,
+      ip            TEXT,
+      brand         TEXT,
+      model         TEXT,
+      time          TEXT    NOT NULL,
+      total_pages   INTEGER,
+      mono_pages    INTEGER,
+      color_pages   INTEGER,
+      toner_black   INTEGER,
+      toner_cyan    INTEGER,
+      toner_magenta INTEGER,
+      toner_yellow  INTEGER,
+      poll_method   TEXT    DEFAULT 'snmp',
+      synced        INTEGER DEFAULT 0,
+      created_at    TEXT    DEFAULT (datetime('now'))
     );
 
     CREATE TABLE IF NOT EXISTS known_devices (
@@ -58,8 +62,12 @@ export function openQueue(): void {
 
   // Migracion en caliente: agrega columna si la BD ya existia sin ella
   for (const stmt of [
-    "ALTER TABLE readings_queue ADD COLUMN poll_method TEXT DEFAULT 'snmp'",
-    "ALTER TABLE known_devices  ADD COLUMN poll_method TEXT DEFAULT 'snmp'",
+    "ALTER TABLE readings_queue ADD COLUMN poll_method   TEXT    DEFAULT 'snmp'",
+    "ALTER TABLE known_devices  ADD COLUMN poll_method   TEXT    DEFAULT 'snmp'",
+    "ALTER TABLE readings_queue ADD COLUMN toner_black   INTEGER DEFAULT NULL",
+    "ALTER TABLE readings_queue ADD COLUMN toner_cyan    INTEGER DEFAULT NULL",
+    "ALTER TABLE readings_queue ADD COLUMN toner_magenta INTEGER DEFAULT NULL",
+    "ALTER TABLE readings_queue ADD COLUMN toner_yellow  INTEGER DEFAULT NULL",
   ]) {
     try { db.exec(stmt); } catch { /* columna ya existe */ }
   }
@@ -68,11 +76,14 @@ export function openQueue(): void {
 export function enqueueReading(r: DeviceReading): void {
   db.prepare(`
     INSERT INTO readings_queue
-      (device_id, ip, brand, model, time, total_pages, mono_pages, color_pages, poll_method)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      (device_id, ip, brand, model, time, total_pages, mono_pages, color_pages,
+       toner_black, toner_cyan, toner_magenta, toner_yellow, poll_method)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     r.serial ?? r.ip, r.ip, r.brand, r.model, r.time,
-    r.total_pages, r.mono_pages, r.color_pages, r.poll_method ?? 'snmp',
+    r.total_pages, r.mono_pages, r.color_pages,
+    r.toner_black ?? null, r.toner_cyan ?? null, r.toner_magenta ?? null, r.toner_yellow ?? null,
+    r.poll_method ?? 'snmp',
   );
 }
 
