@@ -131,8 +131,13 @@ export async function readDevice(
     const fast = hintMethod === 'snmp'
       ? await readViaSNMP(ip, community)
       : await readViaMethod(ip, hintMethod);
-    if (fast) return fast;
-    // Previous method stopped working - fall through to full cascade
+    if (fast) {
+      // If we got rich counters, or if the hint method is already counter-rich (ews/snmp), use it!
+      if (fast.mono_pages !== null || hintMethod === 'ews' || hintMethod === 'snmp') {
+        return fast;
+      }
+    }
+    // Previous method stopped working or lacked detailed counters - fall through to full cascade
   }
 
   // Port 9100 (JetDirect) and 631 (IPP) are printer-exclusive.

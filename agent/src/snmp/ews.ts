@@ -20,6 +20,9 @@ type Parser = (body: string) => Partial<EwsData>;
 interface EwsCandidate { path: string; protocol: 'http' | 'https'; parse: Parser; }
 
 const CANDIDATES: EwsCandidate[] = [
+  // Samsung Solution Web Service (newer models, e.g. X4300LX)
+  { path: '/sws.application/home/homeDeviceInfo.sws',               protocol: 'http',  parse: parseSamsungSolutionHome     },
+  { path: '/sws.application/information/countersView.sws',           protocol: 'http',  parse: parseSamsungSolutionCounters },
   // Samsung SyncThru: home (model + serial), identity (model + serial), then counters (page count)
   { path: '/sws/app/information/home/home.json',                   protocol: 'http',  parse: parseSamsungHome     },
   { path: '/sws/app/information/identity/identity.json',           protocol: 'http',  parse: parseSamsungIdentity },
@@ -179,6 +182,74 @@ function parseSamsungCounters(body: string): Partial<EwsData> {
     totalPages: total !== null ? total : undefined,
     monoPages:  mono !== undefined ? mono : undefined,
     colorPages: color !== undefined ? color : undefined,
+  };
+}
+
+// Samsung Solution Web Service — home info (model + serial)
+function parseSamsungSolutionHome(body: string): Partial<EwsData> {
+  const modelMatch = body.match(/(?:모델명|Model\s*Name)<\/td>\s*<td class="[^"]*">([^<]+)<\/td>/i);
+  const serialMatch = body.match(/(?:시리얼\s*넘버|Serial\s*Number)<\/td>\s*<td class="[^"]*">([^<]+)<\/td>/i);
+
+  const model  = modelMatch  ? modelMatch[1].trim()  : undefined;
+  const serial = serialMatch ? serialMatch[1].trim() : undefined;
+
+  if (!model && !serial) return {};
+  return { brand: 'samsung', model, serial };
+}
+
+// Samsung Solution Web Service — page counters
+function parseSamsungSolutionCounters(html: string): Partial<EwsData> {
+  // Extract serial number
+  const snMatch = html.match(/id='snValue'[^>]*>([^<]+)/i) ||
+                  html.match(/id="snValue"[^>]*>([^<]+)/i);
+  const serial = snMatch ? snMatch[1].trim() : undefined;
+
+  // Extract all rows and cells
+  const trRegex = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
+  const tdRegex = /<td[^>]*>([\s\S]*?)<\/td>/gi;
+
+  let trMatch;
+  let monoPages: number | undefined = undefined;
+  let colorPages: number | undefined = undefined;
+  let totalPages: number | undefined = undefined;
+
+  while ((trMatch = trRegex.exec(html)) !== null) {
+    const rowHtml = trMatch[1];
+    const tds: string[] = [];
+    let tdMatch;
+    while ((tdMatch = tdRegex.exec(rowHtml)) !== null) {
+      const text = tdMatch[1].replace(/<[^>]*>/g, '').trim().replace(/\s+/g, ' ');
+      tds.push(text);
+    }
+    
+    if (tds.length < 2) continue;
+    const label = tds[0];
+    
+    // Get the last column value as the total for this category
+    const lastValStr = tds[tds.length - 1];
+    const lastVal = parseInt(lastValStr.replace(/[,\.]/g, ''), 10);
+    if (isNaN(lastVal)) continue;
+
+    if (/(?:흑백\s*-\s*총합|Black\s*-\s*Total|Mono\s*-\s*Total)/i.test(label)) {
+      if (monoPages === undefined) monoPages = lastVal;
+    } else if (/(?:컬러\s*-\s*총합|Color\s*-\s*Total|컬러\s*총합|Color\s*Total)/i.test(label)) {
+      if (colorPages === undefined) colorPages = lastVal;
+    } else if (/(?:전체\s*면수|Total\s*Impressions|Total\s*Pages)/i.test(label)) {
+      if (totalPages === undefined) totalPages = lastVal;
+    }
+  }
+
+  // Fallback: Total = Mono + Color
+  if (totalPages === undefined && monoPages !== undefined) {
+    totalPages = monoPages + (colorPages ?? 0);
+  }
+
+  return {
+    brand:      'samsung',
+    serial,
+    totalPages,
+    monoPages,
+    colorPages,
   };
 }
 
