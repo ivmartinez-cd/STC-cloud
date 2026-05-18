@@ -125,7 +125,13 @@ function parseSamsungCounters(body: string): Partial<EwsData> {
   const serialMatch = body.match(/GXI_SYS_SERIAL_NUM\s*:\s*["']([^"']+)["']/i) ??
                       body.match(/"serialNum"\s*:\s*"([^"]+)"/i);
   const totalMatch  = body.match(/GXI_BILLING_TOTAL_IMP_CNT\s*:\s*(\d+)/i);
-  const simplexMatch = body.match(/GXI_BILLING_SIMPLEX_BW_TOTAL_CNT\s*:\s*(\d+)/i);
+  
+  const simplexBwMatch = body.match(/GXI_BILLING_SIMPLEX_BW_TOTAL_CNT\s*:\s*(\d+)/i);
+  const duplexBwMatch  = body.match(/GXI_BILLING_DUPLEX_BW_TOTAL_CNT\s*:\s*(\d+)/i);
+  
+  const simplexColorMatch = body.match(/GXI_BILLING_SIMPLEX_COLOR_TOTAL_CNT\s*:\s*(\d+)/i);
+  const duplexColorMatch  = body.match(/GXI_BILLING_DUPLEX_COLOR_TOTAL_CNT\s*:\s*(\d+)/i);
+
   const modelMatch  =
     body.match(/GXI_SYS_PRD_NAME\s*:\s*["']([^"']+)["']/i) ??
     body.match(/GXI_SYS_MODEL_NAME\s*:\s*["']([^"']+)["']/i) ??
@@ -133,18 +139,49 @@ function parseSamsungCounters(body: string): Partial<EwsData> {
 
   const serial = serialMatch ? serialMatch[1].trim() : undefined;
   const model  = modelMatch  ? modelMatch[1].trim()  : undefined;
-  let   total  = totalMatch  ? Number(totalMatch[1]) : null;
-  if (total === null && simplexMatch) total = Number(simplexMatch[1]);
+  
+  const simplexBw = simplexBwMatch ? Number(simplexBwMatch[1]) : null;
+  const duplexBw  = duplexBwMatch  ? Number(duplexBwMatch[1])  : null;
+  const simplexColor = simplexColorMatch ? Number(simplexColorMatch[1]) : null;
+  const duplexColor  = duplexColorMatch  ? Number(duplexColorMatch[1])  : null;
+
+  let total = totalMatch ? Number(totalMatch[1]) : null;
+
+  let mono: number | undefined = undefined;
+  let color: number | undefined = undefined;
+
+  if (simplexBw !== null || duplexBw !== null) {
+    mono = (simplexBw ?? 0) + (duplexBw ?? 0);
+  }
+  if (simplexColor !== null || duplexColor !== null) {
+    color = (simplexColor ?? 0) + (duplexColor ?? 0);
+  }
+
+  // If mono was parsed but color was not, default color to 0
+  if (mono !== undefined && color === undefined) {
+    color = 0;
+  }
+
+  if (total === null && mono !== undefined) {
+    total = mono + (color ?? 0);
+  }
+
+  // Fallback: if we couldn't parse mono or color, use total as mono
+  if (total !== null && mono === undefined) {
+    mono = total;
+    color = 0;
+  }
 
   return {
     brand:      'samsung',
     model,
     serial,
-    totalPages: total !== null ? total    : undefined,
-    monoPages:  total !== null ? total    : undefined,
-    colorPages: total !== null ? 0        : undefined,
+    totalPages: total !== null ? total : undefined,
+    monoPages:  mono !== undefined ? mono : undefined,
+    colorPages: color !== undefined ? color : undefined,
   };
 }
+
 
 // ─── Lexmark EWS parser ──────────────────────────────────────────────────────
 
