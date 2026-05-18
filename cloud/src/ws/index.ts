@@ -73,14 +73,18 @@ export async function registerWebSocket(fastify: FastifyInstance, agentService: 
       data: { message: 'STC Cloud WebSocket activo', role: agentId ? 'agent' : 'portal' }
     }));
 
-    // Server-side heartbeat: keep agent connections alive through Render.com's idle timeout.
-    // All socket operations must be outside the auth try-catch to have access to socket methods.
     let pingInterval: ReturnType<typeof setInterval> | null = null;
     if (agentId) {
       pingInterval = setInterval(() => {
         if (socket.readyState === 1) {
-          // Data frame (no control frame) para que el proxy de Render.com no corte por inactividad
-          socket.send(JSON.stringify({ event: 'ping' }));
+          try {
+            // Enviar ping nativo (control frame) para mantener activa la conexión en proxies y firewalls
+            socket.ping();
+          } catch {}
+          try {
+            // Data frame de compatibilidad
+            socket.send(JSON.stringify({ event: 'ping' }));
+          } catch {}
         } else {
           clearInterval(pingInterval!);
           pingInterval = null;

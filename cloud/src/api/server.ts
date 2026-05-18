@@ -30,7 +30,10 @@ if (!process.env.JWT_SECRET) {
   process.exit(1);
 }
 
-const fastify = Fastify({ logger: true });
+const fastify = Fastify({
+  logger: true,
+  connectionTimeout: 0,
+});
 
 const db = knex(knexConfig.development);
 const redis = new Redis(process.env.REDIS_URL || "redis://localhost:6379", {
@@ -119,8 +122,9 @@ const start = async () => {
       max: 100,
       timeWindow: "1 minute",
       redis,
-      keyGenerator: (request) =>
+      keyGenerator: (request: any) =>
         (request.headers["x-forwarded-for"] as string) || request.ip,
+      allowList: (request: any) => request.url.startsWith("/ws"),
     });
 
     try {
