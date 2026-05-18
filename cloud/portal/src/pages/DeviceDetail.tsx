@@ -10,14 +10,18 @@ import {
 
 interface Reading {
   id: string;
-  time:        string;
-  total_pages: number;
-  mono_pages:  number | null;
-  color_pages: number | null;
-  totalPages?: number; // Compatibilidad con camelCase
-  monoPages?:  number;
-  colorPages?: number;
-  status:      string;
+  time:           string;
+  total_pages:    number;
+  mono_pages:     number | null;
+  color_pages:    number | null;
+  totalPages?:    number; // Compatibilidad con camelCase
+  monoPages?:     number;
+  colorPages?:    number;
+  toner_black?:   number | null;
+  toner_cyan?:    number | null;
+  toner_magenta?: number | null;
+  toner_yellow?:  number | null;
+  status:         string;
 }
 
 interface Device {
@@ -246,6 +250,64 @@ const DeviceDetail = () => {
 
           {/* Stats Panel */}
           <div className="space-y-6">
+
+            {/* Toner Panel */}
+            {latest?.toner_black != null && (
+              <div className="cd-panel p-6 bg-white border border-slate-100 rounded-[24px] space-y-5">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-slate-50 rounded-xl text-[#e67e22]">
+                    <Activity size={20} />
+                  </div>
+                  <div>
+                    <h4 className="font-extrabold text-[#1a2333] text-sm">Nivel de Consumibles</h4>
+                    <p className="text-[10px] font-bold text-slate-400">Estado actual de cartuchos</p>
+                  </div>
+                </div>
+
+                {latest.toner_cyan == null ? (
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center text-xs font-extrabold">
+                      <span className="text-slate-500 uppercase tracking-widest text-[10px]">Tóner Negro</span>
+                      <span className="text-slate-700">{latest.toner_black}%</span>
+                    </div>
+                    <div className="h-3 w-full bg-slate-100 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-slate-700 to-slate-900 rounded-full transition-all duration-1000"
+                        style={{ width: `${latest.toner_black}%` }}
+                      />
+                    </div>
+                    {latest.toner_black <= 15 && (
+                      <p className="text-[10px] font-extrabold text-amber-500 uppercase tracking-widest">⚠ Requiere reposición</p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-4 gap-3 text-center">
+                    {([
+                      { label: 'K', grad: 'from-slate-700 to-slate-900', val: latest.toner_black },
+                      { label: 'C', grad: 'from-cyan-400 to-cyan-600',   val: latest.toner_cyan },
+                      { label: 'M', grad: 'from-pink-400 to-pink-600',   val: latest.toner_magenta },
+                      { label: 'Y', grad: 'from-yellow-300 to-yellow-500', val: latest.toner_yellow },
+                    ] as { label: string; grad: string; val: number | null | undefined }[]).map(t => (
+                      <div key={t.label} className="space-y-2">
+                        <div className="h-28 bg-slate-50 rounded-2xl flex flex-col justify-end overflow-hidden p-1 border border-slate-100 relative">
+                          <div
+                            className={`w-full bg-gradient-to-t ${t.grad} rounded-xl transition-all duration-1000`}
+                            style={{ height: `${t.val ?? 0}%` }}
+                          />
+                          <span className="absolute inset-0 flex items-center justify-center text-[10px] font-black text-slate-700">
+                            {t.val ?? '—'}%
+                          </span>
+                        </div>
+                        <span className={`text-xs font-black uppercase ${(t.val ?? 100) <= 15 ? 'text-amber-500' : 'text-slate-400'}`}>
+                          {t.label}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="rounded-[24px] p-8 bg-gradient-to-br from-[#f7931d] to-[#e67e22] text-white shadow-2xl shadow-orange-500/20">
               <div className="flex items-center gap-3 mb-8">
                 <div className="p-2 bg-white/20 rounded-xl backdrop-blur-md">

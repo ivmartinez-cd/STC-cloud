@@ -13,6 +13,10 @@ interface Device {
   active: boolean;
   monitor_name: string;
   client_name: string;
+  toner_black?:   number | null;
+  toner_cyan?:    number | null;
+  toner_magenta?: number | null;
+  toner_yellow?:  number | null;
 }
 
 const Devices = () => {
@@ -160,6 +164,46 @@ const Devices = () => {
                     {device.brand?.toUpperCase() || 'Genérico'} — <span className="opacity-70">{device.model || 'S/M'}</span>
                   </p>
                 </div>
+
+                {device.toner_black != null && (
+                  <div className="mt-4 pt-3 border-t border-slate-50 space-y-2">
+                    <div className="flex justify-between items-center text-[9px] font-extrabold text-slate-400 uppercase tracking-widest">
+                      <span>Consumibles</span>
+                      <span>{device.toner_black}%</span>
+                    </div>
+                    {device.toner_cyan == null ? (
+                      <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden" title={`Negro: ${device.toner_black}%`}>
+                        <div
+                          className="h-full bg-slate-800 rounded-full transition-all duration-500"
+                          style={{ width: `${device.toner_black}%` }}
+                        />
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-4 gap-1.5">
+                        <div className="h-1 bg-slate-100 rounded-full overflow-hidden" title={`Negro: ${device.toner_black}%`}>
+                          <div className="h-full bg-slate-800" style={{ width: `${device.toner_black}%` }} />
+                        </div>
+                        <div className="h-1 bg-slate-100 rounded-full overflow-hidden" title={`Cian: ${device.toner_cyan}%`}>
+                          <div className="h-full bg-[#00adef]" style={{ width: `${device.toner_cyan ?? 0}%` }} />
+                        </div>
+                        <div className="h-1 bg-slate-100 rounded-full overflow-hidden" title={`Magenta: ${device.toner_magenta}%`}>
+                          <div className="h-full bg-[#ec008c]" style={{ width: `${device.toner_magenta ?? 0}%` }} />
+                        </div>
+                        <div className="h-1 bg-slate-100 rounded-full overflow-hidden" title={`Amarillo: ${device.toner_yellow}%`}>
+                          <div className="h-full bg-[#f5c400]" style={{ width: `${device.toner_yellow ?? 0}%` }} />
+                        </div>
+                      </div>
+                    )}
+                    {(device.toner_black <= 15 ||
+                      (device.toner_cyan != null && device.toner_cyan <= 15) ||
+                      (device.toner_magenta != null && device.toner_magenta <= 15) ||
+                      (device.toner_yellow != null && device.toner_yellow <= 15)) && (
+                      <p className="text-[9px] font-extrabold text-amber-500 uppercase tracking-widest">
+                        ⚠ Tóner bajo — requiere reposición
+                      </p>
+                    )}
+                  </div>
+                )}
 
                 <div className="mt-6 pt-5 border-t border-slate-50 flex items-center justify-between">
                   <div className="space-y-1">

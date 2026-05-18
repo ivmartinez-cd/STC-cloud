@@ -244,6 +244,13 @@ export class AgentService {
       const n = parseInt(v, 10);
       return isNaN(n) ? null : n;
     };
+
+    const parseToner = (v: any) => {
+      if (v === null || v === undefined) return null;
+      const n = parseInt(v, 10);
+      if (isNaN(n)) return null;
+      return Math.min(100, Math.max(0, n));
+    };
     
     for (const r of readings) {
       try {
@@ -278,8 +285,12 @@ export class AgentService {
         const pollMethod = (r.poll_method || 'snmp').slice(0, 20);
 
         const upserted = await this.db.raw<{ rows: { id: string }[] }>(`
-          INSERT INTO devices (id, agent_id, ip_address, serial_number, name, brand, model, active, last_seen, total_pages, mono_pages, color_pages, poll_method)
-          VALUES (?, ?, ?, ?, ?, ?, ?, true, NOW(), ?, ?, ?, ?)
+          INSERT INTO devices (
+            id, agent_id, ip_address, serial_number, name, brand, model, active, last_seen,
+            total_pages, mono_pages, color_pages, poll_method,
+            toner_black, toner_cyan, toner_magenta, toner_yellow
+          )
+          VALUES (?, ?, ?, ?, ?, ?, ?, true, NOW(), ?, ?, ?, ?, ?, ?, ?, ?)
           ON CONFLICT (agent_id, serial_number) WHERE serial_number IS NOT NULL
           DO UPDATE SET
             ip_address    = EXCLUDED.ip_address,
@@ -298,7 +309,11 @@ export class AgentService {
             total_pages   = EXCLUDED.total_pages,
             mono_pages    = EXCLUDED.mono_pages,
             color_pages   = EXCLUDED.color_pages,
-            poll_method   = EXCLUDED.poll_method
+            poll_method   = EXCLUDED.poll_method,
+            toner_black   = EXCLUDED.toner_black,
+            toner_cyan    = EXCLUDED.toner_cyan,
+            toner_magenta = EXCLUDED.toner_magenta,
+            toner_yellow  = EXCLUDED.toner_yellow
           RETURNING id
         `, [
           crypto.randomUUID(),
@@ -312,6 +327,10 @@ export class AgentService {
           parseCount(r.mono_pages),
           parseCount(r.color_pages),
           pollMethod,
+          parseToner(r.toner_black),
+          parseToner(r.toner_cyan),
+          parseToner(r.toner_magenta),
+          parseToner(r.toner_yellow),
         ]);
 
         if (!upserted.rows || upserted.rows.length === 0) {
@@ -338,13 +357,17 @@ export class AgentService {
         }
 
         mappedReadings.push({
-          id: crypto.randomUUID(),
-          time: readingTime,
-          device_id: deviceId,
-          total_pages: parseCount(r.total_pages),
-          mono_pages:  parseCount(r.mono_pages),
-          color_pages: parseCount(r.color_pages),
-          offline:     r.offline ?? false,
+          id:           crypto.randomUUID(),
+          time:         readingTime,
+          device_id:    deviceId,
+          total_pages:  parseCount(r.total_pages),
+          mono_pages:   parseCount(r.mono_pages),
+          color_pages:  parseCount(r.color_pages),
+          toner_black:  parseToner(r.toner_black),
+          toner_cyan:   parseToner(r.toner_cyan),
+          toner_magenta: parseToner(r.toner_magenta),
+          toner_yellow: parseToner(r.toner_yellow),
+          offline:      r.offline ?? false,
         });
       } catch (err: any) {
         console.error(`[SYNC] Error procesando dispositivo ${r.device_id}:`, err.message);
