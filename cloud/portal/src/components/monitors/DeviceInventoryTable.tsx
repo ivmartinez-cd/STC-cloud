@@ -84,13 +84,14 @@ const DeviceInventoryTable = ({ devices, monitorName, monitorStatus, monitorLast
                 <th className="!bg-[#004a99] !text-white !rounded-tl-2xl">Dispositivo</th>
                 <th className="!bg-[#004a99] !text-white">Red</th>
                 <th className="!bg-[#004a99] !text-white">Número de Serie</th>
+                <th className="!bg-[#004a99] !text-white">Tóner</th>
                 <th className="!bg-[#004a99] !text-white !text-right !rounded-tr-2xl">Contadores (Total / Mono / Color)</th>
               </tr>
             </thead>
             <tbody>
               {devices.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-8 py-20 text-center">
+                  <td colSpan={5} className="px-8 py-20 text-center">
                     <div className="flex flex-col items-center gap-3">
                       <Printer size={48} className="text-slate-200" />
                       <p className="text-slate-400 font-bold text-xs uppercase tracking-widest">No se han descubierto dispositivos en este segmento</p>
@@ -125,6 +126,61 @@ const DeviceInventoryTable = ({ devices, monitorName, monitorStatus, monitorLast
                       <span className="px-3 py-1 bg-slate-100 text-slate-600 rounded-lg font-mono text-xs font-bold border border-slate-200">
                         {device.serial_number || 'N/A'}
                       </span>
+                    </td>
+                    <td className="px-8 py-5">
+                      {device.toner_black !== undefined && device.toner_black !== null ? (
+                        <div className="w-28 space-y-1.5">
+                          {device.toner_cyan === null || device.toner_cyan === undefined ? (
+                            // Monocromo
+                            <div className="space-y-1">
+                              <div className="flex justify-between items-center text-[9px] font-extrabold uppercase tracking-widest text-slate-400">
+                                <span>Negro</span>
+                                <span className={device.toner_black <= 15 ? 'text-amber-500 animate-pulse font-black' : 'text-slate-600'}>
+                                  {device.toner_black}%
+                                </span>
+                              </div>
+                              <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden border border-slate-200/50">
+                                <div 
+                                  className={`h-full rounded-full transition-all duration-500 ${
+                                    device.toner_black <= 15 ? 'bg-amber-400' : 'bg-slate-800'
+                                  }`} 
+                                  style={{ width: `${device.toner_black}%` }}
+                                />
+                              </div>
+                            </div>
+                          ) : (
+                            // Color CMYK
+                            <div className="space-y-1">
+                              <div className="flex justify-between items-center text-[9px] font-extrabold uppercase tracking-widest text-slate-400">
+                                <span>CMYK</span>
+                                <span className={
+                                  (device.toner_black <= 15 || device.toner_cyan <= 15 || device.toner_magenta <= 15 || device.toner_yellow <= 15)
+                                    ? 'text-amber-500 animate-pulse font-black'
+                                    : 'text-slate-600'
+                                }>
+                                  Mín: {Math.min(device.toner_black, device.toner_cyan, device.toner_magenta, device.toner_yellow)}%
+                                </span>
+                              </div>
+                              <div className="grid grid-cols-4 gap-1">
+                                <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden border border-slate-200/30" title={`Negro: ${device.toner_black}%`}>
+                                  <div className={`h-full ${device.toner_black <= 15 ? 'bg-amber-400 animate-pulse' : 'bg-slate-800'}`} style={{ width: `${device.toner_black}%` }} />
+                                </div>
+                                <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden border border-slate-200/30" title={`Cian: ${device.toner_cyan}%`}>
+                                  <div className={`h-full ${device.toner_cyan <= 15 ? 'bg-amber-400 animate-pulse' : 'bg-[#00adef]'}`} style={{ width: `${device.toner_cyan}%` }} />
+                                </div>
+                                <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden border border-slate-200/30" title={`Magenta: ${device.toner_magenta}%`}>
+                                  <div className={`h-full ${device.toner_magenta <= 15 ? 'bg-amber-400 animate-pulse' : 'bg-[#ec008c]'}`} style={{ width: `${device.toner_magenta}%` }} />
+                                </div>
+                                <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden border border-slate-200/30" title={`Amarillo: ${device.toner_yellow}%`}>
+                                  <div className={`h-full ${device.toner_yellow <= 15 ? 'bg-amber-400 animate-pulse' : 'bg-[#f5c400]'}`} style={{ width: `${device.toner_yellow}%` }} />
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-[10px] font-extrabold text-slate-300 uppercase tracking-wider">n/a</span>
+                      )}
                     </td>
                     <td className="px-8 py-5 text-right">
                       <div className="flex flex-col items-end gap-1">

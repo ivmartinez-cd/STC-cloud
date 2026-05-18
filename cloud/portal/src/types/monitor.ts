@@ -9,6 +9,10 @@ export interface Device {
   mono_pages: number | null;
   color_pages: number | null;
   brand: string | null;
+  toner_black?: number | null;
+  toner_cyan?: number | null;
+  toner_magenta?: number | null;
+  toner_yellow?: number | null;
 }
 
 export interface MonitorData {
