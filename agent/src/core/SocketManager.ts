@@ -91,8 +91,10 @@ export class SocketManager {
         this.reconnectTimer = null;
       }
       this.pingInterval = setInterval(() => {
-        if (this.ws?.readyState === WebSocket.OPEN) this.ws.ping();
-      }, 30_000);
+        if (this.ws?.readyState === WebSocket.OPEN) {
+          this.ws.ping();
+        }
+      }, 5_000);
     });
 
     this.ws.on('message', (data) => {
@@ -106,8 +108,9 @@ export class SocketManager {
       }
     });
 
-    this.ws.on('close', () => {
-      this.onLog('WARN', `WSS desconectado. Reintento en ${this.reconnectDelay / 1000}s (Exponential Backoff).`);
+    this.ws.on('close', (code, reason) => {
+      const reasonStr = reason ? reason.toString() : '';
+      this.onLog('WARN', `WSS desconectado. Codigo: ${code} | Razon: ${reasonStr || 'ninguna'}. Reintento en ${this.reconnectDelay / 1000}s (Exponential Backoff).`);
       this.ws = null;
       if (this.pingInterval) { clearInterval(this.pingInterval); this.pingInterval = null; }
       this.scheduleReconnect();

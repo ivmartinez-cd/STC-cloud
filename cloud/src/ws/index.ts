@@ -104,6 +104,12 @@ export async function registerWebSocket(fastify: FastifyInstance, agentService: 
       }
     });
 
+    const closePromise = new Promise<void>((resolve) => {
+      socket.once('close', () => {
+        resolve();
+      });
+    });
+
     socket.on('close', () => {
       if (agentId) agentClients.delete(agentId);
       else portalClients.delete(socket);
@@ -115,5 +121,7 @@ export async function registerWebSocket(fastify: FastifyInstance, agentService: 
       if (agentId) agentClients.delete(agentId);
       else portalClients.delete(socket);
     });
+
+    await closePromise;
   });
 }
