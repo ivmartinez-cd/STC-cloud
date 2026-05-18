@@ -20,7 +20,8 @@ type Parser = (body: string) => Partial<EwsData>;
 interface EwsCandidate { path: string; protocol: 'http' | 'https'; parse: Parser; }
 
 const CANDIDATES: EwsCandidate[] = [
-  // Samsung SyncThru: identity first (model + serial), then counters (page count)
+  // Samsung SyncThru: home (model + serial), identity (model + serial), then counters (page count)
+  { path: '/sws/app/information/home/home.json',                   protocol: 'http',  parse: parseSamsungHome     },
   { path: '/sws/app/information/identity/identity.json',           protocol: 'http',  parse: parseSamsungIdentity },
   { path: '/sws/app/information/counters/counters.json',           protocol: 'http',  parse: parseSamsungCounters },
   // Lexmark config/deviceinfo
@@ -81,18 +82,35 @@ export async function readDeviceViaEWS(ip: string): Promise<EwsData | null> {
 
 // ─── Samsung JSON parsers ─────────────────────────────────────────────────────
 
+// home.json — model name + serial (SyncThru V5/V6)
+function parseSamsungHome(body: string): Partial<EwsData> {
+  const modelMatch =
+    body.match(/"?model_name"?\s*:\s*"([^"]+)"/i) ??
+    body.match(/"?productName"?\s*:\s*"([^"]+)"/i);
+
+  const serialMatch =
+    body.match(/"?serial_num"?\s*:\s*"([^"]+)"/i) ??
+    body.match(/"?serialNumber"?\s*:\s*"([^"]+)"/i);
+
+  const model  = modelMatch  ? modelMatch[1].trim()  : undefined;
+  const serial = serialMatch ? serialMatch[1].trim() : undefined;
+
+  if (!model && !serial) return {};
+  return { brand: 'samsung', model, serial };
+}
+
 // identity.json — model name + serial (SyncThru V4/V6)
 function parseSamsungIdentity(body: string): Partial<EwsData> {
   // SyncThru V6 JSON format: {"identity":{"productName":"SL-M4580FX","serialNumber":"Z7K3..."}}
   // SyncThru V4 JS format:   GXI_SYS_PRD_NAME : 'SL-M4580FX'
   const modelMatch =
-    body.match(/"productName"\s*:\s*"([^"]+)"/i) ??
+    body.match(/"?productName"?\s*:\s*"([^"]+)"/i) ??
     body.match(/GXI_SYS_PRD_NAME\s*:\s*["']([^"']+)["']/i) ??
     body.match(/GXI_SYS_MODEL_NAME\s*:\s*["']([^"']+)["']/i) ??
-    body.match(/"modelName"\s*:\s*"([^"]+)"/i);
+    body.match(/"?modelName"?\s*:\s*"([^"]+)"/i);
 
   const serialMatch =
-    body.match(/"serialNumber"\s*:\s*"([^"]+)"/i) ??
+    body.match(/"?serialNumber"?\s*:\s*"([^"]+)"/i) ??
     body.match(/GXI_SYS_SERIAL_NUM\s*:\s*["']([^"']+)["']/i);
 
   const model  = modelMatch  ? modelMatch[1].trim()  : undefined;
