@@ -3,11 +3,16 @@ import net from 'net';
 import {
   detectBrandFromOid, detectBrandFromText, OID_MAPS, GENERIC_OIDS, SYS_OIDS, HR_STATUS_MAP, HR_DEVICE_PRINTER, type Brand,
 } from './oids';
+import { readDeviceViaPJL } from './pjl';
+import { readDeviceViaEWS } from './ews';
+import { readDeviceViaIPP } from './ipp';
 
-const TIMEOUT_MS      = 3000;
-const RETRIES         = 1;
-const MAX_CONCURRENT  = 20;
-const REACH_TIMEOUT   = 500; // ms para el pre-check TCP
+export type PollMethod = 'snmp' | 'pjl' | 'ews' | 'ipp' | 'unknown';
+
+const TIMEOUT_MS     = 3000;
+const RETRIES        = 1;
+const MAX_CONCURRENT = 20;
+const REACH_TIMEOUT  = 500; // ms para el pre-check TCP
 
 class Semaphore {
   private current = 0;
@@ -23,7 +28,8 @@ class Semaphore {
 const sem = new Semaphore(MAX_CONCURRENT);
 
 // Nota: no usa ICMP para compatibilidad con redes que bloquean ping.
-const PRINTER_PORTS = [9100, 80, 443];
+// Puerto 631 (IPP) añadido para detectar impresoras sin SNMP.
+const PRINTER_PORTS = [9100, 80, 443, 631];
 
 function tryPort(ip: string, port: number): Promise<boolean> {
   return new Promise((resolve, reject) => {
@@ -42,11 +48,7 @@ function tryPort(ip: string, port: number): Promise<boolean> {
     socket.once('timeout',  () => finish(false));
     socket.once('error', (err: NodeJS.ErrnoException) => {
       if (err.code === 'ENETUNREACH' || err.code === 'EHOSTDOWN') {
-        if (!settled) {
-          settled = true;
-          socket.destroy();
-          reject(err);
-        }
+        if (!settled) { settled = true; socket.destroy(); reject(err); }
       } else {
         finish(err.code === 'ECONNREFUSED');
       }
@@ -56,21 +58,22 @@ function tryPort(ip: string, port: number): Promise<boolean> {
 }
 
 async function isHostReachable(ip: string): Promise<boolean> {
-  const results = await Promise.all(PRINTER_PORTS.map(p => tryPort(ip, p)));
+  const results = await Promise.all(PRINTER_PORTS.map(p => tryPort(ip, p).catch(() => false)));
   return results.some(Boolean);
 }
 
 export interface DeviceReading {
-  ip:         string;
-  brand:      Brand;
-  model:      string;
-  sysDescr:   string;
-  sysName:    string;
-  serial:     string | null;
+  ip:          string;
+  brand:       Brand;
+  model:       string;
+  sysDescr:    string;
+  sysName:     string;
+  serial:      string | null;
   total_pages: number | null;
   mono_pages:  number | null;
   color_pages: number | null;
-  time:       string;
+  time:        string;
+  poll_method: PollMethod;
 }
 
 function createSession(ip: string, community: string) {
@@ -108,11 +111,46 @@ export function hrStatus(val: unknown): string {
   return HR_STATUS_MAP[Number(val)] ?? 'idle';
 }
 
-export async function readDevice(ip: string, community: string): Promise<DeviceReading | null> {
+// ─── Orquestador: cascada SNMP → PJL → EWS → IPP ────────────────────────────
+
+export async function readDevice(
+  ip: string,
+  community: string,
+  hintMethod?: PollMethod,
+): Promise<DeviceReading | null> {
   // Pre-check fuera del semaforo: descarta IPs sin respuesta en 500ms
-  // antes de ocupar un slot de concurrencia SNMP con un timeout de 3s.
+  // antes de ocupar un slot de concurrencia con un timeout de 3s.
   if (!await isHostReachable(ip)) return null;
 
+  // Si hay un método conocido por ciclos anteriores, intentarlo primero (evita redescubrimiento)
+  if (hintMethod && hintMethod !== 'unknown') {
+    const fast = hintMethod === 'snmp'
+      ? await readViaSNMP(ip, community)
+      : await readViaMethod(ip, hintMethod);
+    if (fast) return fast;
+    // El método previo dejó de funcionar → renegociar con cascada completa
+  }
+
+  // Cascada con prioridad de contadores: preferimos cualquier método que devuelva contadores (total_pages)
+  const ews = await readViaEWS(ip);
+  if (ews && ews.total_pages !== null) return ews;
+
+  const ipp = await readViaIPP(ip);
+  if (ipp && ipp.total_pages !== null) return ipp;
+
+  const pjl = await readViaPJL(ip);
+  if (pjl && pjl.total_pages !== null) return pjl;
+
+  const snmp = await readViaSNMP(ip, community);
+  if (snmp && snmp.total_pages !== null) return snmp;
+
+  // Fallback: si ningún método tiene contadores, retornar el primero con información parcial
+  return ews ?? ipp ?? pjl ?? snmp ?? null;
+}
+
+// ─── Método 1: SNMP v2c ───────────────────────────────────────────────────────
+
+async function readViaSNMP(ip: string, community: string): Promise<DeviceReading | null> {
   await sem.acquire();
   const session = createSession(ip, community);
   try {
@@ -121,20 +159,15 @@ export async function readDevice(ip: string, community: string): Promise<DeviceR
     // Si no responde (null) → pasar a Fase 2.
     const deviceType = await snmpGet(session, SYS_OIDS.hrDeviceType);
     if (deviceType !== null && String(deviceType) !== HR_DEVICE_PRINTER) {
-      // Definitivamente NO es una impresora
-      return null;
+      return null; // Definitivamente NO es una impresora
     }
 
     // ── Fase 2: Verificar presencia de Printer-MIB ──────────────────────────
     // El OID prtGeneralConfigChanges (1.3.6.1.2.1.43.5.1.1.1.1) solo existe
     // en dispositivos que implementan la Printer-MIB (RFC 3805).
-    // Si no responde → no es impresora, descartar silenciosamente.
     if (deviceType === null) {
       const printerMibProbe = await snmpGet(session, '1.3.6.1.2.1.43.5.1.1.1.1');
-      if (printerMibProbe === null) {
-        // No tiene HR-MIB ni Printer-MIB - definitivamente no es impresora
-        return null;
-      }
+      if (printerMibProbe === null) return null; // No tiene HR-MIB ni Printer-MIB
     }
 
     // --- Fase 3: Identificar Fabricante ---
@@ -150,16 +183,16 @@ export async function readDevice(ip: string, community: string): Promise<DeviceR
       snmpGet(session, SYS_OIDS.sysName),
     ]);
 
-    const serialOids = brand !== 'generic' ? oidMap.serial : GENERIC_OIDS.serial;
+    const serialOids = brand !== 'generic' ? oidMap.serial     : GENERIC_OIDS.serial;
     const totalOids  = brand !== 'generic' ? oidMap.totalPages : GENERIC_OIDS.totalPages;
-    const monoOids   = brand !== 'generic' ? oidMap.monoPages : GENERIC_OIDS.monoPages;
+    const monoOids   = brand !== 'generic' ? oidMap.monoPages  : GENERIC_OIDS.monoPages;
     const colorOids  = brand !== 'generic' ? oidMap.colorPages : GENERIC_OIDS.colorPages;
 
     const serial = await snmpGetFirstValid(session, serialOids);
     let totalPages = await snmpGetFirstValid(session, totalOids) as number | null;
 
     let [monoPages, colorPages] = await Promise.all([
-      snmpGetFirstValid(session, monoOids) as Promise<number | null>,
+      snmpGetFirstValid(session, monoOids)  as Promise<number | null>,
       snmpGetFirstValid(session, colorOids) as Promise<number | null>,
     ]);
 
@@ -174,33 +207,100 @@ export async function readDevice(ip: string, community: string): Promise<DeviceR
 
     // --- Fase 5: Limpieza de "Basura" ---
     const raw = String(sysDescr ?? '').trim();
-    
-    // 1. Cortar en el primer separador o palabra clave tecnica
     let cleaned = raw.split(/[;|\r\n,]/)[0].trim();
-    
-    // Limpiar descriptores de version/kernel que a veces vienen pegados
     cleaned = cleaned.split(/version|kernel|firmware/i)[0].trim();
 
-    // 2. Intentar detectar marca por texto si el OID fallo
     let finalBrand = brand;
-    if (finalBrand === 'generic') {
-      finalBrand = detectBrandFromText(raw);
-    }
+    if (finalBrand === 'generic') finalBrand = detectBrandFromText(raw);
 
     return {
       ip,
-      brand: finalBrand,
-      sysDescr:   raw.slice(0, 255),
-      sysName:    String(sysName  ?? ''),
-      serial:     serial ? String(serial).trim() || null : null,
+      brand:       finalBrand,
+      sysDescr:    raw.slice(0, 255),
+      sysName:     String(sysName ?? ''),
+      serial:      serial ? String(serial).trim() || null : null,
       total_pages: totalPages !== null ? Number(totalPages) : null,
       mono_pages:  monoPages  !== null ? Number(monoPages)  : null,
       color_pages: colorPages !== null ? Number(colorPages) : null,
-      model:      cleaned.slice(0, 100), // Solo Fabricante + Modelo
-      time:       new Date().toISOString(),
+      model:       cleaned.slice(0, 100),
+      time:        new Date().toISOString(),
+      poll_method: 'snmp',
     };
   } finally {
     session.close();
     sem.release();
+  }
+}
+
+// ─── Método 2: PJL (puerto 9100) ─────────────────────────────────────────────
+
+async function readViaPJL(ip: string): Promise<DeviceReading | null> {
+  const data = await readDeviceViaPJL(ip);
+  if (!data) return null;
+  const brand = data.model ? detectBrandFromText(data.model) : 'generic';
+  return {
+    ip,
+    brand,
+    model:       (data.model ?? brand).slice(0, 100),
+    sysDescr:    '',
+    sysName:     '',
+    serial:      data.serial ?? null,
+    total_pages: data.totalPages,
+    mono_pages:  null,
+    color_pages: null,
+    time:        new Date().toISOString(),
+    poll_method: 'pjl',
+  };
+}
+
+// ─── Método 3: EWS (HTTP scraping, puerto 80/443) ────────────────────────────
+
+async function readViaEWS(ip: string): Promise<DeviceReading | null> {
+  const data = await readDeviceViaEWS(ip);
+  if (!data) return null;
+  return {
+    ip,
+    brand:       data.brand,
+    model:       (data.model ?? data.brand).slice(0, 100),
+    sysDescr:    '',
+    sysName:     '',
+    serial:      data.serial ?? null,
+    total_pages: data.totalPages,
+    mono_pages:  data.monoPages,
+    color_pages: data.colorPages,
+    time:        new Date().toISOString(),
+    poll_method: 'ews',
+  };
+}
+
+// ─── Método 4: IPP (puerto 631) ───────────────────────────────────────────────
+
+async function readViaIPP(ip: string): Promise<DeviceReading | null> {
+  const data = await readDeviceViaIPP(ip);
+  if (!data) return null;
+  const brand = data.model ? detectBrandFromText(data.model) : 'generic';
+  return {
+    ip,
+    brand,
+    model:       (data.model ?? data.name ?? brand).slice(0, 100),
+    sysDescr:    '',
+    sysName:     data.name ?? '',
+    serial:      data.serial ?? null,
+    total_pages: null,
+    mono_pages:  null,
+    color_pages: null,
+    time:        new Date().toISOString(),
+    poll_method: 'ipp',
+  };
+}
+
+// ─── Helper para hint de método conocido ─────────────────────────────────────
+
+function readViaMethod(ip: string, method: PollMethod): Promise<DeviceReading | null> {
+  switch (method) {
+    case 'pjl': return readViaPJL(ip);
+    case 'ews': return readViaEWS(ip);
+    case 'ipp': return readViaIPP(ip);
+    default:    return Promise.resolve(null);
   }
 }

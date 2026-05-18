@@ -38,7 +38,8 @@ function fakeReading(ip: string, totalPages = 1000): DeviceReading {
     total_pages: totalPages,
     mono_pages: totalPages - 100,
     color_pages: 100,
-    time: new Date().toISOString(),
+    time:        new Date().toISOString(),
+    poll_method: 'snmp',
   };
 }
 

@@ -19,6 +19,7 @@ export async function uploadPending(config: AgentConfig): Promise<UploadResult &
     total_pages: r.total_pages,
     mono_pages:  r.mono_pages,
     color_pages: r.color_pages,
+    poll_method: r.poll_method ?? 'snmp',
     offline:     true,
   }));
 

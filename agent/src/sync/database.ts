@@ -2,7 +2,7 @@ import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
 import { DATA_DIR } from '../core/config';
-import type { DeviceReading } from '../snmp/scanner';
+import type { DeviceReading, PollMethod } from '../snmp/scanner';
 
 const MAX_RETENTION_DAYS = 7;
 const BACKPRESSURE_LIMIT = 10_000;
@@ -40,29 +40,39 @@ export function openQueue(): void {
       total_pages INTEGER,
       mono_pages  INTEGER,
       color_pages INTEGER,
+      poll_method TEXT    DEFAULT 'snmp',
       synced      INTEGER DEFAULT 0,
       created_at  TEXT    DEFAULT (datetime('now'))
     );
 
     CREATE TABLE IF NOT EXISTS known_devices (
-      ip         TEXT PRIMARY KEY,
-      serial     TEXT,
-      brand      TEXT,
-      model      TEXT,
-      registered INTEGER DEFAULT 0,
-      last_seen  TEXT
+      ip          TEXT PRIMARY KEY,
+      serial      TEXT,
+      brand       TEXT,
+      model       TEXT,
+      registered  INTEGER DEFAULT 0,
+      poll_method TEXT    DEFAULT 'snmp',
+      last_seen   TEXT
     );
   `);
+
+  // Migracion en caliente: agrega columna si la BD ya existia sin ella
+  for (const stmt of [
+    "ALTER TABLE readings_queue ADD COLUMN poll_method TEXT DEFAULT 'snmp'",
+    "ALTER TABLE known_devices  ADD COLUMN poll_method TEXT DEFAULT 'snmp'",
+  ]) {
+    try { db.exec(stmt); } catch { /* columna ya existe */ }
+  }
 }
 
 export function enqueueReading(r: DeviceReading): void {
   db.prepare(`
     INSERT INTO readings_queue
-      (device_id, ip, brand, model, time, total_pages, mono_pages, color_pages)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      (device_id, ip, brand, model, time, total_pages, mono_pages, color_pages, poll_method)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     r.serial ?? r.ip, r.ip, r.brand, r.model, r.time,
-    r.total_pages, r.mono_pages, r.color_pages
+    r.total_pages, r.mono_pages, r.color_pages, r.poll_method ?? 'snmp',
   );
 }
 
@@ -94,23 +104,33 @@ export function isBackpressureActive(): boolean {
   return pendingCount() > BACKPRESSURE_LIMIT;
 }
 
-export function upsertKnownDevice(ip: string, data: { serial?: string; brand?: string; model?: string; registered?: boolean }): void {
+export function upsertKnownDevice(
+  ip: string,
+  data: { serial?: string; brand?: string; model?: string; registered?: boolean; pollMethod?: PollMethod },
+): void {
   db.prepare(`
-    INSERT INTO known_devices (ip, serial, brand, model, registered, last_seen)
-    VALUES (?, ?, ?, ?, ?, datetime('now'))
+    INSERT INTO known_devices (ip, serial, brand, model, registered, poll_method, last_seen)
+    VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
     ON CONFLICT(ip) DO UPDATE SET
-      serial     = COALESCE(excluded.serial, serial),
-      brand      = COALESCE(excluded.brand, brand),
-      model      = COALESCE(excluded.model, model),
-      registered = COALESCE(excluded.registered, registered),
-      last_seen  = datetime('now')
+      serial      = COALESCE(excluded.serial,      serial),
+      brand       = COALESCE(excluded.brand,       brand),
+      model       = COALESCE(excluded.model,       model),
+      registered  = COALESCE(excluded.registered,  registered),
+      poll_method = COALESCE(excluded.poll_method, poll_method),
+      last_seen   = datetime('now')
   `).run(
     ip,
-    data.serial ?? null,
-    data.brand ?? null,
-    data.model ?? null,
-    data.registered === undefined ? null : (data.registered ? 1 : 0)
+    data.serial     ?? null,
+    data.brand      ?? null,
+    data.model      ?? null,
+    data.registered === undefined ? null : (data.registered ? 1 : 0),
+    data.pollMethod ?? null,
   );
+}
+
+export function getKnownPollMethod(ip: string): PollMethod | null {
+  const row = db.prepare('SELECT poll_method FROM known_devices WHERE ip = ?').get(ip) as any;
+  return row?.poll_method ?? null;
 }
 
 export function closeQueue(): void {

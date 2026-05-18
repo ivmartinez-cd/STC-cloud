@@ -275,27 +275,30 @@ export class AgentService {
         // Limpiar también el modelo para que no guarde basura
         const cleanModel = (r.model || "unknown").split(/[;|\r\n]/)[0].trim();
 
+        const pollMethod = (r.poll_method || 'snmp').slice(0, 20);
+
         const upserted = await this.db.raw<{ rows: { id: string }[] }>(`
-          INSERT INTO devices (id, agent_id, ip_address, serial_number, name, brand, model, active, last_seen, total_pages, mono_pages, color_pages)
-          VALUES (?, ?, ?, ?, ?, ?, ?, true, NOW(), ?, ?, ?)
+          INSERT INTO devices (id, agent_id, ip_address, serial_number, name, brand, model, active, last_seen, total_pages, mono_pages, color_pages, poll_method)
+          VALUES (?, ?, ?, ?, ?, ?, ?, true, NOW(), ?, ?, ?, ?)
           ON CONFLICT (agent_id, serial_number) WHERE serial_number IS NOT NULL
           DO UPDATE SET
             ip_address    = EXCLUDED.ip_address,
             brand         = COALESCE(NULLIF(EXCLUDED.brand, 'unknown'), devices.brand),
             model         = COALESCE(EXCLUDED.model, devices.model),
-            name          = CASE 
-                              WHEN devices.name IS NULL 
-                                OR devices.name = devices.serial_number 
-                                OR devices.name LIKE '%;%' 
-                                OR devices.name LIKE '%V4.%' 
+            name          = CASE
+                              WHEN devices.name IS NULL
+                                OR devices.name = devices.serial_number
+                                OR devices.name LIKE '%;%'
+                                OR devices.name LIKE '%V4.%'
                               THEN EXCLUDED.name
-                              ELSE devices.name 
+                              ELSE devices.name
                             END,
             last_seen     = NOW(),
             active        = true,
             total_pages   = EXCLUDED.total_pages,
             mono_pages    = EXCLUDED.mono_pages,
-            color_pages   = EXCLUDED.color_pages
+            color_pages   = EXCLUDED.color_pages,
+            poll_method   = EXCLUDED.poll_method
           RETURNING id
         `, [
           crypto.randomUUID(),
@@ -307,7 +310,8 @@ export class AgentService {
           cleanModel.slice(0, 255),
           parseCount(r.total_pages),
           parseCount(r.mono_pages),
-          parseCount(r.color_pages)
+          parseCount(r.color_pages),
+          pollMethod,
         ]);
 
         if (!upserted.rows || upserted.rows.length === 0) {
