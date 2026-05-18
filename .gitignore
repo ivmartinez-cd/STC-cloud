@@ -70,3 +70,9 @@ cloud/check_key.js
 
 # ─── Env ────────────────────────────────────
 env
+
+# ─── Agente temporales ──────────────────────────────────────────────
+agent/scratch/
+agent-data-dev/
+qc
+query

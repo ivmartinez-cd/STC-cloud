@@ -15,12 +15,12 @@ export async function readDeviceViaIPP(ip: string): Promise<IppData | null> {
     try {
       const result = await attemptIPP(ip, path);
       if (result) return result;
-    } catch { /* probar siguiente */ }
+    } catch { /* try next path */ }
   }
   return null;
 }
 
-// ─── Construcción del request IPP/1.1 Get-Printer-Attributes ─────────────────
+// ─── IPP/1.1 Get-Printer-Attributes request builder ──────────────────────────
 
 function buildIppRequest(printerUri: string): Buffer {
   const enc = (s: string) => Buffer.from(s, 'utf8');
@@ -57,7 +57,7 @@ function buildIppRequest(printerUri: string): Buffer {
     ...attrName('printer-uri'), ...attrVal(uri),
   ];
 
-  // requested-attributes: primer ítem lleva nombre, los siguientes lo omiten
+  // requested-attributes: first entry carries the attribute name, subsequent ones omit it
   requestedAttrs.forEach((attr, i) => {
     const v = enc(attr);
     parts.push(
@@ -72,13 +72,13 @@ function buildIppRequest(printerUri: string): Buffer {
   return Buffer.concat(parts);
 }
 
-// ─── Parser de respuesta IPP ──────────────────────────────────────────────────
+// ─── IPP response attribute parser ───────────────────────────────────────────
 
 function parseIppAttr(buf: Buffer, attrName: string): string | null {
-  let i = 8; // saltar cabecera de 8 bytes
+  let i = 8; // skip 8-byte header
   while (i < buf.length) {
     const tag = buf[i];
-    // Group separators (0x01-0x05): avanzar 1 byte
+    // Group separators (0x01-0x05): advance 1 byte
     if (tag >= 0x01 && tag <= 0x05) { i++; continue; }
     // end-of-attributes
     if (tag === 0x03) break;

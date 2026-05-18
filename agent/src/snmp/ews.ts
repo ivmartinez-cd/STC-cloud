@@ -13,7 +13,7 @@ export interface EwsData {
   colorPages:  number | null;
 }
 
-// ─── Candidatos de URL ordenados por confiabilidad ───────────────────────────
+// ─── URL candidates ordered by reliability ───────────────────────────────────
 
 type Parser = (body: string) => Partial<EwsData>;
 
@@ -24,7 +24,7 @@ const CANDIDATES: EwsCandidate[] = [
   { path: '/sws/app/information/counters/counters.json',           protocol: 'http',  parse: parseSamsungCounters },
   // Lexmark config/deviceinfo
   { path: '/cgi-bin/dynamic/printer/config/reports/deviceinfo.html', protocol: 'http',  parse: parseLexmarkEws      },
-  // HP: XML > HTML (el XML es más estable)
+  // HP: XML > HTML (XML is more stable across firmware updates)
   { path: '/DevMgmt/ProductUsageDyn.xml',                          protocol: 'http',  parse: parseHpXml   },
   { path: '/hp/device/InternalPages/Index?id=UsagePage',           protocol: 'http',  parse: parseHpHtml  },
   // Ricoh
@@ -58,12 +58,12 @@ export async function readDeviceViaEWS(ip: string): Promise<EwsData | null> {
           colorPages: parsed.colorPages ?? null,
         };
       }
-    } catch { /* probar siguiente */ }
+    } catch { /* try next */ }
   }
   return null;
 }
 
-// ─── Parser Samsung JSON ─────────────────────────────────────────────────────
+// ─── Samsung JSON parser ──────────────────────────────────────────────────────
 
 function parseSamsungCounters(body: string): Partial<EwsData> {
   const serialMatch = body.match(/GXI_SYS_SERIAL_NUM\s*:\s*["']([^"']+)["']/i);
@@ -86,7 +86,7 @@ function parseSamsungCounters(body: string): Partial<EwsData> {
   };
 }
 
-// ─── Parser Lexmark EWS ──────────────────────────────────────────────────────
+// ─── Lexmark EWS parser ──────────────────────────────────────────────────────
 
 function parseLexmarkEws(html: string): Partial<EwsData> {
   const pageMatch = html.match(/(?:C.mputo de p.g\.|Page Count|Total Pages)[^=]*=\s*(\d+)/i);
@@ -108,7 +108,7 @@ function parseLexmarkEws(html: string): Partial<EwsData> {
   };
 }
 
-// ─── Parser HP XML (ProductUsageDyn.xml) ─────────────────────────────────────
+// ─── HP XML parser (ProductUsageDyn.xml) ─────────────────────────────────────
 
 function parseHpXml(xml: string): Partial<EwsData> {
   const v = (tag: string) => xmlVal(xml, tag);
@@ -132,7 +132,7 @@ function xmlVal(xml: string, tag: string): string | null {
   return m ? m[1].trim() : null;
 }
 
-// ─── Parser HP HTML (UsagePage) ───────────────────────────────────────────────
+// ─── HP HTML parser (UsagePage) ───────────────────────────────────────────────
 
 function parseHpHtml(html: string): Partial<EwsData> {
   // Structured ID-based matching (Modern HP responsive / onehp theme)
@@ -165,7 +165,7 @@ function parseHpHtml(html: string): Partial<EwsData> {
   };
 }
 
-// ─── Parser genérico (busca patrones de contador comunes) ────────────────────
+// ─── Generic parser (common counter label patterns) ──────────────────────────
 
 function parseGeneric(html: string): Partial<EwsData> {
   const total = htmlCounter(html, /Total\s+(?:Pages|Impressions|Count|Print)/i)
@@ -186,7 +186,7 @@ function parseGeneric(html: string): Partial<EwsData> {
   };
 }
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function htmlCounter(html: string, label: RegExp): number | null {
   const m = html.match(new RegExp(
@@ -208,7 +208,7 @@ function fetchHttp(
   protocol: 'http' | 'https',
   redirectDepth = 0,
 ): Promise<string | null> {
-  if (redirectDepth > 3) return Promise.resolve(null); // Evita bucles infinitos
+  if (redirectDepth > 3) return Promise.resolve(null); // guard against redirect loops
 
   return new Promise((resolve) => {
     const lib  = protocol === 'https' ? https : http;
@@ -216,7 +216,7 @@ function fetchHttp(
     const req  = lib.request(
       { hostname: ip, port, path, method: 'GET', timeout: EWS_TIMEOUT, rejectUnauthorized: false },
       (res) => {
-        // Manejo de redirecciones (301, 302, 307, 308)
+        // Handle redirects (301, 302, 307, 308)
         if (res.statusCode && [301, 302, 307, 308].includes(res.statusCode) && res.headers.location) {
           let loc = res.headers.location;
           let nextProtocol = protocol;
