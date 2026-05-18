@@ -1,4 +1,4 @@
-﻿import os from 'os';
+import os from 'os';
 import fs from 'fs';
 import path from 'path';
 import { exec, spawn } from 'child_process';
@@ -631,6 +631,7 @@ async function printStatus(): Promise<void> {
     const t0 = Date.now();
     try {
       const res = await fetch(`${config.serverUrl}/api/v1/health`, {
+        headers: { Connection: 'close' },
         signal: AbortSignal.timeout(5_000),
       });
       cloudConnectivity = { reachable: res.ok, latencyMs: Date.now() - t0, httpStatus: res.status };
@@ -662,6 +663,7 @@ async function printStatus(): Promise<void> {
     activated:                  config !== null,
     agentId:                    config?.agentId   ?? null,
     serverUrl:                  config?.serverUrl ?? null,
+    service:                    serviceStatus,
     service_status:             serviceStatus,
     cloud_connectivity:         cloudConnectivity,
     hardware_binding_integrity: hardwareBindingIntegrity,
@@ -671,7 +673,9 @@ async function printStatus(): Promise<void> {
   };
 
   process.stdout.write(JSON.stringify(status, null, 2) + '\n');
-  process.exit(hasCriticalError ? 1 : 0);
+  setTimeout(() => {
+    process.exit(hasCriticalError ? 1 : 0);
+  }, 100);
 }
 
 //  Proxy 
