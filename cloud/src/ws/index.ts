@@ -61,6 +61,18 @@ export async function registerWebSocket(fastify: FastifyInstance, agentService: 
           agentId = user.agentId;
           agentClients.set(agentId!, socket);
           fastify.log.info(`Agente ${agentId} conectado vía WSS`);
+
+          // Server-side heartbeat: Render.com closes idle connections after ~55s.
+          // Ping every 20s so the TCP link stays alive regardless of traffic.
+          const pingInterval = setInterval(() => {
+            if (socket.readyState === 1) {
+              socket.ping();
+            } else {
+              clearInterval(pingInterval);
+            }
+          }, 20_000);
+
+          socket.once('close', () => clearInterval(pingInterval));
         } else if (user.role === 'portal') {
           portalClients.add(socket);
           fastify.log.info(`Cliente de Portal (${user.userId}) conectado vía WSS`);

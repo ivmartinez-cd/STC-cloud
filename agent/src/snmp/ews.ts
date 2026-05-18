@@ -20,7 +20,8 @@ type Parser = (body: string) => Partial<EwsData>;
 interface EwsCandidate { path: string; protocol: 'http' | 'https'; parse: Parser; }
 
 const CANDIDATES: EwsCandidate[] = [
-  // Samsung SyncThru JSON
+  // Samsung SyncThru: identity first (model + serial), then counters (page count)
+  { path: '/sws/app/information/identity/identity.json',           protocol: 'http',  parse: parseSamsungIdentity },
   { path: '/sws/app/information/counters/counters.json',           protocol: 'http',  parse: parseSamsungCounters },
   // Lexmark config/deviceinfo
   { path: '/cgi-bin/dynamic/printer/config/reports/deviceinfo.html', protocol: 'http',  parse: parseLexmarkEws      },
@@ -42,47 +43,88 @@ const CANDIDATES: EwsCandidate[] = [
 ];
 
 export async function readDeviceViaEWS(ip: string): Promise<EwsData | null> {
+  // Accumulates data across candidates so that model from one endpoint
+  // can be combined with counters from another (e.g. Samsung identity + counters).
+  let acc: Partial<EwsData> = {};
+
   for (const c of CANDIDATES) {
     try {
       const body = await fetchHttp(ip, c.path, c.protocol);
       if (!body) continue;
       const parsed = c.parse(body);
-      if (parsed.totalPages !== undefined || parsed.model !== undefined) {
-        const brand = parsed.brand ?? (parsed.model ? detectBrandFromText(parsed.model) : 'generic');
-        return {
-          brand,
-          model:      parsed.model      ?? null,
-          serial:     parsed.serial     ?? null,
-          totalPages: parsed.totalPages ?? null,
-          monoPages:  parsed.monoPages  ?? null,
-          colorPages: parsed.colorPages ?? null,
-        };
-      }
+
+      // Merge: only overwrite with a better (non-undefined) value
+      if (parsed.brand      !== undefined) acc.brand      = parsed.brand;
+      if (parsed.model      !== undefined) acc.model      = parsed.model;
+      if (parsed.serial     !== undefined) acc.serial     = parsed.serial;
+      if (parsed.totalPages !== undefined) acc.totalPages = parsed.totalPages;
+      if (parsed.monoPages  !== undefined) acc.monoPages  = parsed.monoPages;
+      if (parsed.colorPages !== undefined) acc.colorPages = parsed.colorPages;
+
+      // Stop as soon as we have page counters (no need to probe more endpoints)
+      if (acc.totalPages !== undefined) break;
     } catch { /* try next */ }
   }
-  return null;
+
+  if (acc.totalPages === undefined && acc.model === undefined) return null;
+
+  const brand = acc.brand ?? (acc.model ? detectBrandFromText(acc.model) : 'generic');
+  return {
+    brand,
+    model:      acc.model      ?? null,
+    serial:     acc.serial     ?? null,
+    totalPages: acc.totalPages ?? null,
+    monoPages:  acc.monoPages  ?? null,
+    colorPages: acc.colorPages ?? null,
+  };
 }
 
-// ─── Samsung JSON parser ──────────────────────────────────────────────────────
+// ─── Samsung JSON parsers ─────────────────────────────────────────────────────
 
+// identity.json — model name + serial (SyncThru V4/V6)
+function parseSamsungIdentity(body: string): Partial<EwsData> {
+  // SyncThru V6 JSON format: {"identity":{"productName":"SL-M4580FX","serialNumber":"Z7K3..."}}
+  // SyncThru V4 JS format:   GXI_SYS_PRD_NAME : 'SL-M4580FX'
+  const modelMatch =
+    body.match(/"productName"\s*:\s*"([^"]+)"/i) ??
+    body.match(/GXI_SYS_PRD_NAME\s*:\s*["']([^"']+)["']/i) ??
+    body.match(/GXI_SYS_MODEL_NAME\s*:\s*["']([^"']+)["']/i) ??
+    body.match(/"modelName"\s*:\s*"([^"]+)"/i);
+
+  const serialMatch =
+    body.match(/"serialNumber"\s*:\s*"([^"]+)"/i) ??
+    body.match(/GXI_SYS_SERIAL_NUM\s*:\s*["']([^"']+)["']/i);
+
+  const model  = modelMatch  ? modelMatch[1].trim()  : undefined;
+  const serial = serialMatch ? serialMatch[1].trim() : undefined;
+
+  if (!model && !serial) return {};
+  return { brand: 'samsung', model, serial };
+}
+
+// counters.json — page count + serial (+ model when available in the same response)
 function parseSamsungCounters(body: string): Partial<EwsData> {
-  const serialMatch = body.match(/GXI_SYS_SERIAL_NUM\s*:\s*["']([^"']+)["']/i);
-  const totalMatch = body.match(/GXI_BILLING_TOTAL_IMP_CNT\s*:\s*(\d+)/i);
+  const serialMatch = body.match(/GXI_SYS_SERIAL_NUM\s*:\s*["']([^"']+)["']/i) ??
+                      body.match(/"serialNum"\s*:\s*"([^"]+)"/i);
+  const totalMatch  = body.match(/GXI_BILLING_TOTAL_IMP_CNT\s*:\s*(\d+)/i);
   const simplexMatch = body.match(/GXI_BILLING_SIMPLEX_BW_TOTAL_CNT\s*:\s*(\d+)/i);
+  const modelMatch  =
+    body.match(/GXI_SYS_PRD_NAME\s*:\s*["']([^"']+)["']/i) ??
+    body.match(/GXI_SYS_MODEL_NAME\s*:\s*["']([^"']+)["']/i) ??
+    body.match(/"productName"\s*:\s*"([^"]+)"/i);
 
   const serial = serialMatch ? serialMatch[1].trim() : undefined;
-  let total = totalMatch ? Number(totalMatch[1]) : null;
-
-  if (total === null && simplexMatch) {
-    total = Number(simplexMatch[1]);
-  }
+  const model  = modelMatch  ? modelMatch[1].trim()  : undefined;
+  let   total  = totalMatch  ? Number(totalMatch[1]) : null;
+  if (total === null && simplexMatch) total = Number(simplexMatch[1]);
 
   return {
     brand:      'samsung',
-    serial:     serial,
-    totalPages: total !== null ? total : undefined,
-    monoPages:  total !== null ? total : undefined,
-    colorPages: 0,
+    model,
+    serial,
+    totalPages: total !== null ? total    : undefined,
+    monoPages:  total !== null ? total    : undefined,
+    colorPages: total !== null ? 0        : undefined,
   };
 }
 
