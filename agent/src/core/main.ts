@@ -14,7 +14,7 @@ import { SocketManager } from './SocketManager';
 import { ConsoleConnector } from './ConsoleConnector';
 import { ConsoleEngine } from './ConsoleEngine';
 
-const VERSION = '1.6.1';
+const VERSION = '1.6.2';
 let socket: SocketManager | null = null;
 const LOG_MAX_BYTES = 10 * 1024 * 1024;
 
