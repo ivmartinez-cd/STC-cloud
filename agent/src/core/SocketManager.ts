@@ -90,9 +90,12 @@ export class SocketManager {
         clearTimeout(this.reconnectTimer);
         this.reconnectTimer = null;
       }
+      // Data frame inmediato para que el proxy de Render.com no corte la conexion por inactividad
+      this.ws?.send(JSON.stringify({ event: 'ping' }));
       this.pingInterval = setInterval(() => {
         if (this.ws?.readyState === WebSocket.OPEN) {
-          this.ws.ping();
+          // Data frame (no control frame) para mantener vivo el proxy de Render.com
+          this.ws.send(JSON.stringify({ event: 'ping' }));
         }
       }, 5_000);
     });

@@ -79,12 +79,13 @@ export async function registerWebSocket(fastify: FastifyInstance, agentService: 
     if (agentId) {
       pingInterval = setInterval(() => {
         if (socket.readyState === 1) {
-          socket.ping();
+          // Data frame (no control frame) para que el proxy de Render.com no corte por inactividad
+          socket.send(JSON.stringify({ event: 'ping' }));
         } else {
           clearInterval(pingInterval!);
           pingInterval = null;
         }
-      }, 20_000);
+      }, 8_000);
     }
 
     socket.on('message', (raw: Buffer) => {
