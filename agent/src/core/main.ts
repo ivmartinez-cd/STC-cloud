@@ -1,4 +1,4 @@
-﻿import os from 'os';
+import os from 'os';
 import fs from 'fs';
 import path from 'path';
 import { exec, spawn } from 'child_process';
@@ -226,7 +226,17 @@ async function handleCommand(type: string, payload: any = {}, id?: string) {
           fetchOptions.body = Buffer.from(body, 'base64');
         }
 
-        const response = await fetch(targetUrl, fetchOptions);
+        let response: Response;
+        let finalUrl = targetUrl;
+        try {
+          response = await fetch(finalUrl, fetchOptions);
+        } catch (err: any) {
+          // Si falla (por ejemplo, porque la impresora usa HTTPS autofirmado), reintentar con HTTPS
+          process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+          finalUrl = `https://${ip}${reqPath || '/'}`;
+          response = await fetch(finalUrl, fetchOptions);
+        }
+
         const arrayBuffer = await response.arrayBuffer();
         const base64Body = Buffer.from(arrayBuffer).toString('base64');
 
