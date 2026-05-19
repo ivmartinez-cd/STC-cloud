@@ -10,7 +10,9 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
   
   // Interceptar solo peticiones del mismo origen que NO empiecen con /api/
-  if (url.origin === self.location.origin && !url.pathname.startsWith('/api/')) {
+  // Excluir assets estáticos del portal (Vite build output, favicon, etc.) — nunca deben ir al proxy
+  const PORTAL_STATIC = ['/assets/', '/favicon.ico', '/logo1.png', '/public/'];
+  if (url.origin === self.location.origin && !url.pathname.startsWith('/api/') && !PORTAL_STATIC.some(p => url.pathname.startsWith(p) || url.pathname === p)) {
     // Si la petición viene referenciada desde el flujo del proxy (EWS)
     const referer = event.request.referrer;
     if (referer && referer.includes('/ews-proxy/')) {
