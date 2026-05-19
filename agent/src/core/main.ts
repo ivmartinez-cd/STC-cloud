@@ -1,8 +1,6 @@
-﻿import os from 'os';
+import os from 'os';
 import fs from 'fs';
 import path from 'path';
-import http from 'http';
-import https from 'https';
 import { exec, spawn } from 'child_process';
 import { promisify } from 'util';
 import { createHash, verify as cryptoVerify, createPublicKey } from 'crypto';
@@ -16,7 +14,7 @@ import { SocketManager } from './SocketManager';
 import { ConsoleConnector } from './ConsoleConnector';
 import { ConsoleEngine } from './ConsoleEngine';
 
-const VERSION = '1.7.7';
+const VERSION = '1.7.0';
 let socket: SocketManager | null = null;
 const LOG_MAX_BYTES = 10 * 1024 * 1024;
 
@@ -143,12 +141,12 @@ async function heartbeat(): Promise<void> {
 
       if (data.commands && data.commands.length > 0) {
         for (const cmd of data.commands) {
-          // DeduplicaciÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³n: Si ya lo procesamos (vÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â­a WSS o heartbeat anterior), lo saltamos
+          // DeduplicaciÃƒÆ’Ã‚Â³n: Si ya lo procesamos (vÃƒÆ’Ã‚Â­a WSS o heartbeat anterior), lo saltamos
           if (cmd.id && processedCommandIds.has(cmd.id)) continue;
           
           if (cmd.id) {
             processedCommandIds.add(cmd.id);
-            // Mantener el set limpio (ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Âºltimos 1000 IDs)
+            // Mantener el set limpio (ÃƒÆ’Ã‚Âºltimos 1000 IDs)
             if (processedCommandIds.size > 1000) {
               const firstKey = processedCommandIds.values().next().value;
               if (firstKey) processedCommandIds.delete(firstKey);
@@ -200,93 +198,6 @@ async function handleCommand(type: string, payload: any = {}, id?: string) {
       case 'FORCE_UPDATE': {
         const applied = await checkForUpdate(currentConfig.serverUrl, true);
         result = { message: applied ? 'Actualizacion aplicada. Reiniciando...' : 'Sin actualizacion disponible o verificacion fallida.' };
-        break;
-      }
-      case 'EWS_PROXY_REQ': {
-        const { ip, method, path: reqPath, headers, body } = payload;
-        if (!isRegistered(ip)) {
-          throw new Error(`Acceso no autorizado: la IP ${ip} no corresponde a un dispositivo registrado.`);
-        }
-
-        const cleanHeaders: Record<string, string> = {};
-        if (headers) {
-          for (const [key, value] of Object.entries(headers)) {
-            const k = key.toLowerCase();
-            if (k !== 'host' && k !== 'authorization' && k !== 'connection') {
-              cleanHeaders[key] = String(value);
-            }
-          }
-        }
-
-        const bodyBuffer = (body && (method === 'POST' || method === 'PUT'))
-          ? Buffer.from(body, 'base64')
-          : undefined;
-
-        type ProxyRes = { status: number; headers: Record<string, string>; buffer: Buffer };
-
-        const rawReq = (urlStr: string, useTls: boolean, sendBody: boolean): Promise<ProxyRes> =>
-          new Promise((resolve, reject) => {
-            const u = new URL(urlStr);
-            const req = (useTls ? https : http).request({
-              hostname: u.hostname,
-              port:     Number(u.port) || (useTls ? 443 : 80),
-              path:     (u.pathname || '/') + (u.search || ''),
-              method:   method || 'GET',
-              headers:  cleanHeaders,
-              timeout:  8000,
-              ...(useTls ? { rejectUnauthorized: false } : {}),
-            }, (res) => {
-              const chunks: Buffer[] = [];
-              res.on('data', (c: Buffer) => chunks.push(Buffer.isBuffer(c) ? c : Buffer.from(c)));
-              res.on('end', () => {
-                const h: Record<string, string> = {};
-                for (const [k, v] of Object.entries(res.headers)) {
-                  if (v !== undefined) h[k] = Array.isArray(v) ? v.join(', ') : String(v);
-                }
-                resolve({ status: res.statusCode ?? 0, headers: h, buffer: Buffer.concat(chunks) });
-              });
-              res.on('error', reject);
-            });
-            req.on('timeout', () => req.destroy(new Error(`Timeout (8s) conectando a ${urlStr}`)));
-            req.on('error', reject);
-            if (sendBody && bodyBuffer) req.write(bodyBuffer);
-            req.end();
-          });
-
-        // Sigue toda la cadena de redirects internamente (ej: http→https→pagina-especifica).
-        // El browser no puede alcanzar la IP de la impresora, así que los resolvemos aquí.
-        // Retorna también finalUrl para que el backend pueda calcular el <base href> correcto.
-        const proxyFetch = async (startUrl: string, startTls: boolean): Promise<{ res: ProxyRes; finalUrl: string }> => {
-          let url = startUrl;
-          let tls = startTls;
-          for (let hop = 0; hop < 5; hop++) {
-            const res = await rawReq(url, tls, hop === 0);
-            if (res.status >= 300 && res.status < 400 && res.headers['location']) {
-              const loc = res.headers['location'];
-              if (loc.startsWith('https://'))      { url = loc; tls = true; }
-              else if (loc.startsWith('http://'))  { url = loc; tls = false; }
-              else { const base = new URL(url); url = `${base.protocol}//${base.host}${loc.startsWith('/') ? loc : '/' + loc}`; }
-              continue;
-            }
-            return { res, finalUrl: url };
-          }
-          const res = await rawReq(url, tls, false);
-          return { res, finalUrl: url };
-        };
-
-        let proxyRes: ProxyRes;
-        let finalUrl: string;
-        try {
-          const r = await proxyFetch(`http://${ip}${reqPath || '/'}`, false);
-          proxyRes = r.res; finalUrl = r.finalUrl;
-        } catch {
-          const r = await proxyFetch(`https://${ip}${reqPath || '/'}`, true);
-          proxyRes = r.res; finalUrl = r.finalUrl;
-        }
-
-        const finalPath = (() => { try { return new URL(finalUrl).pathname; } catch { return reqPath || '/'; } })();
-        log('INFO', `EWS [${ip}] ${method || 'GET'} ${reqPath || '/'} → ${proxyRes.status} (final: ${finalPath})`);
-        result = { statusCode: proxyRes.status, headers: proxyRes.headers, body: proxyRes.buffer.toString('base64'), finalPath };
         break;
       }
       default:
@@ -643,7 +554,7 @@ async function checkForUpdate(serverUrl: string, force = false): Promise<boolean
     }
 
     if ((UPDATE_PUBLIC_KEY_HEX as string) === 'PLACEHOLDER_RUN_GEN_KEYS_FIRST') {
-      log('WARN', 'SEGURIDAD: firma Ed25519 no configurada ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â ejecutar installer/gen-keys.js y rebuild.');
+      log('WARN', 'SEGURIDAD: firma Ed25519 no configurada ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â ejecutar installer/gen-keys.js y rebuild.');
     } else {
       try {
         const sigRes = await fetch(data.url + '.sig', { signal: AbortSignal.timeout(15_000) });
@@ -655,7 +566,7 @@ async function checkForUpdate(serverUrl: string, force = false): Promise<boolean
         const sigBuf = Buffer.from(await sigRes.arrayBuffer());
         const pubKey = createPublicKey({ key: Buffer.from(UPDATE_PUBLIC_KEY_HEX, 'hex'), format: 'der', type: 'spki' });
         if (!cryptoVerify(null, buffer, pubKey, sigBuf)) {
-          log('ERROR', `VIOLACION DE INTEGRIDAD [Ed25519]: La firma del paquete de actualizacion NO es valida. URL: ${data.url} | Version: ${data.version} | Timestamp: ${new Date().toISOString()}. Actualizacion rechazada ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â posible ataque de cadena de suministro o paquete comprometido.`);
+          log('ERROR', `VIOLACION DE INTEGRIDAD [Ed25519]: La firma del paquete de actualizacion NO es valida. URL: ${data.url} | Version: ${data.version} | Timestamp: ${new Date().toISOString()}. Actualizacion rechazada ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â posible ataque de cadena de suministro o paquete comprometido.`);
           isUpdating = false;
           return false;
         }
@@ -746,7 +657,7 @@ async function printStatus(): Promise<void> {
     }
   }
 
-  // Health check rÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡pido al servidor configurado (timeout 5s)
+  // Health check rÃƒÆ’Ã‚Â¡pido al servidor configurado (timeout 5s)
   let cloudConnectivity: { reachable: boolean; latencyMs?: number; httpStatus?: number; error?: string };
   if (config?.serverUrl) {
     const t0 = Date.now();
@@ -887,7 +798,7 @@ async function activate(): Promise<void> {
     process.exit(0);
   } catch (e: any) {
     console.error(`Error de activacion: ${e.message}`);
-    // Propagamos exit code especÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â­fico si viene del bloque de respuesta HTTP
+    // Propagamos exit code especÃƒÆ’Ã‚Â­fico si viene del bloque de respuesta HTTP
     if (e._stcExitCode) {
       process.exit(e._stcExitCode);
     }
