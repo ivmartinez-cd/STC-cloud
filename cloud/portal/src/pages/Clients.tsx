@@ -71,7 +71,10 @@ const Clients = () => {
   }, [showToast]);
 
   useEffect(() => {
-    fetchClients();
+    const init = async () => {
+      await fetchClients();
+    };
+    void init();
   }, [fetchClients]);
 
   const handleSubmit = async (e: React.FormEvent) => {

@@ -16,7 +16,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
       headers: { ...headers, ...(init.headers as Record<string, string>) },
     });
   } catch (err) {
-    if ((err as Error).name === 'AbortError') throw new Error('La solicitud tardó demasiado. Verifica tu conexión.');
+    if ((err as Error).name === 'AbortError') throw new Error('La solicitud tardó demasiado. Verifica tu conexión.', { cause: err });
     throw err;
   } finally {
     clearTimeout(timeoutId);

@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { useNow } from '../hooks/useNow';
 import { Link } from 'react-router-dom';
 import {
   HardDrive, Activity, Radio, Users, ChevronRight,
@@ -37,7 +38,12 @@ const StatCard = ({
 );
 
 const Dashboard = () => {
-  const { data, loading } = useDashboard();
+  const { data, loading, fetchDashboardData } = useDashboard();
+  const now = useNow();
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, [fetchDashboardData]);
 
   if (loading && !data) {
     return (
@@ -180,7 +186,7 @@ const Dashboard = () => {
                   <div className="flex items-center justify-between mt-3">
                     <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{a.name}</span>
                     <span className="text-[9px] font-black text-rose-600/60 uppercase">
-                      Visto hace {Math.round((Date.now() - new Date(a.last_seen).getTime()) / 60000)}m
+                      Visto hace {Math.round((now - new Date(a.last_seen).getTime()) / 60000)}m
                     </span>
                   </div>
                 </div>

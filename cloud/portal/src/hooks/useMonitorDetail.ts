@@ -15,6 +15,7 @@ export function useMonitorDetail(id: string) {
   const { showToast } = useToast();
   const navigate = useNavigate();
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scheduleNextRef = useRef<() => void>(() => {});
 
   const fetchDevices = useCallback(async () => {
     const data = await api.get<Device[]>(`/agents/${id}/devices`);
@@ -38,15 +39,23 @@ export function useMonitorDetail(id: string) {
   const scheduleNext = useCallback(() => {
     timerRef.current = setTimeout(() => {
       if (document.visibilityState === 'visible') {
-        fetchAll().finally(scheduleNext);
+        fetchAll().finally(() => scheduleNextRef.current());
       } else {
-        scheduleNext();
+        scheduleNextRef.current();
       }
     }, POLL_INTERVAL_MS);
   }, [fetchAll]);
 
   useEffect(() => {
-    fetchAll(true).finally(scheduleNext);
+    scheduleNextRef.current = scheduleNext;
+  }, [scheduleNext]);
+
+  useEffect(() => {
+    const init = async () => {
+      await fetchAll(true);
+      scheduleNext();
+    };
+    void init();
 
     const onVisibility = () => {
       if (document.visibilityState === 'visible') {

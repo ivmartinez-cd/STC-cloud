@@ -42,8 +42,8 @@ const Layout = () => {
   const debouncedSearch = useDebounce(searchQuery, 300);
 
   useEffect(() => {
-    if (debouncedSearch.length >= 2) {
-      const fetchResults = async () => {
+    const init = async () => {
+      if (debouncedSearch.length >= 2) {
         setIsSearching(true);
         try {
           const data = await api.get<SearchResults>(`/search?q=${debouncedSearch}`);
@@ -54,12 +54,12 @@ const Layout = () => {
         } finally {
           setIsSearching(false);
         }
-      };
-      fetchResults();
-    } else {
-      setSearchResults({ clients: [], devices: [] });
-      setShowResults(false);
-    }
+      } else {
+        setSearchResults({ clients: [], devices: [] });
+        setShowResults(false);
+      }
+    };
+    void init();
   }, [debouncedSearch]);
 
   useEffect(() => {

@@ -1,4 +1,5 @@
 import { Printer } from 'lucide-react';
+import { useNow } from '../../hooks/useNow';
 import { OFFLINE_THRESHOLD_MS } from '../../lib/constants';
 import type { MonitorData, Device } from '../../types/monitor';
 
@@ -8,9 +9,10 @@ interface Props {
 }
 
 const DeviceSummaryCard = ({ devices, monitor }: Props) => {
+  const now = useNow();
   const agentOnline = monitor.status === 'active'
     && monitor.last_seen !== null
-    && (Date.now() - new Date(monitor.last_seen).getTime() <= OFFLINE_THRESHOLD_MS);
+    && (now - new Date(monitor.last_seen).getTime() <= OFFLINE_THRESHOLD_MS);
 
   const ringColor = agentOnline ? '#10b981' : '#f59e0b';
 

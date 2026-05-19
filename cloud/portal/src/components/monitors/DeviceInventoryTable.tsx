@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNow } from '../../hooks/useNow';
 import { Link } from 'react-router-dom';
 import { Printer, Download, X } from 'lucide-react';
 import { OFFLINE_THRESHOLD_MS } from '../../lib/constants';
@@ -45,9 +46,10 @@ function exportCountersCSV(devices: Device[], monitorName: string, discriminate:
 const DeviceInventoryTable = ({ devices, monitorName, monitorStatus, monitorLastSeen }: Props) => {
   const [showExportModal, setShowExportModal] = useState(false);
 
+  const now = useNow();
   const isMonitorOnline = monitorStatus === 'active'
     && monitorLastSeen !== null
-    && (Date.now() - new Date(monitorLastSeen).getTime() <= OFFLINE_THRESHOLD_MS);
+    && (now - new Date(monitorLastSeen).getTime() <= OFFLINE_THRESHOLD_MS);
 
   const handleExport = (discriminate: boolean) => {
     exportCountersCSV(devices, monitorName, discriminate);

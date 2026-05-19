@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNow } from '../hooks/useNow';
 import { useParams, Link } from 'react-router-dom';
 import {
   HardDrive, ChevronRight, Users, Radio,
@@ -12,10 +13,10 @@ import ConfirmModal from '../components/ConfirmModal';
 import ClientUsageChart from '../components/agents/ClientUsageChart';
 import CreateMonitorModal from '../components/monitors/CreateMonitorModal';
 
-function MonitorStatusBadge({ status, last_seen }: { status: string; last_seen: string | null }) {
+function MonitorStatusBadge({ status, last_seen, now }: { status: string; last_seen: string | null; now: number }) {
   const isOnline = status === 'active'
     && last_seen !== null
-    && (Date.now() - new Date(last_seen).getTime() <= OFFLINE_THRESHOLD_MS);
+    && (now - new Date(last_seen).getTime() <= OFFLINE_THRESHOLD_MS);
 
   if (status === 'active' && isOnline) {
     return (
@@ -38,9 +39,9 @@ function MonitorStatusBadge({ status, last_seen }: { status: string; last_seen: 
   );
 }
 
-function timeAgo(dateStr: string | null): string {
+function timeAgo(dateStr: string | null, now: number): string {
   if (!dateStr) return 'Nunca';
-  const diff = Date.now() - new Date(dateStr).getTime();
+  const diff = now - new Date(dateStr).getTime();
   const mins = Math.floor(diff / 60000);
   if (mins < 1) return 'Ahora';
   if (mins < 60) return `hace ${mins}m`;
@@ -51,6 +52,7 @@ function timeAgo(dateStr: string | null): string {
 const ClientDetail = () => {
   const { id } = useParams<{ id: string }>();
   const { showToast } = useToast();
+  const now = useNow();
   const { client, monitors, usage, loading, error, createMonitor, deleteMonitor } = useClientDetail(id!);
 
   const [showMonitorModal, setShowMonitorModal] = useState(false);
@@ -73,7 +75,7 @@ const ClientDetail = () => {
 
   const onlineMonitors = monitors.filter(m =>
     m.status === 'active' && m.last_seen !== null
-    && (Date.now() - new Date(m.last_seen).getTime() <= OFFLINE_THRESHOLD_MS)
+    && (now - new Date(m.last_seen).getTime() <= OFFLINE_THRESHOLD_MS)
   ).length;
 
   const totalPagesMonth = usage.length > 0
@@ -245,10 +247,10 @@ const ClientDetail = () => {
                             </div>
                           </Link>
                         </td>
-                        <td><MonitorStatusBadge status={m.status} last_seen={m.last_seen} /></td>
+                        <td><MonitorStatusBadge status={m.status} last_seen={m.last_seen} now={now} /></td>
                         <td className="hidden md:table-cell">
                           <div className="flex items-center gap-2 text-slate-500 font-bold text-xs">
-                            <Clock size={12} className="text-slate-300" /> {timeAgo(m.last_seen)}
+                            <Clock size={12} className="text-slate-300" /> {timeAgo(m.last_seen, now)}
                           </div>
                         </td>
                         <td className="text-center">

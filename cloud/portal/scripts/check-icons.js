@@ -15,7 +15,7 @@ const IGNORED_COMPONENTS = new Set([
   'Fragment', 'Suspense', 'Portal', 'AreaChart', 'Area', 'Line', 'LineChart',
   'RechartsTooltip', 'PieChart', 'Pie', 'ErrorBoundary', 'Terminal',
   'AgentTable', 'CreateAgentModal', 'ConfigAgentModal', 'RegenKeyModal',
-  'AgentConfig', 'Agent', 'Client', 'DashboardData', 'MonitorData', 'MonitorConfig', 'Thresholds', 'Reading', 'Device', 'Icon', 'PieChartIcon',
+  'AgentConfig', 'Agent', 'Client', 'DashboardData', 'MonitorData', 'MonitorConfig', 'Thresholds', 'Reading', 'Device', 'Icon', 'PieChartIcon', 'DBUser',
   'ClientUsageChart', 'CreateMonitorModal', 'Tab', 'DeviceSummaryCard', 'MonitorSpecsCard', 'LicenseCard', 'DeviceInventoryTable', 'RemoteToolsPanel', 'EditMonitorModal'
 ]);
 

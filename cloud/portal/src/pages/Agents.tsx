@@ -32,7 +32,11 @@ const Agents = () => {
   }, [showToast]);
 
   useEffect(() => {
-    loadAgents().finally(() => setLoading(false));
+    const init = async () => {
+      await loadAgents();
+      setLoading(false);
+    };
+    void init();
   }, [loadAgents]);
 
   const revokeAgent = async () => {

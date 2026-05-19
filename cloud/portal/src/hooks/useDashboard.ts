@@ -9,6 +9,7 @@ export function useDashboard() {
   const [loading, setLoading] = useState(true);
   const { showToast } = useToast();
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scheduleNextRef = useRef<() => void>(() => {});
 
   const load = useCallback(async () => {
     try {
@@ -24,15 +25,23 @@ export function useDashboard() {
   const scheduleNext = useCallback(() => {
     timerRef.current = setTimeout(() => {
       if (document.visibilityState === 'visible') {
-        load().finally(scheduleNext);
+        load().finally(() => scheduleNextRef.current());
       } else {
-        scheduleNext();
+        scheduleNextRef.current();
       }
     }, DASHBOARD_POLL_MS);
   }, [load]);
 
   useEffect(() => {
-    load().finally(scheduleNext);
+    scheduleNextRef.current = scheduleNext;
+  }, [scheduleNext]);
+
+  useEffect(() => {
+    const init = async () => {
+      await load();
+      scheduleNext();
+    };
+    void init();
 
     const onVisibility = () => {
       if (document.visibilityState === 'visible') {

@@ -35,11 +35,19 @@ const Terminal: React.FC<TerminalProps> = ({ agentId }) => {
     }
   }, [lines]);
 
+  const addLog = (type: LogLine['type'], content: string) => {
+    setLines(prev => [...prev, {
+      id: Math.random().toString(36).substring(7),
+      type,
+      content,
+      timestamp: new Date()
+    }]);
+  };
+
   // WebSocket for real-time results
   useEffect(() => {
     const connect = () => {
-      // Determine WebSocket URL
-      let wsUrl = '';
+      let wsUrl: string;
       const token = sessionStorage.getItem('stc_ws_token');
       
       if (window.location.hostname.includes('vercel.app')) {
@@ -87,14 +95,7 @@ const Terminal: React.FC<TerminalProps> = ({ agentId }) => {
     };
   }, [agentId]);
 
-  const addLog = (type: LogLine['type'], content: string) => {
-    setLines(prev => [...prev, {
-      id: Math.random().toString(36).substring(7),
-      type,
-      content,
-      timestamp: new Date()
-    }]);
-  };
+
 
   const handleExecute = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();

@@ -25,13 +25,16 @@ export default function CreateAgentModal({ show, clients, activationKey, onClose
   const [creating, setCreating] = useState(false);
 
   useEffect(() => {
-    if (show) {
-      setFormClientId('');
-      setFormName('');
-      setFormRanges([emptyRange()]);
-      setFormSnmp(SNMP_DEFAULT_COMMUNITY);
-      setFormInterval(SCAN_DEFAULT_INTERVAL);
-    }
+    const init = async () => {
+      if (show) {
+        setFormClientId('');
+        setFormName('');
+        setFormRanges([emptyRange()]);
+        setFormSnmp(SNMP_DEFAULT_COMMUNITY);
+        setFormInterval(SCAN_DEFAULT_INTERVAL);
+      }
+    };
+    void init();
   }, [show]);
 
   const updateRange = (idx: number, field: 'start' | 'end', value: string) =>

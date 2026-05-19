@@ -17,16 +17,23 @@ export default function ConfigAgentModal({ modal, onClose }: Props) {
   const [savingConfig, setSavingConfig] = useState(false);
 
   useEffect(() => {
-    if (!modal) return;
-    setLoadingConfig(true);
-    api.get<AgentConfig>(`/agents/${modal.id}/config`)
-      .then(data => setConfigForm({
-        ip_ranges: data?.ip_ranges ?? [],
-        snmp_community: data?.snmp_community ?? 'public',
-        scan_interval_minutes: data?.scan_interval_minutes ?? 15,
-      }))
-      .catch(() => setConfigForm(defaultConfig))
-      .finally(() => setLoadingConfig(false));
+    const init = async () => {
+      if (!modal) return;
+      setLoadingConfig(true);
+      try {
+        const data = await api.get<AgentConfig>(`/agents/${modal.id}/config`);
+        setConfigForm({
+          ip_ranges: data?.ip_ranges ?? [],
+          snmp_community: data?.snmp_community ?? 'public',
+          scan_interval_minutes: data?.scan_interval_minutes ?? 15,
+        });
+      } catch {
+        setConfigForm(defaultConfig);
+      } finally {
+        setLoadingConfig(false);
+      }
+    };
+    void init();
   }, [modal]);
 
   const handleClose = () => {

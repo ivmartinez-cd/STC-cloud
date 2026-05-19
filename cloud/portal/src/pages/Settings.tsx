@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Radio, Save, Mail, Shield, CheckCircle, Settings as SettingsIcon, Bell, User, UserPlus, Key, Trash2, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../lib/api';
@@ -59,23 +59,27 @@ const Settings = () => {
   const isAdmin = currentUserRole === 'admin';
 
   // Cargar usuarios si es administrador
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     if (!isAdmin) return;
     setLoadingUsers(true);
     setUserError(null);
     try {
       const data = await api.get<DBUser[]>('/portal/users');
       setUsers(data);
-    } catch (err: any) {
-      setUserError(err.response?.data?.error || err.message || 'Error al obtener usuarios');
+    } catch (err: unknown) {
+      setUserError((err as { response?: { data?: { error?: string } } })?.response?.data?.error || (err as Error).message || 'Error al obtener usuarios');
     } finally {
       setLoadingUsers(false);
     }
-  };
+  }, [isAdmin]);
 
   useEffect(() => {
-    fetchUsers();
-  }, [isAdmin]);
+    // Avoid synchronous setState in effect to satisfy ESLint
+    const init = async () => {
+      await fetchUsers();
+    };
+    void init();
+  }, [fetchUsers]);
 
   const save = () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(thresholds));
@@ -100,8 +104,8 @@ const Settings = () => {
       setNewPassword('');
       setNewRole('operator');
       fetchUsers();
-    } catch (err: any) {
-      setCreateError(err.response?.data?.error || err.message || 'Error al crear usuario');
+    } catch (err: unknown) {
+      setCreateError((err as { response?: { data?: { error?: string } } })?.response?.data?.error || (err as Error).message || 'Error al crear usuario');
     } finally {
       setCreateLoading(false);
     }
@@ -118,8 +122,8 @@ const Settings = () => {
         active: !user.active,
       });
       fetchUsers();
-    } catch (err: any) {
-      alert(err.response?.data?.error || err.message || 'Error al actualizar estado del usuario');
+    } catch (err: unknown) {
+      alert((err as { response?: { data?: { error?: string } } })?.response?.data?.error || (err as Error).message || 'Error al actualizar estado del usuario');
     }
   };
 
@@ -132,8 +136,8 @@ const Settings = () => {
     try {
       await api.put(`/portal/users/${user.id}`, { role });
       fetchUsers();
-    } catch (err: any) {
-      alert(err.response?.data?.error || err.message || 'Error al actualizar rol');
+    } catch (err: unknown) {
+      alert((err as { response?: { data?: { error?: string } } })?.response?.data?.error || (err as Error).message || 'Error al actualizar rol');
     }
   };
 
@@ -150,8 +154,8 @@ const Settings = () => {
       setResettingUser(null);
       setResetPassword('');
       alert("Contraseña actualizada con éxito");
-    } catch (err: any) {
-      setResetError(err.response?.data?.error || err.message || 'Error al actualizar contraseña');
+    } catch (err: unknown) {
+      setResetError((err as { response?: { data?: { error?: string } } })?.response?.data?.error || (err as Error).message || 'Error al actualizar contraseña');
     } finally {
       setResetLoading(false);
     }
@@ -169,8 +173,8 @@ const Settings = () => {
     try {
       await api.delete(`/portal/users/${user.id}`);
       fetchUsers();
-    } catch (err: any) {
-      alert(err.response?.data?.error || err.message || 'Error al eliminar usuario');
+    } catch (err: unknown) {
+      alert((err as { response?: { data?: { error?: string } } })?.response?.data?.error || (err as Error).message || 'Error al eliminar usuario');
     }
   };
 

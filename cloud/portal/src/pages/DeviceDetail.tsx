@@ -43,6 +43,7 @@ const DeviceDetail = () => {
   const [device, setDevice]     = useState<Device | null>(null);
   const [loading, setLoading]   = useState(true);
   const [error, setError]       = useState('');
+  const [now] = useState(() => Date.now());
 
   const load = useCallback(() => {
     setLoading(true);
@@ -60,7 +61,12 @@ const DeviceDetail = () => {
     .finally(() => setLoading(false));
   }, [id]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    const init = async () => {
+      await load();
+    };
+    void init();
+  }, [load]);
 
   const latest = readings[0] ?? null;
   
@@ -76,7 +82,7 @@ const DeviceDetail = () => {
     && device.agent_status === 'active'
     && device.agent_last_seen !== null
     && device.agent_last_seen !== undefined
-    && (Date.now() - new Date(device.agent_last_seen).getTime() <= OFFLINE_THRESHOLD_MS);
+    && (now - new Date(device.agent_last_seen).getTime() <= OFFLINE_THRESHOLD_MS);
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -143,7 +149,7 @@ const DeviceDetail = () => {
                <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Cliente / Monitor</p>
                <p className="text-xs font-bold text-slate-500">{device.client_name} · {device.monitor_name}</p>
              </div>
-             {device.agent_status === 'active' && device.agent_last_seen && (Date.now() - new Date(device.agent_last_seen).getTime() <= OFFLINE_THRESHOLD_MS) ? (
+             {device.agent_status === 'active' && device.agent_last_seen && (now - new Date(device.agent_last_seen).getTime() <= OFFLINE_THRESHOLD_MS) ? (
                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" title="Agente en línea" />
              ) : (
                <div className="w-2 h-2 rounded-full bg-amber-400" title="Agente sin contacto" />
@@ -355,13 +361,13 @@ const DeviceDetail = () => {
                  <p className="text-xs font-bold text-slate-600">Dispositivo registrado en red</p>
                </div>
                <div className="flex items-center gap-3">
-                 {device.agent_status === 'active' && device.agent_last_seen && (Date.now() - new Date(device.agent_last_seen).getTime() <= OFFLINE_THRESHOLD_MS) ? (
+                 {device.agent_status === 'active' && device.agent_last_seen && (now - new Date(device.agent_last_seen).getTime() <= OFFLINE_THRESHOLD_MS) ? (
                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500 shadow-sm shadow-blue-500/50" />
                  ) : (
                    <div className="w-1.5 h-1.5 rounded-full bg-amber-400" />
                  )}
                  <p className="text-xs font-bold text-slate-600">
-                   {device.agent_status === 'active' && device.agent_last_seen && (Date.now() - new Date(device.agent_last_seen).getTime() <= OFFLINE_THRESHOLD_MS)
+                   {device.agent_status === 'active' && device.agent_last_seen && (now - new Date(device.agent_last_seen).getTime() <= OFFLINE_THRESHOLD_MS)
                      ? 'Integridad de datos verificada'
                      : 'Agente sin contacto — datos pueden no ser actuales'}
                  </p>

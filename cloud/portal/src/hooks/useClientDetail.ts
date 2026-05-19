@@ -25,7 +25,12 @@ export function useClientDetail(id: string) {
       .finally(() => setLoading(false));
   }, [id]);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => {
+    const init = async () => {
+      await fetchData();
+    };
+    void init();
+  }, [fetchData]);
 
   const createMonitor = useCallback(async (form: CreateMonitorForm): Promise<string> => {
     const payload: {

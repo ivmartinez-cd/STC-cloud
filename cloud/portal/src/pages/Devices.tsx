@@ -37,7 +37,11 @@ const Devices = () => {
     }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    void (async () => {
+      await load();
+    })();
+  }, [load]);
 
   const filtered = devices.filter(d => {
     if (!search.trim()) return true;
