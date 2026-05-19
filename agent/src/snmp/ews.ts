@@ -417,30 +417,47 @@ function parseHpSupplies(html: string): Partial<EwsData> {
 // ─── Samsung SyncThru supplies.json parser ────────────────────────────────────
 
 function parseSamsungSyncThruSupplies(body: string): Partial<EwsData> {
-  const extract = (pattern: RegExp): number | null => {
+  const extractObj = (color: string): number | null => {
+    const blockMatch = body.match(new RegExp(`toner_${color}\\s*:\\s*\\{([\\s\\S]*?)\\}`, 'i'));
+    if (!blockMatch) return null;
+    const block = blockMatch[1];
+    const optMatch = block.match(/opt\s*:\s*(\d+)/i);
+    if (optMatch && parseInt(optMatch[1], 10) === 0) {
+      return null; // not installed/supported (e.g. CMY on mono printers)
+    }
+    const remMatch = block.match(/remaining\s*:\s*(\d+)/i);
+    if (!remMatch) return null;
+    const v = parseInt(remMatch[1], 10);
+    return isNaN(v) ? null : Math.min(100, Math.max(0, v));
+  };
+
+  const extractLegacy = (pattern: RegExp): number | null => {
     const m = body.match(pattern);
     if (!m) return null;
     const v = parseInt(m[1], 10);
     return isNaN(v) ? null : Math.min(100, Math.max(0, v));
   };
 
-  // V4 JS-style variables & nested objects
-  const black   = extract(/GXI_TONER_BLACK_REMAIN_CNT\s*:\s*(\d+)/i)
-               ?? extract(/"color"\s*:\s*"black"[^}]*"remaining"\s*:\s*(\d+)/i)
-               ?? extract(/"remaining"\s*:\s*(\d+)[^}]*"color"\s*:\s*"black"/i)
-               ?? extract(/toner_black\s*:\s*\{[^}]*remaining\s*:\s*(\d+)/i);
-  const cyan    = extract(/GXI_TONER_CYAN_REMAIN_CNT\s*:\s*(\d+)/i)
-               ?? extract(/"color"\s*:\s*"cyan"[^}]*"remaining"\s*:\s*(\d+)/i)
-               ?? extract(/"remaining"\s*:\s*(\d+)[^}]*"color"\s*:\s*"cyan"/i)
-               ?? extract(/toner_cyan\s*:\s*\{[^}]*remaining\s*:\s*(\d+)/i);
-  const magenta = extract(/GXI_TONER_MAGENTA_REMAIN_CNT\s*:\s*(\d+)/i)
-               ?? extract(/"color"\s*:\s*"magenta"[^}]*"remaining"\s*:\s*(\d+)/i)
-               ?? extract(/"remaining"\s*:\s*(\d+)[^}]*"color"\s*:\s*"magenta"/i)
-               ?? extract(/toner_magenta\s*:\s*\{[^}]*remaining\s*:\s*(\d+)/i);
-  const yellow  = extract(/GXI_TONER_YELLOW_REMAIN_CNT\s*:\s*(\d+)/i)
-               ?? extract(/"color"\s*:\s*"yellow"[^}]*"remaining"\s*:\s*(\d+)/i)
-               ?? extract(/"remaining"\s*:\s*(\d+)[^}]*"color"\s*:\s*"yellow"/i)
-               ?? extract(/toner_yellow\s*:\s*\{[^}]*remaining\s*:\s*(\d+)/i);
+  // Modern JSON-like objects first, then V4/V5 legacy format
+  const black   = extractObj('black')
+               ?? extractLegacy(/GXI_TONER_BLACK_REMAIN_CNT\s*:\s*(\d+)/i)
+               ?? extractLegacy(/"color"\s*:\s*"black"[^}]*"remaining"\s*:\s*(\d+)/i)
+               ?? extractLegacy(/"remaining"\s*:\s*(\d+)[^}]*"color"\s*:\s*"black"/i);
+
+  const cyan    = extractObj('cyan')
+               ?? extractLegacy(/GXI_TONER_CYAN_REMAIN_CNT\s*:\s*(\d+)/i)
+               ?? extractLegacy(/"color"\s*:\s*"cyan"[^}]*"remaining"\s*:\s*(\d+)/i)
+               ?? extractLegacy(/"remaining"\s*:\s*(\d+)[^}]*"color"\s*:\s*"cyan"/i);
+
+  const magenta = extractObj('magenta')
+               ?? extractLegacy(/GXI_TONER_MAGENTA_REMAIN_CNT\s*:\s*(\d+)/i)
+               ?? extractLegacy(/"color"\s*:\s*"magenta"[^}]*"remaining"\s*:\s*(\d+)/i)
+               ?? extractLegacy(/"remaining"\s*:\s*(\d+)[^}]*"color"\s*:\s*"magenta"/i);
+
+  const yellow  = extractObj('yellow')
+               ?? extractLegacy(/GXI_TONER_YELLOW_REMAIN_CNT\s*:\s*(\d+)/i)
+               ?? extractLegacy(/"color"\s*:\s*"yellow"[^}]*"remaining"\s*:\s*(\d+)/i)
+               ?? extractLegacy(/"remaining"\s*:\s*(\d+)[^}]*"color"\s*:\s*"yellow"/i);
 
   if (black === null && cyan === null && magenta === null && yellow === null) return {};
   return { brand: 'samsung', tonerBlack: black, tonerCyan: cyan, tonerMagenta: magenta, tonerYellow: yellow };
@@ -449,37 +466,47 @@ function parseSamsungSyncThruSupplies(body: string): Partial<EwsData> {
 // ─── Samsung Solution Web Service supplies parser ─────────────────────────────
 
 function parseSamsungSolutionSupplies(html: string): Partial<EwsData> {
-  const trRegex = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
-  const tdRegex = /<td[^>]*>([\s\S]*?)<\/td>/gi;
+  const cleanText = html
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<style[\s\S]*?<\/style>/gi, '')
+    .replace(/<[^>]+>/g, '\n')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&#\d+;/g, ' ');
+
+  const lines = cleanText
+    .split('\n')
+    .map(l => l.trim())
+    .filter(l => l.length > 0);
 
   let black: number | null = null;
   let cyan:  number | null = null;
   let magenta: number | null = null;
   let yellow: number | null = null;
 
-  let trMatch;
-  while ((trMatch = trRegex.exec(html)) !== null) {
-    const rowHtml = trMatch[1];
-    const tds: string[] = [];
-    let tdMatch;
-    while ((tdMatch = tdRegex.exec(rowHtml)) !== null) {
-      tds.push(tdMatch[1].replace(/<[^>]*>/g, '').trim());
-    }
-    if (tds.length < 2) continue;
-    const label  = tds[0];
-    const pctStr = tds[tds.length - 1];
-    const raw    = parseInt(pctStr.replace('%', '').replace(/[,\.]/g, '').trim(), 10);
-    if (isNaN(raw)) continue;
-    const pct = Math.min(100, Math.max(0, raw));
+  let currentColor: 'black' | 'cyan' | 'magenta' | 'yellow' | null = null;
 
-    if (/(?:흑백|Black|Negro)\s*(?:토너|Toner|Tóner)?/i.test(label) && !/Total|총합/i.test(label)) {
-      black = pct;
-    } else if (/(?:시안|Cyan)/i.test(label)) {
-      cyan = pct;
-    } else if (/(?:마젠타|Magenta)/i.test(label)) {
-      magenta = pct;
-    } else if (/(?:노란|Yellow|Amarillo)/i.test(label)) {
-      yellow = pct;
+  for (const line of lines) {
+    // 1. Detect color context
+    if (/(?:이미징|OPC|드럼|Drum|Unit)/i.test(line)) {
+      currentColor = null;
+    } else if (/(?:흑백|검정|Black|Negro)/i.test(line) && /(?:토너|Toner|Tóner)/i.test(line)) {
+      currentColor = 'black';
+    } else if (/(?:시안|청색|Cyan)/i.test(line) && /(?:토너|Toner|Tóner)/i.test(line)) {
+      currentColor = 'cyan';
+    } else if (/(?:마젠타|심홍색|Magenta)/i.test(line) && /(?:토너|Toner|Tóner)/i.test(line)) {
+      currentColor = 'magenta';
+    } else if (/(?:노란색|노란|Yellow|Amarillo)/i.test(line) && /(?:토너|Toner|Tóner)/i.test(line)) {
+      currentColor = 'yellow';
+    }
+
+    // 2. Extract percentage
+    const m = line.match(/^(\d+)\s*%/);
+    if (m) {
+      const val = parseInt(m[1], 10);
+      if (currentColor === 'black' && black === null) black = val;
+      else if (currentColor === 'cyan' && cyan === null) cyan = val;
+      else if (currentColor === 'magenta' && magenta === null) magenta = val;
+      else if (currentColor === 'yellow' && yellow === null) yellow = val;
     }
   }
 
