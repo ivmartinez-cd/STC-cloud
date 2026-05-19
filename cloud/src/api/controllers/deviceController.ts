@@ -1,6 +1,15 @@
 import { FastifyReply, FastifyRequest } from "fastify";
 import { Knex } from "knex";
 
+function ipToInt(ip: string): number {
+  return ip.split('.').reduce((acc, octet) => (acc << 8) | parseInt(octet, 10), 0) >>> 0;
+}
+
+function isIpInRanges(ip: string, ranges: { start: string; end: string }[]): boolean {
+  const ipInt = ipToInt(ip);
+  return ranges.some(r => ipInt >= ipToInt(r.start) && ipInt <= ipToInt(r.end));
+}
+
 export function createDeviceController(db: Knex) {
   return {
     listDevices: async () =>
@@ -78,7 +87,18 @@ export function createDeviceController(db: Knex) {
         return reply.status(503).send({ error: "El agente de monitoreo está desconectado. No se puede acceder al EWS en este momento." });
       }
 
-      // 3. Preparar payload de comando
+      // 3. Validación defensa-en-profundidad: la IP del dispositivo debe estar dentro
+      //    de los rangos configurados del agente (previene pivoteo si un admin modifica la IP)
+      const agent = await db("agents").where("id", agentId).select("ip_ranges").first();
+      if (agent?.ip_ranges) {
+        const ranges: { start: string; end: string }[] =
+          typeof agent.ip_ranges === "string" ? JSON.parse(agent.ip_ranges) : agent.ip_ranges;
+        if (Array.isArray(ranges) && ranges.length > 0 && !isIpInRanges(ip, ranges)) {
+          return reply.status(403).send({ error: "La IP del dispositivo no está dentro de los rangos autorizados del agente." });
+        }
+      }
+
+      // 4. Preparar payload de comando
       const cleanHeaders: Record<string, string> = {};
       for (const [key, value] of Object.entries(request.headers)) {
         const k = key.toLowerCase();
@@ -89,7 +109,7 @@ export function createDeviceController(db: Knex) {
 
       const tunnelRequestId = require("crypto").randomUUID();
 
-      // 4. Enviar comando y esperar resolución de promesa
+      // 5. Enviar comando y esperar resolución de promesa
       const resultPromise = new Promise<{ statusCode: number; headers: Record<string, string>; body: string }>((resolve, reject) => {
         const timeout = setTimeout(() => {
           pendingProxyRequests.delete(tunnelRequestId);
@@ -100,9 +120,18 @@ export function createDeviceController(db: Knex) {
       });
 
       // Leer body si existe (por ejemplo en POST)
+      // Se usa Buffer.isBuffer para preservar datos binarios intactos; JSON solo para objetos ya parseados por Fastify
       let requestBodyBase64: string | null = null;
-      if (request.body) {
-        requestBodyBase64 = Buffer.from(JSON.stringify(request.body)).toString('base64');
+      if (request.body !== undefined && request.body !== null) {
+        let bodyBuf: Buffer;
+        if (Buffer.isBuffer(request.body)) {
+          bodyBuf = request.body;
+        } else if (typeof request.body === "string") {
+          bodyBuf = Buffer.from(request.body);
+        } else {
+          bodyBuf = Buffer.from(JSON.stringify(request.body));
+        }
+        requestBodyBase64 = bodyBuf.toString("base64");
       }
 
       const sent = sendCommandToAgent(agentId, "EWS_PROXY_REQ", {
