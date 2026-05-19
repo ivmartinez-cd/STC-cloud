@@ -4,6 +4,17 @@ import { FastifyInstance } from 'fastify';
 const portalClients = new Set<any>();
 const agentClients = new Map<string, any>();
 
+export const pendingProxyRequests = new Map<string, {
+  resolve: (value: any) => void;
+  reject: (reason: any) => void;
+  timeout: NodeJS.Timeout;
+}>();
+
+export function isAgentOnlineWss(agentId: string): boolean {
+  const socket = agentClients.get(agentId);
+  return !!(socket && socket.readyState === 1);
+}
+
 export function broadcastToPortal(event: string, data: unknown) {
   const message = JSON.stringify({ event, data, timestamp: new Date().toISOString() });
   for (const socket of portalClients) {
@@ -98,6 +109,19 @@ export async function registerWebSocket(fastify: FastifyInstance, agentService: 
 
         if (agentId && msg.event === 'command_result') {
           if (msg.data && msg.data.id) {
+            if (msg.data.type === 'EWS_PROXY_REQ') {
+              const pending = pendingProxyRequests.get(msg.data.id);
+              if (pending) {
+                clearTimeout(pending.timeout);
+                pendingProxyRequests.delete(msg.data.id);
+                if (msg.data.status === 'success') {
+                  pending.resolve(msg.data.result);
+                } else {
+                  pending.reject(new Error(msg.data.result?.error || 'Error desconocido en agente'));
+                }
+              }
+            }
+
             agentService.updateCommandResult(
               msg.data.id,
               msg.data.status === 'success' ? 'completed' : 'error',

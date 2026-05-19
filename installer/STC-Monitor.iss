@@ -20,7 +20,7 @@
 ; ============================================================================
 
 #define MyAppName      "STC Cloud Monitor"
-#define MyAppVersion   "1.7.0"
+#define MyAppVersion   "1.7.1"
 #define MyAppPublisher "STC Cloud"
 #define MyAppExeName   "stc-node.exe"
 #define ServiceName    "STCCloudMonitor"

@@ -56,5 +56,102 @@ export function createDeviceController(db: Knex) {
         )
       );
     },
+
+    ewsProxy: async (request: FastifyRequest, reply: FastifyReply) => {
+      const { id } = request.params as any;
+      const subPath = "/" + ((request.params as any)["*"] || "");
+      const queryString = request.url.split('?')[1];
+      const fullPath = subPath + (queryString ? "?" + queryString : "");
+
+      // 1. Obtener dispositivo e IP
+      const device = await db("devices")
+        .where("id", id)
+        .first();
+      if (!device) return reply.status(404).send({ error: "Dispositivo no encontrado" });
+
+      const agentId = device.agent_id;
+      const ip = device.ip_address;
+
+      // 2. Verificar si el agente está conectado vía WSS
+      const { isAgentOnlineWss, sendCommandToAgent, pendingProxyRequests } = require("../../ws/index");
+      if (!isAgentOnlineWss(agentId)) {
+        return reply.status(503).send({ error: "El agente de monitoreo está desconectado. No se puede acceder al EWS en este momento." });
+      }
+
+      // 3. Preparar payload de comando
+      const cleanHeaders: Record<string, string> = {};
+      for (const [key, value] of Object.entries(request.headers)) {
+        const k = key.toLowerCase();
+        if (k !== "host" && k !== "authorization" && k !== "cookie" && k !== "connection") {
+          cleanHeaders[key] = String(value);
+        }
+      }
+
+      const tunnelRequestId = require("crypto").randomUUID();
+
+      // 4. Enviar comando y esperar resolución de promesa
+      const resultPromise = new Promise<{ statusCode: number; headers: Record<string, string>; body: string }>((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          pendingProxyRequests.delete(tunnelRequestId);
+          reject(new Error("Timeout esperando respuesta del agente (15s)"));
+        }, 15000);
+
+        pendingProxyRequests.set(tunnelRequestId, { resolve, reject, timeout });
+      });
+
+      // Leer body si existe (por ejemplo en POST)
+      let requestBodyBase64: string | null = null;
+      if (request.body) {
+        requestBodyBase64 = Buffer.from(JSON.stringify(request.body)).toString('base64');
+      }
+
+      const sent = sendCommandToAgent(agentId, "EWS_PROXY_REQ", {
+        ip,
+        method: request.method,
+        path: fullPath,
+        headers: cleanHeaders,
+        body: requestBodyBase64
+      }, tunnelRequestId);
+
+      if (!sent) {
+        pendingProxyRequests.delete(tunnelRequestId);
+        return reply.status(503).send({ error: "No se pudo transmitir el comando al agente." });
+      }
+
+      try {
+        const response = await resultPromise;
+
+        // Escribir headers
+        for (const [key, value] of Object.entries(response.headers)) {
+          const k = key.toLowerCase();
+          if (k !== "content-encoding" && k !== "transfer-encoding" && k !== "content-length") {
+            reply.header(key, value);
+          }
+        }
+
+        reply.code(response.statusCode);
+
+        let responseBody = Buffer.from(response.body, "base64");
+        
+        // Inyección de <base href> para resolver enlaces absolutos en HTML
+        const contentType = response.headers["content-type"] || "";
+        if (contentType.toLowerCase().includes("text/html")) {
+          let html = responseBody.toString("utf8");
+          const baseTag = `<base href="/api/v1/devices/${id}/ews-proxy/">`;
+          
+          const headIndex = html.toLowerCase().indexOf("<head>");
+          if (headIndex !== -1) {
+            html = html.slice(0, headIndex + 6) + "\n" + baseTag + html.slice(headIndex + 6);
+          } else {
+            html = baseTag + "\n" + html;
+          }
+          responseBody = Buffer.from(html, "utf8");
+        }
+
+        return reply.send(responseBody);
+      } catch (err: any) {
+        return reply.status(504).send({ error: err.message });
+      }
+    }
   };
 }

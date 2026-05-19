@@ -17,4 +17,14 @@ export function registerDeviceRoutes(
     preHandler: portalAuth,
     handler: ctrl.getDeviceReadings,
   });
+
+  fastify.get("/api/v1/devices/:id/ews-proxy/*", {
+    preHandler: portalAuth,
+    handler: ctrl.ewsProxy,
+  });
+
+  fastify.post("/api/v1/devices/:id/ews-proxy/*", {
+    preHandler: portalAuth,
+    handler: ctrl.ewsProxy,
+  });
 }

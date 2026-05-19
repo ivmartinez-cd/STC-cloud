@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
-import { ArrowLeft, Printer, RefreshCw, FileText, Clock, TrendingUp, Activity } from 'lucide-react';
+import { ArrowLeft, Printer, RefreshCw, FileText, Clock, TrendingUp, Activity, Globe, X } from 'lucide-react';
 import { OFFLINE_THRESHOLD_MS } from '../lib/constants';
 import {
   Line, XAxis, YAxis, Tooltip,
@@ -43,6 +43,7 @@ const DeviceDetail = () => {
   const [device, setDevice]     = useState<Device | null>(null);
   const [loading, setLoading]   = useState(true);
   const [error, setError]       = useState('');
+  const [isEwsOpen, setIsEwsOpen] = useState(false);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -96,13 +97,24 @@ const DeviceDetail = () => {
             <p className="text-slate-400 text-sm mt-1 font-medium">Análisis de rendimiento y contadores históricos</p>
           </div>
         </div>
-        <button
-          onClick={load}
-          disabled={loading}
-          className="p-3 bg-white text-slate-400 hover:text-brand border border-slate-100 rounded-2xl transition-all shadow-sm active:scale-95 disabled:opacity-40"
-        >
-          <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setIsEwsOpen(true)}
+            disabled={!isAgentOnline}
+            className="flex items-center gap-2 px-4 py-3 bg-[#004a99] hover:bg-[#003d80] disabled:bg-slate-100 disabled:text-slate-400 text-white font-extrabold text-xs rounded-2xl transition-all shadow-sm active:scale-95 disabled:opacity-50"
+            title={isAgentOnline ? "Abrir consola web EWS de la impresora" : "El agente de monitoreo debe estar en línea para abrir EWS"}
+          >
+            <Globe size={16} />
+            <span className="hidden sm:inline">Consola Web EWS</span>
+          </button>
+          <button
+            onClick={load}
+            disabled={loading}
+            className="p-3 bg-white text-slate-400 hover:text-brand border border-slate-100 rounded-2xl transition-all shadow-sm active:scale-95 disabled:opacity-40"
+          >
+            <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
+          </button>
+        </div>
       </header>
 
       {error && (
@@ -369,11 +381,51 @@ const DeviceDetail = () => {
              </div>
           </div>
           </div>
-        </div>
-      )}
-    </div>
-  );
-};
+         </div>
+       )}
+
+       {isEwsOpen && device && (
+         <div className="fixed inset-0 bg-[#0c111d]/60 backdrop-blur-md z-50 flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-300">
+           <div className="bg-white rounded-[32px] shadow-2xl border border-slate-100 w-full h-full max-w-7xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-300">
+             {/* Modal Header */}
+             <div className="px-8 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+               <div className="flex items-center gap-3">
+                 <div className="p-2 bg-[#004a99]/10 text-[#004a99] rounded-xl">
+                   <Globe size={20} />
+                 </div>
+                 <div>
+                   <h3 className="font-extrabold text-slate-800 text-lg leading-tight flex items-center gap-2">
+                     EWS Remoto: {device.model}
+                     <span className="text-xs bg-slate-200 text-slate-600 px-2.5 py-0.5 rounded-full font-bold">
+                       {device.ip_address}
+                     </span>
+                   </h3>
+                   <p className="text-xs text-slate-400 font-medium">Túnel HTTP seguro establecido a través de {device.monitor_name}</p>
+                 </div>
+               </div>
+               
+               <button
+                 onClick={() => setIsEwsOpen(false)}
+                 className="p-2 hover:bg-slate-200/60 rounded-xl transition-colors text-slate-400 hover:text-slate-600 active:scale-95"
+               >
+                 <X size={20} />
+               </button>
+             </div>
+
+             {/* Modal Body / Iframe */}
+             <div className="flex-1 bg-slate-100 relative">
+               <iframe
+                 src={`/api/v1/devices/${id}/ews-proxy/`}
+                 className="w-full h-full border-none bg-white"
+                 title="EWS Printer Console"
+                 sandbox="allow-same-origin allow-scripts allow-forms"
+               />
+             </div>
+           </div>
+         </div>
+       )}
+     </div>
+   );
+ };
 
 export default DeviceDetail;
-
