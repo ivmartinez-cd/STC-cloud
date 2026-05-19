@@ -57,5 +57,5 @@ export function useDashboard() {
     };
   }, [load, scheduleNext]);
 
-  return { data, loading };
+  return { data, loading, fetchDashboardData: load };
 }
