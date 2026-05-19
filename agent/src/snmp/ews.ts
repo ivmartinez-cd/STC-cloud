@@ -33,6 +33,8 @@ const CANDIDATES: EwsCandidate[] = [
   { path: '/sws/app/information/identity/identity.json',                protocol: 'http', parse: parseSamsungIdentity          },
   { path: '/sws/app/information/supplies/supplies.json',                protocol: 'http', parse: parseSamsungSyncThruSupplies  },
   { path: '/sws/app/information/counters/counters.json',                protocol: 'http', parse: parseSamsungCounters          },
+  // Lexmark PrinterStatus (toner levels)
+  { path: '/cgi-bin/dynamic/printer/PrinterStatus.html',                protocol: 'http', parse: parseLexmarkPrinterStatus     },
   // Lexmark config/deviceinfo
   { path: '/cgi-bin/dynamic/printer/config/reports/deviceinfo.html',    protocol: 'http', parse: parseLexmarkEws               },
   // HP: supplies first (toner levels), then XML > HTML for page counters
@@ -268,6 +270,25 @@ function parseSamsungSolutionCounters(html: string): Partial<EwsData> {
   };
 }
 
+
+// ─── Lexmark PrinterStatus parser ────────────────────────────────────────────
+
+function parseLexmarkPrinterStatus(html: string): Partial<EwsData> {
+  const extractToner = (pattern: RegExp): number | null => {
+    const m = html.match(pattern);
+    if (!m) return null;
+    const v = parseInt(m[1], 10);
+    return isNaN(v) ? null : Math.min(100, Math.max(0, v));
+  };
+
+  const black   = extractToner(/(?:T.ner\s+negro|Black\s+T.ner|T.ner\s+Black|Negro\s+T.ner)[^<]*?(\d+)\s*%/i);
+  const cyan    = extractToner(/(?:T.ner\s+cian|Cyan\s+T.ner|T.ner\s+Cyan|Cian\s+T.ner)[^<]*?(\d+)\s*%/i);
+  const magenta = extractToner(/(?:T.ner\s+magenta|Magenta\s+T.ner|T.ner\s+Magenta)[^<]*?(\d+)\s*%/i);
+  const yellow  = extractToner(/(?:T.ner\s+amarillo|Yellow\s+T.ner|T.ner\s+Yellow|Amarillo\s+T.ner)[^<]*?(\d+)\s*%/i);
+
+  if (black === null && cyan === null && magenta === null && yellow === null) return {};
+  return { brand: 'lexmark', tonerBlack: black, tonerCyan: cyan, tonerMagenta: magenta, tonerYellow: yellow };
+}
 
 // ─── Lexmark EWS parser ──────────────────────────────────────────────────────
 
