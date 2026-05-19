@@ -154,7 +154,20 @@ export function createDeviceController(db: Knex) {
         for (const [key, value] of Object.entries(response.headers)) {
           const k = key.toLowerCase();
           if (k !== "content-encoding" && k !== "transfer-encoding" && k !== "content-length") {
-            reply.header(key, value);
+            if (k === "location") {
+              let loc = String(value);
+              if (loc.startsWith("/")) {
+                loc = `/api/v1/devices/${id}/ews-proxy${loc}`;
+              } else if (loc.startsWith("http")) {
+                try {
+                  const parsedUrl = new URL(loc);
+                  loc = `/api/v1/devices/${id}/ews-proxy${parsedUrl.pathname}${parsedUrl.search}`;
+                } catch {}
+              }
+              reply.header(key, loc);
+            } else {
+              reply.header(key, value);
+            }
           }
         }
 
@@ -162,12 +175,18 @@ export function createDeviceController(db: Knex) {
 
         let responseBody = Buffer.from(response.body, "base64");
         
-        // Inyección de <base href> para resolver enlaces absolutos en HTML
+        // Inyección de <base href> y reescritura de atributos absolutos para evitar fugas del iframe
         const contentType = response.headers["content-type"] || "";
         if (contentType.toLowerCase().includes("text/html")) {
           let html = responseBody.toString("utf8");
-          const baseTag = `<base href="/api/v1/devices/${id}/ews-proxy/">`;
+          const proxyPrefix = `/api/v1/devices/${id}/ews-proxy/`;
           
+          // Reemplazar href="/, src="/, action="/ por prefijo del proxy (evita fuga a localhost:5173/)
+          html = html.replace(/(href|src|action)\s*=\s*"\/(?!\/)/gi, `$1="${proxyPrefix}`);
+          html = html.replace(/(href|src|action)\s*=\s*'\/(?!\/)/gi, `$1='${proxyPrefix}`);
+          
+          // Inyección de <base href>
+          const baseTag = `<base href="${proxyPrefix}">`;
           const headIndex = html.toLowerCase().indexOf("<head>");
           if (headIndex !== -1) {
             html = html.slice(0, headIndex + 6) + "\n" + baseTag + html.slice(headIndex + 6);
