@@ -110,7 +110,7 @@ export function createDeviceController(db: Knex) {
       const tunnelRequestId = require("crypto").randomUUID();
 
       // 5. Enviar comando y esperar resolución de promesa
-      const resultPromise = new Promise<{ statusCode: number; headers: Record<string, string>; body: string }>((resolve, reject) => {
+      const resultPromise = new Promise<{ statusCode: number; headers: Record<string, string>; body: string; finalPath?: string }>((resolve, reject) => {
         const timeout = setTimeout(() => {
           pendingProxyRequests.delete(tunnelRequestId);
           reject(new Error("Timeout esperando respuesta del agente (15s)"));
@@ -179,14 +179,23 @@ export function createDeviceController(db: Knex) {
         const contentType = response.headers["content-type"] || "";
         if (contentType.toLowerCase().includes("text/html")) {
           let html = responseBody.toString("utf8");
-          const proxyPrefix = `/api/v1/devices/${id}/ews-proxy/`;
-          
-          // Reemplazar href="/, src="/, action="/ por prefijo del proxy (evita fuga a localhost:5173/)
-          html = html.replace(/(href|src|action)\s*=\s*"\/(?!\/)/gi, `$1="${proxyPrefix}`);
-          html = html.replace(/(href|src|action)\s*=\s*'\/(?!\/)/gi, `$1='${proxyPrefix}`);
-          
-          // Inyección de <base href>
-          const baseTag = `<base href="${proxyPrefix}">`;
+          // rootProxyPrefix: usado para reescribir atributos absolutos (href="/...", src="/...")
+          const rootProxyPrefix = `/api/v1/devices/${id}/ews-proxy/`;
+
+          // Reemplazar href="/, src="/, action="/ por prefijo del proxy
+          html = html.replace(/(href|src|action)\s*=\s*"\/(?!\/)/gi, `$1="${rootProxyPrefix}`);
+          html = html.replace(/(href|src|action)\s*=\s*'\/(?!\/)/gi, `$1='${rootProxyPrefix}`);
+
+          // Reescribir URLs en meta-refresh (Samsung SyncThru usa meta-refresh para redirigir a /SyncThruWebApp/)
+          // Ej: content="0;URL=/SyncThruWebApp/" → content="0;URL=/api/v1/devices/{id}/ews-proxy/SyncThruWebApp/"
+          html = html.replace(/(content=["'][^"']*?url=)(\/(?!\/))/gi, `$1${rootProxyPrefix}`);
+
+          // <base href> apunta al DIRECTORIO de la URL final (después de seguir redirects).
+          // Así los paths relativos como "assets/foo.js" resuelven desde el directorio correcto
+          // en lugar de la raíz del proxy, evitando 404 en impresoras HP que redirigen a subdirectorios.
+          const finalPath = (response as any).finalPath || fullPath;
+          const finalDir = finalPath.substring(0, finalPath.lastIndexOf('/') + 1) || '/';
+          const baseTag = `<base href="/api/v1/devices/${id}/ews-proxy${finalDir}">`;
           const headIndex = html.toLowerCase().indexOf("<head>");
           if (headIndex !== -1) {
             html = html.slice(0, headIndex + 6) + "\n" + baseTag + html.slice(headIndex + 6);
