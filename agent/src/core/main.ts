@@ -1,4 +1,4 @@
-﻿import os from 'os';
+import os from 'os';
 import fs from 'fs';
 import path from 'path';
 import { exec, spawn } from 'child_process';
@@ -68,6 +68,31 @@ let isSyncing = false;
 let commandResults: any[] = [];
 let processedCommandIds = new Set<string>();
 
+function getLocalIp(): string {
+  const nets = os.networkInterfaces();
+  for (const name of Object.keys(nets)) {
+    const netList = nets[name];
+    if (netList) {
+      for (const netInfo of netList) {
+        if (!netInfo.internal && netInfo.family === 'IPv4') {
+          return netInfo.address;
+        }
+      }
+    }
+  }
+  return '127.0.0.1';
+}
+
+function getHostOS(): string {
+  const type = os.type();
+  const release = os.release();
+  const arch = os.arch();
+  if (type === 'Windows_NT') {
+    return `Windows ${release} (${arch})`;
+  }
+  return `${type} ${release} (${arch})`;
+}
+
 //     Loop 1: Heartbeat (cada 60s)                                            
 
 async function heartbeat(): Promise<void> {
@@ -84,7 +109,14 @@ async function heartbeat(): Promise<void> {
         snmpErrors:  lastScanErrors,
         memoryMb:    Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
         logs,
-        commandResults
+        commandResults,
+        system_info: {
+          version:   VERSION,
+          host_name: os.hostname(),
+          host_os:   getHostOS(),
+          host_ip:   getLocalIp(),
+          uptime:    Math.round(os.uptime())
+        }
       }),
     });
 
