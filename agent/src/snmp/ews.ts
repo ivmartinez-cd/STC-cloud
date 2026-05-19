@@ -424,19 +424,23 @@ function parseSamsungSyncThruSupplies(body: string): Partial<EwsData> {
     return isNaN(v) ? null : Math.min(100, Math.max(0, v));
   };
 
-  // V4 JS-style variables
+  // V4 JS-style variables & nested objects
   const black   = extract(/GXI_TONER_BLACK_REMAIN_CNT\s*:\s*(\d+)/i)
                ?? extract(/"color"\s*:\s*"black"[^}]*"remaining"\s*:\s*(\d+)/i)
-               ?? extract(/"remaining"\s*:\s*(\d+)[^}]*"color"\s*:\s*"black"/i);
+               ?? extract(/"remaining"\s*:\s*(\d+)[^}]*"color"\s*:\s*"black"/i)
+               ?? extract(/toner_black\s*:\s*\{[^}]*remaining\s*:\s*(\d+)/i);
   const cyan    = extract(/GXI_TONER_CYAN_REMAIN_CNT\s*:\s*(\d+)/i)
                ?? extract(/"color"\s*:\s*"cyan"[^}]*"remaining"\s*:\s*(\d+)/i)
-               ?? extract(/"remaining"\s*:\s*(\d+)[^}]*"color"\s*:\s*"cyan"/i);
+               ?? extract(/"remaining"\s*:\s*(\d+)[^}]*"color"\s*:\s*"cyan"/i)
+               ?? extract(/toner_cyan\s*:\s*\{[^}]*remaining\s*:\s*(\d+)/i);
   const magenta = extract(/GXI_TONER_MAGENTA_REMAIN_CNT\s*:\s*(\d+)/i)
                ?? extract(/"color"\s*:\s*"magenta"[^}]*"remaining"\s*:\s*(\d+)/i)
-               ?? extract(/"remaining"\s*:\s*(\d+)[^}]*"color"\s*:\s*"magenta"/i);
+               ?? extract(/"remaining"\s*:\s*(\d+)[^}]*"color"\s*:\s*"magenta"/i)
+               ?? extract(/toner_magenta\s*:\s*\{[^}]*remaining\s*:\s*(\d+)/i);
   const yellow  = extract(/GXI_TONER_YELLOW_REMAIN_CNT\s*:\s*(\d+)/i)
                ?? extract(/"color"\s*:\s*"yellow"[^}]*"remaining"\s*:\s*(\d+)/i)
-               ?? extract(/"remaining"\s*:\s*(\d+)[^}]*"color"\s*:\s*"yellow"/i);
+               ?? extract(/"remaining"\s*:\s*(\d+)[^}]*"color"\s*:\s*"yellow"/i)
+               ?? extract(/toner_yellow\s*:\s*\{[^}]*remaining\s*:\s*(\d+)/i);
 
   if (black === null && cyan === null && magenta === null && yellow === null) return {};
   return { brand: 'samsung', tonerBlack: black, tonerCyan: cyan, tonerMagenta: magenta, tonerYellow: yellow };
