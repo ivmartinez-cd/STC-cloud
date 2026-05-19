@@ -11,3 +11,12 @@ createRoot(document.getElementById('root')!).render(
     </ErrorBoundary>
   </StrictMode>,
 )
+
+// Registrar el Service Worker para interceptar fugas de urls absolutas de impresoras (EWS)
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+      .then(reg => console.log('STC Service Worker registrado con éxito:', reg.scope))
+      .catch(err => console.error('Error al registrar STC Service Worker:', err));
+  });
+}
