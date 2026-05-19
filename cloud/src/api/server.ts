@@ -85,6 +85,28 @@ const start = async () => {
     });
     console.log("[DB] Migraciones al día.");
 
+    // Bootstrapping: Auto-inicializar primer administrador si la tabla 'users' está vacía
+    try {
+      const { hashPassword } = require("./utils/password");
+      const usersCount = await db("users").count("id as count").first();
+      const count = parseInt((usersCount?.count as string) || "0", 10);
+      if (count === 0) {
+        console.log("[DB] Inicializando usuario administrador por defecto...");
+        const adminUser = (process.env.PORTAL_ADMIN_USER || "admin").toLowerCase();
+        const adminPass = process.env.PORTAL_ADMIN_PASSWORD || "stc123456";
+        await db("users").insert({
+          id: db.raw("gen_random_uuid()"),
+          username: adminUser,
+          password_hash: hashPassword(adminPass),
+          role: "admin",
+          active: true,
+        });
+        console.log(`[DB] Usuario administrador '${adminUser}' inicializado con éxito.`);
+      }
+    } catch (bootErr: any) {
+      console.error("[DB] Error al inicializar administrador:", bootErr.message);
+    }
+
     // ─── Plugins ──────────────────────────────────────────────────────────────
 
     const allowedOrigins = [
@@ -151,7 +173,7 @@ const start = async () => {
 
     // ─── Rutas ────────────────────────────────────────────────────────────────
 
-    registerAuthRoutes(fastify, agentService, agentAuth, portalAuth);
+    registerAuthRoutes(fastify, db, agentService, agentAuth, portalAuth);
     registerAgentRoutes(fastify, redis, agentService, agentAuth);
     registerPortalAgentRoutes(fastify, db, redis, agentService, portalAuth);
     registerClientRoutes(fastify, db, portalAuth);

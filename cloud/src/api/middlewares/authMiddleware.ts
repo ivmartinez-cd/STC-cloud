@@ -46,7 +46,31 @@ export function createAuthMiddleware(
       if (decoded.role !== "portal") {
         return reply.status(403).send({ error: "Token de agente no puede acceder a esta ruta" });
       }
-      (request as any).user = decoded;
+
+      // Validar si el usuario existe y está activo
+      const user = await db("users")
+        .where(db.raw("CAST(id AS TEXT) = ? OR username = ?", [decoded.userId, decoded.userId]))
+        .first();
+
+      if (!user) {
+        // Fallback de retrocompatibilidad si es la sesión previa de "admin" hardcodeado
+        if (decoded.userId === "admin") {
+          (request as any).user = { userId: "admin", role: "admin", active: true };
+          return;
+        }
+        return reply.status(401).send({ error: "Usuario no encontrado" });
+      }
+
+      if (!user.active) {
+        return reply.status(401).send({ error: "Usuario desactivado" });
+      }
+
+      (request as any).user = {
+        userId: user.id,
+        username: user.username,
+        role: user.role,
+        active: user.active,
+      };
     } catch {
       return reply.status(401).send({ error: "Token inválido o expirado" });
     }

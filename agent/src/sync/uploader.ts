@@ -24,7 +24,7 @@ export async function uploadPending(config: AgentConfig): Promise<UploadResult &
     toner_magenta: r.toner_magenta ?? null,
     toner_yellow:  r.toner_yellow  ?? null,
     poll_method:   r.poll_method ?? 'snmp',
-    offline:       true,
+    offline:       false,
   }));
 
   const { res, updatedConfig } = await postWithAuth(`${config.serverUrl}/api/v1/devices/sync`, { readings }, config);

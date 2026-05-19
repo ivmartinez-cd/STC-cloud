@@ -1,4 +1,4 @@
-import os from 'os';
+﻿import os from 'os';
 import fs from 'fs';
 import path from 'path';
 import { exec, spawn } from 'child_process';
@@ -14,7 +14,7 @@ import { SocketManager } from './SocketManager';
 import { ConsoleConnector } from './ConsoleConnector';
 import { ConsoleEngine } from './ConsoleEngine';
 
-const VERSION = '1.7.0';
+const VERSION = '1.7.9';
 let socket: SocketManager | null = null;
 const LOG_MAX_BYTES = 10 * 1024 * 1024;
 
@@ -141,12 +141,12 @@ async function heartbeat(): Promise<void> {
 
       if (data.commands && data.commands.length > 0) {
         for (const cmd of data.commands) {
-          // DeduplicaciÃƒÆ’Ã‚Â³n: Si ya lo procesamos (vÃƒÆ’Ã‚Â­a WSS o heartbeat anterior), lo saltamos
+          // DeduplicaciÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³n: Si ya lo procesamos (vÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­a WSS o heartbeat anterior), lo saltamos
           if (cmd.id && processedCommandIds.has(cmd.id)) continue;
           
           if (cmd.id) {
             processedCommandIds.add(cmd.id);
-            // Mantener el set limpio (ÃƒÆ’Ã‚Âºltimos 1000 IDs)
+            // Mantener el set limpio (ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âºltimos 1000 IDs)
             if (processedCommandIds.size > 1000) {
               const firstKey = processedCommandIds.values().next().value;
               if (firstKey) processedCommandIds.delete(firstKey);
@@ -554,7 +554,7 @@ async function checkForUpdate(serverUrl: string, force = false): Promise<boolean
     }
 
     if ((UPDATE_PUBLIC_KEY_HEX as string) === 'PLACEHOLDER_RUN_GEN_KEYS_FIRST') {
-      log('WARN', 'SEGURIDAD: firma Ed25519 no configurada ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â ejecutar installer/gen-keys.js y rebuild.');
+      log('WARN', 'SEGURIDAD: firma Ed25519 no configurada ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ejecutar installer/gen-keys.js y rebuild.');
     } else {
       try {
         const sigRes = await fetch(data.url + '.sig', { signal: AbortSignal.timeout(15_000) });
@@ -566,7 +566,7 @@ async function checkForUpdate(serverUrl: string, force = false): Promise<boolean
         const sigBuf = Buffer.from(await sigRes.arrayBuffer());
         const pubKey = createPublicKey({ key: Buffer.from(UPDATE_PUBLIC_KEY_HEX, 'hex'), format: 'der', type: 'spki' });
         if (!cryptoVerify(null, buffer, pubKey, sigBuf)) {
-          log('ERROR', `VIOLACION DE INTEGRIDAD [Ed25519]: La firma del paquete de actualizacion NO es valida. URL: ${data.url} | Version: ${data.version} | Timestamp: ${new Date().toISOString()}. Actualizacion rechazada ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â posible ataque de cadena de suministro o paquete comprometido.`);
+          log('ERROR', `VIOLACION DE INTEGRIDAD [Ed25519]: La firma del paquete de actualizacion NO es valida. URL: ${data.url} | Version: ${data.version} | Timestamp: ${new Date().toISOString()}. Actualizacion rechazada ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â posible ataque de cadena de suministro o paquete comprometido.`);
           isUpdating = false;
           return false;
         }
@@ -657,7 +657,7 @@ async function printStatus(): Promise<void> {
     }
   }
 
-  // Health check rÃƒÆ’Ã‚Â¡pido al servidor configurado (timeout 5s)
+  // Health check rÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡pido al servidor configurado (timeout 5s)
   let cloudConnectivity: { reachable: boolean; latencyMs?: number; httpStatus?: number; error?: string };
   if (config?.serverUrl) {
     const t0 = Date.now();
@@ -798,7 +798,7 @@ async function activate(): Promise<void> {
     process.exit(0);
   } catch (e: any) {
     console.error(`Error de activacion: ${e.message}`);
-    // Propagamos exit code especÃƒÆ’Ã‚Â­fico si viene del bloque de respuesta HTTP
+    // Propagamos exit code especÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­fico si viene del bloque de respuesta HTTP
     if (e._stcExitCode) {
       process.exit(e._stcExitCode);
     }

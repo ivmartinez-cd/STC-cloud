@@ -4,6 +4,8 @@ import { api } from '../lib/api';
 interface AuthContextType {
   isAuthenticated: boolean;
   userEmail: string;
+  userId: string;
+  role: string;
   checking: boolean;
   login: (username: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -14,6 +16,8 @@ const AuthContext = createContext<AuthContextType | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [userEmail, setUserEmail] = useState<string>('');
+  const [userId, setUserId] = useState<string>('');
+  const [role, setRole] = useState<string>('operator');
   const [checking, setChecking] = useState<boolean>(true);
 
   useEffect(() => {
@@ -22,11 +26,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     fetch('/api/v1/portal/me', { credentials: 'include' })
       .then(res => {
         if (!res.ok) throw new Error('not authenticated');
-        return res.json() as Promise<{ userId: string; role: string }>;
+        return res.json() as Promise<{ userId: string; username?: string; role: string; token?: string }>;
       })
       .then(data => {
         setIsAuthenticated(true);
-        setUserEmail(data.userId);
+        setUserEmail(data.username || data.userId);
+        setUserId(data.userId);
+        setRole(data.role);
         if (data.token) {
           sessionStorage.setItem('stc_ws_token', data.token);
         }
@@ -52,8 +58,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       sessionStorage.setItem('stc_ws_token', data.token);
     }
 
+    // Volver a consultar /me para obtener el rol y el ID real del usuario recién autenticado
+    try {
+      const meRes = await fetch('/api/v1/portal/me', { credentials: 'include' });
+      if (meRes.ok) {
+        const meData = await meRes.json() as { userId: string; username?: string; role: string };
+        setUserId(meData.userId);
+        setRole(meData.role);
+        setUserEmail(meData.username || meData.userId);
+      } else {
+        setUserEmail(username);
+      }
+    } catch {
+      setUserEmail(username);
+    }
+
     setIsAuthenticated(true);
-    setUserEmail(username);
   }, []);
 
   const logout = useCallback(async () => {
@@ -61,11 +81,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     sessionStorage.removeItem('stc_ws_token');
     setIsAuthenticated(false);
     setUserEmail('');
+    setUserId('');
+    setRole('operator');
     window.location.replace('/login');
   }, []);
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, userEmail, checking, login, logout }}>
+    <AuthContext.Provider value={{ isAuthenticated, userEmail, userId, role, checking, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
