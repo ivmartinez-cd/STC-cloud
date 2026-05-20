@@ -81,6 +81,18 @@ export interface DeviceReading {
   toner_cyan?:    number | null;
   toner_magenta?: number | null;
   toner_yellow?:  number | null;
+  cartridge_code_black?:       string | null;
+  cartridge_code_cyan?:        string | null;
+  cartridge_code_magenta?:     string | null;
+  cartridge_code_yellow?:      string | null;
+  cartridge_serial_black?:     string | null;
+  cartridge_serial_cyan?:      string | null;
+  cartridge_serial_magenta?:   string | null;
+  cartridge_serial_yellow?:    string | null;
+  cartridge_capacity_black?:   number | null;
+  cartridge_capacity_cyan?:    number | null;
+  cartridge_capacity_magenta?: number | null;
+  cartridge_capacity_yellow?:  number | null;
   time:           string;
   poll_method:    PollMethod;
 }
@@ -189,6 +201,18 @@ export async function readViaEWS(ip: string): Promise<DeviceReading | null> {
     toner_cyan:    data.tonerCyan    ?? null,
     toner_magenta: data.tonerMagenta ?? null,
     toner_yellow:  data.tonerYellow  ?? null,
+    cartridge_code_black:       data.cartridgeCodeBlack       ?? null,
+    cartridge_code_cyan:        data.cartridgeCodeCyan        ?? null,
+    cartridge_code_magenta:     data.cartridgeCodeMagenta     ?? null,
+    cartridge_code_yellow:      data.cartridgeCodeYellow      ?? null,
+    cartridge_serial_black:     data.cartridgeSerialBlack     ?? null,
+    cartridge_serial_cyan:      data.cartridgeSerialCyan      ?? null,
+    cartridge_serial_magenta:   data.cartridgeSerialMagenta   ?? null,
+    cartridge_serial_yellow:    data.cartridgeSerialYellow    ?? null,
+    cartridge_capacity_black:   data.cartridgeCapacityBlack   ?? null,
+    cartridge_capacity_cyan:    data.cartridgeCapacityCyan    ?? null,
+    cartridge_capacity_magenta: data.cartridgeCapacityMagenta ?? null,
+    cartridge_capacity_yellow:  data.cartridgeCapacityYellow  ?? null,
     time:          new Date().toISOString(),
     poll_method:   'ews',
   };

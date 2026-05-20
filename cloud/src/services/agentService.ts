@@ -294,9 +294,12 @@ export class AgentService {
           INSERT INTO devices (
             id, agent_id, ip_address, serial_number, name, brand, model, active, last_seen,
             total_pages, mono_pages, color_pages, poll_method,
-            toner_black, toner_cyan, toner_magenta, toner_yellow
+            toner_black, toner_cyan, toner_magenta, toner_yellow,
+            cartridge_code_black, cartridge_code_cyan, cartridge_code_magenta, cartridge_code_yellow,
+            cartridge_serial_black, cartridge_serial_cyan, cartridge_serial_magenta, cartridge_serial_yellow,
+            cartridge_capacity_black, cartridge_capacity_cyan, cartridge_capacity_magenta, cartridge_capacity_yellow
           )
-          VALUES (?, ?, ?, ?, ?, ?, ?, true, NOW(), ?, ?, ?, ?, ?, ?, ?, ?)
+          VALUES (?, ?, ?, ?, ?, ?, ?, true, NOW(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           ON CONFLICT (agent_id, serial_number) WHERE serial_number IS NOT NULL
           DO UPDATE SET
             ip_address    = EXCLUDED.ip_address,
@@ -319,7 +322,19 @@ export class AgentService {
             toner_black   = EXCLUDED.toner_black,
             toner_cyan    = EXCLUDED.toner_cyan,
             toner_magenta = EXCLUDED.toner_magenta,
-            toner_yellow  = EXCLUDED.toner_yellow
+            toner_yellow  = EXCLUDED.toner_yellow,
+            cartridge_code_black       = COALESCE(EXCLUDED.cartridge_code_black,       devices.cartridge_code_black),
+            cartridge_code_cyan        = COALESCE(EXCLUDED.cartridge_code_cyan,        devices.cartridge_code_cyan),
+            cartridge_code_magenta     = COALESCE(EXCLUDED.cartridge_code_magenta,     devices.cartridge_code_magenta),
+            cartridge_code_yellow      = COALESCE(EXCLUDED.cartridge_code_yellow,      devices.cartridge_code_yellow),
+            cartridge_serial_black     = COALESCE(EXCLUDED.cartridge_serial_black,     devices.cartridge_serial_black),
+            cartridge_serial_cyan      = COALESCE(EXCLUDED.cartridge_serial_cyan,      devices.cartridge_serial_cyan),
+            cartridge_serial_magenta   = COALESCE(EXCLUDED.cartridge_serial_magenta,   devices.cartridge_serial_magenta),
+            cartridge_serial_yellow    = COALESCE(EXCLUDED.cartridge_serial_yellow,    devices.cartridge_serial_yellow),
+            cartridge_capacity_black   = COALESCE(EXCLUDED.cartridge_capacity_black,   devices.cartridge_capacity_black),
+            cartridge_capacity_cyan    = COALESCE(EXCLUDED.cartridge_capacity_cyan,    devices.cartridge_capacity_cyan),
+            cartridge_capacity_magenta = COALESCE(EXCLUDED.cartridge_capacity_magenta, devices.cartridge_capacity_magenta),
+            cartridge_capacity_yellow  = COALESCE(EXCLUDED.cartridge_capacity_yellow,  devices.cartridge_capacity_yellow)
           RETURNING id
         `, [
           crypto.randomUUID(),
@@ -337,6 +352,18 @@ export class AgentService {
           parseToner(r.toner_cyan),
           parseToner(r.toner_magenta),
           parseToner(r.toner_yellow),
+          r.cartridge_code_black       ?? null,
+          r.cartridge_code_cyan        ?? null,
+          r.cartridge_code_magenta     ?? null,
+          r.cartridge_code_yellow      ?? null,
+          r.cartridge_serial_black     ?? null,
+          r.cartridge_serial_cyan      ?? null,
+          r.cartridge_serial_magenta   ?? null,
+          r.cartridge_serial_yellow    ?? null,
+          r.cartridge_capacity_black   ?? null,
+          r.cartridge_capacity_cyan    ?? null,
+          r.cartridge_capacity_magenta ?? null,
+          r.cartridge_capacity_yellow  ?? null,
         ]);
 
         if (!upserted.rows || upserted.rows.length === 0) {

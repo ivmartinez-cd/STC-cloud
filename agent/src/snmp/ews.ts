@@ -15,6 +15,19 @@ export interface EwsData {
   tonerCyan?:     number | null;
   tonerMagenta?:  number | null;
   tonerYellow?:   number | null;
+  // Cartridge identity fields (from EWS supplies endpoint)
+  cartridgeCodeBlack?:      string | null;
+  cartridgeCodeCyan?:       string | null;
+  cartridgeCodeMagenta?:    string | null;
+  cartridgeCodeYellow?:     string | null;
+  cartridgeSerialBlack?:    string | null;
+  cartridgeSerialCyan?:     string | null;
+  cartridgeSerialMagenta?:  string | null;
+  cartridgeSerialYellow?:   string | null;
+  cartridgeCapacityBlack?:  number | null;
+  cartridgeCapacityCyan?:   number | null;
+  cartridgeCapacityMagenta?: number | null;
+  cartridgeCapacityYellow?: number | null;
 }
 
 // ─── URL candidates ordered by reliability ───────────────────────────────────
@@ -77,6 +90,19 @@ export async function readDeviceViaEWS(ip: string): Promise<EwsData | null> {
       if (parsed.tonerCyan    !== undefined) acc.tonerCyan    = parsed.tonerCyan;
       if (parsed.tonerMagenta !== undefined) acc.tonerMagenta = parsed.tonerMagenta;
       if (parsed.tonerYellow  !== undefined) acc.tonerYellow  = parsed.tonerYellow;
+      // Cartridge identity — never overwrite a real value with null
+      if (parsed.cartridgeCodeBlack      != null) acc.cartridgeCodeBlack      = parsed.cartridgeCodeBlack;
+      if (parsed.cartridgeCodeCyan       != null) acc.cartridgeCodeCyan       = parsed.cartridgeCodeCyan;
+      if (parsed.cartridgeCodeMagenta    != null) acc.cartridgeCodeMagenta    = parsed.cartridgeCodeMagenta;
+      if (parsed.cartridgeCodeYellow     != null) acc.cartridgeCodeYellow     = parsed.cartridgeCodeYellow;
+      if (parsed.cartridgeSerialBlack    != null) acc.cartridgeSerialBlack    = parsed.cartridgeSerialBlack;
+      if (parsed.cartridgeSerialCyan     != null) acc.cartridgeSerialCyan     = parsed.cartridgeSerialCyan;
+      if (parsed.cartridgeSerialMagenta  != null) acc.cartridgeSerialMagenta  = parsed.cartridgeSerialMagenta;
+      if (parsed.cartridgeSerialYellow   != null) acc.cartridgeSerialYellow   = parsed.cartridgeSerialYellow;
+      if (parsed.cartridgeCapacityBlack  != null) acc.cartridgeCapacityBlack  = parsed.cartridgeCapacityBlack;
+      if (parsed.cartridgeCapacityCyan   != null) acc.cartridgeCapacityCyan   = parsed.cartridgeCapacityCyan;
+      if (parsed.cartridgeCapacityMagenta != null) acc.cartridgeCapacityMagenta = parsed.cartridgeCapacityMagenta;
+      if (parsed.cartridgeCapacityYellow != null) acc.cartridgeCapacityYellow = parsed.cartridgeCapacityYellow;
 
       // Stop as soon as we have page counters (no need to probe more endpoints)
       if (acc.totalPages !== undefined) break;
@@ -97,6 +123,18 @@ export async function readDeviceViaEWS(ip: string): Promise<EwsData | null> {
     tonerCyan:    acc.tonerCyan    ?? null,
     tonerMagenta: acc.tonerMagenta ?? null,
     tonerYellow:  acc.tonerYellow  ?? null,
+    cartridgeCodeBlack:       acc.cartridgeCodeBlack       ?? null,
+    cartridgeCodeCyan:        acc.cartridgeCodeCyan        ?? null,
+    cartridgeCodeMagenta:     acc.cartridgeCodeMagenta     ?? null,
+    cartridgeCodeYellow:      acc.cartridgeCodeYellow      ?? null,
+    cartridgeSerialBlack:     acc.cartridgeSerialBlack     ?? null,
+    cartridgeSerialCyan:      acc.cartridgeSerialCyan      ?? null,
+    cartridgeSerialMagenta:   acc.cartridgeSerialMagenta   ?? null,
+    cartridgeSerialYellow:    acc.cartridgeSerialYellow    ?? null,
+    cartridgeCapacityBlack:   acc.cartridgeCapacityBlack   ?? null,
+    cartridgeCapacityCyan:    acc.cartridgeCapacityCyan    ?? null,
+    cartridgeCapacityMagenta: acc.cartridgeCapacityMagenta ?? null,
+    cartridgeCapacityYellow:  acc.cartridgeCapacityYellow  ?? null,
   };
 }
 
@@ -400,6 +438,16 @@ function parseHpSupplies(html: string): Partial<EwsData> {
     return isNaN(pct) ? null : Math.min(100, Math.max(0, pct));
   };
 
+  // Extract HP cartridge order number near a color label
+  // e.g. id="BlackCartridge1-Header_OrderNumber">CE285A
+  const extractOrderNumber = (colorPattern: RegExp): string | null => {
+    const m = html.match(new RegExp(
+      colorPattern.source + '[\\s\\S]{0,500}id="[^"]*OrderNumber[^"]*"[^>]*>\\s*([A-Z0-9\\-]+)',
+      'i',
+    ));
+    return m ? m[1].trim() || null : null;
+  };
+
   // Modern HP FutureSmart: id="BlackCartridge1-Header_Level">15%
   const black   = extractById(/id="[^"]*Black[^"]*(?:Level|Remaining)[^"]*"[^>]*>\s*([\d]+)\s*%/i)
                ?? htmlTonerPct(html, /black\s*(?:toner|cartridge|ink)/i);
@@ -411,24 +459,44 @@ function parseHpSupplies(html: string): Partial<EwsData> {
                ?? htmlTonerPct(html, /yellow\s*(?:toner|cartridge|ink)/i);
 
   if (black === null && cyan === null && magenta === null && yellow === null) return {};
-  return { brand: 'hp', tonerBlack: black, tonerCyan: cyan, tonerMagenta: magenta, tonerYellow: yellow };
+
+  return {
+    brand: 'hp',
+    tonerBlack: black, tonerCyan: cyan, tonerMagenta: magenta, tonerYellow: yellow,
+    cartridgeCodeBlack:   extractOrderNumber(/Black/i),
+    cartridgeCodeCyan:    extractOrderNumber(/Cyan/i),
+    cartridgeCodeMagenta: extractOrderNumber(/Magenta/i),
+    cartridgeCodeYellow:  extractOrderNumber(/Yellow/i),
+  };
 }
 
 // ─── Samsung SyncThru supplies.json parser ────────────────────────────────────
 
 function parseSamsungSyncThruSupplies(body: string): Partial<EwsData> {
-  const extractObj = (color: string): number | null => {
+  // Extract a named field from a toner_<color> block
+  const extractBlock = (color: string): { remaining: number | null; id: string | null; serial: string | null; capa: number | null } => {
     const blockMatch = body.match(new RegExp(`toner_${color}\\s*:\\s*\\{([\\s\\S]*?)\\}`, 'i'));
-    if (!blockMatch) return null;
+    if (!blockMatch) return { remaining: null, id: null, serial: null, capa: null };
     const block = blockMatch[1];
+
     const optMatch = block.match(/opt\s*:\s*(\d+)/i);
     if (optMatch && parseInt(optMatch[1], 10) === 0) {
-      return null; // not installed/supported (e.g. CMY on mono printers)
+      return { remaining: null, id: null, serial: null, capa: null }; // not installed
     }
-    const remMatch = block.match(/remaining\s*:\s*(\d+)/i);
-    if (!remMatch) return null;
-    const v = parseInt(remMatch[1], 10);
-    return isNaN(v) ? null : Math.min(100, Math.max(0, v));
+
+    const remMatch  = block.match(/remaining\s*:\s*(\d+)/i);
+    const idMatch   = block.match(/id\s*:\s*"([^"]+)"/i);
+    const serMatch  = block.match(/serial\s*:\s*"([^"]+)"/i);
+    const capaMatch = block.match(/capa\s*:\s*(\d+)/i);
+
+    const remVal  = remMatch  ? parseInt(remMatch[1], 10)  : null;
+    const capaVal = capaMatch ? parseInt(capaMatch[1], 10) : null;
+    return {
+      remaining: remVal !== null && !isNaN(remVal) ? Math.min(100, Math.max(0, remVal)) : null,
+      id:        idMatch  ? idMatch[1].trim()  || null : null,
+      serial:    serMatch ? serMatch[1].trim() || null : null,
+      capa:      capaVal !== null && !isNaN(capaVal) && capaVal > 0 ? capaVal : null,
+    };
   };
 
   const extractLegacy = (pattern: RegExp): number | null => {
@@ -438,29 +506,32 @@ function parseSamsungSyncThruSupplies(body: string): Partial<EwsData> {
     return isNaN(v) ? null : Math.min(100, Math.max(0, v));
   };
 
-  // Modern JSON-like objects first, then V4/V5 legacy format
-  const black   = extractObj('black')
-               ?? extractLegacy(/GXI_TONER_BLACK_REMAIN_CNT\s*:\s*(\d+)/i)
-               ?? extractLegacy(/"color"\s*:\s*"black"[^}]*"remaining"\s*:\s*(\d+)/i)
-               ?? extractLegacy(/"remaining"\s*:\s*(\d+)[^}]*"color"\s*:\s*"black"/i);
+  const bk = extractBlock('black');
+  const cy = extractBlock('cyan');
+  const mg = extractBlock('magenta');
+  const ye = extractBlock('yellow');
 
-  const cyan    = extractObj('cyan')
-               ?? extractLegacy(/GXI_TONER_CYAN_REMAIN_CNT\s*:\s*(\d+)/i)
-               ?? extractLegacy(/"color"\s*:\s*"cyan"[^}]*"remaining"\s*:\s*(\d+)/i)
-               ?? extractLegacy(/"remaining"\s*:\s*(\d+)[^}]*"color"\s*:\s*"cyan"/i);
-
-  const magenta = extractObj('magenta')
-               ?? extractLegacy(/GXI_TONER_MAGENTA_REMAIN_CNT\s*:\s*(\d+)/i)
-               ?? extractLegacy(/"color"\s*:\s*"magenta"[^}]*"remaining"\s*:\s*(\d+)/i)
-               ?? extractLegacy(/"remaining"\s*:\s*(\d+)[^}]*"color"\s*:\s*"magenta"/i);
-
-  const yellow  = extractObj('yellow')
-               ?? extractLegacy(/GXI_TONER_YELLOW_REMAIN_CNT\s*:\s*(\d+)/i)
-               ?? extractLegacy(/"color"\s*:\s*"yellow"[^}]*"remaining"\s*:\s*(\d+)/i)
-               ?? extractLegacy(/"remaining"\s*:\s*(\d+)[^}]*"color"\s*:\s*"yellow"/i);
+  // Fallback to legacy format for remaining % if block parsing failed
+  const black   = bk.remaining ?? extractLegacy(/GXI_TONER_BLACK_REMAIN_CNT\s*:\s*(\d+)/i)
+               ?? extractLegacy(/"color"\s*:\s*"black"[^}]*"remaining"\s*:\s*(\d+)/i);
+  const cyan    = cy.remaining ?? extractLegacy(/GXI_TONER_CYAN_REMAIN_CNT\s*:\s*(\d+)/i)
+               ?? extractLegacy(/"color"\s*:\s*"cyan"[^}]*"remaining"\s*:\s*(\d+)/i);
+  const magenta = mg.remaining ?? extractLegacy(/GXI_TONER_MAGENTA_REMAIN_CNT\s*:\s*(\d+)/i)
+               ?? extractLegacy(/"color"\s*:\s*"magenta"[^}]*"remaining"\s*:\s*(\d+)/i);
+  const yellow  = ye.remaining ?? extractLegacy(/GXI_TONER_YELLOW_REMAIN_CNT\s*:\s*(\d+)/i)
+               ?? extractLegacy(/"color"\s*:\s*"yellow"[^}]*"remaining"\s*:\s*(\d+)/i);
 
   if (black === null && cyan === null && magenta === null && yellow === null) return {};
-  return { brand: 'samsung', tonerBlack: black, tonerCyan: cyan, tonerMagenta: magenta, tonerYellow: yellow };
+  return {
+    brand: 'samsung',
+    tonerBlack: black, tonerCyan: cyan, tonerMagenta: magenta, tonerYellow: yellow,
+    cartridgeCodeBlack:       bk.id,     cartridgeCodeCyan:       cy.id,
+    cartridgeCodeMagenta:     mg.id,     cartridgeCodeYellow:     ye.id,
+    cartridgeSerialBlack:     bk.serial, cartridgeSerialCyan:     cy.serial,
+    cartridgeSerialMagenta:   mg.serial, cartridgeSerialYellow:   ye.serial,
+    cartridgeCapacityBlack:   bk.capa,   cartridgeCapacityCyan:   cy.capa,
+    cartridgeCapacityMagenta: mg.capa,   cartridgeCapacityYellow: ye.capa,
+  };
 }
 
 // ─── Samsung Solution Web Service supplies parser ─────────────────────────────

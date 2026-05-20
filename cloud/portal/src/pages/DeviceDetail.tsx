@@ -34,6 +34,19 @@ interface Device {
   client_name:  string;
   agent_status?: string;
   agent_last_seen?: string | null;
+  // Cartridge identity (from EWS)
+  cartridge_code_black?:       string | null;
+  cartridge_code_cyan?:        string | null;
+  cartridge_code_magenta?:     string | null;
+  cartridge_code_yellow?:      string | null;
+  cartridge_serial_black?:     string | null;
+  cartridge_serial_cyan?:      string | null;
+  cartridge_serial_magenta?:   string | null;
+  cartridge_serial_yellow?:    string | null;
+  cartridge_capacity_black?:   number | null;
+  cartridge_capacity_cyan?:    number | null;
+  cartridge_capacity_magenta?: number | null;
+  cartridge_capacity_yellow?:  number | null;
 }
 
 const DeviceDetail = () => {
@@ -311,6 +324,94 @@ const DeviceDetail = () => {
                     ))}
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* Cartridge Info Panel */}
+            {device && (
+              device.cartridge_code_black ||
+              device.cartridge_code_cyan ||
+              device.cartridge_code_magenta ||
+              device.cartridge_code_yellow
+            ) && (
+              <div className="cd-panel p-6 bg-white border border-slate-100 rounded-[24px] space-y-4">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="p-2 bg-slate-50 rounded-xl text-slate-500">
+                    <FileText size={18} />
+                  </div>
+                  <div>
+                    <h4 className="font-extrabold text-[#1a2333] text-sm">Cartuchos Instalados</h4>
+                    <p className="text-[10px] font-bold text-slate-400">Código comercial · Serie CRUM · Capacidad</p>
+                  </div>
+                </div>
+
+                {([
+                  {
+                    label: 'Negro',
+                    dot: 'bg-slate-800',
+                    code: device.cartridge_code_black,
+                    serial: device.cartridge_serial_black,
+                    capacity: device.cartridge_capacity_black,
+                    pct: latest?.toner_black,
+                  },
+                  {
+                    label: 'Cian',
+                    dot: 'bg-cyan-500',
+                    code: device.cartridge_code_cyan,
+                    serial: device.cartridge_serial_cyan,
+                    capacity: device.cartridge_capacity_cyan,
+                    pct: latest?.toner_cyan,
+                  },
+                  {
+                    label: 'Magenta',
+                    dot: 'bg-pink-500',
+                    code: device.cartridge_code_magenta,
+                    serial: device.cartridge_serial_magenta,
+                    capacity: device.cartridge_capacity_magenta,
+                    pct: latest?.toner_magenta,
+                  },
+                  {
+                    label: 'Amarillo',
+                    dot: 'bg-yellow-400',
+                    code: device.cartridge_code_yellow,
+                    serial: device.cartridge_serial_yellow,
+                    capacity: device.cartridge_capacity_yellow,
+                    pct: latest?.toner_yellow,
+                  },
+                ] as { label: string; dot: string; code?: string | null; serial?: string | null; capacity?: number | null; pct?: number | null }[])
+                  .filter(c => c.code)
+                  .map(c => (
+                    <div key={c.label} className="flex items-start gap-3 p-3 bg-slate-50 rounded-2xl border border-slate-100">
+                      <div className={`mt-1.5 w-2.5 h-2.5 rounded-full flex-shrink-0 ${c.dot}`} />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">{c.label}</span>
+                          <span className="font-black text-slate-800 text-sm tracking-tight">{c.code}</span>
+                          {c.pct != null && (
+                            <span className={`ml-auto text-xs font-black ${
+                              c.pct <= 10 ? 'text-rose-500' : c.pct <= 20 ? 'text-amber-500' : 'text-emerald-600'
+                            }`}>{c.pct}%</span>
+                          )}
+                        </div>
+                        {c.capacity != null && (
+                          <p className="text-[10px] text-slate-400 font-bold mt-0.5">
+                            Capacidad: {c.capacity.toLocaleString()} pág.
+                            {c.pct != null && c.capacity > 0 && (
+                              <span className="ml-2 text-slate-500">
+                                (~{Math.round(c.capacity * c.pct / 100).toLocaleString()} restantes)
+                              </span>
+                            )}
+                          </p>
+                        )}
+                        {c.serial && (
+                          <p className="text-[10px] text-slate-300 font-mono mt-0.5 truncate" title={c.serial}>
+                            {c.serial}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                }
               </div>
             )}
 

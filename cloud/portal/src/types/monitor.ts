@@ -13,6 +13,19 @@ export interface Device {
   toner_cyan?: number | null;
   toner_magenta?: number | null;
   toner_yellow?: number | null;
+  // Cartridge identity (from EWS)
+  cartridge_code_black?:       string | null;
+  cartridge_code_cyan?:        string | null;
+  cartridge_code_magenta?:     string | null;
+  cartridge_code_yellow?:      string | null;
+  cartridge_serial_black?:     string | null;
+  cartridge_serial_cyan?:      string | null;
+  cartridge_serial_magenta?:   string | null;
+  cartridge_serial_yellow?:    string | null;
+  cartridge_capacity_black?:   number | null;
+  cartridge_capacity_cyan?:    number | null;
+  cartridge_capacity_magenta?: number | null;
+  cartridge_capacity_yellow?:  number | null;
 }
 
 export interface MonitorData {
