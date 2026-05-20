@@ -127,11 +127,16 @@ export function createDashboardController(db: Knex, agentService: AgentService) 
       const { resolved } = request.query as any;
       const query = db("alerts")
         .join("devices", "alerts.device_id", "devices.id")
+        .leftJoin("agents", "devices.agent_id", "agents.id")
+        .leftJoin("clients", "agents.client_id", "clients.id")
         .select(
           "alerts.*",
           "devices.brand",
           "devices.ip_address",
-          "devices.name as device_name"
+          "devices.name as device_name",
+          "devices.serial",
+          "agents.name as agent_name",
+          "clients.name as client_name"
         )
         .orderBy("alerts.created_at", "desc")
         .limit(200);

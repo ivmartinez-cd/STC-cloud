@@ -52,6 +52,9 @@ interface Alert {
   brand: string;
   ip_address: string;
   device_name: string;
+  serial: string | null;
+  agent_name: string | null;
+  client_name: string | null;
 }
 
 const getTonerColorInfo = (type: string) => {
@@ -308,13 +311,30 @@ const Dashboard = () => {
                   >
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <span className="text-xs font-black text-[#1a2333] uppercase tracking-tight truncate">
                             {alert.device_name || 'Dispositivo'}
                           </span>
                           <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest bg-slate-100 px-2 py-0.5 rounded-md">
                             {alert.ip_address}
                           </span>
+                        </div>
+                        <div className="flex items-center gap-2 mt-1 flex-wrap">
+                          {alert.client_name && (
+                            <span className="text-[9px] font-black text-indigo-500 uppercase tracking-widest bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100">
+                              {alert.client_name}
+                            </span>
+                          )}
+                          {alert.agent_name && (
+                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest bg-slate-50 px-2 py-0.5 rounded-md border border-slate-100">
+                              {alert.agent_name}
+                            </span>
+                          )}
+                          {alert.serial && (
+                            <span className="text-[9px] font-mono text-slate-300 tracking-wide" title={alert.serial}>
+                              S/N: {alert.serial}
+                            </span>
+                          )}
                         </div>
                         <p className="text-[11px] font-medium text-slate-500 mt-1 leading-relaxed">
                           {alert.message}
