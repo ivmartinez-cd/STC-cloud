@@ -130,7 +130,14 @@ export function createDashboardController(db: Knex, agentService: AgentService) 
         .leftJoin("agents", "devices.agent_id", "agents.id")
         .leftJoin("clients", "agents.client_id", "clients.id")
         .select(
-          "alerts.*",
+          "alerts.id",
+          "alerts.device_id",
+          "alerts.type",
+          "alerts.severity",
+          "alerts.message",
+          "alerts.value",
+          "alerts.resolved",
+          "alerts.created_at",
           "devices.brand",
           "devices.ip_address",
           "devices.name as device_name",
