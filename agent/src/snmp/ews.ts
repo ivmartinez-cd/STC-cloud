@@ -240,7 +240,7 @@ function parseSamsungCounters(body: string): Partial<EwsData> {
   };
 }
 
-// Samsung Solution Web Service — home info (model + serial)
+// Samsung Solution Web Service — home info (model + serial + toner levels)
 function parseSamsungSolutionHome(body: string): Partial<EwsData> {
   const modelMatch = body.match(/(?:모델명|Model\s*Name)<\/td>\s*<td class="[^"]*">([^<]+)<\/td>/i);
   const serialMatch = body.match(/(?:시리얼\s*넘버|Serial\s*Number)<\/td>\s*<td class="[^"]*">([^<]+)<\/td>/i);
@@ -248,8 +248,35 @@ function parseSamsungSolutionHome(body: string): Partial<EwsData> {
   const model  = modelMatch  ? modelMatch[1].trim()  : undefined;
   const serial = serialMatch ? serialMatch[1].trim() : undefined;
 
-  if (!model && !serial) return {};
-  return { brand: 'samsung', model, serial };
+  // Extract toner levels from embedded JavaScript: var tonerData = [ {cartridge:'검정색', remaining:'90', ...}, ... ];
+  let tonerBlack:   number | undefined = undefined;
+  let tonerCyan:    number | undefined = undefined;
+  let tonerMagenta: number | undefined = undefined;
+  let tonerYellow:  number | undefined = undefined;
+
+  const tonerDataMatch = body.match(/var\s+tonerData\s*=\s*\[([\s\S]*?)\];/);
+  if (tonerDataMatch) {
+    const block = tonerDataMatch[1];
+    // Parse each {cartridge:'...', remaining:'N', ...} entry
+    const entryRegex = /\{[^}]*cartridge\s*:\s*'([^']+)'[^}]*remaining\s*:\s*'(\d+)'/gi;
+    let m;
+    while ((m = entryRegex.exec(block)) !== null) {
+      const label = m[1];
+      const pct = Math.min(100, Math.max(0, parseInt(m[2], 10)));
+      if (isNaN(pct)) continue;
+      // Map Korean/English color names to toner slots
+      if (/검정|black/i.test(label))       tonerBlack   = pct;
+      else if (/시안|cyan/i.test(label))   tonerCyan    = pct;
+      else if (/마젠타|magenta/i.test(label)) tonerMagenta = pct;
+      else if (/노란|yellow/i.test(label)) tonerYellow  = pct;
+    }
+  }
+
+  if (!model && !serial && tonerBlack === undefined) return {};
+  return {
+    brand: 'samsung', model, serial,
+    tonerBlack, tonerCyan, tonerMagenta, tonerYellow,
+  };
 }
 
 // Samsung Solution Web Service — page counters
