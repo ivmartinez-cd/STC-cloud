@@ -24,5 +24,8 @@
     "timescaledb"
   ],
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "dependencies": {
+    "semver": "^7.8.0"
+  }
 }

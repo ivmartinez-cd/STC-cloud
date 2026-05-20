@@ -94,6 +94,8 @@ export function useMonitorDetail(id: string) {
       ip_ranges: form.ipStart && form.ipEnd ? [{ start: form.ipStart, end: form.ipEnd }] : [],
       snmp_community: form.snmp,
       scan_interval_minutes: form.interval,
+      toner_warning_threshold: form.tonerWarningThreshold,
+      toner_critical_threshold: form.tonerCriticalThreshold,
     });
     showToast('Configuración actualizada correctamente', 'success');
     refetch();

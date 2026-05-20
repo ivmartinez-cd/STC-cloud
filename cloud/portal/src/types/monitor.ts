@@ -28,6 +28,8 @@ export interface MonitorData {
     ip_ranges: { start: string; end: string }[];
     snmp_community: string;
     scan_interval_minutes: number;
+    toner_warning_threshold?: number;
+    toner_critical_threshold?: number;
   };
   version?: string;
   host_name?: string;
@@ -42,6 +44,8 @@ export interface EditFormData {
   ipEnd: string;
   snmp: string;
   interval: number;
+  tonerWarningThreshold: number;
+  tonerCriticalThreshold: number;
 }
 
 export interface DashboardData {

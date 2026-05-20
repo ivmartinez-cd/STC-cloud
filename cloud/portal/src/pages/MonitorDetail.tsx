@@ -14,12 +14,12 @@ import DeviceSummaryCard from '../components/monitors/DeviceSummaryCard';
 import LicenseCard from '../components/monitors/LicenseCard';
 import DeviceInventoryTable from '../components/monitors/DeviceInventoryTable';
 import RemoteToolsPanel from '../components/monitors/RemoteToolsPanel';
-import EditMonitorModal from '../components/monitors/EditMonitorModal';
 import Terminal from '../components/Terminal';
 import ConfirmModal from '../components/ConfirmModal';
 import { useToast } from '../context/ToastContext';
+import type { EditFormData, MonitorData } from '../types/monitor';
 
-type Tab = 'overview' | 'devices' | 'console';
+type Tab = 'overview' | 'devices' | 'console' | 'config';
 
 const MonitorDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -28,10 +28,8 @@ const MonitorDetail = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState<Tab>(() => {
     const tab = searchParams.get('tab');
-    return (tab === 'overview' || tab === 'devices' || tab === 'console') ? tab : 'overview';
+    return (tab === 'overview' || tab === 'devices' || tab === 'console' || tab === 'config') ? tab : 'overview';
   });
-
-  const [showEditModal, setShowEditModal] = useState(false);
   const [showRevokeModal, setShowRevokeModal] = useState(false);
   const [revoking, setRevoking] = useState(false);
   const [regenKey, setRegenKey] = useState<string | null>(null);
@@ -104,6 +102,7 @@ const MonitorDetail = () => {
     { id: 'overview', label: 'Resumen', icon: Activity },
     { id: 'devices', label: 'Dispositivos', icon: HardDrive },
     { id: 'console', label: 'Consola', icon: TerminalIcon },
+    { id: 'config', label: 'Configuración', icon: Settings },
   ];
 
   return (
@@ -138,7 +137,7 @@ const MonitorDetail = () => {
             className="px-6 py-4 bg-white text-emerald-600 font-black text-[10px] uppercase tracking-widest rounded-2xl shadow-xl shadow-blue-900/5 hover:bg-emerald-50 transition-all active:scale-95 flex items-center gap-3">
             <Download size={18} /> Descargar Logs
           </button>
-          <button onClick={() => setShowEditModal(true)}
+          <button onClick={() => handleTabChange('config')}
             className="px-6 py-4 bg-white text-[#1a2333] font-black text-[10px] uppercase tracking-widest rounded-2xl shadow-xl shadow-blue-900/5 hover:bg-slate-50 transition-all active:scale-95 flex items-center gap-3">
             <Settings size={18} /> Ajustes
           </button>
@@ -208,13 +207,10 @@ const MonitorDetail = () => {
         </div>
       )}
 
-      {/* Edit Modal */}
-      <EditMonitorModal
-        isOpen={showEditModal}
-        onClose={() => setShowEditModal(false)}
-        monitor={monitor}
-        onSave={saveConfig}
-      />
+      {/* Config Tab */}
+      {activeTab === 'config' && (
+        <ConfigTabPanel monitor={monitor} onSave={saveConfig} />
+      )}
 
       {/* Revoke Confirm */}
       <ConfirmModal
@@ -271,6 +267,186 @@ const MonitorDetail = () => {
         </div>
       )}
     </div>
+  );
+};
+
+interface ConfigTabPanelProps {
+  monitor: MonitorData;
+  onSave: (form: EditFormData) => Promise<void>;
+}
+
+const ConfigTabPanel = ({ monitor, onSave }: ConfigTabPanelProps) => {
+  const [form, setForm] = useState<EditFormData>(() => {
+    const ranges = typeof monitor.config?.ip_ranges === 'string'
+      ? JSON.parse(monitor.config.ip_ranges as unknown as string)
+      : (monitor.config?.ip_ranges ?? []);
+    const firstRange = (ranges as { start: string; end: string }[])[0] ?? { start: '', end: '' };
+    return {
+      name: monitor.name,
+      ipStart: firstRange.start,
+      ipEnd: firstRange.end,
+      snmp: monitor.config?.snmp_community ?? 'public',
+      interval: monitor.config?.scan_interval_minutes ?? 15,
+      tonerWarningThreshold: monitor.config?.toner_warning_threshold ?? 20,
+      tonerCriticalThreshold: monitor.config?.toner_critical_threshold ?? 10,
+    };
+  });
+  const [saving, setSaving] = useState(false);
+  const { showToast } = useToast();
+
+  const set = (key: keyof EditFormData, value: string | number) =>
+    setForm(prev => ({ ...prev, [key]: value }));
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (form.tonerCriticalThreshold >= form.tonerWarningThreshold) {
+      showToast('El umbral crítico debe ser menor que el umbral de advertencia', 'error');
+      return;
+    }
+    setSaving(true);
+    try {
+      await onSave(form);
+    } catch (err: unknown) {
+      showToast((err as Error).message || 'Error al actualizar configuración', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-8 animate-in slide-in-from-bottom-4 duration-500">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        
+        {/* Panel Izquierdo: Ajustes de Escaneo */}
+        <div className="bg-white p-8 rounded-[32px] border border-slate-100 shadow-xl shadow-blue-900/5 space-y-6">
+          <div className="flex items-center gap-4 mb-2">
+            <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl">
+              <Settings size={24} />
+            </div>
+            <div>
+              <h3 className="text-lg font-black text-[#1a2333] tracking-tight uppercase">Parámetros de Red</h3>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5">Control de escaneo y conectividad</p>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nombre del Nodo</label>
+            <input
+              required type="text" value={form.name}
+              className="cd-input w-full !h-14 !bg-slate-50 border-transparent focus:!border-brand focus:!bg-white"
+              onChange={e => set('name', e.target.value)}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-6">
+            <div className="space-y-3">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 font-sans">IP Inicial</label>
+              <input type="text" value={form.ipStart} placeholder="e.g. 192.168.1.1"
+                className="cd-input w-full !h-14 !bg-slate-50 border-transparent focus:!border-brand focus:!bg-white font-mono"
+                onChange={e => set('ipStart', e.target.value)}
+              />
+            </div>
+            <div className="space-y-3">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 font-sans">IP Final</label>
+              <input type="text" value={form.ipEnd} placeholder="e.g. 192.168.1.254"
+                className="cd-input w-full !h-14 !bg-slate-50 border-transparent focus:!border-brand focus:!bg-white font-mono"
+                onChange={e => set('ipEnd', e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-6">
+            <div className="space-y-3">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Comunidad SNMP</label>
+              <input type="text" value={form.snmp}
+                className="cd-input w-full !h-14 !bg-slate-50 border-transparent focus:!border-brand focus:!bg-white font-mono"
+                onChange={e => set('snmp', e.target.value)}
+              />
+            </div>
+            <div className="space-y-3">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Frecuencia de Escaneo</label>
+              <select value={form.interval}
+                className="cd-input w-full !h-14 !bg-slate-50 border-transparent focus:!border-brand focus:!bg-white"
+                onChange={e => set('interval', parseInt(e.target.value))}
+              >
+                <option value={15}>Cada 15 min</option>
+                <option value={30}>Cada 30 min</option>
+                <option value={60}>Cada 1 hora</option>
+                <option value={1440}>Cada 24 horas</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Panel Derecho: Umbrales de Tóner */}
+        <div className="bg-white p-8 rounded-[32px] border border-slate-100 shadow-xl shadow-blue-900/5 space-y-8">
+          <div className="flex items-center gap-4 mb-2">
+            <div className="p-3 bg-amber-50 text-amber-600 rounded-2xl">
+              <AlertTriangle size={24} />
+            </div>
+            <div>
+              <h3 className="text-lg font-black text-[#1a2333] tracking-tight uppercase">Umbrales de Consumibles</h3>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5">Alertas automáticas de nivel de tóner</p>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div className="flex justify-between items-center ml-1">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Advertencia de Tóner Bajo (Warning)</label>
+              <span className="px-3 py-1 bg-amber-50 text-amber-700 rounded-lg text-xs font-black">{form.tonerWarningThreshold}%</span>
+            </div>
+            <div className="flex items-center gap-4">
+              <input
+                type="range" min="1" max="99" value={form.tonerWarningThreshold}
+                className="w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-amber-500"
+                onChange={e => set('tonerWarningThreshold', parseInt(e.target.value))}
+              />
+            </div>
+            <p className="text-[11px] font-bold text-slate-400 leading-relaxed ml-1">
+              Se creará una alerta amarilla cuando algún color de tóner sea menor o igual a este porcentaje.
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            <div className="flex justify-between items-center ml-1">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nivel Crítico de Tóner (Critical)</label>
+              <span className="px-3 py-1 bg-rose-50 text-rose-700 rounded-lg text-xs font-black">{form.tonerCriticalThreshold}%</span>
+            </div>
+            <div className="flex items-center gap-4">
+              <input
+                type="range" min="1" max="99" value={form.tonerCriticalThreshold}
+                className="w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-rose-500"
+                onChange={e => set('tonerCriticalThreshold', parseInt(e.target.value))}
+              />
+            </div>
+            <p className="text-[11px] font-bold text-slate-400 leading-relaxed ml-1">
+              Se creará una alerta roja y crítica cuando el nivel de tóner sea menor o igual a este porcentaje.
+            </p>
+          </div>
+
+          <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100 flex items-start gap-4">
+            <AlertTriangle className="text-amber-500 shrink-0 mt-0.5" size={20} />
+            <div className="space-y-1">
+              <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Comportamiento del Sensor</p>
+              <p className="text-xs text-slate-500 font-bold leading-relaxed">
+                El sistema evalúa cada color de tóner de forma independiente. Las alertas se resuelven automáticamente de inmediato en cuanto los niveles suben (por ejemplo, después de un cambio de cartucho).
+              </p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      {/* Botones de acción */}
+      <div className="flex justify-end gap-4">
+        <button
+          type="submit" disabled={saving}
+          className="px-8 py-4 bg-brand text-white rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-xl shadow-blue-900/20 flex items-center gap-3 disabled:opacity-50 hover:bg-brand/90 transition-all active:scale-95"
+        >
+          {saving ? <Loader2 size={18} className="animate-spin" /> : <Settings size={18} />} Guardar Cambios
+        </button>
+      </div>
+    </form>
   );
 };
 

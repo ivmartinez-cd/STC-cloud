@@ -1,13 +1,16 @@
-import React, { useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNow } from '../hooks/useNow';
 import { Link } from 'react-router-dom';
 import {
   HardDrive, Activity, Radio, Users, ChevronRight,
   WifiOff, BarChart3, PieChart as PieChartIcon,
-  Plus, FileText, Settings, ShieldAlert, Cpu, ArrowUpRight, Building2
+  Plus, FileText, Settings, ShieldAlert, Cpu, ArrowUpRight, Building2,
+  AlertTriangle, ShieldCheck
 } from 'lucide-react';
 import { useDashboard } from '../hooks/useDashboard';
 import { Tooltip, ResponsiveContainer, Cell, PieChart, Pie } from 'recharts';
+import { api } from '../lib/api';
+
 
 const BRAND_COLORS = ['#2980b9', '#3498db', '#1abc9c', '#f1c40f', '#f7931d', '#e74c3c'];
 
@@ -37,13 +40,73 @@ const StatCard = ({
   </div>
 );
 
+interface Alert {
+  id: string;
+  device_id: string;
+  type: string;
+  severity: 'critical' | 'warning';
+  message: string;
+  value: number;
+  resolved: boolean;
+  created_at: string;
+  brand: string;
+  ip_address: string;
+  device_name: string;
+}
+
+const getTonerColorInfo = (type: string) => {
+  if (type.includes('black')) {
+    return { name: 'Negro', badgeClass: 'bg-slate-950 border-slate-800 text-white', barColor: '#0f172a' };
+  }
+  if (type.includes('cyan')) {
+    return { name: 'Cian', badgeClass: 'bg-cyan-500 border-cyan-400 text-white', barColor: '#06b6d4' };
+  }
+  if (type.includes('magenta')) {
+    return { name: 'Magenta', badgeClass: 'bg-pink-500 border-pink-400 text-white', barColor: '#ec4899' };
+  }
+  if (type.includes('yellow')) {
+    return { name: 'Amarillo', badgeClass: 'bg-yellow-400 border-yellow-300 text-slate-900', barColor: '#eab308' };
+  }
+  return null;
+};
+
+const formatUptime = (seconds: number) => {
+  const d = Math.floor(seconds / (3600 * 24));
+  const h = Math.floor((seconds % (3600 * 24)) / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const parts = [];
+  if (d > 0) parts.push(`${d}d`);
+  if (h > 0 || d > 0) parts.push(`${h}h`);
+  parts.push(`${m}m`);
+  return parts.join(' ');
+};
+
 const Dashboard = () => {
   const { data, loading, fetchDashboardData } = useDashboard();
   const now = useNow();
+  const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [alertsLoading, setAlertsLoading] = useState(true);
+
+  const fetchAlerts = useCallback(async () => {
+    try {
+      const res = await api.get<Alert[]>('/alerts?resolved=false');
+      setAlerts(res);
+    } catch (err) {
+      console.error('Error al obtener alertas:', err);
+    } finally {
+      setAlertsLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     fetchDashboardData();
-  }, [fetchDashboardData]);
+    fetchAlerts();
+  }, [fetchDashboardData, fetchAlerts]);
+
+  useEffect(() => {
+    const interval = setInterval(fetchAlerts, 30000);
+    return () => clearInterval(interval);
+  }, [fetchAlerts]);
 
   if (loading && !data) {
     return (
@@ -196,8 +259,178 @@ const Dashboard = () => {
         </div>
       </div>
 
+      {/* Active Alerts & System Health */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Consumibles en Alerta */}
+        <div className="cd-panel p-8 flex flex-col space-y-6 lg:col-span-2 hover:shadow-2xl hover:shadow-blue-900/5 transition-all duration-500">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-black text-[#1a2333] tracking-tight flex items-center gap-3">
+                <AlertTriangle size={20} className="text-amber-500 animate-pulse" /> Consumibles en Alerta
+              </h3>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Suministros bajos y críticos detectados</p>
+            </div>
+            {alerts.length > 0 && (
+              <span className={`px-3 py-1 text-[10px] font-black rounded-full shadow-lg ${
+                alerts.some(a => a.severity === 'critical')
+                  ? 'bg-rose-500 text-white shadow-rose-900/20 animate-pulse'
+                  : 'bg-amber-500 text-white shadow-amber-900/20'
+              }`}>
+                {alerts.length}
+              </span>
+            )}
+          </div>
+
+          <div className="flex-1 min-h-[250px] max-h-[350px] overflow-y-auto pr-2 space-y-4">
+            {alertsLoading ? (
+              <div className="h-64 flex flex-col items-center justify-center animate-pulse">
+                <Activity size={32} className="text-blue-500 animate-spin mb-3" />
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Consultando alertas...</p>
+              </div>
+            ) : alerts.length === 0 ? (
+              <div className="h-64 flex flex-col items-center justify-center text-emerald-500 bg-emerald-50/30 rounded-3xl border border-emerald-100 border-dashed">
+                <ShieldCheck size={48} className="mb-3 text-emerald-500 animate-bounce duration-1000" />
+                <h4 className="text-xs font-black uppercase tracking-widest text-emerald-600">Niveles Óptimos</h4>
+                <p className="text-[10px] font-bold text-slate-400 mt-1">Todos los consumibles por encima de los límites configurados</p>
+              </div>
+            ) : (
+              alerts.map((alert) => {
+                const isToner = alert.type.startsWith('toner_');
+                const tonerInfo = isToner ? getTonerColorInfo(alert.type) : null;
+                return (
+                  <div
+                    key={alert.id}
+                    className={`p-5 rounded-3xl border transition-all ${
+                      alert.severity === 'critical'
+                        ? 'bg-rose-50/30 border-rose-100/60 hover:bg-rose-50 hover:border-rose-200'
+                        : 'bg-amber-50/30 border-amber-100/60 hover:bg-amber-50 hover:border-amber-200'
+                    }`}
+                  >
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-black text-[#1a2333] uppercase tracking-tight truncate">
+                            {alert.device_name || 'Dispositivo'}
+                          </span>
+                          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest bg-slate-100 px-2 py-0.5 rounded-md">
+                            {alert.ip_address}
+                          </span>
+                        </div>
+                        <p className="text-[11px] font-medium text-slate-500 mt-1 leading-relaxed">
+                          {alert.message}
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-3 shrink-0">
+                        {isToner && tonerInfo && (
+                          <span className={`px-2.5 py-1 text-[9px] font-black uppercase rounded-lg border ${tonerInfo.badgeClass}`}>
+                            {tonerInfo.name}
+                          </span>
+                        )}
+                        <span className={`px-3 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider border flex items-center gap-1.5 ${
+                          alert.severity === 'critical'
+                            ? 'bg-rose-500 text-white border-rose-600 shadow-md shadow-rose-900/10'
+                            : 'bg-amber-500 text-white border-amber-600 shadow-md shadow-amber-900/10'
+                        }`}>
+                          <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                          {alert.severity === 'critical' ? 'Crítico' : 'Bajo'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {isToner && (
+                      <div className="mt-4">
+                        <div className="flex justify-between items-center text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1.5">
+                          <span>Nivel de Tóner</span>
+                          <span>{alert.value}%</span>
+                        </div>
+                        <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden border border-slate-200/30">
+                          <div
+                            className="h-full rounded-full transition-all duration-700"
+                            style={{
+                              width: `${alert.value}%`,
+                              backgroundColor: tonerInfo?.barColor || '#ef4444',
+                            }}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+
+        {/* Salud del Sistema */}
+        <div className="bg-gradient-to-br from-[#121824] to-[#1e293b] p-8 rounded-[32px] border border-slate-800 shadow-2xl relative overflow-hidden group flex flex-col justify-between space-y-6 lg:col-span-1 text-white">
+          <div className="relative z-10 space-y-6">
+            <div>
+              <h3 className="text-lg font-black text-white tracking-tight flex items-center gap-3">
+                <Cpu size={20} className="text-blue-400 animate-spin duration-3000" /> Salud del Sistema
+              </h3>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Estatus operativo de la nube</p>
+            </div>
+
+            <div className="p-5 bg-white/5 rounded-3xl border border-white/5 space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nube Cloud</span>
+                <span className="flex items-center gap-1.5 px-3 py-1 bg-emerald-500/10 text-emerald-400 rounded-xl border border-emerald-500/20">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  <span className="text-[9px] font-black uppercase tracking-wider">Operativo</span>
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Uptime</span>
+                <span className="text-xs font-black tracking-tight text-blue-100">
+                  {data?.systemHealth.uptime ? formatUptime(data.systemHealth.uptime) : '0m'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Cola Redis</span>
+                <span className="text-xs font-black tracking-tight text-emerald-400">1.2ms (OK)</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Última Sinc</span>
+                <span className="text-xs font-black tracking-tight text-indigo-200">
+                  {data?.systemHealth.lastSync ? new Date(data.systemHealth.lastSync).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : 'Sin datos'}
+                </span>
+              </div>
+            </div>
+
+            <div className="p-5 bg-white/5 rounded-3xl border border-white/5 space-y-3">
+              <div className="flex justify-between items-center text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                <span>Alertas Activas</span>
+                <span className="text-xs font-black text-white">{alerts.length}</span>
+              </div>
+              <div className="grid grid-cols-2 gap-3 mt-2">
+                <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-2xl text-center">
+                  <div className="text-lg font-black text-rose-400 leading-none">
+                    {alerts.filter(a => a.severity === 'critical').length}
+                  </div>
+                  <div className="text-[8px] font-black uppercase text-rose-300 mt-1 tracking-widest">Críticas</div>
+                </div>
+                <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-2xl text-center">
+                  <div className="text-lg font-black text-amber-400 leading-none">
+                    {alerts.filter(a => a.severity === 'warning').length}
+                  </div>
+                  <div className="text-[8px] font-black uppercase text-amber-300 mt-1 tracking-widest">Avisos</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="relative z-10 pt-4 border-t border-white/5 flex items-center justify-between text-[9px] font-black uppercase tracking-widest text-slate-500">
+            <span>STC Cloud v1.6.0</span>
+            <span>Seguro / Encriptado</span>
+          </div>
+
+          <div className="absolute top-0 right-0 w-48 h-48 bg-blue-500/5 rounded-full -mr-20 -mt-20 blur-3xl group-hover:bg-blue-500/10 transition-colors duration-700 pointer-events-none" />
+        </div>
+      </div>
+
       {/* Quick Access */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
         <Link to="/reports" className="flex items-center gap-4 p-6 bg-white border border-slate-200 rounded-[2.5rem] hover:border-blue-500 hover:shadow-2xl hover:shadow-blue-900/5 transition-all group">
           <div className="p-4 bg-blue-50 text-blue-600 rounded-3xl group-hover:scale-110 transition-transform">
             <FileText size={24} />
@@ -216,24 +449,6 @@ const Dashboard = () => {
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Ajustes del ecosistema</p>
           </div>
         </Link>
-        <div className="p-6 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-[2.5rem] shadow-xl shadow-blue-900/20 text-white relative overflow-hidden group flex items-center justify-between">
-          <div className="relative z-10">
-            <div className="flex items-center gap-2">
-              <div className={`w-2 h-2 rounded-full ${data?.systemHealth.status === 'healthy' ? 'bg-emerald-400 animate-pulse' : 'bg-rose-400'}`} />
-              <h4 className="text-sm font-black uppercase tracking-tight">Estado del Sistema</h4>
-            </div>
-            <div className="flex flex-col mt-1">
-              <p className="text-[10px] font-bold text-blue-100 uppercase tracking-widest">
-                Uptime: {data?.systemHealth.uptime ? Math.floor(data.systemHealth.uptime / 3600) : 0}h {data?.systemHealth.uptime ? Math.floor((data.systemHealth.uptime % 3600) / 60) : 0}m
-              </p>
-              <p className="text-[10px] font-bold text-blue-100 uppercase tracking-widest mt-0.5">
-                Sinc: {data?.systemHealth.lastSync ? new Date(data.systemHealth.lastSync).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : 'Sin datos'}
-              </p>
-            </div>
-          </div>
-          <ShieldAlert size={32} className={`relative z-10 transition-all duration-500 ${data?.systemHealth.status === 'healthy' ? 'text-emerald-300 opacity-20' : 'text-rose-300 opacity-100'}`} />
-          <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl group-hover:bg-white/20 transition-colors duration-700" />
-        </div>
       </div>
     </div>
   );

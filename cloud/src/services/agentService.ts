@@ -121,6 +121,12 @@ export class AgentService {
     if (newConfig.name !== undefined) {
       updates.name = newConfig.name;
     }
+    if (newConfig.toner_warning_threshold !== undefined) {
+      updates.toner_warning_threshold = newConfig.toner_warning_threshold;
+    }
+    if (newConfig.toner_critical_threshold !== undefined) {
+      updates.toner_critical_threshold = newConfig.toner_critical_threshold;
+    }
 
     if (Object.keys(updates).length > 0) {
       await this.db("agents").where({ id: agentId }).update(updates);
@@ -489,7 +495,7 @@ export class AgentService {
   async getConfig(agentId: string) {
     const agent = await this.db("agents")
       .where({ id: agentId })
-      .select("ip_ranges", "snmp_community", "scan_interval_minutes")
+      .select("ip_ranges", "snmp_community", "scan_interval_minutes", "toner_warning_threshold", "toner_critical_threshold")
       .first();
     
     if (agent && typeof agent.ip_ranges === 'string') {

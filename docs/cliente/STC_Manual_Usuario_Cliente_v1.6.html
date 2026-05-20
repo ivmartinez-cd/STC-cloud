@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>STC Cloud - Manual de Usuario y Propuesta de Valor v1.6</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --stc-blue: #004a99;
+            --stc-orange: #f7931d;
+            --text-dark: #1a2333;
+            --text-gray: #64748b;
+            --bg-light: #f8fafc;
+            --border-color: #e2e8f0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            background: white;
+            color: var(--text-dark);
+        }
+
+        .page {
+            width: 210mm;
+            min-height: 297mm;
+            padding: 25mm;
+            margin: 0 auto;
+            box-sizing: border-box;
+            position: relative;
+            background: white;
+        }
+
+        @media print {
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            .page { margin: 0; padding: 20mm; page-break-after: always; }
+        }
+
+        /* === PORTADA === */
+        .cover-top-bar {
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 75mm;
+        }
+
+        .top-title {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--stc-blue);
+            letter-spacing: 0.05em;
+        }
+
+        .cover-main { text-align: left; padding-left: 10mm; }
+
+        .stc-cloud-brand {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 50px;
+        }
+
+        .brand-stc {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 900;
+            font-size: 42px;
+            color: var(--stc-blue);
+            letter-spacing: -0.02em;
+        }
+
+        .brand-cloud {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 900;
+            font-size: 42px;
+            color: var(--stc-orange);
+            letter-spacing: -0.02em;
+        }
+
+        .main-title {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 34px;
+            font-weight: 700;
+            color: var(--stc-blue);
+            margin: 0;
+            line-height: 1.1;
+            text-transform: uppercase;
+        }
+
+        .main-subtitle {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 34px;
+            font-weight: 400;
+            color: var(--stc-blue);
+            margin: 5px 0 50px 0;
+            text-transform: uppercase;
+        }
+
+        .cover-desc {
+            font-size: 14px;
+            color: var(--text-gray);
+            line-height: 1.6;
+            margin-bottom: 40px;
+            max-width: 150mm;
+        }
+
+        .version-tag {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text-gray);
+            letter-spacing: 0.1em;
+        }
+
+        /* === HEADER INTERNO === */
+        .internal-header {
+            border-bottom: 3px solid var(--stc-blue);
+            padding-bottom: 8px;
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+
+        .internal-brand {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 900;
+            font-size: 18px;
+            color: var(--stc-blue);
+        }
+
+        .internal-brand span {
+            color: var(--stc-orange);
+        }
+
+        .internal-doc-type {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-gray);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        /* === CONTENIDO === */
+        h2 {
+            font-family: 'Montserrat', sans-serif;
+            color: var(--stc-blue);
+            font-size: 20px;
+            border-bottom: 1px solid #f1f5f9;
+            padding-bottom: 8px;
+            margin-top: 35px;
+        }
+
+        h3 {
+            font-family: 'Montserrat', sans-serif;
+            color: var(--stc-orange);
+            font-size: 15px;
+            margin-top: 25px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        p { font-size: 13.5px; color: #334155; line-height: 1.7; }
+
+        ul { padding-left: 20px; }
+        li { font-size: 13.5px; color: #334155; margin-bottom: 8px; line-height: 1.6; }
+
+        /* === ELEMENTOS VISUALES === */
+        .value-card {
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 15px;
+            background: var(--bg-light);
+            display: flex;
+            gap: 15px;
+        }
+
+        .value-card-icon {
+            font-size: 24px;
+            color: var(--stc-orange);
+            display: flex;
+            align-items: center;
+        }
+
+        .value-card-content h4 {
+            margin: 0 0 5px 0;
+            color: var(--stc-blue);
+            font-family: 'Montserrat', sans-serif;
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .value-card-content p {
+            margin: 0;
+            font-size: 12.5px;
+        }
+
+        .ui-dot {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 5px;
+        }
+
+        .dot-green { background: #22c55e; box-shadow: 0 0 5px #22c55e; }
+        .dot-orange { background: #f97316; box-shadow: 0 0 5px #f97316; }
+        .dot-red { background: #ef4444; box-shadow: 0 0 5px #ef4444; }
+
+        .callout-box {
+            background: #eff6ff;
+            border-left: 4px solid var(--stc-blue);
+            padding: 15px 20px;
+            margin: 25px 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .callout-box p {
+            margin: 0;
+            font-size: 13px;
+            color: var(--stc-blue);
+            font-weight: 600;
+        }
+
+        .security-badge {
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            color: #166534;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: 700;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            display: inline-block;
+        }
+
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { border: 1px solid var(--border-color); padding: 12px 14px; text-align: left; font-size: 13px; }
+        th {
+            background-color: #f8fafc;
+            color: var(--stc-blue);
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: 0.05em;
+        }
+
+        /* === INDICE === */
+        .toc-container { margin-top: 30px; }
+        .toc-item {
+            display: flex;
+            align-items: baseline;
+            margin-bottom: 12px;
+            font-size: 14px;
+            color: #1a2333;
+            text-decoration: none;
+        }
+        .toc-text { flex-shrink: 0; padding-right: 5px; }
+        .toc-dots { flex-grow: 1; border-bottom: 1px dotted #94a3b8; margin: 0 5px; position: relative; top: -4px; }
+        .toc-page { flex-shrink: 0; padding-left: 5px; font-weight: 600; color: var(--stc-blue); }
+
+        .footer {
+            position: absolute;
+            bottom: 20mm;
+            left: 25mm;
+            right: 25mm;
+            border-top: 1px solid var(--border-color);
+            padding-top: 15px;
+            font-size: 10px;
+            color: #94a3b8;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- PÁGINA 1: PORTADA -->
+    <div class="page">
+        <div class="cover-top-bar">
+            <div class="top-title">STC CLOUD – MANUAL DE USUARIO & PROPUESTA DE VALOR</div>
+        </div>
+
+        <div class="cover-main">
+            <div class="stc-cloud-brand">
+                <span class="brand-stc">STC</span>
+                <span class="brand-cloud">CLOUD</span>
+            </div>
+
+            <h1 class="main-title">Manual de Usuario</h1>
+            <h1 class="main-subtitle">y Propuesta de Valor</h1>
+
+            <p class="cover-desc">
+                Gestión inteligente, eficiente y automatizada de su parque de impresión.
+                Descubra cómo STC Cloud Monitor elimina las tareas administrativas manuales, 
+                garantiza el suministro de insumos justo a tiempo y opera bajo estándares estrictos de seguridad silenciosa.
+            </p>
+
+            <div class="version-tag">Edición Cliente Final | v1.6 | Mayo 2026</div>
+        </div>
+
+        <div class="footer">
+            © 2026 CANAL DIRECTO | STC CLOUD | MANUAL DE CLIENTE | CONFIDENCIAL
+        </div>
+    </div>
+
+    <!-- PÁGINA 2: ÍNDICE -->
+    <div class="page">
+        <div class="internal-header">
+            <div class="internal-brand">STC<span>CLOUD</span></div>
+            <div class="internal-doc-type">Tabla de Contenidos</div>
+        </div>
+
+        <h2 style="border: none; margin-bottom: 30px;">Índice del Manual</h2>
+
+        <div class="toc-container">
+            <a href="#propuesta-valor" class="toc-item">
+                <span class="toc-text">1. Propuesta de Valor: ¿Por qué STC Cloud?</span>
+                <span class="toc-dots"></span>
+                <span class="toc-page">3</span>
+            </a>
+            <a href="#interfaz-visual" class="toc-item">
+                <span class="toc-text">2. La Consola de Control de Usuario (Tray Icon)</span>
+                <span class="toc-dots"></span>
+                <span class="toc-page">3</span>
+            </a>
+            <a href="#pestanas-consola" class="toc-item">
+                <span class="toc-text">3. Pestañas de la Consola Visual Detalladas</span>
+                <span class="toc-dots"></span>
+                <span class="toc-page">4</span>
+            </a>
+            <a href="#seguridad-cliente" class="toc-item">
+                <span class="toc-text">4. Seguridad Sin Preocupaciones (Zero-Inbound)</span>
+                <span class="toc-dots"></span>
+                <span class="toc-page">5</span>
+            </a>
+            <a href="#preguntas-frecuentes" class="toc-item">
+                <span class="toc-text">5. Preguntas Frecuentes (FAQ)</span>
+                <span class="toc-dots"></span>
+                <span class="toc-page">5</span>
+            </a>
+        </div>
+
+        <div class="footer">
+            PÁGINA 2 | STC CLOUD – MANUAL DE USUARIO
+        </div>
+    </div>
+
+    <!-- PÁGINA 3: PROPUESTA DE VALOR E INTERFAZ -->
+    <div class="page">
+        <div class="internal-header">
+            <div class="internal-brand">STC<span>CLOUD</span></div>
+            <div class="internal-doc-type">Propuesta de Valor y Consola</div>
+        </div>
+
+        <h2 id="propuesta-valor">1. Propuesta de Valor: ¿Por qué STC Cloud?</h2>
+        <p>
+            En la gestión moderna de oficinas, las impresoras y multifuncionales son herramientas críticas. Sin embargo, su administración tradicional genera tareas repetitivas y riesgos de interrupción operativa. STC Cloud automatiza este ecosistema brindando tres ventajas clave:
+        </p>
+
+        <div class="value-card">
+            <div class="value-card-icon">⚡</div>
+            <div class="value-card-content">
+                <h4>Automatización de Lecturas (Cero Esfuerzo)</h4>
+                <p>Olvídese de tomar lecturas de contadores de páginas de forma manual cada mes. El sistema recolecta y reporta de forma segura los números de contadores (color y monocromo) directo a su portal sin intervención de su personal.</p>
+            </div>
+        </div>
+
+        <div class="value-card">
+            <div class="value-card-icon">📦</div>
+            <div class="value-card-content">
+                <h4>Reposición de Tóner Justo a Tiempo</h4>
+                <p>El sistema mide los niveles precisos de los cartuchos de tóner (Negro, Cian, Magenta, Amarillo). Cuando un insumo alcanza el umbral de advertencia, se genera un pedido automático de entrega antes de que la impresora quede inoperativa.</p>
+            </div>
+        </div>
+
+        <div class="value-card">
+            <div class="value-card-icon">🔒</div>
+            <div class="value-card-content">
+                <h4>Privacidad y Cumplimiento Total</h4>
+                <p>STC Cloud Monitor solo recolecta telemetría del hardware de impresión (contadores, niveles de tóner, marcas, modelos y alertas del sistema). Jamás accede al contenido de sus documentos impresos ni almacena datos confidenciales del negocio.</p>
+            </div>
+        </div>
+
+        <h2 id="interfaz-visual">2. La Consola de Control de Usuario (Tray Icon)</h2>
+        <p>
+            Para facilitarle el control visual instantáneo del agente en su equipo host, la aplicación se aloja silenciosamente en la bandeja del sistema (System Tray) al lado del reloj de Windows.
+        </p>
+
+        <h3>Estados del Icono en Bandeja</h3>
+        <p>El icono circular cambia de color de forma intuitiva para reflejar el estado actual del servicio:</p>
+        <ul>
+            <li><span class="ui-dot dot-green"></span> <strong>Verde (Activo):</strong> El agente funciona correctamente y está conectado a la nube de STC Cloud.</li>
+            <li><span class="ui-dot dot-orange"></span> <strong>Naranja (Pendiente de Activación):</strong> El agente está instalado pero no se ha enlazado con su clave de cliente en el portal.</li>
+            <li><span class="ui-dot dot-red"></span> <strong>Rojo (Falla / Detenido):</strong> El servicio de Windows no se encuentra operativo o hay un bloqueo crítico de red local.</li>
+        </ul>
+
+        <h3>Menú de Acceso Rápido (Click Derecho)</h3>
+        <p>Al presionar click derecho sobre el icono, se despliegan las siguientes funciones:</p>
+        <ul>
+            <li><strong>Ver Estado (Negrita):</strong> Abre la ventana principal de la Consola STC Cloud Monitor.</li>
+            <li><strong>Forzar Sincronización:</strong> Envía una señal manual para que el agente realice un escaneo de impresoras y lo envíe al portal de inmediato, útil tras instalar una impresora nueva.</li>
+            <li><strong>Abrir Logs Locales:</strong> Abre el archivo histórico de texto de auditoría local (útil para su departamento de TI).</li>
+        </ul>
+
+        <div class="footer">
+            PÁGINA 3 | STC CLOUD – MANUAL DE USUARIO
+        </div>
+    </div>
+
+    <!-- PÁGINA 4: PESTAÑAS DE LA CONSOLA -->
+    <div class="page">
+        <div class="internal-header">
+            <div class="internal-brand">STC<span>CLOUD</span></div>
+            <div class="internal-doc-type">Pestañas de la Consola Visual</div>
+        </div>
+
+        <h2 id="pestanas-consola">3. Pestañas de la Consola Visual Detalladas</h2>
+        <p>
+            La Consola de STC Cloud Monitor está diseñada para proveer máxima claridad y opciones de autoconfiguración organizadas en tres secciones:
+        </p>
+
+        <h3>A. Pestaña: "Service Information" (Información del Servicio)</h3>
+        <p>
+            Es la pantalla principal que consolida el estado global de la aplicación. Muestra los siguientes datos:
+        </p>
+        <ul>
+            <li><strong>Application Information:</strong> Detalla la versión exacta del agente (ej. 1.5.6), a qué ID de licencia de cliente está asignado, el límite de dispositivos autorizados (licencia empresarial ilimitada por defecto) y su validez.</li>
+            <li><strong>Service Status:</strong> Tres semáforos criptográficos que muestran el estado del Servicio de Windows (Running), la lógica operativa del Monitor (Active) y la conexión de salida al Portal (Connected).</li>
+            <li><strong>Discovery Status:</strong> Un indicador rápido que muestra el estado de respuesta de las impresoras descubiertas en sus rangos de red locales y provee un botón directo para forzar el refresco de datos.</li>
+        </ul>
+
+        <h3>B. Pestaña: "Environment Settings" (Configuración de Entorno)</h3>
+        <p>
+            Sección exclusiva utilizada durante la puesta en marcha inicial del agente o en labores de reubicación:
+        </p>
+        <ul>
+            <li><strong>URL del Servidor:</strong> Apunta al portal de telemetría segura en la nube corporativa (por defecto <code>https://stc-cloud.onrender.com</code>).</li>
+            <li><strong>Clave de Activación:</strong> Entrada de la clave de encriptación de 64 caracteres provista por su gestor de Canal Directo. Al ingresarla y dar click en "Activar Agente", el software se asocia y activa el autoarranque desatendido del servicio.</li>
+        </ul>
+
+        <h3>C. Pestaña: "Network / Proxy" (Red / Proxy)</h3>
+        <p>
+            Diseñada especialmente para corporaciones con redes informáticas altamente restrictivas que canalizan la salida a Internet mediante servidores intermediarios:
+        </p>
+        <ul>
+            <li>Permite registrar de manera visual el Servidor y Puerto del Proxy HTTP/HTTPS (ej. <code>proxy.miempresa.com:8080</code>).</li>
+            <li>Admite opcionalmente credenciales de acceso (Usuario y Contraseña) si su infraestructura lo requiere.</li>
+            <li><strong>Seguridad Integrada:</strong> Las credenciales del proxy se guardan cifradas criptográficamente. Al guardar, el servicio del agente se reinicia automáticamente en segundo plano para aplicar los parámetros de red sin perder datos.</li>
+        </ul>
+
+        <div class="footer">
+            PÁGINA 4 | STC CLOUD – MANUAL DE USUARIO
+        </div>
+    </div>
+
+    <!-- PÁGINA 5: SEGURIDAD Y PREGUNTAS FRECUENTES -->
+    <div class="page">
+        <div class="internal-header">
+            <div class="internal-brand">STC<span>CLOUD</span></div>
+            <div class="internal-doc-type">Seguridad y Preguntas Frecuentes</div>
+        </div>
+
+        <h2 id="seguridad-cliente">4. Seguridad Sin Preocupaciones (Zero-Inbound)</h2>
+        <p>
+            Entendemos que la seguridad de su red interna es su prioridad número uno. Por ello, STC Cloud se ha diseñado desde los cimientos bajo el paradigma de seguridad militar <strong>Zero-Inbound</strong>:
+        </p>
+
+        <div class="callout-box">
+            <p>El agente opera 100% "hacia afuera" (Outbound-Only). Nunca abre puertos entrantes en el firewall de su red, eliminando por completo cualquier puerta trasera que ciberdelincuentes puedan explotar.</p>
+        </div>
+
+        <p>
+            Toda la comunicación la inicia el agente local hacia el portal web seguro mediante conexiones seguras cifradas bajo HTTPS y WebSockets seguros en el puerto estándar 443 (el mismo puerto de navegación bancaria web).
+        </p>
+
+        <p>
+            Además, sus credenciales y configuraciones locales de red se almacenan bajo cifrado simétrico robusto <strong>AES-256-GCM</strong>. Este cifrado se enlaza físicamente al procesador y BIOS de la máquina host por derivación de firma (HWID). Si alguien extrajera la carpeta del agente de su red, los datos no podrían descifrarse, asegurando una confidencialidad impenetrable.
+        </p>
+
+        <h2 id="preguntas-frecuentes">5. Preguntas Frecuentes (FAQ)</h2>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 45%;">Pregunta del Cliente</th>
+                    <th>Respuesta STC Cloud</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>¿El agente consume mucho ancho de banda de mi conexión de Internet?</strong></td>
+                    <td>No. Las lecturas de telemetría se consolidan localmente en una base de datos SQLite compacta. Los paquetes enviados son de apenas unos pocos kilobytes y se transmiten a intervalos espaciados.</td>
+                </tr>
+                <tr>
+                    <td><strong>¿Qué pasa si mi red de Internet se cae por unos días?</strong></td>
+                    <td>El agente cuenta con persistencia tolerante. Guarda de forma segura las lecturas acumuladas localmente. En cuanto se restablece el acceso a Internet, el agente sube las lecturas pendientes automáticamente sin perder datos.</td>
+                </tr>
+                <tr>
+                    <td><strong>¿El agente ralentiza la computadora del usuario?</strong></td>
+                    <td>No. El software se ejecuta como un proceso secundario del sistema con la prioridad más baja. Consume menos de 30 MB de RAM y menos de 1% de uso de CPU, siendo imperceptible para el usuario.</td>
+                </tr>
+                <tr>
+                    <td><strong>¿Cómo se manejan las impresoras nuevas que compremos?</strong></td>
+                    <td>No requiere reconfiguración. El agente realiza escaneos automáticos programados de red (LAN). Si detecta un nuevo dispositivo de impresión, lo enrola dinámicamente y comienza a monitorear su tóner.</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="footer">
+            PÁGINA 5 | STC CLOUD – MANUAL DE USUARIO
+        </div>
+    </div>
+
+</body>
+</html>

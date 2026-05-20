@@ -38,6 +38,10 @@ const fastify = Fastify({
 const db = knex(knexConfig.development);
 const redis = new Redis(process.env.REDIS_URL || "redis://localhost:6379", {
   maxRetriesPerRequest: null,
+  retryStrategy(times) {
+    // Retry every 10 seconds to prevent event loop flood when Redis is offline
+    return 10000;
+  }
 });
 const agentService = new AgentService(db, redis);
 
@@ -54,9 +58,18 @@ const start = async () => {
     try {
       const hasTable = await db.schema.hasTable("knex_migrations");
       if (hasTable) {
-        await db.raw(
-          `UPDATE knex_migrations SET name = REPLACE(name, '.ts', '.js') WHERE name LIKE '%.ts'`
-        );
+        const isTS = __filename.endsWith(".ts");
+        if (isTS) {
+          await db.raw(
+            `UPDATE knex_migrations SET name = REPLACE(name, '.js', '.ts') WHERE name LIKE '%.js'`
+          );
+          console.log("[DB] Normalizadas migraciones a .ts para ejecución de desarrollo.");
+        } else {
+          await db.raw(
+            `UPDATE knex_migrations SET name = REPLACE(name, '.ts', '.js') WHERE name LIKE '%.ts'`
+          );
+          console.log("[DB] Normalizadas migraciones a .js para ejecución de producción/compilada.");
+        }
       }
     } catch {
       console.warn("[DB] No se pudo normalizar knex_migrations (posiblemente primera ejecución)");

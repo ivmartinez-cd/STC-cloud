@@ -154,25 +154,25 @@ export async function readDevice(
   }
 
   // Printer confirmed - safe to use all methods.
-  // Prefer counter-rich results; fall back to partial data if nothing has counters.
+  // Prefer EWS as first choice, then SNMP as second choice, and PJL/IPP as fallback options.
   const ews = await readViaEWS(ip);
   if (ews?.total_pages !== null) return ews;
-
-  const pjl = await readViaPJL(ip);
-  if (pjl?.total_pages !== null) return pjl;
 
   const snmpResult = await readViaSNMP(ip, community);
   if (snmpResult?.total_pages !== null) return snmpResult;
 
+  const pjl = await readViaPJL(ip);
+  if (pjl?.total_pages !== null) return pjl;
+
   const ipp = await readViaIPP(ip);
   if (ipp) return ipp;
 
-  return ews ?? pjl ?? snmpResult ?? null;
+  return ews ?? snmpResult ?? pjl ?? null;
 }
 
 // ─── Method 1: EWS (HTTP scraping, port 80/443) ──────────────────────────────
 
-async function readViaEWS(ip: string): Promise<DeviceReading | null> {
+export async function readViaEWS(ip: string): Promise<DeviceReading | null> {
   const data = await readDeviceViaEWS(ip);
   if (!data) return null;
   return {
@@ -196,7 +196,7 @@ async function readViaEWS(ip: string): Promise<DeviceReading | null> {
 
 // ─── Method 2: PJL (port 9100) ───────────────────────────────────────────────
 
-async function readViaPJL(ip: string): Promise<DeviceReading | null> {
+export async function readViaPJL(ip: string): Promise<DeviceReading | null> {
   const data = await readDeviceViaPJL(ip);
   if (!data) return null;
   const brand = data.model ? detectBrandFromText(data.model) : 'generic';
@@ -275,7 +275,7 @@ async function readTonerViaSNMP(session: any): Promise<TonerLevels> {
 
 // ─── Method 3: SNMP v2c (port 161 UDP) ───────────────────────────────────────
 
-async function readViaSNMP(ip: string, community: string): Promise<DeviceReading | null> {
+export async function readViaSNMP(ip: string, community: string): Promise<DeviceReading | null> {
   await sem.acquire();
   const session = createSession(ip, community);
   try {
@@ -362,7 +362,7 @@ async function readViaSNMP(ip: string, community: string): Promise<DeviceReading
 
 // ─── Method 4: IPP (port 631) ────────────────────────────────────────────────
 
-async function readViaIPP(ip: string): Promise<DeviceReading | null> {
+export async function readViaIPP(ip: string): Promise<DeviceReading | null> {
   const data = await readDeviceViaIPP(ip);
   if (!data) return null;
   const brand = data.model ? detectBrandFromText(data.model) : 'generic';

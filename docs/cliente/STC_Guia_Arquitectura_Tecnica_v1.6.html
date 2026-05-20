@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>STC Cloud - Guía Técnica de Arquitectura v1.6</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --stc-blue: #004a99;
+            --stc-orange: #f7931d;
+            --text-dark: #1a2333;
+            --text-gray: #64748b;
+            --code-bg: #f8fafc;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            background: #f1f5f9;
+            color: var(--text-dark);
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+
+        .page {
+            width: 210mm;
+            min-height: 297mm;
+            padding: 25mm;
+            margin: 20px auto;
+            box-sizing: border-box;
+            position: relative;
+            background: white;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+
+        @media print {
+            body {
+                background: white;
+            }
+            .page {
+                margin: 0;
+                padding: 20mm;
+                box-shadow: none;
+                page-break-after: always;
+            }
+        }
+
+        .cover-top-bar {
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 75mm;
+        }
+
+        .top-title {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--stc-blue);
+            letter-spacing: 0.05em;
+        }
+
+        .cover-main { 
+            text-align: left; 
+            padding-left: 10mm; 
+        }
+
+        .stc-cloud-brand {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 50px;
+        }
+
+        .brand-stc {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 900;
+            font-size: 42px;
+            color: var(--stc-blue);
+            letter-spacing: -0.02em;
+        }
+
+        .brand-cloud {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 900;
+            font-size: 42px;
+            color: var(--stc-orange);
+            letter-spacing: -0.02em;
+        }
+
+        .main-title {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 34px;
+            font-weight: 700;
+            color: var(--stc-blue);
+            margin: 0;
+            line-height: 1.15;
+            text-transform: uppercase;
+        }
+
+        .main-subtitle {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 34px;
+            font-weight: 400;
+            color: var(--stc-blue);
+            margin: 5px 0 50px 0;
+            text-transform: uppercase;
+        }
+
+        .version-tag {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-gray);
+            letter-spacing: 0.08em;
+        }
+
+        .internal-header {
+            border-bottom: 3px solid var(--stc-blue);
+            padding-bottom: 8px;
+            margin-bottom: 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+
+        .internal-brand {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 900;
+            font-size: 16px;
+            color: var(--stc-blue);
+        }
+
+        .internal-brand span {
+            color: var(--stc-orange);
+        }
+
+        .internal-doc-type {
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--text-gray);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        h2 {
+            font-family: 'Montserrat', sans-serif;
+            color: var(--stc-blue);
+            font-size: 20px;
+            border-bottom: 1px solid #f1f5f9;
+            padding-bottom: 8px;
+            margin-top: 35px;
+        }
+
+        h3 {
+            font-family: 'Montserrat', sans-serif;
+            color: var(--stc-orange);
+            font-size: 14px;
+            margin-top: 25px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        p { 
+            font-size: 13.5px; 
+            color: #334155; 
+            line-height: 1.65; 
+        }
+
+        ul, ol { 
+            padding-left: 20px; 
+        }
+        
+        li { 
+            font-size: 13.5px; 
+            color: #334155; 
+            margin-bottom: 8px; 
+            line-height: 1.6;
+        }
+
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            margin: 20px 0; 
+        }
+
+        th, td { 
+            border: 1px solid #e2e8f0; 
+            padding: 12px; 
+            text-align: left; 
+            font-size: 12.5px; 
+        }
+
+        th {
+            background-color: #f8fafc;
+            color: var(--stc-blue);
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: 0.05em;
+        }
+
+        .note-callout {
+            background: #fff7ed;
+            border-left: 4px solid var(--stc-orange);
+            padding: 18px;
+            margin: 25px 0;
+            font-size: 13px;
+            color: #9a3412;
+            line-height: 1.6;
+        }
+
+        .footer {
+            position: absolute;
+            bottom: 20mm;
+            left: 25mm;
+            right: 25mm;
+            border-top: 1px solid #e2e8f0;
+            padding-top: 15px;
+            font-size: 10px;
+            color: #94a3b8;
+            text-align: center;
+        }
+
+        .toc-container { 
+            margin-top: 30px; 
+        }
+
+        .toc-item {
+            display: flex;
+            align-items: baseline;
+            margin-bottom: 14px;
+            font-size: 14px;
+            color: #1a2333;
+            text-decoration: none;
+        }
+
+        .toc-link {
+            text-decoration: none;
+            color: inherit;
+            display: flex;
+            width: 100%;
+            align-items: baseline;
+        }
+
+        .toc-text { 
+            flex-shrink: 0; 
+            padding-right: 5px; 
+            font-weight: 600;
+        }
+        
+        .toc-dots { 
+            flex-grow: 1; 
+            border-bottom: 1px dotted #94a3b8; 
+            margin: 0 5px; 
+            position: relative; 
+            top: -4px; 
+        }
+        
+        .toc-page { 
+            flex-shrink: 0; 
+            padding-left: 5px; 
+            font-weight: 700; 
+            color: var(--stc-blue);
+        }
+
+        pre.code {
+            background: var(--code-bg);
+            border: 1px solid #e2e8f0;
+            border-left: 4px solid var(--stc-blue);
+            padding: 14px;
+            font-size: 12px;
+            font-family: 'Courier New', Courier, monospace;
+            color: #1e293b;
+            overflow-x: auto;
+            border-radius: 4px;
+            line-height: 1.5;
+            margin: 15px 0;
+        }
+
+        pre.diagram {
+            background: #0f172a;
+            color: #38bdf8;
+            border-left: 4px solid var(--stc-orange);
+            padding: 15px;
+            font-size: 11px;
+            font-family: 'Courier New', Courier, monospace;
+            overflow-x: auto;
+            border-radius: 4px;
+            line-height: 1.35;
+            margin: 15px 0;
+        }
+        
+        .diagram-title {
+            font-size: 10px;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: -10px;
+            font-weight: 700;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- PÁGINA 1: PORTADA -->
+    <div class="page">
+        <div class="cover-top-bar">
+            <div class="top-title">STC CLOUD – DOCUMENTACIÓN TÉCNICA E INTERNA</div>
+        </div>
+
+        <div class="cover-main">
+            <div class="stc-cloud-brand">
+                <span class="brand-stc">STC</span>
+                <span class="brand-cloud">CLOUD</span>
+            </div>
+
+            <h1 class="main-title">GUÍA TÉCNICA</h1>
+            <h1 class="main-subtitle">Y ARQUITECTURA DE SISTEMAS</h1>
+
+            <div class="version-tag">Edición de Ingeniería | v1.6 | Mayo 2026</div>
+        </div>
+
+        <div class="footer">
+            © 2026 CANAL DIRECTO | STC CLOUD | GUÍA TÉCNICA | DOCUMENTACIÓN INTERNA | CONFIDENCIAL
+        </div>
+    </div>
+
+    <!-- PÁGINA 2: ÍNDICE -->
+    <div class="page">
+        <div class="internal-header">
+            <div class="internal-brand">STC <span>CLOUD</span></div>
+            <div class="internal-doc-type">Índice</div>
+        </div>
+
+        <h2 style="border: none; margin-bottom: 30px;">Índice de Arquitectura</h2>
+
+        <div class="toc-container">
+            <a href="#vision-general" class="toc-item">
+                <span class="toc-text">1. Visión General de la Arquitectura y Flujos</span>
+                <span class="toc-dots"></span>
+                <span class="toc-page">3</span>
+            </a>
+            <a href="#zero-inbound" class="toc-item">
+                <span class="toc-text">2. Arquitectura de Red: Zero-Inbound y Salida Segura</span>
+                <span class="toc-dots"></span>
+                <span class="toc-page">3</span>
+            </a>
+            <a href="#hwid-binding" class="toc-item">
+                <span class="toc-text">3. Derivación de Claves por Hardware (HWID Binding)</span>
+                <span class="toc-dots"></span>
+                <span class="toc-page">4</span>
+            </a>
+            <a href="#descubrimiento" class="toc-item">
+                <span class="toc-text">4. Algoritmo y Cascada de Descubrimiento de Impresoras</span>
+                <span class="toc-dots"></span>
+                <span class="toc-page">5</span>
+            </a>
+            <a href="#ews-engine" class="toc-item">
+                <span class="toc-text">5. Motor de Extracción Quirúrgica via EWS (Deep-Dive)</span>
+                <span class="toc-dots"></span>
+                <span class="toc-page">6</span>
+            </a>
+            <a href="#almacenamiento" class="toc-item">
+                <span class="toc-text">6. Arquitectura de Almacenamiento Local (SQLite WAL)</span>
+                <span class="toc-dots"></span>
+                <span class="toc-page">7</span>
+            </a>
+            <a href="#autenticacion" class="toc-item">
+                <span class="toc-text">7. Autenticación Rotativa de Doble Token</span>
+                <span class="toc-dots"></span>
+                <span class="toc-page">7</span>
+            </a>
+            <a href="#firmware" class="toc-item">
+                <span class="toc-text">8. Protocolo de Firma de Actualización (Ed25519)</span>
+                <span class="toc-dots"></span>
+                <span class="toc-page">7</span>
+            </a>
+        </div>
+
+        <div class="footer">
+            PÁGINA 2 | STC CLOUD – GUÍA TÉCNICA DE ARQUITECTURA
+        </div>
+    </div>
+
+    <!-- PÁGINA 3: VISIÓN GENERAL Y ZERO-INBOUND -->
+    <div class="page">
+        <div class="internal-header">
+            <div class="internal-brand">STC <span>CLOUD</span></div>
+            <div class="internal-doc-type">1. Visión General & 2. Red</div>
+        </div>
+
+        <h2 id="vision-general">1. Visión General de la Arquitectura</h2>
+        <p>
+            El ecosistema de <strong>STC Cloud</strong> está dividido en tres componentes desacoplados diseñados para operar de manera autónoma, tolerar fallas de comunicación y proteger la integridad del tráfico de red interna:
+        </p>
+
+        <div class="diagram-title">Consola de Red y Flujo de Datos (Arquitectura)</div>
+        <pre class="diagram">
+  ┌────────────────────────────────────────────────────────┐
+  │                   Infraestructura WAN                  │
+  │                                                        │
+  │                  ┌──────────────────┐                  │
+  │                  │ STC Cloud Portal │                  │
+  │                  │  (Fastify API)   │                  │
+  │                  └────────┬─────────┘                  │
+  │                           │                            │
+  └───────────────────────────┼────────────────────────────┘
+                              │ HTTPS / WSS (Port 443)
+  ┌───────────────────────────┼────────────────────────────┐
+  │                   Red Local del Cliente                │
+  │                           │                            │
+  │                           ▼                            │
+  │                  ┌──────────────────┐                  │
+  │                  │ STC Cloud Agent  │                  │
+  │                  │   (Single Exec)  │                  │
+  │                  └────────┬─────────┘                  │
+  │                           │                            │
+  │         ┌─────────────────┼─────────────────┐          │
+  │         │ UDP 161 (SNMP)  │ TCP 80/443 (EWS)│          │
+  │         ▼                 ▼                 ▼          │
+  │    ┌───────────┐     ┌───────────┐     ┌───────────┐   │
+  │    │ Impresora │     │ Impresora │     │ Impresora │   │
+  │    │   HP M404 │     │ Lexmark   │     │ Samsung   │   │
+  │    └───────────┘     └───────────┘     └───────────┘   │
+  └────────────────────────────────────────────────────────┘</pre>
+
+        <h2 id="zero-inbound">2. Arquitectura de Red: Zero-Inbound</h2>
+        <p>
+            Para integrarse sin fricciones en entornos corporativos altamente regulados (banca, salud, sector público), el agente opera bajo un paradigma de <strong>Zero-Inbound (Entrada Cero)</strong>:
+        </p>
+        <ul>
+            <li><strong>Sin Puertos de Entrada Abiertos:</strong> El agente nunca escucha peticiones desde el exterior. No se expone ningún socket entrante en la red del cliente, anulando la superficie de ataque perimetral.</li>
+            <li><strong>Conexiones de Salida Seguras (Outbound-Only):</strong> Todo el flujo hacia el portal en la nube se realiza a través de peticiones HTTP/S estándar y canales WebSocket Seguros (WSS) bidireccionales en el puerto estándar <strong>TCP 443</strong>.</li>
+            <li><strong>Tolerancia y Backoff Exponencial:</strong> Si se pierde el canal WAN, el agente utiliza un algoritmo progresivo (`waitForConnectivity`) que espacia los intentos de conexión desde 10 segundos hasta un techo de 5 minutos, previniendo inundaciones en los firewalls locales y servidores externos.</li>
+        </ul>
+
+        <div class="footer">
+            PÁGINA 3 | STC CLOUD – GUÍA TÉCNICA DE ARQUITECTURA
+        </div>
+    </div>
+
+    <!-- PÁGINA 4: HWID BINDING -->
+    <div class="page">
+        <div class="internal-header">
+            <div class="internal-brand">STC <span>CLOUD</span></div>
+            <div class="internal-doc-type">3. Hardware ID Binding</div>
+        </div>
+
+        <h2 id="hwid-binding">3. Derivación de Claves por Hardware (HWID Binding)</h2>
+        <p>
+            Para impedir el robo de credenciales y asegurar que una configuración local (`config.enc`) no pueda ser trasladada o clonada en otra máquina física, el agente implementa un cifrado de vinculación física estricto (Hardware Binding):
+        </p>
+
+        <div class="diagram-title">Flujo de Derivación Criptográfica</div>
+        <pre class="diagram">
+[MachineGuid] + [BIOS Serial] ──► [String Crudo] ──► [SHA-256 Hash] ──► [Hardware ID (32 chars hex)]
+                                                                                  │
+                                                                                  ▼
+                                                                       [PBKDF2 (100k iter, sha256)]
+                                                                                  │
+                                                                                  ▼
+[JSON de Config] ──► [Cifrado Simétrico AES-256-GCM] ◄────────────────────── [Derived Key]
+                                 │
+                                 ▼
+                     [config.enc en Disco]</pre>
+
+        <h3>Especificaciones Técnicas del Proceso</h3>
+        <ol>
+            <li>
+                <strong>Extracción de Identificadores (Windows):</strong>
+                <ul>
+                    <li>Consulta el parámetro único de instalación de Windows mediante el registro del sistema: <br>
+                    <code style="font-size: 11.5px; font-family: monospace; color: var(--stc-blue);">Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Cryptography\MachineGuid</code></li>
+                    <li>Extrae el número de serie de hardware físico de la placa base/BIOS por consulta WMI/CIM nativa: <br>
+                    <code style="font-size: 11.5px; font-family: monospace; color: var(--stc-blue);">Win32_BIOS.SerialNumber</code></li>
+                </ul>
+            </li>
+            <li>
+                <strong>Derivación del HWID base:</strong>
+                Combina ambos strings en el formato `${guid}-${bios}` y ejecuta un hashing unidireccional SHA-256. Los primeros 32 caracteres hexadecimales resultantes componen el identificador único de hardware.
+            </li>
+            <li>
+                <strong>Función de Derivación de Claves (KDF):</strong>
+                Para blindar la clave simétrica ante ataques de fuerza bruta en memoria, aplica **PBKDF2** (Password-Based Key Derivation Function 2) alimentado por el HWID base, una sal criptográfica de 16 bytes generada en el disco en caliente, y **100,000 iteraciones** del motor `sha256`. Esto produce la clave final de cifrado de 32 bytes (256 bits).
+            </li>
+            <li>
+                <strong>Cifrado Simétrico Integrado (AES-256-GCM):</strong>
+                Genera un vector de inicialización (IV) criptográfico de 12 bytes aleatorios. Cifra los datos sensibles y calcula un tag de autenticación de 16 bytes. Escribe el buffer binario estructurado en `config.enc`.
+            </li>
+            <li>
+                <strong>Prevención contra Manipulación y Clonado:</strong>
+                Si un atacante copia el archivo `config.enc` a otra máquina, el agente intentará leer la BIOS y el Guid local de esa nueva máquina para descifrar el tag de autenticación. Esto causará un fallo criptográfico inmediato (`BAD_DECRYPT` o `Invalid authentication tag`), disparando la excepción preventiva `HWID_MISMATCH` y bloqueando la ejecución.
+            </li>
+        </ol>
+
+        <div class="footer">
+            PÁGINA 4 | STC CLOUD – GUÍA TÉCNICA DE ARQUITECTURA
+        </div>
+    </div>
+
+    <!-- PÁGINA 5: ESCANEO Y CASCADA -->
+    <div class="page">
+        <div class="internal-header">
+            <div class="internal-brand">STC <span>CLOUD</span></div>
+            <div class="internal-doc-type">4. Escaneo e Inmunidad IDS</div>
+        </div>
+
+        <h2 id="descubrimiento">4. Algoritmo y Cascada de Descubrimiento de Impresoras</h2>
+        <p>
+            El subsistema de escaneo (`scanner.ts`) está diseñado de manera defensiva. Su prioridad es **no activar alertas de intrusión en la intranet** (evitar falsos positivos en firewalls perimetrales, WAF o sistemas SIEM) y optimizar la precisión de datos de contadores.
+        </p>
+
+        <h3>A. Precalificación de Puertos por Socket TCP Crudo</h3>
+        <p>
+            Antes de enviar tramas HTTP o comandos complejos, el agente ejecuta una sonda paralela rápida en los puertos TCP `9100`, `631`, `80` y `443` con un timeout estricto de **500 ms** (`REACH_TIMEOUT = 500`). Concurrencia regulada mediante semáforo a un máximo de 20 IPs simultáneas.
+        </p>
+
+        <h3>B. La Bifurcación de Aislamiento de Seguridad (`hasPrinterPort`)</h3>
+        <p>
+            El agente implementa una lógica booleana determinante para decidir qué protocolos está autorizado a interrogar en cada dirección IP:
+        </p>
+        <pre class="code">const hasPrinterPort = openPorts.has(PORT_JETDIRECT) || openPorts.has(PORT_IPP);</pre>
+        <ul>
+            <li>
+                <strong>Caso `hasPrinterPort === false` (Aislamiento de Seguridad):</strong>
+                Si los puertos exclusivos de impresión TCP `9100` (JetDirect) y TCP `631` (IPP) están **cerrados**, el agente asume inmediatamente que el host es un dispositivo de infraestructura general (servidor web, switch, Active Directory, NAS, router, PC de usuario).
+                <br>
+                <strong>Acción:</strong> El agente **cancela y omite cualquier petición HTTP/S a los puertos 80/443**. Pasa de inmediato y de forma exclusiva a una consulta SNMP de lectura básica de MIBs estándar. Esto elimina falsas alarmas de escaneo web perimetral.
+            </li>
+            <li>
+                <strong>Caso `hasPrinterPort === true` (Dispositivo Confirmado):</strong>
+                Si el puerto `9100` o el `631` está abierto, se confirma la existencia física de una impresora en red. El agente queda habilitado para realizar HTTP/S Scraping y el resto de la cascada con seguridad.
+            </li>
+        </ul>
+
+        <h3>C. Flujo Secuencial de Cascada y Fallback en Caliente</h3>
+        <p>
+            Para impresoras confirmadas, el agente interroga secuencialmente hasta hallar contadores válidos (`total_pages !== null`), en la siguiente jerarquía:
+        </p>
+        <ol>
+            <li><strong>Nivel 1: EWS (HTTP/S Scraping - Puertos 80/443):</strong> Scraping HTML/XML de administración. Obtiene datos literales y directos tal cual los calcula la impresora. Si obtiene contadores, detiene la cascada.</li>
+            <li><strong>Nivel 2: SNMP v2c (UDP Puerto 161):</strong> Consulta de MIBs RFC 3805/2790 con timeout de **3000 ms** (`TIMEOUT_MS = 3000`) y **1 reintento** (`RETRIES = 1`). Valida la OID `hrDeviceType` para confirmar tipo impresora física; si no coincide, aborta la lectura. Si obtiene contadores, detiene la cascada.</li>
+            <li><strong>Nivel 3: PJL (TCP Puerto 9100):</strong> Conexión TCP y comandos directos de conteo (por ejemplo, `@PJL INFO PAGECOUNT` y `@PJL INFO ID`). Si obtiene contadores, detiene la cascada.</li>
+            <li><strong>Nivel 4: IPP (TCP Puerto 631):</strong> Envío de tramas de atributos estandarizados (`Get-Printer-Attributes`).</li>
+            <li><strong>Coalescencia Nullish (`ews ?? snmpResult ?? pjl ?? null`):</strong> Si ningún método entregó contadores consolidados, fusiona los datos parciales para rescatar la identidad básica (número de serie, marca, modelo).</li>
+        </ol>
+
+        <h3>D. Caché Persistente: Ruta Rápida (Fast Path)</h3>
+        <p>
+            Una vez que se identifica el método exitoso, este se persiste en la base SQLite bajo la columna `poll_method`. En los ciclos siguientes, el agente ejecuta el protocolo cacheado de forma **directa y directa**, saltándose la verificación de puertos y la cascada secuencial. Si el dispositivo falla, la caché se invalida a `'unknown'` y se vuelve a lanzar el descubrimiento dinámico.
+        </p>
+
+        <div class="footer">
+            PÁGINA 5 | STC CLOUD – GUÍA TÉCNICA DE ARQUITECTURA
+        </div>
+    </div>
+
+    <!-- PÁGINA 6: PROFUNDIZACIÓN - MOTOR DE EXTRACCIÓN EWS -->
+    <div class="page">
+        <div class="internal-header">
+            <div class="internal-brand">STC <span>CLOUD</span></div>
+            <div class="internal-doc-type">5. Motor de Extracción EWS</div>
+        </div>
+
+        <h2 id="ews-engine">5. Motor de Extracción Quirúrgica via EWS</h2>
+        <p>
+            El motor de telemetría por EWS (Embedded Web Server) implementado en <code>ews.ts</code> representa la capa de mayor precisión del agente. Permite extraer contadores y estados de consumibles directamente de las páginas administrativas nativas del hardware, operando de manera aislada y sin consumo excesivo de red.
+        </p>
+
+        <h3>A. Capa de Transporte y Control de Red (`fetchHttp`)</h3>
+        <p>
+            Diseñado sobre los módulos nativos <code>http</code> y <code>https</code> de Node.js, garantizando un binario libre de librerías externas de red (evita dependencias como Axios).
+        </p>
+        <ul>
+            <li><strong>Límite de Espera Estricto:</strong> Se fija en **4000 ms** (<code>EWS_TIMEOUT = 4000</code>). Si la CPU de la placa de red de la impresora está saturada, se destruye el socket de inmediato (<code>req.destroy()</code>) liberando el Event Loop del agente.</li>
+            <li><strong>Bypass TLS para Intranet:</strong> Configura <code>rejectUnauthorized: false</code>. Es mandatorio para saltarse advertencias de certificados auto-firmados o expirados habituales en impresoras corporativas locales.</li>
+            <li><strong>Manejador de Redirecciones (Anti-Loop):</strong> Sigue estados <code>301</code>, <code>302</code>, <code>307</code> y <code>308</code> recalculando esquemas y rutas dinámicas. Cuenta con un límite de **3 saltos** (<code>redirectDepth = 3</code>) para evitar bucles infinitos causados por portales cautivos.</li>
+        </ul>
+
+        <h3>B. Matriz Quirúrgica de 13 Endpoints</h3>
+        <p>
+            El agente no realiza un rastreo (crawl) genérico. Interroga de forma directa una matriz ordenada de URLs específicas:
+        </p>
+        <table style="margin-top: 10px; margin-bottom: 10px;">
+            <thead>
+                <tr>
+                    <th style="width: 25%;">Fabricante / Tipo</th>
+                    <th style="width: 50%;">Endpoint Clave del Firmware</th>
+                    <th style="width: 25%;">Objetivo de Telemetría</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Samsung SWS</strong></td>
+                    <td><code>/sws.application/information/countersView.sws</code></td>
+                    <td>Contadores físicos consolidados</td>
+                </tr>
+                <tr>
+                    <td><strong>Samsung SyncThru</strong></td>
+                    <td><code>/sws/app/information/counters/counters.json</code></td>
+                    <td>Contadores en formato JSON nativo</td>
+                </tr>
+                <tr>
+                    <td><strong>Lexmark Reports</strong></td>
+                    <td><code>/cgi-bin/dynamic/printer/config/reports/deviceinfo.html</code></td>
+                    <td>Páginas totales, serial y modelo</td>
+                </tr>
+                <tr>
+                    <td><strong>HP FutureSmart</strong></td>
+                    <td><code>/DevMgmt/ProductUsageDyn.xml</code></td>
+                    <td>API XML estructurada de HP</td>
+                </tr>
+                <tr>
+                    <td><strong>HP Usage Page</strong></td>
+                    <td><code>/hp/device/InternalPages/Index?id=UsagePage</code></td>
+                    <td>Contador físico (HTML responsive)</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>C. Acumulador Incremental y Cortocircuito (Billing Guard)</h3>
+        <p>
+            El agente procesa secuencialmente la matriz en un bucle cerrado. Inicializa un objeto acumulador dinámico (<code>acc</code>) y vuelca los datos extraídos de cada endpoint exitoso mediante una estrategia de fusión conservadora: solo escribe propiedades si el nuevo valor no es indefinido (por ejemplo, combina el modelo de <code>identity.json</code> con contadores de <code>counters.json</code>).
+        </p>
+        <div class="note-callout" style="padding: 10px 15px; margin: 10px 0; font-size: 12px;">
+            <strong>Cortocircuito de Facturación:</strong> En el instante exacto en que <code>acc.totalPages</code> es exitosamente poblado, el agente rompe la ejecución del bucle (<code>break</code>) y retorna los datos. Esto evita realizar las peticiones HTTP/S restantes a otros endpoints de la matriz, reduciendo el tráfico de red local en un 70%.
+        </div>
+
+        <h3>D. Parseo de Datos sin Motor Web (Headless Free)</h3>
+        <p>
+            Para anular vulnerabilidades de scripting y reducir la huella de memoria RAM a kilobytes, el agente no levanta navegadores embebidos ni procesa el DOM. Utiliza expresiones regulares deterministas y lectores XML planos:
+        </p>
+        <ul>
+            <li><strong>Lector XML Determinista (HP):</strong> Extrae los valores de etiquetas como <code>&lt;TotalImpressions&gt;</code> mediante expresiones regulares de etiquetas limpiando signos de millares.</li>
+            <li><strong>Regex Multilingüe (Español / Inglés / Coreano):</strong> Busca cadenas físicas específicas como <code>gxi-billing-simplex-bw-total-cnt</code> (simplex) o <code>Cómputo de pág.</code> (Page Count) aislando el entero continuo.</li>
+            <li><strong>Suma de Facturación Simplex/Duplex:</strong> En JSONs de Samsung, extrae y suma las variables <code>GXI_BILLING_SIMPLEX_BW_TOTAL_CNT</code> y <code>GXI_BILLING_DUPLEX_BW_TOTAL_CNT</code> para evitar omisiones de impresión a doble cara.</li>
+        </ul>
+
+        <div class="footer">
+            PÁGINA 6 | STC CLOUD – GUÍA TÉCNICA DE ARQUITECTURA
+        </div>
+    </div>
+
+    <!-- PÁGINA 7: ALMACENAMIENTO, TOKENS Y FIRMA -->
+    <div class="page">
+        <div class="internal-header">
+            <div class="internal-brand">STC <span>CLOUD</span></div>
+            <div class="internal-doc-type">6. DB | 7. Auth | 8. Firmware</div>
+        </div>
+
+        <h2 id="almacenamiento">6. Arquitectura de Almacenamiento Local (SQLite WAL)</h2>
+        <p>
+            El agente aloja la cola de telemetría e histórico de lecturas en una base de datos local SQLite administrada bajo el motor nativo <code>better-sqlite3</code>:
+        </p>
+        <ul>
+            <li><strong>Write-Ahead Logging (PRAGMA journal_mode = WAL):</strong> Permite operaciones de lectura y escritura concurrentes sin bloqueos de hilos (Thread Blocking).</li>
+            <li><strong>Control de Backpressure:</strong> Para evitar llenar el disco local si se interrumpe la conexión WAN de manera indefinida, el agente implementa un límite estricto de **10,000 registros en cola**. Si se supera, los escaneos de red se pausan preventivamente.</li>
+            <li><strong>Autolimpieza y Retención:</strong> Cada proceso de sincronización purga automáticamente los registros sincronizados (<code>synced = 1</code>) y aquellos con antigüedad superior a los **7 días**, manteniendo el archivo estable en disco.</li>
+        </ul>
+
+        <h2 id="autenticacion">7. Autenticación Rotativa de Doble Token</h2>
+        <p>
+            Para proteger las APIs de ingesta del canal en la nube sin almacenar credenciales perennes en los equipos clientes, STC Cloud utiliza un sistema dinámico:
+        </p>
+        <ol>
+            <li><strong>Clave de Activación Efímera:</strong> Clave uniuso válida por 24 horas enviada durante la instalación.</li>
+            <li><strong>Refresh Token Rotativo:</strong> Al activarse, la API de la nube le asigna un token criptográfico de 64 bytes que se persiste de forma cifrada en la configuración local.</li>
+            <li><strong>Access Token JWT (Corto Plazo):</strong> Las peticiones normales usan un JSON Web Token (JWT) temporal con expiración de unas pocas horas.</li>
+            <li><strong>Rotación Activa en Caliente:</strong> Si la petición al portal devuelve un HTTP <code>401 Unauthorized</code>, el agente lanza de forma asíncrona un flujo de renovación (<code>tryRefresh</code>) enviando el <em>Refresh Token</em>. La nube verifica el hash SHA-256 en la base relacional (<code>refresh_token_hash</code>), destruye el refresh token anterior, emite una nueva pareja de tokens y el agente actualiza su archivo <code>config.enc</code>.</li>
+        </ol>
+
+        <h2 id="firmware">8. Protocolo de Firma de Actualización de Firmware (Ed25519)</h2>
+        <p>
+            El actualizador automático implementa un flujo criptográfico asimétrico de dos firmas para mitigar vulnerabilidades críticas de cadena de suministro (Supply Chain Attacks):
+        </p>
+        <ul>
+            <li><strong>Integridad por Hash SHA-256:</strong> Descarga el archivo de firmware comprimido y computa su hash SHA-256 para validarlo frente a la firma declarada por la API HTTPS.</li>
+            <li><strong>Firma Digital de Clave Pública Fija (Ed25519):</strong> El agente descarga adicionalmente un archivo de firma digital <code>.sig</code>. Utilizando el motor criptográfico nativo de Node.js, verifica la firma digital del binario contra la clave pública maestra inmutable e inyectada en su binario (<code>UPDATE_PUBLIC_KEY_HEX</code>). Si la firma falla, se elimina inmediatamente el archivo descargado de forma preventiva y se genera una alerta crítica.</li>
+        </ul>
+
+        <div class="footer">
+            PÁGINA 7 | STC CLOUD – GUÍA TÉCNICA DE ARQUITECTURA
+        </div>
+    </div>
+
+</body>
+</html>

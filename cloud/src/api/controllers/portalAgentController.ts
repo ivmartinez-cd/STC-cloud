@@ -67,7 +67,26 @@ export function createPortalAgentController(
         .groupBy("agents.id", "clients.name", "clients.id")
         .first();
       if (!agent) return { error: "Monitor no encontrado" };
-      return agent;
+
+      let parsedIpRanges = [];
+      if (agent.ip_ranges) {
+        try {
+          parsedIpRanges = typeof agent.ip_ranges === "string" ? JSON.parse(agent.ip_ranges) : agent.ip_ranges;
+        } catch (e) {
+          console.error("Error parsing ip_ranges in getAgent:", e);
+        }
+      }
+
+      return {
+        ...agent,
+        config: {
+          ip_ranges: parsedIpRanges,
+          snmp_community: agent.snmp_community,
+          scan_interval_minutes: agent.scan_interval_minutes,
+          toner_warning_threshold: agent.toner_warning_threshold,
+          toner_critical_threshold: agent.toner_critical_threshold,
+        },
+      };
     },
 
     getAgentDevices: async (request: FastifyRequest) => {
