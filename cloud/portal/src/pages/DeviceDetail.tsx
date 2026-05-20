@@ -270,7 +270,7 @@ const DeviceDetail = () => {
           {/* Stats Panel */}
           <div className="space-y-6">
 
-            {/* Toner Panel */}
+            {/* Unified Consumibles Panel */}
             {latest?.toner_black != null && (
               <div className="cd-panel p-6 bg-white border border-slate-100 rounded-[24px] space-y-5">
                 <div className="flex items-center gap-3">
@@ -278,35 +278,66 @@ const DeviceDetail = () => {
                     <Activity size={20} />
                   </div>
                   <div>
-                    <h4 className="font-extrabold text-[#1a2333] text-sm">Nivel de Consumibles</h4>
-                    <p className="text-[10px] font-bold text-slate-400">Estado actual de cartuchos</p>
+                    <h4 className="font-extrabold text-[#1a2333] text-sm">Consumibles</h4>
+                    <p className="text-[10px] font-bold text-slate-400">Niveles de tóner y datos de cartuchos</p>
                   </div>
                 </div>
 
                 {latest.toner_cyan == null ? (
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center text-xs font-extrabold">
-                      <span className="text-slate-500 uppercase tracking-widest text-[10px]">Tóner Negro</span>
-                      <span className="text-slate-700">{latest.toner_black}%</span>
+                  /* ── Mono printer ── */
+                  <div className="space-y-3">
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center text-xs font-extrabold">
+                        <span className="text-slate-500 uppercase tracking-widest text-[10px]">Tóner Negro</span>
+                        <span className="text-slate-700">{latest.toner_black}%</span>
+                      </div>
+                      <div className="h-3 w-full bg-slate-100 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-gradient-to-r from-slate-700 to-slate-900 rounded-full transition-all duration-1000"
+                          style={{ width: `${latest.toner_black}%` }}
+                        />
+                      </div>
+                      {latest.toner_black <= 15 && (
+                        <p className="text-[10px] font-extrabold text-amber-500 uppercase tracking-widest">⚠ Requiere reposición</p>
+                      )}
                     </div>
-                    <div className="h-3 w-full bg-slate-100 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-gradient-to-r from-slate-700 to-slate-900 rounded-full transition-all duration-1000"
-                        style={{ width: `${latest.toner_black}%` }}
-                      />
-                    </div>
-                    {latest.toner_black <= 15 && (
-                      <p className="text-[10px] font-extrabold text-amber-500 uppercase tracking-widest">⚠ Requiere reposición</p>
+                    {device?.cartridge_code_black && (
+                      <div className="flex items-start gap-3 p-3 bg-slate-50 rounded-2xl border border-slate-100">
+                        <div className="mt-1.5 w-2.5 h-2.5 rounded-full flex-shrink-0 bg-slate-800" />
+                        <div className="flex-1 min-w-0">
+                          <span className="font-black text-slate-800 text-sm tracking-tight">{device.cartridge_code_black}</span>
+                          {device.cartridge_capacity_black != null && (
+                            <p className="text-[10px] text-slate-400 font-bold mt-0.5">
+                              Capacidad: {device.cartridge_capacity_black.toLocaleString()} pág.
+                              {latest.toner_black != null && device.cartridge_capacity_black > 0 && (
+                                <span className="ml-2 text-slate-500">
+                                  (~{Math.round(device.cartridge_capacity_black * latest.toner_black / 100).toLocaleString()} restantes)
+                                </span>
+                              )}
+                            </p>
+                          )}
+                          {device.cartridge_serial_black && (
+                            <p className="text-[10px] text-slate-300 font-mono mt-0.5 truncate" title={device.cartridge_serial_black}>
+                              {device.cartridge_serial_black}
+                            </p>
+                          )}
+                        </div>
+                      </div>
                     )}
                   </div>
                 ) : (
+                  /* ── Color printer ── */
                   <div className="grid grid-cols-4 gap-3 text-center">
                     {([
-                      { label: 'K', grad: 'from-slate-700 to-slate-900', val: latest.toner_black },
-                      { label: 'C', grad: 'from-cyan-400 to-cyan-600',   val: latest.toner_cyan },
-                      { label: 'M', grad: 'from-pink-400 to-pink-600',   val: latest.toner_magenta },
-                      { label: 'Y', grad: 'from-yellow-300 to-yellow-500', val: latest.toner_yellow },
-                    ] as { label: string; grad: string; val: number | null | undefined }[]).map(t => (
+                      { label: 'K', color: 'Negro', grad: 'from-slate-700 to-slate-900', val: latest.toner_black,
+                        code: device?.cartridge_code_black, serial: device?.cartridge_serial_black, capacity: device?.cartridge_capacity_black },
+                      { label: 'C', color: 'Cian', grad: 'from-cyan-400 to-cyan-600', val: latest.toner_cyan,
+                        code: device?.cartridge_code_cyan, serial: device?.cartridge_serial_cyan, capacity: device?.cartridge_capacity_cyan },
+                      { label: 'M', color: 'Magenta', grad: 'from-pink-400 to-pink-600', val: latest.toner_magenta,
+                        code: device?.cartridge_code_magenta, serial: device?.cartridge_serial_magenta, capacity: device?.cartridge_capacity_magenta },
+                      { label: 'Y', color: 'Amarillo', grad: 'from-yellow-300 to-yellow-500', val: latest.toner_yellow,
+                        code: device?.cartridge_code_yellow, serial: device?.cartridge_serial_yellow, capacity: device?.cartridge_capacity_yellow },
+                    ] as { label: string; color: string; grad: string; val: number | null | undefined; code?: string | null; serial?: string | null; capacity?: number | null }[]).map(t => (
                       <div key={t.label} className="space-y-2">
                         <div className="h-28 bg-slate-50 rounded-2xl flex flex-col justify-end overflow-hidden p-1 border border-slate-100 relative">
                           <div
@@ -317,101 +348,28 @@ const DeviceDetail = () => {
                             {t.val ?? '—'}%
                           </span>
                         </div>
-                        <span className={`text-xs font-black uppercase ${(t.val ?? 100) <= 15 ? 'text-amber-500' : 'text-slate-400'}`}>
+                        <span className={`text-xs font-black uppercase block ${(t.val ?? 100) <= 15 ? 'text-amber-500' : 'text-slate-400'}`}>
                           {t.label}
                         </span>
+                        {t.code ? (
+                          <div className="text-left space-y-0.5 px-0.5">
+                            <p className="text-[10px] font-black text-slate-700 truncate" title={t.code}>{t.code}</p>
+                            {t.capacity != null && (
+                              <p className="text-[9px] text-slate-400 font-bold">{t.capacity.toLocaleString()} pág.</p>
+                            )}
+                            {t.serial && (
+                              <p className="text-[8px] text-slate-300 font-mono truncate" title={t.serial}>{t.serial}</p>
+                            )}
+                          </div>
+                        ) : (
+                          (t.val ?? 100) <= 15 && (
+                            <p className="text-[9px] font-extrabold text-amber-500">⚠ Bajo</p>
+                          )
+                        )}
                       </div>
                     ))}
                   </div>
                 )}
-              </div>
-            )}
-
-            {/* Cartridge Info Panel */}
-            {device && (
-              device.cartridge_code_black ||
-              device.cartridge_code_cyan ||
-              device.cartridge_code_magenta ||
-              device.cartridge_code_yellow
-            ) && (
-              <div className="cd-panel p-6 bg-white border border-slate-100 rounded-[24px] space-y-4">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="p-2 bg-slate-50 rounded-xl text-slate-500">
-                    <FileText size={18} />
-                  </div>
-                  <div>
-                    <h4 className="font-extrabold text-[#1a2333] text-sm">Cartuchos Instalados</h4>
-                    <p className="text-[10px] font-bold text-slate-400">Código comercial · Serie CRUM · Capacidad</p>
-                  </div>
-                </div>
-
-                {([
-                  {
-                    label: 'Negro',
-                    dot: 'bg-slate-800',
-                    code: device.cartridge_code_black,
-                    serial: device.cartridge_serial_black,
-                    capacity: device.cartridge_capacity_black,
-                    pct: latest?.toner_black,
-                  },
-                  {
-                    label: 'Cian',
-                    dot: 'bg-cyan-500',
-                    code: device.cartridge_code_cyan,
-                    serial: device.cartridge_serial_cyan,
-                    capacity: device.cartridge_capacity_cyan,
-                    pct: latest?.toner_cyan,
-                  },
-                  {
-                    label: 'Magenta',
-                    dot: 'bg-pink-500',
-                    code: device.cartridge_code_magenta,
-                    serial: device.cartridge_serial_magenta,
-                    capacity: device.cartridge_capacity_magenta,
-                    pct: latest?.toner_magenta,
-                  },
-                  {
-                    label: 'Amarillo',
-                    dot: 'bg-yellow-400',
-                    code: device.cartridge_code_yellow,
-                    serial: device.cartridge_serial_yellow,
-                    capacity: device.cartridge_capacity_yellow,
-                    pct: latest?.toner_yellow,
-                  },
-                ] as { label: string; dot: string; code?: string | null; serial?: string | null; capacity?: number | null; pct?: number | null }[])
-                  .filter(c => c.code)
-                  .map(c => (
-                    <div key={c.label} className="flex items-start gap-3 p-3 bg-slate-50 rounded-2xl border border-slate-100">
-                      <div className={`mt-1.5 w-2.5 h-2.5 rounded-full flex-shrink-0 ${c.dot}`} />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">{c.label}</span>
-                          <span className="font-black text-slate-800 text-sm tracking-tight">{c.code}</span>
-                          {c.pct != null && (
-                            <span className={`ml-auto text-xs font-black ${
-                              c.pct <= 10 ? 'text-rose-500' : c.pct <= 20 ? 'text-amber-500' : 'text-emerald-600'
-                            }`}>{c.pct}%</span>
-                          )}
-                        </div>
-                        {c.capacity != null && (
-                          <p className="text-[10px] text-slate-400 font-bold mt-0.5">
-                            Capacidad: {c.capacity.toLocaleString()} pág.
-                            {c.pct != null && c.capacity > 0 && (
-                              <span className="ml-2 text-slate-500">
-                                (~{Math.round(c.capacity * c.pct / 100).toLocaleString()} restantes)
-                              </span>
-                            )}
-                          </p>
-                        )}
-                        {c.serial && (
-                          <p className="text-[10px] text-slate-300 font-mono mt-0.5 truncate" title={c.serial}>
-                            {c.serial}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  ))
-                }
               </div>
             )}
 
