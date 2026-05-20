@@ -44,6 +44,18 @@ export function openQueue(): void {
       toner_cyan    INTEGER,
       toner_magenta INTEGER,
       toner_yellow  INTEGER,
+      cartridge_code_black       TEXT,
+      cartridge_code_cyan        TEXT,
+      cartridge_code_magenta     TEXT,
+      cartridge_code_yellow      TEXT,
+      cartridge_serial_black     TEXT,
+      cartridge_serial_cyan      TEXT,
+      cartridge_serial_magenta   TEXT,
+      cartridge_serial_yellow    TEXT,
+      cartridge_capacity_black   INTEGER,
+      cartridge_capacity_cyan    INTEGER,
+      cartridge_capacity_magenta INTEGER,
+      cartridge_capacity_yellow  INTEGER,
       poll_method   TEXT    DEFAULT 'snmp',
       synced        INTEGER DEFAULT 0,
       created_at    TEXT    DEFAULT (datetime('now'))
@@ -68,6 +80,18 @@ export function openQueue(): void {
     "ALTER TABLE readings_queue ADD COLUMN toner_cyan    INTEGER DEFAULT NULL",
     "ALTER TABLE readings_queue ADD COLUMN toner_magenta INTEGER DEFAULT NULL",
     "ALTER TABLE readings_queue ADD COLUMN toner_yellow  INTEGER DEFAULT NULL",
+    "ALTER TABLE readings_queue ADD COLUMN cartridge_code_black       TEXT DEFAULT NULL",
+    "ALTER TABLE readings_queue ADD COLUMN cartridge_code_cyan        TEXT DEFAULT NULL",
+    "ALTER TABLE readings_queue ADD COLUMN cartridge_code_magenta     TEXT DEFAULT NULL",
+    "ALTER TABLE readings_queue ADD COLUMN cartridge_code_yellow      TEXT DEFAULT NULL",
+    "ALTER TABLE readings_queue ADD COLUMN cartridge_serial_black     TEXT DEFAULT NULL",
+    "ALTER TABLE readings_queue ADD COLUMN cartridge_serial_cyan      TEXT DEFAULT NULL",
+    "ALTER TABLE readings_queue ADD COLUMN cartridge_serial_magenta   TEXT DEFAULT NULL",
+    "ALTER TABLE readings_queue ADD COLUMN cartridge_serial_yellow    TEXT DEFAULT NULL",
+    "ALTER TABLE readings_queue ADD COLUMN cartridge_capacity_black   INTEGER DEFAULT NULL",
+    "ALTER TABLE readings_queue ADD COLUMN cartridge_capacity_cyan    INTEGER DEFAULT NULL",
+    "ALTER TABLE readings_queue ADD COLUMN cartridge_capacity_magenta INTEGER DEFAULT NULL",
+    "ALTER TABLE readings_queue ADD COLUMN cartridge_capacity_yellow  INTEGER DEFAULT NULL",
   ]) {
     try { db.exec(stmt); } catch { /* columna ya existe */ }
   }
@@ -77,12 +101,19 @@ export function enqueueReading(r: DeviceReading): void {
   db.prepare(`
     INSERT INTO readings_queue
       (device_id, ip, brand, model, time, total_pages, mono_pages, color_pages,
-       toner_black, toner_cyan, toner_magenta, toner_yellow, poll_method)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       toner_black, toner_cyan, toner_magenta, toner_yellow,
+       cartridge_code_black, cartridge_code_cyan, cartridge_code_magenta, cartridge_code_yellow,
+       cartridge_serial_black, cartridge_serial_cyan, cartridge_serial_magenta, cartridge_serial_yellow,
+       cartridge_capacity_black, cartridge_capacity_cyan, cartridge_capacity_magenta, cartridge_capacity_yellow,
+       poll_method)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     r.serial ?? r.ip, r.ip, r.brand, r.model, r.time,
     r.total_pages, r.mono_pages, r.color_pages,
     r.toner_black ?? null, r.toner_cyan ?? null, r.toner_magenta ?? null, r.toner_yellow ?? null,
+    r.cartridge_code_black ?? null, r.cartridge_code_cyan ?? null, r.cartridge_code_magenta ?? null, r.cartridge_code_yellow ?? null,
+    r.cartridge_serial_black ?? null, r.cartridge_serial_cyan ?? null, r.cartridge_serial_magenta ?? null, r.cartridge_serial_yellow ?? null,
+    r.cartridge_capacity_black ?? null, r.cartridge_capacity_cyan ?? null, r.cartridge_capacity_magenta ?? null, r.cartridge_capacity_yellow ?? null,
     r.poll_method ?? 'snmp',
   );
 }
