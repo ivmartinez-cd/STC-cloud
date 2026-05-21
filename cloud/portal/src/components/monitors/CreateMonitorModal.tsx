@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, Radio, Check, Copy, Info, Loader2, MapPin, Shield, Clock, Layout, Download } from 'lucide-react';
+import { X, Radio, Check, Copy, Loader2, MapPin, Shield, Clock, Layout, Download } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
 import type { CreateMonitorForm } from '../../types/monitor';
 
