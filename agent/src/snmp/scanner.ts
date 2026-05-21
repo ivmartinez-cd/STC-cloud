@@ -93,6 +93,14 @@ export interface DeviceReading {
   cartridge_capacity_cyan?:    number | null;
   cartridge_capacity_magenta?: number | null;
   cartridge_capacity_yellow?:  number | null;
+  cartridge_printed_black?:    number | null;
+  cartridge_printed_cyan?:     number | null;
+  cartridge_printed_magenta?:  number | null;
+  cartridge_printed_yellow?:   number | null;
+  cartridge_estimated_black?:    number | null;
+  cartridge_estimated_cyan?:     number | null;
+  cartridge_estimated_magenta?:  number | null;
+  cartridge_estimated_yellow?:   number | null;
   time:           string;
   poll_method:    PollMethod;
 }
@@ -213,6 +221,14 @@ export async function readViaEWS(ip: string): Promise<DeviceReading | null> {
     cartridge_capacity_cyan:    data.cartridgeCapacityCyan    ?? null,
     cartridge_capacity_magenta: data.cartridgeCapacityMagenta ?? null,
     cartridge_capacity_yellow:  data.cartridgeCapacityYellow  ?? null,
+    cartridge_printed_black:    data.cartridgePrintedBlack    ?? null,
+    cartridge_printed_cyan:     data.cartridgePrintedCyan     ?? null,
+    cartridge_printed_magenta:  data.cartridgePrintedMagenta  ?? null,
+    cartridge_printed_yellow:   data.cartridgePrintedYellow   ?? null,
+    cartridge_estimated_black:  data.cartridgeEstimatedBlack  ?? null,
+    cartridge_estimated_cyan:   data.cartridgeEstimatedCyan   ?? null,
+    cartridge_estimated_magenta: data.cartridgeEstimatedMagenta ?? null,
+    cartridge_estimated_yellow:  data.cartridgeEstimatedYellow  ?? null,
     time:          new Date().toISOString(),
     poll_method:   'ews',
   };

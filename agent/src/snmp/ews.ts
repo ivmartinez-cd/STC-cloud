@@ -28,6 +28,14 @@ export interface EwsData {
   cartridgeCapacityCyan?:   number | null;
   cartridgeCapacityMagenta?: number | null;
   cartridgeCapacityYellow?: number | null;
+  cartridgePrintedBlack?:   number | null;
+  cartridgePrintedCyan?:    number | null;
+  cartridgePrintedMagenta?: number | null;
+  cartridgePrintedYellow?:  number | null;
+  cartridgeEstimatedBlack?:   number | null;
+  cartridgeEstimatedCyan?:    number | null;
+  cartridgeEstimatedMagenta?: number | null;
+  cartridgeEstimatedYellow?:  number | null;
 }
 
 // ─── URL candidates ordered by reliability ───────────────────────────────────
@@ -103,6 +111,14 @@ export async function readDeviceViaEWS(ip: string): Promise<EwsData | null> {
       if (parsed.cartridgeCapacityCyan   != null) acc.cartridgeCapacityCyan   = parsed.cartridgeCapacityCyan;
       if (parsed.cartridgeCapacityMagenta != null) acc.cartridgeCapacityMagenta = parsed.cartridgeCapacityMagenta;
       if (parsed.cartridgeCapacityYellow != null) acc.cartridgeCapacityYellow = parsed.cartridgeCapacityYellow;
+      if (parsed.cartridgePrintedBlack   != null) acc.cartridgePrintedBlack   = parsed.cartridgePrintedBlack;
+      if (parsed.cartridgePrintedCyan    != null) acc.cartridgePrintedCyan    = parsed.cartridgePrintedCyan;
+      if (parsed.cartridgePrintedMagenta != null) acc.cartridgePrintedMagenta = parsed.cartridgePrintedMagenta;
+      if (parsed.cartridgePrintedYellow  != null) acc.cartridgePrintedYellow  = parsed.cartridgePrintedYellow;
+      if (parsed.cartridgeEstimatedBlack   != null) acc.cartridgeEstimatedBlack   = parsed.cartridgeEstimatedBlack;
+      if (parsed.cartridgeEstimatedCyan    != null) acc.cartridgeEstimatedCyan    = parsed.cartridgeEstimatedCyan;
+      if (parsed.cartridgeEstimatedMagenta != null) acc.cartridgeEstimatedMagenta = parsed.cartridgeEstimatedMagenta;
+      if (parsed.cartridgeEstimatedYellow  != null) acc.cartridgeEstimatedYellow  = parsed.cartridgeEstimatedYellow;
 
       // Stop as soon as we have page counters (no need to probe more endpoints)
       if (acc.totalPages !== undefined) break;
@@ -135,6 +151,14 @@ export async function readDeviceViaEWS(ip: string): Promise<EwsData | null> {
     cartridgeCapacityCyan:    acc.cartridgeCapacityCyan    ?? null,
     cartridgeCapacityMagenta: acc.cartridgeCapacityMagenta ?? null,
     cartridgeCapacityYellow:  acc.cartridgeCapacityYellow  ?? null,
+    cartridgePrintedBlack:    acc.cartridgePrintedBlack    ?? null,
+    cartridgePrintedCyan:     acc.cartridgePrintedCyan     ?? null,
+    cartridgePrintedMagenta:  acc.cartridgePrintedMagenta  ?? null,
+    cartridgePrintedYellow:   acc.cartridgePrintedYellow   ?? null,
+    cartridgeEstimatedBlack:    acc.cartridgeEstimatedBlack    ?? null,
+    cartridgeEstimatedCyan:     acc.cartridgeEstimatedCyan     ?? null,
+    cartridgeEstimatedMagenta:  acc.cartridgeEstimatedMagenta  ?? null,
+    cartridgeEstimatedYellow:   acc.cartridgeEstimatedYellow   ?? null,
   };
 }
 
@@ -489,6 +513,14 @@ function parseHpSupplies(html: string): Partial<EwsData> {
     return m ? m[1].trim() || null : null;
   };
 
+  const extractNumberById = (colorPattern: RegExp, idPattern: string): number | null => {
+    const m = html.match(new RegExp(
+      colorPattern.source + `[\\s\\S]{0,500}id="[^"]*${idPattern}[^"]*"[^>]*>\\s*([\\d]+)`,
+      'i',
+    ));
+    return m ? parseInt(m[1], 10) : null;
+  };
+
   // Modern HP FutureSmart: id="BlackCartridge1-Header_Level">15%
   const black   = extractById(/id="[^"]*Black[^"]*(?:Level|Remaining)[^"]*"[^>]*>\s*([\d]+)\s*%/i)
                ?? htmlTonerPct(html, /black\s*(?:toner|cartridge|ink)/i);
@@ -512,6 +544,14 @@ function parseHpSupplies(html: string): Partial<EwsData> {
     cartridgeSerialCyan:    extractSerialNumber(/Cyan/i),
     cartridgeSerialMagenta: extractSerialNumber(/Magenta/i),
     cartridgeSerialYellow:  extractSerialNumber(/Yellow/i),
+    cartridgePrintedBlack:     extractNumberById(/Black/i, 'PagesPrintedWithSupply'),
+    cartridgePrintedCyan:      extractNumberById(/Cyan/i, 'PagesPrintedWithSupply'),
+    cartridgePrintedMagenta:   extractNumberById(/Magenta/i, 'PagesPrintedWithSupply'),
+    cartridgePrintedYellow:    extractNumberById(/Yellow/i, 'PagesPrintedWithSupply'),
+    cartridgeEstimatedBlack:     extractNumberById(/Black/i, 'EstimatedPagesRemaining'),
+    cartridgeEstimatedCyan:      extractNumberById(/Cyan/i, 'EstimatedPagesRemaining'),
+    cartridgeEstimatedMagenta:   extractNumberById(/Magenta/i, 'EstimatedPagesRemaining'),
+    cartridgeEstimatedYellow:    extractNumberById(/Yellow/i, 'EstimatedPagesRemaining'),
   };
 }
 
