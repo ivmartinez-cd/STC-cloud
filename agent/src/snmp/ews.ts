@@ -465,11 +465,25 @@ function parseHpSupplies(html: string): Partial<EwsData> {
     return isNaN(pct) ? null : Math.min(100, Math.max(0, pct));
   };
 
-  // Extract HP cartridge order number near a color label
-  // e.g. id="BlackCartridge1-Header_OrderNumber">CE285A
+  // Extract HP cartridge order number or part number near a color label
+  // e.g. id="BlackCartridge1-Header_OrderNumber">CE285A or id="BlackCartridge1-InstalledPartNumber">58A (CF258A)
   const extractOrderNumber = (colorPattern: RegExp): string | null => {
+    let m = html.match(new RegExp(
+      colorPattern.source + '[\\s\\S]{0,500}id="[^"]*OrderNumber[^"]*"[^>]*>\\s*([^<]+)',
+      'i',
+    ));
+    if (!m) {
+      m = html.match(new RegExp(
+        colorPattern.source + '[\\s\\S]{0,500}id="[^"]*InstalledPartNumber[^"]*"[^>]*>\\s*([^<]+)',
+        'i',
+      ));
+    }
+    return m ? m[1].trim() || null : null;
+  };
+
+  const extractSerialNumber = (colorPattern: RegExp): string | null => {
     const m = html.match(new RegExp(
-      colorPattern.source + '[\\s\\S]{0,500}id="[^"]*OrderNumber[^"]*"[^>]*>\\s*([A-Z0-9\\-]+)',
+      colorPattern.source + '[\\s\\S]{0,500}id="[^"]*SerialNumber[^"]*"[^>]*>\\s*([^<]+)',
       'i',
     ));
     return m ? m[1].trim() || null : null;
@@ -490,10 +504,14 @@ function parseHpSupplies(html: string): Partial<EwsData> {
   return {
     brand: 'hp',
     tonerBlack: black, tonerCyan: cyan, tonerMagenta: magenta, tonerYellow: yellow,
-    cartridgeCodeBlack:   extractOrderNumber(/Black/i),
-    cartridgeCodeCyan:    extractOrderNumber(/Cyan/i),
-    cartridgeCodeMagenta: extractOrderNumber(/Magenta/i),
-    cartridgeCodeYellow:  extractOrderNumber(/Yellow/i),
+    cartridgeCodeBlack:     extractOrderNumber(/Black/i),
+    cartridgeCodeCyan:      extractOrderNumber(/Cyan/i),
+    cartridgeCodeMagenta:   extractOrderNumber(/Magenta/i),
+    cartridgeCodeYellow:    extractOrderNumber(/Yellow/i),
+    cartridgeSerialBlack:   extractSerialNumber(/Black/i),
+    cartridgeSerialCyan:    extractSerialNumber(/Cyan/i),
+    cartridgeSerialMagenta: extractSerialNumber(/Magenta/i),
+    cartridgeSerialYellow:  extractSerialNumber(/Yellow/i),
   };
 }
 
