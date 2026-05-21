@@ -14,7 +14,7 @@ import { SocketManager } from './SocketManager';
 import { ConsoleConnector } from './ConsoleConnector';
 import { ConsoleEngine } from './ConsoleEngine';
 
-const VERSION = '1.8.4';
+const VERSION = '1.8.6';
 let socket: SocketManager | null = null;
 const LOG_MAX_BYTES = 10 * 1024 * 1024;
 
@@ -141,12 +141,12 @@ async function heartbeat(): Promise<void> {
 
       if (data.commands && data.commands.length > 0) {
         for (const cmd of data.commands) {
-          // DeduplicaciÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³n: Si ya lo procesamos (vÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­a WSS o heartbeat anterior), lo saltamos
+          // DeduplicaciÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³n: Si ya lo procesamos (vÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â­a WSS o heartbeat anterior), lo saltamos
           if (cmd.id && processedCommandIds.has(cmd.id)) continue;
           
           if (cmd.id) {
             processedCommandIds.add(cmd.id);
-            // Mantener el set limpio (ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âºltimos 1000 IDs)
+            // Mantener el set limpio (ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Âºltimos 1000 IDs)
             if (processedCommandIds.size > 1000) {
               const firstKey = processedCommandIds.values().next().value;
               if (firstKey) processedCommandIds.delete(firstKey);
@@ -413,11 +413,12 @@ async function applyZipUpdate(zipFilePath: string): Promise<boolean> {
 
     const bat = [
       '@echo off',
-      'ping -n 5 127.0.0.1 > nul',
+      'ping -n 4 127.0.0.1 > nul',
       'sc stop STCCloudMonitor > nul 2>&1',
-      'ping -n 3 127.0.0.1 > nul',
+      'ping -n 4 127.0.0.1 > nul',
       'taskkill /im STC.Monitor.UI.exe /f > nul 2>&1',
-      `robocopy "${stagingDir}" "${installDir}" /E /IS /IT /IM /NFL /NDL /NJH /NJS > nul`,
+      'taskkill /im stc-node.exe /f > nul 2>&1',
+      `robocopy "${stagingDir}" "${installDir}" /E /IS /IT /IM /NFL /NDL /NJH /NJS /R:3 /W:1 > nul`,
       `rd /s /q "${stagingDir}" 2>nul`,
       'sc start STCCloudMonitor > nul 2>&1',
       'del "%~f0"',
@@ -425,9 +426,15 @@ async function applyZipUpdate(zipFilePath: string): Promise<boolean> {
 
     fs.writeFileSync(batPath, bat, { encoding: 'utf8' });
 
-    log('INFO', `Parche ZIP extraido correctamente. Lanzando actualizador...`);
+    log('INFO', `Parche ZIP extraido correctamente. Lanzando actualizador independiente...`);
 
-    spawn('cmd.exe', ['/c', batPath], { detached: true, stdio: 'ignore', windowsHide: true }).unref();
+    // Usar WMI para escapar del Job Object de NSSM.
+    // Si lanzamos el .bat con spawn, NSSM matara el proceso hijo en cuanto detenga el servicio.
+    // WMI (Win32_Process) lo ejecuta via WmiPrvSE.exe, completamente aislado.
+    await execAsync(
+      `powershell -NoProfile -Command "Invoke-WmiMethod -Class Win32_Process -Name Create -ArgumentList 'cmd.exe /c \"${batPath}\"'"`,
+      { windowsHide: true, timeout: 15_000 }
+    );
 
     setTimeout(() => process.exit(0), 500);
     return true;
@@ -554,7 +561,7 @@ async function checkForUpdate(serverUrl: string, force = false): Promise<boolean
     }
 
     if ((UPDATE_PUBLIC_KEY_HEX as string) === 'PLACEHOLDER_RUN_GEN_KEYS_FIRST') {
-      log('WARN', 'SEGURIDAD: firma Ed25519 no configurada ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ejecutar installer/gen-keys.js y rebuild.');
+      log('WARN', 'SEGURIDAD: firma Ed25519 no configurada ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â ejecutar installer/gen-keys.js y rebuild.');
     } else {
       try {
         const sigRes = await fetch(data.url + '.sig', { signal: AbortSignal.timeout(15_000) });
@@ -566,7 +573,7 @@ async function checkForUpdate(serverUrl: string, force = false): Promise<boolean
         const sigBuf = Buffer.from(await sigRes.arrayBuffer());
         const pubKey = createPublicKey({ key: Buffer.from(UPDATE_PUBLIC_KEY_HEX, 'hex'), format: 'der', type: 'spki' });
         if (!cryptoVerify(null, buffer, pubKey, sigBuf)) {
-          log('ERROR', `VIOLACION DE INTEGRIDAD [Ed25519]: La firma del paquete de actualizacion NO es valida. URL: ${data.url} | Version: ${data.version} | Timestamp: ${new Date().toISOString()}. Actualizacion rechazada ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â posible ataque de cadena de suministro o paquete comprometido.`);
+          log('ERROR', `VIOLACION DE INTEGRIDAD [Ed25519]: La firma del paquete de actualizacion NO es valida. URL: ${data.url} | Version: ${data.version} | Timestamp: ${new Date().toISOString()}. Actualizacion rechazada ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â posible ataque de cadena de suministro o paquete comprometido.`);
           isUpdating = false;
           return false;
         }
@@ -657,7 +664,7 @@ async function printStatus(): Promise<void> {
     }
   }
 
-  // Health check rÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡pido al servidor configurado (timeout 5s)
+  // Health check rÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡pido al servidor configurado (timeout 5s)
   let cloudConnectivity: { reachable: boolean; latencyMs?: number; httpStatus?: number; error?: string };
   if (config?.serverUrl) {
     const t0 = Date.now();
@@ -798,7 +805,7 @@ async function activate(): Promise<void> {
     process.exit(0);
   } catch (e: any) {
     console.error(`Error de activacion: ${e.message}`);
-    // Propagamos exit code especÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­fico si viene del bloque de respuesta HTTP
+    // Propagamos exit code especÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â­fico si viene del bloque de respuesta HTTP
     if (e._stcExitCode) {
       process.exit(e._stcExitCode);
     }
