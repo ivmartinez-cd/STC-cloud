@@ -26,22 +26,37 @@ export interface AgentConfig {
 
 function getWindowsHardwareId(): string {
   try {
-    // MachineGuid es persistente para la instalacion de Windows
-    const guid = execSync('powershell -NoProfile -Command "(Get-ItemProperty \'Registry::HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Cryptography\').MachineGuid"', {
-      timeout: 5000, encoding: 'utf8', windowsHide: true,
-    }).trim();
+    let guid = '';
+    try {
+      // Intento ultra rápido usando reg query nativo para evitar levantar powershell
+      const regOut = execSync('reg query "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Cryptography" /v MachineGuid', {
+        timeout: 3000, encoding: 'utf8', windowsHide: true,
+      });
+      const match = regOut.match(/MachineGuid\s+REG_SZ\s+(\S+)/i);
+      if (match) {
+        guid = match[1].trim();
+      } else {
+        throw new Error('No se pudo encontrar MachineGuid en el output de reg query');
+      }
+    } catch {
+      // Fallback a powershell por si reg query falla por políticas o entorno
+      guid = execSync('powershell -NoProfile -Command "(Get-ItemProperty \'Registry::HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Cryptography\').MachineGuid"', {
+        timeout: 5000, encoding: 'utf8', windowsHide: true,
+      }).trim();
+    }
     
-    // Serial de la BIOS es inmutable para el hardware
+    // Serial de la BIOS es inmutable para el hardware. Le damos 8 segundos por si el inicio de Windows está muy saturado.
     const bios = execSync('powershell -NoProfile -Command "(Get-CimInstance Win32_BIOS).SerialNumber"', {
-      timeout: 5000, encoding: 'utf8', windowsHide: true,
+      timeout: 8000, encoding: 'utf8', windowsHide: true,
     }).trim();
 
     return `${guid}-${bios}`;
   } catch (e) {
-    // Fallback a hostname si falla (muy improbable en Win10/11)
+    // Fallback a hostname si todo falla para evitar que el agente rompa
     return os.hostname();
   }
 }
+
 
 export function getHardwareId(): string {
   let raw = '';
