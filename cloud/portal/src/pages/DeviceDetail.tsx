@@ -21,6 +21,14 @@ interface Reading {
   toner_cyan?:    number | null;
   toner_magenta?: number | null;
   toner_yellow?:  number | null;
+  cartridge_printed_black?:    number | null;
+  cartridge_printed_cyan?:     number | null;
+  cartridge_printed_magenta?:  number | null;
+  cartridge_printed_yellow?:   number | null;
+  cartridge_estimated_black?:    number | null;
+  cartridge_estimated_cyan?:     number | null;
+  cartridge_estimated_magenta?:  number | null;
+  cartridge_estimated_yellow?:   number | null;
   status:         string;
 }
 
@@ -318,8 +326,18 @@ const DeviceDetail = () => {
                           )}
                           {device.cartridge_serial_black && (
                             <p className="text-[10px] text-slate-500 font-mono mt-0.5 truncate" title={device.cartridge_serial_black}>
-                              {device.cartridge_serial_black}
+                              <span className="font-bold uppercase tracking-wider mr-1">S/N:</span> {device.cartridge_serial_black}
                             </p>
+                          )}
+                          {(latest.cartridge_printed_black != null || latest.cartridge_estimated_black != null) && (
+                            <div className="mt-2 pt-2 border-t border-slate-200/60 flex flex-wrap items-center gap-x-4 gap-y-1">
+                              {latest.cartridge_printed_black != null && (
+                                <p className="text-[10px] text-slate-500"><span className="font-bold text-slate-700">Impresas:</span> {latest.cartridge_printed_black.toLocaleString()}</p>
+                              )}
+                              {latest.cartridge_estimated_black != null && (
+                                <p className="text-[10px] text-slate-500"><span className="font-bold text-slate-700">Restantes:</span> {latest.cartridge_estimated_black.toLocaleString()}</p>
+                              )}
+                            </div>
                           )}
                         </div>
                       </div>
@@ -330,14 +348,18 @@ const DeviceDetail = () => {
                   <div className="grid grid-cols-4 gap-3 text-center">
                     {([
                       { label: 'K', color: 'Negro', grad: 'from-slate-700 to-slate-900', val: latest.toner_black,
-                        code: device?.cartridge_code_black, serial: device?.cartridge_serial_black, capacity: device?.cartridge_capacity_black },
+                        code: device?.cartridge_code_black, serial: device?.cartridge_serial_black, capacity: device?.cartridge_capacity_black,
+                        printed: latest.cartridge_printed_black, estimated: latest.cartridge_estimated_black },
                       { label: 'C', color: 'Cian', grad: 'from-cyan-400 to-cyan-600', val: latest.toner_cyan,
-                        code: device?.cartridge_code_cyan, serial: device?.cartridge_serial_cyan, capacity: device?.cartridge_capacity_cyan },
+                        code: device?.cartridge_code_cyan, serial: device?.cartridge_serial_cyan, capacity: device?.cartridge_capacity_cyan,
+                        printed: latest.cartridge_printed_cyan, estimated: latest.cartridge_estimated_cyan },
                       { label: 'M', color: 'Magenta', grad: 'from-pink-400 to-pink-600', val: latest.toner_magenta,
-                        code: device?.cartridge_code_magenta, serial: device?.cartridge_serial_magenta, capacity: device?.cartridge_capacity_magenta },
+                        code: device?.cartridge_code_magenta, serial: device?.cartridge_serial_magenta, capacity: device?.cartridge_capacity_magenta,
+                        printed: latest.cartridge_printed_magenta, estimated: latest.cartridge_estimated_magenta },
                       { label: 'Y', color: 'Amarillo', grad: 'from-yellow-300 to-yellow-500', val: latest.toner_yellow,
-                        code: device?.cartridge_code_yellow, serial: device?.cartridge_serial_yellow, capacity: device?.cartridge_capacity_yellow },
-                    ] as { label: string; color: string; grad: string; val: number | null | undefined; code?: string | null; serial?: string | null; capacity?: number | null }[]).map(t => (
+                        code: device?.cartridge_code_yellow, serial: device?.cartridge_serial_yellow, capacity: device?.cartridge_capacity_yellow,
+                        printed: latest.cartridge_printed_yellow, estimated: latest.cartridge_estimated_yellow },
+                    ] as { label: string; color: string; grad: string; val: number | null | undefined; code?: string | null; serial?: string | null; capacity?: number | null; printed?: number | null; estimated?: number | null }[]).map(t => (
                       <div key={t.label} className="space-y-2">
                         <div className="h-28 bg-slate-50 rounded-2xl flex flex-col justify-end overflow-hidden p-1 border border-slate-100 relative">
                           <div
@@ -358,7 +380,13 @@ const DeviceDetail = () => {
                               <p className="text-[9px] text-slate-400 font-bold">{t.capacity.toLocaleString()} pág.</p>
                             )}
                             {t.serial && (
-                              <p className="text-[8px] text-slate-500 font-mono truncate" title={t.serial}>{t.serial}</p>
+                              <p className="text-[8px] text-slate-500 font-mono truncate" title={t.serial}><span className="font-bold">S/N:</span> {t.serial}</p>
+                            )}
+                            {(t.printed != null || t.estimated != null) && (
+                              <div className="mt-1 pt-1 border-t border-slate-200/60">
+                                {t.printed != null && <p className="text-[8px] text-slate-500"><span className="font-bold text-slate-600">Imp:</span> {t.printed}</p>}
+                                {t.estimated != null && <p className="text-[8px] text-slate-500"><span className="font-bold text-slate-600">Quedan:</span> {t.estimated}</p>}
+                              </div>
                             )}
                           </div>
                         ) : (
