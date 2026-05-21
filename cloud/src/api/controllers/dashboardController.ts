@@ -141,7 +141,7 @@ export function createDashboardController(db: Knex, agentService: AgentService) 
           "devices.brand",
           "devices.ip_address",
           "devices.name as device_name",
-          "devices.serial",
+          "devices.serial_number as serial",
           "agents.name as agent_name",
           "clients.name as client_name"
         )
