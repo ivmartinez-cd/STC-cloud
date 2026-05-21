@@ -62,7 +62,7 @@ const DeviceInventoryTable = ({ devices, monitorName, monitorStatus, monitorLast
         <header className="px-8 py-6 bg-white border-b border-slate-100 flex items-center justify-between">
           <div>
             <h3 className="text-sm font-black text-[#1a2333] uppercase tracking-tight">Parque de Impresión</h3>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Dispositivos descubiertos y monitorizados por este nodo</p>
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Dispositivos descubiertos y monitorizados por este nodo</p>
           </div>
           <div className="flex items-center gap-3">
             {devices.length > 0 && (
@@ -96,7 +96,7 @@ const DeviceInventoryTable = ({ devices, monitorName, monitorStatus, monitorLast
                   <td colSpan={5} className="px-8 py-20 text-center">
                     <div className="flex flex-col items-center gap-3">
                       <Printer size={48} className="text-slate-200" />
-                      <p className="text-slate-400 font-bold text-xs uppercase tracking-widest">No se han descubierto dispositivos en este segmento</p>
+                      <p className="text-slate-500 font-bold text-xs uppercase tracking-widest">No se han descubierto dispositivos en este segmento</p>
                     </div>
                   </td>
                 </tr>
@@ -110,7 +110,7 @@ const DeviceInventoryTable = ({ devices, monitorName, monitorStatus, monitorLast
                         </div>
                         <div>
                           <p className="text-sm font-black text-[#1a2333] tracking-tight group-hover/device:text-brand transition-colors">{device.model || 'Modelo Genérico'}</p>
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{device.brand || 'Marca n/a'}</p>
+                          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{device.brand || 'Marca n/a'}</p>
                         </div>
                       </Link>
                     </td>
@@ -135,7 +135,7 @@ const DeviceInventoryTable = ({ devices, monitorName, monitorStatus, monitorLast
                           {device.toner_cyan === null || device.toner_cyan === undefined ? (
                             // Monocromo
                             <div className="space-y-1">
-                              <div className="flex justify-between items-center text-[9px] font-extrabold uppercase tracking-widest text-slate-400">
+                              <div className="flex justify-between items-center text-[9px] font-extrabold uppercase tracking-widest text-slate-500">
                                 <span>Negro</span>
                                 <span className={device.toner_black <= 15 ? 'text-amber-500 animate-pulse font-black' : 'text-slate-600'}>
                                   {device.toner_black}%
@@ -153,7 +153,7 @@ const DeviceInventoryTable = ({ devices, monitorName, monitorStatus, monitorLast
                           ) : (
                             // Color CMYK
                             <div className="space-y-1">
-                              <div className="flex justify-between items-center text-[9px] font-extrabold uppercase tracking-widest text-slate-400">
+                              <div className="flex justify-between items-center text-[9px] font-extrabold uppercase tracking-widest text-slate-500">
                                 <span>CMYK</span>
                                 <span className={
                                   (device.toner_black <= 15 || device.toner_cyan <= 15 || device.toner_magenta <= 15 || device.toner_yellow <= 15)
@@ -181,15 +181,15 @@ const DeviceInventoryTable = ({ devices, monitorName, monitorStatus, monitorLast
                           )}
                         </div>
                       ) : (
-                        <span className="text-[10px] font-extrabold text-slate-300 uppercase tracking-wider">n/a</span>
+                        <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">n/a</span>
                       )}
                     </td>
                     <td className="px-8 py-5 text-right">
                       <div className="flex flex-col items-end gap-1">
                         <p className="text-sm font-black text-[#1a2333] tabular-nums">
-                          {(device.total_pages || 0).toLocaleString()} <span className="text-[10px] text-slate-400 font-bold uppercase">Total</span>
+                          {(device.total_pages || 0).toLocaleString()} <span className="text-[10px] text-slate-500 font-bold uppercase">Total</span>
                         </p>
-                        <div className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-widest text-slate-400">
+                        <div className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-widest text-slate-500">
                           <span>{(device.mono_pages || 0).toLocaleString()} M</span>
                           <span className="w-1 h-1 bg-slate-200 rounded-full" />
                           <span className="text-brand">{(device.color_pages || 0).toLocaleString()} C</span>
@@ -217,7 +217,7 @@ const DeviceInventoryTable = ({ devices, monitorName, monitorStatus, monitorLast
               </div>
               <div>
                 <h3 className="text-base font-black text-[#1a2333] tracking-tight">Exportar Contadores</h3>
-                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">¿Discriminar mono / color?</p>
+                <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">¿Discriminar mono / color?</p>
               </div>
             </div>
             <div className="flex flex-col gap-3 mb-4">
@@ -228,7 +228,7 @@ const DeviceInventoryTable = ({ devices, monitorName, monitorStatus, monitorLast
                 No
               </button>
             </div>
-            <button onClick={() => setShowExportModal(false)} className="w-full py-3 rounded-2xl text-slate-400 text-xs font-bold hover:bg-slate-50 transition-colors flex items-center justify-center gap-2">
+            <button onClick={() => setShowExportModal(false)} className="w-full py-3 rounded-2xl text-slate-500 text-xs font-bold hover:bg-slate-50 transition-colors flex items-center justify-center gap-2">
               <X size={14} /> Cancelar
             </button>
           </div>

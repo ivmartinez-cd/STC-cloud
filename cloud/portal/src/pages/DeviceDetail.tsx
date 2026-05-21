@@ -317,7 +317,7 @@ const DeviceDetail = () => {
                             </p>
                           )}
                           {device.cartridge_serial_black && (
-                            <p className="text-[10px] text-slate-300 font-mono mt-0.5 truncate" title={device.cartridge_serial_black}>
+                            <p className="text-[10px] text-slate-500 font-mono mt-0.5 truncate" title={device.cartridge_serial_black}>
                               {device.cartridge_serial_black}
                             </p>
                           )}
@@ -358,7 +358,7 @@ const DeviceDetail = () => {
                               <p className="text-[9px] text-slate-400 font-bold">{t.capacity.toLocaleString()} pág.</p>
                             )}
                             {t.serial && (
-                              <p className="text-[8px] text-slate-300 font-mono truncate" title={t.serial}>{t.serial}</p>
+                              <p className="text-[8px] text-slate-500 font-mono truncate" title={t.serial}>{t.serial}</p>
                             )}
                           </div>
                         ) : (

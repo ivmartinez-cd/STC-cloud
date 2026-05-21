@@ -89,7 +89,7 @@ const ClientDetail = () => {
         <Link to="/clients" className="flex items-center gap-2 text-slate-400 hover:text-brand font-bold uppercase tracking-widest transition-colors">
           <Users size={14} /> Clientes
         </Link>
-        <ChevronRight size={14} className="text-slate-300" />
+        <ChevronRight size={14} className="text-slate-400" />
         {client ? (
           <span className="text-brand font-extrabold uppercase tracking-widest">{client.name}</span>
         ) : (
@@ -250,7 +250,7 @@ const ClientDetail = () => {
                         <td><MonitorStatusBadge status={m.status} last_seen={m.last_seen} now={now} /></td>
                         <td className="hidden md:table-cell">
                           <div className="flex items-center gap-2 text-slate-500 font-bold text-xs">
-                            <Clock size={12} className="text-slate-300" /> {timeAgo(m.last_seen, now)}
+                            <Clock size={12} className="text-slate-400" /> {timeAgo(m.last_seen, now)}
                           </div>
                         </td>
                         <td className="text-center">

@@ -218,13 +218,13 @@ const Devices = () => {
                       {device.monitor_name}
                     </div>
                   </div>
-                  <div className="p-2 bg-slate-50 text-slate-300 rounded-xl group-hover:bg-brand/10 group-hover:text-brand transition-all">
+                  <div className="p-2 bg-slate-50 text-slate-400 rounded-xl group-hover:bg-brand/10 group-hover:text-brand transition-all">
                     <ChevronRight size={16} />
                   </div>
                 </div>
 
                 {device.serial && (
-                  <div className="mt-3 text-[9px] font-bold text-slate-300 uppercase tracking-widest truncate">
+                  <div className="mt-3 text-[9px] font-bold text-slate-500 uppercase tracking-widest truncate">
                     S/N: {device.serial}
                   </div>
                 )}

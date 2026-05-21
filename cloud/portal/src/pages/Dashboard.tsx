@@ -202,7 +202,7 @@ const Dashboard = () => {
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Mayores flotas administradas</p>
             </div>
             <Link to="/clients" className="p-2 hover:bg-slate-50 rounded-xl transition-all">
-              <ChevronRight size={18} className="text-slate-300" />
+              <ChevronRight size={18} className="text-slate-400" />
             </Link>
           </div>
           <div className="space-y-4">
@@ -315,7 +315,7 @@ const Dashboard = () => {
                           <span className="text-xs font-black text-[#1a2333] uppercase tracking-tight truncate">
                             {alert.device_name || 'Dispositivo'}
                           </span>
-                          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest bg-slate-100 px-2 py-0.5 rounded-md">
+                          <span className="text-[9px] font-bold text-slate-600 uppercase tracking-widest bg-slate-100 px-2 py-0.5 rounded-md">
                             {alert.ip_address}
                           </span>
                         </div>
@@ -326,12 +326,12 @@ const Dashboard = () => {
                             </span>
                           )}
                           {alert.agent_name && (
-                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest bg-slate-50 px-2 py-0.5 rounded-md border border-slate-100">
+                            <span className="text-[9px] font-bold text-slate-600 uppercase tracking-widest bg-white/80 px-2 py-0.5 rounded-md border border-slate-200/60">
                               {alert.agent_name}
                             </span>
                           )}
                           {alert.serial && (
-                            <span className="text-[9px] font-mono text-slate-300 tracking-wide" title={alert.serial}>
+                            <span className="text-[9px] font-mono text-slate-500 tracking-wide" title={alert.serial}>
                               S/N: {alert.serial}
                             </span>
                           )}

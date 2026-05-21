@@ -191,7 +191,7 @@ const Reports = () => {
     <div className="space-y-8 animate-in fade-in duration-500">
       <header>
         <h1 className="text-3xl font-black text-[#1a2333] tracking-tight">Reportes de Contadores</h1>
-        <p className="text-slate-400 mt-1 font-bold uppercase tracking-widest text-[10px]">Análisis consolidado y auditoría de lecturas a nivel cliente</p>
+        <p className="text-slate-500 mt-1 font-bold uppercase tracking-widest text-[10px]">Análisis consolidado y auditoría de lecturas a nivel cliente</p>
       </header>
 
       {/* Filters */}
@@ -205,7 +205,7 @@ const Reports = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Cliente</label>
+            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Cliente</label>
             <div className="relative">
               <User size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
               <select 
@@ -223,7 +223,7 @@ const Reports = () => {
           </div>
 
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Fecha Inicial</label>
+            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Fecha Inicial</label>
             <div className="relative">
               <Calendar size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
               <input 
@@ -239,7 +239,7 @@ const Reports = () => {
           </div>
 
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Fecha Final</label>
+            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Fecha Final</label>
             <div className="relative">
               <Calendar size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
               <input 
@@ -312,7 +312,7 @@ const Reports = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             <div className="cd-panel p-6 flex items-center justify-between shadow-sm relative overflow-hidden">
               <div className="space-y-1">
-                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">Volumen Total</span>
+                <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest block">Volumen Total</span>
                 <span className="text-2xl font-black text-[#1a2333] block">{execMetrics.totalPrinted.toLocaleString()}</span>
               </div>
               <div className="p-3 bg-blue-50 text-brand rounded-2xl">
@@ -322,7 +322,7 @@ const Reports = () => {
 
             <div className="cd-panel p-6 flex items-center justify-between shadow-sm relative overflow-hidden">
               <div className="space-y-1">
-                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">Páginas Mono</span>
+                <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest block">Páginas Mono</span>
                 <span className="text-2xl font-black text-[#1a2333] block">{execMetrics.totalMono.toLocaleString()}</span>
               </div>
               <div className="p-3 bg-slate-50 text-slate-600 rounded-2xl">
@@ -332,7 +332,7 @@ const Reports = () => {
 
             <div className="cd-panel p-6 flex items-center justify-between shadow-sm relative overflow-hidden">
               <div className="space-y-1">
-                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">Páginas Color</span>
+                <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest block">Páginas Color</span>
                 <span className="text-2xl font-black text-emerald-600 block">{execMetrics.totalColor.toLocaleString()}</span>
               </div>
               <div className="p-3 bg-emerald-50 text-emerald-600 rounded-2xl">
@@ -342,7 +342,7 @@ const Reports = () => {
 
             <div className="cd-panel p-6 flex items-center justify-between shadow-sm relative overflow-hidden">
               <div className="space-y-1">
-                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">Dispositivos</span>
+                <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest block">Dispositivos</span>
                 <span className="text-2xl font-black text-[#1a2333] block">{execMetrics.onlineCount} / {execMetrics.totalDevices}</span>
               </div>
               <div className="p-3 bg-slate-50 text-slate-400 rounded-2xl">
@@ -365,7 +365,7 @@ const Reports = () => {
             {consolidatedData.length === 0 ? (
               <div className="text-center py-20 bg-white">
                 <FileText size={48} className="mx-auto mb-4 text-slate-100" />
-                <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">Este cliente no posee dispositivos registrados</p>
+                <p className="text-slate-500 font-bold uppercase tracking-widest text-xs">Este cliente no posee dispositivos registrados</p>
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -396,13 +396,13 @@ const Reports = () => {
                         <td className="font-semibold text-slate-500 text-xs">
                           {r.device.ip_address}
                         </td>
-                        <td className="font-bold text-slate-400 text-[10px] uppercase tracking-wider">
+                        <td className="font-bold text-slate-500 text-[10px] uppercase tracking-wider">
                           {r.device.brand?.toUpperCase()}
                         </td>
-                        <td className="text-right text-slate-400 font-semibold">
+                        <td className="text-right text-slate-500 font-semibold">
                           {r.initialTotal.toLocaleString()}
                         </td>
-                        <td className="text-right text-slate-400 font-semibold">
+                        <td className="text-right text-slate-500 font-semibold">
                           {r.finalTotal.toLocaleString()}
                         </td>
                         <td className="text-right font-black text-brand">

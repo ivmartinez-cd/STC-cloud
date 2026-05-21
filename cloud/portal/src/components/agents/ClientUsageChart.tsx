@@ -16,7 +16,7 @@ const ChartContent = ({ usage }: Props) => (
       {usage.length === 0 ? (
         <div className="flex flex-col items-center justify-center h-32 gap-3">
           <BarChart2 size={32} className="text-slate-100" />
-          <p className="text-[10px] font-extrabold text-slate-300 uppercase tracking-widest">Sin historial de uso</p>
+          <p className="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest">Sin historial de uso</p>
         </div>
       ) : (
         <div className="h-[140px] w-full">
@@ -38,7 +38,7 @@ const ChartContent = ({ usage }: Props) => (
       )}
     </div>
     <div className="mt-4 pt-4 border-t border-slate-50 flex justify-between items-center">
-      <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Tendencia</span>
+      <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest">Tendencia</span>
       <TrendingUp size={14} className="text-emerald-500" />
     </div>
   </div>

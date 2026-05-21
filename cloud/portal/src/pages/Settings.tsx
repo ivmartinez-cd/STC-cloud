@@ -198,7 +198,7 @@ const Settings = () => {
         </div>
 
         <div className="max-w-md bg-slate-50/50 p-6 rounded-2xl border border-slate-50">
-          <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest ml-1 block mb-2">
+          <label className="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest ml-1 block mb-2">
             Tiempo de Inactividad (Minutos)
           </label>
           <div className="relative">
@@ -214,7 +214,7 @@ const Settings = () => {
           </div>
           <div className="mt-4 flex items-start gap-2 px-1">
             <Shield size={12} className="text-blue-400 mt-0.5 shrink-0" />
-            <p className="text-[11px] text-slate-400 leading-relaxed font-medium">
+            <p className="text-[11px] text-slate-500 leading-relaxed font-medium">
               Si el sistema no recibe un "heartbeat" del monitor durante este intervalo, 
               se disparará automáticamente el estado <span className="text-rose-500 font-bold uppercase tracking-tighter">Offline</span>.
             </p>
@@ -234,7 +234,7 @@ const Settings = () => {
               <p className="text-xs text-slate-500 font-medium">Configuración técnica del servidor de salida (SMTP).</p>
             </div>
           </div>
-          <span className="bg-slate-100 text-slate-400 text-[10px] font-extrabold px-3 py-1 rounded-full uppercase tracking-widest">
+          <span className="bg-slate-100 text-slate-500 text-[10px] font-extrabold px-3 py-1 rounded-full uppercase tracking-widest">
             Referencia Técnica
           </span>
         </div>
@@ -248,7 +248,7 @@ const Settings = () => {
             { label: 'Remitente',     key: 'from', icon: User },
           ].map(({ label, key, type, icon: Icon }) => (
             <div key={key} className="space-y-2">
-              <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest ml-1">{label}</label>
+              <label className="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest ml-1">{label}</label>
               <div className="relative">
                 {Icon && <Icon size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />}
                 <input
@@ -329,11 +329,11 @@ const Settings = () => {
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-slate-50/70 border-b border-slate-100">
-                      <th className="px-6 py-4 text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Operador</th>
-                      <th className="px-6 py-4 text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Rol</th>
-                      <th className="px-6 py-4 text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Estado</th>
-                      <th className="px-6 py-4 text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Creado el</th>
-                      <th className="px-6 py-4 text-[10px] font-extrabold text-slate-400 uppercase tracking-widest text-right">Acciones</th>
+                      <th className="px-6 py-4 text-[10px] font-extrabold text-slate-500 uppercase tracking-widest">Operador</th>
+                      <th className="px-6 py-4 text-[10px] font-extrabold text-slate-500 uppercase tracking-widest">Rol</th>
+                      <th className="px-6 py-4 text-[10px] font-extrabold text-slate-500 uppercase tracking-widest">Estado</th>
+                      <th className="px-6 py-4 text-[10px] font-extrabold text-slate-500 uppercase tracking-widest">Creado el</th>
+                      <th className="px-6 py-4 text-[10px] font-extrabold text-slate-500 uppercase tracking-widest text-right">Acciones</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50 bg-white">
@@ -346,7 +346,7 @@ const Settings = () => {
                             </div>
                             <div>
                               <div className="font-extrabold text-slate-800 text-sm">{u.username}</div>
-                              <div className="text-[10px] text-slate-400 font-mono">{u.id}</div>
+                              <div className="text-[10px] text-slate-500 font-mono">{u.id}</div>
                             </div>
                           </div>
                         </td>
@@ -454,7 +454,7 @@ const Settings = () => {
 
             <form onSubmit={handleCreateUser} className="space-y-5">
               <div className="space-y-2">
-                <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest ml-1">Nombre de Usuario</label>
+                <label className="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest ml-1">Nombre de Usuario</label>
                 <div className="relative">
                   <User size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
                   <input
@@ -469,7 +469,7 @@ const Settings = () => {
               </div>
 
               <div className="space-y-2">
-                <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest ml-1">Contraseña</label>
+                <label className="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest ml-1">Contraseña</label>
                 <div className="relative">
                   <Key size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
                   <input
@@ -491,7 +491,7 @@ const Settings = () => {
               </div>
 
               <div className="space-y-2">
-                <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest ml-1">Rol en el Portal</label>
+                <label className="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest ml-1">Rol en el Portal</label>
                 <div className="grid grid-cols-2 gap-4">
                   {[
                     { val: 'operator', title: 'Operador', desc: 'Soporte estándar' },
@@ -508,7 +508,7 @@ const Settings = () => {
                       }`}
                     >
                       <div className="font-extrabold text-sm text-[#1a2333]">{r.title}</div>
-                      <div className="text-[10px] text-slate-400 mt-0.5 font-medium">{r.desc}</div>
+                      <div className="text-[10px] text-slate-600 mt-0.5 font-medium">{r.desc}</div>
                     </button>
                   ))}
                 </div>
@@ -550,7 +550,7 @@ const Settings = () => {
               </div>
               <div>
                 <h3 className="text-lg font-extrabold text-[#1a2333]">Restablecer Contraseña</h3>
-                <p className="text-xs text-slate-500 font-medium">Asigna una nueva clave para '{resettingUser.username}'.</p>
+                <p className="text-xs text-slate-600 font-medium">Asigna una nueva clave para '{resettingUser.username}'.</p>
               </div>
             </div>
 
@@ -562,7 +562,7 @@ const Settings = () => {
 
             <form onSubmit={handleResetPassword} className="space-y-5">
               <div className="space-y-2">
-                <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest ml-1">Nueva Contraseña</label>
+                <label className="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest ml-1">Nueva Contraseña</label>
                 <div className="relative">
                   <Key size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
                   <input

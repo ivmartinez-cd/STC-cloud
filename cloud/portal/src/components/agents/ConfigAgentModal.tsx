@@ -93,13 +93,13 @@ export default function ConfigAgentModal({ modal, onClose }: Props) {
           {loadingConfig ? (
             <div className="py-24 text-center">
               <Loader2 size={64} className="animate-spin text-brand mx-auto mb-6" />
-              <p className="text-slate-400 font-black uppercase tracking-widest text-[10px]">Sincronizando con Agente...</p>
+              <p className="text-slate-500 font-black uppercase tracking-widest text-[10px]">Sincronizando con Agente...</p>
             </div>
           ) : (
             <div className="space-y-10">
               <div className="space-y-6">
                 <div className="flex justify-between items-center">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Segmentos IP Activos</label>
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] ml-1">Segmentos IP Activos</label>
                   <button
                     onClick={() => setConfigForm(f => ({ ...f, ip_ranges: [...f.ip_ranges, emptyRange()] }))}
                     className="flex items-center gap-2 text-[10px] font-black text-brand hover:text-[#2471a3] uppercase tracking-widest"
@@ -111,7 +111,7 @@ export default function ConfigAgentModal({ modal, onClose }: Props) {
                 <div className="space-y-4 max-h-[250px] overflow-y-auto pr-4 custom-scrollbar">
                   {configForm.ip_ranges.length === 0 && (
                     <div className="py-12 text-center border-2 border-dashed border-slate-100 rounded-[32px]">
-                      <p className="text-slate-400 font-bold text-xs uppercase tracking-widest">Sin segmentación configurada</p>
+                      <p className="text-slate-500 font-bold text-xs uppercase tracking-widest">Sin segmentación configurada</p>
                     </div>
                   )}
                   {configForm.ip_ranges.map((range, idx) => (
@@ -133,7 +133,7 @@ export default function ConfigAgentModal({ modal, onClose }: Props) {
                       />
                       <button
                         onClick={() => setConfigForm(f => ({ ...f, ip_ranges: f.ip_ranges.filter((_, i) => i !== idx) }))}
-                        className="p-3 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-2xl transition-all"
+                        className="p-3 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-2xl transition-all"
                       >
                         <Trash2 size={20} />
                       </button>
@@ -144,7 +144,7 @@ export default function ConfigAgentModal({ modal, onClose }: Props) {
 
               <div className="grid grid-cols-2 gap-10">
                 <div className="space-y-3">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Comunidad SNMP</label>
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Comunidad SNMP</label>
                   <input
                     type="text"
                     value={configForm.snmp_community}
@@ -153,7 +153,7 @@ export default function ConfigAgentModal({ modal, onClose }: Props) {
                   />
                 </div>
                 <div className="space-y-3">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Frecuencia (Minutos)</label>
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Frecuencia (Minutos)</label>
                   <input
                     type="number"
                     min={1}

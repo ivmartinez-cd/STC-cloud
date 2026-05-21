@@ -203,7 +203,7 @@ const Clients = () => {
                     <td className="px-6 py-4 hidden md:table-cell">
                       <div className="flex flex-col gap-1">
                         <div className="text-xs font-bold text-slate-700 truncate max-w-[200px]">
-                          {client.contact_name || <span className="text-slate-300 italic font-medium">Sin asignar</span>}
+                          {client.contact_name || <span className="text-slate-500 italic font-medium">Sin asignar</span>}
                         </div>
                         {client.contact_email && (
                           <div className="flex items-center gap-1.5 text-[10px] text-brand font-bold truncate max-w-[200px]">
@@ -227,7 +227,7 @@ const Clients = () => {
                       <Link
                         to={`/clients/${client.id}`}
                         aria-label={`Ver detalle de ${client.name}`}
-                        className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-slate-300 group-hover:text-brand group-hover:bg-white transition-all shadow-sm"
+                        className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-slate-400 group-hover:text-brand group-hover:bg-white transition-all shadow-sm"
                       >
                         <ChevronRight size={18} />
                       </Link>

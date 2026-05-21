@@ -85,7 +85,7 @@ export default function CreateAgentModal({ show, clients, activationKey, onClose
           <div className="p-10 space-y-8">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
               <div className="space-y-3">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Vincular a Cliente *</label>
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Vincular a Cliente *</label>
                 <div className="relative">
                   <Server size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
                   <select
@@ -100,7 +100,7 @@ export default function CreateAgentModal({ show, clients, activationKey, onClose
               </div>
 
               <div className="space-y-3">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Etiqueta de Identificación</label>
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Etiqueta de Identificación</label>
                 <div className="relative">
                   <Globe size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
                   <input
@@ -145,7 +145,7 @@ export default function CreateAgentModal({ show, clients, activationKey, onClose
                     {formRanges.length > 1 && (
                       <button
                         onClick={() => setFormRanges(rs => rs.filter((_, i) => i !== idx))}
-                        className="p-3 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all"
+                        className="p-3 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all"
                       >
                         <Trash2 size={20} />
                       </button>
@@ -157,7 +157,7 @@ export default function CreateAgentModal({ show, clients, activationKey, onClose
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
               <div className="space-y-3">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Comunidad SNMP Segura</label>
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Comunidad SNMP Segura</label>
                 <input
                   type="text"
                   value={formSnmp}
@@ -166,7 +166,7 @@ export default function CreateAgentModal({ show, clients, activationKey, onClose
                 />
               </div>
               <div className="space-y-3">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Ciclo de Actualización (Min)</label>
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Ciclo de Actualización (Min)</label>
                 <div className="relative">
                   <Clock size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
                   <input
