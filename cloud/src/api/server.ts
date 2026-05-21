@@ -217,7 +217,7 @@ const start = async () => {
 
     // ─── Rutas ────────────────────────────────────────────────────────────────
 
-    registerAuthRoutes(fastify, db, agentService, agentAuth, portalAuth);
+    registerAuthRoutes(fastify, db, redis, agentService, agentAuth, portalAuth);
     registerAgentRoutes(fastify, redis, agentService, agentAuth);
     registerPortalAgentRoutes(fastify, db, redis, agentService, portalAuth);
     registerClientRoutes(fastify, db, portalAuth);

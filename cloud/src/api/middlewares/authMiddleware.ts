@@ -38,7 +38,14 @@ export function createAuthMiddleware(
 
   async function portalAuth(request: FastifyRequest, reply: FastifyReply) {
     try {
-      const token = request.cookies?.stc_session;
+      let token = request.cookies?.stc_session;
+      if (!token) {
+        const authHeader = request.headers.authorization;
+        if (authHeader && authHeader.startsWith("Bearer ")) {
+          token = authHeader.substring(7);
+        }
+      }
+
       if (!token) {
         return reply.status(401).send({ error: "No autenticado" });
       }

@@ -315,9 +315,7 @@ if "!RENDER_SERVICE_ID!"=="" (
     goto :done
 )
 
-:: Agentes < v1.5.5 no saben manejar ZIP: siempre publicar bundle.js como URL primaria.
-:: Una vez todos los agentes esten en v1.5.5+, se puede cambiar a stc-update.zip.
-set DLURL=https://github.com/!GITHUB_REPO!/releases/download/v!APP_VERSION!/bundle.js
+set DLURL=https://github.com/!GITHUB_REPO!/releases/download/v!APP_VERSION!/stc-update.zip
 set PS_RND=%TEMP%\stc_rnd_%RANDOM%.ps1
 echo param^($ServiceId, $Version, $DownloadUrl, $Hash^) > "!PS_RND!"
 echo $apiKey = $env:RENDER_API_KEY >> "!PS_RND!"
@@ -336,16 +334,40 @@ echo Write-Host "  AGENT_HASH=$Hash" >> "!PS_RND!"
 echo. >> "!PS_RND!"
 echo $deployBody = '{}' >> "!PS_RND!"
 echo $deploy = Invoke-RestMethod "https://api.render.com/v1/services/$ServiceId/deploys" -Method Post -Headers $hdr -Body $deployBody -ContentType 'application/json' -ErrorAction Stop >> "!PS_RND!"
-echo Write-Host "  Deploy disparado: id=$($deploy.id) status=$($deploy.status)" >> "!PS_RND!"
+echo Write-Host "  Deploy en Render disparado: id=$($deploy.id) status=$($deploy.status)" >> "!PS_RND!"
 
-powershell -NoProfile -ExecutionPolicy Bypass -File "!PS_RND!" -ServiceId "!RENDER_SERVICE_ID!" -Version "!APP_VERSION!" -DownloadUrl "!DLURL!" -Hash "!BUNDLE_HASH!"
+powershell -NoProfile -ExecutionPolicy Bypass -File "!PS_RND!" -ServiceId "!RENDER_SERVICE_ID!" -Version "!APP_VERSION!" -DownloadUrl "!DLURL!" -Hash "!UPDATE_HASH!"
 set RND_EXIT=!errorlevel!
 del "!PS_RND!" 2>nul
 if !RND_EXIT! neq 0 (
     echo [ERROR] Fallo al actualizar Render.
     pause & exit /b 1
 )
-echo       OK: Render actualizado. Los agentes aplicaran parche ZIP en el proximo ciclo.
+echo       OK: Render actualizado con el paquete ZIP.
+
+:api_update
+:: ── Paso 8.5: Actualización Dinámica por API (Recomendado / Sin redeploys) ───
+echo.
+echo [8.5/8] Actualizando versión en la API dinámica de STC Cloud...
+if "!STC_PORTAL_TOKEN!"=="" (
+    echo [AVISO] Variable STC_PORTAL_TOKEN no configurada. Saltando actualización por API.
+    echo         Para configurarla en su máquina:
+    echo           setx STC_PORTAL_TOKEN "tu_jwt_token_del_portal" /M
+    echo         Esto le permite actualizar las versiones al instante sin redespliegues de Render.
+    goto :done
+)
+
+set API_URL=https://stc-cloud-api.onrender.com
+if not "!STC_API_URL!"=="" set API_URL=!STC_API_URL!
+
+powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+    "$body = @{ version = '!APP_VERSION!'; url = '!DLURL!'; hash = '!UPDATE_HASH!' } | ConvertTo-Json;" ^
+    "try {" ^
+    "    $res = Invoke-RestMethod -Uri \"!API_URL!/api/v1/portal/agents/version\" -Method Post -Headers @{ Authorization = 'Bearer !STC_PORTAL_TOKEN!'; 'Content-Type' = 'application/json' } -Body $body;" ^
+    "    Write-Host '      OK: API Dinámica actualizada al instante: v' $res.version;" ^
+    "} catch {" ^
+    "    Write-Host '[ERROR] No se pudo actualizar por API:' $_.Exception.Message;" ^
+    "}"
 
 :done
 :: ── Resultado ─────────────────────────────────────────────────────────────────

@@ -1,5 +1,6 @@
 import { FastifyInstance } from "fastify";
 import { Knex } from "knex";
+import Redis from "ioredis";
 import { AgentService } from "../../services/agentService";
 import { createAuthController } from "../controllers/authController";
 
@@ -59,14 +60,27 @@ const userUpdateSchema = {
   },
 };
 
+const updateVersionSchema = {
+  body: {
+    type: "object",
+    required: ["version", "url", "hash"],
+    properties: {
+      version: { type: "string", minLength: 1 },
+      url: { type: "string", minLength: 1 },
+      hash: { type: "string", minLength: 1 },
+    },
+  },
+};
+
 export function registerAuthRoutes(
   fastify: FastifyInstance,
   db: Knex,
+  redis: Redis,
   agentService: AgentService,
   agentAuth: (request: any, reply: any) => Promise<void>,
   portalAuth: (request: any, reply: any) => Promise<void>
 ) {
-  const ctrl = createAuthController(fastify, db, agentService);
+  const ctrl = createAuthController(fastify, db, redis, agentService);
 
   fastify.post("/api/v1/portal/login", {
     schema: portalLoginSchema,
@@ -118,5 +132,11 @@ export function registerAuthRoutes(
   fastify.get("/api/v1/agents/version", {
     preHandler: agentAuth,
     handler: ctrl.agentVersion,
+  });
+
+  fastify.post("/api/v1/portal/agents/version", {
+    preHandler: portalAuth,
+    schema: updateVersionSchema,
+    handler: ctrl.updateAgentVersion,
   });
 }

@@ -1,13 +1,16 @@
 import { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import crypto from "crypto";
+import fs from "fs";
+import path from "path";
 import { Knex } from "knex";
+import Redis from "ioredis";
 import { AgentService } from "../../services/agentService";
 import { hashPassword, verifyPassword } from "../utils/password";
 
 const JWT_AGENT_TTL = "30d";
 const JWT_PORTAL_TTL = "8h";
 
-export function createAuthController(fastify: FastifyInstance, db: Knex, agentService: AgentService) {
+export function createAuthController(fastify: FastifyInstance, db: Knex, redis: Redis, agentService: AgentService) {
   return {
     portalLogin: async (request: FastifyRequest, reply: FastifyReply) => {
       const { username, password } = request.body as any;
@@ -219,10 +222,69 @@ export function createAuthController(fastify: FastifyInstance, db: Knex, agentSe
       }
     },
 
-    agentVersion: async () => ({
-      version: process.env.AGENT_VERSION ?? "1.0.0",
-      url: process.env.AGENT_DOWNLOAD_URL ?? null,
-      hash: process.env.AGENT_HASH ?? null,
-    }),
+    agentVersion: async () => {
+      // 1. Intentar leer de Redis
+      try {
+        const cached = await redis.get("stc:agent_version_metadata");
+        if (cached) {
+          return JSON.parse(cached);
+        }
+      } catch (err) {
+        fastify.log.error(`Error al leer versión de Redis: ${err}`);
+      }
+
+      // 2. Intentar leer del archivo local persistentemente
+      try {
+        const localPath = path.join(process.cwd(), "local_settings.json");
+        if (fs.existsSync(localPath)) {
+          const content = fs.readFileSync(localPath, "utf-8");
+          const parsed = JSON.parse(content);
+          if (parsed.version && parsed.url) {
+            return parsed;
+          }
+        }
+      } catch (err) {
+        fastify.log.error(`Error al leer archivo local_settings.json: ${err}`);
+      }
+
+      // 3. Fallback a variables de entorno
+      return {
+        version: process.env.AGENT_VERSION ?? "1.0.0",
+        url: process.env.AGENT_DOWNLOAD_URL ?? null,
+        hash: process.env.AGENT_HASH ?? null,
+      };
+    },
+
+    updateAgentVersion: async (request: FastifyRequest, reply: FastifyReply) => {
+      const user = (request as any).user;
+      if (!user) {
+        return reply.status(401).send({ error: "No autenticado" });
+      }
+
+      const { version, url, hash } = request.body as any;
+
+      if (!version || !url || !hash) {
+        return reply.status(400).send({ error: "Campos versión, url y hash son requeridos" });
+      }
+
+      const metadata = { version, url, hash };
+
+      // 1. Guardar en Redis
+      try {
+        await redis.set("stc:agent_version_metadata", JSON.stringify(metadata));
+      } catch (err) {
+        fastify.log.error(`Error al guardar versión en Redis: ${err}`);
+      }
+
+      // 2. Guardar en archivo local
+      try {
+        const localPath = path.join(process.cwd(), "local_settings.json");
+        fs.writeFileSync(localPath, JSON.stringify(metadata, null, 2), "utf-8");
+      } catch (err) {
+        fastify.log.error(`Error al guardar versión en archivo local: ${err}`);
+      }
+
+      return { status: "success", ...metadata };
+    },
   };
 }
