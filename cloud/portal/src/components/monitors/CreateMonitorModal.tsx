@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, Radio, Check, Copy, Info, Loader2, MapPin, Shield, Clock, Layout } from 'lucide-react';
+import { X, Radio, Check, Copy, Info, Loader2, MapPin, Shield, Clock, Layout, Download } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
 import type { CreateMonitorForm } from '../../types/monitor';
 
@@ -76,46 +76,113 @@ const CreateMonitorModal = ({ isOpen, onClose, onCreate }: Props) => {
         </header>
 
         {activationKey ? (
-          <div className="p-10 space-y-8">
-            <div className="bg-emerald-50 border border-emerald-100 rounded-[24px] p-8 flex flex-col items-center text-center gap-4">
-              <div className="p-4 bg-white rounded-full shadow-sm text-emerald-500">
-                <Check size={32} />
+          <div className="p-10 space-y-6 max-h-[80vh] overflow-y-auto">
+            {/* Header Success */}
+            <div className="bg-emerald-50 border border-emerald-100 rounded-[24px] p-6 flex items-center gap-4">
+              <div className="p-3 bg-emerald-500 rounded-2xl text-white shadow-lg shadow-emerald-500/20 shrink-0">
+                <Check size={28} />
               </div>
               <div>
-                <p className="text-lg font-black text-emerald-900">¡Nodo Registrado!</p>
-                <p className="text-sm text-emerald-700/60 font-medium">Copia esta clave de seguridad para activar el agente STC en el servidor local.</p>
+                <p className="text-base font-black text-emerald-900 leading-tight">¡Nodo Registrado con Éxito!</p>
+                <p className="text-xs text-emerald-700/70 font-semibold mt-0.5">Sigue estos 3 pasos para poner en marcha el agente.</p>
               </div>
             </div>
 
-            <div className="space-y-3">
-              <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest ml-1">Clave de Activación Única</label>
-              <div className="relative group">
-                <input
-                  readOnly value={activationKey}
-                  className="cd-input w-full font-mono text-sm !bg-slate-50 !py-6 !pl-6 !pr-16 border-transparent focus:!border-brand cursor-default"
-                />
-                <button
-                  onClick={copyKey}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 p-3 bg-white rounded-xl shadow-md text-brand hover:bg-brand hover:text-white transition-all active:scale-90"
-                >
-                  {keyCopied ? <Check size={18} /> : <Copy size={18} />}
-                </button>
+            {/* Onboarding Flow: 3 Steps */}
+            <div className="space-y-6">
+              {/* Paso 1 */}
+              <div className="relative border border-slate-100 bg-slate-50/40 rounded-2xl p-5 flex gap-4 transition-all hover:bg-slate-50/70">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand text-white font-black text-xs shrink-0 shadow-md shadow-brand/10">
+                  1
+                </div>
+                <div className="flex-1 space-y-3">
+                  <div>
+                    <h4 className="text-xs font-black text-slate-700 uppercase tracking-widest">Descargar Instalador</h4>
+                    <p className="text-xs text-slate-500 mt-1">Obtén el instalador del agente de monitoreo para Windows (x64) directo desde este portal.</p>
+                  </div>
+                  <a
+                    href="/api/v1/agents/download-installer"
+                    className="inline-flex items-center gap-2 px-4 py-2.5 bg-brand hover:bg-[#2471a3] text-white rounded-xl text-xs font-black tracking-wider shadow-lg shadow-blue-500/10 transition-all hover:-translate-y-0.5 active:translate-y-0"
+                  >
+                    <Download size={14} /> DESCARGAR AGENTE (.EXE)
+                  </a>
+                </div>
+              </div>
+
+              {/* Paso 2 */}
+              <div className="relative border border-slate-100 bg-slate-50/40 rounded-2xl p-5 flex gap-4">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand text-white font-black text-xs shrink-0 shadow-md shadow-brand/10">
+                  2
+                </div>
+                <div className="flex-1">
+                  <h4 className="text-xs font-black text-slate-700 uppercase tracking-widest">Ejecutar Instalación</h4>
+                  <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                    Corre el instalador descargado en la máquina o servidor local. Se instalará de manera segura y automática como un servicio de fondo permanente en Windows.
+                  </p>
+                </div>
+              </div>
+
+              {/* Paso 3 */}
+              <div className="relative border border-slate-100 bg-slate-50/40 rounded-2xl p-5 flex gap-4">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand text-white font-black text-xs shrink-0 shadow-md shadow-brand/10">
+                  3
+                </div>
+                <div className="flex-1 space-y-4">
+                  <div>
+                    <h4 className="text-xs font-black text-slate-700 uppercase tracking-widest">Activar Agente</h4>
+                    <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                      Usa la clave única maestra generada. Copia este comando rápido de terminal para registrar la instalación:
+                    </p>
+                  </div>
+
+                  {/* Terminal Code Display */}
+                  <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 font-mono text-[11px] relative group select-all">
+                    <p className="text-[9px] text-slate-500 uppercase tracking-widest font-black mb-1">Línea de comandos rápida</p>
+                    <code className="text-emerald-400 block break-all whitespace-pre-wrap pr-10">
+                      stc-agent.exe --activate {activationKey}
+                    </code>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(`stc-agent.exe --activate ${activationKey}`);
+                        showToast('Comando de activación copiado', 'success');
+                      }}
+                      className="absolute right-3 top-3 p-1.5 bg-slate-800 hover:bg-slate-700 rounded-md text-slate-400 hover:text-white transition-colors"
+                      title="Copiar Comando"
+                    >
+                      <Copy size={12} />
+                    </button>
+                  </div>
+
+                  {/* Solo Clave */}
+                  <div className="space-y-1.5">
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Clave de Activación Única</span>
+                    <div className="relative">
+                      <input
+                        readOnly
+                        value={activationKey}
+                        className="w-full font-mono text-xs bg-white border border-slate-200 rounded-xl py-3 pl-4 pr-12 text-slate-600 focus:outline-none cursor-default"
+                      />
+                      <button
+                        onClick={copyKey}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-slate-50 hover:bg-slate-100 rounded-lg text-slate-500 transition-colors"
+                      >
+                        {keyCopied ? <Check size={14} /> : <Copy size={14} />}
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div className="bg-blue-50 border border-blue-100 rounded-2xl p-6 flex items-start gap-4">
-              <Info size={20} className="text-brand shrink-0 mt-1" />
-              <p className="text-xs text-slate-500 font-medium leading-relaxed">
-                Esta clave es confidencial y solo puede usarse una vez. Una vez activado el agente, el nodo comenzará a reportar métricas automáticamente.
-              </p>
+            {/* Bottom Actions */}
+            <div className="flex gap-4 pt-2">
+              <button
+                onClick={handleClose}
+                className="w-full py-4 rounded-2xl bg-brand text-white text-xs font-black uppercase tracking-wider hover:bg-[#2471a3] transition-all shadow-xl shadow-blue-900/10 active:scale-95"
+              >
+                ENTENDIDO, VOLVER AL CLIENTE
+              </button>
             </div>
-
-            <button
-              onClick={handleClose}
-              className="w-full py-5 rounded-[24px] bg-brand text-white font-black hover:bg-[#2471a3] transition-all shadow-xl shadow-blue-900/10 active:scale-95"
-            >
-              Entendido, Volver al Cliente
-            </button>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="p-10 space-y-8">

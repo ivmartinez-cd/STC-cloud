@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'; // v1.0.1-ui-fix
-import { Key, Plus, ShieldCheck, RefreshCw, Trash2, Clock, Globe, Server, Copy } from 'lucide-react';
+import { Key, Plus, ShieldCheck, RefreshCw, Trash2, Clock, Globe, Server, Copy, Download } from 'lucide-react';
 import { api } from '../../lib/api';
 import { useToast } from '../../context/ToastContext';
 import type { Client, IpRange } from '../../types/agents';
@@ -195,33 +195,103 @@ export default function CreateAgentModal({ show, clients, activationKey, onClose
       )}
 
       {activationKey && (
-        <div className="bg-emerald-50 border border-emerald-100 rounded-[40px] p-10 shadow-2xl shadow-emerald-900/10 animate-in zoom-in-95 duration-500">
-          <div className="flex flex-col md:flex-row items-start gap-8">
-            <div className="p-6 bg-emerald-500 text-white rounded-[32px] shadow-xl shadow-emerald-900/20 shrink-0">
-              <ShieldCheck size={40} />
+        <div className="bg-emerald-50 border border-emerald-100 rounded-[40px] p-10 shadow-2xl shadow-emerald-900/10 animate-in zoom-in-95 duration-500 space-y-6">
+          {/* Header Success */}
+          <div className="flex items-center gap-4 border-b border-emerald-100 pb-4">
+            <div className="p-3 bg-emerald-500 rounded-2xl text-white shadow-lg shadow-emerald-500/20 shrink-0">
+              <ShieldCheck size={28} />
             </div>
-            <div className="flex-1 w-full">
-              <h3 className="text-2xl font-black text-emerald-900 tracking-tight">Acceso Concedido</h3>
-              <p className="text-sm text-emerald-700 font-bold mt-2 mb-8 uppercase tracking-wide">
-                La llave expira en 24 horas. Use el comando a continuación en la terminal del cliente.
-              </p>
-              <div className="group relative">
-                <div className="p-8 bg-emerald-900 rounded-[28px] font-mono text-center shadow-inner border border-emerald-800">
-                  <p className="text-[10px] text-emerald-400 uppercase tracking-widest mb-2 font-black">Código de Activación Único</p>
-                  <div className="text-2xl md:text-3xl text-white font-black tracking-widest break-all select-all">
-                    {activationKey}
+            <div>
+              <p className="text-base font-black text-emerald-900 leading-tight">¡Nodo Registrado con Éxito!</p>
+              <p className="text-xs text-emerald-700/70 font-semibold mt-0.5">Sigue estos 3 pasos para poner en marcha el agente.</p>
+            </div>
+          </div>
+
+          {/* Onboarding Flow: 3 Steps */}
+          <div className="space-y-6">
+            {/* Paso 1 */}
+            <div className="relative border border-emerald-100/50 bg-white/60 rounded-2xl p-5 flex gap-4 transition-all hover:bg-white/80">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand text-white font-black text-xs shrink-0 shadow-md shadow-brand/10">
+                1
+              </div>
+              <div className="flex-1 space-y-3">
+                <div>
+                  <h4 className="text-xs font-black text-slate-700 uppercase tracking-widest">Descargar Instalador</h4>
+                  <p className="text-xs text-slate-500 mt-1">Obtén el instalador del agente de monitoreo para Windows (x64) directo desde este portal.</p>
+                </div>
+                <a
+                  href="/api/v1/agents/download-installer"
+                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-brand hover:bg-[#2471a3] text-white rounded-xl text-xs font-black tracking-wider shadow-lg shadow-blue-500/10 transition-all hover:-translate-y-0.5 active:translate-y-0"
+                >
+                  <Download size={14} /> DESCARGAR AGENTE (.EXE)
+                </a>
+              </div>
+            </div>
+
+            {/* Paso 2 */}
+            <div className="relative border border-emerald-100/50 bg-white/60 rounded-2xl p-5 flex gap-4">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand text-white font-black text-xs shrink-0 shadow-md shadow-brand/10">
+                2
+              </div>
+              <div className="flex-1">
+                <h4 className="text-xs font-black text-slate-700 uppercase tracking-widest">Ejecutar Instalación</h4>
+                <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                  Corre el instalador descargado en la máquina o servidor local. Se instalará de manera segura y automática como un servicio de fondo permanente en Windows.
+                </p>
+              </div>
+            </div>
+
+            {/* Paso 3 */}
+            <div className="relative border border-emerald-100/50 bg-white/60 rounded-2xl p-5 flex gap-4">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand text-white font-black text-xs shrink-0 shadow-md shadow-brand/10">
+                3
+              </div>
+              <div className="flex-1 space-y-4">
+                <div>
+                  <h4 className="text-xs font-black text-slate-700 uppercase tracking-widest">Activar Agente</h4>
+                  <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                    Usa la clave única maestra generada. Copia este comando rápido de terminal para registrar la instalación:
+                  </p>
+                </div>
+
+                {/* Terminal Code Display */}
+                <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 font-mono text-[11px] relative group select-all">
+                  <p className="text-[9px] text-slate-500 uppercase tracking-widest font-black mb-1">Línea de comandos rápida</p>
+                  <code className="text-emerald-400 block break-all whitespace-pre-wrap pr-10">
+                    stc-agent.exe --activate {activationKey}
+                  </code>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(`stc-agent.exe --activate ${activationKey}`);
+                      showToast('Comando de activación copiado', 'success');
+                    }}
+                    className="absolute right-3 top-3 p-1.5 bg-slate-800 hover:bg-slate-700 rounded-md text-slate-400 hover:text-white transition-colors"
+                    title="Copiar Comando"
+                  >
+                    <Copy size={12} />
+                  </button>
+                </div>
+
+                {/* Solo Clave */}
+                <div className="space-y-1.5">
+                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Clave de Activación Única</span>
+                  <div className="relative">
+                    <input
+                      readOnly
+                      value={activationKey}
+                      className="w-full font-mono text-xs bg-white border border-slate-200 rounded-xl py-3 pl-4 pr-12 text-slate-600 focus:outline-none cursor-default"
+                    />
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(activationKey);
+                        showToast('Código copiado al portapapeles', 'success');
+                      }}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-slate-50 hover:bg-slate-100 rounded-lg text-slate-500 transition-colors"
+                    >
+                      <Copy size={14} />
+                    </button>
                   </div>
                 </div>
-                <button
-                  onClick={() => {
-                    navigator.clipboard.writeText(activationKey);
-                    showToast('Código copiado al portapapeles', 'success');
-                  }}
-                  className="absolute right-4 top-4 p-3 bg-white/10 hover:bg-white/20 rounded-2xl text-white transition-all active:scale-90"
-                  title="Copiar Código"
-                >
-                  <Copy size={20} />
-                </button>
               </div>
             </div>
           </div>

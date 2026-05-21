@@ -6,6 +6,7 @@ import jwt from "@fastify/jwt";
 import rateLimit from "@fastify/rate-limit";
 import dotenv from "dotenv";
 import path from "path";
+import fs from "fs";
 import Redis from "ioredis";
 import knex from "knex";
 
@@ -179,6 +180,36 @@ const start = async () => {
     fastify.get("/", async () => ({ status: "ok", service: "stc-cloud-api" }));
     fastify.get("/health", async () => ({ status: "ok", version: "1.0.0" }));
     fastify.get("/api/v1/health", async () => ({ status: "ok", version: "1.0.0" }));
+
+    // ─── Agent Installer Public Download Endpoint ─────────────────────────────
+    fastify.get("/api/v1/agents/download-installer", async (request, reply) => {
+      const pathsToTry = [
+        path.join(__dirname, "../../public/installers/stc-agent-setup.exe"),
+        path.join(__dirname, "../../../cloud/public/installers/stc-agent-setup.exe"),
+        path.join(__dirname, "../../../public/installers/stc-agent-setup.exe"),
+        path.join(__dirname, "../../../installer/output/Instalador-STC-Monitor-v1.8.3.exe"),
+      ];
+
+      let foundPath = "";
+      for (const p of pathsToTry) {
+        const resolved = path.resolve(p);
+        if (fs.existsSync(resolved)) {
+          foundPath = resolved;
+          break;
+        }
+      }
+
+      if (!foundPath) {
+        reply.status(404).send({ error: "Instalador no disponible en el servidor" });
+        return;
+      }
+
+      const stream = fs.createReadStream(foundPath);
+      reply
+        .type("application/octet-stream")
+        .header("Content-Disposition", "attachment; filename=Instalador-STC-Monitor.exe")
+        .send(stream);
+    });
 
     // ─── Auth middleware ──────────────────────────────────────────────────────
 
