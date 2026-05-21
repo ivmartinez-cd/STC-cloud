@@ -72,12 +72,12 @@ export function parseHpSupplies(html: string): Partial<EwsData> {
   // e.g. id="BlackCartridge1-Header_OrderNumber">CE285A or id="BlackCartridge1-InstalledPartNumber">58A (CF258A)
   const extractOrderNumber = (colorPattern: RegExp): string | null => {
     let m = html.match(new RegExp(
-      colorPattern.source + '[\\s\\S]{0,500}id="[^"]*OrderNumber[^"]*"[^>]*>\\s*([^<]+)',
+      colorPattern.source + '[\\s\\S]{0,2000}id="[^"]*OrderNumber[^"]*"[^>]*>\\s*([^<]+)',
       'i',
     ));
     if (!m) {
       m = html.match(new RegExp(
-        colorPattern.source + '[\\s\\S]{0,500}id="[^"]*InstalledPartNumber[^"]*"[^>]*>\\s*([^<]+)',
+        colorPattern.source + '[\\s\\S]{0,2000}id="[^"]*InstalledPartNumber[^"]*"[^>]*>\\s*([^<]+)',
         'i',
       ));
     }
@@ -86,7 +86,7 @@ export function parseHpSupplies(html: string): Partial<EwsData> {
 
   const extractSerialNumber = (colorPattern: RegExp): string | null => {
     const m = html.match(new RegExp(
-      colorPattern.source + '[\\s\\S]{0,500}id="[^"]*SerialNumber[^"]*"[^>]*>\\s*([^<]+)',
+      colorPattern.source + '[\\s\\S]{0,2000}id="[^"]*SerialNumber[^"]*"[^>]*>\\s*([^<]+)',
       'i',
     ));
     return m ? m[1].trim() || null : null;
@@ -94,7 +94,7 @@ export function parseHpSupplies(html: string): Partial<EwsData> {
 
   const extractNumberById = (colorPattern: RegExp, idPattern: string): number | null => {
     const m = html.match(new RegExp(
-      colorPattern.source + `[\\s\\S]{0,500}id="[^"]*${idPattern}[^"]*"[^>]*>\\s*([\\d]+)`,
+      colorPattern.source + `[\\s\\S]{0,2000}id="[^"]*${idPattern}[^"]*"[^>]*>\\s*([\\d]+)`,
       'i',
     ));
     return m ? parseInt(m[1], 10) : null;
