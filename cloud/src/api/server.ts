@@ -183,32 +183,8 @@ const start = async () => {
 
     // ─── Agent Installer Public Download Endpoint ─────────────────────────────
     fastify.get("/api/v1/agents/download-installer", async (request, reply) => {
-      const pathsToTry = [
-        path.join(__dirname, "../../public/installers/stc-agent-setup.exe"),
-        path.join(__dirname, "../../../cloud/public/installers/stc-agent-setup.exe"),
-        path.join(__dirname, "../../../public/installers/stc-agent-setup.exe"),
-        path.join(__dirname, "../../../installer/output/Instalador-STC-Monitor-v1.8.3.exe"),
-      ];
-
-      let foundPath = "";
-      for (const p of pathsToTry) {
-        const resolved = path.resolve(p);
-        if (fs.existsSync(resolved)) {
-          foundPath = resolved;
-          break;
-        }
-      }
-
-      if (!foundPath) {
-        reply.status(404).send({ error: "Instalador no disponible en el servidor" });
-        return;
-      }
-
-      const stream = fs.createReadStream(foundPath);
-      reply
-        .type("application/octet-stream")
-        .header("Content-Disposition", "attachment; filename=Instalador-STC-Monitor.exe")
-        .send(stream);
+      // Redirigimos al asset en el último release de GitHub para evitar binarios pesados en el repo
+      reply.redirect("https://github.com/ivmartinez-cd/STC-cloud/releases/latest/download/Instalador-STC-Monitor.exe");
     });
 
     // ─── Auth middleware ──────────────────────────────────────────────────────
