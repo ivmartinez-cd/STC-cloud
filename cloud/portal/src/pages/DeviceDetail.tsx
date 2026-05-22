@@ -345,7 +345,7 @@ const DeviceDetail = () => {
                   </div>
                 ) : (
                   /* ── Color printer ── */
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="flex flex-col gap-3">
                     {([
                       { label: 'K', color: 'Negro', grad: 'from-slate-700 to-slate-900', val: latest.toner_black,
                         code: device?.cartridge_code_black, serial: device?.cartridge_serial_black, capacity: device?.cartridge_capacity_black,
@@ -361,7 +361,7 @@ const DeviceDetail = () => {
                         printed: device?.cartridge_printed_yellow, estimated: device?.cartridge_estimated_yellow },
                     ] as { label: string; color: string; grad: string; val: number | null | undefined; code?: string | null; serial?: string | null; capacity?: number | null; printed?: number | null; estimated?: number | null }[]).map(t => (
                       <div key={t.label} className="flex gap-4 p-3.5 bg-slate-50/50 rounded-2xl border border-slate-100 hover:shadow-lg hover:shadow-slate-200/50 hover:bg-white transition-all duration-300 group">
-                        <div className="h-28 w-14 bg-white rounded-[14px] flex flex-col justify-end overflow-hidden p-1 border border-slate-200/60 relative shrink-0 shadow-inner">
+                        <div className="h-24 w-14 bg-white rounded-[14px] flex flex-col justify-end overflow-hidden p-1 border border-slate-200/60 relative shrink-0 shadow-inner">
                           <div
                             className={`w-full bg-gradient-to-t ${t.grad} rounded-[10px] transition-all duration-1000 group-hover:opacity-90`}
                             style={{ height: `${t.val ?? 0}%` }}
@@ -383,7 +383,7 @@ const DeviceDetail = () => {
                           
                           {t.code ? (
                             <>
-                              <p className="text-sm font-black text-slate-800 tracking-tight truncate group-hover:text-brand transition-colors" title={t.code}>
+                              <p className="text-sm font-black text-slate-800 tracking-tight transition-colors break-words">
                                 {t.code}
                               </p>
                               {t.capacity != null && (
@@ -392,20 +392,20 @@ const DeviceDetail = () => {
                                 </p>
                               )}
                               {t.serial && (
-                                <p className="text-[10px] text-slate-400 font-mono mt-1.5 truncate" title={t.serial}>
+                                <p className="text-[10px] text-slate-400 font-mono mt-1.5 break-all">
                                   <span className="font-bold text-slate-500 uppercase tracking-wider text-[9px] mr-1">S/N:</span> 
                                   {t.serial}
                                 </p>
                               )}
                               {(t.printed != null || t.estimated != null) && (
-                                <div className="mt-2.5 pt-2.5 border-t border-slate-200/60 flex items-center gap-x-3 gap-y-1 flex-wrap">
+                                <div className="mt-2 pt-2 border-t border-slate-200/60 flex items-center justify-between gap-2 flex-wrap">
                                   {t.printed != null && (
-                                    <p className="text-[10px] text-slate-500" title="Páginas impresas con este consumible">
+                                    <p className="text-[10px] text-slate-500">
                                       <span className="font-bold text-slate-700">Imp:</span> {t.printed.toLocaleString()}
                                     </p>
                                   )}
                                   {t.estimated != null && (
-                                    <p className="text-[10px] text-slate-500" title="Páginas restantes estimadas">
+                                    <p className="text-[10px] text-slate-500">
                                       <span className="font-bold text-slate-700">Rest:</span> {t.estimated.toLocaleString()}
                                     </p>
                                   )}
