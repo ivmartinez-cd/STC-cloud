@@ -56,6 +56,14 @@ export function openQueue(): void {
       cartridge_capacity_cyan    INTEGER,
       cartridge_capacity_magenta INTEGER,
       cartridge_capacity_yellow  INTEGER,
+      cartridge_printed_black    INTEGER,
+      cartridge_printed_cyan     INTEGER,
+      cartridge_printed_magenta  INTEGER,
+      cartridge_printed_yellow   INTEGER,
+      cartridge_estimated_black  INTEGER,
+      cartridge_estimated_cyan   INTEGER,
+      cartridge_estimated_magenta INTEGER,
+      cartridge_estimated_yellow  INTEGER,
       poll_method   TEXT    DEFAULT 'snmp',
       synced        INTEGER DEFAULT 0,
       created_at    TEXT    DEFAULT (datetime('now'))
@@ -92,6 +100,14 @@ export function openQueue(): void {
     "ALTER TABLE readings_queue ADD COLUMN cartridge_capacity_cyan    INTEGER DEFAULT NULL",
     "ALTER TABLE readings_queue ADD COLUMN cartridge_capacity_magenta INTEGER DEFAULT NULL",
     "ALTER TABLE readings_queue ADD COLUMN cartridge_capacity_yellow  INTEGER DEFAULT NULL",
+    "ALTER TABLE readings_queue ADD COLUMN cartridge_printed_black    INTEGER DEFAULT NULL",
+    "ALTER TABLE readings_queue ADD COLUMN cartridge_printed_cyan     INTEGER DEFAULT NULL",
+    "ALTER TABLE readings_queue ADD COLUMN cartridge_printed_magenta  INTEGER DEFAULT NULL",
+    "ALTER TABLE readings_queue ADD COLUMN cartridge_printed_yellow   INTEGER DEFAULT NULL",
+    "ALTER TABLE readings_queue ADD COLUMN cartridge_estimated_black   INTEGER DEFAULT NULL",
+    "ALTER TABLE readings_queue ADD COLUMN cartridge_estimated_cyan    INTEGER DEFAULT NULL",
+    "ALTER TABLE readings_queue ADD COLUMN cartridge_estimated_magenta INTEGER DEFAULT NULL",
+    "ALTER TABLE readings_queue ADD COLUMN cartridge_estimated_yellow  INTEGER DEFAULT NULL",
   ]) {
     try { db.exec(stmt); } catch { /* columna ya existe */ }
   }
@@ -105,8 +121,10 @@ export function enqueueReading(r: DeviceReading): void {
        cartridge_code_black, cartridge_code_cyan, cartridge_code_magenta, cartridge_code_yellow,
        cartridge_serial_black, cartridge_serial_cyan, cartridge_serial_magenta, cartridge_serial_yellow,
        cartridge_capacity_black, cartridge_capacity_cyan, cartridge_capacity_magenta, cartridge_capacity_yellow,
+       cartridge_printed_black, cartridge_printed_cyan, cartridge_printed_magenta, cartridge_printed_yellow,
+       cartridge_estimated_black, cartridge_estimated_cyan, cartridge_estimated_magenta, cartridge_estimated_yellow,
        poll_method)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     r.serial ?? r.ip, r.ip, r.brand, r.model, r.time,
     r.total_pages, r.mono_pages, r.color_pages,
@@ -114,6 +132,8 @@ export function enqueueReading(r: DeviceReading): void {
     r.cartridge_code_black ?? null, r.cartridge_code_cyan ?? null, r.cartridge_code_magenta ?? null, r.cartridge_code_yellow ?? null,
     r.cartridge_serial_black ?? null, r.cartridge_serial_cyan ?? null, r.cartridge_serial_magenta ?? null, r.cartridge_serial_yellow ?? null,
     r.cartridge_capacity_black ?? null, r.cartridge_capacity_cyan ?? null, r.cartridge_capacity_magenta ?? null, r.cartridge_capacity_yellow ?? null,
+    r.cartridge_printed_black ?? null, r.cartridge_printed_cyan ?? null, r.cartridge_printed_magenta ?? null, r.cartridge_printed_yellow ?? null,
+    r.cartridge_estimated_black ?? null, r.cartridge_estimated_cyan ?? null, r.cartridge_estimated_magenta ?? null, r.cartridge_estimated_yellow ?? null,
     r.poll_method ?? 'snmp',
   );
 }
