@@ -14,7 +14,7 @@ import { SocketManager } from './SocketManager';
 import { ConsoleConnector } from './ConsoleConnector';
 import { ConsoleEngine } from './ConsoleEngine';
 
-const VERSION = '1.8.9';
+const VERSION = '1.9.0';
 let socket: SocketManager | null = null;
 const LOG_MAX_BYTES = 10 * 1024 * 1024;
 
@@ -523,8 +523,12 @@ async function checkForUpdate(serverUrl: string, force = false): Promise<boolean
       return false;
     }
 
-    if (force && !isNewer && data.version !== VERSION) {
-      log('WARN', `Update forzado omitido: La version del servidor (v${data.version}) es anterior a la instalada (v${VERSION})`);
+    if (force && !isNewer) {
+      if (data.version === VERSION) {
+        log('INFO', `Ya cuentas con la version mas reciente (v${VERSION}). No es necesario actualizar.`);
+      } else {
+        log('WARN', `Update forzado omitido: La version del servidor (v${data.version}) es anterior a la instalada (v${VERSION})`);
+      }
       isUpdating = false;
       return false;
     }
