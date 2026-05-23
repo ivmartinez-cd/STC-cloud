@@ -17,7 +17,7 @@ const IGNORED_COMPONENTS = new Set([
   'AgentTable', 'CreateAgentModal', 'ConfigAgentModal', 'RegenKeyModal',
   'AgentConfig', 'Agent', 'Client', 'DashboardData', 'MonitorData', 'MonitorConfig', 'Thresholds', 'Reading', 'Device', 'Icon', 'PieChartIcon', 'DBUser',
   'ClientUsageChart', 'CreateMonitorModal', 'Tab', 'DeviceSummaryCard', 'MonitorSpecsCard', 'LicenseCard', 'DeviceInventoryTable', 'RemoteToolsPanel', 'EditMonitorModal',
-  'ConfigTabPanel', 'EditFormData'
+  'ConfigTabPanel', 'EditFormData', 'ReportsTabPanel'
 ]);
 
 function checkIcons(dir) {
