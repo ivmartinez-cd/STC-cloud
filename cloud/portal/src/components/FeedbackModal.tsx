@@ -59,6 +59,7 @@ export default function FeedbackModal({ onClose }: Props) {
       setTimeout(onClose, 2200);
     } catch (err) {
       setStage('form');
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       setError((err as any)?.response?.data?.message || 'Error al enviar. Intenta de nuevo.');
     }
   };
