@@ -49,7 +49,7 @@ export default function FeedbackModal({ onClose }: Props) {
 
     setStage('submitting');
     try {
-      await api.post('/api/v1/feedback', {
+      await api.post('/feedback', {
         type,
         title: title.trim(),
         description: description.trim(),
