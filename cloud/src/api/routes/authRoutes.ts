@@ -3,6 +3,7 @@ import { Knex } from "knex";
 import Redis from "ioredis";
 import { AgentService } from "../../services/agentService";
 import { createAuthController } from "../controllers/authController";
+import type { AuthHook } from "../middlewares/authMiddleware";
 
 const activateSchema = {
   body: {
@@ -77,8 +78,8 @@ export function registerAuthRoutes(
   db: Knex,
   redis: Redis,
   agentService: AgentService,
-  agentAuth: (request: any, reply: any) => Promise<void>,
-  portalAuth: (request: any, reply: any) => Promise<void>
+  agentAuth: AuthHook,
+  portalAuth: AuthHook
 ) {
   const ctrl = createAuthController(fastify, db, redis, agentService);
 

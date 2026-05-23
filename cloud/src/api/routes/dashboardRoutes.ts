@@ -2,12 +2,13 @@ import { FastifyInstance } from "fastify";
 import { Knex } from "knex";
 import { AgentService } from "../../services/agentService";
 import { createDashboardController } from "../controllers/dashboardController";
+import type { AuthHook } from "../middlewares/authMiddleware";
 
 export function registerDashboardRoutes(
   fastify: FastifyInstance,
   db: Knex,
   agentService: AgentService,
-  portalAuth: (request: any, reply: any) => Promise<void>
+  portalAuth: AuthHook
 ) {
   const ctrl = createDashboardController(db, agentService);
 

@@ -58,6 +58,14 @@ function getWindowsHardwareId(): string {
 }
 
 
+/**
+ * Genera un identificador de hardware único y determinista para la máquina actual.
+ * Combina identificadores del sistema inmutables (MachineGuid de registro de Windows y Serial de BIOS en Windows,
+ * o machine-id en sistemas tipo Unix) y devuelve un hash SHA-256 de 32 caracteres.
+ * Sirve como clave de cifrado simétrico local en conjunto con la infraestructura AES-256-GCM.
+ * 
+ * @returns {string} Un hash hexadecimal de 32 caracteres correspondiente al Hardware ID único.
+ */
 export function getHardwareId(): string {
   let raw = '';
   if (process.platform === 'win32') {
@@ -84,7 +92,19 @@ export const DATA_DIR = get_DATA_DIR();
 
 const CONFIG_PATH = path.join(DATA_DIR, 'config.enc');
 
+/**
+ * Gestor de configuración persistente cifrada para el agente STC Cloud.
+ * Maneja el almacenamiento de credenciales críticas en disco utilizando cifrado simétrico AES-256-GCM
+ * con enlace fuerte a la identidad de hardware de la máquina (HWID binding).
+ */
 export class ConfigManager {
+  /**
+   * Carga y descifra de forma segura el archivo de configuración del agente desde el almacenamiento local.
+   * Valida la integridad del hardware a través del proceso de autenticación de AES-256-GCM.
+   * 
+   * @throws {Error} Si la configuración no existe, si el Hardware ID cambió (HWID_MISMATCH) o si el descifrado falla.
+   * @returns {Promise<AgentConfig>} Objeto de configuración del agente descifrado.
+   */
   static async load(): Promise<AgentConfig> {
     if (!fs.existsSync(CONFIG_PATH)) {
       throw new Error(`Config no encontrada: ${CONFIG_PATH}. Ejecutar con --activate <KEY>`);
@@ -94,8 +114,8 @@ export class ConfigManager {
       const encrypted = fs.readFileSync(CONFIG_PATH, 'utf8');
       const json = await SecurityUtils.decrypt(encrypted, getHardwareId());
       return JSON.parse(json) as AgentConfig;
-    } catch (error: any) {
-      const msg: string = error.message ?? '';
+    } catch (error: unknown) {
+      const msg: string = error instanceof Error ? error.message : String(error);
       // AES-256-GCM auth-tag failure = HWID del equipo cambió desde la activación
       if (
         msg.includes('Unsupported state') ||
@@ -109,6 +129,13 @@ export class ConfigManager {
     }
   }
 
+  /**
+   * Cifra y almacena la configuración de forma atómica en disco usando la clave de hardware.
+   * Utiliza un esquema de escritura segura temporal (write-then-rename) para evitar corrupción de datos.
+   * 
+   * @param {AgentConfig} config - Objeto de configuración a persistir de forma segura.
+   * @returns {Promise<void>}
+   */
   static async save(config: AgentConfig): Promise<void> {
     fs.mkdirSync(DATA_DIR, { recursive: true });
     const encrypted = await SecurityUtils.encrypt(JSON.stringify(config), getHardwareId());
@@ -119,6 +146,12 @@ export class ConfigManager {
     fs.renameSync(tempPath, CONFIG_PATH);
   }
 
+  /**
+   * Elimina de forma segura toda configuración y archivos temporales de control local.
+   * Usado durante la desvinculación administrativa del agente para limpieza de credenciales.
+   * 
+   * @returns {Promise<void>}
+   */
   static async deleteConfig(): Promise<void> {
     const files = [CONFIG_PATH, `${CONFIG_PATH}.tmp` ];
     for (const f of files) {

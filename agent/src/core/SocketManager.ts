@@ -4,13 +4,20 @@ import https from 'https';
 import tls from 'tls';
 import net from 'net';
 
+interface HttpsAgentWithConnection {
+  createConnection?: (
+    options: { host: string; port: number; servername?: string },
+    callback: (err: Error | null, socket?: tls.TLSSocket) => void,
+  ) => void;
+}
+
 // Crea un HTTPS agent que tuneliza WSS a traves de un proxy HTTP CONNECT.
 // Soporta autenticacion Basic embebida en la URL: http://user:pass@proxy:8080
 function createProxyAgent(proxyUrl: string): https.Agent {
   const proxy = new URL(proxyUrl);
   const agent = new https.Agent();
 
-  (agent as any).createConnection = (
+  (agent as unknown as HttpsAgentWithConnection).createConnection = (
     options: { host: string; port: number; servername?: string },
     callback: (err: Error | null, socket?: tls.TLSSocket) => void,
   ) => {
@@ -51,13 +58,13 @@ export class SocketManager {
   private readonly maxReconnectDelay = 300_000; // Techo: 5 minutos
   private reconnectTimer: NodeJS.Timeout | null = null;
   private pingInterval: NodeJS.Timeout | null = null;
-  private onCommand: (type: string, payload: any, id?: string) => void;
+  private onCommand: (type: string, payload: unknown, id?: string) => void;
   private onLog: (level: string, msg: string) => void;
 
   constructor(
     serverUrl: string,
     token: string,
-    onCommand: (type: string, payload: any, id?: string) => void,
+    onCommand: (type: string, payload: unknown, id?: string) => void,
     onLog: (level: string, msg: string) => void,
     proxyUrl?: string,
   ) {
@@ -112,7 +119,7 @@ export class SocketManager {
 
     this.ws.on('message', (data) => {
       try {
-        const msg = JSON.parse(data.toString());
+        const msg = JSON.parse(data.toString()) as { type: string; commandType: string; payload: unknown; id?: string };
         if (msg.type === 'command') {
           this.onCommand(msg.commandType, msg.payload, msg.id);
         }
@@ -148,7 +155,7 @@ export class SocketManager {
     return this.ws && this.ws.readyState === WebSocket.OPEN;
   }
 
-  send(event: string, data: any) {
+  send(event: string, data: unknown) {
     if (this.isConnected()) {
       this.ws?.send(JSON.stringify({ event, data }));
     }

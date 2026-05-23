@@ -51,7 +51,7 @@ export class ConsoleEngine {
                   const { stdout } = await execAsync(`ping -n 2 ${target}`);
                   const hasResponse = stdout.toLowerCase().includes('respuesta') || stdout.toLowerCase().includes('reply');
                   response = `Respuesta: ${hasResponse ? '✅ ONLINE' : '❌ OFFLINE'}`;
-                } catch (error: any) {
+                } catch (error: unknown) {
                   response = `Respuesta: ❌ OFFLINE`;
                 }
               }
@@ -88,8 +88,9 @@ export class ConsoleEngine {
                     response += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
                     response += `✅ Datos STC recuperados correctamente.`;
                   }
-                } catch (error: any) {
-                  response = `❌ Error SNMP: ${error.message}`;
+                } catch (error: unknown) {
+                  const errMsg = error instanceof Error ? error.message : String(error);
+                  response = `❌ Error SNMP: ${errMsg}`;
                 }
               }
             } else {
@@ -133,7 +134,7 @@ export class ConsoleEngine {
   }
 
   start() {
-    this.server.on('error', (err: any) => {
+    this.server.on('error', (err: Error & { code?: string }) => {
       if (err.code === 'EADDRINUSE') {
         console.warn(`[${this.engineName}] Puerto ${this.port} en uso. Reintentando en 30s...`);
         setTimeout(() => this.start(), 30000);

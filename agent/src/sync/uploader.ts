@@ -1,4 +1,4 @@
-import { getPendingReadings, markSynced } from './database';
+import { getPendingReadings, markSynced, type QueueReading } from './database';
 import { ConfigManager, type AgentConfig } from '../core/config';
 
 export interface UploadResult {
@@ -50,7 +50,7 @@ export async function uploadPending(config: AgentConfig): Promise<UploadResult &
   const { res, updatedConfig } = await postWithAuth(`${config.serverUrl}/api/v1/devices/sync`, { readings }, config);
 
   if (res.ok) {
-    markSynced(pending.map((r: any) => r.id));
+    markSynced(pending.map(r => r.id));
     return { uploaded: pending.length, failed: 0, updatedConfig };
   }
   return { uploaded: 0, failed: pending.length, updatedConfig };
@@ -85,7 +85,7 @@ export async function tryRefresh(config: AgentConfig): Promise<AgentConfig | nul
       body: JSON.stringify({ agentId: config.agentId, refresh_token: config.refreshToken }),
     });
     if (!res.ok) return null;
-    const data = await res.json() as any;
+    const data = await res.json() as { token: string; refresh_token: string };
     const newConfig = { ...config, token: data.token, refreshToken: data.refresh_token };
     await ConfigManager.save(newConfig);
     return newConfig;

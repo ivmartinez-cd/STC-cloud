@@ -33,8 +33,9 @@ async function checkOfflineAgents() {
     if (reactivated > 0) {
       console.log(`[HeartbeatMonitor] ${reactivated} agente(s) REACTIVADOS (heartbeat restaurado)`);
     }
-  } catch (err: any) {
-    console.error('[HeartbeatMonitor] Error en check:', err.message);
+  } catch (err: unknown) {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    console.error('[HeartbeatMonitor] Error en check:', errMsg);
   }
 }
 

@@ -1,17 +1,144 @@
 import { Knex } from "knex";
 import crypto from "crypto";
 
+// ─── Interfaces de Tipado Fuerte ──────────────────────────────────────────────
+// Estas interfaces reemplazan los tipos `any` para cumplir con la Regla 5
+// (Strict TypeScript) de ANTIGRAVITY_SKILLS.md.
+
+/** Interfaz mínima del cliente Redis utilizado para blacklists y colas. */
+interface RedisClient {
+  get(key: string): Promise<string | null>;
+  set(key: string, value: string, mode: string, duration: number): Promise<string | null>;
+}
+
+/** Configuración de red y escaneo enviada desde el portal para actualizar un agente. */
+export interface AgentConfigUpdate {
+  ip_ranges?: Array<{ start: string; end: string }>;
+  snmp_community?: string;
+  scan_interval_minutes?: number;
+  name?: string;
+  toner_warning_threshold?: number;
+  toner_critical_threshold?: number;
+}
+
+/** Dispositivo entrante desde el agente DCA durante el registro inicial. */
+export interface IncomingDevice {
+  ip: string;
+  serial: string | null;
+  brand: string;
+  model: string;
+  name: string;
+}
+
+/** Entrada de log remoto enviada por el agente DCA. */
+export interface IncomingLogEntry {
+  timestamp?: string;
+  time?: string;
+  level?: string;
+  message: string;
+}
+
+/** Lectura de telemetría entrante desde el agente DCA durante la sincronización. */
+export interface IncomingReading {
+  device_id: string;
+  ip?: string;
+  brand?: string;
+  model?: string;
+  name?: string;
+  time?: string;
+  total_pages?: number | string | null;
+  mono_pages?: number | string | null;
+  color_pages?: number | string | null;
+  toner_black?: number | string | null;
+  toner_cyan?: number | string | null;
+  toner_magenta?: number | string | null;
+  toner_yellow?: number | string | null;
+  cartridge_code_black?: string | null;
+  cartridge_code_cyan?: string | null;
+  cartridge_code_magenta?: string | null;
+  cartridge_code_yellow?: string | null;
+  cartridge_serial_black?: string | null;
+  cartridge_serial_cyan?: string | null;
+  cartridge_serial_magenta?: string | null;
+  cartridge_serial_yellow?: string | null;
+  cartridge_capacity_black?: number | string | null;
+  cartridge_capacity_cyan?: number | string | null;
+  cartridge_capacity_magenta?: number | string | null;
+  cartridge_capacity_yellow?: number | string | null;
+  cartridge_printed_black?: number | string | null;
+  cartridge_printed_cyan?: number | string | null;
+  cartridge_printed_magenta?: number | string | null;
+  cartridge_printed_yellow?: number | string | null;
+  cartridge_estimated_black?: number | string | null;
+  cartridge_estimated_cyan?: number | string | null;
+  cartridge_estimated_magenta?: number | string | null;
+  cartridge_estimated_yellow?: number | string | null;
+  poll_method?: string;
+  offline?: boolean;
+}
+
+/** Información de sistema enviada por el agente en cada heartbeat. */
+export interface SystemInfoPayload {
+  version?: string;
+  host_name?: string;
+  host_os?: string;
+  host_ip?: string;
+  uptime?: number;
+}
+
+/** Lectura procesada y mapeada lista para inserción en la tabla `readings`. */
+interface MappedReading {
+  id: string;
+  time: Date;
+  device_id: string;
+  total_pages: number | null;
+  mono_pages: number | null;
+  color_pages: number | null;
+  toner_black: number | null;
+  toner_cyan: number | null;
+  toner_magenta: number | null;
+  toner_yellow: number | null;
+  offline: boolean;
+}
+
+// ─── Utilidades Internas ──────────────────────────────────────────────────────
+
+/**
+ * Genera un hash SHA-256 de un token para almacenamiento seguro en base de datos.
+ * Se utiliza para almacenar refresh tokens sin exponer el valor original.
+ * @param token - Token de texto plano a hashear.
+ * @returns Hash hexadecimal de 64 caracteres.
+ */
 function hashToken(token: string): string {
   return crypto.createHash("sha256").update(token).digest("hex");
 }
 
-export class AgentService {
-  constructor(private db: Knex, private redis?: any) {}
+// ─── Servicio Principal de Agentes ────────────────────────────────────────────
 
+/**
+ * Servicio central de lógica de negocio para la gestión de agentes DCA.
+ * Encapsula operaciones de activación, sincronización de telemetría,
+ * gestión de dispositivos y control de comandos remotos.
+ *
+ * @remarks
+ * Todas las consultas a la base de datos utilizan Knex.js con parametrización
+ * obligatoria para prevenir inyecciones SQL (ver SECURITY_AUDIT.md §3).
+ */
+export class AgentService {
+  constructor(private db: Knex, private redis?: RedisClient) {}
+
+  /**
+   * Genera una llave de activación criptográfica de un solo uso para un nuevo agente.
+   * La llave expira en 24 horas y se vincula al cliente especificado.
+   * @param clientId - UUID del cliente corporativo propietario del agente.
+   * @param name - Nombre descriptivo del monitor (ej: "Sucursal Centro").
+   * @param config - Configuración inicial de red opcional (rangos IP, comunidad SNMP).
+   * @returns Objeto con el agentId generado, la llave de activación y la fecha de expiración.
+   */
   async createActivationKey(
     clientId: string,
     name: string,
-    config?: { ip_ranges?: any[]; snmp_community?: string; scan_interval_minutes?: number }
+    config?: Pick<AgentConfigUpdate, 'ip_ranges' | 'snmp_community' | 'scan_interval_minutes'>
   ) {
     const key = crypto.randomBytes(32).toString("hex"); // 64 chars hex
     const agentId = crypto.randomUUID();
@@ -106,7 +233,13 @@ export class AgentService {
     return { agentId, refreshToken: newRefreshToken };
   }
 
-  async updateConfig(agentId: string, newConfig: any) {
+  /**
+   * Actualiza la configuración de red y escaneo de un agente existente.
+   * Solo los campos proporcionados se actualizan; los demás permanecen intactos.
+   * @param agentId - UUID del agente a configurar.
+   * @param newConfig - Objeto parcial con los campos a modificar.
+   */
+  async updateConfig(agentId: string, newConfig: AgentConfigUpdate) {
     const updates: Record<string, unknown> = {};
 
     if (newConfig.ip_ranges !== undefined) {
@@ -165,7 +298,13 @@ export class AgentService {
     return { agentId, key, expiresAt };
   }
 
-  async registerDevices(agentId: string, devices: any[]) {
+  /**
+   * Registra o actualiza dispositivos de impresión descubiertos por el agente.
+   * Utiliza `ON CONFLICT` sobre `(agent_id, serial_number)` para evitar duplicados.
+   * @param agentId - UUID del agente que reporta los dispositivos.
+   * @param devices - Array de dispositivos descubiertos en la red local del cliente.
+   */
+  async registerDevices(agentId: string, devices: IncomingDevice[]) {
     for (const device of devices) {
       try {
         await this.db.raw(`
@@ -186,8 +325,9 @@ export class AgentService {
           (device.model || "").slice(0, 100),
           (device.name || "").slice(0, 100)
         ]);
-      } catch (e: any) {
-        console.error(`[AGENT_SERVICE] Error registering device ${device.ip}:`, e.message);
+      } catch (e: unknown) {
+        const errMsg = e instanceof Error ? e.message : String(e);
+        console.error(`[AGENT_SERVICE] Error registering device ${device.ip}:`, errMsg);
         throw e;
       }
     }
@@ -195,7 +335,13 @@ export class AgentService {
 
   // --- Remote Logs & Commands ---
 
-  async ingestLogs(agentId: string, logs: any[]) {
+  /**
+   * Ingesta de logs remotos enviados por el agente DCA.
+   * Soporta timestamps en formato DD/MM/YYYY y ISO 8601.
+   * @param agentId - UUID del agente emisor.
+   * @param logs - Array de entradas de log con timestamp, nivel y mensaje.
+   */
+  async ingestLogs(agentId: string, logs: IncomingLogEntry[]) {
     if (!logs || logs.length === 0) return;
     
     const rows = logs.map(l => {
@@ -238,22 +384,36 @@ export class AgentService {
   }
 
   // Actualiza o crea dispositivos y registra lecturas
-  async syncReadings(redis: any, readings: any[], agentId: string) {
+  /**
+   * Sincroniza lecturas de telemetría desde el agente hacia la base de datos cloud.
+   * Para cada lectura, realiza un UPSERT del dispositivo por serial_number y
+   * registra la lectura en el historial de la tabla `readings`.
+   *
+   * @remarks
+   * - Las lecturas se asocian al dispositivo por su número de serie físico inmutable.
+   * - Utiliza `ON CONFLICT (agent_id, serial_number)` para prevenir duplicados.
+   * - Los contadores se parsean con validación estricta (parseCount/parseToner).
+   *
+   * @param redis - Cliente Redis para encolar evaluaciones de alertas asíncronas.
+   * @param readings - Array de lecturas crudas enviadas por el agente DCA.
+   * @param agentId - UUID del agente emisor de la telemetría.
+   */
+  async syncReadings(redis: RedisClient, readings: IncomingReading[], agentId: string) {
     if (!readings || readings.length === 0) return;
 
-    const mappedReadings: any[] = [];
+    const mappedReadings: MappedReading[] = [];
 
     // Procesando lecturas (log removido por ruido en producción)
     
-    const parseCount = (v: any) => {
+    const parseCount = (v: number | string | null | undefined): number | null => {
       if (v === null || v === undefined) return null;
-      const n = parseInt(v, 10);
+      const n = typeof v === "number" ? v : parseInt(v, 10);
       return isNaN(n) ? null : n;
     };
 
-    const parseToner = (v: any) => {
+    const parseToner = (v: number | string | null | undefined): number | null => {
       if (v === null || v === undefined) return null;
-      const n = parseInt(v, 10);
+      const n = typeof v === "number" ? v : parseInt(v, 10);
       if (isNaN(n)) return null;
       return Math.min(100, Math.max(0, n));
     };
@@ -420,13 +580,14 @@ export class AgentService {
           toner_yellow: parseToner(r.toner_yellow),
           offline:      r.offline ?? false,
         });
-      } catch (err: any) {
-        console.error(`[SYNC] Error procesando dispositivo ${r.device_id}:`, err.message);
+      } catch (err: unknown) {
+        const errMsg = err instanceof Error ? err.message : String(err);
+        console.error(`[SYNC] Error procesando dispositivo ${r.device_id}:`, errMsg);
         // Continuamos con el resto de la tanda para no bloquear todo el agente
         await this.ingestLogs(agentId, [{
           time: new Date().toISOString(),
           level: 'ERROR',
-          message: `Device Sync Fail [${r.ip || r.device_id}]: ${err.message}`
+          message: `Device Sync Fail [${r.ip || r.device_id}]: ${errMsg}`
         }]);
       }
     }
@@ -435,12 +596,13 @@ export class AgentService {
       try {
         // Inserción masiva de lecturas en el historial
         await this.db("readings").insert(mappedReadings);
-      } catch (err: any) {
-        console.error("[SYNC] Error al insertar lecturas:", err.message);
+      } catch (err: unknown) {
+        const errMsg = err instanceof Error ? err.message : String(err);
+        console.error("[SYNC] Error al insertar lecturas:", errMsg);
         await this.ingestLogs(agentId, [{
           time: new Date().toISOString(),
           level: 'ERROR',
-          message: `Readings Insert Error: ${err.message}`
+          message: `Readings Insert Error: ${errMsg}`
         }]);
         throw err;
       }
@@ -459,7 +621,14 @@ export class AgentService {
     await this.heartbeat(agentId);
   }
 
-  async addCommand(agentId: string, type: string, payload: any = {}, createdBy?: string) {
+  /**
+   * Registra un comando remoto pendiente para un agente DCA.
+   * @param agentId - UUID del agente destinatario.
+   * @param type - Tipo de comando (FORCE_SCAN, RESTART, UPDATE_CONFIG, etc.).
+   * @param payload - Datos adicionales del comando.
+   * @param createdBy - ID del usuario del portal que originó el comando.
+   */
+  async addCommand(agentId: string, type: string, payload: Record<string, unknown> = {}, createdBy?: string) {
     const [command] = await this.db("agent_commands").insert({
       agent_id: agentId,
       type,
@@ -489,7 +658,8 @@ export class AgentService {
     }));
   }
 
-  async updateCommandResult(commandId: string, status: string, result: any) {
+  /** Actualiza el resultado de un comando ejecutado por el agente. */
+  async updateCommandResult(commandId: string, status: string, result: Record<string, unknown> | null) {
     await this.db("agent_commands")
       .where({ id: commandId })
       .update({
@@ -500,7 +670,14 @@ export class AgentService {
   }
 
 
-  async revokeToken(redis: any, agentId: string, ttlSeconds: number, requestIp?: string) {
+  /**
+   * Revoca el token de acceso de un agente, añadiéndolo a la blacklist de Redis.
+   * @param redis - Cliente Redis para gestión de blacklist.
+   * @param agentId - UUID del agente a revocar.
+   * @param ttlSeconds - Tiempo de vida de la blacklist en segundos.
+   * @param requestIp - IP del solicitante (para registro de auditoría).
+   */
+  async revokeToken(redis: RedisClient, agentId: string, ttlSeconds: number, requestIp?: string) {
     await redis.set(`blacklist:${agentId}`, "true", "EX", ttlSeconds);
     await this.db("agents").where({ id: agentId }).update({ status: "revoked" });
 
@@ -512,14 +689,21 @@ export class AgentService {
     });
   }
 
-  async isBlacklisted(redis: any, agentId: string) {
+  /** Verifica si un agente está en la blacklist de Redis (token revocado). */
+  async isBlacklisted(redis: RedisClient, agentId: string) {
     const val = await redis.get(`blacklist:${agentId}`);
     return !!val;
   }
 
 
-  async heartbeat(agentId: string, systemInfo?: any) {
-    const updateData: any = {
+  /**
+   * Registra un latido (heartbeat) del agente, actualizando su último contacto
+   * e información de sistema operativo del host.
+   * @param agentId - UUID del agente emisor.
+   * @param systemInfo - Datos opcionales del sistema (versión, hostname, OS, IP).
+   */
+  async heartbeat(agentId: string, systemInfo?: SystemInfoPayload) {
+    const updateData: Record<string, unknown> = {
       last_seen: new Date(),
       status: this.db.raw("CASE WHEN status = 'offline' THEN 'active' ELSE status END")
     };

@@ -1,8 +1,15 @@
 import { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { Knex } from "knex";
 import Redis from "ioredis";
-import { AgentService } from "../../services/agentService";
+import { AgentService, AgentConfigUpdate } from "../../services/agentService";
 import { sendCommandToAgent } from "../../ws/index";
+import type { PortalUser } from "../middlewares/authMiddleware";
+
+/** Parámetros de ruta con ID de agente. */
+interface AgentIdParams { id: string; }
+
+/** Query string con límite opcional. */
+interface LimitQuery { limit?: string; }
 
 function formatDateAR(date: Date): string {
   try {
@@ -52,7 +59,7 @@ export function createPortalAgentController(
         .orderBy("agents.created_at", "desc"),
 
     getAgent: async (request: FastifyRequest) => {
-      const { id } = request.params as any;
+      const { id } = request.params as AgentIdParams;
       const agent = await db("agents")
         .where("agents.id", id)
         .select(
@@ -90,7 +97,7 @@ export function createPortalAgentController(
     },
 
     getAgentDevices: async (request: FastifyRequest) => {
-      const { id } = request.params as any;
+      const { id } = request.params as AgentIdParams;
       const monthlySubquery = db("readings")
         .select(
           "device_id",
@@ -116,7 +123,7 @@ export function createPortalAgentController(
 
     createAgent: async (request: FastifyRequest) => {
       const { clientId, name, ip_ranges, snmp_community, scan_interval_minutes } =
-        request.body as any;
+        request.body as { clientId: string; name: string; ip_ranges?: Array<{ start: string; end: string }>; snmp_community?: string; scan_interval_minutes?: number };
       return await agentService.createActivationKey(clientId, name, {
         ip_ranges,
         snmp_community,
@@ -125,7 +132,7 @@ export function createPortalAgentController(
     },
 
     deleteAgent: async (request: FastifyRequest, reply: FastifyReply) => {
-      const { id } = request.params as any;
+      const { id } = request.params as AgentIdParams;
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       if (!uuidRegex.test(id)) {
         return reply.status(400).send({ error: "ID de agente inválido" });
@@ -135,7 +142,7 @@ export function createPortalAgentController(
 
         await db.transaction(async (trx) => {
           const devices = await trx("devices").where("agent_id", id).select("id");
-          const deviceIds = devices.map((d: any) => d.id);
+          const deviceIds = devices.map((d: { id: string }) => d.id);
 
           if (deviceIds.length > 0) {
             await trx("readings").whereIn("device_id", deviceIds).delete();
@@ -146,32 +153,34 @@ export function createPortalAgentController(
         });
 
         return { status: "deleted" };
-      } catch (err: any) {
+      } catch (err: unknown) {
         fastify.log.error(err, "Error al eliminar agente");
-        return reply.status(500).send({ error: "Internal Server Error", details: err.message });
+        const errMsg = err instanceof Error ? err.message : String(err);
+        return reply.status(500).send({ error: "Internal Server Error", details: errMsg });
       }
     },
 
     revokeAgent: async (request: FastifyRequest) => {
-      const { id } = request.params as any;
+      const { id } = request.params as AgentIdParams;
       const requestIp = (request.headers["x-forwarded-for"] as string) || request.ip;
       await agentService.revokeToken(redis, id, 30 * 24 * 60 * 60, requestIp);
       return { status: "revoked" };
     },
 
     regenerateKey: async (request: FastifyRequest, reply: FastifyReply) => {
-      const { id } = request.params as any;
+      const { id } = request.params as AgentIdParams;
       try {
         return await agentService.regenerateActivationKey(id);
-      } catch (err: any) {
-        return reply.status(404).send({ error: err.message });
+      } catch (err: unknown) {
+        const errMsg = err instanceof Error ? err.message : String(err);
+        return reply.status(404).send({ error: errMsg });
       }
     },
 
     sendCommand: async (request: FastifyRequest) => {
-      const { id } = request.params as any;
-      const { type, payload } = request.body as any;
-      const user = (request as any).user;
+      const { id } = request.params as AgentIdParams;
+      const { type, payload } = request.body as { type: string; payload?: Record<string, unknown> };
+      const user = (request as FastifyRequest & { user: PortalUser }).user;
 
       const command = await agentService.addCommand(id, type, payload || {}, user?.userId);
       fastify.log.info(
@@ -188,7 +197,7 @@ export function createPortalAgentController(
     },
 
     triggerScan: async (request: FastifyRequest) => {
-      const { id } = request.params as any;
+      const { id } = request.params as AgentIdParams;
       const sentInstant = sendCommandToAgent(id, "RESCAN");
       await agentService.addCommand(id, "RESCAN");
       return {
@@ -200,13 +209,13 @@ export function createPortalAgentController(
     },
 
     getLogs: async (request: FastifyRequest) => {
-      const { id } = request.params as any;
-      const { limit } = request.query as any;
-      return await agentService.getLogs(id, parseInt(limit) || 50);
+      const { id } = request.params as AgentIdParams;
+      const { limit } = request.query as LimitQuery;
+      return await agentService.getLogs(id, limit ? parseInt(limit, 10) : 50);
     },
 
     exportLogs: async (request: FastifyRequest, reply: FastifyReply) => {
-      const { id } = request.params as any;
+      const { id } = request.params as AgentIdParams;
       const logs = await agentService.getLogs(id, 1000);
       logs.reverse();
 
@@ -219,8 +228,8 @@ export function createPortalAgentController(
       report += "[ FECHA Y HORA ]        [ NIVEL ]   [ MENSAJE ]\n";
       report += "--------------------------------------------------------------------------------\n";
 
-      logs.forEach((l: any) => {
-        const dateObj = new Date(l.timestamp);
+      logs.forEach((l: { timestamp?: string; level?: string; message: string }) => {
+        const dateObj = new Date(l.timestamp ?? 0);
         const time = isNaN(dateObj.getTime()) ? "---" : formatDateAR(dateObj);
         const level = (l.level || "INFO").padEnd(8);
         report += `${time.padEnd(23)} ${level} ${l.message}\n`;
@@ -236,13 +245,13 @@ export function createPortalAgentController(
     },
 
     getConfig: async (request: FastifyRequest) => {
-      const { id } = request.params as any;
+      const { id } = request.params as AgentIdParams;
       return await agentService.getConfig(id);
     },
 
     updateConfig: async (request: FastifyRequest) => {
-      const { id } = request.params as any;
-      return await agentService.updateConfig(id, request.body);
+      const { id } = request.params as AgentIdParams;
+      return await agentService.updateConfig(id, request.body as AgentConfigUpdate);
     },
   };
 }

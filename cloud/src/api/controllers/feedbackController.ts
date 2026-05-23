@@ -1,5 +1,6 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
 import type { Knex } from "knex";
+import type { PortalUser } from "../middlewares/authMiddleware";
 
 interface FeedbackBody {
   type: "bug" | "enhancement";
@@ -11,15 +12,11 @@ interface FeedbackBody {
 export function createFeedbackController(fastify: FastifyInstance, db: Knex) {
   return {
     submit: async (request: FastifyRequest) => {
-      const user = (request as any).user as {
-        userId: string;
-        username: string;
-        role: string;
-      };
+      const user = (request as FastifyRequest & { user: PortalUser }).user;
       const { type, title, description, image_url } = request.body as FeedbackBody;
 
       let actualUserId = user.userId;
-      let actualUsername = user.username;
+      let actualUsername = user.username || "unknown";
 
       if (user.userId === "admin") {
         const actualAdmin = await db("users").where({ username: "admin" }).first();
@@ -61,7 +58,7 @@ export function createFeedbackController(fastify: FastifyInstance, db: Knex) {
     },
 
     list: async (request: FastifyRequest, reply: FastifyReply) => {
-      const user = (request as any).user as { role: string };
+      const user = (request as FastifyRequest & { user: PortalUser }).user;
       if (user.role !== "admin") {
         return reply.status(403).send({ error: "Solo administradores pueden ver los reportes" });
       }
@@ -84,11 +81,7 @@ export function createFeedbackController(fastify: FastifyInstance, db: Knex) {
     },
 
     updateStatus: async (request: FastifyRequest, reply: FastifyReply) => {
-      const user = (request as any).user as {
-        userId: string;
-        username: string;
-        role: string;
-      };
+      const user = (request as FastifyRequest & { user: PortalUser }).user;
       if (user.role !== "admin") {
         return reply.status(403).send({ error: "Solo administradores pueden actualizar los reportes" });
       }
@@ -98,7 +91,7 @@ export function createFeedbackController(fastify: FastifyInstance, db: Knex) {
 
       // Reemplazamos la lógica del usuario si es el admin harcodeado
       let actualUserId = user.userId;
-      let actualUsername = user.username;
+      let actualUsername = user.username || "unknown";
       if (user.userId === "admin") {
         const actualAdmin = await db("users").where({ username: "admin" }).first();
         if (actualAdmin) {

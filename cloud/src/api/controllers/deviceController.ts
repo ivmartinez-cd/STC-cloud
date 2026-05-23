@@ -19,7 +19,7 @@ export function createDeviceController(db: Knex) {
         .orderBy("clients.name"),
 
     getDevice: async (request: FastifyRequest, reply: FastifyReply) => {
-      const { id } = request.params as any;
+      const { id } = request.params as { id: string };
       const device = await db("devices")
         .where("devices.id", id)
         .select(
@@ -38,8 +38,8 @@ export function createDeviceController(db: Knex) {
     },
 
     getDeviceReadings: async (request: FastifyRequest) => {
-      const { id } = request.params as any;
-      const { from, to, limit } = request.query as any;
+      const { id } = request.params as { id: string };
+      const { from, to, limit } = request.query as { from?: string; to?: string; limit?: string };
 
       const query = db("readings")
         .where({ device_id: id })

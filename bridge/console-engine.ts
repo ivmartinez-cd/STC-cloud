@@ -62,8 +62,10 @@ const server = net.createServer((socket) => {
             try {
               const { stdout } = await execAsync(`ping -n 4 ${target}`);
               response = stdout;
-            } catch (error: any) {
-              response = `Error haciendo ping a ${target}:\n${error.stdout || error.message}`;
+            } catch (error: unknown) {
+              const errMsg = error instanceof Error ? error.message : String(error);
+              const errStdout = error && typeof error === 'object' && 'stdout' in error ? String((error as { stdout: unknown }).stdout) : '';
+              response = `Error haciendo ping a ${target}:\n${errStdout || errMsg}`;
             }
           }
         } else {

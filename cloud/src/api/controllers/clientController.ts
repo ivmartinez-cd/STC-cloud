@@ -4,7 +4,14 @@ import { Knex } from "knex";
 export function createClientController(db: Knex) {
   return {
     createClient: async (request: FastifyRequest) => {
-      const data = request.body as any;
+      const data = request.body as Partial<{
+        name: string;
+        business_name: string;
+        tax_id: string;
+        billing_email: string;
+        billing_address: string;
+        active: boolean;
+      }>;
       const [client] = await db("clients").insert(data).returning("*");
       return client;
     },
@@ -27,7 +34,7 @@ export function createClientController(db: Knex) {
         .orderBy("clients.name"),
 
     getClient: async (request: FastifyRequest) => {
-      const { id } = request.params as any;
+      const { id } = request.params as { id: string };
       return await db("clients")
         .where("clients.id", id)
         .select(
@@ -47,7 +54,7 @@ export function createClientController(db: Knex) {
     },
 
     getClientMonitors: async (request: FastifyRequest) => {
-      const { id } = request.params as any;
+      const { id } = request.params as { id: string };
       return await db("agents")
         .where("agents.client_id", id)
         .select(
@@ -69,7 +76,7 @@ export function createClientController(db: Knex) {
     },
 
     getClientUsage: async (request: FastifyRequest) => {
-      const { id } = request.params as any;
+      const { id } = request.params as { id: string };
       const result = await db.raw(
         `
         SELECT
@@ -97,11 +104,11 @@ export function createClientController(db: Knex) {
       `,
         [id]
       );
-      return result.rows;
+      return result.rows as Array<{ month: string; month_date: Date; mono: number; color: number }>;
     },
 
     getClientDevices: async (request: FastifyRequest) => {
-      const { id } = request.params as any;
+      const { id } = request.params as { id: string };
       return await db("devices")
         .join("agents", "devices.agent_id", "agents.id")
         .where("agents.client_id", id)

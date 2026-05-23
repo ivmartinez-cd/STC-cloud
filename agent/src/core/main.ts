@@ -1,4 +1,4 @@
-﻿import os from 'os';
+import os from 'os';
 import fs from 'fs';
 import path from 'path';
 import { exec, spawn } from 'child_process';
@@ -60,12 +60,19 @@ function* ipRange(start: string, end: string): Generator<string> {
 
 // --- Variables de Estado ---
 
+interface CommandResult {
+  status: 'success' | 'error';
+  type: string;
+  result: Record<string, unknown> | { error: string };
+  id?: string;
+}
+
 let currentConfig: AgentConfig;
 let scanInterval: NodeJS.Timeout | null = null;
 let lastScanErrors = 0;
 let isScanning = false;
 let isSyncing = false;
-let commandResults: any[] = [];
+let commandResults: CommandResult[] = [];
 let processedCommandIds = new Set<string>();
 
 function getLocalIp(): string {
@@ -130,7 +137,10 @@ async function heartbeat(): Promise<void> {
         log('ERROR', 'No se pudo renovar el token. El agente podria estar desvinculado.');
       }
     } else if (res.ok) {
-      const data = await res.json() as any;
+      const data = await res.json() as {
+        config?: RemoteConfigPayload;
+        commands?: Array<{ id?: string; type: string; payload?: unknown }>;
+      };
       
       // Limpiar resultados enviados satisfactoriamente
       commandResults = [];
@@ -166,15 +176,16 @@ async function heartbeat(): Promise<void> {
     } else if (res.status === 403) {
       log('WARN', `Acceso denegado (HTTP ${res.status}).`);
     }
-  } catch (e: any) {
-    log('WARN', `Heartbeat error: ${e.message}`);
+  } catch (e: unknown) {
+    const errMsg = e instanceof Error ? e.message : String(e);
+    log('WARN', `Heartbeat error: ${errMsg}`);
   } finally {
     // Re-programar siguiente heartbeat cada 60 segundos
     setTimeout(heartbeat, 60_000);
   }
 }
 
-async function handleCommand(type: string, payload: any = {}, id?: string) {
+async function handleCommand(type: string, payload: unknown = {}, id?: string) {
   log('INFO', `Ejecutando comando remoto: ${type} (ID: ${id || 'N/A'})`);
   try {
     let result = {};
@@ -192,7 +203,10 @@ async function handleCommand(type: string, payload: any = {}, id?: string) {
         break;
       case 'STC_CONSOLE':
         const connector = new ConsoleConnector();
-        const output = await connector.execute(payload.command);
+        const commandText = typeof payload === 'object' && payload !== null && 'command' in payload
+          ? String((payload as { command?: unknown }).command ?? '')
+          : '';
+        const output = await connector.execute(commandText);
         result = { output };
         break;
       case 'FORCE_UPDATE': {
@@ -204,7 +218,7 @@ async function handleCommand(type: string, payload: any = {}, id?: string) {
         throw new Error(`Comando no soportado: ${type}`);
     }
     
-    const finalResult = { status: 'success', type, result, id };
+    const finalResult: CommandResult = { status: 'success', type, result, id };
     
     // Notificar va WS para feedback instantneo si es posible
     if (socket && socket.isConnected()) {
@@ -212,9 +226,10 @@ async function handleCommand(type: string, payload: any = {}, id?: string) {
     }
 
     return finalResult;
-  } catch (e: any) {
-    log('ERROR', `Error ejecutando comando ${type}: ${e.message}`);
-    const finalError = { status: 'error', type, result: { error: e.message }, id };
+  } catch (e: unknown) {
+    const errMsg = e instanceof Error ? e.message : String(e);
+    log('ERROR', `Error ejecutando comando ${type}: ${errMsg}`);
+    const finalError: CommandResult = { status: 'error', type, result: { error: errMsg }, id };
     
     if (socket && socket.isConnected()) {
       socket.send('command_result', finalError);
@@ -224,7 +239,13 @@ async function handleCommand(type: string, payload: any = {}, id?: string) {
   }
 }
 
-async function handleRemoteConfig(remote: any): Promise<void> {
+interface RemoteConfigPayload {
+  ip_ranges?: Array<{ start: string; end: string }>;
+  snmp_community?: string;
+  scan_interval_minutes?: number;
+}
+
+async function handleRemoteConfig(remote: RemoteConfigPayload): Promise<void> {
   let changed = false;
   let triggerImmediateScan = false;
 
@@ -309,9 +330,10 @@ async function snmpScan(config: AgentConfig, loop = true): Promise<void> {
 
           enqueueReading(reading);
           log('INFO', `[${ip}] ${reading.model} | Total: ${reading.total_pages ?? '-'} | Method: ${reading.poll_method}`);
-        } catch (e: any) {
+        } catch (e: unknown) {
+          const errMsg = e instanceof Error ? e.message : String(e);
           errors++;
-          log('WARN', `[${ip}] Scan: ${e.message}`);
+          log('WARN', `[${ip}] Scan: ${errMsg}`);
         }
       }
     });
@@ -347,8 +369,9 @@ async function registerDevice(config: AgentConfig, r: DeviceReading): Promise<bo
       }),
     });
     return res.ok;
-  } catch (e: any) {
-    log('WARN', `Register device ${r.ip}: ${e.message}`);
+  } catch (e: unknown) {
+    const errMsg = e instanceof Error ? e.message : String(e);
+    log('WARN', `Register device ${r.ip}: ${errMsg}`);
     return false;
   }
 }
@@ -368,8 +391,9 @@ async function syncLoop(loop = true): Promise<void> {
     }
     if (uploaded > 0) log('INFO', `Sync: ${uploaded} lecturas subidas`);
     if (failed > 0)   log('WARN', `Sync: ${failed} lecturas retenidas offline`);
-  } catch (e: any) {
-    log('WARN', `Sync error: ${e.message}`);
+  } catch (e: unknown) {
+    const errMsg = e instanceof Error ? e.message : String(e);
+    log('WARN', `Sync error: ${errMsg}`);
   } finally {
     isSyncing = false;
     if (loop) {
@@ -439,8 +463,9 @@ async function applyZipUpdate(zipFilePath: string): Promise<boolean> {
     setTimeout(() => process.exit(0), 500);
     return true;
 
-  } catch (e: any) {
-    log('WARN', `Error aplicando parche ZIP: ${e.message}`);
+  } catch (e: unknown) {
+    const errMsg = e instanceof Error ? e.message : String(e);
+    log('WARN', `Error aplicando parche ZIP: ${errMsg}`);
     try { if (fs.existsSync(zipFilePath)) fs.unlinkSync(zipFilePath); }                  catch {}
     try { if (fs.existsSync(stagingDir)) fs.rmSync(stagingDir, { recursive: true }); }  catch {}
     try { if (fs.existsSync(batPath))    fs.unlinkSync(batPath); }                       catch {}
@@ -463,7 +488,7 @@ async function checkFlags(): Promise<void> {
       fs.unlinkSync(forceUpdateFlag);
       await checkForUpdate(currentConfig.serverUrl, true);
     }
-  } catch (e: any) {
+  } catch (e: unknown) {
     // Silencio en caso de error de acceso a archivos
   }
 }
@@ -501,7 +526,7 @@ async function checkForUpdate(serverUrl: string, force = false): Promise<boolean
       return false;
     }
 
-    const data = await res.json() as any;
+    const data = await res.json() as { version?: string; url?: string; hash?: string };
     if (!data.version || !data.url) {
        isUpdating = false;
        return false;
@@ -582,8 +607,9 @@ async function checkForUpdate(serverUrl: string, force = false): Promise<boolean
           return false;
         }
         log('INFO', 'Firma Ed25519 verificada correctamente.');
-      } catch (e: any) {
-        log('ERROR', `VIOLACION DE INTEGRIDAD [Ed25519]: Error al verificar firma del paquete. URL: ${data.url} | Version: ${data.version} | Error: ${e.message}. Actualizacion rechazada.`);
+      } catch (e: unknown) {
+        const errMsg = e instanceof Error ? e.message : String(e);
+        log('ERROR', `VIOLACION DE INTEGRIDAD [Ed25519]: Error al verificar firma del paquete. URL: ${data.url} | Version: ${data.version} | Error: ${errMsg}. Actualizacion rechazada.`);
         isUpdating = false;
         return false;
       }
@@ -601,13 +627,15 @@ async function checkForUpdate(serverUrl: string, force = false): Promise<boolean
       fs.renameSync(tempPath, bundlePath);
       log('INFO', `Actualizacion aplicada (v${data.version}). Reiniciando para aplicar cambios...`);
       process.exit(0); 
-    } catch (e: any) {
-      log('ERROR', `Error al mover bundle: ${e.message}`);
+    } catch (e: unknown) {
+      const errMsg = e instanceof Error ? e.message : String(e);
+      log('ERROR', `Error al mover bundle: ${errMsg}`);
       isUpdating = false;
       return false;
     }
-  } catch (error: any) {
-    log('ERROR', `Error en checkForUpdate: ${error.message}`);
+  } catch (error: unknown) {
+    const errMsg = error instanceof Error ? error.message : String(error);
+    log('ERROR', `Error en checkForUpdate: ${errMsg}`);
     isUpdating = false;
     return false;
   }
@@ -657,8 +685,8 @@ async function printStatus(): Promise<void> {
   try {
     config = await ConfigManager.load();
     hardwareBindingIntegrity = 'ok';
-  } catch (e: any) {
-    const msg: string = e.message ?? '';
+  } catch (e: unknown) {
+    const msg: string = e instanceof Error ? (e.message ?? '') : String(e);
     if (msg.startsWith('HWID_MISMATCH')) {
       hardwareBindingIntegrity = 'hwid-mismatch';
     } else if (msg.includes('Config no encontrada')) {
@@ -678,8 +706,9 @@ async function printStatus(): Promise<void> {
         signal: AbortSignal.timeout(5_000),
       });
       cloudConnectivity = { reachable: res.ok, latencyMs: Date.now() - t0, httpStatus: res.status };
-    } catch (e: any) {
-      cloudConnectivity = { reachable: false, error: e.message ?? 'network-error' };
+    } catch (e: unknown) {
+      const errMsg = e instanceof Error ? (e.message ?? 'network-error') : String(e);
+      cloudConnectivity = { reachable: false, error: errMsg };
     }
   } else {
     cloudConnectivity = { reachable: false, error: 'not-activated' };
@@ -741,8 +770,9 @@ async function setProxy(): Promise<void> {
     }
     await ConfigManager.save(config);
     process.exit(0);
-  } catch (e: any) {
-    console.error(`Error al configurar proxy: ${e.message}`);
+  } catch (e: unknown) {
+    const errMsg = e instanceof Error ? e.message : String(e);
+    console.error(`Error al configurar proxy: ${errMsg}`);
     process.exit(1);
   }
 }
@@ -783,7 +813,7 @@ async function activate(): Promise<void> {
     if (!res.ok) {
       let errorMsg = `HTTP ${res.status}`;
       try {
-        const err = await res.json() as any;
+        const err = await res.json() as { error?: string; message?: string };
         errorMsg = err.error || err.message || errorMsg;
       } catch { /* ignore parse error */ }
       // exit(2) = clave invalida/no autorizada; exit(1) = error de servidor
@@ -791,7 +821,7 @@ async function activate(): Promise<void> {
       throw Object.assign(new Error(errorMsg), { _stcExitCode: invalidKey ? 2 : 1 });
     }
 
-    const data = await res.json() as any;
+    const data = await res.json() as { agentId: string; token: string; refresh_token: string };
 
     await ConfigManager.save({
       serverUrl,
@@ -807,17 +837,19 @@ async function activate(): Promise<void> {
     console.log(`Activado. ID: ${data.agentId}`);
     console.log(`Config cifrada en: ${DATA_DIR}`);
     process.exit(0);
-  } catch (e: any) {
-    console.error(`Error de activacion: ${e.message}`);
+  } catch (e: unknown) {
+    const err = e as Error & { _stcExitCode?: number; code?: string };
+    const errMsg = err.message ?? String(e);
+    console.error(`Error de activacion: ${errMsg}`);
     // Propagamos exit code especÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â­fico si viene del bloque de respuesta HTTP
-    if (e._stcExitCode) {
-      process.exit(e._stcExitCode);
+    if (err._stcExitCode) {
+      process.exit(err._stcExitCode);
     }
     // exit(3) = error de red/conectividad; exit(1) = error generico
     const networkError =
-      e.code === 'ECONNREFUSED' || e.code === 'ENOTFOUND' || e.code === 'ETIMEDOUT' ||
-      e.name === 'TimeoutError' || e.name === 'AbortError' ||
-      (e.message ?? '').includes('fetch failed');
+      err.code === 'ECONNREFUSED' || err.code === 'ENOTFOUND' || err.code === 'ETIMEDOUT' ||
+      err.name === 'TimeoutError' || err.name === 'AbortError' ||
+      errMsg.includes('fetch failed');
     process.exit(networkError ? 3 : 1);
   }
 }
@@ -853,8 +885,9 @@ async function main(): Promise<void> {
     log('INFO', 'Cargando configuracion...');
     try {
       currentConfig = await ConfigManager.load();
-    } catch (e: any) {
-      log('ERROR', `Error critico al cargar configuracion: ${e.message}`);
+    } catch (e: unknown) {
+      const errMsg = e instanceof Error ? e.message : String(e);
+      log('ERROR', `Error critico al cargar configuracion: ${errMsg}`);
       process.exit(1);
     }
 
@@ -865,11 +898,15 @@ async function main(): Promise<void> {
     if (currentConfig.proxyUrl) {
       try {
         // eslint-disable-next-line @typescript-eslint/no-require-imports
-        const undici = require('undici') as any;
+        const undici = require('undici') as unknown as {
+          ProxyAgent: new (url: string) => unknown;
+          setGlobalDispatcher: (dispatcher: unknown) => void;
+        };
         undici.setGlobalDispatcher(new undici.ProxyAgent(currentConfig.proxyUrl));
         log('INFO', `Proxy HTTP configurado: ${currentConfig.proxyUrl}`);
-      } catch (e: any) {
-        log('WARN', `No se pudo configurar el proxy: ${e.message}`);
+      } catch (e: unknown) {
+        const errMsg = e instanceof Error ? e.message : String(e);
+        log('WARN', `No se pudo configurar el proxy: ${errMsg}`);
       }
     }
 
@@ -902,7 +939,7 @@ async function main(): Promise<void> {
         }
         await handleCommand(type, payload, id);
       },
-      (level, msg) => log(level as any, msg),
+      (level, msg) => log(level as 'INFO' | 'WARN' | 'ERROR', msg),
       currentConfig.proxyUrl,
     );
     socket.connect();
@@ -937,8 +974,10 @@ async function main(): Promise<void> {
     process.on('SIGTERM', () => shutdown('SIGTERM'));
     process.on('SIGHUP',  () => shutdown('SIGHUP'));
     process.on('SIGBREAK', () => shutdown('SIGBREAK')); // Windows Ctrl+Break
-  } catch (err: any) {
-    log('ERROR', `ERROR FATAL EN MAIN: ${err.message}\n${err.stack}`);
+  } catch (err: unknown) {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    const errStack = err instanceof Error ? (err.stack ?? '') : '';
+    log('ERROR', `ERROR FATAL EN MAIN: ${errMsg}\n${errStack}`);
     try { closeQueue(); } catch { /* ignore */ }
     process.exit(1);
   }

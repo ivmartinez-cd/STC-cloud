@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import type { Knex } from "knex";
 import { createFeedbackController } from "../controllers/feedbackController";
+import type { AuthHook } from "../middlewares/authMiddleware";
 
 const submitFeedbackSchema = {
   body: {
@@ -35,7 +36,7 @@ const updateStatusSchema = {
 export function registerFeedbackRoutes(
   fastify: FastifyInstance,
   db: Knex,
-  portalAuth: (request: any, reply: any) => Promise<void>
+  portalAuth: AuthHook
 ) {
   const ctrl = createFeedbackController(fastify, db);
 

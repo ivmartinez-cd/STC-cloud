@@ -39,7 +39,7 @@ export function createDashboardController(db: Knex, agentService: AgentService) 
           ) sub
         `
           )
-          .then((r: any) => r.rows[0]),
+          .then((r: { rows: Array<{ total: string | null }> }) => r.rows[0]),
 
         db("clients")
           .select("clients.name", "clients.id")
@@ -103,8 +103,8 @@ export function createDashboardController(db: Knex, agentService: AgentService) 
           volume: Number(monthlyVolume?.total || 0),
           deviceTrend,
         },
-        topClients: topClients.map((c: any) => ({ ...c, device_count: Number(c.device_count) })),
-        brands: brandStats.map((b: any) => ({ ...b, count: Number(b.count) })),
+        topClients: (topClients as Array<{ name: string; id: string; device_count: string | number }>).map((c) => ({ ...c, device_count: Number(c.device_count) })),
+        brands: (brandStats as Array<{ brand: string; count: string | number }>).map((b) => ({ ...b, count: Number(b.count) })),
         offlineAgents,
         systemHealth: {
           status: "healthy",
@@ -118,13 +118,13 @@ export function createDashboardController(db: Knex, agentService: AgentService) 
     },
 
     globalSearch: async (request: FastifyRequest) => {
-      const { q } = request.query as any;
+      const { q } = request.query as { q?: string };
       if (!q || q.length < 2) return { clients: [], devices: [] };
       return await agentService.globalSearch(q);
     },
 
     getAlerts: async (request: FastifyRequest) => {
-      const { resolved } = request.query as any;
+      const { resolved } = request.query as { resolved?: string };
       const query = db("alerts")
         .join("devices", "alerts.device_id", "devices.id")
         .leftJoin("agents", "devices.agent_id", "agents.id")

@@ -138,10 +138,49 @@ export function enqueueReading(r: DeviceReading): void {
   );
 }
 
-export function getPendingReadings(limit = 500): any[] {
+export interface QueueReading {
+  id:            number;
+  device_id:     string;
+  ip:            string | null;
+  brand:         string | null;
+  model:         string | null;
+  time:          string;
+  total_pages:   number | null;
+  mono_pages:    number | null;
+  color_pages:   number | null;
+  toner_black:   number | null;
+  toner_cyan:    number | null;
+  toner_magenta: number | null;
+  toner_yellow:  number | null;
+  cartridge_code_black?:       string | null;
+  cartridge_code_cyan?:        string | null;
+  cartridge_code_magenta?:     string | null;
+  cartridge_code_yellow?:      string | null;
+  cartridge_serial_black?:     string | null;
+  cartridge_serial_cyan?:      string | null;
+  cartridge_serial_magenta?:   string | null;
+  cartridge_serial_yellow?:    string | null;
+  cartridge_capacity_black?:   number | null;
+  cartridge_capacity_cyan?:    number | null;
+  cartridge_capacity_magenta?: number | null;
+  cartridge_capacity_yellow?:  number | null;
+  cartridge_printed_black?:    number | null;
+  cartridge_printed_cyan?:     number | null;
+  cartridge_printed_magenta?:  number | null;
+  cartridge_printed_yellow?:   number | null;
+  cartridge_estimated_black?:  number | null;
+  cartridge_estimated_cyan?:   number | null;
+  cartridge_estimated_magenta?: number | null;
+  cartridge_estimated_yellow?:  number | null;
+  poll_method:   PollMethod;
+  synced:        number;
+  created_at:    string;
+}
+
+export function getPendingReadings(limit = 500): QueueReading[] {
   return db.prepare(
     'SELECT * FROM readings_queue WHERE synced = 0 ORDER BY id ASC LIMIT ?'
-  ).all(limit);
+  ).all(limit) as QueueReading[];
 }
 
 export function markSynced(ids: number[]): void {
@@ -151,7 +190,8 @@ export function markSynced(ids: number[]): void {
 }
 
 export function pendingCount(): number {
-  return (db.prepare('SELECT COUNT(*) as c FROM readings_queue WHERE synced = 0').get() as any).c;
+  const result = db.prepare('SELECT COUNT(*) as c FROM readings_queue WHERE synced = 0').get() as { c: number } | undefined;
+  return result?.c ?? 0;
 }
 
 export function purgeOld(): void {
@@ -191,7 +231,7 @@ export function upsertKnownDevice(
 }
 
 export function getKnownPollMethod(ip: string): PollMethod | null {
-  const row = db.prepare('SELECT poll_method FROM known_devices WHERE ip = ?').get(ip) as any;
+  const row = db.prepare('SELECT poll_method FROM known_devices WHERE ip = ?').get(ip) as { poll_method: PollMethod } | undefined;
   return row?.poll_method ?? null;
 }
 
@@ -200,12 +240,13 @@ export function closeQueue(): void {
 }
 
 export function isRegistered(ip: string): boolean {
-  const row = db.prepare('SELECT registered FROM known_devices WHERE ip = ?').get(ip) as any;
+  const row = db.prepare('SELECT registered FROM known_devices WHERE ip = ?').get(ip) as { registered: number } | undefined;
   return row?.registered === 1;
 }
 
 export function getDeviceCount(): number {
-  return (db.prepare('SELECT COUNT(*) as c FROM known_devices').get() as any).c;
+  const result = db.prepare('SELECT COUNT(*) as c FROM known_devices').get() as { c: number } | undefined;
+  return result?.c ?? 0;
 }
 
 

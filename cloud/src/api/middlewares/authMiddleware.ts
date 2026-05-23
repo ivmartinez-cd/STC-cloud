@@ -3,6 +3,39 @@ import { Knex } from "knex";
 import Redis from "ioredis";
 import { AgentService } from "../../services/agentService";
 
+// ─── Tipos de Autenticación Exportados ───────────────────────────────────────
+
+/** Firma estándar de un hook de autenticación pre-handler de Fastify. */
+export type AuthHook = (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
+
+/** Usuario del portal inyectado en `request.user` tras la autenticación. */
+export interface PortalUser {
+  userId: string;
+  username?: string;
+  role: string;
+  active: boolean;
+}
+
+/** Payload decodificado del JWT del agente. */
+interface AgentJwtPayload {
+  agentId?: string;
+}
+
+/** Payload decodificado del JWT del portal. */
+interface PortalJwtPayload {
+  role: string;
+  userId: string;
+}
+/**
+ * Crea los middlewares de autenticación JWT para rutas de agente y portal.
+ * Implementa RBAC estricto: un token de agente no puede acceder a rutas de portal y viceversa.
+ *
+ * @param fastify - Instancia del servidor con plugin JWT registrado.
+ * @param db - Conexión Knex para validar estado del agente/usuario.
+ * @param redis - Cliente Redis para verificar blacklist de tokens revocados.
+ * @param agentService - Servicio de agentes para consultas de blacklist.
+ * @returns Objeto con hooks `agentAuth` y `portalAuth`.
+ */
 export function createAuthMiddleware(
   fastify: FastifyInstance,
   db: Knex,
@@ -12,12 +45,12 @@ export function createAuthMiddleware(
   async function agentAuth(request: FastifyRequest, reply: FastifyReply) {
     try {
       await request.jwtVerify();
-      const user = request.user as any;
+      const user = request.user as AgentJwtPayload;
       if (!user.agentId) {
         return reply.status(403).send({ error: "Token de portal no puede acceder a esta ruta" });
       }
 
-      const { id } = request.params as any;
+      const { id } = request.params as { id?: string };
       if (id && id !== user.agentId) {
         return reply.status(403).send({ error: "No tiene permisos para acceder a este agente" });
       }
@@ -49,7 +82,7 @@ export function createAuthMiddleware(
       if (!token) {
         return reply.status(401).send({ error: "No autenticado" });
       }
-      const decoded = fastify.jwt.verify<{ role: string; userId: string }>(token);
+      const decoded = fastify.jwt.verify<PortalJwtPayload>(token);
       if (decoded.role !== "portal") {
         return reply.status(403).send({ error: "Token de agente no puede acceder a esta ruta" });
       }
@@ -62,7 +95,7 @@ export function createAuthMiddleware(
       if (!user) {
         // Fallback de retrocompatibilidad si es la sesión previa de "admin" hardcodeado
         if (decoded.userId === "admin") {
-          (request as any).user = { userId: "admin", role: "admin", active: true };
+          (request as FastifyRequest & { user: PortalUser }).user = { userId: "admin", role: "admin", active: true };
           return;
         }
         return reply.status(401).send({ error: "Usuario no encontrado" });
@@ -72,7 +105,7 @@ export function createAuthMiddleware(
         return reply.status(401).send({ error: "Usuario desactivado" });
       }
 
-      (request as any).user = {
+      (request as FastifyRequest & { user: PortalUser }).user = {
         userId: user.id,
         username: user.username,
         role: user.role,

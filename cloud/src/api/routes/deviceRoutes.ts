@@ -1,11 +1,12 @@
 import { FastifyInstance } from "fastify";
 import { Knex } from "knex";
 import { createDeviceController } from "../controllers/deviceController";
+import type { AuthHook } from "../middlewares/authMiddleware";
 
 export function registerDeviceRoutes(
   fastify: FastifyInstance,
   db: Knex,
-  portalAuth: (request: any, reply: any) => Promise<void>
+  portalAuth: AuthHook
 ) {
   const ctrl = createDeviceController(db);
 

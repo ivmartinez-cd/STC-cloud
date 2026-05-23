@@ -3,6 +3,7 @@ import { Knex } from "knex";
 import Redis from "ioredis";
 import { AgentService } from "../../services/agentService";
 import { createPortalAgentController } from "../controllers/portalAgentController";
+import type { AuthHook } from "../middlewares/authMiddleware";
 
 const createAgentSchema = {
   body: {
@@ -47,7 +48,7 @@ export function registerPortalAgentRoutes(
   db: Knex,
   redis: Redis,
   agentService: AgentService,
-  portalAuth: (request: any, reply: any) => Promise<void>
+  portalAuth: AuthHook
 ) {
   const ctrl = createPortalAgentController(fastify, db, redis, agentService);
 

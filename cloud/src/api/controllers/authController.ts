@@ -6,6 +6,28 @@ import { Knex } from "knex";
 import Redis from "ioredis";
 import { AgentService } from "../../services/agentService";
 import { hashPassword, verifyPassword } from "../utils/password";
+import type { PortalUser } from "../middlewares/authMiddleware";
+
+/** Cuerpo de login del portal. */
+interface LoginBody { username: string; password: string; }
+
+/** Cuerpo de creación de usuario. */
+interface CreateUserBody { username: string; password: string; role?: string; }
+
+/** Cuerpo de actualización de usuario. */
+interface UpdateUserBody { password?: string; role?: string; active?: boolean; }
+
+/** Cuerpo de activación de agente. */
+interface ActivateBody { key: string; hardwareId?: string; }
+
+/** Cuerpo de refresh de agente. */
+interface RefreshBody { agentId: string; refresh_token: string; }
+
+/** Cuerpo de actualización de versión de agente. */
+interface VersionUpdateBody { version: string; url: string; hash: string; }
+
+/** Parámetros de ruta con id. */
+interface IdParams { id: string; }
 
 const JWT_AGENT_TTL = "30d";
 const JWT_PORTAL_TTL = "8h";
@@ -13,7 +35,7 @@ const JWT_PORTAL_TTL = "8h";
 export function createAuthController(fastify: FastifyInstance, db: Knex, redis: Redis, agentService: AgentService) {
   return {
     portalLogin: async (request: FastifyRequest, reply: FastifyReply) => {
-      const { username, password } = request.body as any;
+      const { username, password } = request.body as LoginBody;
 
       if (!username || !password) {
         return reply.status(400).send({ error: "Usuario y contraseña son requeridos" });
@@ -74,13 +96,13 @@ export function createAuthController(fastify: FastifyInstance, db: Knex, redis: 
     },
 
     portalMe: async (request: FastifyRequest) => {
-      const user = (request as any).user as any;
+      const user = (request as FastifyRequest & { user: PortalUser }).user;
       const token = request.cookies.stc_session;
       return { userId: user.userId, username: user.username, role: user.role, token };
     },
 
     listUsers: async (request: FastifyRequest, reply: FastifyReply) => {
-      const currentUser = (request as any).user as any;
+      const currentUser = (request as FastifyRequest & { user: PortalUser }).user;
       if (currentUser.role !== "admin") {
         return reply.status(403).send({ error: "No autorizado. Se requiere rol de administrador." });
       }
@@ -91,11 +113,11 @@ export function createAuthController(fastify: FastifyInstance, db: Knex, redis: 
     },
 
     createUser: async (request: FastifyRequest, reply: FastifyReply) => {
-      const currentUser = (request as any).user as any;
+      const currentUser = (request as FastifyRequest & { user: PortalUser }).user;
       if (currentUser.role !== "admin") {
         return reply.status(403).send({ error: "No autorizado. Se requiere rol de administrador." });
       }
-      const { username, password, role } = request.body as any;
+      const { username, password, role } = request.body as CreateUserBody;
 
       if (!username || !password) {
         return reply.status(400).send({ error: "Usuario y contraseña son requeridos" });
@@ -121,12 +143,12 @@ export function createAuthController(fastify: FastifyInstance, db: Knex, redis: 
     },
 
     updateUser: async (request: FastifyRequest, reply: FastifyReply) => {
-      const currentUser = (request as any).user as any;
+      const currentUser = (request as FastifyRequest & { user: PortalUser }).user;
       if (currentUser.role !== "admin") {
         return reply.status(403).send({ error: "No autorizado. Se requiere rol de administrador." });
       }
-      const { id } = request.params as any;
-      const { password, role, active } = request.body as any;
+      const { id } = request.params as IdParams;
+      const { password, role, active } = request.body as UpdateUserBody;
 
       const user = await db("users").where({ id }).first();
       if (!user) {
@@ -137,7 +159,7 @@ export function createAuthController(fastify: FastifyInstance, db: Knex, redis: 
         return reply.status(400).send({ error: "No puedes desactivar tu propio usuario" });
       }
 
-      const updates: any = { updated_at: new Date() };
+      const updates: Record<string, unknown> = { updated_at: new Date() };
       if (password) {
         updates.password_hash = hashPassword(password);
       }
@@ -157,11 +179,11 @@ export function createAuthController(fastify: FastifyInstance, db: Knex, redis: 
     },
 
     deleteUser: async (request: FastifyRequest, reply: FastifyReply) => {
-      const currentUser = (request as any).user as any;
+      const currentUser = (request as FastifyRequest & { user: PortalUser }).user;
       if (currentUser.role !== "admin") {
         return reply.status(403).send({ error: "No autorizado. Se requiere rol de administrador." });
       }
-      const { id } = request.params as any;
+      const { id } = request.params as IdParams;
 
       const user = await db("users").where({ id }).first();
       if (!user) {
@@ -177,7 +199,7 @@ export function createAuthController(fastify: FastifyInstance, db: Knex, redis: 
     },
 
     agentActivate: async (request: FastifyRequest, reply: FastifyReply) => {
-      const body = request.body as any;
+      const body = request.body as ActivateBody;
       const key = body.key?.trim();
       const hardwareId = body.hardwareId?.trim() || "unknown";
 
@@ -203,13 +225,14 @@ export function createAuthController(fastify: FastifyInstance, db: Knex, redis: 
           refresh_token: result.refreshToken,
           config: { pollInterval: 30, heartbeatInterval: 60 },
         };
-      } catch (err: any) {
-        return reply.status(401).send({ error: err.message });
+      } catch (err: unknown) {
+        const errMsg = err instanceof Error ? err.message : String(err);
+        return reply.status(401).send({ error: errMsg });
       }
     },
 
     agentRefresh: async (request: FastifyRequest, reply: FastifyReply) => {
-      const { agentId, refresh_token } = request.body as any;
+      const { agentId, refresh_token } = request.body as RefreshBody;
       try {
         const result = await agentService.refreshAgentToken(agentId, refresh_token);
         const token = fastify.jwt.sign(
@@ -217,8 +240,9 @@ export function createAuthController(fastify: FastifyInstance, db: Knex, redis: 
           { expiresIn: JWT_AGENT_TTL }
         );
         return { status: "success", token, refresh_token: result.refreshToken };
-      } catch (err: any) {
-        return reply.status(401).send({ error: err.message });
+      } catch (err: unknown) {
+        const errMsg = err instanceof Error ? err.message : String(err);
+        return reply.status(401).send({ error: errMsg });
       }
     },
 
@@ -256,12 +280,12 @@ export function createAuthController(fastify: FastifyInstance, db: Knex, redis: 
     },
 
     updateAgentVersion: async (request: FastifyRequest, reply: FastifyReply) => {
-      const user = (request as any).user;
+      const user = (request as FastifyRequest & { user: PortalUser }).user;
       if (!user) {
         return reply.status(401).send({ error: "No autenticado" });
       }
 
-      const { version, url, hash } = request.body as any;
+      const { version, url, hash } = request.body as VersionUpdateBody;
 
       if (!version || !url || !hash) {
         return reply.status(400).send({ error: "Campos versión, url y hash son requeridos" });

@@ -105,20 +105,20 @@ export interface DeviceReading {
   poll_method:    PollMethod;
 }
 
-function createSession(ip: string, community: string) {
+function createSession(ip: string, community: string): snmp.Session {
   return snmp.createSession(ip, community, {
     timeout: TIMEOUT_MS,
     retries: RETRIES,
-    version: (snmp as any).Version2c,
+    version: snmp.Version2c,
   });
 }
 
-function snmpGet(session: any, oid: string): Promise<number | string | null> {
+function snmpGet(session: snmp.Session, oid: string): Promise<number | string | null> {
   return new Promise(resolve => {
-    session.get([oid], (err: any, varbinds: any[]) => {
+    session.get([oid], (err, varbinds) => {
       if (err || !varbinds?.length) { resolve(null); return; }
       const vb = varbinds[0];
-      if ((snmp as any).isVarbindError(vb)) { resolve(null); return; }
+      if (snmp.isVarbindError(vb)) { resolve(null); return; }
       const val = vb.value;
       if (val === null || val === undefined) { resolve(null); return; }
       if (Buffer.isBuffer(val)) return resolve(val.toString('utf8').replace(/\0/g, '').trim());
@@ -127,7 +127,7 @@ function snmpGet(session: any, oid: string): Promise<number | string | null> {
   });
 }
 
-async function snmpGetFirstValid(session: any, oids: string[]): Promise<number | string | null> {
+async function snmpGetFirstValid(session: snmp.Session, oids: string[]): Promise<number | string | null> {
   for (const oid of oids) {
     const val = await snmpGet(session, oid);
     // 0 is a valid counter value - do not skip it
@@ -142,6 +142,22 @@ export function hrStatus(val: unknown): string {
 
 // ─── Orchestrator: EWS / PJL / SNMP / IPP cascade ───────────────────────────
 
+/**
+ * Orquestador principal de escaneo de dispositivos de impresión.
+ * Implementa una cascada de descubrimiento inteligente y segura (EWS / PJL / SNMP / IPP).
+ * 
+ * 1. Primero verifica qué puertos están abiertos para determinar si es un dispositivo de red genérico o una impresora.
+ * 2. Si hay un `hintMethod` conocido de ciclos anteriores, intenta usarlo de forma directa como vía rápida.
+ * 3. Si no es impresora (puertos 9100 y 631 cerrados), utiliza únicamente SNMP con validación de Printer-MIB
+ *    para evitar activar alarmas de sistemas IDS (Intrusion Detection Systems) al escanear puertos HTTP.
+ * 4. Si se confirma que es impresora, ejecuta la cascada con preferencia por métodos de alta fidelidad:
+ *    EWS (Embedded Web Server) -> SNMP v2c -> PJL (Printer Job Language) -> IPP (Internet Printing Protocol).
+ * 
+ * @param {string} ip - Dirección IP del dispositivo a consultar.
+ * @param {string} community - Nombre de la comunidad SNMP para autenticación.
+ * @param {PollMethod} [hintMethod] - Método exitoso previamente registrado para optimización de ciclos.
+ * @returns {Promise<DeviceReading | null>} Objeto de lectura con contadores y consumibles o null si falla.
+ */
 export async function readDevice(
   ip: string,
   community: string,
@@ -272,7 +288,7 @@ interface TonerLevels {
   toner_yellow:  number | null;
 }
 
-async function readTonerViaSNMP(session: any): Promise<TonerLevels> {
+async function readTonerViaSNMP(session: snmp.Session): Promise<TonerLevels> {
   const result: TonerLevels = { toner_black: null, toner_cyan: null, toner_magenta: null, toner_yellow: null };
 
   // Read all supply descriptions in parallel (indices 1-6 covers most printers)

@@ -1,7 +1,8 @@
-import { FastifyInstance } from "fastify";
+import { FastifyInstance, FastifyRequest } from "fastify";
 import Redis from "ioredis";
 import { AgentService } from "../../services/agentService";
 import { createAgentController } from "../controllers/agentController";
+import type { AuthHook } from "../middlewares/authMiddleware";
 
 const syncSchema = {
   body: {
@@ -59,7 +60,7 @@ export function registerAgentRoutes(
   fastify: FastifyInstance,
   redis: Redis,
   agentService: AgentService,
-  agentAuth: (request: any, reply: any) => Promise<void>
+  agentAuth: AuthHook
 ) {
   const ctrl = createAgentController(fastify, redis, agentService);
 
@@ -76,7 +77,7 @@ export function registerAgentRoutes(
   fastify.post("/api/v1/devices/sync", {
     preHandler: agentAuth,
     schema: syncSchema,
-    preValidation: async (_request: any) => {
+    preValidation: async (_request: FastifyRequest) => {
       // Hook de validación — no-op en producción (logs ruidosos eliminados)
     },
     handler: ctrl.syncDevices,

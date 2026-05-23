@@ -1,4 +1,4 @@
-import Fastify from "fastify";
+import Fastify, { FastifyRequest } from "fastify";
 import cors from "@fastify/cors";
 import cookie from "@fastify/cookie";
 import helmet from "@fastify/helmet";
@@ -91,7 +91,7 @@ const start = async () => {
 
     try {
       const applied = await db("knex_migrations").select("name");
-      console.log(`[DB] Migraciones en DB: ${applied.map((m: any) => m.name).join(", ")}`);
+      console.log(`[DB] Migraciones en DB: ${applied.map((m: { name: string }) => m.name).join(", ")}`);
     } catch {}
 
     await db.migrate.latest({
@@ -118,8 +118,9 @@ const start = async () => {
         });
         console.log(`[DB] Usuario administrador '${adminUser}' inicializado con éxito.`);
       }
-    } catch (bootErr: any) {
-      console.error("[DB] Error al inicializar administrador:", bootErr.message);
+    } catch (bootErr: unknown) {
+      const errMsg = bootErr instanceof Error ? bootErr.message : String(bootErr);
+      console.error("[DB] Error al inicializar administrador:", errMsg);
     }
 
     // ─── Plugins ──────────────────────────────────────────────────────────────
@@ -159,9 +160,9 @@ const start = async () => {
       max: 100,
       timeWindow: "1 minute",
       redis,
-      keyGenerator: (request: any) =>
+      keyGenerator: (request: FastifyRequest) =>
         (request.headers["x-forwarded-for"] as string) || request.ip,
-      allowList: (request: any) => request.url.startsWith("/ws"),
+      allowList: (request: FastifyRequest) => request.url.startsWith("/ws"),
     });
 
     try {
@@ -169,8 +170,9 @@ const start = async () => {
       await fastify.register(wsPlugin);
       await registerWebSocket(fastify, agentService);
       fastify.log.info("WebSocket hub activo en /ws");
-    } catch (err: any) {
-      fastify.log.error(`Error cargando @fastify/websocket: ${err.message}`);
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      fastify.log.error(`Error cargando @fastify/websocket: ${errMsg}`);
       fastify.log.warn(
         "@fastify/websocket no instalado o falló la carga — WebSocket desactivado"
       );

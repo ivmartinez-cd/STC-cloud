@@ -1,6 +1,7 @@
 import { FastifyInstance } from "fastify";
 import { Knex } from "knex";
 import { createClientController } from "../controllers/clientController";
+import type { AuthHook } from "../middlewares/authMiddleware";
 
 const createClientSchema = {
   body: {
@@ -18,7 +19,7 @@ const createClientSchema = {
 export function registerClientRoutes(
   fastify: FastifyInstance,
   db: Knex,
-  portalAuth: (request: any, reply: any) => Promise<void>
+  portalAuth: AuthHook
 ) {
   const ctrl = createClientController(db);
 

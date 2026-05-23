@@ -13,8 +13,9 @@ async function run() {
       status: "online"
     });
     console.log("✅ Lectura insertada");
-  } catch (err: any) {
-    console.error("❌ Error DB:", err.message);
+  } catch (err: unknown) {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    console.error("❌ Error DB:", errMsg);
   } finally {
     await db.destroy();
   }
