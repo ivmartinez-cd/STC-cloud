@@ -2,9 +2,10 @@ import { useState, Suspense, useEffect, useRef } from 'react';
 import { Link, useLocation, Outlet } from 'react-router-dom';
 import { api } from '../lib/api';
 import {
-  LayoutDashboard, Users, LogOut, Search, Settings, Menu, X, ChevronRight, Shield
+  LayoutDashboard, Users, LogOut, Search, Settings, Menu, X, ChevronRight, Shield, MessageSquarePlus
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import FeedbackModal from './FeedbackModal';
 
 type SearchClient = { id: string; name: string };
 type SearchDevice = { id: string; serial_number: string; brand: string; model: string };
@@ -31,6 +32,8 @@ const Layout = () => {
   const { userEmail: email, role, logout } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+
+  const [showFeedback, setShowFeedback] = useState(false);
 
   // Search State
   const [searchQuery, setSearchQuery] = useState('');
@@ -396,6 +399,36 @@ const Layout = () => {
           </div>
         </main>
       </div>
+
+      {/* Feedback FAB */}
+      <button
+        onClick={() => setShowFeedback(true)}
+        title="Reportar problema o sugerir mejora"
+        className="
+          fixed bottom-8 right-8 z-[90] group
+          flex items-center gap-0 overflow-hidden
+          h-12 w-12 hover:w-48
+          bg-gradient-to-r from-[#004a99] to-[#f7931d]
+          text-white rounded-full shadow-[0_8px_30px_rgba(0,74,153,0.4)]
+          hover:shadow-[0_12px_40px_rgba(247,147,29,0.45)]
+          transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]
+        "
+      >
+        <span className="flex items-center justify-center w-12 h-12 shrink-0">
+          <MessageSquarePlus size={18} strokeWidth={2.5} className="transition-transform duration-300 group-hover:rotate-12" />
+        </span>
+        <span className="
+          text-[10px] font-black uppercase tracking-widest whitespace-nowrap
+          max-w-0 group-hover:max-w-[120px] opacity-0 group-hover:opacity-100
+          overflow-hidden transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]
+          pr-0 group-hover:pr-4
+        ">
+          Dar Feedback
+        </span>
+      </button>
+
+      {/* Feedback Modal */}
+      {showFeedback && <FeedbackModal onClose={() => setShowFeedback(false)} />}
     </div>
   );
 };

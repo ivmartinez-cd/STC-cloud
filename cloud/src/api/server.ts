@@ -23,6 +23,7 @@ import { registerPortalAgentRoutes } from "./routes/portalAgentRoutes";
 import { registerClientRoutes } from "./routes/clientRoutes";
 import { registerDeviceRoutes } from "./routes/deviceRoutes";
 import { registerDashboardRoutes } from "./routes/dashboardRoutes";
+import { registerFeedbackRoutes } from "./routes/feedbackRoutes";
 
 dotenv.config({ path: path.join(__dirname, "../../../.env") });
 
@@ -199,6 +200,7 @@ const start = async () => {
     registerClientRoutes(fastify, db, portalAuth);
     registerDeviceRoutes(fastify, db, portalAuth);
     registerDashboardRoutes(fastify, db, agentService, portalAuth);
+    registerFeedbackRoutes(fastify, db, portalAuth);
 
     // ─── Start ────────────────────────────────────────────────────────────────
 
