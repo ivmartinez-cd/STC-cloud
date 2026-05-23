@@ -18,10 +18,21 @@ export function createFeedbackController(fastify: FastifyInstance, db: Knex) {
       };
       const { type, title, description, image_url } = request.body as FeedbackBody;
 
+      let actualUserId = user.userId;
+      let actualUsername = user.username;
+
+      if (user.userId === "admin") {
+        const actualAdmin = await db("users").where({ username: "admin" }).first();
+        if (actualAdmin) {
+          actualUserId = actualAdmin.id;
+          actualUsername = actualAdmin.username;
+        }
+      }
+
       const [feedback] = await db("user_feedback")
         .insert({
           id: db.raw("gen_random_uuid()"),
-          user_id: user.userId,
+          user_id: actualUserId,
           type,
           title: title.trim(),
           description: description.trim(),
@@ -33,17 +44,17 @@ export function createFeedbackController(fastify: FastifyInstance, db: Knex) {
       // Audit log para bugs críticos o cualquier feedback
       await db("audit_logs").insert({
         id: db.raw("gen_random_uuid()"),
-        user_id: user.userId,
+        user_id: actualUserId,
         action: type === "bug" ? "REPORT_BUG" : "SUGGEST_ENHANCEMENT",
         target_id: feedback.id,
         metadata: db.raw("?::jsonb", [
-          JSON.stringify({ title, type, submitted_by: user.username }),
+          JSON.stringify({ title, type, submitted_by: actualUsername }),
         ]),
         ip_address: request.ip,
       });
 
       fastify.log.info(
-        `[Feedback] ${type.toUpperCase()} reportado por ${user.username}: "${title}" (id=${feedback.id})`
+        `[Feedback] ${type.toUpperCase()} reportado por ${actualUsername}: "${title}" (id=${feedback.id})`
       );
 
       return { success: true, feedback };
