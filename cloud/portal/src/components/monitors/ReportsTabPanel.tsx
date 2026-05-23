@@ -16,11 +16,12 @@ interface Props {
 
 function exportReportCSV(devices: Device[], monitorName: string) {
   const today = new Date().toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  const month = new Date().toLocaleDateString('es-AR', { month: 'long', year: 'numeric' });
   const lines = [
     `REPORTE EJECUTIVO — ${monitorName}`,
-    `Generado: ${today}`,
+    `Generado: ${today} | Período: ${month}`,
     '',
-    'SERIE;MODELO;MARCA;IP;MONO;COLOR;TOTAL;NEGRO%;CIAN%;MAGENTA%;AMARILLO%',
+    'SERIE;MODELO;MARCA;IP;VOL_MENSUAL_TOTAL;VOL_MENSUAL_MONO;VOL_MENSUAL_COLOR;CONTADOR_FISICO_TOTAL;CONTADOR_FISICO_MONO;CONTADOR_FISICO_COLOR;NEGRO%;CIAN%;MAGENTA%;AMARILLO%',
   ];
   for (const d of devices) {
     lines.push([
@@ -28,9 +29,12 @@ function exportReportCSV(devices: Device[], monitorName: string) {
       d.model ?? 'N/A',
       d.brand ?? 'N/A',
       d.ip_address ?? 'N/A',
-      d.mono_pages ?? 0,
-      d.color_pages ?? 0,
-      d.total_pages ?? (Number(d.mono_pages ?? 0) + Number(d.color_pages ?? 0)),
+      Number(d.monthly_pages ?? 0),
+      Number(d.monthly_mono ?? 0),
+      Number(d.monthly_color ?? 0),
+      d.total_pages ?? 'N/A',
+      d.mono_pages ?? 'N/A',
+      d.color_pages ?? 'N/A',
       d.toner_black ?? 'N/A',
       d.toner_cyan ?? 'N/A',
       d.toner_magenta ?? 'N/A',
@@ -151,17 +155,17 @@ const ChartTooltip = ({
 const ReportsTabPanel = ({ devices, monitor }: Props) => {
   const [showExportModal, setShowExportModal] = useState(false);
 
-  const totalDevices = devices.length;
-  const totalPages   = devices.reduce((s, d) => s + Number(d.total_pages ?? (Number(d.mono_pages ?? 0) + Number(d.color_pages ?? 0))), 0);
-  const totalMono    = devices.reduce((s, d) => s + Number(d.mono_pages ?? 0), 0);
-  const totalColor   = devices.reduce((s, d) => s + Number(d.color_pages ?? 0), 0);
-  const lowTonerCount = devices.filter(d => deviceTonerStatus(d) !== 'ok').length;
+  const totalDevices   = devices.length;
+  const totalMono      = devices.reduce((s, d) => s + Number(d.monthly_mono  ?? 0), 0);
+  const totalColor     = devices.reduce((s, d) => s + Number(d.monthly_color ?? 0), 0);
+  const totalPages     = devices.reduce((s, d) => s + Number(d.monthly_pages ?? (Number(d.monthly_mono ?? 0) + Number(d.monthly_color ?? 0))), 0);
+  const lowTonerCount  = devices.filter(d => deviceTonerStatus(d) !== 'ok').length;
 
   const chartData: ChartEntry[] = devices.map(d => ({
     name:     d.serial_number?.slice(-6) ?? d.model?.slice(0, 8) ?? 'N/A',
     fullName: `${d.model ?? 'N/A'} · ${d.serial_number ?? 'S/N'}`,
-    mono:     Number(d.mono_pages ?? 0),
-    color:    Number(d.color_pages ?? 0),
+    mono:     Number(d.monthly_mono  ?? 0),
+    color:    Number(d.monthly_color ?? 0),
   }));
 
   const devicesWithToner = devices.filter(d => d.toner_black != null);
@@ -208,7 +212,7 @@ const ReportsTabPanel = ({ devices, monitor }: Props) => {
                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Páginas</span>
               </div>
               <p className="text-4xl font-black text-[#1a2333] tracking-tighter tabular-nums">{totalPages.toLocaleString()}</p>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Impresiones acumuladas</p>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Volumen mensual (págs. procesadas)</p>
             </div>
 
             <div className="p-6 bg-slate-50 rounded-3xl border border-slate-100 space-y-3 group hover:shadow-md hover:-translate-y-0.5 transition-all duration-300">
@@ -307,25 +311,25 @@ const ReportsTabPanel = ({ devices, monitor }: Props) => {
               {/* Top producer highlight */}
               {(() => {
                 const top = [...devices].sort((a, b) =>
-                  (b.total_pages ?? 0) - (a.total_pages ?? 0)
+                  Number(b.monthly_pages ?? 0) - Number(a.monthly_pages ?? 0)
                 )[0];
-                if (!top) return null;
+                if (!top || Number(top.monthly_pages ?? 0) === 0) return null;
                 return (
                   <div className="mt-6 flex items-center gap-4 p-5 bg-[#004a99]/5 rounded-2xl border border-[#004a99]/10">
                     <div className="p-3 bg-[#004a99]/10 text-[#004a99] rounded-xl">
                       <TrendingUp size={20} />
                     </div>
                     <div className="flex-1">
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Mayor Productor</p>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Mayor Productor del Mes</p>
                       <p className="text-sm font-black text-[#1a2333] tracking-tight">
                         {top.model ?? 'N/A'} · <span className="font-mono text-[#004a99]">{top.serial_number ?? 'S/N'}</span>
                       </p>
                     </div>
                     <div className="text-right">
                       <p className="text-2xl font-black text-[#1a2333] tabular-nums tracking-tighter">
-                        {Number(top.total_pages ?? 0).toLocaleString()}
+                        {Number(top.monthly_pages ?? 0).toLocaleString()}
                       </p>
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">páginas totales</p>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">páginas este mes</p>
                     </div>
                   </div>
                 );

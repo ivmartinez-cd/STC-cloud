@@ -91,7 +91,27 @@ export function createPortalAgentController(
 
     getAgentDevices: async (request: FastifyRequest) => {
       const { id } = request.params as any;
-      return await db("devices").where("agent_id", id).select("*").orderBy("brand");
+      const monthlySubquery = db("readings")
+        .select(
+          "device_id",
+          db.raw("(MAX(total_pages) - MIN(total_pages))::int AS monthly_pages"),
+          db.raw("(MAX(mono_pages)   - MIN(mono_pages))::int   AS monthly_mono"),
+          db.raw("(MAX(color_pages)  - MIN(color_pages))::int  AS monthly_color")
+        )
+        .where("time", ">=", db.raw("date_trunc('month', now())"))
+        .groupBy("device_id")
+        .as("m");
+
+      return await db("devices")
+        .where("devices.agent_id", id)
+        .leftJoin(monthlySubquery, "m.device_id", "devices.id")
+        .select(
+          "devices.*",
+          db.raw("COALESCE(m.monthly_pages, 0) AS monthly_pages"),
+          db.raw("COALESCE(m.monthly_mono,  0) AS monthly_mono"),
+          db.raw("COALESCE(m.monthly_color, 0) AS monthly_color")
+        )
+        .orderBy("devices.brand");
     },
 
     createAgent: async (request: FastifyRequest) => {

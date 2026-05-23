@@ -13,6 +13,9 @@ export interface Device {
   toner_cyan?: number | null;
   toner_magenta?: number | null;
   toner_yellow?: number | null;
+  monthly_pages?: number | null;
+  monthly_mono?: number | null;
+  monthly_color?: number | null;
   // Cartridge identity (from EWS)
   cartridge_code_black?:       string | null;
   cartridge_code_cyan?:        string | null;
