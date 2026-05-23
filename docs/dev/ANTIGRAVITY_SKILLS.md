@@ -19,3 +19,4 @@ Este archivo coordina las habilidades necesarias para mantener y evolucionar STC
 2. **Audit Logs**: Acciones administrativas deben registrarse en la tabla `audit_logs`.
 3. **Hardware Privacy**: Nunca subir archivos `config.enc` reales al repo.
 4. **Agent Lifecycle**: Respetar el flujo de activación (Pending -> Active -> Revoked).
+5. **Strict TypeScript**: Prohibido usar el tipo explícito `any`. El typechecker y ESLint de CI fallarán. Usar tipado fuerte o `unknown` con type guards.
