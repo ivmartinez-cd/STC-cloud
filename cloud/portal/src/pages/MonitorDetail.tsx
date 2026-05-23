@@ -4,7 +4,7 @@ import {
   ArrowLeft, HardDrive, Activity, Clock,
   Settings, RefreshCw, Key, ShieldOff,
   AlertTriangle, Loader2, Copy,
-  Command, Terminal as TerminalIcon, Download
+  Command, Terminal as TerminalIcon, Download, BarChart2,
 } from 'lucide-react';
 import { useMonitorDetail } from '../hooks/useMonitorDetail';
 import { useTime } from '../hooks/useTime';
@@ -13,13 +13,14 @@ import MonitorSpecsCard from '../components/monitors/MonitorSpecsCard';
 import DeviceSummaryCard from '../components/monitors/DeviceSummaryCard';
 import LicenseCard from '../components/monitors/LicenseCard';
 import DeviceInventoryTable from '../components/monitors/DeviceInventoryTable';
+import ReportsTabPanel from '../components/monitors/ReportsTabPanel';
 import RemoteToolsPanel from '../components/monitors/RemoteToolsPanel';
 import Terminal from '../components/Terminal';
 import ConfirmModal from '../components/ConfirmModal';
 import { useToast } from '../context/ToastContext';
 import type { EditFormData, MonitorData } from '../types/monitor';
 
-type Tab = 'overview' | 'devices' | 'console' | 'config';
+type Tab = 'overview' | 'devices' | 'console' | 'config' | 'reports';
 
 const MonitorDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -28,7 +29,7 @@ const MonitorDetail = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState<Tab>(() => {
     const tab = searchParams.get('tab');
-    return (tab === 'overview' || tab === 'devices' || tab === 'console' || tab === 'config') ? tab : 'overview';
+    return (tab === 'overview' || tab === 'devices' || tab === 'console' || tab === 'config' || tab === 'reports') ? tab : 'overview';
   });
   const [showRevokeModal, setShowRevokeModal] = useState(false);
   const [revoking, setRevoking] = useState(false);
@@ -99,10 +100,11 @@ const MonitorDetail = () => {
   }
 
   const TABS: { id: Tab; label: string; icon: typeof Activity }[] = [
-    { id: 'overview', label: 'Resumen', icon: Activity },
-    { id: 'devices', label: 'Dispositivos', icon: HardDrive },
-    { id: 'console', label: 'Consola', icon: TerminalIcon },
-    { id: 'config', label: 'Configuración', icon: Settings },
+    { id: 'overview', label: 'Resumen',       icon: Activity },
+    { id: 'devices',  label: 'Dispositivos',  icon: HardDrive },
+    { id: 'console',  label: 'Consola',       icon: TerminalIcon },
+    { id: 'reports',  label: 'Reportes',      icon: BarChart2 },
+    { id: 'config',   label: 'Configuración', icon: Settings },
   ];
 
   return (
@@ -205,6 +207,11 @@ const MonitorDetail = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Reports Tab */}
+      {activeTab === 'reports' && (
+        <ReportsTabPanel devices={devices} monitor={monitor} />
       )}
 
       {/* Config Tab */}
