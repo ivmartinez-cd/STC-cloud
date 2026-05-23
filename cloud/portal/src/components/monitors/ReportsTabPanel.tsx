@@ -30,7 +30,7 @@ function exportReportCSV(devices: Device[], monitorName: string) {
       d.ip_address ?? 'N/A',
       d.mono_pages ?? 0,
       d.color_pages ?? 0,
-      d.total_pages ?? ((d.mono_pages ?? 0) + (d.color_pages ?? 0)),
+      d.total_pages ?? (Number(d.mono_pages ?? 0) + Number(d.color_pages ?? 0)),
       d.toner_black ?? 'N/A',
       d.toner_cyan ?? 'N/A',
       d.toner_magenta ?? 'N/A',
@@ -152,16 +152,16 @@ const ReportsTabPanel = ({ devices, monitor }: Props) => {
   const [showExportModal, setShowExportModal] = useState(false);
 
   const totalDevices = devices.length;
-  const totalPages   = devices.reduce((s, d) => s + (d.total_pages ?? ((d.mono_pages ?? 0) + (d.color_pages ?? 0))), 0);
-  const totalMono    = devices.reduce((s, d) => s + (d.mono_pages ?? 0), 0);
-  const totalColor   = devices.reduce((s, d) => s + (d.color_pages ?? 0), 0);
+  const totalPages   = devices.reduce((s, d) => s + Number(d.total_pages ?? (Number(d.mono_pages ?? 0) + Number(d.color_pages ?? 0))), 0);
+  const totalMono    = devices.reduce((s, d) => s + Number(d.mono_pages ?? 0), 0);
+  const totalColor   = devices.reduce((s, d) => s + Number(d.color_pages ?? 0), 0);
   const lowTonerCount = devices.filter(d => deviceTonerStatus(d) !== 'ok').length;
 
   const chartData: ChartEntry[] = devices.map(d => ({
     name:     d.serial_number?.slice(-6) ?? d.model?.slice(0, 8) ?? 'N/A',
     fullName: `${d.model ?? 'N/A'} · ${d.serial_number ?? 'S/N'}`,
-    mono:     d.mono_pages ?? 0,
-    color:    d.color_pages ?? 0,
+    mono:     Number(d.mono_pages ?? 0),
+    color:    Number(d.color_pages ?? 0),
   }));
 
   const devicesWithToner = devices.filter(d => d.toner_black != null);
@@ -323,7 +323,7 @@ const ReportsTabPanel = ({ devices, monitor }: Props) => {
                     </div>
                     <div className="text-right">
                       <p className="text-2xl font-black text-[#1a2333] tabular-nums tracking-tighter">
-                        {(top.total_pages ?? 0).toLocaleString()}
+                        {Number(top.total_pages ?? 0).toLocaleString()}
                       </p>
                       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">páginas totales</p>
                     </div>
