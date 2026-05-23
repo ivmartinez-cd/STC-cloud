@@ -59,5 +59,77 @@ export function createFeedbackController(fastify: FastifyInstance, db: Knex) {
 
       return { success: true, feedback };
     },
+
+    list: async (request: FastifyRequest) => {
+      const user = (request as any).user as { role: string };
+      if (user.role !== "admin") {
+        throw fastify.httpErrors.forbidden("Solo administradores pueden ver los reportes");
+      }
+
+      const feedbackList = await db("user_feedback as f")
+        .join("users as u", "f.user_id", "u.id")
+        .select(
+          "f.id",
+          "f.type",
+          "f.title",
+          "f.description",
+          "f.image_url",
+          "f.status",
+          "f.created_at",
+          "u.username"
+        )
+        .orderBy("f.created_at", "desc");
+
+      return feedbackList;
+    },
+
+    updateStatus: async (request: FastifyRequest) => {
+      const user = (request as any).user as {
+        userId: string;
+        username: string;
+        role: string;
+      };
+      if (user.role !== "admin") {
+        throw fastify.httpErrors.forbidden("Solo administradores pueden actualizar los reportes");
+      }
+
+      const { id } = request.params as { id: string };
+      const { status } = request.body as { status: "open" | "in_progress" | "closed" };
+
+      // Reemplazamos la lógica del usuario si es el admin harcodeado
+      let actualUserId = user.userId;
+      let actualUsername = user.username;
+      if (user.userId === "admin") {
+        const actualAdmin = await db("users").where({ username: "admin" }).first();
+        if (actualAdmin) {
+          actualUserId = actualAdmin.id;
+          actualUsername = actualAdmin.username;
+        }
+      }
+
+      const [updated] = await db("user_feedback")
+        .where({ id })
+        .update({ status, updated_at: db.fn.now() })
+        .returning(["id", "title", "status"]);
+
+      if (!updated) {
+        throw fastify.httpErrors.notFound("Feedback no encontrado");
+      }
+
+      await db("audit_logs").insert({
+        id: db.raw("gen_random_uuid()"),
+        user_id: actualUserId,
+        action: "UPDATE_FEEDBACK_STATUS",
+        target_id: id,
+        metadata: db.raw("?::jsonb", [
+          JSON.stringify({ status, title: updated.title, updated_by: actualUsername }),
+        ]),
+        ip_address: request.ip,
+      });
+
+      fastify.log.info(`[Feedback] Estado de ${id} actualizado a ${status} por ${actualUsername}`);
+
+      return { success: true, feedback: updated };
+    },
   };
 }
