@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>STC Cloud - Dossier de Operaciones v1.7</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --stc-blue: #004a99;
+            --stc-orange: #f7931d;
+            --text-dark: #1a2333;
+            --text-gray: #64748b;
+            --code-bg: #f8fafc;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            background: #f1f5f9;
+            color: var(--text-dark);
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+
+        .page {
+            width: 210mm;
+            min-height: 297mm;
+            padding: 25mm;
+            margin: 20px auto;
+            box-sizing: border-box;
+            position: relative;
+            background: white;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+
+        @media print {
+            body {
+                background: white;
+            }
+            .page {
+                margin: 0;
+                padding: 20mm;
+                box-shadow: none;
+                page-break-after: always;
+            }
+        }
+
+        .cover-top-bar {
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 75mm;
+        }
+
+        .top-title {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--stc-blue);
+            letter-spacing: 0.05em;
+        }
+
+        .cover-main { 
+            text-align: left; 
+            padding-left: 10mm; 
+        }
+
+        .stc-cloud-brand {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 50px;
+        }
+
+        .brand-stc {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 900;
+            font-size: 42px;
+            color: var(--stc-blue);
+            letter-spacing: -0.02em;
+        }
+
+        .brand-cloud {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 900;
+            font-size: 42px;
+            color: var(--stc-orange);
+            letter-spacing: -0.02em;
+        }
+
+        .main-title {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 34px;
+            font-weight: 700;
+            color: var(--stc-blue);
+            margin: 0;
+            line-height: 1.15;
+            text-transform: uppercase;
+        }
+
+        .main-subtitle {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 34px;
+            font-weight: 400;
+            color: var(--stc-blue);
+            margin: 5px 0 50px 0;
+            text-transform: uppercase;
+        }
+
+        .version-tag {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-gray);
+            letter-spacing: 0.08em;
+        }
+
+        .internal-header {
+            border-bottom: 3px solid var(--stc-blue);
+            padding-bottom: 8px;
+            margin-bottom: 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+
+        .internal-brand {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 900;
+            font-size: 16px;
+            color: var(--stc-blue);
+        }
+
+        .internal-brand span {
+            color: var(--stc-orange);
+        }
+
+        .internal-doc-type {
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--text-gray);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        h2 {
+            font-family: 'Montserrat', sans-serif;
+            color: var(--stc-blue);
+            font-size: 20px;
+            border-bottom: 1px solid #f1f5f9;
+            padding-bottom: 8px;
+            margin-top: 35px;
+        }
+
+        h3 {
+            font-family: 'Montserrat', sans-serif;
+            color: var(--stc-orange);
+            font-size: 14px;
+            margin-top: 25px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        p { 
+            font-size: 13.5px; 
+            color: #334155; 
+            line-height: 1.65; 
+        }
+
+        ul, ol { 
+            padding-left: 20px; 
+        }
+        
+        li { 
+            font-size: 13.5px; 
+            color: #334155; 
+            margin-bottom: 8px; 
+            line-height: 1.6;
+        }
+
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            margin: 20px 0; 
+        }
+
+        th, td { 
+            border: 1px solid #e2e8f0; 
+            padding: 12px; 
+            text-align: left; 
+            font-size: 12.5px; 
+        }
+
+        th {
+            background-color: #f8fafc;
+            color: var(--stc-blue);
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: 0.05em;
+        }
+
+        .note-callout {
+            background: #fff7ed;
+            border-left: 4px solid var(--stc-orange);
+            padding: 18px;
+            margin: 25px 0;
+            font-size: 13px;
+            color: #9a3412;
+            line-height: 1.6;
+        }
+
+        .footer {
+            position: absolute;
+            bottom: 20mm;
+            left: 25mm;
+            right: 25mm;
+            border-top: 1px solid #e2e8f0;
+            padding-top: 15px;
+            font-size: 10px;
+            color: #94a3b8;
+            text-align: center;
+        }
+
+        .toc-container { 
+            margin-top: 30px; 
+        }
+
+        .toc-item {
+            display: flex;
+            align-items: baseline;
+            margin-bottom: 14px;
+            font-size: 14px;
+            color: #1a2333;
+            text-decoration: none;
+        }
+
+        .toc-link {
+            text-decoration: none;
+            color: inherit;
+            display: flex;
+            width: 100%;
+            align-items: baseline;
+        }
+
+        .toc-text { 
+            flex-shrink: 0; 
+            padding-right: 5px; 
+            font-weight: 600;
+        }
+        
+        .toc-dots { 
+            flex-grow: 1; 
+            border-bottom: 1px dotted #94a3b8; 
+            margin: 0 5px; 
+            position: relative; 
+            top: -4px; 
+        }
+        
+        .toc-page { 
+            flex-shrink: 0; 
+            padding-left: 5px; 
+            font-weight: 700; 
+            color: var(--stc-blue);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- PÁGINA 1: PORTADA -->
+    <div class="page">
+        <div class="cover-top-bar">
+            <div class="top-title">STC CLOUD – INFORME DE GESTIÓN OPERATIVA</div>
+        </div>
+
+        <div class="cover-main">
+            <div class="stc-cloud-brand">
+                <span class="brand-stc">STC</span>
+                <span class="brand-cloud">CLOUD</span>
+            </div>
+
+            <h1 class="main-title">DOSSIER DE OPERACIONES</h1>
+            <h1 class="main-subtitle">AUDITORÍA Y CONTROL DE FACTURACIÓN</h1>
+
+            <div class="version-tag">Dossier Ejecutivo | v1.7 | Mayo 2026</div>
+        </div>
+
+        <div class="footer">
+            © 2026 CANAL DIRECTO | STC CLOUD | GERENCIA DE OPERACIONES | CONFIDENCIAL COMERCIAL
+        </div>
+    </div>
+
+    <!-- PÁGINA 2: ÍNDICE -->
+    <div class="page">
+        <div class="internal-header">
+            <div class="internal-brand">STC <span>CLOUD</span></div>
+            <div class="internal-doc-type">Índice</div>
+        </div>
+
+        <h2 style="border: none; margin-bottom: 30px;">Índice del Dossier</h2>
+
+        <div class="toc-container">
+            <a href="#vision-ejecutiva" class="toc-item">
+                <span class="toc-text">1. Visión Ejecutiva y Propósito de STC Cloud</span>
+                <span class="toc-dots"></span>
+                <span class="toc-page">3</span>
+            </a>
+            <a href="#automatizacion" class="toc-item">
+                <span class="toc-text">2. Flujo de Automatización de Contadores</span>
+                <span class="toc-dots"></span>
+                <span class="toc-page">3</span>
+            </a>
+            <a href="#portal-operativo" class="toc-item">
+                <span class="toc-text">3. Portal Operativo: Transparencia y Roles</span>
+                <span class="toc-dots"></span>
+                <span class="toc-page">4</span>
+            </a>
+            <a href="#alertas-consumibles" class="toc-item">
+                <span class="toc-text">4. Monitoreo de Alertas y Gestión de Consumibles</span>
+                <span class="toc-dots"></span>
+                <span class="toc-page">5</span>
+            </a>
+            <a href="#auditoria-facturacion" class="toc-item">
+                <span class="toc-text">5. Auditoría de Facturación y Métricas Críticas</span>
+                <span class="toc-dots"></span>
+                <span class="toc-page">6</span>
+            </a>
+            <a href="#retorno-inversion" class="toc-item">
+                <span class="toc-text">6. Retorno de Inversión y Beneficios Operacionales</span>
+                <span class="toc-dots"></span>
+                <span class="toc-page">7</span>
+            </a>
+        </div>
+
+        <div class="footer">
+            PÁGINA 2 | STC CLOUD – DOSSIER DE OPERACIONES
+        </div>
+    </div>
+
+    <!-- PÁGINA 3: VISIÓN GENERAL Y FLUJO -->
+    <div class="page">
+        <div class="internal-header">
+            <div class="internal-brand">STC <span>CLOUD</span></div>
+            <div class="internal-doc-type">1. Visión & 2. Flujo</div>
+        </div>
+
+        <h2 id="vision-ejecutiva">1. Visión Ejecutiva y Propósito de STC Cloud</h2>
+        <p>
+            En la gestión moderna de servicios gestionados de impresión (MPS), la recolección manual de contadores y el control analógico del stock de insumos representan el mayor foco de ineficiencia administrativa y pérdidas comerciales. **STC Cloud** nace como una plataforma integral de telemetría de impresión diseñada para automatizar por completo estos procesos.
+        </p>
+        <p>
+            El sistema se orienta a eliminar la intervención humana en la cadena de facturación, logrando recolectar lecturas exactas directamente del firmware de los dispositivos instalados en los clientes, consolidando la información de manera inmediata en un portal en la nube para auditoría directa de la **Gerencia de Operaciones** y los departamentos de contabilidad.
+        </p>
+
+        <h2 id="automatizacion">2. Flujo de Automatización de Contadores</h2>
+        <p>
+            El flujo operativo de STC Cloud funciona en segundo plano de manera continua y sin interrumpir las tareas del cliente:
+        </p>
+        <ul>
+            <li>
+                <strong>Recolección en Silencio:</strong> Un agente local inaudible interroga periódicamente (por defecto cada 15 minutos) a las impresoras de la intranet mediante protocolos estándar de red corporativa.
+            </li>
+            <li>
+                <strong>Derivación Directa:</strong> El agente extrae con precisión quirúrgica los contadores de impresión (páginas blanco y negro, páginas color, páginas a doble cara) y niveles de tóner.
+            </li>
+            <li>
+                <strong>Carga Segura (Upload):</strong> Las lecturas son almacenadas de forma local en una base de datos segura y transmitidas encriptadas en la nube a través de HTTPS perimetral seguro.
+            </li>
+            <li>
+                <strong>Auditoría Inmediata:</strong> Los datos se consolidan de inmediato en gráficos de volumen mensual, tableros de estado y tablas descargables, listos para facturar.
+            </li>
+        </ul>
+
+        <div class="note-callout">
+            <strong>Inmunidad Operativa Offline:</strong> Si el cliente sufre micro-cortes o pérdidas prolongadas de internet, el sistema no pierde lecturas. Las almacena localmente y, en cuanto vuelve el enlace, las sube secuencialmente sin duplicar registros ni omitir históricos de facturación.
+        </div>
+
+        <div class="footer">
+            PÁGINA 3 | STC CLOUD – DOSSIER DE OPERACIONES
+        </div>
+    </div>
+
+    <!-- PÁGINA 4: PORTAL OPERATIVO -->
+    <div class="page">
+        <div class="internal-header">
+            <div class="internal-brand">STC <span>CLOUD</span></div>
+            <div class="internal-doc-type">3. Portal Operativo</div>
+        </div>
+
+        <h2 id="portal-operativo">3. Portal Operativo: Transparencia y Roles</h2>
+        <p>
+            El Portal de STC Cloud es la ventana de control donde la Gerencia de Operaciones visualiza y gestiona todo el parque instalado de impresoras. Cuenta con un diseño responsive, moderno y con esquemas visuales de alta gama para agilizar el análisis ejecutivo.
+        </p>
+
+        <h3>Control de Acceso y Gestión de Operadores</h3>
+        <p>
+            El sistema implementa un esquema estricto de roles para salvaguardar la privacidad de la información y la integridad operativa del negocio:
+        </p>
+        <ul>
+            <li>
+                <strong>Administradores (Gerencia de Operaciones y Contadores):</strong> Acceso total. Visualización de métricas críticas de facturación globales, creación de nuevos clientes, configuración de alertas, descarga de reportes y visualización de la bitácora completa de auditoría.
+            </li>
+            <li>
+                <strong>Operadores Técnicos:</strong> Acceso a la monitorización del estado de los agentes, control de conectividad de los equipos de red y comandos de diagnóstico técnico básico. No disponen de permisos para ver datos confidenciales de costos de facturación o alterar parámetros organizacionales.
+            </li>
+        </ul>
+
+        <h3>La Bitácora de Auditoría Operativa (`audit_logs`)</h3>
+        <p>
+            Cada vez que un usuario realiza una acción administrativa en el portal (crear un cliente, cambiar parámetros de alerta, desvincular una impresora, renovar una licencia), el portal registra automáticamente una entrada persistente en la bitácora de auditoría. Este registro contiene la fecha, la IP del operador, la acción realizada y los metadatos anteriores y posteriores. **Garantiza la trazabilidad absoluta exigida por las normativas de control interno.**
+        </p>
+
+        <table style="margin-top: 20px;">
+            <thead>
+                <tr>
+                    <th style="width: 25%;">Acción Auditada</th>
+                    <th style="width: 20%;">Autor</th>
+                    <th style="width: 35%;">Descripción Operativa</th>
+                    <th style="width: 20%;">Trazabilidad</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>CREAR_CLIENTE</strong></td>
+                    <td>Administrador</td>
+                    <td>Alta de nueva entidad comercial en la nube</td>
+                    <td>IP + Timestamp</td>
+                </tr>
+                <tr>
+                    <td><strong>REVOCAR_AGENTE</strong></td>
+                    <td>Administrador</td>
+                    <td>Desvinculación forzada de hardware DCA</td>
+                    <td>IP + Motivo</td>
+                </tr>
+                <tr>
+                    <td><strong>MODIFICAR_ALERTA</strong></td>
+                    <td>Administrador</td>
+                    <td>Cambio de umbrales críticos de tóners</td>
+                    <td>Umbral Pre/Post</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="footer">
+            PÁGINA 4 | STC CLOUD – DOSSIER DE OPERACIONES
+        </div>
+    </div>
+
+    <!-- PÁGINA 5: MONITOREO DE INSUMOS -->
+    <div class="page">
+        <div class="internal-header">
+            <div class="internal-brand">STC <span>CLOUD</span></div>
+            <div class="internal-doc-type">4. Alertas y Consumibles</div>
+        </div>
+
+        <h2 id="alertas-consumibles">4. Monitoreo de Alertas y Gestión de Consumibles</h2>
+        <p>
+            Una de las principales pérdidas de productividad en las empresas es la falta de consumibles o el acopio innecesario de tóners en los clientes. STC Cloud introduce un **Motor de Abastecimiento Proactivo Justo a Tiempo (Just-In-Time)**:
+        </p>
+
+        <h3>Alertas Proactivas Automáticas</h3>
+        <p>
+            El sistema analiza en tiempo real las lecturas de los depósitos de tóner de las impresoras (Negro, Cyan, Magenta, Amarillo). Si un nivel de tóner cae por debajo de los umbrales configurados, se disparan notificaciones jerárquicas:
+        </p>
+        <ol>
+            <li>
+                <strong>Umbral de Advertencia (Tóner Bajo - ej. 20%):</strong> Genera un aviso visual en el portal del operador indicando que el equipo requerirá insumos próximamente. Permite agrupar los envíos semanales planificados para reducir costos de logística.
+            </li>
+            <li>
+                <strong>Umbral Crítico (Tóner Crítico - ej. 10%):</strong> Envía de manera urgente un aviso para el despacho inmediato del consumible. Previene paradas operativas en el cliente y multas por incumplimiento de ANS (Acuerdos de Nivel de Servicio).
+            </li>
+        </ol>
+
+        <h3>Beneficios en Gestión de Stock</h3>
+        <ul>
+            <li>
+                <strong>Cero Acumulaciones:</strong> Evita que los clientes almacenen cajas de tóners sin usar, inmovilizando capital de trabajo del proveedor de servicios de impresión.
+            </li>
+            <li>
+                <strong>Detección de Pérdidas Físicas:</strong> Si un tóner nuevo (100%) cae al 10% en pocos días sin un incremento proporcional del contador de páginas impresas, el sistema lo resalta como **anomalía operativa**, indicando posibles pérdidas físicas de polvo de tóner, cartuchos defectuosos o sustracción de insumos.
+            </li>
+            <li>
+                <strong>Monitoreo de Vida Útil Real:</strong> Muestra el rendimiento exacto de copias impresas por cada cartucho versus las páginas teóricas declaradas por el fabricante del insumo, permitiendo negociar mejores contratos de compra con proveedores de hardware.
+            </li>
+        </ul>
+
+        <div class="note-callout">
+            <strong>Planificación Inteligente de Despacho:</strong> El sistema permite ver y consolidar alertas por cliente. Si un cliente tiene 3 impresoras con tóner al 18% y una al 9%, se envía un único paquete consolidado con todos los insumos necesarios, reduciendo los costos de envío de logística en un 40%.
+        </div>
+
+        <div class="footer">
+            PÁGINA 5 | STC CLOUD – DOSSIER DE OPERACIONES
+        </div>
+    </div>
+
+    <!-- PÁGINA 6: AUDITORÍA DE FACTURACIÓN -->
+    <div class="page">
+        <div class="internal-header">
+            <div class="internal-brand">STC <span>CLOUD</span></div>
+            <div class="internal-doc-type">5. Facturación</div>
+        </div>
+
+        <h2 id="auditoria-facturacion">5. Auditoría de Facturación y Métricas Críticas</h2>
+        <p>
+            El portal de STC Cloud está diseñado específicamente para servir como la herramienta de verdad definitiva en los procesos mensuales de facturación, eliminando disputas con clientes sobre los contadores.
+        </p>
+
+        <h3>Cálculo de Volumen y Delta de Uso</h3>
+        <p>
+            El sistema no se limita a mostrar la lectura actual acumulada de las impresoras; calcula automáticamente el **Delta de Impresiones** (Lectura Fin de Mes menos Lectura Inicio de Mes) para cada equipo individual:
+        </p>
+        <pre style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 12px; font-size: 13px; color: var(--stc-blue); border-radius: 4px; font-weight: bold; text-align: center;">
+Volumen Mensual Facturable = MAX(Lectura_Fin_Mes) - MIN(Lectura_Inicio_Mes)</pre>
+
+        <h3>Facturación Diferenciada: Mono vs Color</h3>
+        <p>
+            Debido a la gran diferencia de costo de insumos entre la impresión monocromática (Negro) y la impresión color (Cyan/Magenta/Amarillo), STC Cloud extrae los contadores de manera separada:
+        </p>
+        <ul>
+            <li><strong>Contadores Mono:</strong> Páginas físicas impresas que utilizan únicamente tinta o polvo de tóner negro.</li>
+            <li><strong>Contadores Color:</strong> Páginas que contienen elementos cromáticos (logos, gráficos, imágenes), las cuales son facturadas bajo una tarifa diferenciada y de mayor valor unitario.</li>
+        </ul>
+
+        <h3>Auditoría de Duplex (Impresión Doble Cara)</h3>
+        <p>
+            El firmware de marcas como Samsung y HP cuenta de forma separada las páginas Simplex (una cara) y Duplex (doble cara). STC Cloud realiza una **conciliación de facturación integrada** (Billing Guard), acumulando e integrando contadores automáticos para asegurar que no se omitan hojas impresas a doble cara en el cierre de mes, lo cual representaba una fuga de facturación silenciosa de hasta un 5% mensual.
+        </p>
+
+        <h3>Exportación de Datos con Validez Contable</h3>
+        <p>
+            Toda la información del panel operativo, desglosada por cliente, sucursal, agente monitor y número de serie físico del equipo, puede exportarse de forma nativa a planillas Microsoft Excel o archivos CSV directos. Esto permite integrarlos de manera automatizada a los sistemas ERP de contabilidad de la empresa para emisión automatizada de facturas.
+        </p>
+
+        <div class="footer">
+            PÁGINA 6 | STC CLOUD – DOSSIER DE OPERACIONES
+        </div>
+    </div>
+
+    <!-- PÁGINA 7: RETORNO DE INVERSIÓN Y CIERRE -->
+    <div class="page">
+        <div class="internal-header">
+            <div class="internal-brand">STC <span>CLOUD</span></div>
+            <div class="internal-doc-type">6. Retorno de Inversión</div>
+        </div>
+
+        <h2 id="retorno-inversion">6. Retorno de Inversión y Beneficios Operacionales</h2>
+        <p>
+            La implementación de STC Cloud no solo moderniza tecnológicamente la empresa, sino que genera un impacto financiero positivo inmediato para la Gerencia de Operaciones y los resultados contables:
+        </p>
+
+        <h3>A. Eliminación del Error Humano en Facturación</h3>
+        <p>
+            La toma de lecturas manuales (ya sea enviando operarios a los clientes o solicitando fotos de pantalla por correo/WhatsApp) conlleva retrasos de facturación, transcripciones erróneas y disputas legales con clientes. STC Cloud anula este coste de fricción administrativa al proveer datos inmutables tomados directamente del hardware.
+        </p>
+
+        <h3>B. Reducción de Costos de Logística y Envíos Urgentísimos</h3>
+        <p>
+            Al conocer con precisión los niveles de tóner de manera anticipada, se eliminan los despachos exprés de insumos de último momento (que duplican o triplican los costos normales de mensajería). Permite realizar envíos planificados y consolidados en rutas regulares de distribución.
+        </p>
+
+        <h3>C. Eficiencia de Mano de Obra y Automatización Operativa</h3>
+        <table style="margin-top: 15px; margin-bottom: 20px;">
+            <thead>
+                <tr>
+                    <th style="width: 35%;">Indicador Operativo</th>
+                    <th style="width: 30%;">Método Tradicional</th>
+                    <th style="width: 35%;">Con STC Cloud</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Tiempo de Cierre Mensual</strong></td>
+                    <td>5 a 7 días hábiles</td>
+                    <td><strong>Menos de 2 horas (Automatizado)</strong></td>
+                </tr>
+                <tr>
+                    <td><strong>Tasa de Error en Contadores</strong></td>
+                    <td>Aproximadamente 4% al 6%</td>
+                    <td><strong>0% (Lectura directa de Firmware)</strong></td>
+                </tr>
+                <tr>
+                    <td><strong>Quiebre de Stock de Tóner</strong></td>
+                    <td>Reactivo (Reclamo de cliente)</td>
+                    <td><strong>Proactivo (Alerta a los umbrales)</strong></td>
+                </tr>
+                <tr>
+                    <td><strong>Fugas de Facturación</strong></td>
+                    <td>Frecuentes por páginas omitidas</td>
+                    <td><strong>Bloqueado (Billing Guard activo)</strong></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <p>
+            En conclusión, **STC Cloud** representa una transformación operativa profunda. Convierte un departamento de MPS de características tradicionales y reactivas en un **centro de operaciones digitalizado, proactivo y altamente eficiente**, asegurando la fidelidad de los datos contables y maximizando los márgenes de ganancia de la empresa.
+        </p>
+
+        <div class="footer">
+            PÁGINA 7 | STC CLOUD – DOSSIER DE OPERACIONES
+        </div>
+    </div>
+
+</body>
+</html>
