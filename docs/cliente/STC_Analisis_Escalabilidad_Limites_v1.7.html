@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>STC Cloud - Análisis de Escalabilidad y Límites Operativos v1.7</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --stc-blue: #004a99;
+            --stc-orange: #f7931d;
+            --text-dark: #1a2333;
+            --text-gray: #64748b;
+            --code-bg: #f8fafc;
+            --red-alert: #dc2626;
+            --red-bg: #fef2f2;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            background: #f1f5f9;
+            color: var(--text-dark);
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+
+        .page {
+            width: 210mm;
+            min-height: 297mm;
+            padding: 25mm;
+            margin: 20px auto;
+            box-sizing: border-box;
+            position: relative;
+            background: white;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+
+        @media print {
+            body {
+                background: white;
+            }
+            .page {
+                margin: 0;
+                padding: 20mm;
+                box-shadow: none;
+                page-break-after: always;
+            }
+        }
+
+        .cover-top-bar {
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 75mm;
+        }
+
+        .top-title {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--stc-blue);
+            letter-spacing: 0.05em;
+        }
+
+        .cover-main { 
+            text-align: left; 
+            padding-left: 10mm; 
+        }
+
+        .stc-cloud-brand {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 50px;
+        }
+
+        .brand-stc {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 900;
+            font-size: 42px;
+            color: var(--stc-blue);
+            letter-spacing: -0.02em;
+        }
+
+        .brand-cloud {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 900;
+            font-size: 42px;
+            color: var(--stc-orange);
+            letter-spacing: -0.02em;
+        }
+
+        .main-title {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 34px;
+            font-weight: 700;
+            color: var(--stc-blue);
+            margin: 0;
+            line-height: 1.15;
+            text-transform: uppercase;
+        }
+
+        .main-subtitle {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 28px;
+            font-weight: 400;
+            color: var(--stc-blue);
+            margin: 5px 0 50px 0;
+            text-transform: uppercase;
+        }
+
+        .version-tag {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-gray);
+            letter-spacing: 0.08em;
+        }
+
+        .internal-header {
+            border-bottom: 3px solid var(--stc-blue);
+            padding-bottom: 8px;
+            margin-bottom: 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+
+        .internal-brand {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 900;
+            font-size: 16px;
+            color: var(--stc-blue);
+        }
+
+        .internal-brand span {
+            color: var(--stc-orange);
+        }
+
+        .internal-doc-type {
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--text-gray);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        h2 {
+            font-family: 'Montserrat', sans-serif;
+            color: var(--stc-blue);
+            font-size: 20px;
+            border-bottom: 1px solid #f1f5f9;
+            padding-bottom: 8px;
+            margin-top: 35px;
+        }
+
+        h3 {
+            font-family: 'Montserrat', sans-serif;
+            color: var(--stc-orange);
+            font-size: 14px;
+            margin-top: 25px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        p { 
+            font-size: 13.5px; 
+            color: #334155; 
+            line-height: 1.65; 
+        }
+
+        ul, ol { 
+            padding-left: 20px; 
+        }
+        
+        li { 
+            font-size: 13.5px; 
+            color: #334155; 
+            margin-bottom: 8px; 
+            line-height: 1.6;
+        }
+
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            margin: 20px 0; 
+        }
+
+        th, td { 
+            border: 1px solid #e2e8f0; 
+            padding: 12px; 
+            text-align: left; 
+            font-size: 12.5px; 
+        }
+
+        th {
+            background-color: #f8fafc;
+            color: var(--stc-blue);
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: 0.05em;
+        }
+
+        .note-callout {
+            background: #fff7ed;
+            border-left: 4px solid var(--stc-orange);
+            padding: 18px;
+            margin: 25px 0;
+            font-size: 13px;
+            color: #9a3412;
+            line-height: 1.6;
+        }
+
+        .alert-callout {
+            background: var(--red-bg);
+            border-left: 4px solid var(--red-alert);
+            padding: 18px;
+            margin: 25px 0;
+            font-size: 13px;
+            color: #7f1d1d;
+            line-height: 1.6;
+        }
+
+        .footer {
+            position: absolute;
+            bottom: 20mm;
+            left: 25mm;
+            right: 25mm;
+            border-top: 1px solid #e2e8f0;
+            padding-top: 15px;
+            font-size: 10px;
+            color: #94a3b8;
+            text-align: center;
+        }
+
+        .toc-container { 
+            margin-top: 30px; 
+        }
+
+        .toc-item {
+            display: flex;
+            align-items: baseline;
+            margin-bottom: 14px;
+            font-size: 14px;
+            color: #1a2333;
+            text-decoration: none;
+        }
+
+        .toc-link {
+            text-decoration: none;
+            color: inherit;
+            display: flex;
+            width: 100%;
+            align-items: baseline;
+        }
+
+        .toc-text { 
+            flex-shrink: 0; 
+            padding-right: 5px; 
+            font-weight: 600;
+        }
+        
+        .toc-dots { 
+            flex-grow: 1; 
+            border-bottom: 1px dotted #94a3b8; 
+            margin: 0 5px; 
+            position: relative; 
+            top: -4px; 
+        }
+        
+        .toc-page { 
+            flex-shrink: 0; 
+            padding-left: 5px; 
+            font-weight: 700; 
+            color: var(--stc-blue);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- PÁGINA 1: PORTADA -->
+    <div class="page">
+        <div class="cover-top-bar">
+            <div class="top-title">STC CLOUD – INFORME DE INFRAESTRUCTURA Y ESCALABILIDAD</div>
+        </div>
+
+        <div class="cover-main">
+            <div class="stc-cloud-brand">
+                <span class="brand-stc">STC</span>
+                <span class="brand-cloud">CLOUD</span>
+            </div>
+
+            <h1 class="main-title">Análisis de Escalabilidad</h1>
+            <h1 class="main-subtitle">Riesgos de Infraestructura y Límites en Cuentas Gratuitas</h1>
+
+            <div class="version-tag">Documento Técnico | v1.7 | Mayo 2026</div>
+        </div>
+
+        <div class="footer">
+            © 2026 CANAL DIRECTO | STC CLOUD | DEPARTAMENTO DE IT | CONFIDENCIAL TÉCNICO
+        </div>
+    </div>
+
+    <!-- PÁGINA 2: ÍNDICE Y RESUMEN EJECUTIVO -->
+    <div class="page">
+        <div class="internal-header">
+            <div class="internal-brand">STC <span>CLOUD</span></div>
+            <div class="internal-doc-type">Índice</div>
+        </div>
+
+        <h2 style="border: none; margin-bottom: 30px;">Índice de Contenidos</h2>
+
+        <div class="toc-container">
+            <a href="#resumen-ejecutivo" class="toc-item">
+                <span class="toc-text">1. Resumen Ejecutivo</span>
+                <span class="toc-dots"></span>
+                <span class="toc-page">2</span>
+            </a>
+            <a href="#limites-proveedores" class="toc-item">
+                <span class="toc-text">2. Límites de Infraestructura (Render, Vercel & Neon)</span>
+                <span class="toc-dots"></span>
+                <span class="toc-page">3</span>
+            </a>
+            <a href="#escenarios-colapso" class="toc-item">
+                <span class="toc-text">3. Escenarios Críticos de Colapso (Proof of Concept vs Producción)</span>
+                <span class="toc-dots"></span>
+                <span class="toc-page">4</span>
+            </a>
+            <a href="#plan-mitigacion" class="toc-item">
+                <span class="toc-text">4. Plan de Mitigación y Presupuesto de Escalabilidad</span>
+                <span class="toc-dots"></span>
+                <span class="toc-page">5</span>
+            </a>
+        </div>
+
+        <h2 id="resumen-ejecutivo" style="margin-top: 50px;">1. Resumen Ejecutivo</h2>
+        <p>
+            El presente informe tiene como objetivo analizar de forma objetiva la capacidad de la infraestructura de **STC Cloud** cuando opera bajo las capas de servicios gratuitos de sus tres proveedores clave: **Vercel** (Portal frontend), **Render** (Backend Fastify de control de agentes) y **Neon** (Base de datos PostgreSQL en la nube).
+        </p>
+        <p>
+            Si bien el uso de cuentas gratuitas es una opción excelente para la etapa de **Prueba de Concepto (PoC)**, desarrollo y testeo con un volumen de 1 a 3 agentes en clientes controlados, presenta restricciones estrictas y cuellos de botella inherentes que provocarán el colapso operativo del sistema en un entorno productivo real de impresión gestionada (MPS).
+        </p>
+        <p>
+            Este documento expone los límites numéricos de cada plataforma, plantea 3 escenarios reales de colapso y detalla el plan de migración de bajo costo requerido para garantizar la alta disponibilidad y la trazabilidad de facturación ininterrumpida que el negocio exige.
+        </p>
+
+        <div class="footer">
+            PÁGINA 2 | STC CLOUD – ANÁLISIS DE ESCALABILIDAD Y LÍMITES
+        </div>
+    </div>
+
+    <!-- PÁGINA 3: LÍMITES DE INFRAESTRUCTURA -->
+    <div class="page">
+        <div class="internal-header">
+            <div class="internal-brand">STC <span>CLOUD</span></div>
+            <div class="internal-doc-type">2. Límites Técnicos</div>
+        </div>
+
+        <h2 id="limites-proveedores">2. Límites de Infraestructura (Render, Vercel & Neon)</h2>
+        <p>
+            El sistema STC Cloud está dividido en tres niveles lógicos. Cada nivel opera sobre un proveedor diferente, sujeto a las siguientes limitaciones de las cuentas gratuitas:
+        </p>
+
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 25%;">Proveedor</th>
+                    <th style="width: 25%;">Límite Crítico (Free)</th>
+                    <th style="width: 30%;">Impacto en STC Cloud</th>
+                    <th style="width: 20%;">Riesgo Operativo</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Render</strong> (Web Service Backend)</td>
+                    <td><strong>Spin-down</strong> tras 15 min de inactividad. 512 MB de RAM compartida.</td>
+                    <td>Retraso de 50 segundos en arranques en frío (cold start) y riesgo de caída por memoria (OOM).</td>
+                    <td style="color: var(--red-alert); font-weight: bold;">ALTO</td>
+                </tr>
+                <tr>
+                    <td><strong>Neon</strong> (PostgreSQL)</td>
+                    <td><strong>190 horas</strong> de cómputo/mes. Autosuspend de 5 min. 0.5 GiB (500 MB) storage.</td>
+                    <td>Bloqueo total del servicio si el cómputo se agota o se llena el almacenamiento histórico.</td>
+                    <td style="color: var(--red-alert); font-weight: bold;">CRÍTICO</td>
+                </tr>
+                <tr>
+                    <td><strong>Vercel</strong> (Next.js Frontend)</td>
+                    <td><strong>10s</strong> Serverless Timeout. 100 GB ancho de banda/mes.</td>
+                    <td>Fallas de carga al consultar reportes masivos. Suspensión de cuenta por exceso de ancho de banda.</td>
+                    <td style="color: #ea580c; font-weight: bold;">MEDIO</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>El Fenómeno "Spin-Down" de Render (Suspensión Inactiva)</h3>
+        <p>
+            En la capa gratuita de Render, si el backend no recibe solicitudes HTTP o de WebSocket durante 15 minutos, el contenedor que ejecuta el servidor Fastify se apaga por completo.
+        </p>
+        <p>
+            Cuando un agente DCA local despierta en la intranet del cliente e intenta enviar datos telemétricos (por ejemplo, después de una hora de inactividad), la petición HTTP impactará contra el servidor apagado. Render debe crear el contenedor, arrancar Node.js y levantar el framework Fastify, lo cual toma **entre 45 y 60 segundos**. Durante este lapso, el agente local experimentará un timeout de red, forzándolo a encolar los datos localmente en SQLite.
+        </p>
+
+        <h3>El Límite de Horas de Computación de Neon (190h / Mes)</h3>
+        <p>
+            Neon computa el tiempo activo de la base de datos en base al estado de la instancia. Si no recibe consultas, entra en reposo después de 5 minutos. Sin embargo, en cuanto un agente o el portal hace una consulta, el contador empieza a correr. Si la telemetría recibe ráfagas de datos constantes de múltiples clientes, la base de datos permanecerá encendida permanentemente, agotando las 190 horas de cómputo mensuales en pocos días.
+        </p>
+
+        <div class="footer">
+            PÁGINA 3 | STC CLOUD – ANÁLISIS DE ESCALABILIDAD Y LÍMITES
+        </div>
+    </div>
+
+    <!-- PÁGINA 4: ESCENARIOS DE COLAPSO -->
+    <div class="page">
+        <div class="internal-header">
+            <div class="internal-brand">STC <span>CLOUD</span></div>
+            <div class="internal-doc-type">3. Escenarios Críticos</div>
+        </div>
+
+        <h2 id="escenarios-colapso">3. Escenarios Críticos de Colapso</h2>
+        <p>
+            A continuación, se presentan tres situaciones reales que causarán el bloqueo absoluto del sistema STC Cloud si se mantiene en producción con cuentas gratuitas:
+        </p>
+
+        <h3 style="color: var(--red-alert);">Escenario A: Agotamiento Prematuro de Neon (Día 8 del Mes)</h3>
+        <p>
+            Supongamos que la empresa despliega el agente DCA en tan solo **2 clientes corporativos**, configurados para reportar telemetría e interactuar con el canal de WebSocket cada 15 minutos de forma alterna.
+        </p>
+        <ul>
+            <li>Al estar los reportes alternados en el tiempo, la base de datos Neon recibe una solicitud cada 7.5 minutos.</li>
+            <li>Dado que el tiempo de autosuspensión por inactividad de Neon es de 5 minutos, la instancia **nunca** alcanzará a entrar en reposo. Permanecerá activa las 24 horas del día.</li>
+            <li><strong>Cálculo de Consumo:</strong> 24 horas/día × 30 días = 720 horas de cómputo requeridas al mes.</li>
+            <li><strong>Punto de Colapso:</strong> Alrededor del **día 8 del mes**, Neon bloqueará por completo el acceso a la base de datos por haber consumido el 100% de las 190 horas gratis. La app arrojará errores de conexión de base de datos (`500 Internal Server Error`) y la telemetría quedará ciega.</li>
+        </ul>
+
+        <h3 style="color: var(--red-alert);">Escenario B: El Bucle de Conexión del Agente y OOM Crash en Render</h3>
+        <p>
+            Si el backend de Render se encuentra suspendido, la primera petición del agente tarda 50s en responder. 
+        </p>
+        <ol>
+            <li>El agente local (DCA) realiza una consulta al backend con un timeout de conexión HTTP estándar de 30 segundos.</li>
+            <li>Dado que Render tarda 50 segundos en despertar, la petición del agente **falla por timeout**.</li>
+            <li>El agente reintenta la conexión inmediatamente o a los pocos minutos, pero si coincide con que Render volvió a apagarse por inactividad, se genera un bucle infinito donde el agente nunca puede transmitir las lecturas debido al retraso del arranque en frío.</li>
+            <li><strong>Fuga de Memoria y Caída (OOM):</strong> Si se logran acumular cientos de peticiones en la cola del agente y se envían de golpe en paralelo, la instancia gratuita de Render excederá su límite de **512 MB de RAM**, provocando un cierre forzado del contenedor por Out-Of-Memory (OOM) y dejando al backend inactivo indefinidamente.</li>
+        </ol>
+
+        <h3 style="color: var(--red-alert);">Escenario C: Saturación de Almacenamiento (Límite 500 MB)</h3>
+        <p>
+            El sistema almacena contadores detallados, logs de auditoría técnica (`audit_logs`) y alertas históricas. Si tenemos 30 clientes con un promedio de 8 impresoras por cliente (240 dispositivos monitoreados) con telemetría cada hora:
+        </p>
+        <ul>
+            <li>Cada registro de telemetría e inserción histórica pesa aproximadamente 4 KB en base de datos.</li>
+            <li>240 impresoras × 24 reportes/día = 5,760 registros/día.</li>
+            <li>5,760 registros/día × 4 KB = 23,040 KB = 22.5 MB de datos generados al día.</li>
+            <li><strong>Punto de Colapso:</strong> En tan solo **22 días de operación**, el almacenamiento de Neon alcanzará los **500 MB (0.5 GB) autorizados**. A partir de ese momento, la base de datos rechazará cualquier operación de escritura (`INSERT` / `UPDATE`), impidiendo el registro de nuevos contadores y perdiendo los datos de facturación de fin de mes.</li>
+        </ul>
+
+        <div class="footer">
+            PÁGINA 4 | STC CLOUD – ANÁLISIS DE ESCALABILIDAD Y LÍMITES
+        </div>
+    </div>
+
+    <!-- PÁGINA 5: PLAN DE MITIGACIÓN Y PRESUPUESTO -->
+    <div class="page">
+        <div class="internal-header">
+            <div class="internal-brand">STC <span>CLOUD</span></div>
+            <div class="internal-doc-type">4. Plan de Mitigación</div>
+        </div>
+
+        <h2 id="plan-mitigacion">4. Plan de Mitigación y Presupuesto de Escalabilidad</h2>
+        <p>
+            Para evitar los escenarios de colapso detallados y asegurar una transición exitosa de una Prueba de Concepto a un software corporativo de grado de producción, el **Departamento de IT** propone el siguiente plan de migración de infraestructura:
+        </p>
+
+        <h3>1. Upgrade Estratégico de Planes (Presupuesto Mensual Mínimo)</h3>
+        <p>
+            No es necesario contratar servidores dedicados costosos de miles de dólares. El siguiente esquema de bajo costo elimina el 100% de los riesgos identificados:
+        </p>
+
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 25%;">Componente</th>
+                    <th style="width: 25%;">Proveedor / Plan Recomendado</th>
+                    <th style="width: 30%;">Solución Provista</th>
+                    <th style="width: 20%;">Costo Mensual</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Base de Datos</strong></td>
+                    <td><strong>Neon Launch Tier</strong></td>
+                    <td>Cómputo ilimitado (24/7 sin apagados) y 10 GB de almacenamiento SSD.</td>
+                    <td>$19.00 USD</td>
+                </tr>
+                <tr>
+                    <td><strong>Servidor Backend</strong></td>
+                    <td><strong>Render Starter ($7/mes)</strong> o <strong>Standard ($25/mes)</strong></td>
+                    <td>Instancia siempre activa (cero spin-down) con 512MB/2GB RAM y CPU dedicada.</td>
+                    <td>$7.00 - $25.00 USD</td>
+                </tr>
+                <tr>
+                    <td><strong>Portal Frontend</strong></td>
+                    <td><strong>Vercel Pro</strong></td>
+                    <td>Límite de Serverless Timeout extendido a 60 segundos y 1 TB de transferencia.</td>
+                    <td>$20.00 USD</td>
+                </tr>
+                <tr style="background: #f8fafc; font-weight: bold;">
+                    <td colspan="3">Presupuesto Operativo Mensual Estimado</td>
+                    <td style="color: var(--stc-blue);">$46.00 - $64.00 USD</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>2. Optimizaciones en la Base de Código para Cuentas Gratuitas (Mitigación Inmediata)</h3>
+        <p>
+            Mientras se mantenga la fase de prueba en cuentas gratuitas, se deben aplicar las siguientes configuraciones de software inmediatamente para retrasar el punto de colapso:
+        </p>
+        <ul>
+            <li>
+                <strong>Intervalos de Telemetría Extendidos:</strong> Cambiar el tiempo de escaneo del agente DCA de 15 minutos a **1 hora (o 4 horas)** en ambientes de pruebas. Esto reducirá el consumo de cómputo en Neon en un 75%.
+            </li>
+            <li>
+                <strong>Política de Pruning de Logs (Purga Activa):</strong> Implementar una rutina diaria que elimine logs de auditoría o escaneos repetidos de más de 30 días de antigüedad para mantener la base de datos por debajo de los 350 MB.
+            </li>
+            <li>
+                <strong>Timeouts Resilientes en el Agente:</strong> Configurar el cliente HTTP del agente con un timeout de **65 segundos** y reintentos exponenciales aleatorios (jitter) para soportar el arranque en frío de Render sin generar bucles de colisión.
+            </li>
+        </ul>
+
+        <div class="note-callout">
+            <strong>Recomendación Final:</strong> Para el lanzamiento comercial del servicio, la contratación de los planes sugeridos es obligatoria. Una fuga de contadores en un cierre mensual debido a la suspensión de base de datos Neon cuesta 20 veces más de lo que representa el costo anual de la infraestructura en la nube.
+        </div>
+
+        <div class="footer">
+            PÁGINA 5 | STC CLOUD – ANÁLISIS DE ESCALABILIDAD Y LÍMITES
+        </div>
+    </div>
+
+</body>
+</html>
