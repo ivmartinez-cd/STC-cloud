@@ -1,4 +1,4 @@
-import type { FastifyInstance, FastifyRequest } from "fastify";
+import type { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
 import type { Knex } from "knex";
 
 interface FeedbackBody {
@@ -60,10 +60,10 @@ export function createFeedbackController(fastify: FastifyInstance, db: Knex) {
       return { success: true, feedback };
     },
 
-    list: async (request: FastifyRequest) => {
+    list: async (request: FastifyRequest, reply: FastifyReply) => {
       const user = (request as any).user as { role: string };
       if (user.role !== "admin") {
-        throw fastify.httpErrors.forbidden("Solo administradores pueden ver los reportes");
+        return reply.status(403).send({ error: "Solo administradores pueden ver los reportes" });
       }
 
       const feedbackList = await db("user_feedback as f")
@@ -83,14 +83,14 @@ export function createFeedbackController(fastify: FastifyInstance, db: Knex) {
       return feedbackList;
     },
 
-    updateStatus: async (request: FastifyRequest) => {
+    updateStatus: async (request: FastifyRequest, reply: FastifyReply) => {
       const user = (request as any).user as {
         userId: string;
         username: string;
         role: string;
       };
       if (user.role !== "admin") {
-        throw fastify.httpErrors.forbidden("Solo administradores pueden actualizar los reportes");
+        return reply.status(403).send({ error: "Solo administradores pueden actualizar los reportes" });
       }
 
       const { id } = request.params as { id: string };
@@ -113,7 +113,7 @@ export function createFeedbackController(fastify: FastifyInstance, db: Knex) {
         .returning(["id", "title", "status"]);
 
       if (!updated) {
-        throw fastify.httpErrors.notFound("Feedback no encontrado");
+        return reply.status(404).send({ error: "Feedback no encontrado" });
       }
 
       await db("audit_logs").insert({
