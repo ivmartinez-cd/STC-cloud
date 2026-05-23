@@ -404,6 +404,15 @@
             Cuando un agente DCA local despierta en la intranet del cliente e intenta enviar datos telemétricos (por ejemplo, después de una hora de inactividad), la petición HTTP impactará contra el servidor apagado. Render debe crear el contenedor, arrancar Node.js y levantar el framework Fastify, lo cual toma **entre 45 y 60 segundos**. Durante este lapso, el agente local experimentará un timeout de red, forzándolo a encolar los datos localmente en SQLite.
         </p>
 
+        <div class="note-callout" style="background: #f8fafc; border-left: 4px solid var(--stc-blue); color: #334155;">
+            <strong>Análisis del Parche de Uptime Robot (Keep-Alive Artificial):</strong><br>
+            Una técnica común en fases de desarrollo es configurar un monitor como <strong>Uptime Robot</strong> para pingear el endpoint del backend cada 5 minutos, previniendo el sueño de Render. Si bien este "keep-alive" artificial soluciona el tiempo de arranque en frío del backend, introduce dos graves riesgos colaterales en la arquitectura de STC Cloud:
+            <ul>
+                <li><strong>Riesgo A (Penalización y Bloqueo de Render):</strong> Render detecta activamente patrones estáticos de agentes externos de ping y cabeceras de monitores de uptime. Evitar el spin-down artificialmente viola los términos de uso justo (Fair Use Policy) de la capa gratuita, exponiendo la cuenta corporativa a suspensiones automáticas de servicios sin aviso previo.</li>
+                <li><strong>Riesgo B (Exhaustión Inducida en Neon PostgreSQL):</strong> Si el backend se mantiene encendido las 24 horas del día gracias a Uptime Robot, sus rutinas internas en segundo plano (como el monitor de latidos <code>heartbeatMonitor.ts</code>) continuarán ejecutándose de manera continua. Esto disparará consultas periódicas a la base de datos Neon, <strong>impidiendo que el motor Serverless de Neon entre en autosuspend</strong>. Como consecuencia directa, Neon consumirá sus 190 horas gratis en solo 8 días seguidos, apagando la base de datos por completo el resto del mes.</li>
+            </ul>
+        </div>
+
         <h3>El Límite de Horas de Computación de Neon (190h / Mes)</h3>
         <p>
             Neon computa el tiempo activo de la base de datos en base al estado de la instancia. Si no recibe consultas, entra en reposo después de 5 minutos. Sin embargo, en cuanto un agente o el portal hace una consulta, el contador empieza a correr. Si la telemetría recibe ráfagas de datos constantes de múltiples clientes, la base de datos permanecerá encendida permanentemente, agotando las 190 horas de cómputo mensuales en pocos días.
