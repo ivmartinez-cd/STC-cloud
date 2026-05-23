@@ -2,7 +2,7 @@ import { useState, Suspense, useEffect, useRef } from 'react';
 import { Link, useLocation, Outlet } from 'react-router-dom';
 import { api } from '../lib/api';
 import {
-  LayoutDashboard, Users, FileText, LogOut, Search, Settings, Menu, X, ChevronRight, Shield
+  LayoutDashboard, Users, LogOut, Search, Settings, Menu, X, ChevronRight, Shield
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
