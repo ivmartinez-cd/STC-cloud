@@ -62,6 +62,7 @@ async function postWithAuth(url: string, body: unknown, config: AgentConfig): Pr
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
       body: JSON.stringify(body),
+      signal: AbortSignal.timeout(65_000)
     });
 
   let res = await make(config.token);
@@ -83,6 +84,7 @@ export async function tryRefresh(config: AgentConfig): Promise<AgentConfig | nul
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ agentId: config.agentId, refresh_token: config.refreshToken }),
+      signal: AbortSignal.timeout(65_000)
     });
     if (!res.ok) return null;
     const data = await res.json() as { token: string; refresh_token: string };

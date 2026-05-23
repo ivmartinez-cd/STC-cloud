@@ -125,6 +125,7 @@ async function heartbeat(): Promise<void> {
           uptime:    Math.round(os.uptime())
         }
       }),
+      signal: AbortSignal.timeout(65_000)
     });
 
     if (res.status === 401) {
@@ -367,6 +368,7 @@ async function registerDevice(config: AgentConfig, r: DeviceReading): Promise<bo
           name:   (r.model || r.ip || "Unknown Device").slice(0, 100),
         }],
       }),
+      signal: AbortSignal.timeout(65_000)
     });
     return res.ok;
   } catch (e: unknown) {
@@ -808,6 +810,7 @@ async function activate(): Promise<void> {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ key, hardwareId: getHardwareId() }),
+      signal: AbortSignal.timeout(65_000)
     });
 
     if (!res.ok) {
