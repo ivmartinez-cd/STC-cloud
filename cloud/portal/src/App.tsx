@@ -10,7 +10,6 @@ const Clients      = lazy(() => import('./pages/Clients'));
 const ClientDetail = lazy(() => import('./pages/ClientDetail'));
 const MonitorDetail   = lazy(() => import('./pages/MonitorDetail'));
 const DeviceDetail = lazy(() => import('./pages/DeviceDetail'));
-const Reports      = lazy(() => import('./pages/Reports'));
 const Settings     = lazy(() => import('./pages/Settings'));
 const Agents       = lazy(() => import('./pages/Agents'));
 
@@ -35,7 +34,6 @@ function App() {
                 <Route path="/monitors/:id"  element={<MonitorDetail />} />
                 <Route path="/agents"        element={<Agents />} />
                 <Route path="/devices/:id"   element={<DeviceDetail />} />
-                <Route path="/reports"       element={<Reports />} />
                 <Route path="/settings"      element={<Settings />} />
               </Route>
             </Route>

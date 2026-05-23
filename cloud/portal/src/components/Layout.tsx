@@ -14,7 +14,6 @@ const navItems = [
   { name: 'Dashboard',     path: '/',          icon: LayoutDashboard },
   { name: 'Clientes',      path: '/clients',   icon: Users           },
   { name: 'Agentes',       path: '/agents',    icon: Shield          },
-  { name: 'Reportes',      path: '/reports',   icon: FileText        },
   { name: 'Configuración', path: '/settings',  icon: Settings        },
 ];
 
