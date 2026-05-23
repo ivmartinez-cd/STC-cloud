@@ -537,7 +537,7 @@
                 <strong>Política de Pruning de Logs (Purga Activa):</strong> Implementar una rutina diaria que elimine logs de auditoría o escaneos repetidos de más de 30 días de antigüedad para mantener la base de datos por debajo de los 350 MB.
             </li>
             <li>
-                <strong>Timeouts Resilientes en el Agente:</strong> Configurar el cliente HTTP del agente con un timeout de **65 segundos** y reintentos exponenciales aleatorios (jitter) para soportar el arranque en frío de Render sin generar bucles de colisión.
+                <strong>Timeouts Resilientes en el Agente (IMPLEMENTADO):</strong> Se han implementado de forma nativa timeouts controlados de **65 segundos** usando <code>AbortSignal.timeout(65_000)</code> en todos los llamados críticos de <code>fetch</code> del agente local (heartbeat, sync, register, refresh y activate). Esto garantiza que el agente DCA espere pacientemente los ~50s necesarios para que Render despierte sin abortar ni generar bucles de colisión.
             </li>
         </ul>
 

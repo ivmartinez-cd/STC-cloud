@@ -64,6 +64,11 @@ Para disipar el temor sobre la rigurosidad técnica de la aplicación, certifica
 3. **JSDoc/TSDoc Uniforme:** Cada función crítica e interfaz cuenta con documentación nativa JSDoc, explicando con exactitud el comportamiento, los parámetros de red y las excepciones posibles. Esto permite que el equipo de sistemas lea y verifique el código fuente línea por línea con facilidad.
 4. **Firma Digital de Actualizaciones (Supply Chain Shield):** Para prevenir que se introduzca un binario malicioso simulando ser una actualización, el agente valida que el paquete de actualización cuente con una firma criptográfica asimétrica válida generada mediante **Ed25519**, contrastándola contra una clave pública inmutable quemada en el ejecutable.
 
+### D. Resiliencia de Red y Mitigaciones ante Caídas Temporales [NUEVO]
+Para garantizar la continuidad de la telemetría ante microcortes de red o la hibernación periódica de servidores en la nube (ej: límites de capas gratuitas como *spin-down* de Render):
+1. **Timeouts Resilientes Nativos (AbortSignal):** Todos los llamados HTTP críticos del agente local (sincronización de lecturas, envío de latidos, renovación de tokens y activación) cuentan con un timeout explícito de **65 segundos** implementado de forma nativa mediante `AbortSignal.timeout(65_000)`. Esto permite al agente DCA tolerar con paciencia los ~50s que toma el servidor en la nube para despertar de su reposo sin abortar el socket.
+2. **Buffer de Telemetría Offline (SQLite WAL):** Si el canal de red o el servidor fallan de forma prolongada, el agente encola de forma ininterrumpida las lecturas de las impresoras en una base de datos SQLite persistente local con la configuración de alto rendimiento Write-Ahead Logging (WAL). Al restablecerse el canal, se realiza una subida secuencial inteligente libre de colisiones.
+
 ---
 
 ## 🛠️ 3. Guía Rápida para el Auditor de Sistemas (Cómo auditar en 5 minutos)
