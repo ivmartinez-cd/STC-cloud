@@ -1,6 +1,7 @@
 import { FastifyRequest } from "fastify";
 import { Knex } from "knex";
 import type { PortalUser } from "../middlewares/authMiddleware";
+import { getClientIp } from "../utils/ip";
 
 export function createClientController(db: Knex) {
   return {
@@ -19,7 +20,7 @@ export function createClientController(db: Knex) {
         action: "CLIENT_CREATED",
         target_id: String(client.id),
         user_id: user?.userId ?? null,
-        ip_address: (request.headers["x-forwarded-for"] as string) || request.ip,
+        ip_address: getClientIp(request),
         metadata: JSON.stringify({ name: client.name }),
       });
       return client;

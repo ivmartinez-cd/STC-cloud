@@ -1,6 +1,7 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
 import type { Knex } from "knex";
 import type { PortalUser } from "../middlewares/authMiddleware";
+import { getClientIp } from "../utils/ip";
 
 interface FeedbackBody {
   type: "bug" | "enhancement";
@@ -47,7 +48,7 @@ export function createFeedbackController(fastify: FastifyInstance, db: Knex) {
         metadata: db.raw("?::jsonb", [
           JSON.stringify({ title, type, submitted_by: actualUsername }),
         ]),
-        ip_address: request.ip,
+        ip_address: getClientIp(request),
       });
 
       fastify.log.info(
@@ -117,7 +118,7 @@ export function createFeedbackController(fastify: FastifyInstance, db: Knex) {
         metadata: db.raw("?::jsonb", [
           JSON.stringify({ status, title: updated.title, updated_by: actualUsername }),
         ]),
-        ip_address: request.ip,
+        ip_address: getClientIp(request),
       });
 
       fastify.log.info(`[Feedback] Estado de ${id} actualizado a ${status} por ${actualUsername}`);

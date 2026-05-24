@@ -7,6 +7,7 @@ import Redis from "ioredis";
 import { AgentService } from "../../services/agentService";
 import { hashPassword, verifyPassword } from "../utils/password";
 import type { PortalUser } from "../middlewares/authMiddleware";
+import { getClientIp } from "../utils/ip";
 
 /** Cuerpo de login del portal. */
 interface LoginBody { username: string; password: string; }
@@ -143,7 +144,7 @@ export function createAuthController(fastify: FastifyInstance, db: Knex, redis: 
         action: "USER_CREATED",
         target_id: String(newUser.id),
         user_id: currentUser.userId !== "admin" ? currentUser.userId : null,
-        ip_address: (request.headers["x-forwarded-for"] as string) || request.ip,
+        ip_address: getClientIp(request),
         metadata: JSON.stringify({ username: cleanUsername, role: role || "operator" }),
       });
 
@@ -187,7 +188,7 @@ export function createAuthController(fastify: FastifyInstance, db: Knex, redis: 
         action: "USER_UPDATED",
         target_id: String(id),
         user_id: currentUser.userId !== "admin" ? currentUser.userId : null,
-        ip_address: (request.headers["x-forwarded-for"] as string) || request.ip,
+        ip_address: getClientIp(request),
         metadata: JSON.stringify({ changes: { password_changed: !!password, role, active } }),
       });
 
@@ -214,7 +215,7 @@ export function createAuthController(fastify: FastifyInstance, db: Knex, redis: 
         action: "USER_DELETED",
         target_id: String(id),
         user_id: currentUser.userId !== "admin" ? currentUser.userId : null,
-        ip_address: (request.headers["x-forwarded-for"] as string) || request.ip,
+        ip_address: getClientIp(request),
         metadata: JSON.stringify({ username: user.username, role: user.role }),
       });
 

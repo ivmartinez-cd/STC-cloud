@@ -24,6 +24,7 @@ import { registerClientRoutes } from "./routes/clientRoutes";
 import { registerDeviceRoutes } from "./routes/deviceRoutes";
 import { registerDashboardRoutes } from "./routes/dashboardRoutes";
 import { registerFeedbackRoutes } from "./routes/feedbackRoutes";
+import { getClientIp } from "./utils/ip";
 
 dotenv.config({ path: path.join(__dirname, "../../../.env") });
 
@@ -160,8 +161,7 @@ const start = async () => {
       max: 100,
       timeWindow: "1 minute",
       redis,
-      keyGenerator: (request: FastifyRequest) =>
-        (request.headers["x-forwarded-for"] as string) || request.ip,
+      keyGenerator: (request: FastifyRequest) => getClientIp(request),
       allowList: (request: FastifyRequest) => request.url.startsWith("/ws"),
     });
 

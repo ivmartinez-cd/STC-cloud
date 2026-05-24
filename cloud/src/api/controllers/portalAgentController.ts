@@ -4,6 +4,7 @@ import Redis from "ioredis";
 import { AgentService, AgentConfigUpdate } from "../../services/agentService";
 import { sendCommandToAgent } from "../../ws/index";
 import type { PortalUser } from "../middlewares/authMiddleware";
+import { getClientIp } from "../utils/ip";
 
 /** Parámetros de ruta con ID de agente. */
 interface AgentIdParams { id: string; }
@@ -141,7 +142,7 @@ export function createPortalAgentController(
         scan_interval_minutes,
       }, {
         userId: user?.userId,
-        ip: (request.headers["x-forwarded-for"] as string) || request.ip,
+        ip: getClientIp(request),
       });
     },
 
@@ -152,7 +153,7 @@ export function createPortalAgentController(
         return reply.status(400).send({ error: "ID de agente inválido" });
       }
       const user = (request as FastifyRequest & { user: PortalUser }).user;
-      const requestIp = (request.headers["x-forwarded-for"] as string) || request.ip;
+      const requestIp = getClientIp(request);
       try {
         fastify.log.info({ agentId: id }, "Solicitud de eliminación de agente y cascada");
 
@@ -191,7 +192,7 @@ export function createPortalAgentController(
 
     revokeAgent: async (request: FastifyRequest) => {
       const { id } = request.params as AgentIdParams;
-      const requestIp = (request.headers["x-forwarded-for"] as string) || request.ip;
+      const requestIp = getClientIp(request);
       await agentService.revokeToken(redis, id, 30 * 24 * 60 * 60, requestIp);
       return { status: "revoked" };
     },
@@ -202,7 +203,7 @@ export function createPortalAgentController(
       try {
         return await agentService.regenerateActivationKey(id, {
           userId: user?.userId,
-          ip: (request.headers["x-forwarded-for"] as string) || request.ip,
+          ip: getClientIp(request),
         });
       } catch (err: unknown) {
         const errMsg = err instanceof Error ? err.message : String(err);
@@ -287,7 +288,7 @@ export function createPortalAgentController(
       const user = (request as FastifyRequest & { user: PortalUser }).user;
       return await agentService.updateConfig(id, request.body as AgentConfigUpdate, {
         userId: user?.userId,
-        ip: (request.headers["x-forwarded-for"] as string) || request.ip,
+        ip: getClientIp(request),
       });
     },
   };
