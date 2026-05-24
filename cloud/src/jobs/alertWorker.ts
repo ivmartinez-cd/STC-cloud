@@ -79,7 +79,7 @@ async function evaluateReading(r: MappedReading) {
           r.device_id,
           critType,
           'critical',
-          `Tóner ${color.toUpperCase()} en nivel crítico (${val}%) en ${deviceName}`,
+          `Tóner ${color.toUpperCase()} en nivel crítico (${val}%)`,
           val
         );
         await resolveAlerts(r.device_id, lowType);
@@ -89,7 +89,7 @@ async function evaluateReading(r: MappedReading) {
           r.device_id,
           lowType,
           'warning',
-          `Tóner ${color.toUpperCase()} bajo (${val}%) en ${deviceName}`,
+          `Tóner ${color.toUpperCase()} bajo (${val}%)`,
           val
         );
         await resolveAlerts(r.device_id, critType);

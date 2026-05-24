@@ -327,7 +327,7 @@ const Dashboard = () => {
                             )}
                           </td>
                           <td className="py-1.5 px-3 text-[10px] text-slate-600 max-w-[200px] truncate" title={alert.message}>
-                            {alert.message}
+                            {alert.message.split(' en ')[0]}
                           </td>
                           <td className="py-1.5 px-3">
                             <span className={`inline-flex px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider ${
