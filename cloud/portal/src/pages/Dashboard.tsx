@@ -73,16 +73,6 @@ const getTonerColorInfo = (type: string) => {
   return null;
 };
 
-const formatUptime = (seconds: number) => {
-  const d = Math.floor(seconds / (3600 * 24));
-  const h = Math.floor((seconds % (3600 * 24)) / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const parts = [];
-  if (d > 0) parts.push(`${d}d`);
-  if (h > 0 || d > 0) parts.push(`${h}h`);
-  parts.push(`${m}m`);
-  return parts.join(' ');
-};
 
 const Dashboard = () => {
   const { data, loading, fetchDashboardData } = useDashboard();
@@ -401,17 +391,19 @@ const Dashboard = () => {
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Uptime</span>
-                <span className="text-xs font-black tracking-tight text-blue-100">
-                  {data?.systemHealth.uptime ? formatUptime(data.systemHealth.uptime) : '0m'}
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Monitores Activos</span>
+                <span className="text-xs font-black tracking-tight text-emerald-400">
+                  {data?.stats?.agents?.online ?? 0} / {data?.stats?.agents?.total ?? 0}
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Cola Redis</span>
-                <span className="text-xs font-black tracking-tight text-emerald-400">1.2ms (OK)</span>
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Impresoras</span>
+                <span className="text-xs font-black tracking-tight text-blue-300">
+                  {data?.stats?.devices?.toLocaleString() ?? '0'}
+                </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Última Sinc</span>
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Última Lectura</span>
                 <span className="text-xs font-black tracking-tight text-indigo-200">
                   {data?.systemHealth.lastSync ? new Date(data.systemHealth.lastSync).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : 'Sin datos'}
                 </span>
