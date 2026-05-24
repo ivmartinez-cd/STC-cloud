@@ -410,15 +410,9 @@ const Dashboard = () => {
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Monitores Activos</span>
-                <span className="text-xs font-black tracking-tight text-emerald-400">
-                  {data?.stats?.agents?.online ?? 0} / {data?.stats?.agents?.total ?? 0}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Impresoras</span>
-                <span className="text-xs font-black tracking-tight text-blue-300">
-                  {data?.stats?.devices?.toLocaleString() ?? '0'}
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Clientes con Alerta</span>
+                <span className="text-xs font-black tracking-tight text-amber-400">
+                  {data?.systemHealth.clientsWithAlertsCount ?? 0} de {data?.stats?.clients ?? 0}
                 </span>
               </div>
               <div className="flex items-center justify-between">
@@ -428,7 +422,7 @@ const Dashboard = () => {
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Última Lectura</span>
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Última Ingesta</span>
                 <span className="text-xs font-black tracking-tight text-indigo-200 text-right flex flex-col items-end">
                   <span>{formatLastSync(data?.systemHealth.lastSync)}</span>
                   {data?.systemHealth.lastClient && (

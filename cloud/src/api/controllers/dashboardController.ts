@@ -18,6 +18,7 @@ export function createDashboardController(db: Knex, agentService: AgentService) 
         newDevicesCount,
         readings24hCount,
         lastReadingInfo,
+        clientsWithAlertsCount,
       ] = await Promise.all([
         db("devices").where({ active: true }).count("* as c").first(),
 
@@ -96,6 +97,13 @@ export function createDashboardController(db: Knex, agentService: AgentService) 
           .orderBy("readings.time", "desc")
           .select("readings.time", "clients.name as client_name")
           .first(),
+
+        db("alerts")
+          .join("devices", "alerts.device_id", "devices.id")
+          .join("agents", "devices.agent_id", "agents.id")
+          .where("alerts.resolved", false)
+          .countDistinct("agents.client_id as c")
+          .first(),
       ]);
 
       const total = Number(devicesCount?.c || 0);
@@ -127,6 +135,7 @@ export function createDashboardController(db: Knex, agentService: AgentService) 
           lastSync: lastReadingInfo?.time ?? null,
           lastClient: lastReadingInfo?.client_name ?? null,
           readingsCount24h: Number(readings24hCount?.c || 0),
+          clientsWithAlertsCount: Number(clientsWithAlertsCount?.c || 0),
         },
       };
     },

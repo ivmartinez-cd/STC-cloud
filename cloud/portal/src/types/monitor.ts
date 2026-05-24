@@ -86,7 +86,7 @@ export interface DashboardData {
   topClients: Array<{ id: string; name: string; device_count: number }>;
   brands: Array<{ brand: string; count: number }>;
   offlineAgents: Array<{ id: string; name: string; client_name: string; last_seen: string }>;
-  systemHealth: { status: 'healthy' | 'degraded' | 'error'; uptime: number; lastSync: string | null; lastClient?: string | null; readingsCount24h?: number };
+  systemHealth: { status: 'healthy' | 'degraded' | 'error'; uptime: number; lastSync: string | null; lastClient?: string | null; readingsCount24h?: number; clientsWithAlertsCount?: number };
 }
 
 export interface Client {
