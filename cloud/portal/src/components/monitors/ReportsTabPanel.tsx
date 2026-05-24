@@ -76,38 +76,22 @@ const STATUS_LABELS: Record<TonerLevel, string> = {
   ok: 'OK', warning: 'Advertencia', critical: 'Crítico',
 };
 
-/* ─── Toner progress bar ─────────────────────────────────────────── */
-interface TonerBarProps {
-  label: string;
+/* ─── Toner progress cell ────────────────────────────────────────── */
+interface TonerCellProps {
   value: number | null | undefined;
-  color: string;
+  colorClass: string;
 }
 
-const TonerBar = ({ label, value, color }: TonerBarProps) => {
-  const pct = value ?? 0;
+const TonerCell = ({ value, colorClass }: TonerCellProps) => {
+  if (value == null) return <span className="text-[10px] text-slate-300 font-bold">-</span>;
   const lvl = tonerStatus(value);
+  const bgClass = lvl === 'critical' ? 'bg-rose-400' : lvl === 'warning' ? 'bg-amber-400' : colorClass;
   return (
-    <div className="space-y-1.5">
-      <div className="flex justify-between items-center">
-        <span className="text-[9px] font-extrabold uppercase tracking-widest text-slate-500">{label}</span>
-        <span className={`text-[9px] font-black ${
-          lvl === 'critical' ? 'text-rose-500' :
-          lvl === 'warning'  ? 'text-amber-500 animate-pulse' :
-          'text-slate-600'
-        }`}>
-          {value != null ? `${pct}%` : 'N/A'}
-        </span>
+    <div className="flex items-center gap-2">
+      <div className="w-16 sm:w-20 bg-slate-100 h-1.5 rounded-full overflow-hidden border border-slate-200/50">
+        <div className={`h-full rounded-full transition-all duration-700 ${bgClass}`} style={{ width: `${value}%` }} />
       </div>
-      <div className="h-2 w-full bg-white rounded-full overflow-hidden border border-slate-200/80">
-        <div
-          className={`h-full rounded-full transition-all duration-700 ${
-            lvl === 'critical' ? 'bg-rose-400' :
-            lvl === 'warning'  ? 'bg-amber-400' :
-            color
-          }`}
-          style={{ width: `${pct}%` }}
-        />
-      </div>
+      <span className="text-[9px] font-bold text-slate-500 w-6 text-right">{value}%</span>
     </div>
   );
 };
@@ -367,57 +351,56 @@ const ReportsTabPanel = ({ devices, monitor }: Props) => {
               <p className="text-slate-500 font-bold text-xs uppercase tracking-widest">Sin datos de consumibles disponibles</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-              {devicesWithToner.map(device => {
-                const status  = deviceTonerStatus(device);
-                const isColor = device.toner_cyan != null;
-                return (
-                  <div
-                    key={device.id}
-                    className={`p-6 rounded-3xl border transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 ${
-                      status === 'critical' ? 'bg-rose-50/60  border-rose-100' :
-                      status === 'warning'  ? 'bg-amber-50/60 border-amber-100' :
-                      'bg-slate-50 border-slate-100'
-                    }`}
-                  >
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex items-center gap-3">
-                        <div className={`p-2.5 rounded-xl ${
-                          status === 'critical' ? 'bg-rose-100 text-rose-500' :
-                          status === 'warning'  ? 'bg-amber-100 text-amber-500' :
-                          'bg-white text-slate-400 border border-slate-100'
-                        }`}>
-                          <Printer size={16} />
-                        </div>
-                        <div>
-                          <p className="text-xs font-black text-[#1a2333] tracking-tight leading-tight">{device.model ?? 'Modelo N/A'}</p>
-                          <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{device.brand ?? 'Marca N/A'}</p>
-                        </div>
-                      </div>
-                      <span className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${STATUS_STYLES[status]}`}>
-                        {STATUS_LABELS[status]}
-                      </span>
-                    </div>
-
-                    <div className="mb-5">
-                      <span className="px-2.5 py-1 bg-white rounded-lg font-mono text-[10px] font-bold text-slate-500 border border-slate-200">
-                        {device.serial_number ?? 'S/N'}
-                      </span>
-                    </div>
-
-                    <div className="space-y-3">
-                      <TonerBar label="Negro"   value={device.toner_black}   color="bg-slate-800" />
-                      {isColor && (
-                        <>
-                          <TonerBar label="Cian"    value={device.toner_cyan}    color="bg-[#00adef]" />
-                          <TonerBar label="Magenta" value={device.toner_magenta} color="bg-[#ec008c]" />
-                          <TonerBar label="Amarillo" value={device.toner_yellow} color="bg-[#f5c400]" />
-                        </>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
+            <div className="w-full overflow-x-auto">
+              <table className="w-full text-left border-collapse whitespace-nowrap">
+                <thead className="bg-slate-50 border-b border-slate-200">
+                  <tr>
+                    <th className="py-2 px-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Modelo</th>
+                    <th className="py-2 px-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Marca</th>
+                    <th className="py-2 px-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">S/N</th>
+                    <th className="py-2 px-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Estado</th>
+                    <th className="py-2 px-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Negro</th>
+                    <th className="py-2 px-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Cian</th>
+                    <th className="py-2 px-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Magenta</th>
+                    <th className="py-2 px-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Amarillo</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {devicesWithToner.map(device => {
+                    const status  = deviceTonerStatus(device);
+                    return (
+                      <tr key={device.id} className="hover:bg-slate-50 transition-colors">
+                        <td className="py-2 px-4 text-[10px] text-[#1a2333] font-bold">
+                          {device.model ?? 'N/A'}
+                        </td>
+                        <td className="py-2 px-4 text-[10px] text-slate-500 font-medium uppercase">
+                          {device.brand ?? 'N/A'}
+                        </td>
+                        <td className="py-2 px-4 text-[10px] text-slate-500 font-mono">
+                          {device.serial_number ?? 'S/N'}
+                        </td>
+                        <td className="py-2 px-4">
+                          <span className={`inline-flex px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider border ${STATUS_STYLES[status]}`}>
+                            {STATUS_LABELS[status]}
+                          </span>
+                        </td>
+                        <td className="py-2 px-4">
+                          <TonerCell value={device.toner_black} colorClass="bg-slate-800" />
+                        </td>
+                        <td className="py-2 px-4">
+                          <TonerCell value={device.toner_cyan} colorClass="bg-[#00adef]" />
+                        </td>
+                        <td className="py-2 px-4">
+                          <TonerCell value={device.toner_magenta} colorClass="bg-[#ec008c]" />
+                        </td>
+                        <td className="py-2 px-4">
+                          <TonerCell value={device.toner_yellow} colorClass="bg-[#f5c400]" />
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           )}
         </div>
