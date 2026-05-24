@@ -87,4 +87,4 @@ Si el Gerente de Sistemas desea auditar la robustez del ecosistema rápidamente,
 
 ### Paso 3: Validar el Cumplimiento de Cifrado
 * Revise el módulo del agente: `agent/src/core/ConfigManager.ts`.
-* Compruebe cómo se implementa la derivación de clave **PBKDF2** con **100,000 iteraciones** y sal de 16 bytes, y el algoritmo **AES-256-GCM** de cifrado síncrono.
+* Compruebe cómo se implementa la derivación de clave **PBKDF2** con **210,000 iteraciones** y sal de 16 bytes, y el algoritmo **AES-256-GCM** de cifrado síncrono.

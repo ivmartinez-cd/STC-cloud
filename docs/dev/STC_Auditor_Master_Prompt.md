@@ -34,7 +34,7 @@ Analiza cada archivo de la base de código aplicando de manera implacable los si
 *   **Metadatos de Trazabilidad:** Confirma que las inserciones registren la IP de origen, el timestamp de servidor, el ID del operador administrativo y el estado previo/posterior a la acción.
 
 ### 3. 🔑 Pilar de Criptografía y Privacidad (Regla 3 & 4)
-*   ** Hardware ID Binding:** Inspecciona el módulo criptográfico del agente (`agent/src/core/config.ts`). Verifica que la derivación de clave para descifrar `config.enc` combine inmutablemente identificadores físicos del host (MachineGuid + Serial de BIOS/Placa base) mediante PBKDF2 (mínimo 100,000 iteraciones).
+*   ** Hardware ID Binding:** Inspecciona el módulo criptográfico del agente (`agent/src/core/config.ts`). Verifica que la derivación de clave para descifrar `config.enc` combine inmutablemente identificadores físicos del host (MachineGuid + Serial de BIOS/Placa base) mediante PBKDF2 (mínimo 210,000 iteraciones).
 *   **Prevención de HWID Mismatch:** Asegura que ante cualquier alteración física del hardware, el desencriptado AES-256-GCM falle de forma segura inhabilitando el binario.
 *   **Ciclo de Vida del Token:** Revisa que el flujo de activación del agente (Pending -> Active -> Revoked) esté blindado en base de datos y que las revocaciones de tokens se sincronicen de inmediato en la lista negra en memoria (Redis).
 

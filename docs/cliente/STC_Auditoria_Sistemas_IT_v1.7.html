@@ -466,7 +466,7 @@
             La derivación de la clave final y el cifrado del archivo se rige por estándares recomendados por la NIST:
         </p>
         <pre class="code">
-Clave_Derivada = PBKDF2(Password: HWID_Base, Salt: Disk_Salt, Iterations: 100000, Hash: sha256)
+Clave_Derivada = PBKDF2(Password: HWID_Base, Salt: Disk_Salt, Iterations: 210000, Hash: sha256)
 Encrypted_Buffer = AES-256-GCM(Data: JSON_Config, Key: Clave_Derivada, IV: 12-bytes_random)</pre>
         <p>
             El vector de inicialización (IV) de 12 bytes asegura que el texto cifrado resultante sea único en cada escritura. La integridad y autenticidad del contenido del archivo config.enc está respaldada por el **Tag de Autenticación de 16 bytes** provisto por el modo GCM.
