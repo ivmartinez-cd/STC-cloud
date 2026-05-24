@@ -44,6 +44,12 @@ export interface MonitorData {
     ip_ranges: { start: string; end: string }[];
     snmp_community: string;
     scan_interval_minutes: number;
+    scan_schedule?: {
+      mode: "interval" | "custom";
+      interval_minutes?: number;
+      custom_days?: number[];
+      custom_times?: string[];
+    };
     toner_warning_threshold?: number;
     toner_critical_threshold?: number;
   };
@@ -56,10 +62,15 @@ export interface MonitorData {
 
 export interface EditFormData {
   name: string;
-  ipStart: string;
-  ipEnd: string;
+  ip_ranges: { start: string; end: string }[];
   snmp: string;
   interval: number;
+  scan_schedule: {
+    mode: "interval" | "custom";
+    interval_minutes?: number;
+    custom_days?: number[];
+    custom_times?: string[];
+  };
   tonerWarningThreshold: number;
   tonerCriticalThreshold: number;
 }

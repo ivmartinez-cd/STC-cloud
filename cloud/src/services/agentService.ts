@@ -18,11 +18,19 @@ export interface AuditContext {
   ip?: string;
 }
 
+export interface ScanSchedule {
+  mode: "interval" | "custom";
+  interval_minutes?: number;
+  custom_days?: number[];  // [1, 2, 3, 4, 5] (1=Lunes, 7=Domingo)
+  custom_times?: string[]; // ["09:00", "15:00"]
+}
+
 /** Configuración de red y escaneo enviada desde el portal para actualizar un agente. */
 export interface AgentConfigUpdate {
   ip_ranges?: Array<{ start: string; end: string }>;
   snmp_community?: string;
   scan_interval_minutes?: number;
+  scan_schedule?: ScanSchedule;
   name?: string;
   toner_warning_threshold?: number;
   toner_critical_threshold?: number;
@@ -260,6 +268,9 @@ export class AgentService {
     }
     if (newConfig.scan_interval_minutes !== undefined) {
       updates.scan_interval_minutes = newConfig.scan_interval_minutes;
+    }
+    if (newConfig.scan_schedule !== undefined) {
+      updates.scan_schedule = JSON.stringify(newConfig.scan_schedule);
     }
     if (newConfig.name !== undefined) {
       updates.name = newConfig.name;
@@ -737,11 +748,16 @@ export class AgentService {
   async getConfig(agentId: string) {
     const agent = await this.db("agents")
       .where({ id: agentId })
-      .select("ip_ranges", "snmp_community", "scan_interval_minutes", "toner_warning_threshold", "toner_critical_threshold")
+      .select("ip_ranges", "snmp_community", "scan_interval_minutes", "toner_warning_threshold", "toner_critical_threshold", "scan_schedule")
       .first();
     
-    if (agent && typeof agent.ip_ranges === 'string') {
-      agent.ip_ranges = JSON.parse(agent.ip_ranges);
+    if (agent) {
+      if (typeof agent.ip_ranges === 'string') {
+        agent.ip_ranges = JSON.parse(agent.ip_ranges);
+      }
+      if (typeof agent.scan_schedule === 'string') {
+        agent.scan_schedule = JSON.parse(agent.scan_schedule);
+      }
     }
     return agent;
   }

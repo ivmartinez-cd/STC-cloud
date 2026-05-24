@@ -91,9 +91,10 @@ export function useMonitorDetail(id: string) {
   const saveConfig = useCallback(async (form: EditFormData) => {
     await api.put(`/agents/${id}/config`, {
       name: form.name,
-      ip_ranges: form.ipStart && form.ipEnd ? [{ start: form.ipStart, end: form.ipEnd }] : [],
+      ip_ranges: form.ip_ranges,
       snmp_community: form.snmp,
-      scan_interval_minutes: form.interval,
+      scan_interval_minutes: form.scan_schedule.mode === 'interval' ? (form.scan_schedule.interval_minutes ?? 15) : form.interval,
+      scan_schedule: form.scan_schedule,
       toner_warning_threshold: form.tonerWarningThreshold,
       toner_critical_threshold: form.tonerCriticalThreshold,
     });

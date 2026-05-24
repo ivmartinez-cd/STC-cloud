@@ -84,12 +84,22 @@ export function createPortalAgentController(
         }
       }
 
+      let parsedScanSchedule = null;
+      if (agent.scan_schedule) {
+        try {
+          parsedScanSchedule = typeof agent.scan_schedule === "string" ? JSON.parse(agent.scan_schedule) : agent.scan_schedule;
+        } catch (e) {
+          console.error("Error parsing scan_schedule in getAgent:", e);
+        }
+      }
+
       return {
         ...agent,
         config: {
           ip_ranges: parsedIpRanges,
           snmp_community: agent.snmp_community,
           scan_interval_minutes: agent.scan_interval_minutes,
+          scan_schedule: parsedScanSchedule,
           toner_warning_threshold: agent.toner_warning_threshold,
           toner_critical_threshold: agent.toner_critical_threshold,
         },
