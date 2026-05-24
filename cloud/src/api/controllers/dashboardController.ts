@@ -16,6 +16,8 @@ export function createDashboardController(db: Knex, agentService: AgentService) 
         brandStats,
         offlineAgents,
         newDevicesCount,
+        readings24hCount,
+        lastReadingInfo,
       ] = await Promise.all([
         db("devices").where({ active: true }).count("* as c").first(),
 
@@ -81,6 +83,19 @@ export function createDashboardController(db: Knex, agentService: AgentService) 
           .where("created_at", ">=", new Date(Date.now() - 30 * 24 * 60 * 60 * 1000))
           .count("* as c")
           .first(),
+
+        db("readings")
+          .where("time", ">=", new Date(Date.now() - 24 * 60 * 60 * 1000))
+          .count("* as c")
+          .first(),
+
+        db("readings")
+          .join("devices", "readings.device_id", "devices.id")
+          .join("agents", "devices.agent_id", "agents.id")
+          .join("clients", "agents.client_id", "clients.id")
+          .orderBy("readings.time", "desc")
+          .select("readings.time", "clients.name as client_name")
+          .first(),
       ]);
 
       const total = Number(devicesCount?.c || 0);
@@ -109,10 +124,9 @@ export function createDashboardController(db: Knex, agentService: AgentService) 
         systemHealth: {
           status: "healthy",
           uptime: process.uptime(),
-          lastSync:
-            brandStats.length > 0
-              ? (await db("readings").orderBy("time", "desc").select("time").first())?.time
-              : null,
+          lastSync: lastReadingInfo?.time ?? null,
+          lastClient: lastReadingInfo?.client_name ?? null,
+          readingsCount24h: Number(readings24hCount?.c || 0),
         },
       };
     },

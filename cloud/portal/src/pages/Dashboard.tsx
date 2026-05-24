@@ -422,9 +422,20 @@ const Dashboard = () => {
                 </span>
               </div>
               <div className="flex items-center justify-between">
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Lecturas (24h)</span>
+                <span className="text-xs font-black tracking-tight text-emerald-300">
+                  {data?.systemHealth.readingsCount24h?.toLocaleString() ?? '0'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Última Lectura</span>
-                <span className="text-xs font-black tracking-tight text-indigo-200">
-                  {formatLastSync(data?.systemHealth.lastSync)}
+                <span className="text-xs font-black tracking-tight text-indigo-200 text-right flex flex-col items-end">
+                  <span>{formatLastSync(data?.systemHealth.lastSync)}</span>
+                  {data?.systemHealth.lastClient && (
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wide mt-0.5">
+                      ({data.systemHealth.lastClient})
+                    </span>
+                  )}
                 </span>
               </div>
             </div>
