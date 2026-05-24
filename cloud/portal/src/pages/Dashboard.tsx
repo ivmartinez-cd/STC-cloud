@@ -73,6 +73,25 @@ const getTonerColorInfo = (type: string) => {
   return null;
 };
 
+const formatLastSync = (dateStr: string | null | undefined) => {
+  if (!dateStr) return 'Sin datos';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return 'Sin datos';
+  
+  const today = new Date();
+  const isToday = d.getDate() === today.getDate() &&
+                  d.getMonth() === today.getMonth() &&
+                  d.getFullYear() === today.getFullYear();
+                  
+  const timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  
+  if (isToday) {
+    return `Hoy, ${timeStr}`;
+  }
+  
+  const dateFormatted = d.toLocaleDateString([], { day: '2-digit', month: '2-digit', year: 'numeric' });
+  return `${dateFormatted} ${timeStr}`;
+};
 
 const Dashboard = () => {
   const { data, loading, fetchDashboardData } = useDashboard();
@@ -405,7 +424,7 @@ const Dashboard = () => {
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Última Lectura</span>
                 <span className="text-xs font-black tracking-tight text-indigo-200">
-                  {data?.systemHealth.lastSync ? new Date(data.systemHealth.lastSync).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : 'Sin datos'}
+                  {formatLastSync(data?.systemHealth.lastSync)}
                 </span>
               </div>
             </div>
