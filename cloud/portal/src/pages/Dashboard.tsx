@@ -287,87 +287,76 @@ const Dashboard = () => {
                 <p className="text-[10px] font-bold text-slate-400 mt-1">Todos los consumibles por encima de los límites configurados</p>
               </div>
             ) : (
-              alerts.map((alert) => {
-                const isToner = alert.type.startsWith('toner_');
-                const tonerInfo = isToner ? getTonerColorInfo(alert.type) : null;
-                return (
-                  <div
-                    key={alert.id}
-                    className={`p-3.5 rounded-2xl border transition-all ${
-                      alert.severity === 'critical'
-                        ? 'bg-rose-50/30 border-rose-100/60 hover:bg-rose-50 hover:border-rose-200'
-                        : 'bg-amber-50/30 border-amber-100/60 hover:bg-amber-50 hover:border-amber-200'
-                    }`}
-                  >
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="text-[11px] font-black text-[#1a2333] uppercase tracking-tight truncate">
+              <div className="w-full overflow-x-auto rounded-xl border border-slate-200 bg-white">
+                <table className="w-full text-left border-collapse whitespace-nowrap">
+                  <thead className="bg-slate-50 border-b border-slate-200">
+                    <tr>
+                      <th className="py-2 px-3 text-[10px] font-black text-slate-500 uppercase tracking-widest">Cliente</th>
+                      <th className="py-2 px-3 text-[10px] font-black text-slate-500 uppercase tracking-widest">S/N</th>
+                      <th className="py-2 px-3 text-[10px] font-black text-slate-500 uppercase tracking-widest">Modelo</th>
+                      <th className="py-2 px-3 text-[10px] font-black text-slate-500 uppercase tracking-widest">Color</th>
+                      <th className="py-2 px-3 text-[10px] font-black text-slate-500 uppercase tracking-widest">Descripción</th>
+                      <th className="py-2 px-3 text-[10px] font-black text-slate-500 uppercase tracking-widest">Motivo</th>
+                      <th className="py-2 px-3 text-[10px] font-black text-slate-500 uppercase tracking-widest">Fecha</th>
+                      <th className="py-2 px-3 text-[10px] font-black text-slate-500 uppercase tracking-widest">Nivel Actual</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {alerts.map((alert) => {
+                      const isToner = alert.type.startsWith('toner_');
+                      const tonerInfo = isToner ? getTonerColorInfo(alert.type) : null;
+                      return (
+                        <tr key={alert.id} className="hover:bg-slate-50 transition-colors">
+                          <td className="py-1.5 px-3 text-[10px] text-[#1a2333] font-black uppercase">
+                            {alert.client_name || '-'}
+                          </td>
+                          <td className="py-1.5 px-3 text-[10px] text-slate-500 font-mono">
+                            {alert.serial || '-'}
+                          </td>
+                          <td className="py-1.5 px-3 text-[10px] text-slate-700 font-bold">
                             {alert.device_name || 'Dispositivo'}
-                          </span>
-                          <span className="text-[8px] font-bold text-slate-600 uppercase tracking-widest bg-slate-100 px-1.5 py-0.5 rounded">
-                            {alert.ip_address}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                          {alert.client_name && (
-                            <span className="text-[8px] font-black text-indigo-500 uppercase tracking-widest bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100">
-                              {alert.client_name}
+                          </td>
+                          <td className="py-1.5 px-3 text-[10px]">
+                            {isToner && tonerInfo ? (
+                               <div className="flex items-center gap-1.5">
+                                 <div className="w-2.5 h-2.5 rounded-sm border border-slate-200" style={{ backgroundColor: tonerInfo.barColor }} />
+                                 <span className="font-bold text-slate-600">{tonerInfo.name}</span>
+                               </div>
+                            ) : (
+                               <span className="text-slate-400 font-medium">Sin color</span>
+                            )}
+                          </td>
+                          <td className="py-1.5 px-3 text-[10px] text-slate-600 max-w-[200px] truncate" title={alert.message}>
+                            {alert.message}
+                          </td>
+                          <td className="py-1.5 px-3">
+                            <span className={`inline-flex px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider ${
+                              alert.severity === 'critical' ? 'bg-rose-100 text-rose-700' : 'bg-amber-100 text-amber-700'
+                            }`}>
+                              {alert.severity === 'critical' ? 'Crítico' : 'Nivel bajo'}
                             </span>
-                          )}
-                          {alert.agent_name && (
-                            <span className="text-[8px] font-bold text-slate-600 uppercase tracking-widest bg-white/80 px-1.5 py-0.5 rounded border border-slate-200/60">
-                              {alert.agent_name}
-                            </span>
-                          )}
-                          {alert.serial && (
-                            <span className="text-[8px] font-mono text-slate-500 tracking-wide" title={alert.serial}>
-                              S/N: {alert.serial}
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-[10px] font-medium text-slate-500 mt-1 leading-snug">
-                          {alert.message}
-                        </p>
-                      </div>
-
-                      <div className="flex items-center gap-2 shrink-0">
-                        {isToner && tonerInfo && (
-                          <span className={`px-2 py-0.5 text-[8px] font-black uppercase rounded-md border ${tonerInfo.badgeClass}`}>
-                            {tonerInfo.name}
-                          </span>
-                        )}
-                        <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-wider border flex items-center gap-1 ${
-                          alert.severity === 'critical'
-                            ? 'bg-rose-500 text-white border-rose-600 shadow-sm shadow-rose-900/10'
-                            : 'bg-amber-500 text-white border-amber-600 shadow-sm shadow-amber-900/10'
-                        }`}>
-                          <span className="w-1 h-1 rounded-full bg-white animate-pulse" />
-                          {alert.severity === 'critical' ? 'Crítico' : 'Bajo'}
-                        </span>
-                      </div>
-                    </div>
-
-                    {isToner && (
-                      <div className="mt-3">
-                        <div className="flex justify-between items-center text-[8px] font-black uppercase tracking-widest text-slate-400 mb-1">
-                          <span>Nivel de Tóner</span>
-                          <span>{alert.value}%</span>
-                        </div>
-                        <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden border border-slate-200/30">
-                          <div
-                            className="h-full rounded-full transition-all duration-700"
-                            style={{
-                              width: `${alert.value}%`,
-                              backgroundColor: tonerInfo?.barColor || '#ef4444',
-                            }}
-                          />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              })
+                          </td>
+                          <td className="py-1.5 px-3 text-[10px] text-slate-500 font-medium">
+                            {new Date(alert.created_at).toLocaleString('es-ES', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                          </td>
+                          <td className="py-1.5 px-3 w-32">
+                            {isToner ? (
+                              <div className="flex items-center gap-2">
+                                <div className="flex-1 bg-slate-100 h-1.5 rounded-full overflow-hidden border border-slate-200/50">
+                                  <div className="h-full rounded-full" style={{ width: `${alert.value}%`, backgroundColor: tonerInfo?.barColor || '#ef4444' }} />
+                                </div>
+                                <span className="text-[9px] font-bold text-slate-500 w-6 text-right">{alert.value}%</span>
+                              </div>
+                            ) : (
+                              <span className="text-[10px] text-slate-500">-</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
         </div>
