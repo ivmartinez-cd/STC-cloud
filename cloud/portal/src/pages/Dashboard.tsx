@@ -293,68 +293,68 @@ const Dashboard = () => {
                 return (
                   <div
                     key={alert.id}
-                    className={`p-5 rounded-3xl border transition-all ${
+                    className={`p-3.5 rounded-2xl border transition-all ${
                       alert.severity === 'critical'
                         ? 'bg-rose-50/30 border-rose-100/60 hover:bg-rose-50 hover:border-rose-200'
                         : 'bg-amber-50/30 border-amber-100/60 hover:bg-amber-50 hover:border-amber-200'
                     }`}
                   >
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-xs font-black text-[#1a2333] uppercase tracking-tight truncate">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-[11px] font-black text-[#1a2333] uppercase tracking-tight truncate">
                             {alert.device_name || 'Dispositivo'}
                           </span>
-                          <span className="text-[9px] font-bold text-slate-600 uppercase tracking-widest bg-slate-100 px-2 py-0.5 rounded-md">
+                          <span className="text-[8px] font-bold text-slate-600 uppercase tracking-widest bg-slate-100 px-1.5 py-0.5 rounded">
                             {alert.ip_address}
                           </span>
                         </div>
-                        <div className="flex items-center gap-2 mt-1 flex-wrap">
+                        <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                           {alert.client_name && (
-                            <span className="text-[9px] font-black text-indigo-500 uppercase tracking-widest bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100">
+                            <span className="text-[8px] font-black text-indigo-500 uppercase tracking-widest bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100">
                               {alert.client_name}
                             </span>
                           )}
                           {alert.agent_name && (
-                            <span className="text-[9px] font-bold text-slate-600 uppercase tracking-widest bg-white/80 px-2 py-0.5 rounded-md border border-slate-200/60">
+                            <span className="text-[8px] font-bold text-slate-600 uppercase tracking-widest bg-white/80 px-1.5 py-0.5 rounded border border-slate-200/60">
                               {alert.agent_name}
                             </span>
                           )}
                           {alert.serial && (
-                            <span className="text-[9px] font-mono text-slate-500 tracking-wide" title={alert.serial}>
+                            <span className="text-[8px] font-mono text-slate-500 tracking-wide" title={alert.serial}>
                               S/N: {alert.serial}
                             </span>
                           )}
                         </div>
-                        <p className="text-[11px] font-medium text-slate-500 mt-1 leading-relaxed">
+                        <p className="text-[10px] font-medium text-slate-500 mt-1 leading-snug">
                           {alert.message}
                         </p>
                       </div>
 
-                      <div className="flex items-center gap-3 shrink-0">
+                      <div className="flex items-center gap-2 shrink-0">
                         {isToner && tonerInfo && (
-                          <span className={`px-2.5 py-1 text-[9px] font-black uppercase rounded-lg border ${tonerInfo.badgeClass}`}>
+                          <span className={`px-2 py-0.5 text-[8px] font-black uppercase rounded-md border ${tonerInfo.badgeClass}`}>
                             {tonerInfo.name}
                           </span>
                         )}
-                        <span className={`px-3 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider border flex items-center gap-1.5 ${
+                        <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-wider border flex items-center gap-1 ${
                           alert.severity === 'critical'
-                            ? 'bg-rose-500 text-white border-rose-600 shadow-md shadow-rose-900/10'
-                            : 'bg-amber-500 text-white border-amber-600 shadow-md shadow-amber-900/10'
+                            ? 'bg-rose-500 text-white border-rose-600 shadow-sm shadow-rose-900/10'
+                            : 'bg-amber-500 text-white border-amber-600 shadow-sm shadow-amber-900/10'
                         }`}>
-                          <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                          <span className="w-1 h-1 rounded-full bg-white animate-pulse" />
                           {alert.severity === 'critical' ? 'Crítico' : 'Bajo'}
                         </span>
                       </div>
                     </div>
 
                     {isToner && (
-                      <div className="mt-4">
-                        <div className="flex justify-between items-center text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1.5">
+                      <div className="mt-3">
+                        <div className="flex justify-between items-center text-[8px] font-black uppercase tracking-widest text-slate-400 mb-1">
                           <span>Nivel de Tóner</span>
                           <span>{alert.value}%</span>
                         </div>
-                        <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden border border-slate-200/30">
+                        <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden border border-slate-200/30">
                           <div
                             className="h-full rounded-full transition-all duration-700"
                             style={{
