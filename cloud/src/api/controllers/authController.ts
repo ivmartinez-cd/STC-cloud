@@ -139,6 +139,14 @@ export function createAuthController(fastify: FastifyInstance, db: Knex, redis: 
         })
         .returning(["id", "username", "role", "active", "created_at"]);
 
+      await db("audit_logs").insert({
+        action: "USER_CREATED",
+        target_id: String(newUser.id),
+        user_id: currentUser.userId !== "admin" ? currentUser.userId : null,
+        ip_address: (request.headers["x-forwarded-for"] as string) || request.ip,
+        metadata: JSON.stringify({ username: cleanUsername, role: role || "operator" }),
+      });
+
       return newUser;
     },
 
@@ -175,6 +183,14 @@ export function createAuthController(fastify: FastifyInstance, db: Knex, redis: 
         .update(updates)
         .returning(["id", "username", "role", "active", "updated_at"]);
 
+      await db("audit_logs").insert({
+        action: "USER_UPDATED",
+        target_id: String(id),
+        user_id: currentUser.userId !== "admin" ? currentUser.userId : null,
+        ip_address: (request.headers["x-forwarded-for"] as string) || request.ip,
+        metadata: JSON.stringify({ changes: { password_changed: !!password, role, active } }),
+      });
+
       return updatedUser;
     },
 
@@ -194,6 +210,14 @@ export function createAuthController(fastify: FastifyInstance, db: Knex, redis: 
         return reply.status(400).send({ error: "No puedes eliminar tu propio usuario" });
       }
 
+      await db("audit_logs").insert({
+        action: "USER_DELETED",
+        target_id: String(id),
+        user_id: currentUser.userId !== "admin" ? currentUser.userId : null,
+        ip_address: (request.headers["x-forwarded-for"] as string) || request.ip,
+        metadata: JSON.stringify({ username: user.username, role: user.role }),
+      });
+
       await db("users").where({ id }).delete();
       return { success: true };
     },
@@ -201,7 +225,10 @@ export function createAuthController(fastify: FastifyInstance, db: Knex, redis: 
     agentActivate: async (request: FastifyRequest, reply: FastifyReply) => {
       const body = request.body as ActivateBody;
       const key = body.key?.trim();
-      const hardwareId = body.hardwareId?.trim() || "unknown";
+      const hardwareId = body.hardwareId?.trim();
+      if (!hardwareId || hardwareId.length < 8 || hardwareId === "unknown") {
+        return reply.status(400).send({ error: "Hardware ID inválido o no proporcionado. Verificar permisos del sistema." });
+      }
 
       request.log.info(
         `[AUTH] Solicitud de activación recibida. Key: ${key?.substring(0, 8)}... HardwareId: ${hardwareId}`
@@ -283,6 +310,9 @@ export function createAuthController(fastify: FastifyInstance, db: Knex, redis: 
       const user = (request as FastifyRequest & { user: PortalUser }).user;
       if (!user) {
         return reply.status(401).send({ error: "No autenticado" });
+      }
+      if (user.role !== "admin") {
+        return reply.status(403).send({ error: "Se requiere rol admin para modificar la versión del agente." });
       }
 
       const { version, url, hash } = request.body as VersionUpdateBody;

@@ -1,5 +1,6 @@
 import { FastifyRequest } from "fastify";
 import { Knex } from "knex";
+import type { PortalUser } from "../middlewares/authMiddleware";
 
 export function createClientController(db: Knex) {
   return {
@@ -13,6 +14,14 @@ export function createClientController(db: Knex) {
         active: boolean;
       }>;
       const [client] = await db("clients").insert(data).returning("*");
+      const user = (request as FastifyRequest & { user: PortalUser }).user;
+      await db("audit_logs").insert({
+        action: "CLIENT_CREATED",
+        target_id: String(client.id),
+        user_id: user?.userId ?? null,
+        ip_address: (request.headers["x-forwarded-for"] as string) || request.ip,
+        metadata: JSON.stringify({ name: client.name }),
+      });
       return client;
     },
 

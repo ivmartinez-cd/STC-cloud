@@ -124,10 +124,14 @@ export function createPortalAgentController(
     createAgent: async (request: FastifyRequest) => {
       const { clientId, name, ip_ranges, snmp_community, scan_interval_minutes } =
         request.body as { clientId: string; name: string; ip_ranges?: Array<{ start: string; end: string }>; snmp_community?: string; scan_interval_minutes?: number };
+      const user = (request as FastifyRequest & { user: PortalUser }).user;
       return await agentService.createActivationKey(clientId, name, {
         ip_ranges,
         snmp_community,
         scan_interval_minutes,
+      }, {
+        userId: user?.userId,
+        ip: (request.headers["x-forwarded-for"] as string) || request.ip,
       });
     },
 
@@ -137,10 +141,13 @@ export function createPortalAgentController(
       if (!uuidRegex.test(id)) {
         return reply.status(400).send({ error: "ID de agente inválido" });
       }
+      const user = (request as FastifyRequest & { user: PortalUser }).user;
+      const requestIp = (request.headers["x-forwarded-for"] as string) || request.ip;
       try {
         fastify.log.info({ agentId: id }, "Solicitud de eliminación de agente y cascada");
 
         await db.transaction(async (trx) => {
+          const agent = await trx("agents").where({ id }).select("name", "client_id").first();
           const devices = await trx("devices").where("agent_id", id).select("id");
           const deviceIds = devices.map((d: { id: string }) => d.id);
 
@@ -150,6 +157,18 @@ export function createPortalAgentController(
           }
 
           await trx("agents").where("id", id).delete();
+
+          await trx("audit_logs").insert({
+            action: "AGENT_DELETED",
+            target_id: id,
+            user_id: user?.userId ?? null,
+            ip_address: requestIp,
+            metadata: JSON.stringify({
+              name: agent?.name ?? null,
+              client_id: agent?.client_id ?? null,
+              devices_removed: deviceIds.length,
+            }),
+          });
         });
 
         return { status: "deleted" };
@@ -169,8 +188,12 @@ export function createPortalAgentController(
 
     regenerateKey: async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as AgentIdParams;
+      const user = (request as FastifyRequest & { user: PortalUser }).user;
       try {
-        return await agentService.regenerateActivationKey(id);
+        return await agentService.regenerateActivationKey(id, {
+          userId: user?.userId,
+          ip: (request.headers["x-forwarded-for"] as string) || request.ip,
+        });
       } catch (err: unknown) {
         const errMsg = err instanceof Error ? err.message : String(err);
         return reply.status(404).send({ error: errMsg });
@@ -251,7 +274,11 @@ export function createPortalAgentController(
 
     updateConfig: async (request: FastifyRequest) => {
       const { id } = request.params as AgentIdParams;
-      return await agentService.updateConfig(id, request.body as AgentConfigUpdate);
+      const user = (request as FastifyRequest & { user: PortalUser }).user;
+      return await agentService.updateConfig(id, request.body as AgentConfigUpdate, {
+        userId: user?.userId,
+        ip: (request.headers["x-forwarded-for"] as string) || request.ip,
+      });
     },
   };
 }

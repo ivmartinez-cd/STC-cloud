@@ -958,8 +958,7 @@ async function main(): Promise<void> {
     
     setInterval(checkFlags, 10_000); // Verificar flags de la UI (scan, update) cada 10s
 
-    syncLoop(); // Primer sync
-    setInterval(syncLoop, 60000); // Sincronizacin de datos cada 60s
+    syncLoop(); // Inicia la cadena: se autoprograma cada 5min internamente con setTimeout
 
     snmpScan(currentConfig); // Iniciar bucle de escaneo
 

@@ -93,11 +93,6 @@ export function createAuthMiddleware(
         .first();
 
       if (!user) {
-        // Fallback de retrocompatibilidad si es la sesión previa de "admin" hardcodeado
-        if (decoded.userId === "admin") {
-          (request as FastifyRequest & { user: PortalUser }).user = { userId: "admin", role: "admin", active: true };
-          return;
-        }
         return reply.status(401).send({ error: "Usuario no encontrado" });
       }
 

@@ -4,7 +4,7 @@ const ALGORITHM = 'aes-256-gcm';
 const IV_LENGTH = 12;
 const SALT_LENGTH = 16;
 const KEY_LENGTH = 32;
-const ITERATIONS = 100000;
+const ITERATIONS = 210_000;
 
 export class SecurityUtils {
   /**

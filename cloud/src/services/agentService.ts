@@ -1,5 +1,6 @@
 import { Knex } from "knex";
 import crypto from "crypto";
+import { Queue } from "bullmq";
 
 // ─── Interfaces de Tipado Fuerte ──────────────────────────────────────────────
 // Estas interfaces reemplazan los tipos `any` para cumplir con la Regla 5
@@ -9,6 +10,12 @@ import crypto from "crypto";
 interface RedisClient {
   get(key: string): Promise<string | null>;
   set(key: string, value: string, mode: string, duration: number): Promise<string | null>;
+}
+
+/** Contexto de auditoría opcional para trazar el operador e IP origen de una acción administrativa. */
+export interface AuditContext {
+  userId?: string;
+  ip?: string;
 }
 
 /** Configuración de red y escaneo enviada desde el portal para actualizar un agente. */
@@ -138,7 +145,8 @@ export class AgentService {
   async createActivationKey(
     clientId: string,
     name: string,
-    config?: Pick<AgentConfigUpdate, 'ip_ranges' | 'snmp_community' | 'scan_interval_minutes'>
+    config?: Pick<AgentConfigUpdate, 'ip_ranges' | 'snmp_community' | 'scan_interval_minutes'>,
+    audit?: AuditContext
   ) {
     const key = crypto.randomBytes(32).toString("hex"); // 64 chars hex
     const agentId = crypto.randomUUID();
@@ -159,6 +167,8 @@ export class AgentService {
     await this.db("audit_logs").insert({
       action: "AGENT_CREATED",
       target_id: agentId,
+      user_id: audit?.userId ?? null,
+      ip_address: audit?.ip ?? null,
       metadata: JSON.stringify({ clientId, name }),
     });
 
@@ -239,7 +249,7 @@ export class AgentService {
    * @param agentId - UUID del agente a configurar.
    * @param newConfig - Objeto parcial con los campos a modificar.
    */
-  async updateConfig(agentId: string, newConfig: AgentConfigUpdate) {
+  async updateConfig(agentId: string, newConfig: AgentConfigUpdate, audit?: AuditContext) {
     const updates: Record<string, unknown> = {};
 
     if (newConfig.ip_ranges !== undefined) {
@@ -268,13 +278,15 @@ export class AgentService {
     await this.db("audit_logs").insert({
       action: "UPDATE_CONFIG",
       target_id: agentId,
+      user_id: audit?.userId ?? null,
+      ip_address: audit?.ip ?? null,
       metadata: JSON.stringify(newConfig),
     });
 
     return { status: "success" };
   }
 
-  async regenerateActivationKey(agentId: string) {
+  async regenerateActivationKey(agentId: string, audit?: AuditContext) {
     const agent = await this.db("agents").where({ id: agentId }).first();
     if (!agent) throw new Error("Agente no encontrado");
 
@@ -292,6 +304,8 @@ export class AgentService {
     await this.db("audit_logs").insert({
       action: "REGENERATE_KEY",
       target_id: agentId,
+      user_id: audit?.userId ?? null,
+      ip_address: audit?.ip ?? null,
       metadata: JSON.stringify({ reason: "Manual key regeneration from portal" }),
     });
 
@@ -610,10 +624,9 @@ export class AgentService {
 
     // Encolar evaluación de alertas de forma asíncrona
     try {
-      const { Queue } = require("bullmq");
-      const readingsQueue = new Queue("readings-queue", { connection: this.redis });
+      const readingsQueue = new Queue("readings-queue", { connection: this.redis as unknown as import("ioredis").Redis });
       await readingsQueue.add("evaluate-readings", { readings: mappedReadings });
-    } catch (e) {
+    } catch (e: unknown) {
       console.error("[SYNC] BullMQ no disponible:", e);
     }
 
