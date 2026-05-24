@@ -73,25 +73,6 @@ const getTonerColorInfo = (type: string) => {
   return null;
 };
 
-const formatLastSync = (dateStr: string | null | undefined) => {
-  if (!dateStr) return 'Sin datos';
-  const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return 'Sin datos';
-  
-  const today = new Date();
-  const isToday = d.getDate() === today.getDate() &&
-                  d.getMonth() === today.getMonth() &&
-                  d.getFullYear() === today.getFullYear();
-                  
-  const timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-  
-  if (isToday) {
-    return `Hoy, ${timeStr}`;
-  }
-  
-  const dateFormatted = d.toLocaleDateString([], { day: '2-digit', month: '2-digit', year: 'numeric' });
-  return `${dateFormatted} ${timeStr}`;
-};
 
 const Dashboard = () => {
   const { data, loading, fetchDashboardData } = useDashboard();
@@ -271,10 +252,10 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Active Alerts & System Health */}
+      {/* Active Alerts */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Consumibles en Alerta */}
-        <div className="cd-panel p-8 flex flex-col space-y-6 lg:col-span-2 hover:shadow-2xl hover:shadow-blue-900/5 transition-all duration-500">
+        <div className="cd-panel p-8 flex flex-col space-y-6 lg:col-span-3 hover:shadow-2xl hover:shadow-blue-900/5 transition-all duration-500">
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-lg font-black text-[#1a2333] tracking-tight flex items-center gap-3">
@@ -389,79 +370,6 @@ const Dashboard = () => {
               })
             )}
           </div>
-        </div>
-
-        {/* Salud del Sistema */}
-        <div className="bg-gradient-to-br from-[#121824] to-[#1e293b] p-8 rounded-[32px] border border-slate-800 shadow-2xl relative overflow-hidden group flex flex-col justify-between space-y-6 lg:col-span-1 text-white">
-          <div className="relative z-10 space-y-6">
-            <div>
-              <h3 className="text-lg font-black text-white tracking-tight flex items-center gap-3">
-                <Cpu size={20} className="text-blue-400 animate-spin duration-3000" /> Salud del Sistema
-              </h3>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Estatus operativo de la nube</p>
-            </div>
-
-            <div className="p-5 bg-white/5 rounded-3xl border border-white/5 space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nube Cloud</span>
-                <span className="flex items-center gap-1.5 px-3 py-1 bg-emerald-500/10 text-emerald-400 rounded-xl border border-emerald-500/20">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  <span className="text-[9px] font-black uppercase tracking-wider">Operativo</span>
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Clientes con Alerta</span>
-                <span className="text-xs font-black tracking-tight text-amber-400">
-                  {data?.systemHealth.clientsWithAlertsCount ?? 0} de {data?.stats?.clients ?? 0}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Lecturas (24h)</span>
-                <span className="text-xs font-black tracking-tight text-emerald-300">
-                  {data?.systemHealth.readingsCount24h?.toLocaleString() ?? '0'}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Última Ingesta</span>
-                <span className="text-xs font-black tracking-tight text-indigo-200 text-right flex flex-col items-end">
-                  <span>{formatLastSync(data?.systemHealth.lastSync)}</span>
-                  {data?.systemHealth.lastClient && (
-                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wide mt-0.5">
-                      ({data.systemHealth.lastClient})
-                    </span>
-                  )}
-                </span>
-              </div>
-            </div>
-
-            <div className="p-5 bg-white/5 rounded-3xl border border-white/5 space-y-3">
-              <div className="flex justify-between items-center text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                <span>Alertas Activas</span>
-                <span className="text-xs font-black text-white">{alerts.length}</span>
-              </div>
-              <div className="grid grid-cols-2 gap-3 mt-2">
-                <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-2xl text-center">
-                  <div className="text-lg font-black text-rose-400 leading-none">
-                    {alerts.filter(a => a.severity === 'critical').length}
-                  </div>
-                  <div className="text-[8px] font-black uppercase text-rose-300 mt-1 tracking-widest">Críticas</div>
-                </div>
-                <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-2xl text-center">
-                  <div className="text-lg font-black text-amber-400 leading-none">
-                    {alerts.filter(a => a.severity === 'warning').length}
-                  </div>
-                  <div className="text-[8px] font-black uppercase text-amber-300 mt-1 tracking-widest">Avisos</div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="relative z-10 pt-4 border-t border-white/5 flex items-center justify-between text-[9px] font-black uppercase tracking-widest text-slate-500">
-            <span>STC Cloud v1.6.0</span>
-            <span>Seguro / Encriptado</span>
-          </div>
-
-          <div className="absolute top-0 right-0 w-48 h-48 bg-blue-500/5 rounded-full -mr-20 -mt-20 blur-3xl group-hover:bg-blue-500/10 transition-colors duration-700 pointer-events-none" />
         </div>
       </div>
 
