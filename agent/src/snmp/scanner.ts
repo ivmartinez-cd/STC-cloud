@@ -182,28 +182,46 @@ export async function readDevice(
 
   // Port 9100 (JetDirect) and 631 (IPP) are printer-exclusive.
   // If neither is open the device is most likely a router/switch/NAS.
-  // In that case only SNMP is attempted: it validates via Printer-MIB
-  // internally and never touches port 80, so it won't alarm IDS systems.
+  // However, many printers (especially older models) only expose port 80 (EWS).
   const hasPrinterPort = openPorts.has(PORT_JETDIRECT) || openPorts.has(PORT_IPP);
-  if (!hasPrinterPort) {
+  const hasWebPort     = openPorts.has(80) || openPorts.has(443);
+
+  if (!hasPrinterPort && !hasWebPort) {
+    // No printer-specific nor web ports open - SNMP only (validates via Printer-MIB)
     return readViaSNMP(ip, community);
   }
 
-  // Printer confirmed - safe to use all methods.
-  // Prefer EWS as first choice, then SNMP as second choice, and PJL/IPP as fallback options.
-  const ews = await readViaEWS(ip);
-  if (ews?.total_pages !== null) return ews;
+  // ── Case A: Printer-exclusive port confirmed → safe to go EWS-first ──
+  if (hasPrinterPort) {
+    if (hasWebPort) {
+      const ews = await readViaEWS(ip);
+      if (ews?.total_pages !== null) return ews;
+    }
 
+    const snmpResult = await readViaSNMP(ip, community);
+    if (snmpResult?.total_pages !== null) return snmpResult;
+
+    const pjl = await readViaPJL(ip);
+    if (pjl?.total_pages !== null) return pjl;
+
+    const ipp = await readViaIPP(ip);
+    if (ipp) return ipp;
+
+    return snmpResult ?? null;
+  }
+
+  // ── Case B: Only web port open (could be router/phone/NAS) ──
+  // Use SNMP as a quick Printer-MIB filter first to avoid wasting
+  // 4+ seconds of EWS timeouts on non-printer devices.
   const snmpResult = await readViaSNMP(ip, community);
-  if (snmpResult?.total_pages !== null) return snmpResult;
+  if (snmpResult) {
+    // SNMP confirmed it's a printer → try EWS for richer data (toner, color split)
+    const ews = await readViaEWS(ip);
+    if (ews?.total_pages !== null) return ews;
+    return snmpResult;
+  }
 
-  const pjl = await readViaPJL(ip);
-  if (pjl?.total_pages !== null) return pjl;
-
-  const ipp = await readViaIPP(ip);
-  if (ipp) return ipp;
-
-  return ews ?? snmpResult ?? pjl ?? null;
+  return null;
 }
 
 // ─── Method 1: EWS (HTTP scraping, port 80/443) ──────────────────────────────
