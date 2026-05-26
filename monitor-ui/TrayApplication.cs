@@ -97,6 +97,21 @@ internal sealed class TrayApplication : ApplicationContext
     private void RefreshStatus()
     {
         _lastStatus = AgentService.GetStatus();
+
+        // Auto-start: si el agente ya esta activado pero el servicio esta detenido,
+        // intentar iniciarlo automáticamente (funcionara si la aplicacion de bandeja corre elevada,
+        // lo cual es el caso por defecto al iniciar post-instalacion o por la Tarea Programada de Inno Setup)
+        if (_lastStatus != null && _lastStatus.Activated && _lastStatus.Service == "stopped")
+        {
+            try
+            {
+                AgentService.SetAutoStart();
+                AgentService.StartService();
+                _lastStatus = AgentService.GetStatus(); // Actualizar estado tras el arranque
+            }
+            catch { /* evitar excepciones silenciosas si no hay privilegios */ }
+        }
+
         ApplyStatusToTray(_lastStatus);
         _form?.UpdateDisplay(_lastStatus);
     }

@@ -32,6 +32,7 @@ internal sealed class ActivationForm : Form
 
     private readonly Label _valDevicesResponding;
     private readonly Button _btnRefresh;
+    private readonly Button _btnStartService;
 
     // ── Environment Settings Tab (Activation) ─────────────────────────────────
     private readonly TextBox _txtKey;
@@ -178,6 +179,10 @@ internal sealed class ActivationForm : Form
         var btnViewLogs = new Button { Text = "View Local Logs", Location = new Point(250, 50), Size = new Size(120, 30), ForeColor = Color.Black };
         btnViewLogs.Click += (s, e) => OpenLogs();
         gbDiscStatus.Controls.Add(btnViewLogs);
+
+        _btnStartService = new Button { Text = "Iniciar Servicio", Location = new Point(120, 50), Size = new Size(120, 30), ForeColor = Color.Black, Visible = false };
+        _btnStartService.Click += BtnStartService_Click;
+        gbDiscStatus.Controls.Add(_btnStartService);
 
         _tabServiceInfo.Controls.Add(gbDiscStatus);
 
@@ -409,6 +414,8 @@ internal sealed class ActivationForm : Form
         SetStatusIndicator(_iconStcStatus, _lblStcStatus, svcRunning, svcRunning ? "Active" : "Inactive");
         SetStatusIndicator(_iconPortalStatus, _lblPortalStatus, s.Activated, s.Activated ? "Connected" : "Not Registered");
 
+        _btnStartService.Visible = !svcRunning && s.Activated;
+
         _valDevicesResponding.Text = "Monitoreando (ver portal)";
 
         // Sincronizar pestana Proxy con el estado actual del agente
@@ -547,6 +554,59 @@ internal sealed class ActivationForm : Form
         var status = await AgentService.GetStatusAsync();
         UpdateDisplay(status);
         _btnRefresh.Enabled = true;
+    }
+
+    private async void BtnStartService_Click(object? sender, EventArgs e)
+    {
+        _btnStartService.Enabled = false;
+        _statusLabel.Text = "Iniciando servicio de Windows...";
+        
+        // Intentar iniciar el servicio (si la UI no esta elevada, StartService iniciara con UAC)
+        var (ok, error) = await Task.Run(() => {
+            AgentService.SetAutoStart();
+            return AgentService.StartService();
+        });
+        
+        if (ok)
+        {
+            _statusLabel.Text = "Servicio iniciado correctamente.";
+        }
+        else
+        {
+            // Intentar iniciar elevando nssm.exe si falla por permisos
+            _statusLabel.Text = "Solicitando permisos para iniciar servicio...";
+            var (elevatedOk, elevatedError) = await Task.Run(() => {
+                try {
+                    var nodeExe = AgentService.FindAgentExe();
+                    if (nodeExe == null) return (false, "Ejecutable no encontrado");
+                    var nssmExe = Path.Combine(Path.GetDirectoryName(nodeExe)!, "nssm.exe");
+                    if (!File.Exists(nssmExe)) return (false, "NSSM no encontrado");
+                    
+                    var psi = new System.Diagnostics.ProcessStartInfo(nssmExe, $"start STCCloudMonitor") {
+                        UseShellExecute = true,
+                        Verb = "runas",
+                        WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden,
+                        CreateNoWindow = true
+                    };
+                    using var proc = System.Diagnostics.Process.Start(psi);
+                    proc?.WaitForExit(10000);
+                    return (proc?.ExitCode == 0, "");
+                } catch (Exception ex) {
+                    return (false, ex.Message);
+                }
+            });
+            
+            if (elevatedOk) {
+                _statusLabel.Text = "Servicio iniciado correctamente con privilegios.";
+            } else {
+                MessageBox.Show($"No se pudo iniciar el servicio:\n{elevatedError ?? error}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                _statusLabel.Text = "Fallo al iniciar el servicio.";
+            }
+        }
+        
+        var s = await AgentService.GetStatusAsync();
+        UpdateDisplay(s);
+        _btnStartService.Enabled = true;
     }
 
     private async void BtnActivate_Click(object? sender, EventArgs e)
