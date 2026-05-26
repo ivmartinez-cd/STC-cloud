@@ -40,7 +40,7 @@ export class LogTailer {
       if (match) {
         const [_, date, time, level, message] = match;
         const [day, month, year] = date.split('/');
-        // Forzamos el envio en formato ISO con el offset de Argentina para evitar ambigüedades en el servidor
+        // Forzamos el envio en formato ISO con el offset de Argentina para evitar ambiguedades en el servidor
         const isoTimestamp = `${year}-${month}-${day}T${time}-03:00`;
         
         return {

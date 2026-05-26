@@ -25,7 +25,7 @@ internal static class AgentService
     private const string DefaultDataDir = @"C:\ProgramData\STCCloudMonitor";
 
     // ── Locate runtime + bundle ───────────────────────────────────────────────
-    // Arquitectura SEA: stc-node.exe es el runtime Node.js; bundle.js es el código.
+    // Arquitectura SEA: stc-node.exe es el runtime Node.js; bundle.js es el codigo.
     // El servicio corre: stc-node.exe bundle.js [args]
 
     public static string? FindAgentExe()
@@ -107,7 +107,7 @@ internal static class AgentService
 
             var detail = !string.IsNullOrWhiteSpace(stderr) ? stderr.Trim()
                        : !string.IsNullOrWhiteSpace(stdout) ? stdout.Trim()
-                       : $"Código de salida {proc.ExitCode}";
+                       : $"Codigo de salida {proc.ExitCode}";
             return (false, detail);
         }
         catch (Exception ex)
@@ -128,7 +128,7 @@ internal static class AgentService
         var bundlePath = FindBundlePath(nodeExe);
         if (bundlePath is null) return (false, "Bundle del agente no encontrado.");
 
-        // Pasar "none" si el usuario dejó el campo vacío (quitar proxy)
+        // Pasar "none" si el usuario dejo el campo vacio (quitar proxy)
         var arg = string.IsNullOrWhiteSpace(proxyUrl) ? "none" : proxyUrl.Trim();
 
         try
@@ -149,7 +149,7 @@ internal static class AgentService
             if (proc.ExitCode == 0) return (true, null);
             var detail = !string.IsNullOrWhiteSpace(stderr) ? stderr.Trim()
                        : !string.IsNullOrWhiteSpace(stdout) ? stdout.Trim()
-                       : $"Código de salida {proc.ExitCode}";
+                       : $"Codigo de salida {proc.ExitCode}";
             return (false, detail);
         }
         catch (Exception ex)
@@ -222,8 +222,8 @@ internal static class AgentService
         }
     }
 
-    // Cambia el servicio a inicio automático una vez que el agente fue activado.
-    // El instalador lo deja en DEMAND_START para evitar reinicios antes de la activación.
+    // Cambia el servicio a inicio automatico una vez que el agente fue activado.
+    // El instalador lo deja en DEMAND_START para evitar reinicios antes de la activacion.
     public static void SetAutoStart()
     {
         var nodeExe = FindAgentExe();

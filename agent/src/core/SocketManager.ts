@@ -106,7 +106,7 @@ export class SocketManager {
       this.pingInterval = setInterval(() => {
         if (this.ws?.readyState === WebSocket.OPEN) {
           try {
-            // Enviar ping nativo (control frame) para mantener activa la conexión en proxies y firewalls
+            // Enviar ping nativo (control frame) para mantener activa la conexion en proxies y firewalls
             this.ws.ping();
           } catch {}
           try {

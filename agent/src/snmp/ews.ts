@@ -18,42 +18,65 @@ const EWS_TIMEOUT = 4000;
 
 const CANDIDATES: EwsCandidate[] = [
   // Samsung Solution Web Service (newer models, e.g. X4300LX)
-  { path: '/sws.application/home/homeDeviceInfo.sws',                   protocol: 'http', parse: parseSamsungSolutionHome      },
-  { path: '/sws.application/information/suppliesView.sws',               protocol: 'http', parse: parseSamsungSolutionSupplies  },
-  { path: '/sws.application/information/countersView.sws',               protocol: 'http', parse: parseSamsungSolutionCounters  },
+  { path: '/sws.application/home/homeDeviceInfo.sws',                   protocol: 'http', parse: parseSamsungSolutionHome,      brand: 'samsung' },
+  { path: '/sws.application/information/suppliesView.sws',               protocol: 'http', parse: parseSamsungSolutionSupplies,  brand: 'samsung' },
+  { path: '/sws.application/information/countersView.sws',               protocol: 'http', parse: parseSamsungSolutionCounters,  brand: 'samsung' },
   // Samsung SyncThru: home (model + serial), identity (model + serial), supplies (toner), counters (page count)
-  { path: '/sws/app/information/home/home.json',                        protocol: 'http', parse: parseSamsungHome              },
-  { path: '/sws/app/information/identity/identity.json',                protocol: 'http', parse: parseSamsungIdentity          },
-  { path: '/sws/app/information/supplies/supplies.json',                protocol: 'http', parse: parseSamsungSyncThruSupplies  },
-  { path: '/sws/app/information/counters/counters.json',                protocol: 'http', parse: parseSamsungCounters          },
+  { path: '/sws/app/information/home/home.json',                        protocol: 'http', parse: parseSamsungHome,              brand: 'samsung' },
+  { path: '/sws/app/information/identity/identity.json',                protocol: 'http', parse: parseSamsungIdentity,          brand: 'samsung' },
+  { path: '/sws/app/information/supplies/supplies.json',                protocol: 'http', parse: parseSamsungSyncThruSupplies,  brand: 'samsung' },
+  { path: '/sws/app/information/counters/counters.json',                protocol: 'http', parse: parseSamsungCounters,          brand: 'samsung' },
   // Lexmark PrinterStatus (toner levels)
-  { path: '/cgi-bin/dynamic/printer/PrinterStatus.html',                protocol: 'http', parse: parseLexmarkPrinterStatus     },
+  { path: '/cgi-bin/dynamic/printer/PrinterStatus.html',                protocol: 'http', parse: parseLexmarkPrinterStatus,     brand: 'lexmark' },
   // Lexmark config/deviceinfo
-  { path: '/cgi-bin/dynamic/printer/config/reports/deviceinfo.html',    protocol: 'http', parse: parseLexmarkEws               },
+  { path: '/cgi-bin/dynamic/printer/config/reports/deviceinfo.html',    protocol: 'http', parse: parseLexmarkEws,               brand: 'lexmark' },
   // HP: supplies first (toner levels), then XML > HTML for page counters
-  { path: '/hp/device/InternalPages/Index?id=SuppliesStatus',           protocol: 'http', parse: parseHpSupplies               },
-  { path: '/DevMgmt/ProductUsageDyn.xml',                               protocol: 'http', parse: parseHpXml                    },
-  { path: '/hp/device/InternalPages/Index?id=UsagePage',                protocol: 'http', parse: parseHpHtml                   },
+  { path: '/hp/device/InternalPages/Index?id=SuppliesStatus',           protocol: 'http', parse: parseHpSupplies,               brand: 'hp'      },
+  { path: '/DevMgmt/ProductUsageDyn.xml',                               protocol: 'http', parse: parseHpXml,                    brand: 'hp'      },
+  { path: '/hp/device/InternalPages/Index?id=UsagePage',                protocol: 'http', parse: parseHpHtml,                   brand: 'hp'      },
   // Ricoh
-  { path: '/web/entry.cgi?func=STR_PRTCNT',                             protocol: 'http', parse: parseGeneric                  },
+  { path: '/web/entry.cgi?func=STR_PRTCNT',                             protocol: 'http', parse: parseGeneric,                  brand: 'ricoh'   },
   // Brother
-  { path: '/general/status.html',                                        protocol: 'http', parse: parseGeneric                  },
+  { path: '/general/status.html',                                        protocol: 'http', parse: parseGeneric,                  brand: 'brother' },
   // Epson
-  { path: '/PRESENTATION/HTML/TOP/PRTINFO.HTML',                        protocol: 'http', parse: parseGeneric                  },
+  { path: '/PRESENTATION/HTML/TOP/PRTINFO.HTML',                        protocol: 'http', parse: parseGeneric,                  brand: 'generic' },
   // Canon
-  { path: '/English/pages/cnc_status.html',                             protocol: 'http', parse: parseGeneric                  },
+  { path: '/English/pages/cnc_status.html',                             protocol: 'http', parse: parseGeneric,                  brand: 'generic' },
   // Konica Minolta
-  { path: '/wcd/index.html',                                             protocol: 'http', parse: parseGeneric                  },
+  { path: '/wcd/index.html',                                             protocol: 'http', parse: parseGeneric,                  brand: 'generic' },
   // Xerox
-  { path: '/cgi-bin/cgix/xerox/printerStat.cgi',                        protocol: 'http', parse: parseGeneric                  },
+  { path: '/cgi-bin/cgix/xerox/printerStat.cgi',                        protocol: 'http', parse: parseGeneric,                  brand: 'xerox'   },
 ];
 
-export async function readDeviceViaEWS(ip: string): Promise<EwsData | null> {
+export async function readDeviceViaEWS(ip: string, targetBrand?: Brand, targetModel?: string): Promise<EwsData | null> {
   // Accumulates data across candidates so that model from one endpoint
-  // can be combined with counters from another (e.g. Samsung identity + counters).
+  // can be combined with consumables from another.
   let acc: Partial<EwsData> = {};
 
-  for (const c of CANDIDATES) {
+  let candidatesToTry = CANDIDATES;
+
+  if (targetBrand && targetBrand !== 'generic') {
+    // Filter candidates to only try the matched brand (plus any brandless/generic ones)
+    let filtered = CANDIDATES.filter(c => c.brand === targetBrand || !c.brand);
+    
+    // Samsung specific optimization: prioritize standard SyncThru JSON endpoints over SWS on older mono printers
+    if (targetBrand === 'samsung') {
+      const isCopier = /LX|FX|GX/i.test(targetModel ?? '');
+      const samsungSws = filtered.filter(c => c.path.startsWith('/sws.application'));
+      const samsungSyncThru = filtered.filter(c => c.path.startsWith('/sws/app'));
+      
+      if (targetModel && !isCopier) {
+        // Prioritize standard SyncThru paths first (avoids firmware lockups/hangs from SWS 404s)
+        filtered = [...samsungSyncThru, ...samsungSws, ...filtered.filter(c => !c.path.startsWith('/sws'))];
+      } else {
+        // Copier or unknown - SWS first
+        filtered = [...samsungSws, ...samsungSyncThru, ...filtered.filter(c => !c.path.startsWith('/sws'))];
+      }
+    }
+    candidatesToTry = filtered;
+  }
+
+  for (const c of candidatesToTry) {
     try {
       const body = await fetchHttp(ip, c.path, c.protocol);
       if (!body) continue;

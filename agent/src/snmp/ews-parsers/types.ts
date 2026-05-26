@@ -40,4 +40,5 @@ export interface EwsCandidate {
   path: string; 
   protocol: 'http' | 'https'; 
   parse: Parser; 
+  brand?: Brand;
 }

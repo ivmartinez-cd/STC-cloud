@@ -14,7 +14,7 @@ static class Program
         if (!isNewInstance)
         {
             MessageBox.Show(
-                "STC Cloud Monitor ya está en ejecución.\nRevise el área de notificaciones (bandeja del sistema).",
+                "STC Cloud Monitor ya esta en ejecucion.\nRevise el area de notificaciones (bandeja del sistema).",
                 "STC Cloud Monitor",
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Information);

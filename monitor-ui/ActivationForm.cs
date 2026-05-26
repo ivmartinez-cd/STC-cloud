@@ -103,17 +103,17 @@ internal sealed class ActivationForm : Form
 
         _leftPanel.Controls.Add(new Label
         {
-            Text = "STC Cloud Monitor Console provee la habilidad de ver información de estado y modificar la configuración del agente.",
+            Text = "STC Cloud Monitor Console provee la habilidad de ver informacion de estado y modificar la configuracion del agente.",
             Location = new Point(10, 100),
             Size = new Size(200, 80),
             Font = _normFont
         });
 
         _leftPanel.Controls.Add(new Label { Text = "Service Information", Font = _boldFont, Location = new Point(10, 190), AutoSize = true });
-        _leftPanel.Controls.Add(new Label { Text = "Versión, licencia y estado operativo del sistema.", Location = new Point(10, 210), Size = new Size(200, 45) });
+        _leftPanel.Controls.Add(new Label { Text = "Version, licencia y estado operativo del sistema.", Location = new Point(10, 210), Size = new Size(200, 45) });
 
         _leftPanel.Controls.Add(new Label { Text = "Environment Settings", Font = _boldFont, Location = new Point(10, 265), AutoSize = true });
-        _leftPanel.Controls.Add(new Label { Text = "Configuración del entorno para activar el acceso al Portal.", Location = new Point(10, 285), Size = new Size(200, 45) });
+        _leftPanel.Controls.Add(new Label { Text = "Configuracion del entorno para activar el acceso al Portal.", Location = new Point(10, 285), Size = new Size(200, 45) });
 
         _leftPanel.Controls.Add(new Label { Text = "Network / Proxy", Font = _boldFont, Location = new Point(10, 340), AutoSize = true });
         _leftPanel.Controls.Add(new Label { Text = "Proxy HTTP para redes corporativas con acceso restringido.", Location = new Point(10, 360), Size = new Size(200, 45) });
@@ -186,12 +186,12 @@ internal sealed class ActivationForm : Form
         // ====================================================================
         _tabSettings.BackColor = Color.White;
 
-        var lblConfigTitle = new Label { Text = "Configuración y Activación del Agente", Font = _titleFont, Location = new Point(20, 20), AutoSize = true, ForeColor = _hpBlue };
+        var lblConfigTitle = new Label { Text = "Configuracion y Activacion del Agente", Font = _titleFont, Location = new Point(20, 20), AutoSize = true, ForeColor = _hpBlue };
         _tabSettings.Controls.Add(lblConfigTitle);
 
         _lblActivationHint = new Label
         {
-            Text = "Ingrese su Clave de Activación y URL del Portal para registrar este agente.",
+            Text = "Ingrese su Clave de Activacion y URL del Portal para registrar este agente.",
             Location = new Point(20, 60),
             Size = new Size(500, 20)
         };
@@ -201,7 +201,7 @@ internal sealed class ActivationForm : Form
         _txtServer = new TextBox { Location = new Point(150, 100), Size = new Size(300, 23), Text = "https://stc-cloud.onrender.com" };
         _tabSettings.Controls.Add(_txtServer);
 
-        _tabSettings.Controls.Add(new Label { Text = "Clave Activación:", Location = new Point(20, 143), Size = new Size(120, 20) });
+        _tabSettings.Controls.Add(new Label { Text = "Clave Activacion:", Location = new Point(20, 143), Size = new Size(120, 20) });
         _txtKey = new TextBox { Location = new Point(150, 140), Size = new Size(300, 23), Font = new Font("Consolas", 10f), PlaceholderText = "Ej: XXXX-XXXX-XXXX" };
         _tabSettings.Controls.Add(_txtKey);
 
@@ -229,7 +229,7 @@ internal sealed class ActivationForm : Form
 
         _tabProxy.Controls.Add(new Label
         {
-            Text = "Configuración de Proxy de Red",
+            Text = "Configuracion de Proxy de Red",
             Font = _titleFont,
             Location = new Point(20, 20),
             AutoSize = true,
@@ -277,7 +277,7 @@ internal sealed class ActivationForm : Form
         };
         gbProxy.Controls.Add(_txtProxyUser);
 
-        gbProxy.Controls.Add(new Label { Text = "Contraseña:", Location = new Point(255, 75), Size = new Size(80, 20), ForeColor = Color.Black });
+        gbProxy.Controls.Add(new Label { Text = "Contrasena:", Location = new Point(255, 75), Size = new Size(80, 20), ForeColor = Color.Black });
         _txtProxyPass = new TextBox
         {
             Location = new Point(330, 72),
@@ -288,7 +288,7 @@ internal sealed class ActivationForm : Form
 
         gbProxy.Controls.Add(new Label
         {
-            Text = "Deje usuario y contraseña en blanco si el proxy no requiere autenticación.\nDeje todos los campos en blanco para quitar el proxy.",
+            Text = "Deje usuario y contrasena en blanco si el proxy no requiere autenticacion.\nDeje todos los campos en blanco para quitar el proxy.",
             Location = new Point(15, 105),
             Size = new Size(465, 35),
             ForeColor = Color.Gray,
@@ -325,7 +325,7 @@ internal sealed class ActivationForm : Form
 
         _tabProxy.Controls.Add(new Label
         {
-            Text = "Nota: después de guardar, el servicio se reiniciará automáticamente para aplicar los cambios.",
+            Text = "Nota: despues de guardar, el servicio se reiniciara automaticamente para aplicar los cambios.",
             Location = new Point(20, 280),
             Size = new Size(500, 35),
             ForeColor = Color.Gray,
@@ -411,7 +411,7 @@ internal sealed class ActivationForm : Form
 
         _valDevicesResponding.Text = "Monitoreando (ver portal)";
 
-        // Sincronizar pestaña Proxy con el estado actual del agente
+        // Sincronizar pestana Proxy con el estado actual del agente
         if (!string.IsNullOrEmpty(s.ProxyUrl))
         {
             _lblProxyStatus.Text = $"Estado: proxy activo → {s.ProxyUrl}";
@@ -436,7 +436,7 @@ internal sealed class ActivationForm : Form
             }
             catch
             {
-                // Si falla el parsing, dejamos lo que esté
+                // Si falla el parsing, dejamos lo que este
             }
         }
         else
@@ -459,7 +459,7 @@ internal sealed class ActivationForm : Form
         }
         else
         {
-            _lblActivationHint.Text = "Ingrese su Clave de Activación para comenzar.";
+            _lblActivationHint.Text = "Ingrese su Clave de Activacion para comenzar.";
             _txtKey.Enabled = true;
             _txtServer.Enabled = true;
             _btnActivate.Enabled = true;
@@ -495,7 +495,7 @@ internal sealed class ActivationForm : Form
                 }
                 else
                 {
-                    // Si el usuario pegó la URL completa en el host (ej. http://proxy:80), usamos el UriBuilder
+                    // Si el usuario pego la URL completa en el host (ej. http://proxy:80), usamos el UriBuilder
                     var ub = new UriBuilder(host);
                     if (!string.IsNullOrEmpty(port)) ub.Port = int.Parse(port);
                     if (!string.IsNullOrEmpty(user)) ub.UserName = user;
@@ -556,14 +556,14 @@ internal sealed class ActivationForm : Form
 
         if (string.IsNullOrEmpty(key))
         {
-            MessageBox.Show("Por favor ingrese la clave de activación.", "Activación", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            MessageBox.Show("Por favor ingrese la clave de activacion.", "Activacion", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             return;
         }
 
         SetActivationUIBusy(true);
         try
         {
-            _lblActivationHint.Text = "Conectando con el servidor de activación...";
+            _lblActivationHint.Text = "Conectando con el servidor de activacion...";
             var (ok, error) = await AgentService.ActivateAsync(key, server);
 
             if (ok)
@@ -576,8 +576,8 @@ internal sealed class ActivationForm : Form
 
                 if (!svcOk)
                 {
-                    _lblActivationHint.Text = "Esperando estabilización del servicio...";
-                    // Verificación final: el servicio puede haberse iniciado justo después del timeout
+                    _lblActivationHint.Text = "Esperando estabilizacion del servicio...";
+                    // Verificacion final: el servicio puede haberse iniciado justo despues del timeout
                     await Task.Delay(3000);
                     var finalStatus = await AgentService.GetStatusAsync();
                     if (finalStatus?.Service == "running")
@@ -586,10 +586,10 @@ internal sealed class ActivationForm : Form
 
                 if (svcOk)
                 {
-                    _lblActivationHint.Text = "¡Agente listo!";
+                    _lblActivationHint.Text = "Agente listo!";
                     MessageBox.Show(
-                        "¡Agente activado! Iniciando escaneo de dispositivos inmediato. Los resultados aparecerán en el portal en breve.",
-                        "Éxito", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        "Agente activado! Iniciando escaneo de dispositivos inmediato. Los resultados apareceran en el portal en breve.",
+                        "Exito", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
                 else
                 {
@@ -603,7 +603,7 @@ internal sealed class ActivationForm : Form
             }
             else
             {
-                MessageBox.Show($"La activación falló:\n{error}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show($"La activacion fallo:\n{error}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
         catch (Exception ex)

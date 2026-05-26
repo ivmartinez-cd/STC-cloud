@@ -3,7 +3,7 @@ const path = require('path');
 
 const DATA_DIR = 'C:\\ProgramData\\STCCloudMonitor';
 
-// Apunta al .js compilado en producción o al .exe empaquetado con pkg
+// Apunta al .js compilado en produccion o al .exe empaquetado con pkg
 const scriptPath = path.join(__dirname, '..', '..', 'dist', 'core', 'main.js');
 
 const svc = new Service({

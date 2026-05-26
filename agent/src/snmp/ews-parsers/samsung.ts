@@ -285,13 +285,13 @@ export function parseSamsungSolutionSupplies(html: string): Partial<EwsData> {
     // 1. Detect color context
     if (/(?:이미징|OPC|드럼|Drum|Unit)/i.test(line)) {
       currentColor = null;
-    } else if (/(?:흑백|검정|Black|Negro)/i.test(line) && /(?:토너|Toner|Tóner)/i.test(line)) {
+    } else if (/(?:흑백|검정|Black|Negro)/i.test(line) && /(?:토너|Toner|Toner)/i.test(line)) {
       currentColor = 'black';
-    } else if (/(?:시안|청색|Cyan)/i.test(line) && /(?:토너|Toner|Tóner)/i.test(line)) {
+    } else if (/(?:시안|청색|Cyan)/i.test(line) && /(?:토너|Toner|Toner)/i.test(line)) {
       currentColor = 'cyan';
-    } else if (/(?:마젠타|심홍색|Magenta)/i.test(line) && /(?:토너|Toner|Tóner)/i.test(line)) {
+    } else if (/(?:마젠타|심홍색|Magenta)/i.test(line) && /(?:토너|Toner|Toner)/i.test(line)) {
       currentColor = 'magenta';
-    } else if (/(?:노란색|노란|Yellow|Amarillo)/i.test(line) && /(?:토너|Toner|Tóner)/i.test(line)) {
+    } else if (/(?:노란색|노란|Yellow|Amarillo)/i.test(line) && /(?:토너|Toner|Toner)/i.test(line)) {
       currentColor = 'yellow';
     }
 

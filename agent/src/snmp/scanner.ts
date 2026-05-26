@@ -143,19 +143,19 @@ export function hrStatus(val: unknown): string {
 // ─── Orchestrator: EWS / PJL / SNMP / IPP cascade ───────────────────────────
 
 /**
- * Orquestador principal de escaneo de dispositivos de impresión.
+ * Orquestador principal de escaneo de dispositivos de impresion.
  * Implementa una cascada de descubrimiento inteligente y segura (EWS / PJL / SNMP / IPP).
  * 
- * 1. Primero verifica qué puertos están abiertos para determinar si es un dispositivo de red genérico o una impresora.
- * 2. Si hay un `hintMethod` conocido de ciclos anteriores, intenta usarlo de forma directa como vía rápida.
- * 3. Si no es impresora (puertos 9100 y 631 cerrados), utiliza únicamente SNMP con validación de Printer-MIB
+ * 1. Primero verifica que puertos estan abiertos para determinar si es un dispositivo de red generico o una impresora.
+ * 2. Si hay un `hintMethod` conocido de ciclos anteriores, intenta usarlo de forma directa como via rapida.
+ * 3. Si no es impresora (puertos 9100 y 631 cerrados), utiliza unicamente SNMP con validacion de Printer-MIB
  *    para evitar activar alarmas de sistemas IDS (Intrusion Detection Systems) al escanear puertos HTTP.
- * 4. Si se confirma que es impresora, ejecuta la cascada con preferencia por métodos de alta fidelidad:
+ * 4. Si se confirma que es impresora, ejecuta la cascada con preferencia por metodos de alta fidelidad:
  *    EWS (Embedded Web Server) -> SNMP v2c -> PJL (Printer Job Language) -> IPP (Internet Printing Protocol).
  * 
- * @param {string} ip - Dirección IP del dispositivo a consultar.
- * @param {string} community - Nombre de la comunidad SNMP para autenticación.
- * @param {PollMethod} [hintMethod] - Método exitoso previamente registrado para optimización de ciclos.
+ * @param {string} ip - Direccion IP del dispositivo a consultar.
+ * @param {string} community - Nombre de la comunidad SNMP para autenticacion.
+ * @param {PollMethod} [hintMethod] - Metodo exitoso previamente registrado para optimizacion de ciclos.
  * @returns {Promise<DeviceReading | null>} Objeto de lectura con contadores y consumibles o null si falla.
  */
 export async function readDevice(
@@ -193,12 +193,16 @@ export async function readDevice(
 
   // ── Case A: Printer-exclusive port confirmed → safe to go EWS-first ──
   if (hasPrinterPort) {
+    // Perform a fast SNMP query to identify brand & model to optimize EWS candidate list
+    const snmpResult = await readViaSNMP(ip, community);
+    const brand = snmpResult?.brand ?? 'generic';
+    const model = snmpResult?.model ?? '';
+
     if (hasWebPort) {
-      const ews = await readViaEWS(ip);
+      const ews = await readViaEWS(ip, brand, model);
       if (ews?.total_pages !== null) return ews;
     }
 
-    const snmpResult = await readViaSNMP(ip, community);
     if (snmpResult?.total_pages !== null) return snmpResult;
 
     const pjl = await readViaPJL(ip);
@@ -216,7 +220,7 @@ export async function readDevice(
   const snmpResult = await readViaSNMP(ip, community);
   if (snmpResult) {
     // SNMP confirmed it's a printer → try EWS for richer data (toner, color split)
-    const ews = await readViaEWS(ip);
+    const ews = await readViaEWS(ip, snmpResult.brand, snmpResult.model);
     if (ews?.total_pages !== null) return ews;
     return snmpResult;
   }
@@ -226,8 +230,8 @@ export async function readDevice(
 
 // ─── Method 1: EWS (HTTP scraping, port 80/443) ──────────────────────────────
 
-export async function readViaEWS(ip: string): Promise<DeviceReading | null> {
-  const data = await readDeviceViaEWS(ip);
+export async function readViaEWS(ip: string, brand?: Brand, model?: string): Promise<DeviceReading | null> {
+  const data = await readDeviceViaEWS(ip, brand, model);
   if (!data) return null;
   return {
     ip,

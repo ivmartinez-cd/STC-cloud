@@ -14,7 +14,7 @@ import { SocketManager } from './SocketManager';
 import { ConsoleConnector } from './ConsoleConnector';
 import { ConsoleEngine } from './ConsoleEngine';
 
-const VERSION = '1.9.0';
+const VERSION = '1.0.0';
 let socket: SocketManager | null = null;
 const LOG_MAX_BYTES = 10 * 1024 * 1024;
 
@@ -108,10 +108,11 @@ async function schedulerTick(): Promise<void> {
       timeZone: 'America/Argentina/Buenos_Aires',
       weekday: 'short'
     });
-    const weekdayName = dayFormatter.format(now).toLowerCase();
+    const rawWeekday = dayFormatter.format(now).toLowerCase();
+    const weekdayName = rawWeekday.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
     const weekdayMap: Record<string, number> = {
-      'lun': 1, 'mar': 2, 'mié': 3, 'jue': 4, 'vie': 5, 'sáb': 6, 'dom': 7,
-      'lu.': 1, 'ma.': 2, 'mi.': 3, 'ju.': 4, 'vi.': 5, 'sá.': 6, 'do.': 7,
+      'lun': 1, 'mar': 2, 'mie': 3, 'jue': 4, 'vie': 5, 'sab': 6, 'dom': 7,
+      'lu.': 1, 'ma.': 2, 'mi.': 3, 'ju.': 4, 'vi.': 5, 'sa.': 6, 'do.': 7,
     };
     for (const key of Object.keys(weekdayMap)) {
       if (weekdayName.includes(key)) {
@@ -146,7 +147,7 @@ async function schedulerTick(): Promise<void> {
       const minuteKey = `${dayOfWeek}-${timeStr}`;
       if (lastExecutedMinuteStr !== minuteKey) {
         lastExecutedMinuteStr = minuteKey;
-        log('INFO', `[Custom Scheduler] Coincidencia de horario: Día ${dayOfWeek}, Hora ${timeStr}. Disparando escaneo.`);
+        log('INFO', `[Custom Scheduler] Coincidencia de horario: Dia ${dayOfWeek}, Hora ${timeStr}. Disparando escaneo.`);
         lastScanTime = Date.now();
         void snmpScan(currentConfig, false);
       }
@@ -231,12 +232,12 @@ async function heartbeat(): Promise<void> {
 
       if (data.commands && data.commands.length > 0) {
         for (const cmd of data.commands) {
-          // DeduplicaciÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³n: Si ya lo procesamos (vÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â­a WSS o heartbeat anterior), lo saltamos
+          // DeduplicaciÃƒÆ’Ã†â€™Ãƒâ€ aâ‚¬â„¢ÃƒÆ’aâ‚¬Â ÃƒÂ¢aâ€šÂ¬aâ€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢aâ€šÂ¬AÂ ÃƒÆ’AÂ¢ÃƒÂ¢aâ‚¬Å¡AÂ¬ÃƒÂ¢aâ‚¬Å¾AÂ¢ÃƒÆ’Ã†â€™Ãƒâ€ aâ‚¬â„¢ÃƒÆ’AÂ¢ÃƒÂ¢aâ‚¬Å¡AÂ¬Ãƒâ€šAÂ ÃƒÆ’Ã†â€™Ãƒâ€šAÂ¢ÃƒÆ’AÂ¢ÃƒÂ¢aâ€šÂ¬Ã…Ãƒâ€šAÂ¬ÃƒÆ’AÂ¢ÃƒÂ¢aâ€šÂ¬Ã…Â¾Ãƒâ€šAÂ¢ÃƒÆ’Ã†â€™Ãƒâ€ aâ‚¬â„¢ÃƒÆ’aâ‚¬Â ÃƒÂ¢aâ€šÂ¬aâ€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šAÂ¢ÃƒÆ’AÂ¢ÃƒÂ¢aâ€šÂ¬Ã…Ãƒâ€šAÂ¬ÃƒÆ’aâ‚¬Â¦Ãƒâ€šAÃƒÆ’Ã†â€™Ãƒâ€ aâ‚¬â„¢ÃƒÆ’AÂ¢ÃƒÂ¢aâ‚¬Å¡AÂ¬Ãƒâ€¦AÃƒÆ’Ã†â€™ÃƒÂ¢aâ€šÂ¬Ã…ÃƒÆ’aâ‚¬Å¡Ãƒâ€šAÂ³n: Si ya lo procesamos (vÃƒÆ’Ã†â€™Ãƒâ€ aâ‚¬â„¢ÃƒÆ’aâ‚¬Â ÃƒÂ¢aâ€šÂ¬aâ€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢aâ€šÂ¬AÂ ÃƒÆ’AÂ¢ÃƒÂ¢aâ‚¬Å¡AÂ¬ÃƒÂ¢aâ‚¬Å¾AÂ¢ÃƒÆ’Ã†â€™Ãƒâ€ aâ‚¬â„¢ÃƒÆ’AÂ¢ÃƒÂ¢aâ‚¬Å¡AÂ¬Ãƒâ€šAÂ ÃƒÆ’Ã†â€™Ãƒâ€šAÂ¢ÃƒÆ’AÂ¢ÃƒÂ¢aâ€šÂ¬Ã…Ãƒâ€šAÂ¬ÃƒÆ’AÂ¢ÃƒÂ¢aâ€šÂ¬Ã…Â¾Ãƒâ€šAÂ¢ÃƒÆ’Ã†â€™Ãƒâ€ aâ‚¬â„¢ÃƒÆ’aâ‚¬Â ÃƒÂ¢aâ€šÂ¬aâ€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šAÂ¢ÃƒÆ’AÂ¢ÃƒÂ¢aâ€šÂ¬Ã…Ãƒâ€šAÂ¬ÃƒÆ’aâ‚¬Â¦Ãƒâ€šAÃƒÆ’Ã†â€™Ãƒâ€ aâ‚¬â„¢ÃƒÆ’AÂ¢ÃƒÂ¢aâ‚¬Å¡AÂ¬Ãƒâ€¦AÃƒÆ’Ã†â€™ÃƒÂ¢aâ€šÂ¬Ã…ÃƒÆ’aâ‚¬Å¡Ãƒâ€šAÂ­a WSS o heartbeat anterior), lo saltamos
           if (cmd.id && processedCommandIds.has(cmd.id)) continue;
           
           if (cmd.id) {
             processedCommandIds.add(cmd.id);
-            // Mantener el set limpio (ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Âºltimos 1000 IDs)
+            // Mantener el set limpio (ÃƒÆ’Ã†â€™Ãƒâ€ aâ‚¬â„¢ÃƒÆ’aâ‚¬Â ÃƒÂ¢aâ€šÂ¬aâ€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢aâ€šÂ¬AÂ ÃƒÆ’AÂ¢ÃƒÂ¢aâ‚¬Å¡AÂ¬ÃƒÂ¢aâ‚¬Å¾AÂ¢ÃƒÆ’Ã†â€™Ãƒâ€ aâ‚¬â„¢ÃƒÆ’AÂ¢ÃƒÂ¢aâ‚¬Å¡AÂ¬Ãƒâ€šAÂ ÃƒÆ’Ã†â€™Ãƒâ€šAÂ¢ÃƒÆ’AÂ¢ÃƒÂ¢aâ€šÂ¬Ã…Ãƒâ€šAÂ¬ÃƒÆ’AÂ¢ÃƒÂ¢aâ€šÂ¬Ã…Â¾Ãƒâ€šAÂ¢ÃƒÆ’Ã†â€™Ãƒâ€ aâ‚¬â„¢ÃƒÆ’aâ‚¬Â ÃƒÂ¢aâ€šÂ¬aâ€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šAÂ¢ÃƒÆ’AÂ¢ÃƒÂ¢aâ€šÂ¬Ã…Ãƒâ€šAÂ¬ÃƒÆ’aâ‚¬Â¦Ãƒâ€šAÃƒÆ’Ã†â€™Ãƒâ€ aâ‚¬â„¢ÃƒÆ’AÂ¢ÃƒÂ¢aâ‚¬Å¡AÂ¬Ãƒâ€¦AÃƒÆ’Ã†â€™ÃƒÂ¢aâ€šÂ¬Ã…ÃƒÆ’aâ‚¬Å¡Ãƒâ€šAÂºltimos 1000 IDs)
             if (processedCommandIds.size > 1000) {
               const firstKey = processedCommandIds.values().next().value;
               if (firstKey) processedCommandIds.delete(firstKey);
@@ -674,7 +675,7 @@ async function checkForUpdate(serverUrl: string, force = false): Promise<boolean
     }
 
     if ((UPDATE_PUBLIC_KEY_HEX as string) === 'PLACEHOLDER_RUN_GEN_KEYS_FIRST') {
-      log('WARN', 'SEGURIDAD: firma Ed25519 no configurada ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â ejecutar installer/gen-keys.js y rebuild.');
+      log('WARN', 'SEGURIDAD: firma Ed25519 no configurada ÃƒÆ’Ã†â€™Ãƒâ€ aâ‚¬â„¢ÃƒÆ’aâ‚¬Â ÃƒÂ¢aâ€šÂ¬aâ€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢aâ€šÂ¬AÂ ÃƒÆ’AÂ¢ÃƒÂ¢aâ‚¬Å¡AÂ¬ÃƒÂ¢aâ‚¬Å¾AÂ¢ÃƒÆ’Ã†â€™Ãƒâ€ aâ‚¬â„¢ÃƒÆ’AÂ¢ÃƒÂ¢aâ‚¬Å¡AÂ¬Ãƒâ€¦AÃƒÆ’Ã†â€™ÃƒÂ¢aâ€šÂ¬Ã…ÃƒÆ’aâ‚¬Å¡Ãƒâ€šAÂ¢ÃƒÆ’Ã†â€™Ãƒâ€ aâ‚¬â„¢ÃƒÆ’aâ‚¬Â ÃƒÂ¢aâ€šÂ¬aâ€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢aâ€šÂ¬Ã…ÃƒÆ’aâ‚¬Å¡Ãƒâ€šAÂ¢ÃƒÆ’Ã†â€™Ãƒâ€ aâ‚¬â„¢ÃƒÆ’aâ‚¬Å¡Ãƒâ€šAÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šAÂ¢ÃƒÆ’AÂ¢ÃƒÂ¢aâ‚¬Å¡AÂ¬Ãƒâ€¦AÃƒÆ’aâ‚¬Å¡Ãƒâ€šAÂ¬ÃƒÆ’Ã†â€™ÃƒÂ¢aâ€šÂ¬AÂ¦ÃƒÆ’aâ‚¬Å¡Ãƒâ€šAÃƒÆ’Ã†â€™Ãƒâ€ aâ‚¬â„¢ÃƒÆ’AÂ¢ÃƒÂ¢aâ‚¬Å¡AÂ¬Ãƒâ€¦AÃƒÆ’Ã†â€™ÃƒÂ¢aâ€šÂ¬Ã…ÃƒÆ’aâ‚¬Å¡Ãƒâ€šAÂ¬ÃƒÆ’Ã†â€™Ãƒâ€ aâ‚¬â„¢ÃƒÆ’aâ‚¬Â ÃƒÂ¢aâ€šÂ¬aâ€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢aâ€šÂ¬Ã…ÃƒÆ’aâ‚¬Å¡Ãƒâ€šAÂ¢ÃƒÆ’Ã†â€™Ãƒâ€ aâ‚¬â„¢ÃƒÆ’aâ‚¬Å¡Ãƒâ€šAÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šAÂ¢ÃƒÆ’AÂ¢ÃƒÂ¢aâ€šÂ¬Ã…Ãƒâ€šAÂ¬ÃƒÆ’aâ‚¬Â¦Ãƒâ€šAÃƒÆ’Ã†â€™ÃƒÂ¢aâ€šÂ¬Ã…ÃƒÆ’aâ‚¬Å¡Ãƒâ€šAÂ¬ÃƒÆ’Ã†â€™Ãƒâ€ aâ‚¬â„¢ÃƒÆ’AÂ¢ÃƒÂ¢aâ‚¬Å¡AÂ¬Ãƒâ€¦AÃƒÆ’Ã†â€™ÃƒÂ¢aâ€šÂ¬Ã…ÃƒÆ’aâ‚¬Å¡Ãƒâ€šAÂ ejecutar installer/gen-keys.js y rebuild.');
     } else {
       try {
         const sigRes = await fetch(data.url + '.sig', { signal: AbortSignal.timeout(15_000) });
@@ -686,7 +687,7 @@ async function checkForUpdate(serverUrl: string, force = false): Promise<boolean
         const sigBuf = Buffer.from(await sigRes.arrayBuffer());
         const pubKey = createPublicKey({ key: Buffer.from(UPDATE_PUBLIC_KEY_HEX, 'hex'), format: 'der', type: 'spki' });
         if (!cryptoVerify(null, buffer, pubKey, sigBuf)) {
-          log('ERROR', `VIOLACION DE INTEGRIDAD [Ed25519]: La firma del paquete de actualizacion NO es valida. URL: ${data.url} | Version: ${data.version} | Timestamp: ${new Date().toISOString()}. Actualizacion rechazada ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â posible ataque de cadena de suministro o paquete comprometido.`);
+          log('ERROR', `VIOLACION DE INTEGRIDAD [Ed25519]: La firma del paquete de actualizacion NO es valida. URL: ${data.url} | Version: ${data.version} | Timestamp: ${new Date().toISOString()}. Actualizacion rechazada ÃƒÆ’Ã†â€™Ãƒâ€ aâ‚¬â„¢ÃƒÆ’aâ‚¬Â ÃƒÂ¢aâ€šÂ¬aâ€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢aâ€šÂ¬AÂ ÃƒÆ’AÂ¢ÃƒÂ¢aâ‚¬Å¡AÂ¬ÃƒÂ¢aâ‚¬Å¾AÂ¢ÃƒÆ’Ã†â€™Ãƒâ€ aâ‚¬â„¢ÃƒÆ’AÂ¢ÃƒÂ¢aâ‚¬Å¡AÂ¬Ãƒâ€¦AÃƒÆ’Ã†â€™ÃƒÂ¢aâ€šÂ¬Ã…ÃƒÆ’aâ‚¬Å¡Ãƒâ€šAÂ¢ÃƒÆ’Ã†â€™Ãƒâ€ aâ‚¬â„¢ÃƒÆ’aâ‚¬Â ÃƒÂ¢aâ€šÂ¬aâ€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢aâ€šÂ¬Ã…ÃƒÆ’aâ‚¬Å¡Ãƒâ€šAÂ¢ÃƒÆ’Ã†â€™Ãƒâ€ aâ‚¬â„¢ÃƒÆ’aâ‚¬Å¡Ãƒâ€šAÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šAÂ¢ÃƒÆ’AÂ¢ÃƒÂ¢aâ‚¬Å¡AÂ¬Ãƒâ€¦AÃƒÆ’aâ‚¬Å¡Ãƒâ€šAÂ¬ÃƒÆ’Ã†â€™ÃƒÂ¢aâ€šÂ¬AÂ¦ÃƒÆ’aâ‚¬Å¡Ãƒâ€šAÃƒÆ’Ã†â€™Ãƒâ€ aâ‚¬â„¢ÃƒÆ’AÂ¢ÃƒÂ¢aâ‚¬Å¡AÂ¬Ãƒâ€¦AÃƒÆ’Ã†â€™ÃƒÂ¢aâ€šÂ¬Ã…ÃƒÆ’aâ‚¬Å¡Ãƒâ€šAÂ¬ÃƒÆ’Ã†â€™Ãƒâ€ aâ‚¬â„¢ÃƒÆ’aâ‚¬Â ÃƒÂ¢aâ€šÂ¬aâ€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢aâ€šÂ¬Ã…ÃƒÆ’aâ‚¬Å¡Ãƒâ€šAÂ¢ÃƒÆ’Ã†â€™Ãƒâ€ aâ‚¬â„¢ÃƒÆ’aâ‚¬Å¡Ãƒâ€šAÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šAÂ¢ÃƒÆ’AÂ¢ÃƒÂ¢aâ€šÂ¬Ã…Ãƒâ€šAÂ¬ÃƒÆ’aâ‚¬Â¦Ãƒâ€šAÃƒÆ’Ã†â€™ÃƒÂ¢aâ€šÂ¬Ã…ÃƒÆ’aâ‚¬Å¡Ãƒâ€šAÂ¬ÃƒÆ’Ã†â€™Ãƒâ€ aâ‚¬â„¢ÃƒÆ’AÂ¢ÃƒÂ¢aâ‚¬Å¡AÂ¬Ãƒâ€¦AÃƒÆ’Ã†â€™ÃƒÂ¢aâ€šÂ¬Ã…ÃƒÆ’aâ‚¬Å¡Ãƒâ€šAÂ posible ataque de cadena de suministro o paquete comprometido.`);
           isUpdating = false;
           return false;
         }
@@ -780,7 +781,7 @@ async function printStatus(): Promise<void> {
     }
   }
 
-  // Health check rÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡pido al servidor configurado (timeout 5s)
+  // Health check rapido al servidor configurado (timeout 5s)
   let cloudConnectivity: { reachable: boolean; latencyMs?: number; httpStatus?: number; error?: string };
   if (config?.serverUrl) {
     const t0 = Date.now();
@@ -926,7 +927,7 @@ async function activate(): Promise<void> {
     const err = e as Error & { _stcExitCode?: number; code?: string };
     const errMsg = err.message ?? String(e);
     console.error(`Error de activacion: ${errMsg}`);
-    // Propagamos exit code especÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â­fico si viene del bloque de respuesta HTTP
+    // Propagamos exit code especifico si viene del bloque de respuesta HTTP
     if (err._stcExitCode) {
       process.exit(err._stcExitCode);
     }

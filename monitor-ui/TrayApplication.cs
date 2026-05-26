@@ -67,7 +67,7 @@ internal sealed class TrayApplication : ApplicationContext
         };
         itemStatus.Click += (_, _) => ShowStatusForm();
 
-        var itemSync = new ToolStripMenuItem("Forzar Sincronización");
+        var itemSync = new ToolStripMenuItem("Forzar Sincronizacion");
         itemSync.Click += (_, _) => ForceSync();
 
         var itemLogs = new ToolStripMenuItem("Abrir Logs Locales");
@@ -113,12 +113,12 @@ internal sealed class TrayApplication : ApplicationContext
         if (!s.Activated)
         {
             _tray.Icon = MakeCircleIcon(Color.Orange);
-            _tray.Text = "STC Cloud Monitor — Pendiente de activación";
+            _tray.Text = "STC Cloud Monitor — Pendiente de activacion";
         }
         else if (s.Service == "running")
         {
             _tray.Icon = MakeCircleIcon(Color.LimeGreen);
-            _tray.Text = "STC Cloud Monitor — En ejecución";
+            _tray.Text = "STC Cloud Monitor — En ejecucion";
         }
         else if (s.Service is "stopped" or "not-installed")
         {
@@ -171,12 +171,12 @@ internal sealed class TrayApplication : ApplicationContext
         {
             AgentService.ForceScan();
             _tray.ShowBalloonTip(3_000, "STC Cloud Monitor",
-                "Sincronización forzada enviada. El agente la procesará en breve.",
+                "Sincronizacion forzada enviada. El agente la procesara en breve.",
                 ToolTipIcon.Info);
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Error al enviar la señal de sincronización:\n{ex.Message}",
+            MessageBox.Show($"Error al enviar la senal de sincronizacion:\n{ex.Message}",
                 "STC Cloud Monitor", MessageBoxButtons.OK, MessageBoxIcon.Warning);
         }
     }

@@ -11,19 +11,29 @@ Add-Type -AssemblyName System.Drawing
 
 function Get-AgentExe {
     $candidates = @(
-        (Join-Path $PSScriptRoot "STCCloudMonitor.exe"),
-        "C:\Program Files\STC\Monitor\STCCloudMonitor.exe",
-        "C:\Program Files (x86)\STC\Monitor\STCCloudMonitor.exe"
+        (Join-Path $PSScriptRoot "stc-node.exe"),
+        "C:\Program Files\STC\Monitor\stc-node.exe",
+        "C:\Program Files (x86)\STC\Monitor\stc-node.exe",
+        "C:\Users\imartinez.CDSA\AppData\Local\Programs\STC\Monitor\stc-node.exe"
     )
     foreach ($p in $candidates) { if (Test-Path $p) { return $p } }
     return $null
 }
 
+function Get-BundlePath ($exePath) {
+    if (-not $exePath) { return $null }
+    $dir = Split-Path $exePath
+    $bundle = Join-Path $dir "bundle.js"
+    if (Test-Path $bundle) { return $bundle }
+    return $null
+}
+
 function Get-AgentStatus {
     $exe = Get-AgentExe
-    if (-not $exe) { return $null }
+    $bundle = Get-BundlePath $exe
+    if (-not $exe -or -not $bundle) { return $null }
     try {
-        $json = & $exe --status 2>$null | Out-String
+        $json = & $exe "$bundle" --status 2>$null | Out-String
         if ([string]::IsNullOrWhiteSpace($json)) { return $null }
         return $json | ConvertFrom-Json
     } catch { 
@@ -39,12 +49,12 @@ function Test-IsAdmin {
 function Invoke-ServiceControl ($Action) {
     if (-not (Test-IsAdmin)) {
         $result = [System.Windows.Forms.MessageBox]::Show(
-            "$Action el servicio requiere privilegios de administrador.`n¿Desea continuar?",
+            "$Action el servicio requiere privilegios de administrador.`nDesea continuar?",
             "STC Cloud Monitor", [System.Windows.Forms.MessageBoxButtons]::YesNo,
             [System.Windows.Forms.MessageBoxIcon]::Question)
         if ($result -ne [System.Windows.Forms.DialogResult]::Yes) { return $false }
 
-        # Re-lanzar elevado y pasar la acción como parámetro
+        # Re-lanzar elevado y pasar la accion como parametro
         $psArgs = "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`" -ServiceAction $Action"
         Start-Process powershell.exe -ArgumentList $psArgs -Verb RunAs -Wait
         return $true
@@ -127,7 +137,7 @@ $lblSub.Location  = New-Object System.Drawing.Point(14, 36)
 $lblSub.Size      = New-Object System.Drawing.Size(300, 18)
 $header.Controls.Add($lblSub)
 
-# Indicador de estado (punto de color) — equivalente al semáforo de HP DCA Console
+# Indicador de estado (punto de color) — equivalente al semaforo de HP DCA Console
 $dot = New-Object System.Windows.Forms.Panel
 $dot.Size      = New-Object System.Drawing.Size(18, 18)
 $dot.Location  = New-Object System.Drawing.Point(422, 23)
@@ -143,7 +153,7 @@ $lblDotText.Size      = New-Object System.Drawing.Size(52, 14)
 $lblDotText.TextAlign = [System.Drawing.ContentAlignment]::MiddleCenter
 $header.Controls.Add($lblDotText)
 
-# ── Filas de información ──────────────────────────────────────────────────────
+# ── Filas de informacion ──────────────────────────────────────────────────────
 
 $y = 78
 function Add-Row ($label) {
@@ -180,7 +190,7 @@ $sep.Size        = New-Object System.Drawing.Size(444, 2)
 $form.Controls.Add($sep)
 $y += 10
 
-# ── Última entrada de log ─────────────────────────────────────────────────────
+# ── Ultima entrada de log ─────────────────────────────────────────────────────
 
 $lblLog = New-Object System.Windows.Forms.Label
 $lblLog.Text      = "Ultima entrada en log:"
@@ -228,7 +238,7 @@ $btnClose.Location = New-Object System.Drawing.Point(376, $y)
 $btnClose.Size     = New-Object System.Drawing.Size(84, 30)
 $form.Controls.Add($btnClose)
 
-# ─── Lógica de actualización de UI ───────────────────────────────────────────
+# ─── Logica de actualizacion de UI ───────────────────────────────────────────
 
 function Update-StatusUI {
     $s = Get-AgentStatus
@@ -337,10 +347,11 @@ $btnActivateUI.Add_Click({
     $btnActivateUI.Text = "..."
     
     $exe = Get-AgentExe
+    $bundle = Get-BundlePath $exe
     $serverUrl = "http://127.0.0.1:3000" # Por defecto para desarrollo, en prod se puede parametrizar
 
     # Ejecutar activacion
-    $out = & $exe --activate $key --server $serverUrl 2>&1 | Out-String
+    $out = & $exe "$bundle" --activate $key --server $serverUrl 2>&1 | Out-String
     
     if ($LASTEXITCODE -eq 0) {
         [System.Windows.Forms.MessageBox]::Show("Activacion exitosa.`n`nReiniciando servicio...", "STC Cloud Monitor", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
@@ -378,7 +389,7 @@ $btnLogs.Add_Click({
     $exe = Get-AgentExe
     if (-not $exe) {
         [System.Windows.Forms.MessageBox]::Show(
-            "No se encontró el agente instalado.",
+            "No se encontro el agente instalado.",
             "STC Cloud Monitor", [System.Windows.Forms.MessageBoxButtons]::OK,
             [System.Windows.Forms.MessageBoxIcon]::Warning)
         return

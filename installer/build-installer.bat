@@ -33,7 +33,7 @@ set OUTPUT_DIR=%SCRIPT_DIR%output
 set INNO_DEFAULT="C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
 set GITHUB_REPO=ivmartinez-cd/STC-cloud
 
-:: ── Extraer version actual del .iss (buscando específicamente la línea #define MyAppVersion) ──
+:: ── Extraer version actual del .iss (buscando especificamente la linea #define MyAppVersion) ──
 for /f "usebackq tokens=3" %%v in (`findstr /C:"#define MyAppVersion" "%SCRIPT_DIR%STC-Monitor.iss"`) do (
     set RAW_VER=%%v
     set APP_VERSION=!RAW_VER:"=!
@@ -346,12 +346,12 @@ if !RND_EXIT! neq 0 (
 echo       OK: Render actualizado con el paquete ZIP.
 
 :api_update
-:: ── Paso 8.5: Actualización Dinámica por API (Recomendado / Sin redeploys) ───
+:: ── Paso 8.5: Actualizacion Dinamica por API (Recomendado / Sin redeploys) ───
 echo.
-echo [8.5/8] Actualizando versión en la API dinámica de STC Cloud...
+echo [8.5/8] Actualizando version en la API dinamica de STC Cloud...
 if "!STC_PORTAL_TOKEN!"=="" (
-    echo [AVISO] Variable STC_PORTAL_TOKEN no configurada. Saltando actualización por API.
-    echo         Para configurarla en su máquina:
+    echo [AVISO] Variable STC_PORTAL_TOKEN no configurada. Saltando actualizacion por API.
+    echo         Para configurarla en su maquina:
     echo           setx STC_PORTAL_TOKEN "tu_jwt_token_del_portal" /M
     echo         Esto le permite actualizar las versiones al instante sin redespliegues de Render.
     goto :done
@@ -364,7 +364,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command ^
     "$body = @{ version = '!APP_VERSION!'; url = '!DLURL!'; hash = '!UPDATE_HASH!' } | ConvertTo-Json;" ^
     "try {" ^
     "    $res = Invoke-RestMethod -Uri \"!API_URL!/api/v1/portal/agents/version\" -Method Post -Headers @{ Authorization = 'Bearer !STC_PORTAL_TOKEN!'; 'Content-Type' = 'application/json' } -Body $body;" ^
-    "    Write-Host '      OK: API Dinámica actualizada al instante: v' $res.version;" ^
+    "    Write-Host '      OK: API Dinamica actualizada al instante: v' $res.version;" ^
     "} catch {" ^
     "    Write-Host '[ERROR] No se pudo actualizar por API:' $_.Exception.Message;" ^
     "}"

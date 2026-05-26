@@ -36,7 +36,7 @@ function getWindowsHardwareId(): string {
   try {
     let guid = '';
     try {
-      // Intento ultra rápido usando reg query nativo para evitar levantar powershell
+      // Intento ultra rapido usando reg query nativo para evitar levantar powershell
       const regOut = execSync('reg query "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Cryptography" /v MachineGuid', {
         timeout: 3000, encoding: 'utf8', windowsHide: true,
       });
@@ -47,13 +47,13 @@ function getWindowsHardwareId(): string {
         throw new Error('No se pudo encontrar MachineGuid en el output de reg query');
       }
     } catch {
-      // Fallback a powershell por si reg query falla por políticas o entorno
+      // Fallback a powershell por si reg query falla por politicas o entorno
       guid = execSync('powershell -NoProfile -Command "(Get-ItemProperty \'Registry::HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Cryptography\').MachineGuid"', {
         timeout: 5000, encoding: 'utf8', windowsHide: true,
       }).trim();
     }
     
-    // Serial de la BIOS es inmutable para el hardware. Le damos 8 segundos por si el inicio de Windows está muy saturado.
+    // Serial de la BIOS es inmutable para el hardware. Le damos 8 segundos por si el inicio de Windows esta muy saturado.
     const bios = execSync('powershell -NoProfile -Command "(Get-CimInstance Win32_BIOS).SerialNumber"', {
       timeout: 8000, encoding: 'utf8', windowsHide: true,
     }).trim();
@@ -67,12 +67,12 @@ function getWindowsHardwareId(): string {
 
 
 /**
- * Genera un identificador de hardware único y determinista para la máquina actual.
+ * Genera un identificador de hardware unico y determinista para la maquina actual.
  * Combina identificadores del sistema inmutables (MachineGuid de registro de Windows y Serial de BIOS en Windows,
  * o machine-id en sistemas tipo Unix) y devuelve un hash SHA-256 de 32 caracteres.
- * Sirve como clave de cifrado simétrico local en conjunto con la infraestructura AES-256-GCM.
+ * Sirve como clave de cifrado simetrico local en conjunto con la infraestructura AES-256-GCM.
  * 
- * @returns {string} Un hash hexadecimal de 32 caracteres correspondiente al Hardware ID único.
+ * @returns {string} Un hash hexadecimal de 32 caracteres correspondiente al Hardware ID unico.
  */
 export function getHardwareId(): string {
   let raw = '';
@@ -101,17 +101,17 @@ export const DATA_DIR = get_DATA_DIR();
 const CONFIG_PATH = path.join(DATA_DIR, 'config.enc');
 
 /**
- * Gestor de configuración persistente cifrada para el agente STC Cloud.
- * Maneja el almacenamiento de credenciales críticas en disco utilizando cifrado simétrico AES-256-GCM
- * con enlace fuerte a la identidad de hardware de la máquina (HWID binding).
+ * Gestor de configuracion persistente cifrada para el agente STC Cloud.
+ * Maneja el almacenamiento de credenciales criticas en disco utilizando cifrado simetrico AES-256-GCM
+ * con enlace fuerte a la identidad de hardware de la maquina (HWID binding).
  */
 export class ConfigManager {
   /**
-   * Carga y descifra de forma segura el archivo de configuración del agente desde el almacenamiento local.
-   * Valida la integridad del hardware a través del proceso de autenticación de AES-256-GCM.
+   * Carga y descifra de forma segura el archivo de configuracion del agente desde el almacenamiento local.
+   * Valida la integridad del hardware a traves del proceso de autenticacion de AES-256-GCM.
    * 
-   * @throws {Error} Si la configuración no existe, si el Hardware ID cambió (HWID_MISMATCH) o si el descifrado falla.
-   * @returns {Promise<AgentConfig>} Objeto de configuración del agente descifrado.
+   * @throws {Error} Si la configuracion no existe, si el Hardware ID cambio (HWID_MISMATCH) o si el descifrado falla.
+   * @returns {Promise<AgentConfig>} Objeto de configuracion del agente descifrado.
    */
   static async load(): Promise<AgentConfig> {
     if (!fs.existsSync(CONFIG_PATH)) {
@@ -124,7 +124,7 @@ export class ConfigManager {
       return JSON.parse(json) as AgentConfig;
     } catch (error: unknown) {
       const msg: string = error instanceof Error ? error.message : String(error);
-      // AES-256-GCM auth-tag failure = HWID del equipo cambió desde la activación
+      // AES-256-GCM auth-tag failure = HWID del equipo cambio desde la activacion
       if (
         msg.includes('Unsupported state') ||
         msg.includes('BAD_DECRYPT') ||
@@ -138,10 +138,10 @@ export class ConfigManager {
   }
 
   /**
-   * Cifra y almacena la configuración de forma atómica en disco usando la clave de hardware.
-   * Utiliza un esquema de escritura segura temporal (write-then-rename) para evitar corrupción de datos.
+   * Cifra y almacena la configuracion de forma atomica en disco usando la clave de hardware.
+   * Utiliza un esquema de escritura segura temporal (write-then-rename) para evitar corrupcion de datos.
    * 
-   * @param {AgentConfig} config - Objeto de configuración a persistir de forma segura.
+   * @param {AgentConfig} config - Objeto de configuracion a persistir de forma segura.
    * @returns {Promise<void>}
    */
   static async save(config: AgentConfig): Promise<void> {
@@ -155,8 +155,8 @@ export class ConfigManager {
   }
 
   /**
-   * Elimina de forma segura toda configuración y archivos temporales de control local.
-   * Usado durante la desvinculación administrativa del agente para limpieza de credenciales.
+   * Elimina de forma segura toda configuracion y archivos temporales de control local.
+   * Usado durante la desvinculacion administrativa del agente para limpieza de credenciales.
    * 
    * @returns {Promise<void>}
    */
