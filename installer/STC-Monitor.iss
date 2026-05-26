@@ -58,6 +58,8 @@ Name: "desktopicon"; Description: "Crear acceso directo en el &escritorio"; Grou
 [Run]
 Filename: "schtasks.exe"; Parameters: "/Create /SC ONLOGON /TN ""STC-Monitor-UI"" /TR ""\""{app}\STC.Monitor.UI.exe\"""" /RL HIGHEST /F"; Flags: runhidden; StatusMsg: "Configurando inicio automatico en bandeja..."
 Filename: "powershell.exe"; Parameters: "-NoProfile -WindowStyle Hidden -Command ""$t = Get-ScheduledTask -TaskName 'STC-Monitor-UI'; $t.Settings.StopIfGoingOnBatteries = $false; $t.Settings.DisallowStartIfOnBatteries = $false; $t.Settings.ExecutionTimeLimit = 'PT0S'; Set-ScheduledTask -InputObject $t"""; Flags: runhidden; StatusMsg: "Optimizando tarea programada para laptops..."
+Filename: "{app}\nssm.exe"; Parameters: "set {#ServiceName} Start SERVICE_AUTO_START"; Flags: runhidden; Check: IsActivated
+Filename: "{app}\nssm.exe"; Parameters: "start {#ServiceName}"; Flags: runhidden; StatusMsg: "Iniciando servicio de monitoreo..."; Check: IsActivated
 Filename: "{app}\STC.Monitor.UI.exe"; Description: "Iniciar consola de monitoreo STC"; Flags: postinstall nowait skipifsilent shellexec; StatusMsg: "Iniciando consola de monitoreo..."
 
 [UninstallRun]
@@ -205,6 +207,11 @@ begin
       end;
     end;
   end;
+end;
+
+function IsActivated: Boolean;
+begin
+  Result := FileExists(ExpandConstant('{#DataDir}\config.enc'));
 end;
 
 procedure CurStepChanged(CurStep: TSetupStep);
