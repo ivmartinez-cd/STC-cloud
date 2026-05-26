@@ -172,8 +172,8 @@ export async function readDevice(
       ? await readViaSNMP(ip, community)
       : await readViaMethod(ip, hintMethod);
     if (fast) {
-      // If we got rich counters, or if the hint method is already counter-rich (ews/snmp), use it!
-      if (fast.mono_pages !== null || hintMethod === 'ews' || hintMethod === 'snmp') {
+      // If we got rich counters, or if the hint method is already counter-rich (ews), use it!
+      if (fast.mono_pages !== null || hintMethod === 'ews') {
         return fast;
       }
     }
@@ -376,33 +376,14 @@ export async function readViaSNMP(ip: string, community: string): Promise<Device
     const brand  = detectBrandFromOid(String(sysOid));
     const oidMap = OID_MAPS[brand];
 
-    // Phase 4: read counters and identity fields
+    // Phase 4: read identity fields
     const [sysDescr, sysName] = await Promise.all([
       snmpGet(session, SYS_OIDS.sysDescr),
       snmpGet(session, SYS_OIDS.sysName),
     ]);
 
-    const serialOids = brand !== 'generic' ? oidMap.serial     : GENERIC_OIDS.serial;
-    const totalOids  = brand !== 'generic' ? oidMap.totalPages : GENERIC_OIDS.totalPages;
-    const monoOids   = brand !== 'generic' ? oidMap.monoPages  : GENERIC_OIDS.monoPages;
-    const colorOids  = brand !== 'generic' ? oidMap.colorPages : GENERIC_OIDS.colorPages;
-
+    const serialOids = brand !== 'generic' ? oidMap.serial : GENERIC_OIDS.serial;
     const serial = await snmpGetFirstValid(session, serialOids);
-    let totalPages = await snmpGetFirstValid(session, totalOids) as number | null;
-
-    let [monoPages, colorPages] = await Promise.all([
-      snmpGetFirstValid(session, monoOids)  as Promise<number | null>,
-      snmpGetFirstValid(session, colorOids) as Promise<number | null>,
-    ]);
-
-    // Infer missing counters (Total = Mono + Color)
-    if (totalPages === null && monoPages !== null && colorPages !== null) {
-      totalPages = Number(monoPages) + Number(colorPages);
-    } else if (totalPages !== null && colorPages !== null && monoPages === null) {
-      monoPages = Math.max(0, Number(totalPages) - Number(colorPages));
-    } else if (totalPages !== null && monoPages !== null && colorPages === null) {
-      colorPages = Math.max(0, Number(totalPages) - Number(monoPages));
-    }
 
     // Phase 5: clean up sysDescr noise
     const raw     = String(sysDescr ?? '').trim();
@@ -412,22 +393,19 @@ export async function readViaSNMP(ip: string, community: string): Promise<Device
     let finalBrand = brand;
     if (finalBrand === 'generic') finalBrand = detectBrandFromText(raw);
 
-    let toner: TonerLevels = { toner_black: null, toner_cyan: null, toner_magenta: null, toner_yellow: null };
-    try { toner = await readTonerViaSNMP(session); } catch { /* supply table unavailable */ }
-
     return {
       ip,
       brand:         finalBrand,
       sysDescr:      raw.slice(0, 255),
       sysName:       String(sysName ?? ''),
       serial:        serial ? String(serial).trim() || null : null,
-      total_pages:   totalPages !== null ? Number(totalPages) : null,
-      mono_pages:    monoPages  !== null ? Number(monoPages)  : null,
-      color_pages:   colorPages !== null ? Number(colorPages) : null,
-      toner_black:   toner.toner_black,
-      toner_cyan:    toner.toner_cyan,
-      toner_magenta: toner.toner_magenta,
-      toner_yellow:  toner.toner_yellow,
+      total_pages:   null,
+      mono_pages:    null,
+      color_pages:   null,
+      toner_black:   null,
+      toner_cyan:    null,
+      toner_magenta: null,
+      toner_yellow:  null,
       model:         cleaned.slice(0, 100),
       time:          new Date().toISOString(),
       poll_method:   'snmp',
