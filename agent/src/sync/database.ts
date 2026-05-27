@@ -249,4 +249,17 @@ export function getDeviceCount(): number {
   return result?.c ?? 0;
 }
 
+export function getKnownDevices(): Array<{ ip: string; brand: string | null; poll_method: PollMethod | null }> {
+  return db.prepare(
+    'SELECT ip, brand, poll_method FROM known_devices WHERE registered = 1',
+  ).all() as Array<{ ip: string; brand: string | null; poll_method: PollMethod | null }>;
+}
+
+export function getKnownDeviceInfo(ip: string): { brand: string | null; model: string | null; serial: string | null; poll_method: PollMethod | null } | null {
+  const row = db.prepare(
+    'SELECT brand, model, serial, poll_method FROM known_devices WHERE ip = ?',
+  ).get(ip) as { brand: string | null; model: string | null; serial: string | null; poll_method: PollMethod | null } | undefined;
+  return row ?? null;
+}
+
 

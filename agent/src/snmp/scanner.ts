@@ -4,15 +4,16 @@ import {
   detectBrandFromOid, detectBrandFromText, OID_MAPS, GENERIC_OIDS, SYS_OIDS, HR_STATUS_MAP, HR_DEVICE_PRINTER, type Brand,
 } from './oids';
 import { readDeviceViaPJL } from './pjl';
-import { readDeviceViaEWS } from './ews';
+import { readDeviceViaEWS, readDeviceCountersViaEWS, readDeviceSuppliesViaEWS } from './ews';
 import { readDeviceViaIPP } from './ipp';
 
 export type PollMethod = 'snmp' | 'pjl' | 'ews' | 'ipp' | 'unknown';
 
-const TIMEOUT_MS     = 3000;
-const RETRIES        = 1;
-const MAX_CONCURRENT = 20;
-const REACH_TIMEOUT  = 500;
+const TIMEOUT_MS         = 3000;
+const RETRIES            = 1;
+const MAX_CONCURRENT     = 20;
+const REACH_TIMEOUT      = 500;   // fast check for printer-exclusive ports (9100, 631)
+const WEB_REACH_TIMEOUT  = 2000;  // old EWS servers (Samsung SyncThru) can take >500ms to accept TCP
 
 // Printer-exclusive ports: 9100 (JetDirect/PJL), 631 (IPP).
 // Routers, switches and NAS never listen on these.
@@ -33,7 +34,7 @@ class Semaphore {
 
 const sem = new Semaphore(MAX_CONCURRENT);
 
-function tryPort(ip: string, port: number): Promise<boolean> {
+function tryPort(ip: string, port: number, timeoutMs = REACH_TIMEOUT): Promise<boolean> {
   return new Promise((resolve, reject) => {
     const socket = new net.Socket();
     let settled = false;
@@ -45,7 +46,7 @@ function tryPort(ip: string, port: number): Promise<boolean> {
       resolve(result);
     };
 
-    socket.setTimeout(REACH_TIMEOUT);
+    socket.setTimeout(timeoutMs);
     socket.once('connect',  () => finish(true));
     socket.once('timeout',  () => finish(false));
     socket.once('error', (err: NodeJS.ErrnoException) => {
@@ -60,9 +61,14 @@ function tryPort(ip: string, port: number): Promise<boolean> {
 }
 
 // Returns the set of ports that responded, all probed in parallel.
+// Web ports (80, 443) use WEB_REACH_TIMEOUT because old EWS firmware (Samsung SyncThru)
+// can take longer than REACH_TIMEOUT to accept a TCP connection even though the port is open.
 async function checkOpenPorts(ip: string): Promise<Set<number>> {
   const results = await Promise.all(
-    PRINTER_PORTS.map(async p => ({ p, open: await tryPort(ip, p).catch(() => false) })),
+    PRINTER_PORTS.map(async p => ({
+      p,
+      open: await tryPort(ip, p, p === 80 || p === 443 ? WEB_REACH_TIMEOUT : REACH_TIMEOUT).catch(() => false),
+    })),
   );
   return new Set(results.filter(r => r.open).map(r => r.p));
 }
@@ -448,6 +454,74 @@ export async function readViaIPP(ip: string): Promise<DeviceReading | null> {
     toner_yellow:  null,
     time:          new Date().toISOString(),
     poll_method:   'ipp',
+  };
+}
+
+// ─── Targeted re-scan wrappers for known devices ─────────────────────────────
+// Used by meterLoop and suppliesLoop in main.ts.
+// Skip port detection and brand identification — brand is already known from DB.
+
+export async function readViaEWSCounters(ip: string, brand?: Brand, model?: string): Promise<DeviceReading | null> {
+  const data = await readDeviceCountersViaEWS(ip, brand);
+  if (!data) return null;
+  return {
+    ip,
+    brand:         data.brand,
+    model:         (data.model ?? model ?? data.brand).slice(0, 100),
+    sysDescr:      '',
+    sysName:       '',
+    serial:        data.serial,
+    total_pages:   data.totalPages,
+    mono_pages:    data.monoPages,
+    color_pages:   data.colorPages,
+    toner_black:   null,
+    toner_cyan:    null,
+    toner_magenta: null,
+    toner_yellow:  null,
+    time:          new Date().toISOString(),
+    poll_method:   'ews',
+  };
+}
+
+export async function readViaEWSSupplies(ip: string, brand?: Brand, model?: string): Promise<DeviceReading | null> {
+  const data = await readDeviceSuppliesViaEWS(ip, brand);
+  if (!data) return null;
+  return {
+    ip,
+    brand:         data.brand,
+    model:         (data.model ?? model ?? data.brand).slice(0, 100),
+    sysDescr:      '',
+    sysName:       '',
+    serial:        data.serial,
+    total_pages:   null,
+    mono_pages:    null,
+    color_pages:   null,
+    toner_black:   data.tonerBlack   ?? null,
+    toner_cyan:    data.tonerCyan    ?? null,
+    toner_magenta: data.tonerMagenta ?? null,
+    toner_yellow:  data.tonerYellow  ?? null,
+    cartridge_code_black:        data.cartridgeCodeBlack       ?? null,
+    cartridge_code_cyan:         data.cartridgeCodeCyan        ?? null,
+    cartridge_code_magenta:      data.cartridgeCodeMagenta     ?? null,
+    cartridge_code_yellow:       data.cartridgeCodeYellow      ?? null,
+    cartridge_serial_black:      data.cartridgeSerialBlack     ?? null,
+    cartridge_serial_cyan:       data.cartridgeSerialCyan      ?? null,
+    cartridge_serial_magenta:    data.cartridgeSerialMagenta   ?? null,
+    cartridge_serial_yellow:     data.cartridgeSerialYellow    ?? null,
+    cartridge_capacity_black:    data.cartridgeCapacityBlack   ?? null,
+    cartridge_capacity_cyan:     data.cartridgeCapacityCyan    ?? null,
+    cartridge_capacity_magenta:  data.cartridgeCapacityMagenta ?? null,
+    cartridge_capacity_yellow:   data.cartridgeCapacityYellow  ?? null,
+    cartridge_printed_black:     data.cartridgePrintedBlack    ?? null,
+    cartridge_printed_cyan:      data.cartridgePrintedCyan     ?? null,
+    cartridge_printed_magenta:   data.cartridgePrintedMagenta  ?? null,
+    cartridge_printed_yellow:    data.cartridgePrintedYellow   ?? null,
+    cartridge_estimated_black:   data.cartridgeEstimatedBlack  ?? null,
+    cartridge_estimated_cyan:    data.cartridgeEstimatedCyan   ?? null,
+    cartridge_estimated_magenta: data.cartridgeEstimatedMagenta ?? null,
+    cartridge_estimated_yellow:  data.cartridgeEstimatedYellow  ?? null,
+    time:          new Date().toISOString(),
+    poll_method:   'ews',
   };
 }
 

@@ -160,7 +160,7 @@ export const SYS_OIDS = {
 
 export const HR_DEVICE_PRINTER = '1.3.6.1.2.1.25.3.1.5';
 
-// Mapa de estado hrPrinterStatus → string legible
+// Mapa de estado hrPrinterStatus → string legible (RFC 2790 §4.2)
 export const HR_STATUS_MAP: Record<number, string> = {
-  1: 'other', 2: 'unknown', 3: 'idle', 4: 'printing', 5: 'warmup',
+  1: 'other', 2: 'unknown', 3: 'idle', 4: 'printing', 5: 'warmup', 6: 'stopped',
 };

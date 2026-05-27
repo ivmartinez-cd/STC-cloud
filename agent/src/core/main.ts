@@ -1,4 +1,4 @@
-import os from 'os';
+﻿import os from 'os';
 import fs from 'fs';
 import path from 'path';
 import { exec, spawn } from 'child_process';
@@ -6,9 +6,9 @@ import { promisify } from 'util';
 import { createHash, verify as cryptoVerify, createPublicKey } from 'crypto';
 import { UPDATE_PUBLIC_KEY_HEX } from './updateKey';
 import { ConfigManager, DATA_DIR, getHardwareId, type AgentConfig, type ScanSchedule } from './config';
-import { openQueue, enqueueReading, pendingCount, purgeOld, upsertKnownDevice, isRegistered, getDeviceCount, closeQueue, getKnownPollMethod } from '../sync/database';
+import { openQueue, enqueueReading, pendingCount, purgeOld, upsertKnownDevice, isRegistered, getDeviceCount, closeQueue, getKnownPollMethod, getKnownDevices, getKnownDeviceInfo } from '../sync/database';
 import { uploadPending, tryRefresh } from '../sync/uploader';
-import { readDevice, type DeviceReading } from '../snmp/scanner';
+import { readDevice, readViaEWSCounters, readViaEWSSupplies, readViaSNMP, type DeviceReading } from '../snmp/scanner';
 import { LogTailer } from './LogTailer';
 import { SocketManager } from './SocketManager';
 import { ConsoleConnector } from './ConsoleConnector';
@@ -232,12 +232,12 @@ async function heartbeat(): Promise<void> {
 
       if (data.commands && data.commands.length > 0) {
         for (const cmd of data.commands) {
-          // DeduplicaciÃƒÆ’Ã†â€™Ãƒâ€ aâ‚¬â„¢ÃƒÆ’aâ‚¬Â ÃƒÂ¢aâ€šÂ¬aâ€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢aâ€šÂ¬AÂ ÃƒÆ’AÂ¢ÃƒÂ¢aâ‚¬Å¡AÂ¬ÃƒÂ¢aâ‚¬Å¾AÂ¢ÃƒÆ’Ã†â€™Ãƒâ€ aâ‚¬â„¢ÃƒÆ’AÂ¢ÃƒÂ¢aâ‚¬Å¡AÂ¬Ãƒâ€šAÂ ÃƒÆ’Ã†â€™Ãƒâ€šAÂ¢ÃƒÆ’AÂ¢ÃƒÂ¢aâ€šÂ¬Ã…Ãƒâ€šAÂ¬ÃƒÆ’AÂ¢ÃƒÂ¢aâ€šÂ¬Ã…Â¾Ãƒâ€šAÂ¢ÃƒÆ’Ã†â€™Ãƒâ€ aâ‚¬â„¢ÃƒÆ’aâ‚¬Â ÃƒÂ¢aâ€šÂ¬aâ€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šAÂ¢ÃƒÆ’AÂ¢ÃƒÂ¢aâ€šÂ¬Ã…Ãƒâ€šAÂ¬ÃƒÆ’aâ‚¬Â¦Ãƒâ€šAÃƒÆ’Ã†â€™Ãƒâ€ aâ‚¬â„¢ÃƒÆ’AÂ¢ÃƒÂ¢aâ‚¬Å¡AÂ¬Ãƒâ€¦AÃƒÆ’Ã†â€™ÃƒÂ¢aâ€šÂ¬Ã…ÃƒÆ’aâ‚¬Å¡Ãƒâ€šAÂ³n: Si ya lo procesamos (vÃƒÆ’Ã†â€™Ãƒâ€ aâ‚¬â„¢ÃƒÆ’aâ‚¬Â ÃƒÂ¢aâ€šÂ¬aâ€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢aâ€šÂ¬AÂ ÃƒÆ’AÂ¢ÃƒÂ¢aâ‚¬Å¡AÂ¬ÃƒÂ¢aâ‚¬Å¾AÂ¢ÃƒÆ’Ã†â€™Ãƒâ€ aâ‚¬â„¢ÃƒÆ’AÂ¢ÃƒÂ¢aâ‚¬Å¡AÂ¬Ãƒâ€šAÂ ÃƒÆ’Ã†â€™Ãƒâ€šAÂ¢ÃƒÆ’AÂ¢ÃƒÂ¢aâ€šÂ¬Ã…Ãƒâ€šAÂ¬ÃƒÆ’AÂ¢ÃƒÂ¢aâ€šÂ¬Ã…Â¾Ãƒâ€šAÂ¢ÃƒÆ’Ã†â€™Ãƒâ€ aâ‚¬â„¢ÃƒÆ’aâ‚¬Â ÃƒÂ¢aâ€šÂ¬aâ€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šAÂ¢ÃƒÆ’AÂ¢ÃƒÂ¢aâ€šÂ¬Ã…Ãƒâ€šAÂ¬ÃƒÆ’aâ‚¬Â¦Ãƒâ€šAÃƒÆ’Ã†â€™Ãƒâ€ aâ‚¬â„¢ÃƒÆ’AÂ¢ÃƒÂ¢aâ‚¬Å¡AÂ¬Ãƒâ€¦AÃƒÆ’Ã†â€™ÃƒÂ¢aâ€šÂ¬Ã…ÃƒÆ’aâ‚¬Å¡Ãƒâ€šAÂ­a WSS o heartbeat anterior), lo saltamos
+          // DeduplicaciÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â aÃ¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™aÃ¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢aÃ¢â‚¬Å¡Ã‚Â¬aÃ¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢aÃ¢â‚¬Å¡Ã‚Â¬AÃ‚Â ÃƒÆ’Ã†â€™AÃ‚Â¢ÃƒÆ’Ã‚Â¢aÃ¢â€šÂ¬Ã…Â¡AÃ‚Â¬ÃƒÆ’Ã‚Â¢aÃ¢â€šÂ¬Ã…Â¾AÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â aÃ¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™AÃ‚Â¢ÃƒÆ’Ã‚Â¢aÃ¢â€šÂ¬Ã…Â¡AÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡AÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡AÃ‚Â¢ÃƒÆ’Ã†â€™AÃ‚Â¢ÃƒÆ’Ã‚Â¢aÃ¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦ÃƒÆ’Ã¢â‚¬Å¡AÃ‚Â¬ÃƒÆ’Ã†â€™AÃ‚Â¢ÃƒÆ’Ã‚Â¢aÃ¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¾ÃƒÆ’Ã¢â‚¬Å¡AÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â aÃ¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™aÃ¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢aÃ¢â‚¬Å¡Ã‚Â¬aÃ¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡AÃ‚Â¢ÃƒÆ’Ã†â€™AÃ‚Â¢ÃƒÆ’Ã‚Â¢aÃ¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦ÃƒÆ’Ã¢â‚¬Å¡AÃ‚Â¬ÃƒÆ’Ã†â€™aÃ¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Å¡AÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â aÃ¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™AÃ‚Â¢ÃƒÆ’Ã‚Â¢aÃ¢â€šÂ¬Ã…Â¡AÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦AÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢aÃ¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦ÃƒÆ’Ã†â€™aÃ¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡AÃ‚Â³n: Si ya lo procesamos (vÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â aÃ¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™aÃ¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢aÃ¢â‚¬Å¡Ã‚Â¬aÃ¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢aÃ¢â‚¬Å¡Ã‚Â¬AÃ‚Â ÃƒÆ’Ã†â€™AÃ‚Â¢ÃƒÆ’Ã‚Â¢aÃ¢â€šÂ¬Ã…Â¡AÃ‚Â¬ÃƒÆ’Ã‚Â¢aÃ¢â€šÂ¬Ã…Â¾AÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â aÃ¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™AÃ‚Â¢ÃƒÆ’Ã‚Â¢aÃ¢â€šÂ¬Ã…Â¡AÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡AÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡AÃ‚Â¢ÃƒÆ’Ã†â€™AÃ‚Â¢ÃƒÆ’Ã‚Â¢aÃ¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦ÃƒÆ’Ã¢â‚¬Å¡AÃ‚Â¬ÃƒÆ’Ã†â€™AÃ‚Â¢ÃƒÆ’Ã‚Â¢aÃ¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¾ÃƒÆ’Ã¢â‚¬Å¡AÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â aÃ¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™aÃ¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢aÃ¢â‚¬Å¡Ã‚Â¬aÃ¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡AÃ‚Â¢ÃƒÆ’Ã†â€™AÃ‚Â¢ÃƒÆ’Ã‚Â¢aÃ¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦ÃƒÆ’Ã¢â‚¬Å¡AÃ‚Â¬ÃƒÆ’Ã†â€™aÃ¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Å¡AÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â aÃ¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™AÃ‚Â¢ÃƒÆ’Ã‚Â¢aÃ¢â€šÂ¬Ã…Â¡AÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦AÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢aÃ¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦ÃƒÆ’Ã†â€™aÃ¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡AÃ‚Â­a WSS o heartbeat anterior), lo saltamos
           if (cmd.id && processedCommandIds.has(cmd.id)) continue;
           
           if (cmd.id) {
             processedCommandIds.add(cmd.id);
-            // Mantener el set limpio (ÃƒÆ’Ã†â€™Ãƒâ€ aâ‚¬â„¢ÃƒÆ’aâ‚¬Â ÃƒÂ¢aâ€šÂ¬aâ€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢aâ€šÂ¬AÂ ÃƒÆ’AÂ¢ÃƒÂ¢aâ‚¬Å¡AÂ¬ÃƒÂ¢aâ‚¬Å¾AÂ¢ÃƒÆ’Ã†â€™Ãƒâ€ aâ‚¬â„¢ÃƒÆ’AÂ¢ÃƒÂ¢aâ‚¬Å¡AÂ¬Ãƒâ€šAÂ ÃƒÆ’Ã†â€™Ãƒâ€šAÂ¢ÃƒÆ’AÂ¢ÃƒÂ¢aâ€šÂ¬Ã…Ãƒâ€šAÂ¬ÃƒÆ’AÂ¢ÃƒÂ¢aâ€šÂ¬Ã…Â¾Ãƒâ€šAÂ¢ÃƒÆ’Ã†â€™Ãƒâ€ aâ‚¬â„¢ÃƒÆ’aâ‚¬Â ÃƒÂ¢aâ€šÂ¬aâ€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šAÂ¢ÃƒÆ’AÂ¢ÃƒÂ¢aâ€šÂ¬Ã…Ãƒâ€šAÂ¬ÃƒÆ’aâ‚¬Â¦Ãƒâ€šAÃƒÆ’Ã†â€™Ãƒâ€ aâ‚¬â„¢ÃƒÆ’AÂ¢ÃƒÂ¢aâ‚¬Å¡AÂ¬Ãƒâ€¦AÃƒÆ’Ã†â€™ÃƒÂ¢aâ€šÂ¬Ã…ÃƒÆ’aâ‚¬Å¡Ãƒâ€šAÂºltimos 1000 IDs)
+            // Mantener el set limpio (ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â aÃ¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™aÃ¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢aÃ¢â‚¬Å¡Ã‚Â¬aÃ¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢aÃ¢â‚¬Å¡Ã‚Â¬AÃ‚Â ÃƒÆ’Ã†â€™AÃ‚Â¢ÃƒÆ’Ã‚Â¢aÃ¢â€šÂ¬Ã…Â¡AÃ‚Â¬ÃƒÆ’Ã‚Â¢aÃ¢â€šÂ¬Ã…Â¾AÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â aÃ¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™AÃ‚Â¢ÃƒÆ’Ã‚Â¢aÃ¢â€šÂ¬Ã…Â¡AÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡AÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡AÃ‚Â¢ÃƒÆ’Ã†â€™AÃ‚Â¢ÃƒÆ’Ã‚Â¢aÃ¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦ÃƒÆ’Ã¢â‚¬Å¡AÃ‚Â¬ÃƒÆ’Ã†â€™AÃ‚Â¢ÃƒÆ’Ã‚Â¢aÃ¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¾ÃƒÆ’Ã¢â‚¬Å¡AÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â aÃ¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™aÃ¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢aÃ¢â‚¬Å¡Ã‚Â¬aÃ¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡AÃ‚Â¢ÃƒÆ’Ã†â€™AÃ‚Â¢ÃƒÆ’Ã‚Â¢aÃ¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦ÃƒÆ’Ã¢â‚¬Å¡AÃ‚Â¬ÃƒÆ’Ã†â€™aÃ¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Å¡AÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â aÃ¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™AÃ‚Â¢ÃƒÆ’Ã‚Â¢aÃ¢â€šÂ¬Ã…Â¡AÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦AÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢aÃ¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦ÃƒÆ’Ã†â€™aÃ¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡AÃ‚Âºltimos 1000 IDs)
             if (processedCommandIds.size > 1000) {
               const firstKey = processedCommandIds.values().next().value;
               if (firstKey) processedCommandIds.delete(firstKey);
@@ -675,7 +675,7 @@ async function checkForUpdate(serverUrl: string, force = false): Promise<boolean
     }
 
     if ((UPDATE_PUBLIC_KEY_HEX as string) === 'PLACEHOLDER_RUN_GEN_KEYS_FIRST') {
-      log('WARN', 'SEGURIDAD: firma Ed25519 no configurada ÃƒÆ’Ã†â€™Ãƒâ€ aâ‚¬â„¢ÃƒÆ’aâ‚¬Â ÃƒÂ¢aâ€šÂ¬aâ€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢aâ€šÂ¬AÂ ÃƒÆ’AÂ¢ÃƒÂ¢aâ‚¬Å¡AÂ¬ÃƒÂ¢aâ‚¬Å¾AÂ¢ÃƒÆ’Ã†â€™Ãƒâ€ aâ‚¬â„¢ÃƒÆ’AÂ¢ÃƒÂ¢aâ‚¬Å¡AÂ¬Ãƒâ€¦AÃƒÆ’Ã†â€™ÃƒÂ¢aâ€šÂ¬Ã…ÃƒÆ’aâ‚¬Å¡Ãƒâ€šAÂ¢ÃƒÆ’Ã†â€™Ãƒâ€ aâ‚¬â„¢ÃƒÆ’aâ‚¬Â ÃƒÂ¢aâ€šÂ¬aâ€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢aâ€šÂ¬Ã…ÃƒÆ’aâ‚¬Å¡Ãƒâ€šAÂ¢ÃƒÆ’Ã†â€™Ãƒâ€ aâ‚¬â„¢ÃƒÆ’aâ‚¬Å¡Ãƒâ€šAÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šAÂ¢ÃƒÆ’AÂ¢ÃƒÂ¢aâ‚¬Å¡AÂ¬Ãƒâ€¦AÃƒÆ’aâ‚¬Å¡Ãƒâ€šAÂ¬ÃƒÆ’Ã†â€™ÃƒÂ¢aâ€šÂ¬AÂ¦ÃƒÆ’aâ‚¬Å¡Ãƒâ€šAÃƒÆ’Ã†â€™Ãƒâ€ aâ‚¬â„¢ÃƒÆ’AÂ¢ÃƒÂ¢aâ‚¬Å¡AÂ¬Ãƒâ€¦AÃƒÆ’Ã†â€™ÃƒÂ¢aâ€šÂ¬Ã…ÃƒÆ’aâ‚¬Å¡Ãƒâ€šAÂ¬ÃƒÆ’Ã†â€™Ãƒâ€ aâ‚¬â„¢ÃƒÆ’aâ‚¬Â ÃƒÂ¢aâ€šÂ¬aâ€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢aâ€šÂ¬Ã…ÃƒÆ’aâ‚¬Å¡Ãƒâ€šAÂ¢ÃƒÆ’Ã†â€™Ãƒâ€ aâ‚¬â„¢ÃƒÆ’aâ‚¬Å¡Ãƒâ€šAÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šAÂ¢ÃƒÆ’AÂ¢ÃƒÂ¢aâ€šÂ¬Ã…Ãƒâ€šAÂ¬ÃƒÆ’aâ‚¬Â¦Ãƒâ€šAÃƒÆ’Ã†â€™ÃƒÂ¢aâ€šÂ¬Ã…ÃƒÆ’aâ‚¬Å¡Ãƒâ€šAÂ¬ÃƒÆ’Ã†â€™Ãƒâ€ aâ‚¬â„¢ÃƒÆ’AÂ¢ÃƒÂ¢aâ‚¬Å¡AÂ¬Ãƒâ€¦AÃƒÆ’Ã†â€™ÃƒÂ¢aâ€šÂ¬Ã…ÃƒÆ’aâ‚¬Å¡Ãƒâ€šAÂ ejecutar installer/gen-keys.js y rebuild.');
+      log('WARN', 'SEGURIDAD: firma Ed25519 no configurada ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â aÃ¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™aÃ¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢aÃ¢â‚¬Å¡Ã‚Â¬aÃ¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢aÃ¢â‚¬Å¡Ã‚Â¬AÃ‚Â ÃƒÆ’Ã†â€™AÃ‚Â¢ÃƒÆ’Ã‚Â¢aÃ¢â€šÂ¬Ã…Â¡AÃ‚Â¬ÃƒÆ’Ã‚Â¢aÃ¢â€šÂ¬Ã…Â¾AÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â aÃ¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™AÃ‚Â¢ÃƒÆ’Ã‚Â¢aÃ¢â€šÂ¬Ã…Â¡AÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦AÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢aÃ¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦ÃƒÆ’Ã†â€™aÃ¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡AÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â aÃ¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™aÃ¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢aÃ¢â‚¬Å¡Ã‚Â¬aÃ¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢aÃ¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦ÃƒÆ’Ã†â€™aÃ¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡AÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â aÃ¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™aÃ¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡AÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡AÃ‚Â¢ÃƒÆ’Ã†â€™AÃ‚Â¢ÃƒÆ’Ã‚Â¢aÃ¢â€šÂ¬Ã…Â¡AÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦AÃƒÆ’Ã†â€™aÃ¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡AÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢aÃ¢â‚¬Å¡Ã‚Â¬AÃ‚Â¦ÃƒÆ’Ã†â€™aÃ¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡AÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â aÃ¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™AÃ‚Â¢ÃƒÆ’Ã‚Â¢aÃ¢â€šÂ¬Ã…Â¡AÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦AÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢aÃ¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦ÃƒÆ’Ã†â€™aÃ¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡AÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â aÃ¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™aÃ¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢aÃ¢â‚¬Å¡Ã‚Â¬aÃ¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢aÃ¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦ÃƒÆ’Ã†â€™aÃ¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡AÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â aÃ¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™aÃ¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡AÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡AÃ‚Â¢ÃƒÆ’Ã†â€™AÃ‚Â¢ÃƒÆ’Ã‚Â¢aÃ¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦ÃƒÆ’Ã¢â‚¬Å¡AÃ‚Â¬ÃƒÆ’Ã†â€™aÃ¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Å¡AÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢aÃ¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦ÃƒÆ’Ã†â€™aÃ¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡AÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â aÃ¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™AÃ‚Â¢ÃƒÆ’Ã‚Â¢aÃ¢â€šÂ¬Ã…Â¡AÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦AÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢aÃ¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦ÃƒÆ’Ã†â€™aÃ¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡AÃ‚Â ejecutar installer/gen-keys.js y rebuild.');
     } else {
       try {
         const sigRes = await fetch(data.url + '.sig', { signal: AbortSignal.timeout(15_000) });
@@ -687,7 +687,7 @@ async function checkForUpdate(serverUrl: string, force = false): Promise<boolean
         const sigBuf = Buffer.from(await sigRes.arrayBuffer());
         const pubKey = createPublicKey({ key: Buffer.from(UPDATE_PUBLIC_KEY_HEX, 'hex'), format: 'der', type: 'spki' });
         if (!cryptoVerify(null, buffer, pubKey, sigBuf)) {
-          log('ERROR', `VIOLACION DE INTEGRIDAD [Ed25519]: La firma del paquete de actualizacion NO es valida. URL: ${data.url} | Version: ${data.version} | Timestamp: ${new Date().toISOString()}. Actualizacion rechazada ÃƒÆ’Ã†â€™Ãƒâ€ aâ‚¬â„¢ÃƒÆ’aâ‚¬Â ÃƒÂ¢aâ€šÂ¬aâ€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢aâ€šÂ¬AÂ ÃƒÆ’AÂ¢ÃƒÂ¢aâ‚¬Å¡AÂ¬ÃƒÂ¢aâ‚¬Å¾AÂ¢ÃƒÆ’Ã†â€™Ãƒâ€ aâ‚¬â„¢ÃƒÆ’AÂ¢ÃƒÂ¢aâ‚¬Å¡AÂ¬Ãƒâ€¦AÃƒÆ’Ã†â€™ÃƒÂ¢aâ€šÂ¬Ã…ÃƒÆ’aâ‚¬Å¡Ãƒâ€šAÂ¢ÃƒÆ’Ã†â€™Ãƒâ€ aâ‚¬â„¢ÃƒÆ’aâ‚¬Â ÃƒÂ¢aâ€šÂ¬aâ€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢aâ€šÂ¬Ã…ÃƒÆ’aâ‚¬Å¡Ãƒâ€šAÂ¢ÃƒÆ’Ã†â€™Ãƒâ€ aâ‚¬â„¢ÃƒÆ’aâ‚¬Å¡Ãƒâ€šAÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šAÂ¢ÃƒÆ’AÂ¢ÃƒÂ¢aâ‚¬Å¡AÂ¬Ãƒâ€¦AÃƒÆ’aâ‚¬Å¡Ãƒâ€šAÂ¬ÃƒÆ’Ã†â€™ÃƒÂ¢aâ€šÂ¬AÂ¦ÃƒÆ’aâ‚¬Å¡Ãƒâ€šAÃƒÆ’Ã†â€™Ãƒâ€ aâ‚¬â„¢ÃƒÆ’AÂ¢ÃƒÂ¢aâ‚¬Å¡AÂ¬Ãƒâ€¦AÃƒÆ’Ã†â€™ÃƒÂ¢aâ€šÂ¬Ã…ÃƒÆ’aâ‚¬Å¡Ãƒâ€šAÂ¬ÃƒÆ’Ã†â€™Ãƒâ€ aâ‚¬â„¢ÃƒÆ’aâ‚¬Â ÃƒÂ¢aâ€šÂ¬aâ€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢aâ€šÂ¬Ã…ÃƒÆ’aâ‚¬Å¡Ãƒâ€šAÂ¢ÃƒÆ’Ã†â€™Ãƒâ€ aâ‚¬â„¢ÃƒÆ’aâ‚¬Å¡Ãƒâ€šAÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šAÂ¢ÃƒÆ’AÂ¢ÃƒÂ¢aâ€šÂ¬Ã…Ãƒâ€šAÂ¬ÃƒÆ’aâ‚¬Â¦Ãƒâ€šAÃƒÆ’Ã†â€™ÃƒÂ¢aâ€šÂ¬Ã…ÃƒÆ’aâ‚¬Å¡Ãƒâ€šAÂ¬ÃƒÆ’Ã†â€™Ãƒâ€ aâ‚¬â„¢ÃƒÆ’AÂ¢ÃƒÂ¢aâ‚¬Å¡AÂ¬Ãƒâ€¦AÃƒÆ’Ã†â€™ÃƒÂ¢aâ€šÂ¬Ã…ÃƒÆ’aâ‚¬Å¡Ãƒâ€šAÂ posible ataque de cadena de suministro o paquete comprometido.`);
+          log('ERROR', `VIOLACION DE INTEGRIDAD [Ed25519]: La firma del paquete de actualizacion NO es valida. URL: ${data.url} | Version: ${data.version} | Timestamp: ${new Date().toISOString()}. Actualizacion rechazada ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â aÃ¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™aÃ¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢aÃ¢â‚¬Å¡Ã‚Â¬aÃ¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢aÃ¢â‚¬Å¡Ã‚Â¬AÃ‚Â ÃƒÆ’Ã†â€™AÃ‚Â¢ÃƒÆ’Ã‚Â¢aÃ¢â€šÂ¬Ã…Â¡AÃ‚Â¬ÃƒÆ’Ã‚Â¢aÃ¢â€šÂ¬Ã…Â¾AÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â aÃ¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™AÃ‚Â¢ÃƒÆ’Ã‚Â¢aÃ¢â€šÂ¬Ã…Â¡AÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦AÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢aÃ¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦ÃƒÆ’Ã†â€™aÃ¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡AÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â aÃ¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™aÃ¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢aÃ¢â‚¬Å¡Ã‚Â¬aÃ¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢aÃ¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦ÃƒÆ’Ã†â€™aÃ¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡AÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â aÃ¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™aÃ¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡AÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡AÃ‚Â¢ÃƒÆ’Ã†â€™AÃ‚Â¢ÃƒÆ’Ã‚Â¢aÃ¢â€šÂ¬Ã…Â¡AÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦AÃƒÆ’Ã†â€™aÃ¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡AÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢aÃ¢â‚¬Å¡Ã‚Â¬AÃ‚Â¦ÃƒÆ’Ã†â€™aÃ¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡AÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â aÃ¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™AÃ‚Â¢ÃƒÆ’Ã‚Â¢aÃ¢â€šÂ¬Ã…Â¡AÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦AÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢aÃ¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦ÃƒÆ’Ã†â€™aÃ¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡AÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â aÃ¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™aÃ¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢aÃ¢â‚¬Å¡Ã‚Â¬aÃ¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢aÃ¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦ÃƒÆ’Ã†â€™aÃ¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡AÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â aÃ¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™aÃ¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡AÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡AÃ‚Â¢ÃƒÆ’Ã†â€™AÃ‚Â¢ÃƒÆ’Ã‚Â¢aÃ¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦ÃƒÆ’Ã¢â‚¬Å¡AÃ‚Â¬ÃƒÆ’Ã†â€™aÃ¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Å¡AÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢aÃ¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦ÃƒÆ’Ã†â€™aÃ¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡AÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â aÃ¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™AÃ‚Â¢ÃƒÆ’Ã‚Â¢aÃ¢â€šÂ¬Ã…Â¡AÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦AÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢aÃ¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦ÃƒÆ’Ã†â€™aÃ¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡AÃ‚Â posible ataque de cadena de suministro o paquete comprometido.`);
           isUpdating = false;
           return false;
         }
@@ -748,7 +748,131 @@ async function waitForConnectivity(serverUrl: string): Promise<void> {
   }
 }
 
-//  Estado del agente (--status) 
+// ─── Business hours helper ────────────────────────────────────────────────────
+// Mon–Fri 08:00–18:00 Argentina time. Drives different scan frequencies.
+
+function isBusinessHours(): boolean {
+  const now = new Date();
+  try {
+    const parts = new Intl.DateTimeFormat('es-AR', {
+      timeZone: 'America/Argentina/Buenos_Aires',
+      weekday: 'short',
+      hour: 'numeric',
+      hour12: false,
+    }).formatToParts(now);
+
+    const rawWeekday = (parts.find(p => p.type === 'weekday')?.value ?? '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[̀-ͯ]/g, '');
+    const hour = parseInt(parts.find(p => p.type === 'hour')?.value ?? '0', 10);
+
+    const isWeekday = /^(lu|ma|mi|ju|vi|mo|tu|we|th|fr)/.test(rawWeekday);
+    return isWeekday && hour >= 8 && hour < 18;
+  } catch {
+    const day = now.getDay();
+    return day >= 1 && day <= 5 && now.getHours() >= 8 && now.getHours() < 18;
+  }
+}
+
+// ─── Meter loop (HP SDS: 20 min biz / 4h off) ────────────────────────────────
+// Re-polls known registered devices for page counters only.
+// EWS primary (counter endpoints), SNMP fallback for non-EWS devices.
+
+const METER_INTERVAL_BIZ_MS = 20 * 60_000;
+const METER_INTERVAL_OFF_MS  = 4  * 60 * 60_000;
+let isMeterScanning = false;
+
+async function meterLoop(): Promise<void> {
+  if (isMeterScanning || isScanning) {
+    setTimeout(meterLoop, 60_000);
+    return;
+  }
+  isMeterScanning = true;
+
+  try {
+    const devices = getKnownDevices();
+    if (devices.length === 0) return;
+
+    log('INFO', `[MeterLoop] ${isBusinessHours() ? 'horario laboral' : 'fuera de horario'} — ${devices.length} dispositivo(s)`);
+
+    const queue = [...devices];
+    const workers = Array(Math.min(10, queue.length)).fill(null).map(async () => {
+      while (queue.length > 0) {
+        const d = queue.shift();
+        if (!d) break;
+        try {
+          const info = getKnownDeviceInfo(d.ip);
+          let reading: DeviceReading | null = null;
+
+          if (d.poll_method === 'ews' || d.poll_method === 'unknown' || d.poll_method === null) {
+            reading = await readViaEWSCounters(d.ip, d.brand as Parameters<typeof readViaEWSCounters>[1], info?.model ?? undefined);
+          }
+          if (!reading && (d.poll_method === 'snmp' || !reading)) {
+            reading = await readViaSNMP(d.ip, currentConfig.snmpCommunity);
+          }
+          if (reading) {
+            enqueueReading(reading);
+            log('INFO', `[MeterLoop] [${d.ip}] total=${reading.total_pages ?? '-'} mono=${reading.mono_pages ?? '-'}`);
+          }
+        } catch { /* continue */ }
+      }
+    });
+    await Promise.all(workers);
+  } catch (e: unknown) {
+    log('WARN', `[MeterLoop] Error: ${e instanceof Error ? e.message : String(e)}`);
+  } finally {
+    isMeterScanning = false;
+    setTimeout(meterLoop, isBusinessHours() ? METER_INTERVAL_BIZ_MS : METER_INTERVAL_OFF_MS);
+  }
+}
+
+// ─── Supplies loop (HP SDS: 60 min biz / 4h off) ─────────────────────────────
+// Re-polls known registered devices for toner levels only.
+// EWS primary (supply endpoints). SNMP devices get toner via meterLoop (prtMarkerSuppliesTable).
+
+const SUPPLY_INTERVAL_BIZ_MS = 60 * 60_000;
+const SUPPLY_INTERVAL_OFF_MS  = 4  * 60 * 60_000;
+let isSupplyScanning = false;
+
+async function suppliesLoop(): Promise<void> {
+  if (isSupplyScanning || isScanning) {
+    setTimeout(suppliesLoop, 60_000);
+    return;
+  }
+  isSupplyScanning = true;
+
+  try {
+    const devices = getKnownDevices().filter(d => d.poll_method === 'ews' || d.poll_method === 'unknown' || d.poll_method === null);
+    if (devices.length === 0) return;
+
+    log('INFO', `[SupplyLoop] ${isBusinessHours() ? 'horario laboral' : 'fuera de horario'} — ${devices.length} dispositivo(s) EWS`);
+
+    const queue = [...devices];
+    const workers = Array(Math.min(10, queue.length)).fill(null).map(async () => {
+      while (queue.length > 0) {
+        const d = queue.shift();
+        if (!d) break;
+        try {
+          const info = getKnownDeviceInfo(d.ip);
+          const reading = await readViaEWSSupplies(d.ip, d.brand as Parameters<typeof readViaEWSSupplies>[1], info?.model ?? undefined);
+          if (reading) {
+            enqueueReading(reading);
+            log('INFO', `[SupplyLoop] [${d.ip}] K=${reading.toner_black ?? '-'} C=${reading.toner_cyan ?? '-'} M=${reading.toner_magenta ?? '-'} Y=${reading.toner_yellow ?? '-'}`);
+          }
+        } catch { /* continue */ }
+      }
+    });
+    await Promise.all(workers);
+  } catch (e: unknown) {
+    log('WARN', `[SupplyLoop] Error: ${e instanceof Error ? e.message : String(e)}`);
+  } finally {
+    isSupplyScanning = false;
+    setTimeout(suppliesLoop, isBusinessHours() ? SUPPLY_INTERVAL_BIZ_MS : SUPPLY_INTERVAL_OFF_MS);
+  }
+}
+
+//  Estado del agente (--status)
 
 async function printStatus(): Promise<void> {
   const { execSync } = await import('child_process');
@@ -1051,6 +1175,11 @@ async function main(): Promise<void> {
     
     // Configurar tick cada 60 segundos
     setInterval(schedulerTick, 60_000);
+
+    // Meter loop (20min biz / 4h off) + supply loop (60min biz / 4h off)
+    // Start 2 min after boot to let initial snmpScan populate known_devices first
+    setTimeout(meterLoop, 2 * 60_000);
+    setTimeout(suppliesLoop, 2 * 60_000 + 30_000); // stagger 30s to avoid simultaneous start
 
     log('INFO', 'Todos los loops activos.');
 

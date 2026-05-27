@@ -36,9 +36,10 @@ export interface EwsData {
 
 export type Parser = (body: string) => Partial<EwsData>;
 
-export interface EwsCandidate { 
-  path: string; 
-  protocol: 'http' | 'https'; 
-  parse: Parser; 
+export interface EwsCandidate {
+  path: string;
+  protocol: 'http' | 'https';
+  parse: Parser;
   brand?: Brand;
+  produces?: 'meters' | 'supplies'; // undefined = identity-only or unknown; used by targeted loops
 }

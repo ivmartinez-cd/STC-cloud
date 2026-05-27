@@ -1,0 +1,957 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>STC Cloud - Funcionamiento Interno del Agente v1.0</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --stc-blue: #004a99;
+            --stc-orange: #f7931d;
+            --text-dark: #1a2333;
+            --text-gray: #64748b;
+            --code-bg: #f8fafc;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            background: #f1f5f9;
+            color: var(--text-dark);
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+
+        .page {
+            width: 210mm;
+            min-height: 297mm;
+            padding: 25mm;
+            margin: 20px auto;
+            box-sizing: border-box;
+            position: relative;
+            background: white;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+
+        @media print {
+            body { background: white; }
+            .page {
+                margin: 0;
+                padding: 20mm;
+                box-shadow: none;
+                page-break-after: always;
+            }
+        }
+
+        .cover-top-bar {
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 75mm;
+        }
+
+        .top-title {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--stc-blue);
+            letter-spacing: 0.05em;
+        }
+
+        .cover-main { text-align: left; padding-left: 10mm; }
+
+        .stc-cloud-brand {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 50px;
+        }
+
+        .brand-stc {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 900;
+            font-size: 42px;
+            color: var(--stc-blue);
+            letter-spacing: -0.02em;
+        }
+
+        .brand-cloud {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 900;
+            font-size: 42px;
+            color: var(--stc-orange);
+            letter-spacing: -0.02em;
+        }
+
+        .main-title {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 34px;
+            font-weight: 700;
+            color: var(--stc-blue);
+            margin: 0;
+            line-height: 1.15;
+            text-transform: uppercase;
+        }
+
+        .main-subtitle {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 34px;
+            font-weight: 400;
+            color: var(--stc-blue);
+            margin: 5px 0 50px 0;
+            text-transform: uppercase;
+        }
+
+        .version-tag {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-gray);
+            letter-spacing: 0.08em;
+        }
+
+        .internal-header {
+            border-bottom: 3px solid var(--stc-blue);
+            padding-bottom: 8px;
+            margin-bottom: 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+
+        .internal-brand {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 900;
+            font-size: 16px;
+            color: var(--stc-blue);
+        }
+
+        .internal-brand span { color: var(--stc-orange); }
+
+        .internal-doc-type {
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--text-gray);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        h2 {
+            font-family: 'Montserrat', sans-serif;
+            color: var(--stc-blue);
+            font-size: 20px;
+            border-bottom: 1px solid #f1f5f9;
+            padding-bottom: 8px;
+            margin-top: 35px;
+        }
+
+        h3 {
+            font-family: 'Montserrat', sans-serif;
+            color: var(--stc-orange);
+            font-size: 14px;
+            margin-top: 25px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        p { font-size: 13.5px; color: #334155; line-height: 1.65; }
+
+        ul, ol { padding-left: 20px; }
+
+        li { font-size: 13.5px; color: #334155; margin-bottom: 8px; line-height: 1.6; }
+
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+
+        th, td { border: 1px solid #e2e8f0; padding: 10px 12px; text-align: left; font-size: 12.5px; }
+
+        th {
+            background-color: #f8fafc;
+            color: var(--stc-blue);
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: 0.05em;
+        }
+
+        .note-callout {
+            background: #fff7ed;
+            border-left: 4px solid var(--stc-orange);
+            padding: 14px 18px;
+            margin: 18px 0;
+            font-size: 13px;
+            color: #9a3412;
+            line-height: 1.6;
+        }
+
+        .info-callout {
+            background: #eff6ff;
+            border-left: 4px solid var(--stc-blue);
+            padding: 14px 18px;
+            margin: 18px 0;
+            font-size: 13px;
+            color: #1e40af;
+            line-height: 1.6;
+        }
+
+        .footer {
+            position: absolute;
+            bottom: 20mm;
+            left: 25mm;
+            right: 25mm;
+            border-top: 1px solid #e2e8f0;
+            padding-top: 15px;
+            font-size: 10px;
+            color: #94a3b8;
+            text-align: center;
+        }
+
+        .toc-container { margin-top: 30px; }
+
+        .toc-item {
+            display: flex;
+            align-items: baseline;
+            margin-bottom: 14px;
+            font-size: 14px;
+            color: #1a2333;
+            text-decoration: none;
+        }
+
+        .toc-link {
+            text-decoration: none;
+            color: inherit;
+            display: flex;
+            width: 100%;
+            align-items: baseline;
+        }
+
+        .toc-num {
+            flex-shrink: 0;
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 700;
+            color: var(--stc-blue);
+            font-size: 13px;
+            width: 28px;
+        }
+
+        .toc-text { flex-shrink: 0; padding-right: 5px; font-weight: 600; }
+
+        .toc-dots {
+            flex-grow: 1;
+            border-bottom: 1px dotted #94a3b8;
+            margin: 0 5px;
+            position: relative;
+            top: -4px;
+        }
+
+        .toc-page { flex-shrink: 0; padding-left: 5px; font-weight: 700; color: var(--stc-blue); }
+
+        .toc-section {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--stc-orange);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin: 20px 0 8px 0;
+        }
+
+        pre.code {
+            background: var(--code-bg);
+            border: 1px solid #e2e8f0;
+            border-left: 4px solid var(--stc-blue);
+            padding: 14px;
+            font-size: 11.5px;
+            font-family: 'Courier New', Courier, monospace;
+            color: #1e293b;
+            overflow-x: auto;
+            border-radius: 4px;
+            line-height: 1.5;
+            margin: 12px 0;
+        }
+
+        pre.diagram {
+            background: #0f172a;
+            color: #38bdf8;
+            border-left: 4px solid var(--stc-orange);
+            padding: 15px;
+            font-size: 10.5px;
+            font-family: 'Courier New', Courier, monospace;
+            overflow-x: auto;
+            border-radius: 4px;
+            line-height: 1.35;
+            margin: 12px 0;
+        }
+
+        .diagram-title {
+            font-size: 10px;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: -8px;
+            font-weight: 700;
+        }
+
+        .two-col {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin: 18px 0;
+        }
+
+        .card {
+            background: #f8fafc;
+            border-left: 4px solid var(--stc-blue);
+            padding: 14px;
+        }
+
+        .card.orange { border-left-color: var(--stc-orange); }
+
+        .card-title {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--stc-blue);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            margin-bottom: 8px;
+        }
+
+        .card.orange .card-title { color: var(--stc-orange); }
+
+        .card p { font-size: 12px; margin: 0; color: #475569; }
+
+        code {
+            font-family: 'Courier New', monospace;
+            font-size: 11.5px;
+            color: var(--stc-blue);
+            background: #e0eaf7;
+            padding: 1px 5px;
+            border-radius: 3px;
+        }
+
+        .badge-fix {
+            display: inline-block;
+            background: #dcfce7;
+            color: #166534;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 9px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            padding: 2px 8px;
+            border-radius: 999px;
+            margin-left: 8px;
+            vertical-align: middle;
+        }
+
+        .badge-new {
+            display: inline-block;
+            background: #fef9c3;
+            color: #854d0e;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 9px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            padding: 2px 8px;
+            border-radius: 999px;
+            margin-left: 8px;
+            vertical-align: middle;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- PÁGINA 1: PORTADA -->
+    <div class="page">
+        <div class="cover-top-bar">
+            <div class="top-title">STC CLOUD – DOCUMENTACIÓN TÉCNICA INTERNA</div>
+        </div>
+
+        <div class="cover-main">
+            <div class="stc-cloud-brand">
+                <span class="brand-stc">STC</span>
+                <span class="brand-cloud">CLOUD</span>
+            </div>
+
+            <h1 class="main-title">AGENTE DE MONITOREO</h1>
+            <h1 class="main-subtitle">FUNCIONAMIENTO INTERNO</h1>
+
+            <div class="version-tag">Referencia de Ingeniería | v1.0 | Mayo 2026</div>
+        </div>
+
+        <div class="footer">
+            © 2026 CANAL DIRECTO | STC CLOUD | DOCUMENTACIÓN TÉCNICA INTERNA | CONFIDENCIAL
+        </div>
+    </div>
+
+    <!-- PÁGINA 2: ÍNDICE -->
+    <div class="page">
+        <div class="internal-header">
+            <div class="internal-brand">STC <span>CLOUD</span></div>
+            <div class="internal-doc-type">Índice</div>
+        </div>
+
+        <h2 style="border: none; margin-bottom: 30px;">Índice de Contenidos</h2>
+
+        <div class="toc-container">
+            <div class="toc-section">Ciclo de Vida y Descubrimiento</div>
+
+            <div class="toc-item">
+                <span class="toc-num">1.</span>
+                <div class="toc-link">
+                    <span class="toc-text">Ciclo de Vida del Agente (Startup, Scan Loop, Sync Loop)</span>
+                    <span class="toc-dots"></span>
+                    <span class="toc-page">3</span>
+                </div>
+            </div>
+            <div class="toc-item">
+                <span class="toc-num">2.</span>
+                <div class="toc-link">
+                    <span class="toc-text">Detección de Puertos y Precalificación de Hosts</span>
+                    <span class="toc-dots"></span>
+                    <span class="toc-page">4</span>
+                </div>
+            </div>
+            <div class="toc-item">
+                <span class="toc-num">3.</span>
+                <div class="toc-link">
+                    <span class="toc-text">Cascada de Descubrimiento (readDevice)</span>
+                    <span class="toc-dots"></span>
+                    <span class="toc-page">5</span>
+                </div>
+            </div>
+            <div class="toc-item">
+                <span class="toc-num">4.</span>
+                <div class="toc-link">
+                    <span class="toc-text">Sistema de Hint: Fast Path y Self-Healing</span>
+                    <span class="toc-dots"></span>
+                    <span class="toc-page">6</span>
+                </div>
+            </div>
+
+            <div class="toc-section">Motor EWS y Parsers</div>
+
+            <div class="toc-item">
+                <span class="toc-num">5.</span>
+                <div class="toc-link">
+                    <span class="toc-text">Motor EWS: Transporte, Candidatos y Acumulador</span>
+                    <span class="toc-dots"></span>
+                    <span class="toc-page">7</span>
+                </div>
+            </div>
+            <div class="toc-item">
+                <span class="toc-num">6.</span>
+                <div class="toc-link">
+                    <span class="toc-text">Parsers por Fabricante (Samsung, HP, Lexmark)</span>
+                    <span class="toc-dots"></span>
+                    <span class="toc-page">8</span>
+                </div>
+            </div>
+
+            <div class="toc-section">Persistencia y Sincronización</div>
+
+            <div class="toc-item">
+                <span class="toc-num">7.</span>
+                <div class="toc-link">
+                    <span class="toc-text">Cola SQLite, Backpressure y Retención</span>
+                    <span class="toc-dots"></span>
+                    <span class="toc-page">9</span>
+                </div>
+            </div>
+            <div class="toc-item">
+                <span class="toc-num">8.</span>
+                <div class="toc-link">
+                    <span class="toc-text">Sincronización con la Nube y Gestión de Errores</span>
+                    <span class="toc-dots"></span>
+                    <span class="toc-page">9</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            PÁGINA 2 | STC CLOUD – AGENTE: FUNCIONAMIENTO INTERNO
+        </div>
+    </div>
+
+    <!-- PÁGINA 3: CICLO DE VIDA -->
+    <div class="page">
+        <div class="internal-header">
+            <div class="internal-brand">STC <span>CLOUD</span></div>
+            <div class="internal-doc-type">1. Ciclo de Vida del Agente</div>
+        </div>
+
+        <h2 id="ciclo-vida">1. Ciclo de Vida del Agente</h2>
+        <p>
+            El agente (<code>main.ts</code>) es un proceso Node.js compilado como ejecutable único mediante <strong>pkg</strong> y registrado como servicio de Windows a través de <strong>NSSM</strong>. Su operación se divide en tres loops independientes que corren de manera concurrente pero sin bloqueos entre sí.
+        </p>
+
+        <div class="diagram-title">Flujo de Inicialización y Loops</div>
+        <pre class="diagram">
+  main()
+    │
+    ├─► openQueue()          — Abre/crea SQLite (WAL mode). Migra columnas en caliente.
+    ├─► loadConfig()         — Descifra config.enc con HWID binding (AES-256-GCM).
+    ├─► waitForConnectivity() — Backoff exponencial 10s → 5min hasta alcanzar servidor.
+    ├─► connectWebSocket()   — Establece canal WSS persistente con el portal en la nube.
+    │
+    ├─── LOOP A: Scan  ─────────────────────────────────────────────────────────────┐
+    │    Cada N minutos (configurable por schedule o intervalo fijo)                 │
+    │    snmpScan(ipRanges, community)                                               │
+    │      └─► Para cada IP en rangos: readDevice(ip, community, hintMethod?)       │
+    │            └─► enqueueReading(result) → SQLite                                │
+    │                upsertKnownDevice(ip, { pollMethod }) → SQLite                 │
+    └─── LOOP B: Sync  ─────────────────────────────────────────────────────────────┘
+         Cada 30 segundos (si hay conectividad WAN)
+         getPendingReadings() → POST /api/readings → markSynced()
+         Purga registros vencidos (> 7 días) o ya sincronizados.</pre>
+
+        <h3>A. Startup y Configuración Cifrada</h3>
+        <p>
+            Al arrancar, el agente extrae el <strong>Hardware ID</strong> del equipo local combinando el <em>MachineGuid</em> del registro de Windows con el serial de BIOS vía WMI. Aplica SHA-256 sobre la concatenación y deriva una clave AES-256 mediante PBKDF2 (100 000 iteraciones). Con esa clave descifra <code>config.enc</code>, obteniendo la URL del servidor, el <code>agentId</code>, los rangos IP a escanear y la comunidad SNMP.
+        </p>
+        <div class="note-callout">
+            <strong>Integridad de Máquina:</strong> Si el archivo <code>config.enc</code> se copia a otro equipo, el HWID resultante difiere y el tag de autenticación GCM falla, disparando <code>HWID_MISMATCH</code> y abortando la ejecución antes de cualquier conexión de red.
+        </div>
+
+        <h3>B. Conectividad WAN y WebSocket</h3>
+        <p>
+            La función <code>waitForConnectivity()</code> ejecuta un backoff exponencial: comienza con 10 s de espera, duplica cada intento y se limita a un techo de 5 minutos. Una vez establecida la conectividad, abre un canal WebSocket Seguro (<strong>WSS port 443</strong>) con el portal para recibir comandos en tiempo real (forzar scan, actualizar configuración). El canal se reconecta automáticamente ante pérdidas de red.
+        </p>
+
+        <h3>C. Scheduler de Escaneo</h3>
+        <p>
+            El agente soporta dos modos de programación configurables desde el portal:
+        </p>
+        <div class="two-col">
+            <div class="card">
+                <div class="card-title">Modo Intervalo</div>
+                <p>Ejecuta el scan cada N minutos de forma continua. Configurable por el cliente.</p>
+            </div>
+            <div class="card orange">
+                <div class="card-title">Modo Custom (Schedule)</div>
+                <p>Define días de la semana (1=Lunes … 7=Domingo) y horas específicas (p. ej. 09:00, 15:00).</p>
+            </div>
+        </div>
+
+        <div class="footer">
+            PÁGINA 3 | STC CLOUD – AGENTE: FUNCIONAMIENTO INTERNO
+        </div>
+    </div>
+
+    <!-- PÁGINA 4: DETECCIÓN DE PUERTOS -->
+    <div class="page">
+        <div class="internal-header">
+            <div class="internal-brand">STC <span>CLOUD</span></div>
+            <div class="internal-doc-type">2. Detección de Puertos</div>
+        </div>
+
+        <h2 id="deteccion-puertos">2. Detección de Puertos y Precalificación de Hosts</h2>
+        <p>
+            Antes de interrogar a cualquier dispositivo, el agente ejecuta una sonda TCP paralela en cuatro puertos clave. Este paso decide qué protocolos están disponibles y, fundamentalmente, si el host es una impresora o infraestructura de red general (router, switch, servidor).
+        </p>
+
+        <h3>A. Parámetros de Tiempo y Concurrencia</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Constante</th>
+                    <th>Valor</th>
+                    <th>Aplica a</th>
+                    <th>Motivo</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>REACH_TIMEOUT</code></td>
+                    <td><strong>500 ms</strong></td>
+                    <td>Puertos 9100, 631</td>
+                    <td>Puertos exclusivos de impresión: respuesta casi instantánea o cerrados.</td>
+                </tr>
+                <tr>
+                    <td><code>WEB_REACH_TIMEOUT</code> <span class="badge-fix">Fix Mayo 2026</span></td>
+                    <td><strong>2 000 ms</strong></td>
+                    <td>Puertos 80, 443</td>
+                    <td>Firmware EWS antiguo (Samsung SyncThru V4/V5) puede tardar &gt;500 ms en aceptar el TCP handshake aunque el puerto esté abierto.</td>
+                </tr>
+                <tr>
+                    <td><code>MAX_CONCURRENT</code></td>
+                    <td><strong>20</strong></td>
+                    <td>Sesiones SNMP</td>
+                    <td>Semáforo interno que limita sesiones SNMP simultáneas para no saturar el switch.</td>
+                </tr>
+                <tr>
+                    <td><code>CONCURRENCY_LIMIT</code></td>
+                    <td><strong>10</strong></td>
+                    <td>Workers de scan</td>
+                    <td>Máximo de IPs interrogadas en paralelo dentro de <code>snmpScan()</code>.</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>B. Lógica de <code>checkOpenPorts()</code></h3>
+        <p>
+            Las cuatro sondas TCP se lanzan en paralelo con <code>Promise.all</code>. Si el socket conecta (<em>connect</em> event), el puerto se marca abierto. Si ocurre <code>ECONNREFUSED</code>, se considera abierto (el host respondió, aunque rechazó). Cualquier otro error o timeout devuelve cerrado.
+        </p>
+        <pre class="code">async function checkOpenPorts(ip: string): Promise&lt;Set&lt;number&gt;&gt; {
+  const results = await Promise.all(
+    PRINTER_PORTS.map(async p =&gt; ({
+      p,
+      open: await tryPort(ip, p, p === 80 || p === 443
+              ? WEB_REACH_TIMEOUT   // 2 000 ms — firmware EWS lento
+              : REACH_TIMEOUT       //   500 ms — JetDirect / IPP
+            ).catch(() =&gt; false),
+    })),
+  );
+  return new Set(results.filter(r =&gt; r.open).map(r =&gt; r.p));
+}</pre>
+
+        <h3>C. Bifurcación de Seguridad: <code>hasPrinterPort</code></h3>
+        <p>
+            Los puertos TCP <strong>9100</strong> (JetDirect/PJL) y <strong>631</strong> (IPP) son exclusivos del protocolo de impresión. Ningún router, switch o servidor convencional los expone. Esta propiedad los convierte en el criterio de seguridad central:
+        </p>
+        <div class="two-col">
+            <div class="card">
+                <div class="card-title">hasPrinterPort = false</div>
+                <p>El host NO es una impresora confirmada. El agente <strong>omite toda petición HTTP/S</strong> a puertos 80/443 y recurre únicamente a SNMP con validación de Printer-MIB. Esto evita activar alertas IDS/SIEM por escaneo web no autorizado en equipos de infraestructura.</p>
+            </div>
+            <div class="card orange">
+                <div class="card-title">hasPrinterPort = true</div>
+                <p>La impresora está confirmada físicamente. El agente queda habilitado para iniciar la cascada completa: EWS + SNMP + PJL + IPP, en ese orden de preferencia.</p>
+            </div>
+        </div>
+
+        <div class="note-callout">
+            <strong>Antecedente del fix de WEB_REACH_TIMEOUT:</strong> Con el timeout original de 500 ms, los modelos Samsung SL-M4072FD y SL-M4020ND (firmware SyncThru V4) no eran detectados con puerto 80 abierto. El agente calculaba <code>hasWebPort = false</code> y nunca intentaba EWS, cayendo siempre a SNMP. Al elevar el timeout a 2 000 ms para los puertos web, el TCP handshake lento de ese firmware queda cubierto y la detección es correcta.
+        </div>
+
+        <div class="footer">
+            PÁGINA 4 | STC CLOUD – AGENTE: FUNCIONAMIENTO INTERNO
+        </div>
+    </div>
+
+    <!-- PÁGINA 5: CASCADA DE DESCUBRIMIENTO -->
+    <div class="page">
+        <div class="internal-header">
+            <div class="internal-brand">STC <span>CLOUD</span></div>
+            <div class="internal-doc-type">3. Cascada de Descubrimiento</div>
+        </div>
+
+        <h2 id="cascada">3. Cascada de Descubrimiento (<code>readDevice</code>)</h2>
+        <p>
+            La función <code>readDevice(ip, community, hintMethod?)</code> es el orquestador central. Evalúa los puertos abiertos, aplica el fast path por hint cuando existe, y ejecuta la cascada de protocolos en orden de fidelidad decreciente.
+        </p>
+
+        <div class="diagram-title">Árbol de decisión de readDevice()</div>
+        <pre class="diagram">
+  checkOpenPorts(ip)
+       │
+       ├─ openPorts.size === 0 ──────────────────────────────────► return null
+       │
+       ├─ hintMethod conocido? ──► Fast Path / Self-Healing (ver §4)
+       │
+       ├─ hasPrinterPort === false &amp;&amp; hasWebPort === false ──────► readViaSNMP() [solo MIB]
+       │
+       ├─ hasPrinterPort === false &amp;&amp; hasWebPort === true ──────► Caso B (solo web)
+       │    readViaSNMP() [validar como impresora]
+       │      └─ snmpResult? ──► readViaEWS(ip, brand, model) ──► ews ?? snmpResult
+       │
+       └─ hasPrinterPort === true ──────────────────────────────► Caso A (impresora confirmada)
+            readViaSNMP(ip)  ← [identifica brand + model para optimizar EWS]
+              │
+              ├─ hasWebPort? ──► readViaEWS(ip, brand, model)
+              │                    └─ ews.total_pages !== null ──► return ews ✓
+              │
+              ├─ snmpResult.total_pages !== null ──────────────► return snmpResult ✓
+              │
+              ├─ readViaPJL(ip)
+              │    └─ pjl.total_pages !== null ───────────────► return pjl ✓
+              │
+              ├─ readViaIPP(ip)
+              │    └─ ipp? ────────────────────────────────────► return ipp ✓
+              │
+              └─ return snmpResult ?? null  [datos parciales de identidad]</pre>
+
+        <h3>A. Caso A — Impresora Confirmada (<code>hasPrinterPort = true</code>)</h3>
+        <p>
+            El agente primero ejecuta <code>readViaSNMP()</code> en modo liviano para obtener <strong>marca y modelo</strong> del dispositivo. Esta información se pasa a <code>readViaEWS()</code> para que el motor EWS filtre y ordene sus candidatos de forma óptima (por ejemplo, intentar primero los endpoints Samsung SyncThru en lugar de los Samsung SWS en modelos sin copiadoras). Si EWS devuelve <code>total_pages !== null</code>, la cascada se detiene y se devuelve el resultado EWS. De lo contrario se continúa con SNMP, luego PJL, luego IPP.
+        </p>
+
+        <h3>B. Caso B — Solo Puerto Web Disponible</h3>
+        <p>
+            Si el host responde al puerto 80 o 443 pero NO a 9100 ni 631, podría ser un router, NAS, teléfono IP o una impresora antigua. El agente primero valida via SNMP consultando la OID <code>hrDeviceType</code> y la Printer-MIB (<code>prtGeneralConfigChanges</code>). Solo si SNMP confirma que es una impresora, se lanza EWS. Esto previene 4–10 segundos de timeouts HTTP en dispositivos de red que no son impresoras.
+        </p>
+
+        <h3>C. Criterio de Aceptación de Resultados</h3>
+        <p>
+            Cada método devuelve un <code>DeviceReading</code> con el campo <code>total_pages</code>. La cascada avanza al siguiente nivel únicamente si <code>total_pages === null</code>. Un resultado con <code>total_pages = 0</code> (impresora nueva, sin páginas impresas) <strong>sí se acepta</strong> como válido y detiene la cascada.
+        </p>
+
+        <div class="footer">
+            PÁGINA 5 | STC CLOUD – AGENTE: FUNCIONAMIENTO INTERNO
+        </div>
+    </div>
+
+    <!-- PÁGINA 6: SISTEMA DE HINT -->
+    <div class="page">
+        <div class="internal-header">
+            <div class="internal-brand">STC <span>CLOUD</span></div>
+            <div class="internal-doc-type">4. Fast Path y Self-Healing</div>
+        </div>
+
+        <h2 id="hint-system">4. Sistema de Hint: Fast Path y Self-Healing</h2>
+        <p>
+            Para evitar la cascada completa en cada ciclo de scan, el agente persiste el método exitoso de la lectura anterior en la columna <code>poll_method</code> de la tabla <code>known_devices</code> en SQLite. Este valor se llama <strong>hint</strong> y funciona como caché de protocolo por IP.
+        </p>
+
+        <h3>A. Fast Path (Ruta Rápida)</h3>
+        <p>
+            Al inicio de <code>readDevice()</code>, si existe un <code>hintMethod</code> válido (distinto de <code>'unknown'</code>), el agente intenta ese método directamente sin ejecutar la cascada:
+        </p>
+        <pre class="code">if (hintMethod && hintMethod !== 'unknown') {
+  const shouldIgnoreHint = hintMethod === 'snmp'
+    && (openPorts.has(80) || openPorts.has(443));   // self-healing check
+
+  if (!shouldIgnoreHint) {
+    const fast = hintMethod === 'snmp'
+      ? await readViaSNMP(ip, community)
+      : await readViaMethod(ip, hintMethod);          // EWS / PJL / IPP sin brand/model
+
+    if (fast) {
+      if (fast.mono_pages !== null || hintMethod === 'ews') return fast;
+    }
+    // Si el método falla o no devuelve contadores → cae a cascada completa
+  }
+}</pre>
+
+        <div class="info-callout">
+            <strong>Condición de retorno del fast path EWS:</strong> Cuando el hint es <code>'ews'</code>, el resultado se retorna incluso si <code>mono_pages</code> es <code>null</code> (impresoras monocromáticas sin desglose simplex/dúplex), ya que el campo <code>total_pages</code> puede ser suficiente. Para otros métodos, se exige <code>mono_pages !== null</code> como indicador de lectura rica.
+        </div>
+
+        <h3>B. Self-Healing: Detección de Degradación a SNMP</h3>
+        <p>
+            Si el método en caché es <code>'snmp'</code> pero el dispositivo tiene un puerto web abierto (80 o 443), existe la posibilidad de que el agente haya quedado atascado en SNMP por un fallo transitorio anterior de EWS. El flag <code>shouldIgnoreHint</code> detecta esta situación e ignora el hint, forzando la cascada completa para intentar una <strong>actualización automática a EWS</strong>:
+        </p>
+
+        <div class="diagram-title">Ciclos de Evolución del poll_method</div>
+        <pre class="diagram">
+  CICLO 1 (primer scan, sin hint):
+    checkOpenPorts → {80, 631, 9100}   hasWebPort = true, hasPrinterPort = true
+    Cascada: SNMP → EWS → EWS exitoso (total_pages = 91 991)
+    Resultado: poll_method = 'ews'  ←── almacenado en SQLite
+
+  CICLO 2 (hint = 'ews'):
+    shouldIgnoreHint = false   (hint no es 'snmp')
+    readViaEWS(ip)  →  EWS exitoso  →  return fast
+    Resultado: poll_method = 'ews'  (sin cambio)
+
+  CICLO N (hipótesis: hint = 'snmp' por fallo antiguo, puerto 80 abierto):
+    shouldIgnoreHint = TRUE   (hint es 'snmp' Y openPorts.has(80) = true)
+    Cascada completa → EWS exitoso → retorna EWS
+    Resultado: poll_method actualizado a 'ews'  ←── auto-sanado</pre>
+
+        <h3>C. Actualización del Hint tras cada Scan</h3>
+        <p>
+            Al finalizar cada lectura exitosa, <code>main.ts</code> llama a <code>upsertKnownDevice(ip, { pollMethod: result.poll_method })</code>. La tabla <code>known_devices</code> usa <code>COALESCE</code> en la cláusula <code>ON CONFLICT DO UPDATE</code>, por lo que el método se actualiza solo si el nuevo valor es no-nulo, preservando la última lectura válida ante fallos transitorios.
+        </p>
+
+        <div class="footer">
+            PÁGINA 6 | STC CLOUD – AGENTE: FUNCIONAMIENTO INTERNO
+        </div>
+    </div>
+
+    <!-- PÁGINA 7: MOTOR EWS -->
+    <div class="page">
+        <div class="internal-header">
+            <div class="internal-brand">STC <span>CLOUD</span></div>
+            <div class="internal-doc-type">5. Motor EWS</div>
+        </div>
+
+        <h2 id="motor-ews">5. Motor EWS: Transporte, Candidatos y Acumulador</h2>
+        <p>
+            El motor EWS (<code>ews.ts</code>) abstrae la extracción de datos sobre HTTP/S nativo de Node.js. Implementa tres capas: transporte (<code>fetchHttp</code>), lista ordenada de candidatos y un acumulador incremental con cortocircuito.
+        </p>
+
+        <h3>A. Capa de Transporte (<code>fetchHttp</code>)</h3>
+        <p>
+            Construida sobre los módulos nativos <code>http</code> / <code>https</code> de Node.js. Parámetros clave:
+        </p>
+        <ul>
+            <li><strong><code>EWS_TIMEOUT = 10 000 ms</code>:</strong> Timeout de socket (inactividad durante la transferencia de datos). Si la CPU del firmware de la impresora está saturada y deja de enviar datos durante 10 s, el socket se destruye con <code>req.destroy()</code> liberando el Event Loop. Este valor fue elevado desde 4 s para evitar falsos timeouts en scans concurrentes.</li>
+            <li><strong><code>rejectUnauthorized: false</code>:</strong> Omite validación de certificados TLS. Obligatorio para impresoras con certificados auto-firmados o expirados, habituales en entornos corporativos locales.</li>
+            <li><strong>Seguidor de Redirecciones:</strong> Maneja códigos <code>301</code>, <code>302</code>, <code>307</code> y <code>308</code> recalculando protocolo y ruta. Límite de <strong>3 saltos</strong> para prevenir bucles (portales cautivos).</li>
+        </ul>
+
+        <h3>B. Matriz de Candidatos y Priorización por Fabricante</h3>
+        <p>
+            El motor define 16 endpoints específicos ordenados por fabricante y confiabilidad. Cuando <code>targetBrand</code> es conocido, filtra y reordena los candidatos para ese fabricante:
+        </p>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 20%;">Fabricante</th>
+                    <th style="width: 45%;">Endpoint</th>
+                    <th style="width: 35%;">Dato principal extraído</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td><strong>Samsung SWS</strong></td><td><code>/sws.application/…/homeDeviceInfo.sws</code></td><td>Modelo, serial, tóner (HTML coreano/inglés)</td></tr>
+                <tr><td><strong>Samsung SWS</strong></td><td><code>/sws.application/…/countersView.sws</code></td><td>Contadores mono/color (tabla HTML)</td></tr>
+                <tr><td><strong>Samsung SyncThru</strong></td><td><code>/sws/app/information/home/home.json</code></td><td>Modelo y serial (JSON)</td></tr>
+                <tr><td><strong>Samsung SyncThru</strong></td><td><code>/sws/app/information/supplies/supplies.json</code></td><td>Niveles de tóner por color</td></tr>
+                <tr><td><strong>Samsung SyncThru</strong></td><td><code>/sws/app/information/counters/counters.json</code></td><td>Contadores GXI simplex/dúplex</td></tr>
+                <tr><td><strong>Lexmark</strong></td><td><code>/cgi-bin/dynamic/printer/PrinterStatus.html</code></td><td>Niveles de tóner</td></tr>
+                <tr><td><strong>Lexmark</strong></td><td><code>/cgi-bin/dynamic/printer/config/reports/deviceinfo.html</code></td><td>Serial, modelo, total páginas</td></tr>
+                <tr><td><strong>HP FutureSmart</strong></td><td><code>/DevMgmt/ProductUsageDyn.xml</code></td><td>XML estructurado de contadores HP</td></tr>
+                <tr><td><strong>HP Legacy</strong></td><td><code>/hp/device/InternalPages/Index?id=UsagePage</code></td><td>Página de uso (HTML)</td></tr>
+            </tbody>
+        </table>
+
+        <p>
+            Para Samsung, la selección de orden depende del modelo: si el nombre contiene <code>LX</code>, <code>FX</code> o <code>GX</code> (indicativo de copiadora/MFP gama alta), se prueban primero los endpoints SWS. En caso contrario (o si el modelo es desconocido), se prueban primero los endpoints SyncThru, evitando que las 3 peticiones SWS con 404 congestionem la ventana de tiempo disponible en firmware antiguo.
+        </p>
+
+        <h3>C. Acumulador Incremental y Cortocircuito</h3>
+        <p>
+            El motor itera la lista de candidatos manteniendo un objeto <code>acc</code> que fusiona los resultados de cada endpoint exitoso: un endpoint puede aportar modelo y serial, el siguiente puede aportar tóner, el siguiente los contadores. La fusión es conservadora: solo se sobreescribe un campo si el nuevo valor no es <code>undefined</code>.
+        </p>
+        <div class="info-callout">
+            <strong>Cortocircuito:</strong> En el momento en que <code>acc.totalPages !== undefined</code>, el agente rompe el bucle con <code>break</code> y retorna. No se realizan más peticiones HTTP a endpoints restantes, reduciendo el tráfico de red en hasta un 70 % en lecturas completas.
+        </div>
+
+        <div class="footer">
+            PÁGINA 7 | STC CLOUD – AGENTE: FUNCIONAMIENTO INTERNO
+        </div>
+    </div>
+
+    <!-- PÁGINA 8: PARSERS POR FABRICANTE -->
+    <div class="page">
+        <div class="internal-header">
+            <div class="internal-brand">STC <span>CLOUD</span></div>
+            <div class="internal-doc-type">6. Parsers por Fabricante</div>
+        </div>
+
+        <h2 id="parsers">6. Parsers por Fabricante</h2>
+        <p>
+            Cada endpoint de la matriz tiene asociado un parser dedicado que extrae los campos del cuerpo HTTP (HTML, JSON o JavaScript variable-style) mediante expresiones regulares y lectores de texto plano. No se utiliza ningún motor DOM ni navegador embebido.
+        </p>
+
+        <h3>A. Samsung SyncThru (firmware V4/V5 — modelos SL-M, SCX, ML, CLP)</h3>
+        <p>
+            El firmware SyncThru devuelve los datos en formato JavaScript de asignación de variables (no JSON estricto). El parser <code>parseSamsungCounters</code> extrae contadores con regex específicas:
+        </p>
+        <pre class="code">// counters.json — variables JavaScript en texto plano
+GXI_BILLING_TOTAL_IMP_CNT       : 91991   → totalPages
+GXI_BILLING_SIMPLEX_BW_TOTAL_CNT : 84200  → monoPages (simplex)
+GXI_BILLING_DUPLEX_BW_TOTAL_CNT  : 7791   → monoPages (dúplex)
+GXI_BILLING_SIMPLEX_COLOR_TOTAL_CNT : 0   → colorPages
+
+// Lógica de cálculo: mono = simplexBw + duplexBw
+// Si total no está disponible: total = mono + color
+// Fallback final: si no hay simplex/dúplex → mono = total</pre>
+
+        <p>
+            El parser <code>parseSamsungSyncThruSupplies</code> extrae los niveles de tóner desde bloques <code>toner_black: { remaining: N, id: "...", serial: "...", capa: K }</code>, incluyendo el identificador de cartucho, su serial físico y la capacidad declarada en páginas.
+        </p>
+
+        <h3>B. Samsung Solution Web Service (SWS — modelos X4300LX, gama copiadora)</h3>
+        <p>
+            Los modelos de copiadora de alta gama usan una interfaz web diferente. <code>parseSamsungSolutionHome</code> extrae el modelo y serial de una tabla HTML bilingüe (coreano/inglés) y los niveles de tóner desde un array JavaScript incrustado:
+        </p>
+        <pre class="code">var tonerData = [ {cartridge:'검정색', remaining:'90'}, {cartridge:'시안', remaining:'75'}, ... ]
+// Mapeado: 검정색/black→K, 시안/cyan→C, 마젠타/magenta→M, 노란/yellow→Y</pre>
+
+        <h3>C. HP (FutureSmart y Legacy)</h3>
+        <p>
+            El parser <code>parseHpXml</code> lee el endpoint <code>ProductUsageDyn.xml</code> extrayendo etiquetas como <code>&lt;dd:TotalImpressions&gt;</code>, <code>&lt;dd:MonochromeImpressions&gt;</code> y bloques de suministros (<code>&lt;dd:ConsumableTypeEnum&gt;</code> para identificar tóner negro/color). Limpia separadores de miles (coma, punto) antes de parsear enteros.
+        </p>
+        <p>
+            El parser <code>parseHpHtml</code> actúa como fallback extrayendo filas de tabla que contienen cadenas como "Total Impressions" o "Black Cartridge" mediante regex multilingüe.
+        </p>
+
+        <h3>D. Lexmark</h3>
+        <p>
+            <code>parseLexmarkPrinterStatus</code> extrae los niveles de tóner desde bloques de porcentaje en el HTML de estado. <code>parseLexmarkEws</code> combina la lectura del modelo, serial y total de páginas desde el informe de configuración del dispositivo, buscando patrones como <code>Total Pages Printed</code> o <code>Device Serial Number</code>.
+        </p>
+
+        <h3>E. Genérico (Ricoh, Brother, Epson, Canon, Konica, Xerox)</h3>
+        <p>
+            El parser <code>parseGeneric</code> ejecuta una búsqueda amplia de patrones comunes: etiquetas con "page count", "total pages", "life count", o contadores en formato numérico adyacente a etiquetas de impresión. Se usa para modelos sin parser dedicado. Solo identifica contadores básicos, sin datos de tóner ni desglose monocolor.
+        </p>
+
+        <div class="footer">
+            PÁGINA 8 | STC CLOUD – AGENTE: FUNCIONAMIENTO INTERNO
+        </div>
+    </div>
+
+    <!-- PÁGINA 9: SQLITE Y SINCRONIZACIÓN -->
+    <div class="page">
+        <div class="internal-header">
+            <div class="internal-brand">STC <span>CLOUD</span></div>
+            <div class="internal-doc-type">7–8. SQLite y Sincronización</div>
+        </div>
+
+        <h2 id="sqlite">7. Cola SQLite, Backpressure y Retención</h2>
+        <p>
+            El agente mantiene una base de datos SQLite local en <code>C:\ProgramData\STCCloudMonitor\local.db</code> operando en modo <strong>Write-Ahead Logging (WAL)</strong>. La base contiene dos tablas principales:
+        </p>
+
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 25%;">Tabla</th>
+                    <th style="width: 75%;">Propósito</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>readings_queue</code></td>
+                    <td>Cola de lecturas pendientes de sincronización. Cada fila almacena todos los campos de telemetría: contadores, tóner, códigos de cartucho, seriales, método de poll. Columna <code>synced</code> marca si fue enviada al servidor.</td>
+                </tr>
+                <tr>
+                    <td><code>known_devices</code></td>
+                    <td>Caché de dispositivos conocidos por IP. Almacena brand, model, serial, estado de registro y el <code>poll_method</code> (hint) de la última lectura exitosa.</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>A. Backpressure</h3>
+        <p>
+            Si la conectividad WAN se interrumpe por un período prolongado, la cola crece. El agente implementa un límite de <strong>10 000 registros pendientes</strong> (<code>BACKPRESSURE_LIMIT</code>). Al superarlo, <code>isBackpressureActive()</code> devuelve <code>true</code> y el scan se pausa hasta que el sincronizador vacíe la cola, protegiendo el disco local.
+        </p>
+
+        <h3>B. Retención y Purga Automática</h3>
+        <p>
+            Cada ciclo de sincronización ejecuta <code>purgeOld()</code>, que elimina registros con <code>synced = 1</code> o con antigüedad superior a <strong>7 días</strong>. Esto mantiene el archivo de base de datos estable y dentro de márgenes predecibles de espacio en disco.
+        </p>
+
+        <h3>C. Migración en Caliente</h3>
+        <p>
+            Al abrir la base de datos, el agente ejecuta una serie de sentencias <code>ALTER TABLE … ADD COLUMN IF NOT EXISTS</code> envueltas en <code>try/catch</code>. Esto permite agregar nuevas columnas (como los campos de cartucho o el <code>poll_method</code>) sin romper instalaciones existentes, sin gestores de migración externos y sin downtime.
+        </p>
+
+        <h2 id="sincronizacion">8. Sincronización con la Nube</h2>
+        <p>
+            El loop de sincronización corre cada <strong>30 segundos</strong>. Recupera hasta 500 registros con <code>synced = 0</code>, los serializa en JSON y los envía en lote mediante un <code>POST</code> autenticado al endpoint de ingesta del portal.
+        </p>
+        <ul>
+            <li><strong>Autenticación JWT:</strong> Cada petición lleva un <em>Access Token</em> de corta duración en el header <code>Authorization: Bearer</code>.</li>
+            <li><strong>Rotación de Token:</strong> Ante un HTTP <code>401</code>, el agente dispara <code>tryRefresh()</code> de forma asíncrona: envía el <em>Refresh Token</em> de 64 bytes, recibe una nueva pareja de tokens y los persiste cifrados en <code>config.enc</code>.</li>
+            <li><strong>Reintentos con Proxy:</strong> Si está configurado un proxy corporativo (<code>proxyUrl</code> en la config), la sincronización y el WebSocket lo utilizan automáticamente vía HTTP CONNECT tunneling.</li>
+            <li><strong>Idempotencia:</strong> El servidor de ingesta procesa los lotes de forma idempotente. Si una petición falla a mitad de camino, los registros no marcados como <code>synced</code> se reenvían en el siguiente ciclo sin duplicar datos en la plataforma.</li>
+        </ul>
+
+        <div class="info-callout">
+            <strong>Garantía de no pérdida de datos:</strong> Mientras el disco del equipo tenga espacio, el agente puede operar desconectado de la WAN por hasta 7 días sin perder lecturas. Al reconectarse, el sincronizador drena la cola en orden cronológico, preservando la serie temporal completa en la plataforma.
+        </div>
+
+        <div class="footer">
+            PÁGINA 9 | STC CLOUD – AGENTE: FUNCIONAMIENTO INTERNO
+        </div>
+    </div>
+
+</body>
+</html>

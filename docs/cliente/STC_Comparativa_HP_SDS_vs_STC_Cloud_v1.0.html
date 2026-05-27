@@ -1,0 +1,1187 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>STC Cloud - Comparativa HP SDS vs STC Cloud v1.0</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --stc-blue: #004a99;
+            --stc-orange: #f7931d;
+            --text-dark: #1a2333;
+            --text-gray: #64748b;
+            --code-bg: #f8fafc;
+            --green: #16a34a;
+            --red: #dc2626;
+            --amber: #d97706;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            background: #f1f5f9;
+            color: var(--text-dark);
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+
+        .page {
+            width: 210mm;
+            min-height: 297mm;
+            padding: 25mm;
+            margin: 20px auto;
+            box-sizing: border-box;
+            position: relative;
+            background: white;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+
+        @media print {
+            body { background: white; }
+            .page {
+                margin: 0;
+                padding: 20mm;
+                box-shadow: none;
+                page-break-after: always;
+            }
+        }
+
+        /* ── Cover ── */
+        .cover-top-bar {
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 75mm;
+        }
+
+        .top-title {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--stc-blue);
+            letter-spacing: 0.05em;
+        }
+
+        .cover-main { text-align: left; padding-left: 10mm; }
+
+        .stc-cloud-brand {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 50px;
+        }
+
+        .brand-stc {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 900;
+            font-size: 42px;
+            color: var(--stc-blue);
+            letter-spacing: -0.02em;
+        }
+
+        .brand-cloud {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 900;
+            font-size: 42px;
+            color: var(--stc-orange);
+            letter-spacing: -0.02em;
+        }
+
+        .main-title {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 34px;
+            font-weight: 700;
+            color: var(--stc-blue);
+            margin: 0;
+            line-height: 1.15;
+            text-transform: uppercase;
+        }
+
+        .main-subtitle {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 34px;
+            font-weight: 400;
+            color: var(--stc-blue);
+            margin: 5px 0 50px 0;
+            text-transform: uppercase;
+        }
+
+        .version-tag {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-gray);
+            letter-spacing: 0.08em;
+        }
+
+        /* ── Internal pages ── */
+        .internal-header {
+            border-bottom: 3px solid var(--stc-blue);
+            padding-bottom: 8px;
+            margin-bottom: 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+
+        .internal-brand {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 900;
+            font-size: 16px;
+            color: var(--stc-blue);
+        }
+
+        .internal-brand span { color: var(--stc-orange); }
+
+        .internal-doc-type {
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--text-gray);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        h2 {
+            font-family: 'Montserrat', sans-serif;
+            color: var(--stc-blue);
+            font-size: 20px;
+            border-bottom: 1px solid #f1f5f9;
+            padding-bottom: 8px;
+            margin-top: 35px;
+        }
+
+        h3 {
+            font-family: 'Montserrat', sans-serif;
+            color: var(--stc-orange);
+            font-size: 14px;
+            margin-top: 25px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        p { font-size: 13.5px; color: #334155; line-height: 1.65; }
+        ul, ol { padding-left: 20px; }
+        li { font-size: 13.5px; color: #334155; margin-bottom: 8px; line-height: 1.6; }
+
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { border: 1px solid #e2e8f0; padding: 10px 12px; text-align: left; font-size: 12px; vertical-align: top; }
+        th {
+            background-color: #f8fafc;
+            color: var(--stc-blue);
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 10.5px;
+            letter-spacing: 0.05em;
+        }
+
+        .note-callout {
+            background: #fff7ed;
+            border-left: 4px solid var(--stc-orange);
+            padding: 18px;
+            margin: 25px 0;
+            font-size: 13px;
+            color: #9a3412;
+            line-height: 1.6;
+        }
+
+        .info-callout {
+            background: #eff6ff;
+            border-left: 4px solid var(--stc-blue);
+            padding: 18px;
+            margin: 25px 0;
+            font-size: 13px;
+            color: #1e3a5f;
+            line-height: 1.6;
+        }
+
+        .footer {
+            position: absolute;
+            bottom: 20mm;
+            left: 25mm;
+            right: 25mm;
+            border-top: 1px solid #e2e8f0;
+            padding-top: 15px;
+            font-size: 10px;
+            color: #94a3b8;
+            text-align: center;
+        }
+
+        /* ── ToC ── */
+        .toc-container { margin-top: 30px; }
+
+        .toc-item {
+            display: flex;
+            align-items: baseline;
+            margin-bottom: 14px;
+            font-size: 14px;
+            color: #1a2333;
+            text-decoration: none;
+        }
+
+        .toc-link {
+            text-decoration: none;
+            color: inherit;
+            display: flex;
+            width: 100%;
+            align-items: baseline;
+        }
+
+        .toc-text { flex-shrink: 0; padding-right: 5px; font-weight: 600; }
+        .toc-dots { flex-grow: 1; border-bottom: 1px dotted #94a3b8; margin: 0 5px; position: relative; top: -4px; }
+        .toc-page { flex-shrink: 0; padding-left: 5px; font-weight: 700; color: var(--stc-blue); }
+
+        /* ── Verdict badges ── */
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            white-space: nowrap;
+        }
+
+        .badge-mejorar {
+            background: #fef3c7;
+            color: #92400e;
+            border: 1px solid #f59e0b;
+        }
+
+        .badge-intencional {
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #34d399;
+        }
+
+        .badge-riesgo {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #f87171;
+        }
+
+        .badge-ok {
+            background: #f0fdf4;
+            color: #166534;
+            border: 1px solid #86efac;
+        }
+
+        .badge-p1 { background: #dc2626; color: white; border: none; }
+        .badge-p2 { background: #d97706; color: white; border: none; }
+        .badge-p3 { background: #2563eb; color: white; border: none; }
+
+        /* ── Section accent ── */
+        .section-label {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: var(--stc-orange);
+            margin-bottom: 2px;
+        }
+
+        pre.diagram {
+            background: #0f172a;
+            color: #38bdf8;
+            border-left: 4px solid var(--stc-orange);
+            padding: 15px;
+            font-size: 10.5px;
+            font-family: 'Courier New', Courier, monospace;
+            overflow-x: auto;
+            border-radius: 4px;
+            line-height: 1.35;
+            margin: 15px 0;
+        }
+
+        pre.code {
+            background: var(--code-bg);
+            border: 1px solid #e2e8f0;
+            border-left: 4px solid var(--stc-blue);
+            padding: 14px;
+            font-size: 11.5px;
+            font-family: 'Courier New', Courier, monospace;
+            color: #1e293b;
+            overflow-x: auto;
+            border-radius: 4px;
+            line-height: 1.5;
+            margin: 15px 0;
+        }
+
+        .two-col {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin: 18px 0;
+        }
+
+        .col-box {
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 14px 16px;
+        }
+
+        .col-box-title {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 700;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+            margin-bottom: 10px;
+        }
+
+        .col-hp .col-box-title { color: #1d4ed8; }
+        .col-stc .col-box-title { color: var(--stc-orange); }
+        .col-hp { border-top: 3px solid #1d4ed8; background: #eff6ff; }
+        .col-stc { border-top: 3px solid var(--stc-orange); background: #fff7ed; }
+
+        .col-box ul { margin: 0; padding-left: 16px; }
+        .col-box li { font-size: 12px; margin-bottom: 5px; }
+
+        .improvement-card {
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 16px;
+            margin-bottom: 14px;
+            border-left: 4px solid;
+        }
+
+        .improvement-card.p1 { border-left-color: #dc2626; }
+        .improvement-card.p2 { border-left-color: #d97706; }
+        .improvement-card.p3 { border-left-color: #2563eb; }
+
+        .improvement-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .improvement-card-title {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 700;
+            font-size: 13px;
+            color: var(--text-dark);
+        }
+
+        .improvement-card p {
+            font-size: 12.5px;
+            margin: 4px 0 0 0;
+            color: #475569;
+        }
+    </style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- PÁGINA 1: PORTADA                                              -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="page">
+    <div class="cover-top-bar">
+        <div class="top-title">STC CLOUD – ANÁLISIS TÉCNICO INTERNO</div>
+    </div>
+
+    <div class="cover-main">
+        <div class="stc-cloud-brand">
+            <span class="brand-stc">STC</span>
+            <span class="brand-cloud">CLOUD</span>
+        </div>
+
+        <h1 class="main-title">COMPARATIVA TÉCNICA</h1>
+        <h1 class="main-subtitle">HP SDS vs STC CLOUD MONITOR</h1>
+
+        <div class="version-tag">Análisis de Ingeniería | v1.0 | Mayo 2026</div>
+    </div>
+
+    <div class="footer">
+        © 2026 CANAL DIRECTO | STC CLOUD | ANÁLISIS TÉCNICO | DOCUMENTACIÓN INTERNA | CONFIDENCIAL
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- PÁGINA 2: ÍNDICE                                               -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="page">
+    <div class="internal-header">
+        <div class="internal-brand">STC <span>CLOUD</span></div>
+        <div class="internal-doc-type">Índice</div>
+    </div>
+
+    <h2 style="border: none; margin-bottom: 30px;">Índice de Contenidos</h2>
+
+    <div class="toc-container">
+        <a href="#intro" class="toc-item">
+            <span class="toc-text">1. Introducción y Contexto del Análisis</span>
+            <span class="toc-dots"></span>
+            <span class="toc-page">3</span>
+        </a>
+        <a href="#arquitectura-comunicacion" class="toc-item">
+            <span class="toc-text">2. Arquitectura de Comunicación: XMPP vs WebSocket</span>
+            <span class="toc-dots"></span>
+            <span class="toc-page">3</span>
+        </a>
+        <a href="#descubrimiento" class="toc-item">
+            <span class="toc-text">3. Descubrimiento de Dispositivos</span>
+            <span class="toc-dots"></span>
+            <span class="toc-page">4</span>
+        </a>
+        <a href="#loops-monitoreo" class="toc-item">
+            <span class="toc-text">4. Bucles de Monitoreo y Frecuencias</span>
+            <span class="toc-dots"></span>
+            <span class="toc-page">5</span>
+        </a>
+        <a href="#snmp" class="toc-item">
+            <span class="toc-text">5. Soporte de Protocolo SNMP</span>
+            <span class="toc-dots"></span>
+            <span class="toc-page">6</span>
+        </a>
+        <a href="#identidad" class="toc-item">
+            <span class="toc-text">6. Identidad Persistente del Dispositivo</span>
+            <span class="toc-dots"></span>
+            <span class="toc-page">6</span>
+        </a>
+        <a href="#ews-remoto" class="toc-item">
+            <span class="toc-text">7. Acceso EWS Remoto via Nube</span>
+            <span class="toc-dots"></span>
+            <span class="toc-page">7</span>
+        </a>
+        <a href="#secure-by-default" class="toc-item">
+            <span class="toc-text">8. HP Secure by Default y Riesgos en FutureSmart 4.5+</span>
+            <span class="toc-dots"></span>
+            <span class="toc-page">7</span>
+        </a>
+        <a href="#capacidades-adicionales" class="toc-item">
+            <span class="toc-text">9. Capacidades No Implementadas (Tray, Firmware, Alertas)</span>
+            <span class="toc-dots"></span>
+            <span class="toc-page">8</span>
+        </a>
+        <a href="#datos-retencion" class="toc-item">
+            <span class="toc-text">10. Modelo de Datos y Retención</span>
+            <span class="toc-dots"></span>
+            <span class="toc-page">8</span>
+        </a>
+        <a href="#seguridad-certificaciones" class="toc-item">
+            <span class="toc-text">11. Certificaciones de Seguridad y Cumplimiento</span>
+            <span class="toc-dots"></span>
+            <span class="toc-page">9</span>
+        </a>
+        <a href="#tabla-resumen" class="toc-item">
+            <span class="toc-text">12. Tabla Resumen Global de Diferencias</span>
+            <span class="toc-dots"></span>
+            <span class="toc-page">9</span>
+        </a>
+        <a href="#roadmap" class="toc-item">
+            <span class="toc-text">13. Hoja de Ruta de Mejoras Priorizadas</span>
+            <span class="toc-dots"></span>
+            <span class="toc-page">10</span>
+        </a>
+    </div>
+
+    <div class="note-callout" style="margin-top: 40px;">
+        <strong>Propósito del documento.</strong> Este análisis compara el sistema HP Smart Device Services (SDS) con el agente STC Cloud Monitor tal como está implementado a mayo de 2026. Para cada diferencia se indica si es una <strong>decisión de diseño intencional</strong> (justificada por el contexto multi-marca y de despliegue) o un <strong>punto de mejora</strong> con su prioridad correspondiente.
+    </div>
+
+    <div class="footer">
+        © 2026 CANAL DIRECTO | STC CLOUD | ANÁLISIS TÉCNICO | DOCUMENTACIÓN INTERNA | CONFIDENCIAL
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- PÁGINA 3: INTRO + ARQUITECTURA COMUNICACIÓN                    -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="page">
+    <div class="internal-header">
+        <div class="internal-brand">STC <span>CLOUD</span></div>
+        <div class="internal-doc-type">Comparativa HP SDS</div>
+    </div>
+
+    <h2 id="intro">1. Introducción y Contexto del Análisis</h2>
+
+    <p>HP Smart Device Services (SDS) es la plataforma de gestión remota de impresoras de HP, compuesta por el <strong>HP SDS Manager Data Collection Application (DCA)</strong> que se instala on-site —conocido internamente como JAMC— y la infraestructura cloud <strong>HP SDS Cloud</strong>, operada bajo los estándares ISO 27001 / SOC2 por EKM Global.</p>
+
+    <p>STC Cloud Monitor es una plataforma propia de monitoreo multi-marca, construida sobre principios similares (agente local → cloud → API) pero con prioridades distintas: soporte nativo de múltiples fabricantes (HP, Samsung, Lexmark, Ricoh, Brother, Epson, Canon, Konica Minolta, Xerox), despliegue sin dependencia de infraestructura HP, y menor fricción de instalación para redes corporativas medianas.</p>
+
+    <p>El análisis se apoya en los documentos técnicos oficiales HP SDS disponibles: <em>Monitoring Loops White Paper (Jan 2020)</em>, <em>Security White Paper</em>, <em>DCA IMIL Commands v29</em>, <em>System Requirements v2.6</em>, <em>Installation Guide v1.2</em> y <em>Secure by Default Initiative White Paper</em>.</p>
+
+    <h2 id="arquitectura-comunicacion">2. Arquitectura de Comunicación: XMPP vs WebSocket</h2>
+    <span class="badge badge-intencional">Decisión intencional</span>
+
+    <div class="two-col" style="margin-top: 14px;">
+        <div class="col-box col-hp">
+            <div class="col-box-title">HP SDS / JAMC</div>
+            <ul>
+                <li>Canal de control: <strong>XMPP</strong> (puerto TCP 5222, salida)</li>
+                <li>Canal de datos: <strong>HTTPS</strong> (puerto 443, salida)</li>
+                <li>JAMC sólo genera conexiones salientes (Zero-Inbound)</li>
+                <li>Requiere apertura explícita de puerto 5222 en firewall</li>
+                <li>XMPP habilita mensajería push en tiempo real desde HP Cloud hacia el agente</li>
+            </ul>
+        </div>
+        <div class="col-box col-stc">
+            <div class="col-box-title">STC Cloud Monitor</div>
+            <ul>
+                <li>Un único canal: <strong>WebSocket Seguro (WSS)</strong> sobre HTTPS puerto 443</li>
+                <li>Agente sólo genera conexiones salientes (Zero-Inbound equivalente)</li>
+                <li>No requiere abrir puertos adicionales al 443 estándar</li>
+                <li>Bi-direccional: el servidor puede enviar comandos via WebSocket</li>
+            </ul>
+        </div>
+    </div>
+
+    <h3>Justificación de la decisión</h3>
+    <p>El puerto 5222 (XMPP) está bloqueado en la mayoría de firewalls corporativos por defecto. Forzar su apertura genera fricción de instalación y requiere coordinación con el departamento de IT del cliente. Al unificar todo el tráfico sobre WSS/443, STC Cloud simplifica drásticamente el despliegue: el mismo puerto que usa el navegador web funciona para el agente sin necesidad de cambios en la política de red.</p>
+    <p>La contrapartida es que WebSocket no es un protocolo de mensajería estándar con presencia nativa en el ecosistema de telecomunicaciones; XMPP es robusto y tiene mecanismos de store-and-forward más maduros. Esta diferencia es aceptable dado el perfil de cliente objetivo.</p>
+
+    <div class="footer">
+        © 2026 CANAL DIRECTO | STC CLOUD | ANÁLISIS TÉCNICO | DOCUMENTACIÓN INTERNA | CONFIDENCIAL
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- PÁGINA 4: DESCUBRIMIENTO                                       -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="page">
+    <div class="internal-header">
+        <div class="internal-brand">STC <span>CLOUD</span></div>
+        <div class="internal-doc-type">Comparativa HP SDS</div>
+    </div>
+
+    <h2 id="descubrimiento">3. Descubrimiento de Dispositivos</h2>
+    <span class="badge badge-intencional">Decisión intencional</span>
+
+    <div class="two-col" style="margin-top: 14px;">
+        <div class="col-box col-hp">
+            <div class="col-box-title">HP SDS / JAMC</div>
+            <ul>
+                <li><strong>Ping ICMP</strong> para verificar alcanzabilidad</li>
+                <li><strong>SNMP broadcast/walk</strong> sobre rangos IP</li>
+                <li><strong>SLP (Service Location Protocol)</strong> UDP 427 — descubrimiento automático local</li>
+                <li><strong>WS-Discovery</strong> UDP 3702 — descubrimiento de dispositivos modernos</li>
+                <li>Los 4 métodos trabajan en paralelo para máxima cobertura</li>
+            </ul>
+        </div>
+        <div class="col-box col-stc">
+            <div class="col-box-title">STC Cloud Monitor</div>
+            <ul>
+                <li><strong>TCP connect</strong> a puertos de impresora: 9100 (RAW), 631 (IPP), 80 (HTTP/EWS), 443 (HTTPS/EWS)</li>
+                <li>Scan sobre rangos IP configurados por el administrador</li>
+                <li>Sin ICMP, sin UDP, sin broadcast</li>
+                <li>Timeout diferenciado: 500ms puertos de impresora, 2000ms puertos web</li>
+            </ul>
+        </div>
+    </div>
+
+    <h3>Justificación de la decisión</h3>
+    <p>El enfoque de STC Cloud de escanear puertos TCP tiene tres ventajas clave respecto al modelo HP:</p>
+    <ul>
+        <li><strong>Sin dependencia de ICMP:</strong> Muchas redes corporativas bloquean ping por política. Un escaneo TCP funciona igualmente aunque ICMP esté desactivado.</li>
+        <li><strong>Sin UDP:</strong> SLP (UDP 427) y WS-Discovery (UDP 3702) suelen estar bloqueados en switches gestionados y VLANs segmentadas. TCP connect siempre funciona si el dispositivo está accesible.</li>
+        <li><strong>Multi-marca desde el primer momento:</strong> SLP y WS-Discovery tienen mayor adopción en dispositivos HP. Los rangos TCP son agnósticos al fabricante: cualquier impresora que tenga un puerto de servicio abierto es descubierta independientemente de la marca.</li>
+    </ul>
+
+    <p>La contrapartida es que el escaneo TCP es más lento que un broadcast UDP y puede generar más tráfico de red visible en logs de firewall. Para los volúmenes típicos de instalación de STC Cloud (200–500 impresoras por sitio) este coste es despreciable.</p>
+
+    <pre class="diagram">HP SDS Discovery:
+  ICMP ping sweep → SNMP walk → SLP multicast (UDP 427) → WS-Discovery (UDP 3702)
+  ↓ Muchos vectores, pero varios bloqueados en redes corporativas segmentadas
+
+STC Cloud Discovery:
+  TCP connect a puertos [9100, 631, 80, 443] sobre rangos IP configurados
+  ↓ Un único vector, siempre funcional si hay conectividad IP básica
+     Timeout 2000ms en 80/443 para firmware lento (Samsung SyncThru antiguo)</pre>
+
+    <div class="info-callout">
+        <strong>Nota sobre WS-Discovery.</strong> WS-Discovery (UDP 3702) es utilizado por HP en modelos con FutureSmart 4.x. Su adopción fuera del ecosistema HP es limitada. Añadir soporte WS-Discovery en STC Cloud tendría valor marginal dado que la base instalada multi-marca prioriza los puertos TCP estándar.
+    </div>
+
+    <div class="footer">
+        © 2026 CANAL DIRECTO | STC CLOUD | ANÁLISIS TÉCNICO | DOCUMENTACIÓN INTERNA | CONFIDENCIAL
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- PÁGINA 5: BUCLES DE MONITOREO                                  -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="page">
+    <div class="internal-header">
+        <div class="internal-brand">STC <span>CLOUD</span></div>
+        <div class="internal-doc-type">Comparativa HP SDS</div>
+    </div>
+
+    <h2 id="loops-monitoreo">4. Bucles de Monitoreo y Frecuencias</h2>
+    <span class="badge badge-intencional">Parcialmente implementado</span> &nbsp; <span class="badge badge-mejorar">Mejora pendiente</span>
+
+    <h3>HP SDS: 5 bucles especializados</h3>
+    <p>HP SDS organiza la recolección en cinco bucles independientes con frecuencias diferenciadas según horario laboral (08:00–18:00 L-V) y fuera de horario:</p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Bucle</th>
+                <th>Datos recogidos</th>
+                <th>En horario laboral</th>
+                <th>Fuera de horario</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Identity</strong></td>
+                <td>Modelo, serial, firmware, IP, MAC</td>
+                <td>Cada 10 min</td>
+                <td>Cada 60 min</td>
+            </tr>
+            <tr>
+                <td><strong>Alert</strong></td>
+                <td>Alertas de estado (papel, error, atasco)</td>
+                <td>Cada 3 min</td>
+                <td>Cada 15 min</td>
+            </tr>
+            <tr>
+                <td><strong>Meter</strong></td>
+                <td>Contadores de páginas (mono/color/total)</td>
+                <td>Cada 20 min</td>
+                <td>Cada 240 min (4h)</td>
+            </tr>
+            <tr>
+                <td><strong>Consumables</strong></td>
+                <td>Niveles de tóner, cartuchos, drum</td>
+                <td>Cada 60 min</td>
+                <td>Cada 240 min (4h)</td>
+            </tr>
+            <tr>
+                <td><strong>Tray/Media</strong></td>
+                <td>Estado de bandejas, tipo de papel</td>
+                <td>Cada 480 min (8h)</td>
+                <td>Cada 480 min (8h)</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <p>Los bucles de Alert y Meter acumulan datos localmente y los envían a HP SDS Cloud en lotes: Alert en tiempo real, Meter una vez por día. Esto reduce el tráfico de red manteniendo resolución alta para las alertas que importan operativamente.</p>
+
+    <h3>STC Cloud: Dos bucles especializados con conciencia horaria</h3>
+    <p>STC Cloud ejecuta dos bucles independientes con conciencia de horario laboral (L-V 08:00–18:00, zona horaria Argentina), alineados con las frecuencias de HP SDS para los datos operativamente más relevantes:</p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Bucle</th>
+                <th>Datos recogidos</th>
+                <th>En horario laboral</th>
+                <th>Fuera de horario</th>
+                <th>Fuente primaria</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Meter</strong></td>
+                <td>Contadores de páginas (mono/color/total)</td>
+                <td>Cada 20 min</td>
+                <td>Cada 4h</td>
+                <td>EWS → SNMP fallback</td>
+            </tr>
+            <tr>
+                <td><strong>Supplies</strong></td>
+                <td>Niveles de tóner + datos de cartucho</td>
+                <td>Cada 60 min</td>
+                <td>Cada 4h</td>
+                <td>EWS únicamente</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <p>Ambos bucles se inician 2 minutos después del arranque (para que el escaneo inicial de descubrimiento pueble la base de datos de dispositivos conocidos) y se autoprograman al finalizar cada ciclo, recalculando el intervalo en función del horario en ese momento exacto.</p>
+
+    <h3>Diferenciador EWS-first</h3>
+    <p>A diferencia de HP SDS, que usa SNMP como protocolo central incluso para contadores, STC Cloud prioriza EWS (HTTP/HTTPS directo a la impresora) como fuente de datos para ambos bucles. SNMP se utiliza únicamente como fallback en dispositivos que no exponen EWS. Esta filosofía permite recolectar datos ricos (código de cartucho, número de serie, capacidad, páginas impresas estimadas) que no están disponibles por SNMP estándar.</p>
+
+    <h3>Gap residual</h3>
+    <ul>
+        <li><strong>Sin bucle de alertas operativas:</strong> Atascos de papel, bandeja vacía y errores de hardware no se detectan en tiempo cuasi-real (3 min en HP SDS). La detección ocurre en el siguiente ciclo Meter (máx. 20 min en horario laboral).</li>
+        <li><strong>Sin bucle de identidad:</strong> Los cambios de modelo, firmware o serial sólo se capturan durante el escaneo de descubrimiento inicial, no en ciclos periódicos dedicados.</li>
+        <li><strong>Sin bucle de bandejas:</strong> El nivel de papel por bandeja no se recoge en ningún ciclo.</li>
+    </ul>
+
+    <div class="note-callout">
+        <strong>Gap pendiente.</strong> El único gap operativo relevante frente a HP SDS es la ausencia de un <strong>bucle de alertas independiente</strong> (papel, atasco, error de hardware) con frecuencia de 5–10 min. Los bucles Meter y Supplies, con sus frecuencias y conciencia horaria, ya están implementados e igualados a HP SDS.
+    </div>
+
+    <div class="footer">
+        © 2026 CANAL DIRECTO | STC CLOUD | ANÁLISIS TÉCNICO | DOCUMENTACIÓN INTERNA | CONFIDENCIAL
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- PÁGINA 6: SNMP + IDENTIDAD                                     -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="page">
+    <div class="internal-header">
+        <div class="internal-brand">STC <span>CLOUD</span></div>
+        <div class="internal-doc-type">Comparativa HP SDS</div>
+    </div>
+
+    <h2 id="snmp">5. Soporte de Protocolo SNMP</h2>
+    <span class="badge badge-mejorar">A mejorar</span> &nbsp; <span class="badge badge-p2">Prioridad 2</span>
+
+    <div class="two-col">
+        <div class="col-box col-hp">
+            <div class="col-box-title">HP SDS / JAMC</div>
+            <ul>
+                <li>SNMPv1, v2c, <strong>v3</strong></li>
+                <li>Auth: MD5, SHA-1, SHA-224, SHA-256, SHA-384, SHA-512</li>
+                <li>Privacidad: AES-128, AES-192, AES-256, DES</li>
+                <li>Comunidades v1/v2c configurables por grupo de dispositivos</li>
+                <li>Credenciales gestionadas por CLI (<code>snmpset</code>, <code>snmpadd</code>)</li>
+            </ul>
+        </div>
+        <div class="col-box col-stc">
+            <div class="col-box-title">STC Cloud Monitor</div>
+            <ul>
+                <li>SNMPv2c únicamente</li>
+                <li>Comunidad única configurable (<code>snmpCommunity</code>)</li>
+                <li>Sin soporte v3 (sin autenticación por usuario, sin privacidad)</li>
+                <li>Rol de SNMP: solo identificación de marca/modelo; EWS es primario para contadores</li>
+            </ul>
+        </div>
+    </div>
+
+    <p>SNMPv3 es el único protocolo SNMP que provee autenticación de mensajes (HMAC) y cifrado de payload. En redes con política de seguridad estricta, SNMPv2c es inaceptable porque las comunidades viajan en claro y cualquier observador de red puede leer o falsificar respuestas. Añadir v3 ampliaría la compatibilidad con entornos enterprise y reduciría la exposición a man-in-the-middle en segmentos de red compartidos.</p>
+
+    <div class="note-callout">
+        <strong>Mejora sugerida.</strong> Extender <code>AgentConfig</code> con campos opcionales <code>snmpV3User</code>, <code>snmpV3AuthProto</code>, <code>snmpV3AuthKey</code>, <code>snmpV3PrivProto</code>, <code>snmpV3PrivKey</code>. La librería <code>net-snmp</code> ya usada en el proyecto soporta v3 sin dependencias adicionales.
+    </div>
+
+    <h2 id="identidad">6. Identidad Persistente del Dispositivo</h2>
+    <span class="badge badge-mejorar">A mejorar</span> &nbsp; <span class="badge badge-p3">Prioridad 3</span>
+
+    <div class="two-col">
+        <div class="col-box col-hp">
+            <div class="col-box-title">HP SDS / JAMC</div>
+            <ul>
+                <li>Identidad primaria: <strong>MAC address + Serial Number</strong></li>
+                <li>El device ID persiste aunque la impresora cambie de IP</li>
+                <li>MAC se obtiene vía SNMP (<code>ifPhysAddress</code>)</li>
+                <li>Correlación automática si la impresora es movida a otra subred</li>
+            </ul>
+        </div>
+        <div class="col-box col-stc">
+            <div class="col-box-title">STC Cloud Monitor</div>
+            <ul>
+                <li>Identidad primaria: <strong>Serial Number</strong> (EWS)</li>
+                <li>Fallback a <strong>IP address</strong> si no hay serial</li>
+                <li>Sin tracking de MAC address</li>
+                <li>Si una impresora cambia de IP sin serial conocido, se crea un registro duplicado</li>
+            </ul>
+        </div>
+    </div>
+
+    <p>En instalaciones con DHCP dinámico, las impresoras pueden cambiar de IP entre ciclos de escaneo. Si el serial ya fue capturado en un ciclo anterior, STC Cloud lo usa como clave estable y el cambio de IP no genera duplicado. El riesgo real es en el primer scan de una impresora que no responde al EWS (sólo SNMP) y cuya comunidad no devuelve serial — en ese caso, la IP se usa como fallback y un cambio de IP genera un registro huérfano.</p>
+
+    <p>Añadir captura de MAC vía SNMP OID <code>1.3.6.1.2.1.2.2.1.6</code> (<code>ifPhysAddress</code>) como campo secundario de identidad eliminaría esta clase de duplicados sin necesidad de cambios en la arquitectura del servidor.</p>
+
+    <div class="footer">
+        © 2026 CANAL DIRECTO | STC CLOUD | ANÁLISIS TÉCNICO | DOCUMENTACIÓN INTERNA | CONFIDENCIAL
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- PÁGINA 7: EWS REMOTO + SECURE BY DEFAULT                       -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="page">
+    <div class="internal-header">
+        <div class="internal-brand">STC <span>CLOUD</span></div>
+        <div class="internal-doc-type">Comparativa HP SDS</div>
+    </div>
+
+    <h2 id="ews-remoto">7. Acceso EWS Remoto vía Nube</h2>
+    <span class="badge badge-mejorar">A mejorar</span> &nbsp; <span class="badge badge-p3">Prioridad 3</span>
+
+    <p>HP SDS provee una funcionalidad llamada <strong>Remote EWS</strong>: el administrador puede acceder a la interfaz web integrada (EWS) de cualquier impresora HP a través de un túnel cifrado establecido desde HP SDS Cloud hacia el JAMC local, sin necesidad de VPN ni de IP pública en la impresora. Esta funcionalidad está <em>desactivada por defecto</em> y requiere whitelisting explícito del cliente.</p>
+
+    <p>STC Cloud no implementa ningún mecanismo equivalente. El acceso a EWS es únicamente local: el agente consulta directamente la IP de la impresora desde la LAN. Un administrador remoto (fuera de la red del cliente) no puede acceder al EWS de la impresora a través de la plataforma STC Cloud.</p>
+
+    <div class="note-callout">
+        <strong>Mejora sugerida (largo plazo).</strong> Un túnel EWS remoto requeriría un proxy inverso en la infraestructura cloud y un canal bidireccional permanente (ya disponible vía WebSocket). La implementación es arquitectónicamente compleja pero se apoya en la infraestructura existente. Es candidato para una fase futura del roadmap, no un bloqueante actual.
+    </div>
+
+    <h2 id="secure-by-default">8. HP Secure by Default y Riesgos en FutureSmart 4.5+</h2>
+    <span class="badge badge-riesgo">Riesgo técnico</span>
+
+    <p>HP introdujo en FutureSmart 4.5 (firmware de impresoras HP de gama empresarial, ~2020 en adelante) una política de seguridad activada por defecto que afecta directamente a los mecanismos que STC Cloud utiliza para la recolección de datos:</p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Funcionalidad afectada</th>
+                <th>Comportamiento en FS4.5+</th>
+                <th>Impacto en STC Cloud</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>SNMP v1/v2c (escritura)</td>
+                <td>Desactivado por defecto (sólo lectura)</td>
+                <td>Bajo — STC Cloud sólo lee SNMP, no escribe</td>
+            </tr>
+            <tr>
+                <td>SNMP v1/v2c (lectura)</td>
+                <td>Activo por defecto, comunidad <code>public</code></td>
+                <td>Ninguno actualmente — pero política enterprise puede desactivarlo</td>
+            </tr>
+            <tr>
+                <td>PJL Device Access Commands</td>
+                <td><strong>Desactivado por defecto</strong></td>
+                <td><strong>Alto</strong> — si STC Cloud usa PJL para contadores, falla silenciosamente</td>
+            </tr>
+            <tr>
+                <td>PJL Drive Access</td>
+                <td>Desactivado por defecto</td>
+                <td>Medio — no usado actualmente pero bloquea futuros usos de PJL</td>
+            </tr>
+            <tr>
+                <td>TLS 1.0 / 1.1</td>
+                <td>Desactivado por defecto</td>
+                <td>Bajo — fetchHttp usa Node.js con TLS 1.2+ por defecto</td>
+            </tr>
+            <tr>
+                <td>CSRF en EWS</td>
+                <td>Activado por defecto en operaciones de configuración</td>
+                <td>Ninguno — STC Cloud sólo hace GET de lectura, no modifica configuración</td>
+            </tr>
+            <tr>
+                <td>Account Lockout (EWS)</td>
+                <td>Activo: 5 intentos fallidos → bloqueo 10 min</td>
+                <td>Ninguno — STC Cloud no autentica en EWS (páginas públicas)</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="note-callout">
+        <strong>Acción recomendada.</strong> Auditar los OIDs y endpoints EWS utilizados para impresoras HP empresa y confirmar que ninguna ruta de código use PJL como fuente de contadores. Documentar esta dependencia ausente. Si en el futuro se implementa soporte PJL, añadir detección del flag FS4.5 antes de enviar comandos PJL.
+    </div>
+
+    <div class="footer">
+        © 2026 CANAL DIRECTO | STC CLOUD | ANÁLISIS TÉCNICO | DOCUMENTACIÓN INTERNA | CONFIDENCIAL
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- PÁGINA 8: CAPACIDADES ADICIONALES + DATOS                      -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="page">
+    <div class="internal-header">
+        <div class="internal-brand">STC <span>CLOUD</span></div>
+        <div class="internal-doc-type">Comparativa HP SDS</div>
+    </div>
+
+    <h2 id="capacidades-adicionales">9. Capacidades No Implementadas</h2>
+
+    <h3>9.1 Monitoreo de Bandejas y Papel</h3>
+    <span class="badge badge-mejorar">A mejorar</span> &nbsp; <span class="badge badge-p3">Prioridad 3</span>
+    <p>HP SDS recoge estado de bandejas (nivel de papel, tipo de papel configurado) vía su bucle <em>Tray/Media</em> cada 8 horas. STC Cloud no captura ningún dato de bandejas. Los OIDs SNMP estándar para bandejas están definidos en <code>Printer-MIB (RFC 3805)</code> bajo <code>1.3.6.1.2.1.43.8</code> (prtInputTable), accesibles en casi cualquier impresora de red. Su implementación es incremental y no requiere cambios de arquitectura.</p>
+
+    <h3>9.2 Actualización de Firmware Remota</h3>
+    <span class="badge badge-intencional">Fuera de scope actual</span>
+    <p>HP SDS JAMC puede recibir instrucciones de HP Cloud para descargar y aplicar actualizaciones de firmware en dispositivos HP. STC Cloud no implementa ni planea implementar esta funcionalidad: el riesgo operativo de un firmware push automático sobre impresoras de producción sin intervención humana explícita supera los beneficios para el perfil de cliente objetivo. Se mantiene deliberadamente fuera de scope.</p>
+
+    <h3>9.3 Alertas Operativas en Tiempo Cuasi-Real</h3>
+    <span class="badge badge-mejorar">A mejorar</span> &nbsp; <span class="badge badge-p2">Prioridad 2</span>
+    <p>El bucle <em>Alert</em> de HP SDS sondea el estado del dispositivo cada 3 minutos durante horario laboral y envía alertas (papel agotado, atasco, error de consumible, modo de ahorro) prácticamente en tiempo real. STC Cloud delega la generación de alertas al servidor tras ingerir los datos del escaneo periódico, resultando en latencias de detección de hasta 60 minutos para condiciones críticas como bandeja vacía o error de hardware.</p>
+
+    <h3>9.4 Instancias Múltiples del Agente por Sitio</h3>
+    <span class="badge badge-mejorar">A mejorar</span> &nbsp; <span class="badge badge-p3">Prioridad 3</span>
+    <p>HP JAMC permite desplegar múltiples instancias DCA en el mismo site para escanear subredes distintas o proporcionar alta disponibilidad. STC Cloud contempla un único agente por site. En clientes con múltiples VLANs de impresoras que no se rutan entre sí, el agente actual no puede cubrir todas las subredes desde un único punto de instalación.</p>
+
+    <h2 id="datos-retencion">10. Modelo de Datos y Retención</h2>
+    <span class="badge badge-mejorar">A mejorar</span> &nbsp; <span class="badge badge-p2">Prioridad 2</span>
+
+    <div class="two-col">
+        <div class="col-box col-hp">
+            <div class="col-box-title">HP SDS</div>
+            <ul>
+                <li>Retención cloud: <strong>10 años</strong></li>
+                <li>Histórico de contadores completo para análisis de tendencias</li>
+                <li>Datos anónimos mediante GUID de cliente (privacidad)</li>
+                <li>Datos accesibles vía ISV/MPS API con historial completo</li>
+            </ul>
+        </div>
+        <div class="col-box col-stc">
+            <div class="col-box-title">STC Cloud Monitor</div>
+            <ul>
+                <li>Retención local (SQLite): <strong>7 días</strong> de backlog</li>
+                <li>Retención cloud: no especificada en documentación actual</li>
+                <li>Sin política formal de retención documentada</li>
+                <li>Sin anonimización de datos de cliente definida</li>
+            </ul>
+        </div>
+    </div>
+
+    <p>Una política de retención de 10 años permite a los clientes analizar tendencias de uso a largo plazo, planificar reemplazos de equipos y documentar el historial de consumibles para auditorías. Definir y comunicar la política de retención de STC Cloud es relevante tanto para la propuesta comercial como para el cumplimiento con RGPD (datos de actividad de impresoras pueden contener metadatos de usuario en modelos con autenticación de usuario).</p>
+
+    <div class="footer">
+        © 2026 CANAL DIRECTO | STC CLOUD | ANÁLISIS TÉCNICO | DOCUMENTACIÓN INTERNA | CONFIDENCIAL
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- PÁGINA 9: CERTIFICACIONES + TABLA RESUMEN                      -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="page">
+    <div class="internal-header">
+        <div class="internal-brand">STC <span>CLOUD</span></div>
+        <div class="internal-doc-type">Comparativa HP SDS</div>
+    </div>
+
+    <h2 id="seguridad-certificaciones">11. Certificaciones de Seguridad y Cumplimiento</h2>
+    <span class="badge badge-mejorar">A mejorar</span> &nbsp; <span class="badge badge-p2">Prioridad 2</span>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Certificación / Estándar</th>
+                <th>HP SDS (EKM Global)</th>
+                <th>STC Cloud Monitor</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>ISO/IEC 27001 (SGSI)</td>
+                <td>✓ Certificado</td>
+                <td>✗ No certificado</td>
+            </tr>
+            <tr>
+                <td>SOC 2 Type I &amp; II</td>
+                <td>✓ Certificado</td>
+                <td>✗ No auditado</td>
+            </tr>
+            <tr>
+                <td>Cyber Essentials Plus (UK)</td>
+                <td>✓ Certificado</td>
+                <td>✗ No aplicable actualmente</td>
+            </tr>
+            <tr>
+                <td>HIPAA</td>
+                <td>✓ BAA disponible</td>
+                <td>✗ No documentado</td>
+            </tr>
+            <tr>
+                <td>RGPD / GDPR</td>
+                <td>✓ Documentado</td>
+                <td>Parcial — requiere DPA formal</td>
+            </tr>
+            <tr>
+                <td>NIST Cybersecurity Framework 2.0</td>
+                <td>✓ Alineado</td>
+                <td>✗ No evaluado</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <p>La ausencia de certificaciones formales no es un bloqueante técnico, pero sí es un freno comercial en licitaciones públicas y clientes enterprise que exigen auditorías de proveedores. La certificación ISO 27001 es la más relevante a corto plazo ya que es prerequisito en muchos procesos de homologación de proveedores en el mercado español y latinoamericano.</p>
+
+    <h2 id="tabla-resumen">12. Tabla Resumen Global de Diferencias</h2>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Área</th>
+                <th>HP SDS</th>
+                <th>STC Cloud</th>
+                <th>Veredicto</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Canal de comunicación agente–cloud</td>
+                <td>XMPP (5222) + HTTPS (443)</td>
+                <td>WSS (443)</td>
+                <td><span class="badge badge-intencional">Intencional</span></td>
+            </tr>
+            <tr>
+                <td>Descubrimiento de dispositivos</td>
+                <td>ICMP + SNMP + SLP + WS-Discovery</td>
+                <td>TCP port scan (9100/631/80/443)</td>
+                <td><span class="badge badge-intencional">Intencional</span></td>
+            </tr>
+            <tr>
+                <td>Bucles de monitoreo</td>
+                <td>5 bucles independientes</td>
+                <td>2 bucles: Meter (20min/4h) + Supplies (60min/4h)</td>
+                <td><span class="badge badge-mejorar">Mejorar</span></td>
+            </tr>
+            <tr>
+                <td>Conciencia horaria laboral</td>
+                <td>Sí (08:00–18:00)</td>
+                <td>Sí (L-V 08:00–18:00 ARG)</td>
+                <td><span class="badge badge-ok">Implementado</span></td>
+            </tr>
+            <tr>
+                <td>Soporte SNMPv3</td>
+                <td>v1 + v2c + v3 completo</td>
+                <td>v2c únicamente</td>
+                <td><span class="badge badge-mejorar">Mejorar</span></td>
+            </tr>
+            <tr>
+                <td>Identidad persistente</td>
+                <td>MAC + Serial</td>
+                <td>Serial (fallback IP)</td>
+                <td><span class="badge badge-mejorar">Mejorar</span></td>
+            </tr>
+            <tr>
+                <td>Acceso EWS remoto via nube</td>
+                <td>Sí (túnel cloud)</td>
+                <td>No</td>
+                <td><span class="badge badge-mejorar">Mejorar</span></td>
+            </tr>
+            <tr>
+                <td>Riesgo PJL en FS4.5+</td>
+                <td>Gestionado (sin PJL)</td>
+                <td>Bajo si no se usa PJL</td>
+                <td><span class="badge badge-ok">Verificar</span></td>
+            </tr>
+            <tr>
+                <td>Monitoreo de bandejas/papel</td>
+                <td>Sí (Tray loop)</td>
+                <td>No</td>
+                <td><span class="badge badge-mejorar">Mejorar</span></td>
+            </tr>
+            <tr>
+                <td>Alertas en tiempo cuasi-real</td>
+                <td>Sí (3 min)</td>
+                <td>No (≤60 min)</td>
+                <td><span class="badge badge-mejorar">Mejorar</span></td>
+            </tr>
+            <tr>
+                <td>Firmware push remoto</td>
+                <td>Sí</td>
+                <td>No</td>
+                <td><span class="badge badge-intencional">Fuera de scope</span></td>
+            </tr>
+            <tr>
+                <td>Múltiples agentes por site</td>
+                <td>Sí</td>
+                <td>No</td>
+                <td><span class="badge badge-mejorar">Mejorar</span></td>
+            </tr>
+            <tr>
+                <td>Retención de datos cloud</td>
+                <td>10 años</td>
+                <td>No especificada</td>
+                <td><span class="badge badge-mejorar">Mejorar</span></td>
+            </tr>
+            <tr>
+                <td>ISO 27001 / SOC2</td>
+                <td>Certificado</td>
+                <td>No certificado</td>
+                <td><span class="badge badge-mejorar">Mejorar</span></td>
+            </tr>
+            <tr>
+                <td>Soporte multi-marca nativo</td>
+                <td>HP únicamente</td>
+                <td>HP, Samsung, Lexmark, Ricoh, Brother, Epson, Canon, Xerox, Konica Minolta</td>
+                <td><span class="badge badge-ok">Ventaja STC</span></td>
+            </tr>
+            <tr>
+                <td>Sincronización cloud</td>
+                <td>Lotes diarios (Meter)</td>
+                <td>Cada 30 segundos</td>
+                <td><span class="badge badge-ok">Ventaja STC</span></td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="footer">
+        © 2026 CANAL DIRECTO | STC CLOUD | ANÁLISIS TÉCNICO | DOCUMENTACIÓN INTERNA | CONFIDENCIAL
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- PÁGINA 10: HOJA DE RUTA DE MEJORAS                            -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="page">
+    <div class="internal-header">
+        <div class="internal-brand">STC <span>CLOUD</span></div>
+        <div class="internal-doc-type">Comparativa HP SDS</div>
+    </div>
+
+    <h2 id="roadmap">13. Hoja de Ruta de Mejoras Priorizadas</h2>
+
+    <p>Las mejoras identificadas en este análisis se ordenan según su impacto operativo y complejidad de implementación. La prioridad se asigna en tres niveles: <span class="badge badge-p1">P1 Urgente</span>, <span class="badge badge-p2">P2 Medio plazo</span> y <span class="badge badge-p3">P3 Largo plazo</span>.</p>
+
+    <div class="improvement-card p1">
+        <div class="improvement-card-header">
+            <div class="improvement-card-title">Auditoría de uso de PJL en HP FutureSmart 4.5+</div>
+            <span class="badge badge-p1">P1 Urgente</span>
+        </div>
+        <p>Confirmar que ninguna ruta de código actual depende de PJL Device Access Commands para la lectura de contadores en impresoras HP enterprise. FutureSmart 4.5 deshabilita PJL por defecto; si el agente lo usa como fallback, falla silenciosamente sobre equipos HP modernos sin diagnóstico visible. Acción: trazar el código de recolección HP y añadir test unitario que verifique que EWS es la fuente primaria.</p>
+    </div>
+
+    <div class="improvement-card p2">
+        <div class="improvement-card-header">
+            <div class="improvement-card-title">Bucle de alertas operativas (Alert Loop)</div>
+            <span class="badge badge-p2">P2 Medio plazo</span>
+        </div>
+        <p>Los bucles Meter (20 min) y Supplies (60 min) con conciencia horaria ya están implementados, igualando las frecuencias de HP SDS para los datos de contadores y consumibles. El gap restante es un ciclo de consulta rápida (5–10 min) para detectar errores críticos en tiempo cuasi-real: atasco de papel, bandeja vacía, error de hardware. La fuente recomendada es EWS (endpoint de estado de dispositivo) con SNMP <code>hrPrinterStatus</code> como fallback. Los datos de alerta se enviarían al servidor inmediatamente por WebSocket sin esperar la sincronización periódica.</p>
+    </div>
+
+    <div class="improvement-card p2">
+        <div class="improvement-card-header">
+            <div class="improvement-card-title">Soporte SNMPv3</div>
+            <span class="badge badge-p2">P2 Medio plazo</span>
+        </div>
+        <p>Extender la configuración del agente con credenciales SNMPv3 opcionales (usuario, protocolo de auth, clave de auth, protocolo de privacidad, clave de privacidad). La librería <code>net-snmp</code> ya usada en el proyecto soporta v3 sin dependencias adicionales. Impacto: desbloquea redes enterprise que han desactivado SNMPv2c por política de seguridad.</p>
+    </div>
+
+    <div class="improvement-card p2">
+        <div class="improvement-card-header">
+            <div class="improvement-card-title">Política formal de retención de datos cloud</div>
+            <span class="badge badge-p2">P2 Medio plazo</span>
+        </div>
+        <p>Definir y documentar la política de retención de datos en el servidor cloud: período mínimo garantizado, proceso de borrado a solicitud del cliente, tratamiento de datos bajo RGPD. Publicar esta información en el contrato de servicio y en la documentación de seguridad. Es prerequisito para licitaciones públicas y clientes con auditorías de proveedor.</p>
+    </div>
+
+    <div class="improvement-card p3">
+        <div class="improvement-card-header">
+            <div class="improvement-card-title">Identidad de dispositivo con MAC address</div>
+            <span class="badge badge-p3">P3 Largo plazo</span>
+        </div>
+        <p>Capturar la dirección MAC vía SNMP OID <code>1.3.6.1.2.1.2.2.1.6</code> (ifPhysAddress) durante el escaneo inicial y almacenarla como campo secundario de identidad. Permite correlacionar registros cuando una impresora cambia de IP, eliminando duplicados en instalaciones con DHCP dinámico.</p>
+    </div>
+
+    <div class="improvement-card p3">
+        <div class="improvement-card-header">
+            <div class="improvement-card-title">Monitoreo de bandejas y nivel de papel</div>
+            <span class="badge badge-p3">P3 Largo plazo</span>
+        </div>
+        <p>Implementar lectura de <code>prtInputTable</code> (RFC 3805, OID <code>1.3.6.1.2.1.43.8</code>) para obtener capacidad y nivel actual de papel por bandeja. Dato con alta demanda en gestión de flota: permite planificar reposición de papel antes de que la impresora se detenga.</p>
+    </div>
+
+    <div class="improvement-card p3">
+        <div class="improvement-card-header">
+            <div class="improvement-card-title">Múltiples agentes por site (multi-subred)</div>
+            <span class="badge badge-p3">P3 Largo plazo</span>
+        </div>
+        <p>Permitir registrar y gestionar más de un agente bajo el mismo site/cliente en la plataforma cloud. Imprescindible para clientes con redes segmentadas (múltiples VLANs de impresoras sin enrutamiento entre sí) o con oficinas remotas bajo el mismo contrato. Requiere cambios en el modelo de datos del servidor y en la interfaz de administración.</p>
+    </div>
+
+    <div class="improvement-card p3">
+        <div class="improvement-card-header">
+            <div class="improvement-card-title">Certificación ISO 27001 (SGSI)</div>
+            <span class="badge badge-p3">P3 Largo plazo</span>
+        </div>
+        <p>Iniciar el proceso de certificación ISO/IEC 27001 para la infraestructura cloud de STC Cloud Monitor. La certificación es prerequisito en licitaciones públicas y concursos de clientes enterprise en España y Latinoamérica. El proceso típico requiere 12–18 meses e implica la implementación de un Sistema de Gestión de Seguridad de la Información (SGSI) formal.</p>
+    </div>
+
+    <div class="info-callout" style="margin-top: 30px;">
+        <strong>Ventajas diferenciales de STC Cloud que no tiene HP SDS.</strong> STC Cloud presenta ventajas estructurales propias que no son mejoras de HP sino diferenciadores: (1) soporte nativo de 9+ fabricantes frente al ecosistema exclusivamente HP de SDS; (2) sincronización al servidor cada 30 segundos frente a lotes diarios para contadores; (3) despliegue sin apertura de puertos adicionales (sólo 443); (4) agente sin dependencia de infraestructura HP Cloud, eliminando el riesgo de discontinuación del servicio por parte del fabricante.
+    </div>
+
+    <div class="footer">
+        © 2026 CANAL DIRECTO | STC CLOUD | ANÁLISIS TÉCNICO | DOCUMENTACIÓN INTERNA | CONFIDENCIAL
+    </div>
+</div>
+
+</body>
+</html>
