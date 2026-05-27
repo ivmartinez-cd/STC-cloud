@@ -12,7 +12,7 @@ import { parseGeneric } from './ews-parsers/generic';
 // Export types so external files don't need to change their imports
 export type { EwsData };
 
-const EWS_TIMEOUT = 4000;
+const EWS_TIMEOUT = 10000;
 
 // ─── URL candidates ordered by reliability ───────────────────────────────────
 
