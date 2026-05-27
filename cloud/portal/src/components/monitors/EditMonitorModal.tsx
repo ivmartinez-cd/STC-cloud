@@ -20,7 +20,6 @@ function getInitialForm(monitor: MonitorData): EditFormData {
     ipStart: firstRange.start,
     ipEnd: firstRange.end,
     snmp: monitor.config?.snmp_community ?? 'public',
-    interval: monitor.config?.scan_interval_minutes ?? 15,
   };
 }
 
@@ -88,26 +87,12 @@ const EditMonitorModal = ({ isOpen, onClose, monitor, onSave }: Props) => {
               />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-6">
-            <div className="space-y-3">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Comunidad SNMP</label>
-              <input type="text" value={form.snmp}
-                className="cd-input w-full !h-14 !bg-slate-50 border-transparent focus:!border-brand focus:!bg-white"
-                onChange={e => set('snmp', e.target.value)}
-              />
-            </div>
-            <div className="space-y-3">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Intervalo (Minutos)</label>
-              <select value={form.interval}
-                className="cd-input w-full !h-14 !bg-slate-50 border-transparent focus:!border-brand focus:!bg-white"
-                onChange={e => set('interval', parseInt(e.target.value))}
-              >
-                <option value={15}>Cada 15 min</option>
-                <option value={30}>Cada 30 min</option>
-                <option value={60}>Cada 1 hora</option>
-                <option value={1440}>Cada 24 horas</option>
-              </select>
-            </div>
+          <div className="space-y-3">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Comunidad SNMP</label>
+            <input type="text" value={form.snmp}
+              className="cd-input w-full !h-14 !bg-slate-50 border-transparent focus:!border-brand focus:!bg-white"
+              onChange={e => set('snmp', e.target.value)}
+            />
           </div>
           <div className="flex gap-4 pt-4">
             <button type="button" onClick={onClose}

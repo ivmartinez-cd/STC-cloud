@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react'; // v1.0.1-ui-fix
-import { Key, Plus, ShieldCheck, RefreshCw, Trash2, Clock, Globe, Server, Copy, Download } from 'lucide-react';
+import { Key, Plus, ShieldCheck, RefreshCw, Trash2, Globe, Server, Copy, Download } from 'lucide-react';
 import { api } from '../../lib/api';
 import { useToast } from '../../context/ToastContext';
 import type { Client, IpRange } from '../../types/agents';
 import { emptyRange } from '../../types/agents';
-import { SNMP_DEFAULT_COMMUNITY, SCAN_DEFAULT_INTERVAL } from '../../lib/constants';
+import { SNMP_DEFAULT_COMMUNITY } from '../../lib/constants';
 
 interface Props {
   show: boolean;
@@ -21,7 +21,6 @@ export default function CreateAgentModal({ show, clients, activationKey, onClose
   const [formName, setFormName] = useState('');
   const [formRanges, setFormRanges] = useState<IpRange[]>([emptyRange()]);
   const [formSnmp, setFormSnmp] = useState(SNMP_DEFAULT_COMMUNITY);
-  const [formInterval, setFormInterval] = useState(SCAN_DEFAULT_INTERVAL);
   const [creating, setCreating] = useState(false);
 
   useEffect(() => {
@@ -31,7 +30,6 @@ export default function CreateAgentModal({ show, clients, activationKey, onClose
         setFormName('');
         setFormRanges([emptyRange()]);
         setFormSnmp(SNMP_DEFAULT_COMMUNITY);
-        setFormInterval(SCAN_DEFAULT_INTERVAL);
       }
     };
     void init();
@@ -55,7 +53,6 @@ export default function CreateAgentModal({ show, clients, activationKey, onClose
         name: formName.trim(),
         ip_ranges: formRanges.filter(r => r.start.trim() && r.end.trim()),
         snmp_community: formSnmp.trim() || SNMP_DEFAULT_COMMUNITY,
-        scan_interval_minutes: formInterval,
       });
       onKeyGenerated(data.key);
       onClose();
@@ -155,29 +152,14 @@ export default function CreateAgentModal({ show, clients, activationKey, onClose
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-              <div className="space-y-3">
-                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Comunidad SNMP Segura</label>
-                <input
-                  type="text"
-                  value={formSnmp}
-                  onChange={e => setFormSnmp(e.target.value)}
-                  className="cd-input w-full !bg-slate-50 border-transparent focus:!bg-white focus:!border-brand font-mono"
-                />
-              </div>
-              <div className="space-y-3">
-                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Ciclo de Actualización (Min)</label>
-                <div className="relative">
-                  <Clock size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
-                  <input
-                    type="number"
-                    min={1}
-                    value={formInterval}
-                    onChange={e => setFormInterval(Number(e.target.value))}
-                    className="cd-input w-full !pl-12 !bg-slate-50 border-transparent focus:!bg-white focus:!border-brand"
-                  />
-                </div>
-              </div>
+            <div className="space-y-3">
+              <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Comunidad SNMP Segura</label>
+              <input
+                type="text"
+                value={formSnmp}
+                onChange={e => setFormSnmp(e.target.value)}
+                className="cd-input w-full !bg-slate-50 border-transparent focus:!bg-white focus:!border-brand font-mono"
+              />
             </div>
 
             <div className="flex justify-end pt-4">

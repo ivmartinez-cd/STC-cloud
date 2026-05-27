@@ -661,13 +661,14 @@ STC Cloud Discovery:
 
     <p>Los bucles de Alert y Meter acumulan datos localmente y los envían a HP SDS Cloud en lotes: Alert en tiempo real, Meter una vez por día. Esto reduce el tráfico de red manteniendo resolución alta para las alertas que importan operativamente.</p>
 
-    <h3>STC Cloud: Dos bucles especializados con conciencia horaria</h3>
-    <p>STC Cloud ejecuta dos bucles independientes con conciencia de horario laboral (L-V 08:00–18:00, zona horaria Argentina), alineados con las frecuencias de HP SDS para los datos operativamente más relevantes:</p>
+    <h3>STC Cloud: Tres bucles especializados con conciencia horaria</h3>
+    <p>STC Cloud ejecuta tres bucles independientes con conciencia de horario laboral (L-V 08:00–18:00, zona horaria Argentina), alineados directamente con las frecuencias de HP SDS:</p>
 
     <table>
         <thead>
             <tr>
-                <th>Bucle</th>
+                <th>Bucle STC</th>
+                <th>Equivalente HP SDS</th>
                 <th>Datos recogidos</th>
                 <th>En horario laboral</th>
                 <th>Fuera de horario</th>
@@ -676,7 +677,16 @@ STC Cloud Discovery:
         </thead>
         <tbody>
             <tr>
+                <td><strong>Discovery</strong></td>
+                <td>Identity</td>
+                <td>Descubrimiento de dispositivos nuevos, marca, modelo, serial</td>
+                <td>Cada 10 min</td>
+                <td>Cada 60 min</td>
+                <td>SNMP</td>
+            </tr>
+            <tr>
                 <td><strong>Meter</strong></td>
+                <td>Meter</td>
                 <td>Contadores de páginas (mono/color/total)</td>
                 <td>Cada 20 min</td>
                 <td>Cada 4h</td>
@@ -684,7 +694,8 @@ STC Cloud Discovery:
             </tr>
             <tr>
                 <td><strong>Supplies</strong></td>
-                <td>Niveles de tóner + datos de cartucho</td>
+                <td>Consumables</td>
+                <td>Niveles de tóner + código, serial y capacidad de cartucho</td>
                 <td>Cada 60 min</td>
                 <td>Cada 4h</td>
                 <td>EWS únicamente</td>
@@ -692,20 +703,18 @@ STC Cloud Discovery:
         </tbody>
     </table>
 
-    <p>Ambos bucles se inician 2 minutos después del arranque (para que el escaneo inicial de descubrimiento pueble la base de datos de dispositivos conocidos) y se autoprograman al finalizar cada ciclo, recalculando el intervalo en función del horario en ese momento exacto.</p>
+    <p>Los tres bucles se autoprograman al finalizar cada ciclo, recalculando el intervalo en función del horario en ese momento exacto. El bucle de descubrimiento arranca inmediatamente al inicio del agente; meter y supplies arrancan 2 minutos después para que el descubrimiento inicial pueble la base de datos de dispositivos conocidos.</p>
 
     <h3>Diferenciador EWS-first</h3>
     <p>A diferencia de HP SDS, que usa SNMP como protocolo central incluso para contadores, STC Cloud prioriza EWS (HTTP/HTTPS directo a la impresora) como fuente de datos para ambos bucles. SNMP se utiliza únicamente como fallback en dispositivos que no exponen EWS. Esta filosofía permite recolectar datos ricos (código de cartucho, número de serie, capacidad, páginas impresas estimadas) que no están disponibles por SNMP estándar.</p>
 
     <h3>Gap residual</h3>
     <ul>
-        <li><strong>Sin bucle de alertas operativas:</strong> Atascos de papel, bandeja vacía y errores de hardware no se detectan en tiempo cuasi-real (3 min en HP SDS). La detección ocurre en el siguiente ciclo Meter (máx. 20 min en horario laboral).</li>
-        <li><strong>Sin bucle de identidad:</strong> Los cambios de modelo, firmware o serial sólo se capturan durante el escaneo de descubrimiento inicial, no en ciclos periódicos dedicados.</li>
-        <li><strong>Sin bucle de bandejas:</strong> El nivel de papel por bandeja no se recoge en ningún ciclo.</li>
+        <li><strong>Sin datos de firmware:</strong> El bucle Discovery captura marca, modelo y serial, pero no la versión de firmware del dispositivo, a diferencia del Identity loop de HP SDS.</li>
     </ul>
 
-    <div class="note-callout">
-        <strong>Gap pendiente.</strong> El único gap operativo relevante frente a HP SDS es la ausencia de un <strong>bucle de alertas independiente</strong> (papel, atasco, error de hardware) con frecuencia de 5–10 min. Los bucles Meter y Supplies, con sus frecuencias y conciencia horaria, ya están implementados e igualados a HP SDS.
+    <div class="info-callout">
+        <strong>Decisión de diseño.</strong> Los bucles de <strong>alertas operativas</strong> (papel, atasco) y de <strong>bandejas/papel</strong> están deliberadamente fuera del scope de STC Cloud Monitor. El foco de la plataforma es la recolección de contadores y consumibles para gestión de flota, no la monitorización operativa en tiempo real. Para atascos y bandejas, el usuario final actúa directamente sobre la impresora.
     </div>
 
     <div class="footer">
@@ -879,16 +888,16 @@ STC Cloud Discovery:
     <h2 id="capacidades-adicionales">9. Capacidades No Implementadas</h2>
 
     <h3>9.1 Monitoreo de Bandejas y Papel</h3>
-    <span class="badge badge-mejorar">A mejorar</span> &nbsp; <span class="badge badge-p3">Prioridad 3</span>
-    <p>HP SDS recoge estado de bandejas (nivel de papel, tipo de papel configurado) vía su bucle <em>Tray/Media</em> cada 8 horas. STC Cloud no captura ningún dato de bandejas. Los OIDs SNMP estándar para bandejas están definidos en <code>Printer-MIB (RFC 3805)</code> bajo <code>1.3.6.1.2.1.43.8</code> (prtInputTable), accesibles en casi cualquier impresora de red. Su implementación es incremental y no requiere cambios de arquitectura.</p>
+    <span class="badge badge-intencional">Fuera de scope</span>
+    <p>HP SDS recoge estado de bandejas (nivel de papel, tipo de papel configurado) vía su bucle <em>Tray/Media</em> cada 8 horas. STC Cloud no implementa ni planea implementar esta funcionalidad: el foco de la plataforma es la gestión de flota (contadores y consumibles), no la monitorización operativa del estado de la impresora. El usuario final actúa directamente sobre la impresora cuando detecta una bandeja vacía.</p>
 
     <h3>9.2 Actualización de Firmware Remota</h3>
     <span class="badge badge-intencional">Fuera de scope actual</span>
     <p>HP SDS JAMC puede recibir instrucciones de HP Cloud para descargar y aplicar actualizaciones de firmware en dispositivos HP. STC Cloud no implementa ni planea implementar esta funcionalidad: el riesgo operativo de un firmware push automático sobre impresoras de producción sin intervención humana explícita supera los beneficios para el perfil de cliente objetivo. Se mantiene deliberadamente fuera de scope.</p>
 
     <h3>9.3 Alertas Operativas en Tiempo Cuasi-Real</h3>
-    <span class="badge badge-mejorar">A mejorar</span> &nbsp; <span class="badge badge-p2">Prioridad 2</span>
-    <p>El bucle <em>Alert</em> de HP SDS sondea el estado del dispositivo cada 3 minutos durante horario laboral y envía alertas (papel agotado, atasco, error de consumible, modo de ahorro) prácticamente en tiempo real. STC Cloud delega la generación de alertas al servidor tras ingerir los datos del escaneo periódico, resultando en latencias de detección de hasta 60 minutos para condiciones críticas como bandeja vacía o error de hardware.</p>
+    <span class="badge badge-intencional">Fuera de scope</span>
+    <p>El bucle <em>Alert</em> de HP SDS sondea el estado del dispositivo cada 3 minutos durante horario laboral para detectar atascos, bandeja vacía o errores de hardware. STC Cloud no implementa ni planea implementar un bucle de alertas operativas: la plataforma está orientada a la gestión de flota (contadores y consumibles), no a la monitorización del estado operativo en tiempo real. Esta distinción es intencional y alinea el producto con su propuesta de valor diferencial frente a HP SDS.</p>
 
     <h3>9.4 Instancias Múltiples del Agente por Sitio</h3>
     <span class="badge badge-mejorar">A mejorar</span> &nbsp; <span class="badge badge-p3">Prioridad 3</span>
@@ -1008,8 +1017,8 @@ STC Cloud Discovery:
             <tr>
                 <td>Bucles de monitoreo</td>
                 <td>5 bucles independientes</td>
-                <td>2 bucles: Meter (20min/4h) + Supplies (60min/4h)</td>
-                <td><span class="badge badge-mejorar">Mejorar</span></td>
+                <td>3 bucles: Discovery (10min/60min) + Meter (20min/4h) + Supplies (60min/4h)</td>
+                <td><span class="badge badge-intencional">Parcialmente implementado</span></td>
             </tr>
             <tr>
                 <td>Conciencia horaria laboral</td>
@@ -1045,13 +1054,13 @@ STC Cloud Discovery:
                 <td>Monitoreo de bandejas/papel</td>
                 <td>Sí (Tray loop)</td>
                 <td>No</td>
-                <td><span class="badge badge-mejorar">Mejorar</span></td>
+                <td><span class="badge badge-intencional">Fuera de scope</span></td>
             </tr>
             <tr>
                 <td>Alertas en tiempo cuasi-real</td>
                 <td>Sí (3 min)</td>
-                <td>No (≤60 min)</td>
-                <td><span class="badge badge-mejorar">Mejorar</span></td>
+                <td>No</td>
+                <td><span class="badge badge-intencional">Fuera de scope</span></td>
             </tr>
             <tr>
                 <td>Firmware push remoto</td>
@@ -1118,13 +1127,6 @@ STC Cloud Discovery:
         <p>Confirmar que ninguna ruta de código actual depende de PJL Device Access Commands para la lectura de contadores en impresoras HP enterprise. FutureSmart 4.5 deshabilita PJL por defecto; si el agente lo usa como fallback, falla silenciosamente sobre equipos HP modernos sin diagnóstico visible. Acción: trazar el código de recolección HP y añadir test unitario que verifique que EWS es la fuente primaria.</p>
     </div>
 
-    <div class="improvement-card p2">
-        <div class="improvement-card-header">
-            <div class="improvement-card-title">Bucle de alertas operativas (Alert Loop)</div>
-            <span class="badge badge-p2">P2 Medio plazo</span>
-        </div>
-        <p>Los bucles Meter (20 min) y Supplies (60 min) con conciencia horaria ya están implementados, igualando las frecuencias de HP SDS para los datos de contadores y consumibles. El gap restante es un ciclo de consulta rápida (5–10 min) para detectar errores críticos en tiempo cuasi-real: atasco de papel, bandeja vacía, error de hardware. La fuente recomendada es EWS (endpoint de estado de dispositivo) con SNMP <code>hrPrinterStatus</code> como fallback. Los datos de alerta se enviarían al servidor inmediatamente por WebSocket sin esperar la sincronización periódica.</p>
-    </div>
 
     <div class="improvement-card p2">
         <div class="improvement-card-header">
@@ -1148,14 +1150,6 @@ STC Cloud Discovery:
             <span class="badge badge-p3">P3 Largo plazo</span>
         </div>
         <p>Capturar la dirección MAC vía SNMP OID <code>1.3.6.1.2.1.2.2.1.6</code> (ifPhysAddress) durante el escaneo inicial y almacenarla como campo secundario de identidad. Permite correlacionar registros cuando una impresora cambia de IP, eliminando duplicados en instalaciones con DHCP dinámico.</p>
-    </div>
-
-    <div class="improvement-card p3">
-        <div class="improvement-card-header">
-            <div class="improvement-card-title">Monitoreo de bandejas y nivel de papel</div>
-            <span class="badge badge-p3">P3 Largo plazo</span>
-        </div>
-        <p>Implementar lectura de <code>prtInputTable</code> (RFC 3805, OID <code>1.3.6.1.2.1.43.8</code>) para obtener capacidad y nivel actual de papel por bandeja. Dato con alta demanda en gestión de flota: permite planificar reposición de papel antes de que la impresora se detenga.</p>
     </div>
 
     <div class="improvement-card p3">

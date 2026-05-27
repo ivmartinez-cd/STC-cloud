@@ -21,7 +21,6 @@ interface IpRange {
 interface MonitorConfig {
   ip_ranges: IpRange[];
   snmp_community: string;
-  scan_interval_minutes: number;
 }
 
 interface Client { id: string; name: string }
@@ -43,7 +42,6 @@ const emptyRange = (): IpRange => ({ start: '', end: '' });
 const defaultConfig: MonitorConfig = {
   ip_ranges: [],
   snmp_community: 'public',
-  scan_interval_minutes: 15,
 };
 
 const Monitors = () => {
@@ -60,7 +58,6 @@ const Monitors = () => {
   const [formName, setFormName]           = useState('');
   const [formRanges, setFormRanges]       = useState<IpRange[]>([emptyRange()]);
   const [formSnmp, setFormSnmp]           = useState('public');
-  const [formInterval, setFormInterval]   = useState(15);
 
   const [configModal, setConfigModal]     = useState<{ id: string; name: string } | null>(null);
   const [configForm, setConfigForm]       = useState<MonitorConfig>(defaultConfig);
@@ -96,7 +93,6 @@ const Monitors = () => {
     setFormName('');
     setFormRanges([emptyRange()]);
     setFormSnmp('public');
-    setFormInterval(15);
   };
 
   const updateFormRange = (idx: number, field: 'start' | 'end', value: string) =>
@@ -131,7 +127,6 @@ const Monitors = () => {
         name: formName.trim(),
         ip_ranges: formRanges.filter(r => r.start.trim() && r.end.trim()),
         snmp_community: formSnmp.trim() || 'public',
-        scan_interval_minutes: formInterval,
       });
       setActivationKey(data.key);
       setShowForm(false);
@@ -181,7 +176,6 @@ const Monitors = () => {
       setConfigForm({
         ip_ranges: data?.ip_ranges ?? [],
         snmp_community: data?.snmp_community ?? 'public',
-        scan_interval_minutes: data?.scan_interval_minutes ?? 15,
       });
     } catch {
       showToast('No se pudo cargar la configuración remota', 'warning');
@@ -209,7 +203,6 @@ const Monitors = () => {
       await api.put(`/agents/${configModal.id}/config`, {
         ip_ranges: configForm.ip_ranges,
         snmp_community: configForm.snmp_community,
-        scan_interval_minutes: configForm.scan_interval_minutes,
       });
       showToast('Configuración actualizada correctamente', 'success');
       closeConfigModal();
@@ -331,27 +324,14 @@ const Monitors = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 pt-2">
-              <div className="space-y-2">
-                <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest ml-1">Comunidad SNMP</label>
-                <input 
-                  type="text" 
-                  value={formSnmp} 
-                  onChange={e => setFormSnmp(e.target.value)}
-                  className="cd-input w-full !h-12 !bg-white border-slate-200 focus:border-brand font-mono text-xs" 
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest ml-1">Intervalo de Escaneo (Minutos)</label>
-                <input 
-                  type="number" 
-                  min={1} 
-                  max={1440} 
-                  value={formInterval} 
-                  onChange={e => setFormInterval(Number(e.target.value))}
-                  className="cd-input w-full !h-12 !bg-white border-slate-200 focus:border-brand" 
-                />
-              </div>
+            <div className="space-y-2 pt-2">
+              <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest ml-1">Comunidad SNMP</label>
+              <input
+                type="text"
+                value={formSnmp}
+                onChange={e => setFormSnmp(e.target.value)}
+                className="cd-input w-full !h-12 !bg-white border-slate-200 focus:border-brand font-mono text-xs"
+              />
             </div>
 
             <div className="pt-4 flex justify-end">
@@ -579,27 +559,14 @@ const Monitors = () => {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest ml-1">Comunidad SNMP</label>
-                    <input 
-                      type="text" 
-                      value={configForm.snmp_community}
-                      onChange={e => setConfigForm(f => ({ ...f, snmp_community: e.target.value }))}
-                      className="cd-input w-full !h-12 !bg-slate-50 border-transparent focus:!bg-white focus:!border-brand font-mono text-xs" 
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest ml-1">Frecuencia (min)</label>
-                    <input 
-                      type="number" 
-                      min={1} 
-                      max={1440} 
-                      value={configForm.scan_interval_minutes}
-                      onChange={e => setConfigForm(f => ({ ...f, scan_interval_minutes: Number(e.target.value) }))}
-                      className="cd-input w-full !h-12 !bg-slate-50 border-transparent focus:!bg-white focus:!border-brand" 
-                    />
-                  </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest ml-1">Comunidad SNMP</label>
+                  <input
+                    type="text"
+                    value={configForm.snmp_community}
+                    onChange={e => setConfigForm(f => ({ ...f, snmp_community: e.target.value }))}
+                    className="cd-input w-full !h-12 !bg-slate-50 border-transparent focus:!bg-white focus:!border-brand font-mono text-xs"
+                  />
                 </div>
 
                 <div className="bg-amber-50 p-4 rounded-xl border border-amber-100 flex items-start gap-3">

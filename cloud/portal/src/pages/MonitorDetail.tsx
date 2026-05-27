@@ -5,7 +5,7 @@ import {
   Settings, RefreshCw, Key, ShieldOff,
   AlertTriangle, Loader2, Copy,
   Command, Terminal as TerminalIcon, Download, BarChart2,
-  Plus, Trash2, Calendar
+  Plus, Trash2
 } from 'lucide-react';
 import { useMonitorDetail } from '../hooks/useMonitorDetail';
 import { useTime } from '../hooks/useTime';
@@ -295,27 +295,10 @@ const ConfigTabPanel = ({ monitor, onSave }: ConfigTabPanelProps) => {
       ranges = [{ start: '', end: '' }];
     }
 
-    let schedule = monitor.config?.scan_schedule;
-    if (typeof schedule === 'string') {
-      try {
-        schedule = JSON.parse(schedule);
-      } catch {
-        schedule = undefined;
-      }
-    }
-    const defaultSchedule = schedule ?? {
-      mode: 'interval' as const,
-      interval_minutes: monitor.config?.scan_interval_minutes ?? 15,
-      custom_days: [1, 2, 3, 4, 5],
-      custom_times: ['09:00', '15:00'],
-    };
-
     return {
       name: monitor.name,
       ip_ranges: ranges,
       snmp: monitor.config?.snmp_community ?? 'public',
-      interval: monitor.config?.scan_interval_minutes ?? 15,
-      scan_schedule: defaultSchedule,
       tonerWarningThreshold: monitor.config?.toner_warning_threshold ?? 20,
       tonerCriticalThreshold: monitor.config?.toner_critical_threshold ?? 10,
     };
@@ -337,18 +320,6 @@ const ConfigTabPanel = ({ monitor, onSave }: ConfigTabPanelProps) => {
     for (const r of form.ip_ranges) {
       if (!r.start.trim() || !r.end.trim()) {
         showToast('Todos los rangos deben tener IP de inicio y fin', 'warning');
-        return;
-      }
-    }
-
-    // Schedule Custom mode validation
-    if (form.scan_schedule.mode === 'custom') {
-      if (!form.scan_schedule.custom_days || form.scan_schedule.custom_days.length === 0) {
-        showToast('Debes seleccionar al menos un día de la semana', 'warning');
-        return;
-      }
-      if (!form.scan_schedule.custom_times || form.scan_schedule.custom_times.length === 0) {
-        showToast('Debes agregar al menos un horario de escaneo', 'warning');
         return;
       }
     }
@@ -460,168 +431,6 @@ const ConfigTabPanel = ({ monitor, onSave }: ConfigTabPanelProps) => {
             </div>
           </div>
 
-          {/* Planificador de Escaneo */}
-          <div className="space-y-4 pt-4 border-t border-slate-100">
-            <div className="flex items-center gap-3">
-              <Calendar size={18} className="text-slate-400" />
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Planificación del Escaneo</label>
-            </div>
-            
-            {/* Toggle Mode */}
-            <div className="flex bg-slate-100 p-1 rounded-2xl w-full">
-              <button
-                type="button"
-                onClick={() => setForm(f => ({ ...f, scan_schedule: { ...f.scan_schedule, mode: 'interval' } }))}
-                className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all ${
-                  form.scan_schedule.mode === 'interval'
-                    ? 'bg-white text-brand shadow-sm'
-                    : 'text-slate-400 hover:text-slate-600'
-                }`}
-              >
-                Por Intervalo
-              </button>
-              <button
-                type="button"
-                onClick={() => setForm(f => ({ ...f, scan_schedule: { ...f.scan_schedule, mode: 'custom' } }))}
-                className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all ${
-                  form.scan_schedule.mode === 'custom'
-                    ? 'bg-white text-brand shadow-sm'
-                    : 'text-slate-400 hover:text-slate-600'
-                }`}
-              >
-                Horario Personalizado
-              </button>
-            </div>
-
-            {/* Interval Mode Content */}
-            {form.scan_schedule.mode === 'interval' && (
-              <div className="space-y-3 animate-in fade-in duration-300">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Frecuencia de Escaneo</label>
-                <select
-                  value={form.scan_schedule.interval_minutes ?? 15}
-                  className="cd-input w-full !h-14 !bg-slate-50 border-transparent focus:!border-brand focus:!bg-white"
-                  onChange={e => {
-                    const mins = parseInt(e.target.value);
-                    setForm(f => ({
-                      ...f,
-                      scan_schedule: { ...f.scan_schedule, interval_minutes: mins }
-                    }));
-                  }}
-                >
-                  <option value={15}>Cada 15 minutos</option>
-                  <option value={30}>Cada 30 minutos</option>
-                  <option value={60}>Cada 1 hora</option>
-                  <option value={1440}>Cada 24 horas</option>
-                </select>
-              </div>
-            )}
-
-            {/* Custom Mode Content */}
-            {form.scan_schedule.mode === 'custom' && (
-              <div className="space-y-5 animate-in fade-in duration-300">
-                {/* Days of Week Select */}
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Días de la Semana</label>
-                  <div className="flex gap-2 justify-between">
-                    {[
-                      { id: 1, label: 'L' },
-                      { id: 2, label: 'M' },
-                      { id: 3, label: 'M' },
-                      { id: 4, label: 'J' },
-                      { id: 5, label: 'V' },
-                      { id: 6, label: 'S' },
-                      { id: 7, label: 'D' },
-                    ].map(day => {
-                      const active = form.scan_schedule.custom_days?.includes(day.id) ?? false;
-                      return (
-                        <button
-                          key={day.id}
-                          type="button"
-                          onClick={() => {
-                            const currentDays = form.scan_schedule.custom_days ?? [];
-                            const nextDays = active
-                              ? currentDays.filter(d => d !== day.id)
-                              : [...currentDays, day.id].sort();
-                            setForm(f => ({
-                              ...f,
-                              scan_schedule: { ...f.scan_schedule, custom_days: nextDays }
-                            }));
-                          }}
-                          className={`w-10 h-10 rounded-xl text-xs font-black uppercase transition-all border ${
-                            active
-                              ? 'bg-brand text-white border-brand shadow-md shadow-brand/10'
-                              : 'bg-slate-50 text-slate-500 border-slate-100 hover:bg-slate-100'
-                          }`}
-                        >
-                          {day.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Times List */}
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Horarios de Escaneo</label>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const currentTimes = form.scan_schedule.custom_times ?? [];
-                        setForm(f => ({
-                          ...f,
-                          scan_schedule: { ...f.scan_schedule, custom_times: [...currentTimes, '12:00'] }
-                        }));
-                      }}
-                      className="flex items-center gap-1 text-[9px] font-black text-brand hover:text-brand/80 uppercase tracking-widest"
-                    >
-                      <Plus size={12} /> AGREGAR HORA
-                    </button>
-                  </div>
-
-                  <div className="space-y-2 max-h-[140px] overflow-y-auto pr-1 custom-scrollbar">
-                    {(form.scan_schedule.custom_times ?? []).length === 0 && (
-                      <p className="text-slate-400 text-xs italic ml-1">Sin horarios configurados.</p>
-                    )}
-                    {(form.scan_schedule.custom_times ?? []).map((time, idx) => (
-                      <div key={idx} className="flex items-center gap-3 bg-slate-50 p-1.5 rounded-xl border border-slate-100">
-                        <input
-                          type="time"
-                          value={time}
-                          onChange={e => {
-                            const val = e.target.value;
-                            setForm(f => ({
-                              ...f,
-                              scan_schedule: {
-                                ...f.scan_schedule,
-                                custom_times: (f.scan_schedule.custom_times ?? []).map((t, i) => i === idx ? val : t)
-                              }
-                            }));
-                          }}
-                          className="cd-input w-full !h-10 !text-xs font-mono !bg-white border-transparent focus:!border-brand"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setForm(f => ({
-                              ...f,
-                              scan_schedule: {
-                                ...f.scan_schedule,
-                                custom_times: (f.scan_schedule.custom_times ?? []).filter((_, i) => i !== idx)
-                              }
-                            }));
-                          }}
-                          className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-all"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
         </div>
 
         {/* Panel Derecho: Umbrales de Tóner */}

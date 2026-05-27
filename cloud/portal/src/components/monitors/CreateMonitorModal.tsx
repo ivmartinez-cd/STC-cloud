@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, Radio, Check, Copy, Loader2, MapPin, Shield, Clock, Layout, Download } from 'lucide-react';
+import { X, Radio, Check, Copy, Loader2, MapPin, Shield, Layout, Download } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
 import type { CreateMonitorForm } from '../../types/monitor';
 
@@ -10,7 +10,7 @@ interface Props {
 }
 
 const EMPTY_FORM: CreateMonitorForm = {
-  name: '', ipStart: '', ipEnd: '', snmp_community: 'public', scan_interval_minutes: 15,
+  name: '', ipStart: '', ipEnd: '', snmp_community: 'public',
 };
 
 const CreateMonitorModal = ({ isOpen, onClose, onCreate }: Props) => {
@@ -225,30 +225,13 @@ const CreateMonitorModal = ({ isOpen, onClose, onCreate }: Props) => {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-6">
-              <div className="space-y-3">
-                <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest ml-1">Comunidad SNMP</label>
-                <div className="relative">
-                  <Shield size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
-                  <input type="text" className="cd-input w-full !pl-12"
-                    value={form.snmp_community} onChange={e => set('snmp_community', e.target.value)}
-                  />
-                </div>
-              </div>
-              <div className="space-y-3">
-                <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest ml-1">Intervalo de Escaneo</label>
-                <div className="relative">
-                  <Clock size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
-                  <select className="cd-input w-full !pl-12"
-                    value={form.scan_interval_minutes}
-                    onChange={e => set('scan_interval_minutes', Number(e.target.value))}
-                  >
-                    <option value={15}>Cada 15 min</option>
-                    <option value={30}>Cada 30 min</option>
-                    <option value={60}>Cada 1 hora</option>
-                    <option value={1440}>Cada 24 horas</option>
-                  </select>
-                </div>
+            <div className="space-y-3">
+              <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest ml-1">Comunidad SNMP</label>
+              <div className="relative">
+                <Shield size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
+                <input type="text" className="cd-input w-full !pl-12"
+                  value={form.snmp_community} onChange={e => set('snmp_community', e.target.value)}
+                />
               </div>
             </div>
 

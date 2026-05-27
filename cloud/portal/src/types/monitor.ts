@@ -43,13 +43,6 @@ export interface MonitorData {
   config?: {
     ip_ranges: { start: string; end: string }[];
     snmp_community: string;
-    scan_interval_minutes: number;
-    scan_schedule?: {
-      mode: "interval" | "custom";
-      interval_minutes?: number;
-      custom_days?: number[];
-      custom_times?: string[];
-    };
     toner_warning_threshold?: number;
     toner_critical_threshold?: number;
   };
@@ -64,13 +57,6 @@ export interface EditFormData {
   name: string;
   ip_ranges: { start: string; end: string }[];
   snmp: string;
-  interval: number;
-  scan_schedule: {
-    mode: "interval" | "custom";
-    interval_minutes?: number;
-    custom_days?: number[];
-    custom_times?: string[];
-  };
   tonerWarningThreshold: number;
   tonerCriticalThreshold: number;
 }
@@ -107,7 +93,6 @@ export interface Monitor {
   status: string;
   last_seen: string | null;
   device_count: number;
-  scan_interval_minutes: number;
   hardware_id: string | null;
   host_name: string | null;
 }
@@ -123,5 +108,4 @@ export interface CreateMonitorForm {
   ipStart: string;
   ipEnd: string;
   snmp_community: string;
-  scan_interval_minutes: number;
 }

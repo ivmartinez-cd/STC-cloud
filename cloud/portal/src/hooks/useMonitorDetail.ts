@@ -93,8 +93,6 @@ export function useMonitorDetail(id: string) {
       name: form.name,
       ip_ranges: form.ip_ranges,
       snmp_community: form.snmp,
-      scan_interval_minutes: form.scan_schedule.mode === 'interval' ? (form.scan_schedule.interval_minutes ?? 15) : form.interval,
-      scan_schedule: form.scan_schedule,
       toner_warning_threshold: form.tonerWarningThreshold,
       toner_critical_threshold: form.tonerCriticalThreshold,
     });

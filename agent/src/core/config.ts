@@ -10,13 +10,6 @@ export interface IpRange {
   end: string;
 }
 
-export interface ScanSchedule {
-  mode: 'interval' | 'custom';
-  interval_minutes?: number;
-  custom_days?: number[];  // [1, 2, 3, 4, 5] (1=Lunes, 7=Domingo)
-  custom_times?: string[]; // ["09:00", "15:00"]
-}
-
 export interface AgentConfig {
   serverUrl: string;
   agentId: string;
@@ -25,8 +18,6 @@ export interface AgentConfig {
   ipRanges: IpRange[];
   snmpCommunity: string;
   snmpVersion: 1 | 2;
-  scanIntervalMinutes: number;
-  scanSchedule?: ScanSchedule;
   proxyUrl?: string; // http://user:pass@proxy:8080 - opcional, para redes con proxy corporativo
 }
 

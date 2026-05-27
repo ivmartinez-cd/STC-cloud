@@ -25,7 +25,6 @@ export default function ConfigAgentModal({ modal, onClose }: Props) {
         setConfigForm({
           ip_ranges: data?.ip_ranges ?? [],
           snmp_community: data?.snmp_community ?? 'public',
-          scan_interval_minutes: data?.scan_interval_minutes ?? 15,
         });
       } catch {
         setConfigForm(defaultConfig);
@@ -60,7 +59,6 @@ export default function ConfigAgentModal({ modal, onClose }: Props) {
       await api.put(`/agents/${modal.id}/config`, {
         ip_ranges: configForm.ip_ranges,
         snmp_community: configForm.snmp_community,
-        scan_interval_minutes: configForm.scan_interval_minutes,
       });
       showToast('Configuración remota actualizada', 'success');
       handleClose();
@@ -142,26 +140,14 @@ export default function ConfigAgentModal({ modal, onClose }: Props) {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-10">
-                <div className="space-y-3">
-                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Comunidad SNMP</label>
-                  <input
-                    type="text"
-                    value={configForm.snmp_community}
-                    onChange={e => setConfigForm(f => ({ ...f, snmp_community: e.target.value }))}
-                    className="cd-input w-full !h-14 !bg-slate-50 border-transparent focus:!border-brand focus:!bg-white font-mono"
-                  />
-                </div>
-                <div className="space-y-3">
-                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Frecuencia (Minutos)</label>
-                  <input
-                    type="number"
-                    min={1}
-                    value={configForm.scan_interval_minutes}
-                    onChange={e => setConfigForm(f => ({ ...f, scan_interval_minutes: Number(e.target.value) }))}
-                    className="cd-input w-full !h-14 !bg-slate-50 border-transparent focus:!border-brand focus:!bg-white"
-                  />
-                </div>
+              <div className="space-y-3">
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Comunidad SNMP</label>
+                <input
+                  type="text"
+                  value={configForm.snmp_community}
+                  onChange={e => setConfigForm(f => ({ ...f, snmp_community: e.target.value }))}
+                  className="cd-input w-full !h-14 !bg-slate-50 border-transparent focus:!border-brand focus:!bg-white font-mono"
+                />
               </div>
 
               <div className="flex gap-6 pt-6">

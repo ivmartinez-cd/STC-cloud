@@ -259,11 +259,6 @@ const ClientDetail = () => {
                             {m.device_count}
                           </Link>
                         </td>
-                        <td className="hidden lg:table-cell">
-                          <span className="text-[10px] font-extrabold text-slate-400 bg-slate-50 px-2 py-1 rounded-lg border border-slate-100">
-                            CADA {m.scan_interval_minutes} MIN
-                          </span>
-                        </td>
                         <td className="text-right">
                           <button
                             onClick={() => setMonitorToDelete({ id: m.id, name: m.name })}

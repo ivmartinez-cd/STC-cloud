@@ -5,7 +5,7 @@ import { exec, spawn } from 'child_process';
 import { promisify } from 'util';
 import { createHash, verify as cryptoVerify, createPublicKey } from 'crypto';
 import { UPDATE_PUBLIC_KEY_HEX } from './updateKey';
-import { ConfigManager, DATA_DIR, getHardwareId, type AgentConfig, type ScanSchedule } from './config';
+import { ConfigManager, DATA_DIR, getHardwareId, type AgentConfig } from './config';
 import { openQueue, enqueueReading, pendingCount, purgeOld, upsertKnownDevice, isRegistered, getDeviceCount, closeQueue, getKnownPollMethod, getKnownDevices, getKnownDeviceInfo } from '../sync/database';
 import { uploadPending, tryRefresh } from '../sync/uploader';
 import { readDevice, readViaEWSCounters, readViaEWSSupplies, readViaSNMP, type DeviceReading } from '../snmp/scanner';
@@ -74,85 +74,15 @@ let isScanning = false;
 let isSyncing = false;
 let commandResults: CommandResult[] = [];
 let processedCommandIds = new Set<string>();
-let lastScanTime = 0;
-let lastExecutedMinuteStr = '';
+// \u2500\u2500\u2500 Discovery loop (HP SDS Identity: 10 min biz / 60 min off) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+const DISCOVERY_INTERVAL_BIZ_MS = 10 * 60_000;
+const DISCOVERY_INTERVAL_OFF_MS = 60 * 60_000;
 
-async function schedulerTick(): Promise<void> {
-  if (isScanning) return;
-
-  const now = new Date();
-  
-  // Normalize date options to Argentina (America/Argentina/Buenos_Aires)
-  const options: Intl.DateTimeFormatOptions = {
-    timeZone: 'America/Argentina/Buenos_Aires',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false
-  };
-  
-  let timeStr = '';
-  try {
-    const timeFormatter = new Intl.DateTimeFormat('es-AR', options);
-    timeStr = timeFormatter.format(now); // "HH:MM"
-  } catch {
-    const pad = (n: number) => String(n).padStart(2, '0');
-    timeStr = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+async function discoveryLoop(): Promise<void> {
+  if (!isScanning) {
+    void snmpScan(currentConfig, false);
   }
-
-  // Get weekday (1=Lunes, 7=Domingo)
-  let dayOfWeek = now.getDay();
-  if (dayOfWeek === 0) dayOfWeek = 7;
-  
-  try {
-    const dayFormatter = new Intl.DateTimeFormat('es-AR', {
-      timeZone: 'America/Argentina/Buenos_Aires',
-      weekday: 'short'
-    });
-    const rawWeekday = dayFormatter.format(now).toLowerCase();
-    const weekdayName = rawWeekday.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-    const weekdayMap: Record<string, number> = {
-      'lun': 1, 'mar': 2, 'mie': 3, 'jue': 4, 'vie': 5, 'sab': 6, 'dom': 7,
-      'lu.': 1, 'ma.': 2, 'mi.': 3, 'ju.': 4, 'vi.': 5, 'sa.': 6, 'do.': 7,
-    };
-    for (const key of Object.keys(weekdayMap)) {
-      if (weekdayName.includes(key)) {
-        dayOfWeek = weekdayMap[key];
-        break;
-      }
-    }
-  } catch { /* fallback to system local dayOfWeek */ }
-
-  const schedule: ScanSchedule = currentConfig.scanSchedule ?? {
-    mode: 'interval',
-    interval_minutes: currentConfig.scanIntervalMinutes ?? 15
-  };
-
-  if (schedule.mode === 'interval') {
-    const intervalMinutes = schedule.interval_minutes ?? currentConfig.scanIntervalMinutes ?? 15;
-    const elapsedMinutes = (Date.now() - lastScanTime) / 60_000;
-    
-    if (elapsedMinutes >= intervalMinutes) {
-      log('INFO', `[Interval Scheduler] Han pasado ${Math.round(elapsedMinutes)} min (intervalo: ${intervalMinutes} min). Disparando escaneo.`);
-      lastScanTime = Date.now();
-      void snmpScan(currentConfig, false);
-    }
-  } else if (schedule.mode === 'custom') {
-    const customDays = schedule.custom_days ?? [1, 2, 3, 4, 5];
-    const customTimes = schedule.custom_times ?? ['09:00', '15:00'];
-    
-    const dayMatches = customDays.includes(dayOfWeek);
-    const timeMatches = customTimes.includes(timeStr);
-    
-    if (dayMatches && timeMatches) {
-      const minuteKey = `${dayOfWeek}-${timeStr}`;
-      if (lastExecutedMinuteStr !== minuteKey) {
-        lastExecutedMinuteStr = minuteKey;
-        log('INFO', `[Custom Scheduler] Coincidencia de horario: Dia ${dayOfWeek}, Hora ${timeStr}. Disparando escaneo.`);
-        lastScanTime = Date.now();
-        void snmpScan(currentConfig, false);
-      }
-    }
-  }
+  setTimeout(discoveryLoop, isBusinessHours() ? DISCOVERY_INTERVAL_BIZ_MS : DISCOVERY_INTERVAL_OFF_MS);
 }
 
 function getLocalIp(): string {
@@ -323,8 +253,6 @@ async function handleCommand(type: string, payload: unknown = {}, id?: string) {
 interface RemoteConfigPayload {
   ip_ranges?: Array<{ start: string; end: string }>;
   snmp_community?: string;
-  scan_interval_minutes?: number;
-  scan_schedule?: ScanSchedule;
 }
 
 async function handleRemoteConfig(remote: RemoteConfigPayload): Promise<void> {
@@ -344,18 +272,6 @@ async function handleRemoteConfig(remote: RemoteConfigPayload): Promise<void> {
   if (remote.snmp_community && remote.snmp_community !== currentConfig.snmpCommunity) {
     log('INFO', `Nueva comunidad SNMP: ${remote.snmp_community}`);
     currentConfig.snmpCommunity = remote.snmp_community;
-    changed = true;
-  }
-
-  if (remote.scan_interval_minutes && remote.scan_interval_minutes !== currentConfig.scanIntervalMinutes) {
-    log('INFO', `Nuevo intervalo de scan: ${remote.scan_interval_minutes} min`);
-    currentConfig.scanIntervalMinutes = remote.scan_interval_minutes;
-    changed = true;
-  }
-
-  if (remote.scan_schedule && JSON.stringify(remote.scan_schedule) !== JSON.stringify(currentConfig.scanSchedule)) {
-    log('INFO', `Nuevo cronograma de escaneo detectado: ${JSON.stringify(remote.scan_schedule)}`);
-    currentConfig.scanSchedule = remote.scan_schedule;
     changed = true;
   }
 
@@ -432,7 +348,6 @@ async function snmpScan(config: AgentConfig, loop = false): Promise<void> {
   log('INFO', `Scan completado. Pendientes en cola: ${pendingCount()} | Errores: ${errors}`);
 } finally {
     isScanning = false;
-    lastScanTime = Date.now();
   }
 }
 
@@ -1041,7 +956,6 @@ async function activate(): Promise<void> {
       ipRanges:          [],
       snmpCommunity:     'public',
       snmpVersion:       2,
-      scanIntervalMinutes: 15,
     });
 
     console.log(`Activado. ID: ${data.agentId}`);
@@ -1159,7 +1073,7 @@ async function main(): Promise<void> {
     engine.start();
 
     // 
-    log('INFO', `Configuracion del Planificador: Modo=${currentConfig.scanSchedule?.mode ?? 'interval'} | Community: ${currentConfig.snmpCommunity}`);
+    log('INFO', `Comunidad SNMP: ${currentConfig.snmpCommunity}`);
     
     heartbeat(); // Inicia la cadena de latidos (se auto-programa cada 5 min)
     
@@ -1167,14 +1081,8 @@ async function main(): Promise<void> {
 
     syncLoop(); // Inicia la cadena: se autoprograma cada 5min internamente con setTimeout
 
-    //  Planificador Unificado y Ticker por Minuto 
-    log('INFO', 'Iniciando planificador unificado de escaneo (evaluacion cada 60s)...');
-    // Disparar escaneo inicial inmediatamente al arrancar
-    lastScanTime = Date.now();
-    void snmpScan(currentConfig, false);
-    
-    // Configurar tick cada 60 segundos
-    setInterval(schedulerTick, 60_000);
+    // Discovery loop (HP SDS Identity: 10min biz / 60min off) — arranca inmediatamente
+    void discoveryLoop();
 
     // Meter loop (20min biz / 4h off) + supply loop (60min biz / 4h off)
     // Start 2 min after boot to let initial snmpScan populate known_devices first

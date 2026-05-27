@@ -1,4 +1,4 @@
-import { OFFLINE_THRESHOLD_MS, SNMP_DEFAULT_COMMUNITY, SCAN_DEFAULT_INTERVAL } from '../lib/constants';
+import { OFFLINE_THRESHOLD_MS, SNMP_DEFAULT_COMMUNITY } from '../lib/constants';
 
 export type Agent = {
   id: string;
@@ -18,7 +18,6 @@ export type IpRange = {
 export type AgentConfig = {
   ip_ranges: IpRange[];
   snmp_community: string;
-  scan_interval_minutes: number;
 }
 
 export interface Client { id: string; name: string }
@@ -34,5 +33,4 @@ export function isAgentOffline(agent: Agent): boolean {
 export const defaultConfig: AgentConfig = {
   ip_ranges: [],
   snmp_community: SNMP_DEFAULT_COMMUNITY,
-  scan_interval_minutes: SCAN_DEFAULT_INTERVAL,
 };

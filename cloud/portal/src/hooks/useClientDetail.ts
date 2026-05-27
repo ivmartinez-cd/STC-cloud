@@ -37,13 +37,11 @@ export function useClientDetail(id: string) {
       clientId: string;
       name: string;
       snmp_community: string;
-      scan_interval_minutes: number;
       ip_ranges?: Array<{ start: string; end: string }>;
     } = {
       clientId: id,
       name: form.name,
       snmp_community: form.snmp_community,
-      scan_interval_minutes: form.scan_interval_minutes,
     };
     if (form.ipStart && form.ipEnd) {
       payload.ip_ranges = [{ start: form.ipStart, end: form.ipEnd }];
