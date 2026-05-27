@@ -168,16 +168,21 @@ export async function readDevice(
 
   // Known method from a previous cycle - try it first to skip rediscovery
   if (hintMethod && hintMethod !== 'unknown') {
-    const fast = hintMethod === 'snmp'
-      ? await readViaSNMP(ip, community)
-      : await readViaMethod(ip, hintMethod);
-    if (fast) {
-      // If we got rich counters, or if the hint method is already counter-rich (ews), use it!
-      if (fast.mono_pages !== null || hintMethod === 'ews') {
-        return fast;
+    // Self-healing: if stuck on SNMP but web port is open, ignore hint to attempt EWS upgrade
+    const shouldIgnoreHint = hintMethod === 'snmp' && (openPorts.has(80) || openPorts.has(443));
+    
+    if (!shouldIgnoreHint) {
+      const fast = hintMethod === 'snmp'
+        ? await readViaSNMP(ip, community)
+        : await readViaMethod(ip, hintMethod);
+      if (fast) {
+        // If we got rich counters, or if the hint method is already counter-rich (ews), use it!
+        if (fast.mono_pages !== null || hintMethod === 'ews') {
+          return fast;
+        }
       }
+      // Previous method stopped working or lacked detailed counters - fall through to full cascade
     }
-    // Previous method stopped working or lacked detailed counters - fall through to full cascade
   }
 
   // Port 9100 (JetDirect) and 631 (IPP) are printer-exclusive.
