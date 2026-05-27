@@ -65,12 +65,12 @@ export async function readDeviceViaEWS(ip: string, targetBrand?: Brand, targetMo
       const samsungSws = filtered.filter(c => c.path.startsWith('/sws.application'));
       const samsungSyncThru = filtered.filter(c => c.path.startsWith('/sws/app'));
       
-      if (targetModel && !isCopier) {
-        // Prioritize standard SyncThru paths first (avoids firmware lockups/hangs from SWS 404s)
-        filtered = [...samsungSyncThru, ...samsungSws, ...filtered.filter(c => !c.path.startsWith('/sws'))];
-      } else {
-        // Copier or unknown - SWS first
+      if (isCopier) {
+        // Only prioritize SWS if we are SURE it's a copier
         filtered = [...samsungSws, ...samsungSyncThru, ...filtered.filter(c => !c.path.startsWith('/sws'))];
+      } else {
+        // Unknown model or standard printer - SyncThru first to avoid locking up old firmware
+        filtered = [...samsungSyncThru, ...samsungSws, ...filtered.filter(c => !c.path.startsWith('/sws'))];
       }
     }
     candidatesToTry = filtered;

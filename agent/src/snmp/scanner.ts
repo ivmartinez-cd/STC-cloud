@@ -385,6 +385,11 @@ export async function readViaSNMP(ip: string, community: string): Promise<Device
     const serialOids = brand !== 'generic' ? oidMap.serial : GENERIC_OIDS.serial;
     const serial = await snmpGetFirstValid(session, serialOids);
 
+    const total_pages = await snmpGetFirstValid(session, brand !== 'generic' ? oidMap.totalPages : GENERIC_OIDS.totalPages);
+    const mono_pages  = await snmpGetFirstValid(session, brand !== 'generic' ? oidMap.monoPages  : GENERIC_OIDS.monoPages);
+    const color_pages = await snmpGetFirstValid(session, brand !== 'generic' ? oidMap.colorPages : GENERIC_OIDS.colorPages);
+    const toners      = await readTonerViaSNMP(session);
+
     // Phase 5: clean up sysDescr noise
     const raw     = String(sysDescr ?? '').trim();
     let cleaned   = raw.split(/[;|\r\n,]/)[0].trim();
@@ -399,13 +404,13 @@ export async function readViaSNMP(ip: string, community: string): Promise<Device
       sysDescr:      raw.slice(0, 255),
       sysName:       String(sysName ?? ''),
       serial:        serial ? String(serial).trim() || null : null,
-      total_pages:   null,
-      mono_pages:    null,
-      color_pages:   null,
-      toner_black:   null,
-      toner_cyan:    null,
-      toner_magenta: null,
-      toner_yellow:  null,
+      total_pages:   total_pages !== null ? Number(total_pages) : null,
+      mono_pages:    mono_pages  !== null ? Number(mono_pages)  : null,
+      color_pages:   color_pages !== null ? Number(color_pages) : null,
+      toner_black:   toners.toner_black,
+      toner_cyan:    toners.toner_cyan,
+      toner_magenta: toners.toner_magenta,
+      toner_yellow:  toners.toner_yellow,
       model:         cleaned.slice(0, 100),
       time:          new Date().toISOString(),
       poll_method:   'snmp',
