@@ -1,4 +1,4 @@
-import fs from 'fs';
+﻿import fs from 'fs';
 import { log, setupProcessErrorHandlers } from './Logger';
 import { waitForConnectivity } from './NetworkUtils';
 import { ConfigManager, DATA_DIR } from './config';

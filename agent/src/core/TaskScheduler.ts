@@ -10,8 +10,8 @@ export class TaskScheduler {
   private deps: TaskSchedulerDeps;
   private isNetworkTaskRunning = false;
   private lastDiscoveryTime = 0;
-  private lastMeterTime = 0;
-  private lastSuppliesTime = 0;
+  private lastMeterTime = Date.now();
+  private lastSuppliesTime = Date.now();
   private timer: NodeJS.Timeout | null = null;
 
   constructor(deps: TaskSchedulerDeps) {
@@ -55,8 +55,6 @@ export class TaskScheduler {
       try {
         await this.deps.scanService.scan();
         this.lastDiscoveryTime = Date.now();
-        this.lastMeterTime = Date.now();
-        this.lastSuppliesTime = Date.now();
       } finally {
         this.isNetworkTaskRunning = false;
       }
