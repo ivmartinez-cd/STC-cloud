@@ -103,7 +103,7 @@ export interface SystemInfoPayload {
 
 /** Lectura procesada y mapeada lista para inserción en la tabla `readings`. */
 interface MappedReading {
-  id: string;
+  id?: string;
   time: Date;
   device_id: string;
   total_pages: number | null;
@@ -443,8 +443,51 @@ export class AgentService {
       return Math.min(100, Math.max(0, n));
     };
     
+    const deduplicatedIps = new Set<string>();
+
     for (const r of readings) {
       try {
+        // Solución para dispositivos duplicados: Si descubrimos el serial real de un dispositivo que 
+        // antes usaba su IP como número de serie (ej: porque SNMP falló y luego EWS lo encontró),
+        // promovemos el registro fantasma en lugar de crear uno nuevo.
+        const serial = (r.device_id || "").slice(0, 150);
+        const ip = r.ip || null;
+        if (ip && serial && serial !== ip && !deduplicatedIps.has(ip)) {
+          deduplicatedIps.add(ip);
+          
+          const ghostRes = await this.db.raw<{rows: {id: string}[]}>(`
+            SELECT id FROM devices 
+            WHERE agent_id = ? 
+              AND ip_address = ? 
+              AND (serial_number IS NULL OR serial_number = ?)
+          `, [agentId, ip, ip]);
+          
+          if (ghostRes.rows.length > 0) {
+            const realRes = await this.db.raw<{rows: {id: string}[]}>(`
+              SELECT id FROM devices WHERE agent_id = ? AND serial_number = ?
+            `, [agentId, serial]);
+            
+            if (realRes.rows.length > 0) {
+              const realId = realRes.rows[0].id;
+              for (const ghost of ghostRes.rows) {
+                if (ghost.id !== realId) {
+                  await this.db.raw(`UPDATE readings SET device_id = ? WHERE device_id = ?`, [realId, ghost.id]);
+                  await this.db.raw(`DELETE FROM devices WHERE id = ?`, [ghost.id]);
+                }
+              }
+            } else {
+              const ghostToPromote = ghostRes.rows[0];
+              await this.db.raw(`UPDATE devices SET serial_number = ? WHERE id = ?`, [serial, ghostToPromote.id]);
+              
+              for (let i = 1; i < ghostRes.rows.length; i++) {
+                const ghostId = ghostRes.rows[i].id;
+                await this.db.raw(`UPDATE readings SET device_id = ? WHERE device_id = ?`, [ghostToPromote.id, ghostId]);
+                await this.db.raw(`DELETE FROM devices WHERE id = ?`, [ghostId]);
+              }
+            }
+          }
+        }
+
         // Limpiar marca si viene genérica
         let brand = r.brand || "unknown";
         if (brand.toLowerCase() === 'generic' && r.model) {
@@ -593,7 +636,6 @@ export class AgentService {
         }
 
         mappedReadings.push({
-          id:           crypto.randomUUID(),
           time:         readingTime,
           device_id:    deviceId,
           total_pages:  parseCount(r.total_pages),
@@ -635,7 +677,7 @@ export class AgentService {
 
     // Encolar evaluación de alertas de forma asíncrona
     try {
-      const readingsQueue = new Queue("readings-queue", { connection: this.redis as unknown as import("ioredis").Redis });
+      const readingsQueue = new Queue("readings-queue", { connection: this.redis as any });
       await readingsQueue.add("evaluate-readings", { readings: mappedReadings });
     } catch (e: unknown) {
       console.error("[SYNC] BullMQ no disponible:", e);

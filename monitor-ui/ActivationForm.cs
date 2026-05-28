@@ -203,7 +203,7 @@ internal sealed class ActivationForm : Form
         _tabSettings.Controls.Add(_lblActivationHint);
 
         _tabSettings.Controls.Add(new Label { Text = "URL del Servidor:", Location = new Point(20, 103), Size = new Size(120, 20) });
-        _txtServer = new TextBox { Location = new Point(150, 100), Size = new Size(300, 23), Text = "https://stc-cloud.onrender.com" };
+        _txtServer = new TextBox { Location = new Point(150, 100), Size = new Size(300, 23), Text = "http://localhost:3000" };
         _tabSettings.Controls.Add(_txtServer);
 
         _tabSettings.Controls.Add(new Label { Text = "Clave Activacion:", Location = new Point(20, 143), Size = new Size(120, 20) });

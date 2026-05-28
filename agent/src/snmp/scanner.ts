@@ -168,6 +168,7 @@ export async function readDevice(
   ip: string,
   community: string,
   hintMethod?: PollMethod,
+  identityOnly = false,
 ): Promise<DeviceReading | null> {
   const openPorts = await checkOpenPorts(ip);
   if (openPorts.size === 0) return null;
@@ -178,10 +179,22 @@ export async function readDevice(
     const shouldIgnoreHint = hintMethod === 'snmp' && (openPorts.has(80) || openPorts.has(443));
     
     if (!shouldIgnoreHint) {
-      const fast = hintMethod === 'snmp'
-        ? await readViaSNMP(ip, community)
-        : await readViaMethod(ip, hintMethod);
+      let fast: DeviceReading | null = null;
+      
+      // EWS-First: Si sabemos que el dispositivo prefiere EWS, lo atacamos directo sin SNMP.
+      if (hintMethod === 'ews') {
+        fast = await readViaEWS(ip, undefined, undefined, identityOnly); 
+        // Nota: al omitir brand y model, readViaEWS intentará deducirlo usando todos los scrapers 
+        // o si sabemos el brand en discovery, lo usamos. Pero readDevice() estándar en discovery no recibe brand.
+      } else {
+        fast = hintMethod === 'snmp'
+          ? await readViaSNMP(ip, community, identityOnly)
+          : await readViaMethod(ip, hintMethod, identityOnly);
+      }
+
       if (fast) {
+        // If we only need identity, any fast result is sufficient!
+        if (identityOnly) return fast;
         // If we got rich counters, or if the hint method is already counter-rich (ews), use it!
         if (fast.mono_pages !== null || hintMethod === 'ews') {
           return fast;
@@ -199,22 +212,22 @@ export async function readDevice(
 
   if (!hasPrinterPort && !hasWebPort) {
     // No printer-specific nor web ports open - SNMP only (validates via Printer-MIB)
-    return readViaSNMP(ip, community);
+    return readViaSNMP(ip, community, identityOnly);
   }
 
   // ── Case A: Printer-exclusive port confirmed → safe to go EWS-first ──
   if (hasPrinterPort) {
     // Perform a fast SNMP query to identify brand & model to optimize EWS candidate list
-    const snmpResult = await readViaSNMP(ip, community);
+    const snmpResult = await readViaSNMP(ip, community, true); // Use identityOnly=true here because we just want to optimize EWS
     const brand = snmpResult?.brand ?? 'generic';
     const model = snmpResult?.model ?? '';
 
     if (hasWebPort) {
-      const ews = await readViaEWS(ip, brand, model);
-      if (ews?.total_pages !== null) return ews;
+      const ews = await readViaEWS(ip, brand, model, identityOnly);
+      if (identityOnly || ews?.total_pages !== null) return ews;
     }
 
-    if (snmpResult?.total_pages !== null) return snmpResult;
+    if (identityOnly || snmpResult?.total_pages !== null) return snmpResult;
 
     const pjl = await readViaPJL(ip);
     if (pjl?.total_pages !== null) return pjl;
@@ -228,11 +241,12 @@ export async function readDevice(
   // ── Case B: Only web port open (could be router/phone/NAS) ──
   // Use SNMP as a quick Printer-MIB filter first to avoid wasting
   // 4+ seconds of EWS timeouts on non-printer devices.
-  const snmpResult = await readViaSNMP(ip, community);
+  // We use identityOnly=true for the quick filter so we don't do heavy SNMP if EWS will be used anyway.
+  const snmpResult = await readViaSNMP(ip, community, identityOnly || hasWebPort);
   if (snmpResult) {
     // SNMP confirmed it's a printer → try EWS for richer data (toner, color split)
-    const ews = await readViaEWS(ip, snmpResult.brand, snmpResult.model);
-    if (ews?.total_pages !== null) return ews;
+    const ews = await readViaEWS(ip, snmpResult.brand, snmpResult.model, identityOnly);
+    if (identityOnly || ews?.total_pages !== null) return ews;
     return snmpResult;
   }
 
@@ -241,8 +255,8 @@ export async function readDevice(
 
 // ─── Method 1: EWS (HTTP scraping, port 80/443) ──────────────────────────────
 
-export async function readViaEWS(ip: string, brand?: Brand, model?: string): Promise<DeviceReading | null> {
-  const data = await readDeviceViaEWS(ip, brand, model);
+export async function readViaEWS(ip: string, brand?: Brand, model?: string, identityOnly = false): Promise<DeviceReading | null> {
+  const data = await readDeviceViaEWS(ip, brand, model, identityOnly);
   if (!data) return null;
   return {
     ip,
@@ -364,7 +378,7 @@ async function readTonerViaSNMP(session: snmp.Session): Promise<TonerLevels> {
 
 // ─── Method 3: SNMP v2c (port 161 UDP) ───────────────────────────────────────
 
-export async function readViaSNMP(ip: string, community: string): Promise<DeviceReading | null> {
+export async function readViaSNMP(ip: string, community: string, identityOnly = false): Promise<DeviceReading | null> {
   await sem.acquire();
   const session = createSession(ip, community);
   try {
@@ -396,10 +410,17 @@ export async function readViaSNMP(ip: string, community: string): Promise<Device
     const serialOids = brand !== 'generic' ? oidMap.serial : GENERIC_OIDS.serial;
     const serial = await snmpGetFirstValid(session, serialOids);
 
-    const total_pages = await snmpGetFirstValid(session, brand !== 'generic' ? oidMap.totalPages : GENERIC_OIDS.totalPages);
-    const mono_pages  = await snmpGetFirstValid(session, brand !== 'generic' ? oidMap.monoPages  : GENERIC_OIDS.monoPages);
-    const color_pages = await snmpGetFirstValid(session, brand !== 'generic' ? oidMap.colorPages : GENERIC_OIDS.colorPages);
-    const toners      = await readTonerViaSNMP(session);
+    let total_pages: number | string | null = null;
+    let mono_pages: number | string | null = null;
+    let color_pages: number | string | null = null;
+    let toners: TonerLevels = { toner_black: null, toner_cyan: null, toner_magenta: null, toner_yellow: null };
+
+    if (!identityOnly) {
+      total_pages = await snmpGetFirstValid(session, brand !== 'generic' ? oidMap.totalPages : GENERIC_OIDS.totalPages);
+      mono_pages  = await snmpGetFirstValid(session, brand !== 'generic' ? oidMap.monoPages  : GENERIC_OIDS.monoPages);
+      color_pages = await snmpGetFirstValid(session, brand !== 'generic' ? oidMap.colorPages : GENERIC_OIDS.colorPages);
+      toners      = await readTonerViaSNMP(session);
+    }
 
     // Phase 5: clean up sysDescr noise
     const raw     = String(sysDescr ?? '').trim();
@@ -527,10 +548,10 @@ export async function readViaEWSSupplies(ip: string, brand?: Brand, model?: stri
 
 // ─── Helper for hint-method fast path ────────────────────────────────────────
 
-function readViaMethod(ip: string, method: PollMethod): Promise<DeviceReading | null> {
+function readViaMethod(ip: string, method: PollMethod, identityOnly = false): Promise<DeviceReading | null> {
   switch (method) {
     case 'pjl': return readViaPJL(ip);
-    case 'ews': return readViaEWS(ip);
+    case 'ews': return readViaEWS(ip, undefined, undefined, identityOnly);
     case 'ipp': return readViaIPP(ip);
     default:    return Promise.resolve(null);
   }

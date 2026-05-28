@@ -26,15 +26,27 @@ services:
     volumes:
       - redisdata:/data
 
-  # Servidor API (placeholder para cuando se construya la imagen)
-  # api:
-  #   build: ./cloud
-  #   ports:
-  #     - "3000:3000"
-  #   env_file: .env
-  #   depends_on:
-  #     - postgres
-  #     - redis
+  # Servidor API
+  api:
+    build: ./cloud
+    container_name: stc_api
+    restart: always
+    ports:
+      - "3000:3000"
+    env_file: .env
+    depends_on:
+      - postgres
+      - redis
+
+  # Frontend Portal
+  portal:
+    build: ./cloud/portal
+    container_name: stc_portal
+    restart: always
+    ports:
+      - "5173:80"
+    depends_on:
+      - api
 
 volumes:
   pgdata:

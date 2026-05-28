@@ -97,7 +97,7 @@ const start = async () => {
 
     await db.migrate.latest({
       directory: path.join(__dirname, "../db/migrations"),
-      loadExtensions: process.env.NODE_ENV === "production" ? [".js"] : [".js", ".ts"],
+      loadExtensions: __filename.endsWith(".ts") ? [".ts", ".js"] : [".js"],
     });
     console.log("[DB] Migraciones al día.");
 

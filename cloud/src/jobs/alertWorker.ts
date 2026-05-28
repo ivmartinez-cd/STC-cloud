@@ -108,7 +108,7 @@ export const alertWorker = new Worker(
     const readings: MappedReading[] = job.data.readings || [];
     await Promise.allSettled(readings.map(evaluateReading));
   },
-  { connection: redis },
+  { connection: redis as any },
 );
 
 alertWorker.on('failed', (job, err) => {

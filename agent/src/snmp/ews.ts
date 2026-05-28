@@ -43,7 +43,7 @@ const CANDIDATES: EwsCandidate[] = [
   { path: '/cgi-bin/cgix/xerox/printerStat.cgi',                        protocol: 'http', parse: parseGeneric,                  brand: 'xerox'   },
 ];
 
-export async function readDeviceViaEWS(ip: string, targetBrand?: Brand, targetModel?: string): Promise<EwsData | null> {
+export async function readDeviceViaEWS(ip: string, targetBrand?: Brand, targetModel?: string, identityOnly = false): Promise<EwsData | null> {
   // Accumulates data across candidates so that model from one endpoint
   // can be combined with consumables from another.
   let acc: Partial<EwsData> = {};
@@ -110,8 +110,12 @@ export async function readDeviceViaEWS(ip: string, targetBrand?: Brand, targetMo
       if (parsed.cartridgeEstimatedMagenta != null) acc.cartridgeEstimatedMagenta = parsed.cartridgeEstimatedMagenta;
       if (parsed.cartridgeEstimatedYellow  != null) acc.cartridgeEstimatedYellow  = parsed.cartridgeEstimatedYellow;
 
-      // Stop as soon as we have page counters (no need to probe more endpoints)
-      if (acc.totalPages !== undefined) break;
+      // Stop as soon as we have enough data
+      if (identityOnly) {
+        if (acc.model !== undefined || acc.serial !== undefined) break;
+      } else {
+        if (acc.totalPages !== undefined) break;
+      }
     } catch { /* try next */ }
   }
 

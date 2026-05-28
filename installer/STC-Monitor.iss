@@ -9,7 +9,7 @@
 #define MyAppExeName   "stc-node.exe"
 #define ServiceName    "STCCloudMonitor"
 #define DataDir        "C:\ProgramData\STCCloudMonitor"
-#define DefaultServer  "https://stc-cloud.onrender.com"
+#define DefaultServer  "http://localhost:3000"
 
 [Setup]
 AppId={{D3A7C2F1-8B4E-4F6A-9D0C-E5B123456789}
