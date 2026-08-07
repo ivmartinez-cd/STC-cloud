@@ -1,15 +1,18 @@
 import { useState } from 'react';
 import { useNow } from '../../hooks/useNow';
 import { Link } from 'react-router-dom';
-import { Printer, Download, X } from 'lucide-react';
-import { OFFLINE_THRESHOLD_MS } from '../../lib/constants';
+import { Printer, Download, X, Trash2 } from 'lucide-react';
+import { OFFLINE_THRESHOLD_MS, DEVICE_OFFLINE_THRESHOLD_MS } from '../../lib/constants';
 import type { Device, MonitorData } from '../../types/monitor';
+import { api } from '../../lib/api';
+import { getDeviceStatusInfo } from '../../lib/formatters';
 
 interface Props {
   devices: Device[];
   monitorName: string;
   monitorStatus: MonitorData['status'];
   monitorLastSeen: string | null;
+  onRefresh?: () => void;
 }
 
 function exportCountersCSV(devices: Device[], monitorName: string, discriminate: boolean) {
@@ -43,13 +46,46 @@ function exportCountersCSV(devices: Device[], monitorName: string, discriminate:
   URL.revokeObjectURL(url);
 }
 
-const DeviceInventoryTable = ({ devices, monitorName, monitorStatus, monitorLastSeen }: Props) => {
+const DeviceInventoryTable = ({ devices, monitorName, monitorStatus, monitorLastSeen, onRefresh }: Props) => {
   const [showExportModal, setShowExportModal] = useState(false);
 
   const now = useNow();
   const isMonitorOnline = monitorStatus === 'active'
     && monitorLastSeen !== null
     && (now - new Date(monitorLastSeen).getTime() <= OFFLINE_THRESHOLD_MS);
+
+  const offlineCount = devices.filter(d => {
+    if (d.last_seen == null) return !(d.active ?? false);
+    return (Math.abs(now - new Date(d.last_seen).getTime()) > DEVICE_OFFLINE_THRESHOLD_MS);
+  }).length;
+
+  const handleDeleteDevice = async (id: string, model: string | null, ip: string) => {
+    if (window.confirm(`¿Seguro que deseas eliminar el equipo ${model || ip} de la base de datos?`)) {
+      try {
+        await api.delete(`/devices/${id}`);
+        if (onRefresh) onRefresh();
+        else window.location.reload();
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : String(e);
+        alert('Error al eliminar dispositivo: ' + msg);
+      }
+    }
+  };
+
+  const handleDeleteOffline = async () => {
+    const agentId = devices.find(d => d.agent_id)?.agent_id;
+    const url = agentId ? `/devices/offline?agent_id=${agentId}` : '/devices/offline';
+    if (window.confirm(`¿Deseas eliminar los ${offlineCount} equipos desconectados de este monitor?`)) {
+      try {
+        await api.delete(url);
+        if (onRefresh) onRefresh();
+        else window.location.reload();
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : String(e);
+        alert('Error al eliminar equipos desconectados: ' + msg);
+      }
+    }
+  };
 
   const handleExport = (discriminate: boolean) => {
     exportCountersCSV(devices, monitorName, discriminate);
@@ -59,12 +95,21 @@ const DeviceInventoryTable = ({ devices, monitorName, monitorStatus, monitorLast
   return (
     <>
       <div className="cd-panel overflow-hidden border-none shadow-xl shadow-blue-900/5 animate-in slide-in-from-bottom-4 duration-500">
-        <header className="px-8 py-6 bg-white border-b border-slate-100 flex items-center justify-between">
+        <header className="px-8 py-6 bg-white border-b border-slate-100 flex items-center justify-between flex-wrap gap-3">
           <div>
             <h3 className="text-sm font-black text-[#1a2333] uppercase tracking-tight">Parque de Impresión</h3>
             <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Dispositivos descubiertos y monitorizados por este nodo</p>
           </div>
           <div className="flex items-center gap-3">
+            {offlineCount > 0 && (
+              <button
+                onClick={handleDeleteOffline}
+                className="flex items-center gap-2 px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-xl text-[11px] font-black uppercase tracking-wider transition-colors border border-rose-200"
+                title="Eliminar todos los equipos desconectados de este monitor"
+              >
+                <Trash2 size={13} /> Eliminar Desconectados ({offlineCount})
+              </button>
+            )}
             {devices.length > 0 && (
               <button
                 onClick={() => setShowExportModal(true)}
@@ -87,13 +132,14 @@ const DeviceInventoryTable = ({ devices, monitorName, monitorStatus, monitorLast
                 <th className="!bg-[#004a99] !text-white">Red</th>
                 <th className="!bg-[#004a99] !text-white">Número de Serie</th>
                 <th className="!bg-[#004a99] !text-white">Tóner</th>
-                <th className="!bg-[#004a99] !text-white !text-right !rounded-tr-2xl">Contadores (Total / Mono / Color)</th>
+                <th className="!bg-[#004a99] !text-white !text-right">Contadores (Total / Mono / Color)</th>
+                <th className="!bg-[#004a99] !text-white !text-center !rounded-tr-2xl">Acción</th>
               </tr>
             </thead>
             <tbody>
               {devices.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-8 py-20 text-center">
+                  <td colSpan={6} className="px-8 py-20 text-center">
                     <div className="flex flex-col items-center gap-3">
                       <Printer size={48} className="text-slate-200" />
                       <p className="text-slate-500 font-bold text-xs uppercase tracking-widest">No se han descubierto dispositivos en este segmento</p>
@@ -101,29 +147,31 @@ const DeviceInventoryTable = ({ devices, monitorName, monitorStatus, monitorLast
                   </td>
                 </tr>
               ) : (
-                devices.map((device) => (
-                  <tr key={device.id} className="group hover:bg-slate-50/50 transition-all">
-                    <td className="px-8 py-5">
-                      <Link to={`/devices/${device.id}`} className="flex items-center gap-4 group/device">
-                        <div className="w-10 h-10 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-400 group-hover/device:bg-brand group-hover/device:text-white transition-all">
-                          <Printer size={18} />
+                devices.map((device) => {
+                  const statusInfo = getDeviceStatusInfo(device.last_seen, now);
+
+                  return (
+                    <tr key={device.id} className="group hover:bg-slate-50/50 transition-all">
+                      <td className="px-8 py-5">
+                        <Link to={`/devices/${device.id}`} className="flex items-center gap-4 group/device">
+                          <div className="w-10 h-10 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-400 group-hover/device:bg-brand group-hover/device:text-white transition-all">
+                            <Printer size={18} />
+                          </div>
+                          <div>
+                            <p className="text-sm font-black text-[#1a2333] tracking-tight group-hover/device:text-brand transition-colors">{device.model || 'Modelo Genérico'}</p>
+                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{device.brand || 'Marca n/a'}</p>
+                          </div>
+                        </Link>
+                      </td>
+                      <td className="px-8 py-5">
+                        <div className="flex flex-col">
+                          <span className="text-xs font-bold text-slate-600 font-mono">{device.ip_address}</span>
+                          <span className={`text-[9px] font-black uppercase tracking-widest flex items-center gap-1 mt-0.5 ${statusInfo.textClass}`}>
+                            <span className={`w-1.5 h-1.5 rounded-full inline-block ${statusInfo.dotClass} ${statusInfo.status === 'online' ? 'animate-pulse' : ''}`}></span>
+                            {statusInfo.status === 'online' ? 'Conexión OK' : statusInfo.label}
+                          </span>
                         </div>
-                        <div>
-                          <p className="text-sm font-black text-[#1a2333] tracking-tight group-hover/device:text-brand transition-colors">{device.model || 'Modelo Genérico'}</p>
-                          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{device.brand || 'Marca n/a'}</p>
-                        </div>
-                      </Link>
-                    </td>
-                    <td className="px-8 py-5">
-                      <div className="flex flex-col">
-                        <span className="text-xs font-bold text-slate-600 font-mono">{device.ip_address}</span>
-                        {isMonitorOnline ? (
-                          <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">Conexión OK</span>
-                        ) : (
-                          <span className="text-[9px] font-black text-amber-500 uppercase tracking-widest">Sin Contacto</span>
-                        )}
-                      </div>
-                    </td>
+                      </td>
                     <td className="px-8 py-5">
                       <span className="px-3 py-1 bg-slate-100 text-slate-600 rounded-lg font-mono text-xs font-bold border border-slate-200">
                         {device.serial_number || 'N/A'}
@@ -196,8 +244,32 @@ const DeviceInventoryTable = ({ devices, monitorName, monitorStatus, monitorLast
                         </div>
                       </div>
                     </td>
+                    <td className="px-6 py-5 text-center">
+                      {statusInfo.status !== 'online' ? (
+                        <button
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleDeleteDevice(device.id, device.model, device.ip_address);
+                          }}
+                          className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 hover:text-rose-800 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all border border-rose-200 inline-flex items-center gap-1.5 shadow-sm"
+                          title="Eliminar este equipo sin conexión"
+                        >
+                          <Trash2 size={13} /> Eliminar
+                        </button>
+                      ) : (
+                        <button
+                          disabled
+                          className="px-3 py-1.5 bg-slate-100 text-slate-300 rounded-xl text-[11px] font-black uppercase tracking-wider cursor-not-allowed inline-flex items-center gap-1.5 border border-slate-200/50 opacity-60"
+                          title="Solo se pueden eliminar equipos sin conexión"
+                        >
+                          <Trash2 size={13} /> Eliminar
+                        </button>
+                      )}
+                    </td>
                   </tr>
-                ))
+                  );
+                })
               )}
             </tbody>
           </table>

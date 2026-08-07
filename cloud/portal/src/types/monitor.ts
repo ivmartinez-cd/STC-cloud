@@ -1,5 +1,77 @@
+export interface SuppliesItem {
+  percentage?: number | null;
+  status?: string | null;
+  code?: string | null;
+  serial?: string | null;
+  capacity?: number | null;
+  printed?: number | null;
+  remainingPages?: number | null;
+}
+
+export interface InputTrayInfo {
+  name: string;
+  paperType?: string | null;
+  paperSize?: string | null;
+  level?: number | null;
+  capacity?: number | null;
+  status?: string | null;
+}
+
+export interface OutputTrayInfo {
+  name: string;
+  capacity?: string | number | null;
+  level?: number | null;
+  status?: string | null;
+}
+
+export interface CounterRowDetail {
+  print: number;
+  report: number;
+  total: number;
+}
+
+export interface DetailedCounters {
+  monoSimplex?: CounterRowDetail;
+  duplex?: CounterRowDetail;
+  colorSimplex?: CounterRowDetail;
+  colorDuplex?: CounterRowDetail;
+  totalImpressions?: CounterRowDetail;
+}
+
+export interface SuppliesDetails {
+  toners?: {
+    black?: SuppliesItem;
+    cyan?: SuppliesItem;
+    magenta?: SuppliesItem;
+    yellow?: SuppliesItem;
+  };
+  drums?: {
+    black?: SuppliesItem;
+    cyan?: SuppliesItem;
+    magenta?: SuppliesItem;
+    yellow?: SuppliesItem;
+  };
+  maintenance?: {
+    fuser?: SuppliesItem;
+    transferBelt?: SuppliesItem;
+    transferRoller?: SuppliesItem;
+    tray1Roller?: SuppliesItem;
+    tray1RetardRoller?: SuppliesItem;
+    mpTrayRoller?: SuppliesItem;
+    mpTrayRetardRoller?: SuppliesItem;
+    wasteToner?: SuppliesItem;
+    other?: Array<{ name: string; percentage?: number | null; status?: string | null; maxCapacity?: number | null; currentCount?: number | null }>;
+  };
+  inputTrays?: InputTrayInfo[];
+  outputTrays?: OutputTrayInfo[];
+  alerts?: Array<{ code?: string; description?: string; severity?: string }>;
+  counters?: DetailedCounters;
+}
+
 export interface Device {
   id: string;
+  agent_id?: string | null;
+  active?: boolean;
   name: string;
   ip_address: string;
   serial_number: string | null;
@@ -9,6 +81,7 @@ export interface Device {
   mono_pages: number | null;
   color_pages: number | null;
   brand: string | null;
+  firmware?: string | null;
   toner_black?: number | null;
   toner_cyan?: number | null;
   toner_magenta?: number | null;
@@ -16,6 +89,7 @@ export interface Device {
   monthly_pages?: number | null;
   monthly_mono?: number | null;
   monthly_color?: number | null;
+  supplies_details?: SuppliesDetails | string | null;
   // Cartridge identity (from EWS)
   cartridge_code_black?:       string | null;
   cartridge_code_cyan?:        string | null;

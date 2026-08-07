@@ -43,6 +43,11 @@ export async function uploadPending(config: AgentConfig): Promise<UploadResult &
     cartridge_estimated_cyan:   r.cartridge_estimated_cyan   ?? null,
     cartridge_estimated_magenta: r.cartridge_estimated_magenta ?? null,
     cartridge_estimated_yellow:  r.cartridge_estimated_yellow  ?? null,
+    supplies_details: r.supplies_details ? (typeof r.supplies_details === 'string' ? JSON.parse(r.supplies_details) : r.supplies_details) : null,
+    firmware:      r.firmware ?? null,
+    mac:           r.mac ?? null,
+    hostname:      r.hostname ?? null,
+    location:      r.location ?? null,
     poll_method:   r.poll_method ?? 'snmp',
     offline:       false,
   }));

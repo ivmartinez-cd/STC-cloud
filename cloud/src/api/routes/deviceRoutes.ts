@@ -18,4 +18,14 @@ export function registerDeviceRoutes(
     preHandler: portalAuth,
     handler: ctrl.getDeviceReadings,
   });
+
+  fastify.delete("/api/v1/devices/offline", {
+    preHandler: portalAuth,
+    handler: ctrl.deleteOfflineDevices,
+  });
+
+  fastify.delete("/api/v1/devices/:id", {
+    preHandler: portalAuth,
+    handler: ctrl.deleteDevice,
+  });
 }

@@ -65,8 +65,18 @@ async function evaluateReading(r: MappedReading) {
   const criticalThreshold = device?.toner_critical_threshold ?? 10;
   const deviceName = device?.device_name || 'Dispositivo';
 
-  // 3. Evaluar los 4 colores de tóner
-  const colors = ['black', 'cyan', 'magenta', 'yellow'];
+  // 3. Evaluar colores de tóner (solo evaluar c/m/y si el equipo NO es monocromático)
+  const isMonoOnly = r.color_pages === 0 || (r.toner_cyan === null && r.toner_magenta === null && r.toner_yellow === null);
+  const colors = isMonoOnly ? ['black'] : ['black', 'cyan', 'magenta', 'yellow'];
+
+  // Si es mono, resolver inmediatamente cualquier alerta residual de tóner color que se haya creado previamente
+  if (isMonoOnly) {
+    for (const cColor of ['cyan', 'magenta', 'yellow']) {
+      await resolveAlerts(r.device_id, `toner_${cColor}_low`);
+      await resolveAlerts(r.device_id, `toner_${cColor}_critical`);
+    }
+  }
+
   for (const color of colors) {
     const val = r[`toner_${color}` as keyof MappedReading];
     if (typeof val === 'number' && val >= 0) {

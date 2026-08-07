@@ -6,6 +6,7 @@ import {
 import { readDeviceViaPJL } from './pjl';
 import { readDeviceViaEWS, readDeviceCountersViaEWS, readDeviceSuppliesViaEWS } from './ews';
 import { readDeviceViaIPP } from './ipp';
+import type { SuppliesDetails } from './ews-parsers/types';
 
 export type PollMethod = 'snmp' | 'pjl' | 'ews' | 'ipp' | 'unknown';
 
@@ -107,6 +108,11 @@ export interface DeviceReading {
   cartridge_estimated_cyan?:     number | null;
   cartridge_estimated_magenta?:  number | null;
   cartridge_estimated_yellow?:   number | null;
+  supplies_details?:           SuppliesDetails | null;
+  firmware?:                   string | null;
+  mac?:                        string | null;
+  hostname?:                   string | null;
+  location?:                   string | null;
   time:           string;
   poll_method:    PollMethod;
 }
@@ -218,36 +224,108 @@ export async function readDevice(
   // ── Case A: Printer-exclusive port confirmed → safe to go EWS-first ──
   if (hasPrinterPort) {
     // Perform a fast SNMP query to identify brand & model to optimize EWS candidate list
-    const snmpResult = await readViaSNMP(ip, community, true); // Use identityOnly=true here because we just want to optimize EWS
+    let snmpResult = await readViaSNMP(ip, community, identityOnly); 
     const brand = snmpResult?.brand ?? 'generic';
     const model = snmpResult?.model ?? '';
 
+    let ews: DeviceReading | null = null;
     if (hasWebPort) {
-      const ews = await readViaEWS(ip, brand, model, identityOnly);
-      if (identityOnly || ews?.total_pages !== null) return ews;
+      ews = await readViaEWS(ip, brand, model, identityOnly);
+      if (identityOnly && ews) return ews;
+      if (ews?.total_pages !== null && ews?.total_pages !== undefined) {
+        return ews;
+      }
     }
 
-    if (identityOnly || snmpResult?.total_pages !== null) return snmpResult;
+    if (identityOnly) {
+      if (snmpResult) return snmpResult;
+    } else {
+      // EWS didn't return page counts. Perform a complete SNMP query.
+      const fullSnmp = await readViaSNMP(ip, community, false);
+      if (fullSnmp) {
+        if (ews) {
+          if (ews.supplies_details)           fullSnmp.supplies_details           = ews.supplies_details;
+          if (ews.firmware)                   fullSnmp.firmware                   = ews.firmware;
+          if (ews.mac)                        fullSnmp.mac                        = ews.mac;
+          if (ews.hostname)                   fullSnmp.hostname                   = ews.hostname;
+          if (ews.location)                   fullSnmp.location                   = ews.location;
+          if (ews.cartridge_code_black)       fullSnmp.cartridge_code_black       = ews.cartridge_code_black;
+          if (ews.cartridge_serial_black)     fullSnmp.cartridge_serial_black     = ews.cartridge_serial_black;
+          if (ews.cartridge_capacity_black)   fullSnmp.cartridge_capacity_black   = ews.cartridge_capacity_black;
+        }
+        if (fullSnmp.total_pages !== null) return fullSnmp;
+        snmpResult = fullSnmp;
+      }
+    }
 
     const pjl = await readViaPJL(ip);
-    if (pjl?.total_pages !== null) return pjl;
+    if (pjl && pjl.total_pages !== null) {
+      if (ews?.supplies_details) pjl.supplies_details = ews.supplies_details;
+      return pjl;
+    }
 
     const ipp = await readViaIPP(ip);
-    if (ipp) return ipp;
+    if (ipp) {
+      if (ews?.supplies_details) ipp.supplies_details = ews.supplies_details;
+      return ipp;
+    }
 
-    return snmpResult ?? null;
+    if (snmpResult && ews?.supplies_details) {
+      snmpResult.supplies_details = ews.supplies_details;
+    }
+
+    return snmpResult ?? ews ?? null;
   }
 
   // ── Case B: Only web port open (could be router/phone/NAS) ──
   // Use SNMP as a quick Printer-MIB filter first to avoid wasting
   // 4+ seconds of EWS timeouts on non-printer devices.
-  // We use identityOnly=true for the quick filter so we don't do heavy SNMP if EWS will be used anyway.
-  const snmpResult = await readViaSNMP(ip, community, identityOnly || hasWebPort);
+  let snmpResult = await readViaSNMP(ip, community, true);
   if (snmpResult) {
-    // SNMP confirmed it's a printer → try EWS for richer data (toner, color split)
+    // SNMP confirmed it's a printer → try EWS for richer data (toner, color split, identity)
     const ews = await readViaEWS(ip, snmpResult.brand, snmpResult.model, identityOnly);
-    if (identityOnly || ews?.total_pages !== null) return ews;
-    return snmpResult;
+    if (identityOnly && ews) return ews;
+
+    if (ews?.total_pages !== null && ews?.total_pages !== undefined) {
+      // EWS succeeded for page count. Check if toner fields are missing in EWS result
+      const missingToner = ews.toner_black === null && ews.toner_cyan === null && ews.toner_magenta === null && ews.toner_yellow === null;
+      if (missingToner) {
+        const fullSnmp = await readViaSNMP(ip, community, false);
+        if (fullSnmp) {
+          if (fullSnmp.toner_black   !== null) ews.toner_black   = fullSnmp.toner_black;
+          if (fullSnmp.toner_cyan    !== null) ews.toner_cyan    = fullSnmp.toner_cyan;
+          if (fullSnmp.toner_magenta !== null) ews.toner_magenta = fullSnmp.toner_magenta;
+          if (fullSnmp.toner_yellow  !== null) ews.toner_yellow  = fullSnmp.toner_yellow;
+        }
+      }
+      return ews;
+    }
+
+    let result = snmpResult;
+    if (!identityOnly) {
+      const fullSnmp = await readViaSNMP(ip, community, false);
+      if (fullSnmp) result = fullSnmp;
+    }
+
+    if (ews) {
+      if (ews.mac)              result.mac              = ews.mac;
+      if (ews.hostname)         result.hostname         = ews.hostname;
+      if (ews.firmware)         result.firmware         = ews.firmware;
+      if (ews.supplies_details) result.supplies_details = ews.supplies_details;
+      if (ews.toner_black   != null) result.toner_black   = ews.toner_black;
+      if (ews.toner_cyan    != null) result.toner_cyan    = ews.toner_cyan;
+      if (ews.toner_magenta != null) result.toner_magenta = ews.toner_magenta;
+      if (ews.toner_yellow  != null) result.toner_yellow  = ews.toner_yellow;
+      if (ews.cartridge_code_black)   result.cartridge_code_black   = ews.cartridge_code_black;
+      if (ews.cartridge_serial_black) result.cartridge_serial_black = ews.cartridge_serial_black;
+    }
+
+    return result;
+  }
+
+  if (hasWebPort) {
+    const ews = await readViaEWS(ip, 'generic', '', identityOnly);
+    if (ews && (identityOnly || ews.total_pages !== null)) return ews;
   }
 
   return null;
@@ -292,6 +370,11 @@ export async function readViaEWS(ip: string, brand?: Brand, model?: string, iden
     cartridge_estimated_cyan:   data.cartridgeEstimatedCyan   ?? null,
     cartridge_estimated_magenta: data.cartridgeEstimatedMagenta ?? null,
     cartridge_estimated_yellow:  data.cartridgeEstimatedYellow  ?? null,
+    supplies_details:           data.suppliesDetails           ?? null,
+    firmware:                   data.firmware                  ?? null,
+    mac:                        data.mac                       ?? null,
+    hostname:                   data.hostname                  ?? null,
+    location:                   data.location                  ?? null,
     time:          new Date().toISOString(),
     poll_method:   'ews',
   };
@@ -302,14 +385,13 @@ export async function readViaEWS(ip: string, brand?: Brand, model?: string, iden
 export async function readViaPJL(ip: string): Promise<DeviceReading | null> {
   const data = await readDeviceViaPJL(ip);
   if (!data) return null;
-  const brand = data.model ? detectBrandFromText(data.model) : 'generic';
   return {
     ip,
-    brand,
-    model:         (data.model ?? brand).slice(0, 100),
+    brand:         'generic',
+    model:         'PJL Device',
     sysDescr:      '',
     sysName:       '',
-    serial:        data.serial ?? null,
+    serial:        null,
     total_pages:   data.totalPages,
     mono_pages:    null,
     color_pages:   null,
@@ -338,9 +420,9 @@ interface TonerLevels {
 async function readTonerViaSNMP(session: snmp.Session): Promise<TonerLevels> {
   const result: TonerLevels = { toner_black: null, toner_cyan: null, toner_magenta: null, toner_yellow: null };
 
-  // Read all supply descriptions in parallel (indices 1-6 covers most printers)
+  // Read supply descriptions in parallel (indices 1-16 covers modern multi-function devices)
   const descs = await Promise.all(
-    Array.from({ length: 6 }, (_, i) =>
+    Array.from({ length: 16 }, (_, i) =>
       snmpGet(session, `${SUPPLY_DESC}.${i + 1}`).then(v => ({ idx: i + 1, v })),
     ),
   );
@@ -350,10 +432,10 @@ async function readTonerViaSNMP(session: snmp.Session): Promise<TonerLevels> {
     .map(({ idx, v }) => {
       const s = String(v!).toLowerCase();
       let key: keyof TonerLevels | null = null;
-      if      (/black|negro|noir|schwarz|nero|blk/i.test(s)) key = 'toner_black';
-      else if (/cyan|cian/i.test(s))                          key = 'toner_cyan';
-      else if (/magenta/i.test(s))                            key = 'toner_magenta';
-      else if (/yellow|amarillo|jaune|gelb|giallo|yel/i.test(s)) key = 'toner_yellow';
+      if      (/black|negro|noir|schwarz|nero|blk|\b(k|toner\s*k|cartridge\s*k)\b/i.test(s)) key = 'toner_black';
+      else if (/cyan|cian|\b(c|toner\s*c|cartridge\s*c)\b/i.test(s))                          key = 'toner_cyan';
+      else if (/magenta|\b(m|toner\s*m|cartridge\s*m)\b/i.test(s))                            key = 'toner_magenta';
+      else if (/yellow|amarillo|jaune|gelb|giallo|yel|\b(y|toner\s*y|cartridge\s*y)\b/i.test(s)) key = 'toner_yellow';
       return key ? { idx, key } : null;
     })
     .filter(Boolean) as Array<{ idx: number; key: keyof TonerLevels }>;
@@ -368,8 +450,9 @@ async function readTonerViaSNMP(session: snmp.Session): Promise<TonerLevels> {
       if (max === null || level === null) return;
       const maxN = Number(max); const lvlN = Number(level);
       if (lvlN === -3 && maxN > 0) { result[key] = 100; return; }
-      if (lvlN < 0 || maxN <= 0) return;
-      result[key] = Math.min(100, Math.max(0, Math.round((lvlN / maxN) * 100)));
+      if (maxN === 100 && lvlN >= 0 && lvlN <= 100) { result[key] = lvlN; return; }
+      if (lvlN >= 0 && maxN > 0) { result[key] = Math.min(100, Math.max(0, Math.round((lvlN / maxN) * 100))); return; }
+      if (lvlN >= 0 && lvlN <= 100 && maxN <= 0) { result[key] = lvlN; return; }
     }),
   );
 
@@ -435,7 +518,7 @@ export async function readViaSNMP(ip: string, community: string, identityOnly = 
       brand:         finalBrand,
       sysDescr:      raw.slice(0, 255),
       sysName:       String(sysName ?? ''),
-      serial:        serial ? String(serial).trim() || null : null,
+      serial:        serial ? String(serial).replace(/[^\x20-\x7E]/g, '').trim() || null : null,
       total_pages:   total_pages !== null ? Number(total_pages) : null,
       mono_pages:    mono_pages  !== null ? Number(mono_pages)  : null,
       color_pages:   color_pages !== null ? Number(color_pages) : null,
@@ -541,6 +624,7 @@ export async function readViaEWSSupplies(ip: string, brand?: Brand, model?: stri
     cartridge_estimated_cyan:    data.cartridgeEstimatedCyan   ?? null,
     cartridge_estimated_magenta: data.cartridgeEstimatedMagenta ?? null,
     cartridge_estimated_yellow:  data.cartridgeEstimatedYellow  ?? null,
+    supplies_details:           data.suppliesDetails           ?? null,
     time:          new Date().toISOString(),
     poll_method:   'ews',
   };

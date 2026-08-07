@@ -53,7 +53,7 @@ export class ScanService {
             if (!ip) break;
             try {
               const hintMethod = getKnownPollMethod(ip) ?? undefined;
-              const reading = await readDevice(ip, config.snmpCommunity, hintMethod, true);
+              const reading = await readDevice(ip, config.snmpCommunity, hintMethod, false);
               if (!reading) continue;
 
               if (!isRegistered(ip)) {

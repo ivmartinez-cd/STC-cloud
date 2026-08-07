@@ -17,3 +17,78 @@ export function formatDateTime(ts: string | null | undefined): string {
   if (!ts) return '—';
   return new Date(ts).toLocaleString('es-AR', { dateStyle: 'medium', timeStyle: 'short' });
 }
+
+export interface DeviceStatusInfo {
+  status: 'online' | 'warning' | 'critical';
+  label: string;
+  subtext: string;
+  badgeClass: string;
+  dotClass: string;
+  textClass: string;
+  iconBgClass: string;
+}
+
+export const DEVICE_CRITICAL_OFFLINE_THRESHOLD_MS = 72 * 60 * 60 * 1000; // 72 horas
+
+export function getDeviceStatusInfo(lastSeenStr: string | null | undefined, now = Date.now()): DeviceStatusInfo {
+  if (!lastSeenStr) {
+    return {
+      status: 'critical',
+      label: 'Sin Contacto (+72h)',
+      subtext: 'Sin registros de conexión',
+      badgeClass: 'bg-rose-50 text-rose-600 border-rose-200',
+      dotClass: 'bg-rose-500',
+      textClass: 'text-rose-600',
+      iconBgClass: 'bg-rose-50 text-rose-600',
+    };
+  }
+
+  const lastSeen = new Date(lastSeenStr);
+  const diffMs = Math.abs(now - lastSeen.getTime());
+
+  if (diffMs <= 30 * 60 * 1000) {
+    return {
+      status: 'online',
+      label: 'En Línea',
+      subtext: 'Conexión OK',
+      badgeClass: 'bg-emerald-50 text-emerald-600 border-emerald-200',
+      dotClass: 'bg-emerald-500',
+      textClass: 'text-emerald-600',
+      iconBgClass: 'bg-emerald-50 text-emerald-600',
+    };
+  }
+
+  const dateFormatted = lastSeen.toLocaleString('es-AR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+  const diffDays = Math.floor(diffHours / 24);
+
+  if (diffMs <= DEVICE_CRITICAL_OFFLINE_THRESHOLD_MS) {
+    const timeAgo = diffHours < 1 ? `hace ${Math.floor(diffMs / 60000)}m` : `hace ${diffHours}h`;
+    return {
+      status: 'warning',
+      label: 'Sin Contacto',
+      subtext: `Desde ${dateFormatted} (${timeAgo})`,
+      badgeClass: 'bg-amber-50 text-amber-600 border-amber-200',
+      dotClass: 'bg-amber-500',
+      textClass: 'text-amber-500',
+      iconBgClass: 'bg-amber-50 text-amber-500',
+    };
+  } else {
+    return {
+      status: 'critical',
+      label: 'Sin Contacto (+72h)',
+      subtext: `Desde ${dateFormatted} (${diffDays}d sin contacto)`,
+      badgeClass: 'bg-rose-50 text-rose-600 border-rose-200',
+      dotClass: 'bg-rose-500',
+      textClass: 'text-rose-600',
+      iconBgClass: 'bg-rose-50 text-rose-600',
+    };
+  }
+}

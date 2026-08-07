@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { api } from '../lib/api';
 import { ChevronRight, WifiOff, RefreshCw, Search, Printer } from 'lucide-react';
 
+import { DEVICE_OFFLINE_THRESHOLD_MS } from '../lib/constants';
+
 interface Device {
   id: string;
   ip: string;
@@ -11,6 +13,7 @@ interface Device {
   model: string;
   name: string;
   active: boolean;
+  last_seen?: string | null;
   monitor_name: string;
   client_name: string;
   toner_black?:   number | null;
@@ -137,28 +140,33 @@ const Devices = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-            {clientDevices.map(device => (
-              <Link
-                key={device.id}
-                to={`/devices/${device.id}`}
-                className="cd-panel p-6 group hover:border-brand/30 transition-all flex flex-col h-full"
-              >
-                <div className="flex items-start justify-between mb-5">
-                  <div className="p-3 bg-blue-50 text-brand rounded-2xl group-hover:bg-brand group-hover:text-white transition-all duration-300">
-                    <Printer size={20} />
+            {clientDevices.map(device => {
+              const isDeviceOnline = (device.last_seen != null)
+                ? (Math.abs(Date.now() - new Date(device.last_seen).getTime()) <= DEVICE_OFFLINE_THRESHOLD_MS)
+                : (device.active ?? false);
+
+              return (
+                <Link
+                  key={device.id}
+                  to={`/devices/${device.id}`}
+                  className="cd-panel p-6 group hover:border-brand/30 transition-all flex flex-col h-full"
+                >
+                  <div className="flex items-start justify-between mb-5">
+                    <div className="p-3 bg-blue-50 text-brand rounded-2xl group-hover:bg-brand group-hover:text-white transition-all duration-300">
+                      <Printer size={20} />
+                    </div>
+                    {isDeviceOnline ? (
+                      <span className="flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-wider text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full">
+                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                        Activo
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-400 bg-slate-50 px-3 py-1 rounded-full">
+                        <WifiOff size={12} />
+                        Sin Contacto
+                      </span>
+                    )}
                   </div>
-                  {device.active ? (
-                    <span className="flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-wider text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full">
-                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                      Activo
-                    </span>
-                  ) : (
-                    <span className="flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-400 bg-slate-50 px-3 py-1 rounded-full">
-                      <WifiOff size={12} />
-                      Inactivo
-                    </span>
-                  )}
-                </div>
 
                 <div className="flex-1">
                   <h3 className="font-extrabold text-[#1a2333] group-hover:text-brand transition-colors truncate">
@@ -229,7 +237,8 @@ const Devices = () => {
                   </div>
                 )}
               </Link>
-            ))}
+            );
+          })}
           </div>
         </div>
       ))}

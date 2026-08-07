@@ -1,4 +1,5 @@
 export const OFFLINE_THRESHOLD_MS   = 5 * 60 * 1000;   // 5 min sin heartbeat → agente offline
+export const DEVICE_OFFLINE_THRESHOLD_MS = 30 * 60 * 1000; // 30 min sin lecturas → dispositivo offline
 export const DASHBOARD_POLL_MS      = 60_000;           // intervalo de refresco del dashboard
 export const REPORT_RECORD_LIMIT    = 5_000;            // máximo registros a traer en reportes
 export const REPORT_DISPLAY_LIMIT   = 100;              // máximo filas visibles en tabla de reporte

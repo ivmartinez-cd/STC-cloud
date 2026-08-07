@@ -1,5 +1,6 @@
 import { Knex } from "knex";
 import crypto from "crypto";
+import net from "net";
 import { Queue } from "bullmq";
 
 // ─── Interfaces de Tipado Fuerte ──────────────────────────────────────────────
@@ -88,6 +89,11 @@ export interface IncomingReading {
   cartridge_estimated_cyan?: number | string | null;
   cartridge_estimated_magenta?: number | string | null;
   cartridge_estimated_yellow?: number | string | null;
+  supplies_details?: any;
+  firmware?: string | null;
+  mac?: string | null;
+  hostname?: string | null;
+  location?: string | null;
   poll_method?: string;
   offline?: boolean;
 }
@@ -113,6 +119,7 @@ interface MappedReading {
   toner_cyan: number | null;
   toner_magenta: number | null;
   toner_yellow: number | null;
+  supplies_details?: any;
   offline: boolean;
 }
 
@@ -332,20 +339,64 @@ export class AgentService {
   async registerDevices(agentId: string, devices: IncomingDevice[]) {
     for (const device of devices) {
       try {
+        const ip = device.ip;
+        const serial = (device.serial || "").trim();
+        const isRealSerial = serial.length > 0 && serial !== ip;
+
+        // 1. Si el serial es real, verificar si existe un registro fantasma en esta IP para actualizarlo
+        if (isRealSerial) {
+          const ghostDevices = await this.db("devices")
+            .where({ agent_id: agentId, ip_address: ip })
+            .andWhere((b) => b.whereNull("serial_number").orWhere("serial_number", ip))
+            .select("id");
+
+          if (ghostDevices.length > 0) {
+            const ghostId = ghostDevices[0].id;
+            await this.db("devices")
+              .where("id", ghostId)
+              .update({
+                serial_number: serial,
+                brand: device.brand && device.brand !== 'unknown' ? device.brand : undefined,
+                model: device.model || undefined,
+                name: device.name || undefined,
+                last_seen: new Date(),
+                active: true,
+              });
+            continue;
+          }
+        }
+
+        // 2. Si el serial es temporal/nulo, verificar si YA EXISTE algún equipo registrado en esta IP
+        if (!isRealSerial) {
+          const existingDevices = await this.db("devices")
+            .where({ agent_id: agentId, ip_address: ip })
+            .select("id");
+
+          if (existingDevices.length > 0) {
+            await this.db("devices")
+              .where("id", existingDevices[0].id)
+              .update({ last_seen: new Date(), active: true });
+            continue;
+          }
+        }
+
+        // 3. Upsert estándar por (agent_id, serial_number)
         await this.db.raw(`
-          INSERT INTO devices (id, agent_id, ip_address, serial_number, brand, model, name)
-          VALUES (?, ?, ?, ?, ?, ?, ?)
+          INSERT INTO devices (id, agent_id, ip_address, serial_number, brand, model, name, active, last_seen)
+          VALUES (?, ?, ?, ?, ?, ?, ?, true, NOW())
           ON CONFLICT (agent_id, serial_number) WHERE serial_number IS NOT NULL
           DO UPDATE SET
-            ip_address = COALESCE(EXCLUDED.ip_address, devices.ip_address),
-            brand      = COALESCE(EXCLUDED.brand,      devices.brand),
-            model      = COALESCE(EXCLUDED.model,      devices.model),
-            name       = COALESCE(EXCLUDED.name,       devices.name)
+            ip_address = EXCLUDED.ip_address,
+            brand      = COALESCE(NULLIF(EXCLUDED.brand, 'unknown'), devices.brand),
+            model      = COALESCE(NULLIF(EXCLUDED.model, ''), devices.model),
+            name       = COALESCE(NULLIF(EXCLUDED.name, ''), devices.name),
+            last_seen  = NOW(),
+            active     = true
         `, [
           crypto.randomUUID(),
           agentId,
           device.ip,
-          device.serial || null,
+          serial || null,
           device.brand || 'unknown',
           (device.model || "").slice(0, 100),
           (device.name || "").slice(0, 100)
@@ -353,7 +404,6 @@ export class AgentService {
       } catch (e: unknown) {
         const errMsg = e instanceof Error ? e.message : String(e);
         console.error(`[AGENT_SERVICE] Error registering device ${device.ip}:`, errMsg);
-        throw e;
       }
     }
   }
@@ -426,10 +476,18 @@ export class AgentService {
   async syncReadings(redis: RedisClient, readings: IncomingReading[], agentId: string) {
     if (!readings || readings.length === 0) return;
 
+    // 0. Actualizar la última conexión del monitor / agente emisor
+    try {
+      await this.db("agents")
+        .where("id", agentId)
+        .update({
+          last_seen: new Date(),
+          status: "active",
+        });
+    } catch { /* continuar si el agente fue eliminado */ }
+
     const mappedReadings: MappedReading[] = [];
 
-    // Procesando lecturas (log removido por ruido en producción)
-    
     const parseCount = (v: number | string | null | undefined): number | null => {
       if (v === null || v === undefined) return null;
       const n = typeof v === "number" ? v : parseInt(v, 10);
@@ -442,53 +500,29 @@ export class AgentService {
       if (isNaN(n)) return null;
       return Math.min(100, Math.max(0, n));
     };
-    
-    const deduplicatedIps = new Set<string>();
 
     for (const r of readings) {
       try {
-        // Solución para dispositivos duplicados: Si descubrimos el serial real de un dispositivo que 
-        // antes usaba su IP como número de serie (ej: porque SNMP falló y luego EWS lo encontró),
-        // promovemos el registro fantasma en lugar de crear uno nuevo.
-        const serial = (r.device_id || "").slice(0, 150);
-        const ip = r.ip || null;
-        if (ip && serial && serial !== ip && !deduplicatedIps.has(ip)) {
-          deduplicatedIps.add(ip);
-          
-          const ghostRes = await this.db.raw<{rows: {id: string}[]}>(`
-            SELECT id FROM devices 
-            WHERE agent_id = ? 
-              AND ip_address = ? 
-              AND (serial_number IS NULL OR serial_number = ?)
-          `, [agentId, ip, ip]);
-          
-          if (ghostRes.rows.length > 0) {
-            const realRes = await this.db.raw<{rows: {id: string}[]}>(`
-              SELECT id FROM devices WHERE agent_id = ? AND serial_number = ?
-            `, [agentId, serial]);
-            
-            if (realRes.rows.length > 0) {
-              const realId = realRes.rows[0].id;
-              for (const ghost of ghostRes.rows) {
-                if (ghost.id !== realId) {
-                  await this.db.raw(`UPDATE readings SET device_id = ? WHERE device_id = ?`, [realId, ghost.id]);
-                  await this.db.raw(`DELETE FROM devices WHERE id = ?`, [ghost.id]);
-                }
-              }
-            } else {
-              const ghostToPromote = ghostRes.rows[0];
-              await this.db.raw(`UPDATE devices SET serial_number = ? WHERE id = ?`, [serial, ghostToPromote.id]);
-              
-              for (let i = 1; i < ghostRes.rows.length; i++) {
-                const ghostId = ghostRes.rows[i].id;
-                await this.db.raw(`UPDATE readings SET device_id = ? WHERE device_id = ?`, [ghostToPromote.id, ghostId]);
-                await this.db.raw(`DELETE FROM devices WHERE id = ?`, [ghostId]);
-              }
-            }
-          }
+        const rawDeviceId = (r.device_id || "").trim();
+        const ip = (r.ip || "").trim();
+        const isIpAsSerial = !rawDeviceId || (net.isIP(rawDeviceId) !== 0) || rawDeviceId === ip;
+
+        let serialToUse: string | null = isIpAsSerial ? null : rawDeviceId;
+
+        // 1. Encontrar el equipo destino existente por IP o por Número de Serie
+        let existingDevice = null;
+        if (ip || serialToUse) {
+          existingDevice = await this.db("devices")
+            .where({ agent_id: agentId })
+            .andWhere((builder) => {
+              if (ip) builder.where("ip_address", ip);
+              if (serialToUse) builder.orWhere("serial_number", serialToUse);
+            })
+            .orderByRaw("CASE WHEN serial_number IS NOT NULL AND serial_number != host(ip_address) THEN 0 ELSE 1 END")
+            .first();
         }
 
-        // Limpiar marca si viene genérica
+        // 2. Limpiar marca si viene genérica
         let brand = r.brand || "unknown";
         if (brand.toLowerCase() === 'generic' && r.model) {
           if (r.model.toLowerCase().includes('samsung')) brand = 'Samsung';
@@ -500,123 +534,154 @@ export class AgentService {
         }
 
         // ── Fase 5: Estilización Forzada (Backend) ───────────────────────────
-        // Limpiamos el nombre: Tomamos r.name o r.model y cortamos en el primer separador técnico (; | \r \n)
-        const sourceName = r.name || r.model || r.device_id || "Unknown";
+        const cleanModel = (r.model || "unknown").split(/[;|\r\n]/)[0].trim();
+        const rawSerial = serialToUse;
+        
+        // Hostname válido solo si no es igual al serie ni a la IP
+        const validHost = (r.hostname && r.hostname.trim() && r.hostname.trim().toLowerCase() !== rawSerial?.toLowerCase() && r.hostname.trim() !== ip)
+          ? r.hostname.trim()
+          : null;
+
+        const sourceName = (r.name && r.name !== rawSerial && r.name !== ip) ? r.name : cleanModel;
         let friendlyName = sourceName.split(/[;|\r\n]/)[0].trim();
 
-        // Quitar el prefijo de la marca si está presente (ej: "SAMSUNG SL-M..." -> "SL-M...")
         const bLower = brand.toLowerCase();
         if (friendlyName.toLowerCase().startsWith(bLower)) {
           friendlyName = friendlyName.slice(bLower.length).trim();
         }
 
-        // Si después de limpiar queda vacío o muy corto, usamos el ID
-        if (friendlyName.length < 2) friendlyName = r.device_id;
-
-        // Limpiar también el modelo para que no guarde basura
-        const cleanModel = (r.model || "unknown").split(/[;|\r\n]/)[0].trim();
-
+        if (friendlyName.length < 2 || friendlyName === rawSerial) friendlyName = cleanModel;
         const pollMethod = (r.poll_method || 'snmp').slice(0, 20);
 
-        const upserted = await this.db.raw<{ rows: { id: string }[] }>(`
-          INSERT INTO devices (
-            id, agent_id, ip_address, serial_number, name, brand, model, active, last_seen,
-            total_pages, mono_pages, color_pages, poll_method,
-            toner_black, toner_cyan, toner_magenta, toner_yellow,
-            cartridge_code_black, cartridge_code_cyan, cartridge_code_magenta, cartridge_code_yellow,
-            cartridge_serial_black, cartridge_serial_cyan, cartridge_serial_magenta, cartridge_serial_yellow,
-            cartridge_capacity_black, cartridge_capacity_cyan, cartridge_capacity_magenta, cartridge_capacity_yellow,
-            cartridge_printed_black, cartridge_printed_cyan, cartridge_printed_magenta, cartridge_printed_yellow,
-            cartridge_estimated_black, cartridge_estimated_cyan, cartridge_estimated_magenta, cartridge_estimated_yellow
-          )
-          VALUES (?, ?, ?, ?, ?, ?, ?, true, NOW(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-          ON CONFLICT (agent_id, serial_number) WHERE serial_number IS NOT NULL
-          DO UPDATE SET
-            ip_address    = EXCLUDED.ip_address,
-            brand         = COALESCE(NULLIF(EXCLUDED.brand, 'unknown'), devices.brand),
-            model         = COALESCE(EXCLUDED.model, devices.model),
-            name          = CASE
-                              WHEN devices.name IS NULL
-                                OR devices.name = devices.serial_number
-                                OR devices.name LIKE '%;%'
-                                OR devices.name LIKE '%V4.%'
-                              THEN EXCLUDED.name
-                              ELSE devices.name
-                            END,
-            last_seen     = NOW(),
-            active        = true,
-            total_pages   = EXCLUDED.total_pages,
-            mono_pages    = EXCLUDED.mono_pages,
-            color_pages   = EXCLUDED.color_pages,
-            poll_method   = EXCLUDED.poll_method,
-            toner_black   = EXCLUDED.toner_black,
-            toner_cyan    = EXCLUDED.toner_cyan,
-            toner_magenta = EXCLUDED.toner_magenta,
-            toner_yellow  = EXCLUDED.toner_yellow,
-            cartridge_code_black       = COALESCE(EXCLUDED.cartridge_code_black,       devices.cartridge_code_black),
-            cartridge_code_cyan        = COALESCE(EXCLUDED.cartridge_code_cyan,        devices.cartridge_code_cyan),
-            cartridge_code_magenta     = COALESCE(EXCLUDED.cartridge_code_magenta,     devices.cartridge_code_magenta),
-            cartridge_code_yellow      = COALESCE(EXCLUDED.cartridge_code_yellow,      devices.cartridge_code_yellow),
-            cartridge_serial_black     = COALESCE(EXCLUDED.cartridge_serial_black,     devices.cartridge_serial_black),
-            cartridge_serial_cyan      = COALESCE(EXCLUDED.cartridge_serial_cyan,      devices.cartridge_serial_cyan),
-            cartridge_serial_magenta   = COALESCE(EXCLUDED.cartridge_serial_magenta,   devices.cartridge_serial_magenta),
-            cartridge_serial_yellow    = COALESCE(EXCLUDED.cartridge_serial_yellow,    devices.cartridge_serial_yellow),
-            cartridge_capacity_black   = COALESCE(EXCLUDED.cartridge_capacity_black,   devices.cartridge_capacity_black),
-            cartridge_capacity_cyan    = COALESCE(EXCLUDED.cartridge_capacity_cyan,    devices.cartridge_capacity_cyan),
-            cartridge_capacity_magenta = COALESCE(EXCLUDED.cartridge_capacity_magenta, devices.cartridge_capacity_magenta),
-            cartridge_capacity_yellow  = COALESCE(EXCLUDED.cartridge_capacity_yellow,  devices.cartridge_capacity_yellow),
-            cartridge_printed_black    = COALESCE(EXCLUDED.cartridge_printed_black,    devices.cartridge_printed_black),
-            cartridge_printed_cyan     = COALESCE(EXCLUDED.cartridge_printed_cyan,     devices.cartridge_printed_cyan),
-            cartridge_printed_magenta  = COALESCE(EXCLUDED.cartridge_printed_magenta,  devices.cartridge_printed_magenta),
-            cartridge_printed_yellow   = COALESCE(EXCLUDED.cartridge_printed_yellow,   devices.cartridge_printed_yellow),
-            cartridge_estimated_black    = COALESCE(EXCLUDED.cartridge_estimated_black,    devices.cartridge_estimated_black),
-            cartridge_estimated_cyan     = COALESCE(EXCLUDED.cartridge_estimated_cyan,     devices.cartridge_estimated_cyan),
-            cartridge_estimated_magenta  = COALESCE(EXCLUDED.cartridge_estimated_magenta,  devices.cartridge_estimated_magenta),
-            cartridge_estimated_yellow   = COALESCE(EXCLUDED.cartridge_estimated_yellow,   devices.cartridge_estimated_yellow)
-          RETURNING id
-        `, [
-          crypto.randomUUID(),
-          agentId,
-          r.ip || null,
-          (r.device_id || "").slice(0, 150), // serial_number
-          friendlyName.slice(0, 255),
-          brand.slice(0, 100),
-          cleanModel.slice(0, 255),
-          parseCount(r.total_pages),
-          parseCount(r.mono_pages),
-          parseCount(r.color_pages),
-          pollMethod,
-          parseToner(r.toner_black),
-          parseToner(r.toner_cyan),
-          parseToner(r.toner_magenta),
-          parseToner(r.toner_yellow),
-          r.cartridge_code_black       ?? null,
-          r.cartridge_code_cyan        ?? null,
-          r.cartridge_code_magenta     ?? null,
-          r.cartridge_code_yellow      ?? null,
-          r.cartridge_serial_black     ?? null,
-          r.cartridge_serial_cyan      ?? null,
-          r.cartridge_serial_magenta   ?? null,
-          r.cartridge_serial_yellow    ?? null,
-          r.cartridge_capacity_black   ?? null,
-          r.cartridge_capacity_cyan    ?? null,
-          r.cartridge_capacity_magenta ?? null,
-          r.cartridge_capacity_yellow  ?? null,
-          r.cartridge_printed_black    ?? null,
-          r.cartridge_printed_cyan     ?? null,
-          r.cartridge_printed_magenta  ?? null,
-          r.cartridge_printed_yellow   ?? null,
-          r.cartridge_estimated_black  ?? null,
-          r.cartridge_estimated_cyan   ?? null,
-          r.cartridge_estimated_magenta ?? null,
-          r.cartridge_estimated_yellow  ?? null,
-        ]);
+        let deviceId: string;
 
-        if (!upserted.rows || upserted.rows.length === 0) {
-          throw new Error("Upsert no retornó ID del dispositivo");
+        if (existingDevice) {
+          deviceId = existingDevice.id;
+
+          // Conservar número de serie real si ya existía uno registrado
+          const finalSerial = (existingDevice.serial_number && existingDevice.serial_number !== ip)
+            ? existingDevice.serial_number
+            : (serialToUse || existingDevice.serial_number || null);
+
+          // Conservar modelo detallado más largo (para evitar degradaciones a 'hp' o 'generic')
+          const existingModel = existingDevice.model || "";
+          const isGenericModel = cleanModel.toLowerCase() === 'generic' || cleanModel.toLowerCase() === 'unknown' || cleanModel.toLowerCase() === 'hp' || cleanModel.toLowerCase() === 'samsung';
+          const finalModel = (!isGenericModel && cleanModel.length >= existingModel.length) ? cleanModel : (existingModel || cleanModel);
+
+          // Conservar nombre amigable si ya está bien formateado
+          const existingName = existingDevice.name || "";
+          const isGenericOrModelName = !existingName || existingName === finalSerial || existingName.includes("192.168") || existingName.toLowerCase() === finalModel.toLowerCase();
+          const finalName = validHost || (isGenericOrModelName ? cleanModel : existingName);
+
+          await this.db("devices")
+            .where("id", deviceId)
+            .update({
+              ip_address: ip || existingDevice.ip_address,
+              serial_number: finalSerial,
+              brand: (brand !== 'unknown' && brand !== 'generic') ? brand : existingDevice.brand,
+              model: finalModel,
+              name: finalName,
+              last_seen: new Date(),
+              active: true,
+              total_pages: parseCount(r.total_pages) ?? existingDevice.total_pages,
+              mono_pages: parseCount(r.mono_pages) ?? existingDevice.mono_pages,
+              color_pages: parseCount(r.color_pages) ?? existingDevice.color_pages,
+              poll_method: pollMethod || existingDevice.poll_method,
+              toner_black: parseToner(r.toner_black) ?? existingDevice.toner_black,
+              toner_cyan: parseToner(r.toner_cyan) ?? existingDevice.toner_cyan,
+              toner_magenta: parseToner(r.toner_magenta) ?? existingDevice.toner_magenta,
+              toner_yellow: parseToner(r.toner_yellow) ?? existingDevice.toner_yellow,
+              cartridge_code_black: r.cartridge_code_black ?? existingDevice.cartridge_code_black,
+              cartridge_code_cyan: r.cartridge_code_cyan ?? existingDevice.cartridge_code_cyan,
+              cartridge_code_magenta: r.cartridge_code_magenta ?? existingDevice.cartridge_code_magenta,
+              cartridge_code_yellow: r.cartridge_code_yellow ?? existingDevice.cartridge_code_yellow,
+              cartridge_serial_black: r.cartridge_serial_black ?? existingDevice.cartridge_serial_black,
+              cartridge_serial_cyan: r.cartridge_serial_cyan ?? existingDevice.cartridge_serial_cyan,
+              cartridge_serial_magenta: r.cartridge_serial_magenta ?? existingDevice.cartridge_serial_magenta,
+              cartridge_serial_yellow: r.cartridge_serial_yellow ?? existingDevice.cartridge_serial_yellow,
+              firmware: (r.firmware && r.firmware.trim()) ? r.firmware.trim() : (existingDevice.firmware || null),
+              supplies_details: r.supplies_details 
+                ? JSON.stringify({
+                    ...(existingDevice.supplies_details ? (typeof existingDevice.supplies_details === 'string' ? JSON.parse(existingDevice.supplies_details) : existingDevice.supplies_details) : {}),
+                    ...r.supplies_details
+                  })
+                : existingDevice.supplies_details,
+            });
+        } else {
+          deviceId = crypto.randomUUID();
+          await this.db("devices").insert({
+            id: deviceId,
+            agent_id: agentId,
+            ip_address: ip || null,
+            serial_number: serialToUse || null,
+            name: (validHost || friendlyName).slice(0, 255),
+            brand: brand.slice(0, 100),
+            model: cleanModel.slice(0, 255),
+            active: true,
+            last_seen: new Date(),
+            total_pages: parseCount(r.total_pages),
+            mono_pages: parseCount(r.mono_pages),
+            color_pages: parseCount(r.color_pages),
+            poll_method: pollMethod,
+            toner_black: parseToner(r.toner_black),
+            toner_cyan: parseToner(r.toner_cyan),
+            toner_magenta: parseToner(r.toner_magenta),
+            toner_yellow: parseToner(r.toner_yellow),
+            cartridge_code_black: r.cartridge_code_black ?? null,
+            cartridge_code_cyan: r.cartridge_code_cyan ?? null,
+            cartridge_code_magenta: r.cartridge_code_magenta ?? null,
+            cartridge_code_yellow: r.cartridge_code_yellow ?? null,
+            cartridge_serial_black: r.cartridge_serial_black ?? null,
+            cartridge_serial_cyan: r.cartridge_serial_cyan ?? null,
+            cartridge_serial_magenta: r.cartridge_serial_magenta ?? null,
+            cartridge_serial_yellow: r.cartridge_serial_yellow ?? null,
+            firmware: r.firmware ?? null,
+            mac: r.mac ?? null,
+            supplies_details: r.supplies_details ? JSON.stringify(r.supplies_details) : null,
+          });
         }
 
-        const deviceId = upserted.rows[0].id;
+        // Sincronizar alertas activas provenientes de EWS si están presentes
+        const suppliesObj = typeof r.supplies_details === 'string' ? JSON.parse(r.supplies_details) : r.supplies_details;
+        if (suppliesObj?.alerts && Array.isArray(suppliesObj.alerts)) {
+          for (const alertItem of suppliesObj.alerts) {
+            if (alertItem.description || alertItem.code) {
+              const alertMsg = alertItem.description || alertItem.code;
+              const alertType = alertItem.code || 'EWS_ALERT';
+              const sevLower = String(alertItem.severity || '').toLowerCase();
+              const alertSev = (sevLower === 'critical' || sevLower === 'error' || sevLower === 'danger') ? 'critical' : 'warning';
+              
+              const existingAlert = await this.db("alerts")
+                .where({ device_id: deviceId, message: alertMsg, resolved: false })
+                .first();
+
+              if (!existingAlert) {
+                await this.db("alerts").insert({
+                  device_id: deviceId,
+                  type: alertType.slice(0, 50),
+                  severity: alertSev,
+                  message: alertMsg,
+                  resolved: false,
+                  created_at: new Date(),
+                });
+              }
+            }
+          }
+        }
+
+        // Purgar y consolidar cualquier otro registro fantasma duplicado en esta IP
+        if (ip) {
+          const ghostDeviceIds = await this.db("devices")
+            .where({ agent_id: agentId, ip_address: ip })
+            .whereNot("id", deviceId)
+            .andWhere((b) => b.whereNull("serial_number").orWhere("serial_number", ip))
+            .pluck("id");
+
+          if (ghostDeviceIds.length > 0) {
+            await this.db("readings").whereIn("device_id", ghostDeviceIds).update({ device_id: deviceId });
+            await this.db("devices").whereIn("id", ghostDeviceIds).del();
+          }
+        }
 
         // Parseo seguro de fecha (detectar DD/MM/YYYY)
         let readingTime: Date;
@@ -645,24 +710,38 @@ export class AgentService {
           toner_cyan:   parseToner(r.toner_cyan),
           toner_magenta: parseToner(r.toner_magenta),
           toner_yellow: parseToner(r.toner_yellow),
+          supplies_details: r.supplies_details ? JSON.stringify(r.supplies_details) : null,
           offline:      r.offline ?? false,
         });
       } catch (err: unknown) {
-        const errMsg = err instanceof Error ? err.message : String(err);
+        const errMsg = err instanceof Error ? err.stack || err.message : String(err);
         console.error(`[SYNC] Error procesando dispositivo ${r.device_id}:`, errMsg);
         // Continuamos con el resto de la tanda para no bloquear todo el agente
-        await this.ingestLogs(agentId, [{
-          time: new Date().toISOString(),
-          level: 'ERROR',
-          message: `Device Sync Fail [${r.ip || r.device_id}]: ${errMsg}`
-        }]);
+        if (agentId) {
+          await this.ingestLogs(agentId, [{
+            time: new Date().toISOString(),
+            level: 'ERROR',
+            message: `Device Sync Fail [${r.ip || r.device_id}]: ${errMsg}`
+          }]);
+        }
       }
     }
 
     if (mappedReadings.length > 0) {
       try {
-        // Inserción masiva de lecturas en el historial
-        await this.db("readings").insert(mappedReadings);
+        // Filtrar lecturas para asegurar que el device_id exista en la tabla devices
+        const deviceIds = [...new Set(mappedReadings.map(m => m.device_id))];
+        const existingDevices = await this.db("devices")
+          .whereIn("id", deviceIds)
+          .pluck("id");
+
+        const validDeviceSet = new Set(existingDevices.map(String));
+        const validReadings = mappedReadings.filter(m => validDeviceSet.has(String(m.device_id)));
+
+        if (validReadings.length > 0) {
+          // Inserción masiva de lecturas válidas en el historial
+          await this.db("readings").insert(validReadings);
+        }
       } catch (err: unknown) {
         const errMsg = err instanceof Error ? err.message : String(err);
         console.error("[SYNC] Error al insertar lecturas:", errMsg);
@@ -769,9 +848,9 @@ export class AgentService {
    * @param systemInfo - Datos opcionales del sistema (versión, hostname, OS, IP).
    */
   async heartbeat(agentId: string, systemInfo?: SystemInfoPayload) {
-    const updateData: Record<string, unknown> = {
+    if (!agentId) return;
+    const updateData: Record<string, any> = {
       last_seen: new Date(),
-      status: this.db.raw("CASE WHEN status = 'offline' THEN 'active' ELSE status END")
     };
     
     if (systemInfo) {
@@ -785,6 +864,10 @@ export class AgentService {
     await this.db("agents")
       .where({ id: agentId })
       .update(updateData);
+
+    await this.db("agents")
+      .where({ id: agentId, status: "offline" })
+      .update({ status: "active" });
   }
 
   async getConfig(agentId: string) {

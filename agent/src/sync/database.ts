@@ -108,12 +108,14 @@ export function openQueue(): void {
     "ALTER TABLE readings_queue ADD COLUMN cartridge_estimated_cyan    INTEGER DEFAULT NULL",
     "ALTER TABLE readings_queue ADD COLUMN cartridge_estimated_magenta INTEGER DEFAULT NULL",
     "ALTER TABLE readings_queue ADD COLUMN cartridge_estimated_yellow  INTEGER DEFAULT NULL",
+    "ALTER TABLE readings_queue ADD COLUMN supplies_details            TEXT DEFAULT NULL",
   ]) {
     try { db.exec(stmt); } catch { /* columna ya existe */ }
   }
 }
 
 export function enqueueReading(r: DeviceReading): void {
+  const suppliesDetailsStr = r.supplies_details ? JSON.stringify(r.supplies_details) : null;
   db.prepare(`
     INSERT INTO readings_queue
       (device_id, ip, brand, model, time, total_pages, mono_pages, color_pages,
@@ -123,8 +125,8 @@ export function enqueueReading(r: DeviceReading): void {
        cartridge_capacity_black, cartridge_capacity_cyan, cartridge_capacity_magenta, cartridge_capacity_yellow,
        cartridge_printed_black, cartridge_printed_cyan, cartridge_printed_magenta, cartridge_printed_yellow,
        cartridge_estimated_black, cartridge_estimated_cyan, cartridge_estimated_magenta, cartridge_estimated_yellow,
-       poll_method)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       supplies_details, poll_method)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     r.serial ?? r.ip, r.ip, r.brand, r.model, r.time,
     r.total_pages, r.mono_pages, r.color_pages,
@@ -134,6 +136,7 @@ export function enqueueReading(r: DeviceReading): void {
     r.cartridge_capacity_black ?? null, r.cartridge_capacity_cyan ?? null, r.cartridge_capacity_magenta ?? null, r.cartridge_capacity_yellow ?? null,
     r.cartridge_printed_black ?? null, r.cartridge_printed_cyan ?? null, r.cartridge_printed_magenta ?? null, r.cartridge_printed_yellow ?? null,
     r.cartridge_estimated_black ?? null, r.cartridge_estimated_cyan ?? null, r.cartridge_estimated_magenta ?? null, r.cartridge_estimated_yellow ?? null,
+    suppliesDetailsStr,
     r.poll_method ?? 'snmp',
   );
 }
@@ -172,6 +175,11 @@ export interface QueueReading {
   cartridge_estimated_cyan?:   number | null;
   cartridge_estimated_magenta?: number | null;
   cartridge_estimated_yellow?:  number | null;
+  supplies_details?:           string | null;
+  firmware?:                   string | null;
+  mac?:                        string | null;
+  hostname?:                   string | null;
+  location?:                   string | null;
   poll_method:   PollMethod;
   synced:        number;
   created_at:    string;

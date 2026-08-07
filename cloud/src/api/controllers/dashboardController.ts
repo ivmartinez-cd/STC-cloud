@@ -147,7 +147,7 @@ export function createDashboardController(db: Knex, agentService: AgentService) 
     },
 
     getAlerts: async (request: FastifyRequest) => {
-      const { resolved } = request.query as { resolved?: string };
+      const { resolved, device_id } = request.query as { resolved?: string; device_id?: string };
       const query = db("alerts")
         .join("devices", "alerts.device_id", "devices.id")
         .leftJoin("agents", "devices.agent_id", "agents.id")
@@ -171,9 +171,13 @@ export function createDashboardController(db: Knex, agentService: AgentService) 
         .orderBy("alerts.created_at", "desc")
         .limit(200);
 
+      if (device_id) {
+        query.where("alerts.device_id", device_id);
+      }
+
       if (resolved === "true") {
         query.where("alerts.resolved", true);
-      } else {
+      } else if (resolved === "false") {
         query.where("alerts.resolved", false);
       }
 

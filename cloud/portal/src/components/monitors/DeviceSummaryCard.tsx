@@ -1,6 +1,6 @@
 import { Printer } from 'lucide-react';
 import { useNow } from '../../hooks/useNow';
-import { OFFLINE_THRESHOLD_MS } from '../../lib/constants';
+import { OFFLINE_THRESHOLD_MS, DEVICE_OFFLINE_THRESHOLD_MS } from '../../lib/constants';
 import type { MonitorData, Device } from '../../types/monitor';
 
 interface Props {
@@ -14,7 +14,16 @@ const DeviceSummaryCard = ({ devices, monitor }: Props) => {
     && monitor.last_seen !== null
     && (now - new Date(monitor.last_seen).getTime() <= OFFLINE_THRESHOLD_MS);
 
-  const ringColor = agentOnline ? '#10b981' : '#f59e0b';
+  const offlineCount = devices.filter(d => {
+    if (!agentOnline) return true;
+    if (d.last_seen == null) return true;
+    return (now - new Date(d.last_seen).getTime() > DEVICE_OFFLINE_THRESHOLD_MS);
+  }).length;
+
+  const activeCount = devices.length - offlineCount;
+  const activeRatio = devices.length > 0 ? activeCount / devices.length : 0;
+  const strokeDashoffset = devices.length === 0 ? '251.2' : `${(1 - activeRatio) * 251.2}`;
+  const ringColor = activeRatio === 1 ? '#10b981' : activeRatio > 0 ? '#f59e0b' : '#ef4444';
 
   return (
     <div className="cd-panel overflow-hidden border-none shadow-xl shadow-blue-900/5 relative bg-white h-full">
@@ -32,11 +41,11 @@ const DeviceSummaryCard = ({ devices, monitor }: Props) => {
         <ul className="space-y-3">
           <li className="flex justify-between items-center text-xs">
             <span className="font-bold text-slate-500 uppercase tracking-widest">Activos</span>
-            <span className="font-black text-emerald-600 text-sm">{agentOnline ? devices.length : 0}</span>
+            <span className="font-black text-emerald-600 text-sm">{activeCount}</span>
           </li>
           <li className="flex justify-between items-center text-xs">
             <span className="font-bold text-slate-500 uppercase tracking-widest">Offline / No Gestionados</span>
-            <span className="font-black text-amber-500 text-sm">{agentOnline ? 0 : devices.length}</span>
+            <span className="font-black text-amber-500 text-sm">{offlineCount}</span>
           </li>
           <li className="flex justify-between items-center text-xs pt-3 border-t border-slate-100">
             <span className="font-black text-[#1a2333] uppercase tracking-widest">Total</span>
@@ -49,7 +58,7 @@ const DeviceSummaryCard = ({ devices, monitor }: Props) => {
               <circle cx="50" cy="50" r="40" fill="transparent" stroke="#f1f5f9" strokeWidth="12" />
               <circle cx="50" cy="50" r="40" fill="transparent" stroke={ringColor} strokeWidth="12"
                 strokeDasharray="251.2"
-                strokeDashoffset={devices.length === 0 ? '251.2' : '0'}
+                strokeDashoffset={strokeDashoffset}
                 className="transition-all duration-1000 ease-out"
               />
             </svg>

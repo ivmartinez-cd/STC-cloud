@@ -12,7 +12,7 @@ export function parseHpXml(xml: string): Partial<EwsData> {
 
   return {
     brand:      'hp',
-    model:      v('ProductName') ?? v('ModelName') ?? null,
+    model:      v('MakeAndModel') ?? v('MakeAndModelBase') ?? v('ProductName') ?? v('ModelName') ?? null,
     serial:     v('SerialNumber') ?? null,
     totalPages: toInt(total),
     monoPages:  toInt(mono),
@@ -21,8 +21,62 @@ export function parseHpXml(xml: string): Partial<EwsData> {
 }
 
 function xmlVal(xml: string, tag: string): string | null {
-  const m = xml.match(new RegExp(`<${tag}[^>]*>\\s*([^<]+)\\s*<\\/${tag}>`, 'i'));
+  const m = xml.match(new RegExp(`<(?:\\w+:)?${tag}[^>]*>\\s*([^<]+)\\s*<\\/(?:\\w+:)?${tag}>`, 'i'));
   return m ? m[1].trim() : null;
+}
+
+// ─── HP XML Consumables parser (ConsumableConfigDyn.xml) ─────────────────────
+
+export function parseHpConsumablesXml(xml: string): Partial<EwsData> {
+  const result: Partial<EwsData> = { brand: 'hp' };
+  const blocks = xml.split(/<(?:[\w-]+:)?ConsumableInfo[^>]*>/i);
+
+  for (const block of blocks.slice(1)) {
+    const category   = xmlVal(block, 'ConsumableCategory')?.toLowerCase();
+    const labelCode  = xmlVal(block, 'ConsumableLabelCode')?.toUpperCase();
+    const familyName = xmlVal(block, 'ConsumableFamilyName')?.toLowerCase();
+
+    let color: 'black' | 'cyan' | 'magenta' | 'yellow' | null = null;
+
+    if (category === 'black' || labelCode === 'K' || (familyName && /black|negro|toner\s*k/i.test(familyName))) {
+      color = 'black';
+    } else if (category === 'cyan' || labelCode === 'C' || (familyName && /cyan|cian/i.test(familyName))) {
+      color = 'cyan';
+    } else if (category === 'magenta' || labelCode === 'M' || (familyName && /magenta/i.test(familyName))) {
+      color = 'magenta';
+    } else if (category === 'yellow' || labelCode === 'Y' || (familyName && /yellow|amarillo/i.test(familyName))) {
+      color = 'yellow';
+    }
+
+    if (!color) continue;
+
+    const pctStr = xmlVal(block, 'ConsumablePercentageLevelRemaining') || xmlVal(block, 'EngineTonerRemaining');
+    const partNo = xmlVal(block, 'ProductNumber') || xmlVal(block, 'ConsumablePartNumber') || xmlVal(block, 'ConsumableSelectibilityNumber');
+    const serialNo = xmlVal(block, 'SerialNumber') || xmlVal(block, 'ConsumableSerialNumber');
+
+    const pct = pctStr != null ? parseInt(pctStr, 10) : null;
+    const validPct = pct != null && !isNaN(pct) ? Math.min(100, Math.max(0, pct)) : null;
+
+    if (color === 'black') {
+      if (validPct != null) result.tonerBlack = validPct;
+      if (partNo) result.cartridgeCodeBlack = partNo;
+      if (serialNo) result.cartridgeSerialBlack = serialNo;
+    } else if (color === 'cyan') {
+      if (validPct != null) result.tonerCyan = validPct;
+      if (partNo) result.cartridgeCodeCyan = partNo;
+      if (serialNo) result.cartridgeSerialCyan = serialNo;
+    } else if (color === 'magenta') {
+      if (validPct != null) result.tonerMagenta = validPct;
+      if (partNo) result.cartridgeCodeMagenta = partNo;
+      if (serialNo) result.cartridgeSerialMagenta = serialNo;
+    } else if (color === 'yellow') {
+      if (validPct != null) result.tonerYellow = validPct;
+      if (partNo) result.cartridgeCodeYellow = partNo;
+      if (serialNo) result.cartridgeSerialYellow = serialNo;
+    }
+  }
+
+  return result;
 }
 
 // ─── HP HTML parser (UsagePage) ───────────────────────────────────────────────
@@ -102,13 +156,17 @@ export function parseHpSupplies(html: string): Partial<EwsData> {
 
   // Modern HP FutureSmart: id="BlackCartridge1-Header_Level">15%
   const black   = extractById(/id="[^"]*Black[^"]*(?:Level|Remaining)[^"]*"[^>]*>\s*([\d]+)\s*%/i)
-               ?? htmlTonerPct(html, /black\s*(?:toner|cartridge|ink)/i);
+               ?? htmlTonerPct(html, /black\s*(?:toner|cartridge|ink)/i)
+               ?? extractHpLegacyToner(html, 'black');
   const cyan    = extractById(/id="[^"]*Cyan[^"]*(?:Level|Remaining)[^"]*"[^>]*>\s*([\d]+)\s*%/i)
-               ?? htmlTonerPct(html, /cyan\s*(?:toner|cartridge|ink)/i);
+               ?? htmlTonerPct(html, /cyan\s*(?:toner|cartridge|ink)/i)
+               ?? extractHpLegacyToner(html, 'cyan');
   const magenta = extractById(/id="[^"]*Magenta[^"]*(?:Level|Remaining)[^"]*"[^>]*>\s*([\d]+)\s*%/i)
-               ?? htmlTonerPct(html, /magenta\s*(?:toner|cartridge|ink)/i);
+               ?? htmlTonerPct(html, /magenta\s*(?:toner|cartridge|ink)/i)
+               ?? extractHpLegacyToner(html, 'magenta');
   const yellow  = extractById(/id="[^"]*Yellow[^"]*(?:Level|Remaining)[^"]*"[^>]*>\s*([\d]+)\s*%/i)
-               ?? htmlTonerPct(html, /yellow\s*(?:toner|cartridge|ink)/i);
+               ?? htmlTonerPct(html, /yellow\s*(?:toner|cartridge|ink)/i)
+               ?? extractHpLegacyToner(html, 'yellow');
 
   if (black === null && cyan === null && magenta === null && yellow === null) return {};
 
@@ -133,3 +191,70 @@ export function parseHpSupplies(html: string): Partial<EwsData> {
     cartridgeEstimatedYellow:    extractNumberById(/Yellow/i, 'EstimatedPagesRemaining'),
   };
 }
+
+// ─── HP Legacy HTML Supplies parser (/info_suppliesStatus.html, etc.) ─────────
+
+export function parseHpLegacyHtmlSupplies(html: string): Partial<EwsData> {
+  const black   = extractHpLegacyToner(html, 'black');
+  const cyan    = extractHpLegacyToner(html, 'cyan');
+  const magenta = extractHpLegacyToner(html, 'magenta');
+  const yellow  = extractHpLegacyToner(html, 'yellow');
+
+  const modelMatch  = html.match(/(?:Product\s*Name|Model\s*Name|Modelo|Nombre\s*de\s*producto)[^<]{0,100}>[\s\n]*([^<]+)/i);
+  const serialMatch = html.match(/(?:Serial\s*Number|Número\s*de\s*serie)[^<]{0,100}>[\s\n]*([^<]+)/i);
+
+  const model  = modelMatch  ? modelMatch[1].trim()  : undefined;
+  const serial = serialMatch ? serialMatch[1].trim() : undefined;
+
+  if (black === null && cyan === null && magenta === null && yellow === null && !model && !serial) {
+    return {};
+  }
+
+  return {
+    brand: 'hp',
+    model,
+    serial,
+    tonerBlack: black,
+    tonerCyan: cyan,
+    tonerMagenta: magenta,
+    tonerYellow: yellow,
+  };
+}
+
+function extractHpLegacyToner(html: string, color: 'black' | 'cyan' | 'magenta' | 'yellow'): number | null {
+  const colorPatterns: Record<string, RegExp> = {
+    black:   /(?:black|negro|noir|schwarz|nero|cartucho\s*negro|tóner\s*negro|cartridge\s*k|\bk\b)/i,
+    cyan:    /(?:cyan|cian|cartucho\s*cian|tóner\s*cian|\bc\b)/i,
+    magenta: /(?:magenta|cartucho\s*magenta|tóner\s*magenta|\bm\b)/i,
+    yellow:  /(?:yellow|amarillo|cartucho\s*amarillo|tóner\s*amarillo|\by\b)/i,
+  };
+
+  const pattern = colorPatterns[color];
+  const colorMatch = html.match(new RegExp(pattern.source + '[\\s\\S]{0,1500}', 'i'));
+  if (!colorMatch) return null;
+  const block = colorMatch[0];
+
+  // 1. Direct percentage text e.g. "75%", "75 %", "75%*"
+  const pctMatch = block.match(/(\d{1,3})\s*%\s*\*?/);
+  if (pctMatch) {
+    const val = parseInt(pctMatch[1], 10);
+    if (!isNaN(val) && val <= 100 && val >= 0) return val;
+  }
+
+  // 2. Bar width style e.g. style="width: 75%" or width="75%"
+  const widthMatch = block.match(/width[:=]\s*["']?(\d{1,3})%/i);
+  if (widthMatch) {
+    const val = parseInt(widthMatch[1], 10);
+    if (!isNaN(val) && val <= 100 && val >= 0) return val;
+  }
+
+  // 3. Level text e.g. "Nivel: 75" or "Level: 75"
+  const lvlMatch = block.match(/(?:level|nivel|restante|remaining)\s*[:=]?\s*(\d{1,3})/i);
+  if (lvlMatch) {
+    const val = parseInt(lvlMatch[1], 10);
+    if (!isNaN(val) && val <= 100 && val >= 0) return val;
+  }
+
+  return null;
+}
+
