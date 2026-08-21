@@ -7,7 +7,7 @@ services:
     build:
       context: ./cloud
       dockerfile: Dockerfile
-    restart: unless-stopped
+    restart: "no"
     env_file: .env.production
     depends_on:
       postgres:
@@ -27,14 +27,14 @@ services:
     build:
       context: ./cloud/portal
       dockerfile: Dockerfile
-    restart: unless-stopped
+    restart: "no"
     networks:
       - stc-network
 
   # ─── Base de datos (PostgreSQL 16 + TimescaleDB) ──────────────────────────
   postgres:
     image: timescale/timescaledb:latest-pg16
-    restart: always
+    restart: "no"
     volumes:
       - pgdata:/var/lib/postgresql/data
     environment:
@@ -57,7 +57,7 @@ services:
   # ─── Cache y cola de comandos ─────────────────────────────────────────────
   redis:
     image: redis:7-alpine
-    restart: always
+    restart: "no"
     volumes:
       - redisdata:/data
     command: redis-server --appendonly yes
@@ -72,7 +72,7 @@ services:
   # ─── Reverse Proxy (nginx + SSL) ─────────────────────────────────────────
   nginx:
     image: nginx:alpine
-    restart: unless-stopped
+    restart: "no"
     ports:
       - "80:80"
       - "443:443"
@@ -93,12 +93,12 @@ services:
       - certbot-certs:/etc/letsencrypt
       - certbot-www:/var/www/certbot
     entrypoint: /bin/sh -c 'trap exit TERM; while :; do certbot renew --webroot -w /var/www/certbot --quiet; sleep 12h & wait $${!}; done'
-    restart: unless-stopped
+    restart: "no"
 
   # ─── Backup automático PostgreSQL — diario, retención 30 días ─────────────
   backup:
     image: timescale/timescaledb:latest-pg16
-    restart: unless-stopped
+    restart: "no"
     volumes:
       - backups:/backups
     environment:

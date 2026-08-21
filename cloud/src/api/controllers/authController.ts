@@ -44,27 +44,12 @@ export function createAuthController(fastify: FastifyInstance, db: Knex, redis: 
 
       const cleanUsername = username.trim().toLowerCase();
 
-      // Buscar el usuario en la base de datos
+      // Buscar el usuario en la base de datos. El servidor siempre crea un usuario
+      // administrador real en el primer boot (ver server.ts), así que no existe
+      // fallback por variable de entorno: si no está en la tabla, no hay acceso.
       const user = await db("users").where({ username: cleanUsername }).first();
 
       if (!user) {
-        // Fallback temporal si no se ha inicializado el admin en la base de datos y coincide con el env
-        const adminUser = (process.env.PORTAL_ADMIN_USER || "admin").toLowerCase();
-        const adminPass = process.env.PORTAL_ADMIN_PASSWORD;
-        if (adminPass && cleanUsername === adminUser && password === adminPass) {
-          const token = fastify.jwt.sign(
-            { role: "portal", userId: "admin" },
-            { expiresIn: JWT_PORTAL_TTL }
-          );
-          reply.setCookie("stc_session", token, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
-            sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-            path: "/",
-            maxAge: 8 * 60 * 60,
-          });
-          return { ok: true, token };
-        }
         return reply.status(401).send({ error: "Credenciales inválidas" });
       }
 
@@ -81,18 +66,26 @@ export function createAuthController(fastify: FastifyInstance, db: Knex, redis: 
         { role: "portal", userId: user.id },
         { expiresIn: JWT_PORTAL_TTL }
       );
-      reply.setCookie("stc_session", token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      const isProd = process.env.NODE_ENV === "production";
+      const cookieOpts = {
+        secure: isProd,
+        sameSite: (isProd ? "none" : "lax") as "none" | "lax",
         path: "/",
         maxAge: 8 * 60 * 60,
-      });
+      };
+      reply.setCookie("stc_session", token, { ...cookieOpts, httpOnly: true });
+
+      // Cookie CSRF (double-submit): NO httpOnly, el frontend debe poder leerla
+      // para reenviarla como header X-CSRF-Token en cada mutación.
+      const csrfToken = crypto.randomBytes(32).toString("hex");
+      reply.setCookie("stc_csrf", csrfToken, { ...cookieOpts, httpOnly: false });
+
       return { ok: true, token };
     },
 
     portalLogout: async (_request: FastifyRequest, reply: FastifyReply) => {
       reply.clearCookie("stc_session", { path: "/" });
+      reply.clearCookie("stc_csrf", { path: "/" });
       return { ok: true };
     },
 

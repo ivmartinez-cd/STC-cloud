@@ -72,6 +72,7 @@ export function createAuthMiddleware(
   async function portalAuth(request: FastifyRequest, reply: FastifyReply) {
     try {
       let token = request.cookies?.stc_session;
+      const usedCookie = !!token;
       if (!token) {
         const authHeader = request.headers.authorization;
         if (authHeader && authHeader.startsWith("Bearer ")) {
@@ -82,6 +83,19 @@ export function createAuthMiddleware(
       if (!token) {
         return reply.status(401).send({ error: "No autenticado" });
       }
+
+      // CSRF (double-submit cookie): solo aplica cuando la autenticación vino de la
+      // cookie de sesión. Un header Authorization explícito no puede ser forjado por
+      // un sitio de terceros vía formulario/fetch cross-site, así que es inmune a CSRF.
+      const MUTATING_METHODS = new Set(["POST", "PUT", "DELETE", "PATCH"]);
+      if (usedCookie && MUTATING_METHODS.has(request.method)) {
+        const csrfCookie = request.cookies?.stc_csrf;
+        const csrfHeader = request.headers["x-csrf-token"];
+        if (!csrfCookie || csrfCookie !== csrfHeader) {
+          return reply.status(403).send({ error: "Token CSRF inválido o ausente" });
+        }
+      }
+
       const decoded = fastify.jwt.verify<PortalJwtPayload>(token);
       if (decoded.role !== "portal") {
         return reply.status(403).send({ error: "Token de agente no puede acceder a esta ruta" });

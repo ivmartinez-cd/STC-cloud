@@ -20,8 +20,14 @@ declare module 'net-snmp' {
     value: string | number | Buffer | null;
   }
 
+  export type FeedCallback = (varbinds: Varbind[]) => boolean | void;
+  export type DoneCallback = (error: Error | null) => void;
+
   export interface Session {
     get(oids: string[], callback: (error: Error | null, varbinds: Varbind[]) => void): void;
+    /** GETBULK iterativo sobre un subárbol (v2c). `feedCallback` recibe lotes de varbinds. */
+    subtree(oid: string, maxRepetitions: number, feedCallback: FeedCallback, doneCallback: DoneCallback): void;
+    walk(oid: string, maxRepetitions: number, feedCallback: FeedCallback, doneCallback: DoneCallback): void;
     close(): void;
   }
 

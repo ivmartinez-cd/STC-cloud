@@ -1,11 +1,17 @@
 export interface SuppliesItem {
   percentage?: number | null;
   status?: string | null;
+  /** Part number instalado (p. ej. W2020A, MLT-D201L). */
   code?: string | null;
+  /** Número de pedido recomendado por el equipo (si difiere del instalado). */
+  orderNumber?: string | null;
   serial?: string | null;
   capacity?: number | null;
   printed?: number | null;
   remainingPages?: number | null;
+  remainingDays?: number | null;
+  firstInstallDate?: string | null;
+  lastUseDate?: string | null;
 }
 
 export interface InputTrayInfo {
@@ -30,12 +36,47 @@ export interface CounterRowDetail {
   total: number;
 }
 
+export interface CounterTriple {
+  mono?:  number | null;
+  color?: number | null;
+  total?: number | null;
+}
+
+export interface ScanCounters {
+  copy?:  number | null;
+  send?:  number | null;
+  fax?:   number | null;
+  total?: number | null;
+}
+
 export interface DetailedCounters {
   monoSimplex?: CounterRowDetail;
   duplex?: CounterRowDetail;
   colorSimplex?: CounterRowDetail;
   colorDuplex?: CounterRowDetail;
   totalImpressions?: CounterRowDetail;
+  print?:            CounterTriple;
+  copy?:             CounterTriple;
+  fax?:              CounterTriple;
+  equivalentA4?:     CounterTriple;
+  duplexEquivalent?: CounterTriple;
+  scans?:            ScanCounters;
+  engineCycles?:      number | null;
+  colorEngineCycles?: number | null;
+}
+
+/** Datos del equipo sin columna propia (llegan en supplies_details.device). */
+export interface DeviceExtraInfo {
+  sku?:              string | null;
+  alias?:            string | null;
+  dnsName?:          string | null;
+  firmwarePackage?:  string | null;
+  firmwareRevision?: string | null;
+  firmwareDate?:     string | null;
+  platform?:         string | null;
+  formatterNumber?:  string | null;
+  ramMb?:            number | null;
+  manufacturer?:     string | null;
 }
 
 export interface SuppliesDetails {
@@ -64,8 +105,9 @@ export interface SuppliesDetails {
   };
   inputTrays?: InputTrayInfo[];
   outputTrays?: OutputTrayInfo[];
-  alerts?: Array<{ code?: string; description?: string; severity?: string }>;
+  alerts?: Array<{ code?: string; description?: string; severity?: string; time?: string }>;
   counters?: DetailedCounters;
+  device?: DeviceExtraInfo;
 }
 
 export interface Device {
@@ -82,6 +124,12 @@ export interface Device {
   color_pages: number | null;
   brand: string | null;
   firmware?: string | null;
+  mac?: string | null;
+  hostname?: string | null;
+  location?: string | null;
+  sku?: string | null;
+  poll_method?: string | null;
+  created_at?: string | null;
   toner_black?: number | null;
   toner_cyan?: number | null;
   toner_magenta?: number | null;

@@ -1,8 +1,24 @@
 const BASE = '/api/v1';
 
+/** Lee el valor de una cookie no-httpOnly (ej. stc_csrf) desde document.cookie. */
+function readCookie(name: string): string | null {
+  const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
+const MUTATING_METHODS = new Set(['POST', 'PUT', 'DELETE', 'PATCH']);
+
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers: Record<string, string> = {};
   if (init.body) headers['Content-Type'] = 'application/json';
+
+  // CSRF (double-submit cookie): reenviar el valor de stc_csrf como header en
+  // cada mutación, para que el backend pueda validarlo contra la cookie.
+  const method = (init.method || 'GET').toUpperCase();
+  if (MUTATING_METHODS.has(method)) {
+    const csrf = readCookie('stc_csrf');
+    if (csrf) headers['X-CSRF-Token'] = csrf;
+  }
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 15_000);

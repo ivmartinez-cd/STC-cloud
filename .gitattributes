@@ -1,0 +1,17 @@
+# Normalizar fin de línea: LF en el repo y en el checkout (evita diffs masivos CRLF/LF entre Windows y WSL)
+* text=auto eol=lf
+
+# Scripts de Windows deben mantener CRLF
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+*.iss text eol=crlf
+
+# Binarios
+*.png binary
+*.jpg binary
+*.ico binary
+*.exe binary
+*.gz binary
+*.zip binary
+*.enc binary

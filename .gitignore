@@ -76,3 +76,9 @@ agent/scratch/
 agent-data-dev/
 qc
 query
+# Dumps y backups de base de datos (no versionar)
+*.sql
+*.dump
+*.tar.gz
+pgdata_backup*
+fresh_dump_*

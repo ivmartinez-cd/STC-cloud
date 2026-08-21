@@ -29,6 +29,33 @@ const createAgentSchema = {
   },
 };
 
+const updateConfigSchema = {
+  body: {
+    type: "object",
+    properties: {
+      name: { type: "string", minLength: 1, maxLength: 100 },
+      ip_ranges: {
+        type: "array",
+        items: {
+          type: "object",
+          required: ["start", "end"],
+          properties: {
+            start: { type: "string" },
+            end: { type: "string" },
+          },
+        },
+      },
+      snmp_community: { type: "string", maxLength: 64 },
+      scan_interval_minutes: { type: "integer", minimum: 1, maximum: 1440 },
+      // Validación superficial: el detalle de mode/custom_days/custom_times lo
+      // interpreta agentService.updateConfig; acá solo se bloquea basura no-objeto.
+      scan_schedule: { type: "object" },
+      toner_warning_threshold: { type: "integer", minimum: 0, maximum: 100 },
+      toner_critical_threshold: { type: "integer", minimum: 0, maximum: 100 },
+    },
+  },
+};
+
 const commandSchema = {
   body: {
     type: "object",
@@ -95,6 +122,7 @@ export function registerPortalAgentRoutes(
 
   fastify.put("/api/v1/agents/:id/config", {
     preHandler: portalAuth,
+    schema: updateConfigSchema,
     handler: ctrl.updateConfig,
   });
 }

@@ -34,12 +34,18 @@ export function createDashboardController(db: Knex, agentService: AgentService) 
         db
           .raw(
             `
-          SELECT SUM(delta)::bigint as total FROM (
-            SELECT (MAX(total_pages) - MIN(total_pages)) as delta
+          -- Suma de deltas positivos entre lecturas consecutivas (no MAX-MIN del período):
+          -- un reset/decremento de contador dentro del mes no debe inflar el volumen.
+          -- La ventana interna se extiende 40 días atrás para que la primera lectura
+          -- del mes tenga como base la última lectura del mes anterior.
+          SELECT SUM(GREATEST(delta, 0))::bigint as total FROM (
+            SELECT
+              time,
+              total_pages - LAG(total_pages) OVER (PARTITION BY device_id ORDER BY time) as delta
             FROM readings
-            WHERE time >= date_trunc('month', now())
-            GROUP BY device_id
+            WHERE time >= date_trunc('month', now()) - INTERVAL '40 days'
           ) sub
+          WHERE delta IS NOT NULL AND time >= date_trunc('month', now())
         `
           )
           .then((r: { rows: Array<{ total: string | null }> }) => r.rows[0]),

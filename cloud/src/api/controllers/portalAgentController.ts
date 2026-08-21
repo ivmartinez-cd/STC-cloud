@@ -109,16 +109,31 @@ export function createPortalAgentController(
 
     getAgentDevices: async (request: FastifyRequest) => {
       const { id } = request.params as AgentIdParams;
-      const monthlySubquery = db("readings")
-        .select(
-          "device_id",
-          db.raw("(MAX(total_pages) - MIN(total_pages))::int AS monthly_pages"),
-          db.raw("(MAX(mono_pages)   - MIN(mono_pages))::int   AS monthly_mono"),
-          db.raw("(MAX(color_pages)  - MIN(color_pages))::int  AS monthly_color")
-        )
-        .where("time", ">=", db.raw("date_trunc('month', now())"))
-        .groupBy("device_id")
-        .as("m");
+      // Suma de deltas positivos entre lecturas consecutivas (no MAX-MIN del mes): un
+      // reset/decremento de contador no debe inflar el volumen mensual mostrado en el
+      // reporte del monitor. La subconsulta interna se extiende 40 días atrás para que
+      // la primera lectura del mes tenga como base la última lectura del mes anterior.
+      const monthlySubquery = db.raw(`
+        (
+          SELECT
+            device_id,
+            SUM(GREATEST(total_pages_delta, 0))::int AS monthly_pages,
+            SUM(GREATEST(mono_pages_delta,  0))::int AS monthly_mono,
+            SUM(GREATEST(color_pages_delta, 0))::int AS monthly_color
+          FROM (
+            SELECT
+              device_id,
+              time,
+              total_pages - LAG(total_pages) OVER (PARTITION BY device_id ORDER BY time) AS total_pages_delta,
+              mono_pages  - LAG(mono_pages)  OVER (PARTITION BY device_id ORDER BY time) AS mono_pages_delta,
+              color_pages - LAG(color_pages) OVER (PARTITION BY device_id ORDER BY time) AS color_pages_delta
+            FROM readings
+            WHERE time >= date_trunc('month', now()) - INTERVAL '40 days'
+          ) deltas
+          WHERE time >= date_trunc('month', now())
+          GROUP BY device_id
+        ) as m
+      `);
 
       return await db("devices")
         .where("devices.agent_id", id)
@@ -221,6 +236,14 @@ export function createPortalAgentController(
         { agentId: id, type, commandId: command.id },
         "Comando remoto registrado y pendiente"
       );
+
+      await db("audit_logs").insert({
+        action: "AGENT_COMMAND",
+        target_id: id,
+        user_id: user?.userId ?? null,
+        ip_address: getClientIp(request),
+        metadata: JSON.stringify({ type, payload: payload || {} }),
+      });
 
       const sentViaWss = sendCommandToAgent(id, type, payload || {}, command.id);
       if (sentViaWss) {

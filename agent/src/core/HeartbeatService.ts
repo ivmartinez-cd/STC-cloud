@@ -2,7 +2,7 @@ import os from 'os';
 import { log, logTailer } from './Logger';
 import { getLocalIp, getHostOS } from './NetworkUtils';
 import { tryRefresh } from '../sync/uploader';
-import { getDeviceCount } from '../sync/database';
+import { getDeviceCount, pendingCount } from '../sync/database';
 import type { AgentConfig } from './config';
 import { ConfigManager } from './config';
 import type { CommandHandler, CommandResult } from './CommandHandler';
@@ -58,6 +58,7 @@ export class HeartbeatService {
           deviceCount: getDeviceCount(),
           snmpErrors:  this.deps.getLastScanErrors(),
           memoryMb:    Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
+          queueSize:   pendingCount(),
           logs,
           commandResults,
           system_info: {

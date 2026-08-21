@@ -1,80 +1,41 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo, type ReactNode } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { api } from '../lib/api';
 import {
-  Printer, RefreshCw, Activity, Layers,
-  SlidersHorizontal, Edit3, Trash2, PlusCircle, AlertTriangle, Inbox,
-  TrendingUp, Clock, FileText
+  Printer, RefreshCw, Activity, Layers, Trash2, AlertTriangle, Inbox,
+  TrendingUp, Clock, FileText, Cpu, Info, ScanLine, Copy, Phone,
 } from 'lucide-react';
 import { OFFLINE_THRESHOLD_MS } from '../lib/constants';
-import {
-  XAxis, YAxis, Tooltip,
-  ResponsiveContainer, CartesianGrid, Area, AreaChart
-} from 'recharts';
-import { type SuppliesDetails } from '../types/monitor';
+import { XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Area, AreaChart } from 'recharts';
+import type { Device, SuppliesDetails, CounterTriple } from '../types/monitor';
+import { parseSuppliesDetails, buildSupplyRows, usageRate, fmtDate, fmtInt, type SupplyRow, type ReadingPoint } from '../lib/supplies';
+import { deviceImageCandidates } from '../lib/deviceImage';
+import { ConfirmationModal } from '../components/ui/ConfirmationModal';
 
-interface Reading {
+// ─── Tipos locales ───────────────────────────────────────────────────────────
+
+interface Reading extends ReadingPoint {
   id: string;
-  time:           string;
-  total_pages:    number;
-  mono_pages:     number | null;
-  color_pages:    number | null;
-  totalPages?:    number;
-  monoPages?:     number;
-  colorPages?:    number;
   toner_black?:   number | null;
   toner_cyan?:    number | null;
   toner_magenta?: number | null;
   toner_yellow?:  number | null;
-  status:         string;
 }
 
-interface Device {
-  id:           string;
-  brand:        string;
-  model:        string;
-  serial_number: string;
-  ip_address:   string;
-  monitor_name: string;
-  client_name:  string;
-  client_id?:   string;
-  agent_id?:    string;
-  agent_status?: string;
+/** Respuesta de GET /devices/:id (devices.* + joins de agente/cliente). */
+interface DeviceDetailData extends Device {
+  monitor_name?:    string;
+  client_name?:     string;
+  client_id?:       string;
+  agent_status?:    string;
   agent_last_seen?: string | null;
-  last_seen?:   string;
-  total_pages?: number;
-  mono_pages?:  number;
-  color_pages?: number;
-  toner_black?: number | null;
-  toner_cyan?:  number | null;
-  toner_magenta?: number | null;
-  toner_yellow?: number | null;
-  supplies_details?: string | SuppliesDetails | null;
-  cartridge_code_black?:       string | null;
-  cartridge_code_cyan?:        string | null;
-  cartridge_code_magenta?:     string | null;
-  cartridge_code_yellow?:      string | null;
-  cartridge_serial_black?:     string | null;
-  cartridge_serial_cyan?:      string | null;
-  cartridge_serial_magenta?:   string | null;
-  cartridge_serial_yellow?:    string | null;
-  cartridge_capacity_black?:   number | null;
-  cartridge_capacity_cyan?:    number | null;
-  cartridge_capacity_magenta?: number | null;
-  cartridge_capacity_yellow?:  number | null;
-  cartridge_printed_black?:    number | null;
-  cartridge_printed_cyan?:     number | null;
-  cartridge_printed_magenta?:  number | null;
-  cartridge_printed_yellow?:   number | null;
-  cartridge_estimated_black?:    number | null;
-  cartridge_estimated_cyan?:     number | null;
-  cartridge_estimated_magenta?:  number | null;
-  cartridge_estimated_yellow?:   number | null;
+  status?:          string;
 }
 
 interface DeviceAlert {
   id: string;
   device_id: string;
+  deviceId?: string;
   type: string;
   severity: string;
   message: string;
@@ -82,1097 +43,512 @@ interface DeviceAlert {
   resolved: boolean;
 }
 
+type Tab = 'general' | 'counters' | 'supplies' | 'media' | 'alerts';
+
+// ─── Helpers de presentación ─────────────────────────────────────────────────
+
+const fmtDateTime = (v: string | null | undefined): string =>
+  v ? new Date(v).toLocaleString('es-AR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
+
+const POLL_LABEL: Record<string, string> = { ews: 'EWS (web embebida)', snmp: 'SNMP', pjl: 'PJL (9100)', ipp: 'IPP (631)', unknown: '—' };
+
+/** Fila "etiqueta → valor" de las tarjetas de datos (estilo SDS). */
+const Row = ({ label, value, mono = false, muted = false }: { label: string; value: ReactNode; mono?: boolean; muted?: boolean }) => (
+  <div className="flex items-start justify-between gap-4 px-4 py-2 odd:bg-slate-50/70">
+    <span className="text-[11px] font-bold text-slate-500 whitespace-nowrap">{label}</span>
+    <span className={`text-[11px] text-right font-semibold ${muted ? 'text-slate-400' : 'text-slate-800'} ${mono ? 'font-mono' : ''} break-all`}>{value ?? '—'}</span>
+  </div>
+);
+
+const CardTitle = ({ icon, children, right }: { icon: ReactNode; children: ReactNode; right?: ReactNode }) => (
+  <div className="bg-gradient-to-r from-sky-600 to-blue-700 px-4 py-2.5 text-white flex items-center justify-between">
+    <div className="flex items-center gap-2">{icon}<h4 className="text-sm font-black tracking-wide">{children}</h4></div>
+    {right}
+  </div>
+);
+
+const Card = ({ children, className = '' }: { children: ReactNode; className?: string }) => (
+  <div className={`cd-panel bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs ${className}`}>{children}</div>
+);
+
+/** Foto del equipo con cadena de fallbacks (ver public/devices/README.md). */
+const DeviceImage = ({ brand, model }: { brand: string | null; model: string | null }) => {
+  const candidates = useMemo(() => deviceImageCandidates(brand, model), [brand, model]);
+  const [idx, setIdx] = useState(0);
+  useEffect(() => { setIdx(0); }, [candidates]);
+  const src = candidates[Math.min(idx, candidates.length - 1)];
+  return (
+    <img
+      src={src}
+      alt={model ?? 'Dispositivo'}
+      className="max-h-44 w-auto object-contain drop-shadow-sm"
+      onError={() => setIdx(i => (i < candidates.length - 1 ? i + 1 : i))}
+    />
+  );
+};
+
+const TripleRows = ({ label, t }: { label: string; t: CounterTriple | undefined }) => {
+  if (!t) return null;
+  return (
+    <>
+      <Row label={`${label} — monocromo`} value={fmtInt(t.mono)} />
+      <Row label={`${label} — color`} value={fmtInt(t.color)} />
+      <Row label={`${label} — total`} value={fmtInt(t.total)} />
+    </>
+  );
+};
+
+// ─── Página ──────────────────────────────────────────────────────────────────
+
 const DeviceDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [readings, setReadings] = useState<Reading[]>([]);
-  const [device, setDevice]     = useState<Device | null>(null);
+  const [device, setDevice]     = useState<DeviceDetailData | null>(null);
   const [alerts, setAlerts]     = useState<DeviceAlert[]>([]);
   const [loading, setLoading]   = useState(true);
   const [error, setError]       = useState('');
   const [now] = useState(() => Date.now());
-  const [activeTab, setActiveTab] = useState<'general' | 'counters' | 'supplies' | 'media' | 'alerts'>('general');
+  const [activeTab, setActiveTab] = useState<Tab>('general');
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const load = useCallback(() => {
     setLoading(true);
     Promise.all([
-      api.get<Device>(`/devices/${id}`),
-      api.get<Reading[]>(`/devices/${id}/readings?limit=48`),
-      api.get<DeviceAlert[]>(`/alerts?device_id=${id}`).catch(() => [] as DeviceAlert[])
+      api.get<DeviceDetailData>(`/devices/${id}`),
+      // 400 lecturas alcanzan para ~1 semana de historial con los loops actuales → ritmo de impresión real
+      api.get<Reading[]>(`/devices/${id}/readings?limit=400`),
+      api.get<DeviceAlert[]>(`/alerts?device_id=${id}`).catch(() => [] as DeviceAlert[]),
     ])
-    .then(([deviceData, readingsData, alertsData]) => {
-      setDevice(deviceData);
-      setReadings(Array.isArray(readingsData) ? readingsData : []);
-      setAlerts(Array.isArray(alertsData) ? alertsData : []);
-    })
-    .catch((e: Error) => setError(e.message))
-    .finally(() => setLoading(false));
+      .then(([deviceData, readingsData, alertsData]) => {
+        setDevice(deviceData);
+        setReadings(Array.isArray(readingsData) ? readingsData : []);
+        setAlerts(Array.isArray(alertsData) ? alertsData : []);
+      })
+      .catch((e: Error) => setError(e.message))
+      .finally(() => setLoading(false));
   }, [id]);
 
-  useEffect(() => {
-    const init = async () => {
-      await load();
-    };
-    void init();
-  }, [load]);
+  useEffect(() => { void load(); }, [load]);
 
   const latest = readings[0] ?? null;
+  const details: SuppliesDetails | null = useMemo(() => parseSuppliesDetails(device?.supplies_details), [device?.supplies_details]);
+  const rate = useMemo(() => usageRate(readings), [readings]);
+  const supplyRows: SupplyRow[] = useMemo(() => (device ? buildSupplyRows(device, details, rate) : []), [device, details, rate]);
+  const counters = details?.counters;
+  const extra = details?.device;
 
-  // Parse supplies_details if available as string or object
-  const suppliesDetails: SuppliesDetails | null = (() => {
-    if (!device?.supplies_details) return null;
-    if (typeof device.supplies_details === 'object') return device.supplies_details as SuppliesDetails;
-    try {
-      return JSON.parse(device.supplies_details) as SuppliesDetails;
-    } catch {
-      return null;
-    }
-  })();
-
-  const handleDelete = async () => {
-    if (!window.confirm('¿Estás seguro de que deseas eliminar este dispositivo?')) return;
-    try {
-      await api.delete(`/devices/${id}`);
-      navigate('/devices');
-    } catch (e: any) {
-      alert(`Error al eliminar: ${e.message}`);
-    }
-  };
-
-  const chartData = [...readings].reverse().map(r => ({
+  const chartData = useMemo(() => [...readings].slice(0, 48).reverse().map(r => ({
     time:  new Date(r.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    Total: r.total_pages ?? r.totalPages ?? 0,
-    Mono:  r.mono_pages  ?? r.monoPages  ?? 0,
-    Color: r.color_pages ?? r.colorPages ?? 0,
-  }));
+    Total: r.total_pages ?? 0,
+    Mono:  r.mono_pages ?? 0,
+    Color: r.color_pages ?? 0,
+  })), [readings]);
 
   const isAgentOnline = device !== null
     && device.agent_status === 'active'
-    && device.agent_last_seen !== null
-    && device.agent_last_seen !== undefined
+    && !!device.agent_last_seen
     && (now - new Date(device.agent_last_seen).getTime() <= OFFLINE_THRESHOLD_MS);
 
-  // Build supplies rows dynamically from REAL EWS / SNMP data
-  const buildSuppliesRows = () => {
-    const rows = [];
-    const updateTime = device?.last_seen 
-      ? new Date(device.last_seen).toLocaleString('es-AR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' })
-      : (latest?.time ? new Date(latest.time).toLocaleString('es-AR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '—');
-
-    const totalP = latest?.total_pages ?? device?.total_pages ?? 0;
-    const dutyCycles = totalP.toLocaleString('es-AR');
-    const isSamsung4020 = device?.brand?.toLowerCase().includes('samsung') || device?.model?.toLowerCase().includes('4020') || device?.model?.toLowerCase().includes('m4020');
-
-    // 1. Black Toner Cartridge
-    const bkVal = latest?.toner_black ?? suppliesDetails?.toners?.black?.percentage ?? device?.toner_black ?? 31;
-    const bkSerial = device?.cartridge_serial_black || suppliesDetails?.toners?.black?.serial || (device?.serial_number ? `CRUM-${device.serial_number.slice(-8)}` : '—');
-    const bkSku = device?.cartridge_code_black || suppliesDetails?.toners?.black?.code || (isSamsung4020 ? 'MLT-D203U' : '—');
-    const bkCap = device?.cartridge_capacity_black ?? suppliesDetails?.toners?.black?.capacity ?? (isSamsung4020 ? 15000 : 10000);
-    
-    const bkPagesNum = device?.cartridge_estimated_black ?? Math.round((bkCap * bkVal) / 100);
-    const bkDaysNum = Math.round(bkPagesNum / 11);
-    const bkPages = bkPagesNum.toLocaleString('es-AR');
-    const bkDays = bkDaysNum.toLocaleString('es-AR');
-
-    const bkDesc = `Black Toner Cartridge ${bkSerial !== '—' ? 'S/N ' + bkSerial : ''}`.trim();
-
-    rows.push({
-      id: 1,
-      desc: bkDesc,
-      type: 'Tóner',
-      color: 'Negro',
-      colorBar: 'bg-slate-900',
-      pct: bkVal,
-      serial: bkSerial,
-      sku: bkSku,
-      capacity: bkCap.toLocaleString('es-AR'),
-      days: bkDays,
-      pages: bkPages,
-      updateTime,
-      dutyCycles,
-      solicitud: 'El dispositivo no está habilitado para la gestión de consumibles'
-    });
-
-    // Color Toners
-    const cyVal = latest?.toner_cyan ?? suppliesDetails?.toners?.cyan?.percentage ?? device?.toner_cyan ?? null;
-    if (cyVal != null && cyVal > 0) {
-      const cySerial = device?.cartridge_serial_cyan || suppliesDetails?.toners?.cyan?.serial || '—';
-      const cySku = device?.cartridge_code_cyan || suppliesDetails?.toners?.cyan?.code || '—';
-      const cyCap = device?.cartridge_capacity_cyan ?? suppliesDetails?.toners?.cyan?.capacity ?? 15000;
-      const p = Math.round((cyCap * cyVal) / 100);
-      rows.push({
-        id: rows.length + 1,
-        desc: `Cyan Toner Cartridge ${cySerial !== '—' ? 'S/N ' + cySerial : ''}`.trim(),
-        type: 'Tóner',
-        color: 'Cian',
-        colorBar: 'bg-cyan-500',
-        pct: cyVal,
-        serial: cySerial,
-        sku: cySku,
-        capacity: cyCap.toLocaleString('es-AR'),
-        days: Math.round(p / 11).toLocaleString('es-AR'),
-        pages: p.toLocaleString('es-AR'),
-        updateTime,
-        dutyCycles,
-        solicitud: 'El dispositivo no está habilitado para la gestión de consumibles'
-      });
+  const handleDelete = async () => {
+    setDeleting(true); setDeleteError(null);
+    try {
+      await api.delete(`/devices/${id}`);
+      navigate('/devices');
+    } catch (e) {
+      setDeleteError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setDeleting(false);
     }
-
-    const mgVal = latest?.toner_magenta ?? suppliesDetails?.toners?.magenta?.percentage ?? device?.toner_magenta ?? null;
-    if (mgVal != null && mgVal > 0) {
-      const mgSerial = device?.cartridge_serial_magenta || suppliesDetails?.toners?.magenta?.serial || '—';
-      const mgSku = device?.cartridge_code_magenta || suppliesDetails?.toners?.magenta?.code || '—';
-      const mgCap = device?.cartridge_capacity_magenta ?? suppliesDetails?.toners?.magenta?.capacity ?? 15000;
-      const p = Math.round((mgCap * mgVal) / 100);
-      rows.push({
-        id: rows.length + 1,
-        desc: `Magenta Toner Cartridge ${mgSerial !== '—' ? 'S/N ' + mgSerial : ''}`.trim(),
-        type: 'Tóner',
-        color: 'Magenta',
-        colorBar: 'bg-pink-500',
-        pct: mgVal,
-        serial: mgSerial,
-        sku: mgSku,
-        capacity: mgCap.toLocaleString('es-AR'),
-        days: Math.round(p / 11).toLocaleString('es-AR'),
-        pages: p.toLocaleString('es-AR'),
-        updateTime,
-        dutyCycles,
-        solicitud: 'El dispositivo no está habilitado para la gestión de consumibles'
-      });
-    }
-
-    const yeVal = latest?.toner_yellow ?? suppliesDetails?.toners?.yellow?.percentage ?? device?.toner_yellow ?? null;
-    if (yeVal != null && yeVal > 0) {
-      const yeSerial = device?.cartridge_serial_yellow || suppliesDetails?.toners?.yellow?.serial || '—';
-      const yeSku = device?.cartridge_code_yellow || suppliesDetails?.toners?.yellow?.code || '—';
-      const yeCap = device?.cartridge_capacity_yellow ?? suppliesDetails?.toners?.yellow?.capacity ?? 15000;
-      const p = Math.round((yeCap * yeVal) / 100);
-      rows.push({
-        id: rows.length + 1,
-        desc: `Yellow Toner Cartridge ${yeSerial !== '—' ? 'S/N ' + yeSerial : ''}`.trim(),
-        type: 'Tóner',
-        color: 'Amarillo',
-        colorBar: 'bg-yellow-400',
-        pct: yeVal,
-        serial: yeSerial,
-        sku: yeSku,
-        capacity: yeCap.toLocaleString('es-AR'),
-        days: Math.round(p / 11).toLocaleString('es-AR'),
-        pages: p.toLocaleString('es-AR'),
-        updateTime,
-        dutyCycles,
-        solicitud: 'El dispositivo no está habilitado para la gestión de consumibles'
-      });
-    }
-
-    // 2. Fuser
-    const fusVal = suppliesDetails?.maintenance?.fuser?.percentage ?? (
-      isSamsung4020 || totalP > 0
-        ? Math.max(10, Math.round(100 - ((totalP % 90000) / 900)))
-        : 88
-    );
-    const fusPages = Math.round((90000 * fusVal) / 100);
-    const fusDays = Math.round(fusPages / 11);
-    rows.push({
-      id: rows.length + 1,
-      desc: 'Fuser',
-      type: 'Fusor',
-      color: 'Sin color',
-      colorBar: 'bg-slate-400',
-      pct: fusVal,
-      serial: '—',
-      sku: 'JC91-01024A',
-      capacity: '—',
-      days: fusDays.toLocaleString('es-AR'),
-      pages: fusPages.toLocaleString('es-AR'),
-      updateTime,
-      dutyCycles,
-      solicitud: 'El dispositivo no está habilitado para la gestión de consumibles'
-    });
-
-    // 3. Transfer Roller
-    const trVal = suppliesDetails?.maintenance?.transferRoller?.percentage ?? suppliesDetails?.maintenance?.transferBelt?.percentage ?? (
-      isSamsung4020 || totalP > 0
-        ? Math.max(10, Math.round(100 - ((totalP % 100000) / 1000)))
-        : 89
-    );
-    const trPages = Math.round((100000 * trVal) / 100);
-    const trDays = Math.round(trPages / 11);
-    rows.push({
-      id: rows.length + 1,
-      desc: 'Transfer Roller',
-      type: 'Rodillo',
-      color: 'Sin color',
-      colorBar: 'bg-slate-400',
-      pct: trVal,
-      serial: '—',
-      sku: 'JC97-02259A',
-      capacity: '—',
-      days: trDays.toLocaleString('es-AR'),
-      pages: trPages.toLocaleString('es-AR'),
-      updateTime,
-      dutyCycles,
-      solicitud: 'El dispositivo no está habilitado para la gestión de consumibles'
-    });
-
-    // 4. MP Roller
-    const mpRollerVal = suppliesDetails?.maintenance?.mpTrayRoller?.percentage ?? (
-      isSamsung4020 || totalP > 0
-        ? Math.max(15, Math.round(100 - ((totalP % 100000) / 1000)))
-        : 21
-    );
-    const mpPages = Math.round((100000 * mpRollerVal) / 100);
-    const mpDays = Math.round(mpPages / 11);
-    rows.push({
-      id: rows.length + 1,
-      desc: 'MP Roller',
-      type: 'Rodillo',
-      color: 'Sin color',
-      colorBar: 'bg-slate-400',
-      pct: mpRollerVal,
-      serial: '—',
-      sku: 'JC97-02259A',
-      capacity: '—',
-      days: mpDays.toLocaleString('es-AR'),
-      pages: mpPages.toLocaleString('es-AR'),
-      updateTime,
-      dutyCycles,
-      solicitud: 'El dispositivo no está habilitado para la gestión de consumibles'
-    });
-
-    // 5. MP Retard Roller
-    const mpRetardVal = suppliesDetails?.maintenance?.mpTrayRetardRoller?.percentage ?? (
-      isSamsung4020 || totalP > 0
-        ? Math.max(5, Math.round(100 - ((totalP % 80000) / 800)))
-        : 2
-    );
-    const mpRPages = Math.round((80000 * mpRetardVal) / 100);
-    const mpRDays = Math.round(mpRPages / 11);
-    rows.push({
-      id: rows.length + 1,
-      desc: 'MP Retard Roller',
-      type: 'Rodillo',
-      color: 'Sin color',
-      colorBar: 'bg-slate-400',
-      pct: mpRetardVal,
-      serial: '—',
-      sku: 'JC97-02259A',
-      capacity: '—',
-      days: mpRDays.toLocaleString('es-AR'),
-      pages: mpRPages.toLocaleString('es-AR'),
-      updateTime,
-      dutyCycles,
-      solicitud: 'El dispositivo no está habilitado para la gestión de consumibles'
-    });
-
-    // 6. Tray 1 Roller
-    const tray1Val = suppliesDetails?.maintenance?.tray1Roller?.percentage ?? (
-      isSamsung4020 || totalP > 0
-        ? Math.max(10, Math.round(100 - ((totalP % 90000) / 900)))
-        : 99
-    );
-    const t1Pages = Math.round((90000 * tray1Val) / 100);
-    const t1Days = Math.round(t1Pages / 11);
-    rows.push({
-      id: rows.length + 1,
-      desc: 'Tray 1 Roller',
-      type: 'Rodillo',
-      color: 'Sin color',
-      colorBar: 'bg-slate-400',
-      pct: tray1Val,
-      serial: '—',
-      sku: 'JC97-02259A',
-      capacity: '—',
-      days: t1Days.toLocaleString('es-AR'),
-      pages: t1Pages.toLocaleString('es-AR'),
-      updateTime,
-      dutyCycles,
-      solicitud: 'El dispositivo no está habilitado para la gestión de consumibles'
-    });
-
-    // 7. Tray 1 Retard Roller
-    const tray1RetardVal = suppliesDetails?.maintenance?.tray1RetardRoller?.percentage ?? (
-      isSamsung4020 || totalP > 0
-        ? Math.max(2, Math.round(100 - ((totalP % 60000) / 600)))
-        : 99
-    );
-    const t1RPages = Math.round((60000 * tray1RetardVal) / 100);
-    const t1RDays = Math.round(t1RPages / 11);
-    rows.push({
-      id: rows.length + 1,
-      desc: 'Tray 1 Retard Roller',
-      type: 'Rodillo',
-      color: 'Sin color',
-      colorBar: 'bg-slate-400',
-      pct: tray1RetardVal,
-      serial: '—',
-      sku: 'JC97-02259A',
-      capacity: '—',
-      days: t1RDays.toLocaleString('es-AR'),
-      pages: t1RPages.toLocaleString('es-AR'),
-      updateTime,
-      dutyCycles,
-      solicitud: 'El dispositivo no está habilitado para la gestión de consumibles'
-    });
-
-    // 8. Drum / Imaging Unit
-    const drumBkVal = suppliesDetails?.drums?.black?.percentage ?? (
-      suppliesDetails?.drums?.black ? 85 : null
-    );
-    if (drumBkVal != null) {
-      const drumPages = Math.round((30000 * drumBkVal) / 100);
-      const drumDays = Math.round(drumPages / 11);
-      rows.push({
-        id: rows.length + 1,
-        desc: `Black Imaging Unit ${suppliesDetails?.drums?.black?.serial ? 'S/N ' + suppliesDetails.drums.black.serial : ''}`.trim(),
-        type: 'Tambor de imagen',
-        color: 'Negro',
-        colorBar: 'bg-slate-900',
-        pct: drumBkVal,
-        serial: suppliesDetails?.drums?.black?.serial || '—',
-        sku: suppliesDetails?.drums?.black?.code || 'JC96-06514A',
-        capacity: '30.000',
-        days: drumDays.toLocaleString('es-AR'),
-        pages: drumPages.toLocaleString('es-AR'),
-        updateTime,
-        dutyCycles,
-        solicitud: 'El dispositivo no está habilitado para la gestión de consumibles'
-      });
-    }
-
-    return rows;
   };
 
-  const suppliesTableRows = buildSuppliesRows();
+  const totalPages = latest?.total_pages ?? device?.total_pages ?? null;
+  const monoPages  = latest?.mono_pages  ?? device?.mono_pages  ?? null;
+  const colorPages = latest?.color_pages ?? device?.color_pages ?? null;
+  const isColorDevice = (colorPages ?? 0) > 0 || supplyRows.some(r => r.kind === 'Tóner' && r.color !== 'Negro');
 
-  // Build media / tray rows dynamically matching SDS Bandejas de medios table
-  const buildMediaRows = () => {
-    const rows = [];
-    const isSamsung = device?.brand?.toLowerCase().includes('samsung') || device?.model?.toLowerCase().includes('4020') || device?.model?.toLowerCase().includes('m4020');
+  // Alertas activas: del servidor + las que reporta el equipo (supplies_details.alerts), deduplicadas
+  const activeAlerts = useMemo(() => {
+    const seen = new Set<string>();
+    const out: Array<{ key: string; severity: string; message: string; code?: string; time?: string }> = [];
+    for (const a of details?.alerts ?? []) {
+      const key = `${a.code ?? ''}|${(a.description ?? '').toLowerCase()}`;
+      if (!a.description && !a.code) continue;
+      if (seen.has(key)) continue; seen.add(key);
+      out.push({ key: `dev-${key}`, severity: (a.severity ?? 'INFO').toUpperCase(), message: a.description ?? a.code ?? '', code: a.code, time: a.time });
+    }
+    for (const a of alerts.filter(x => !x.resolved && (x.device_id === id || x.deviceId === id))) {
+      const key = `${(a.type ?? '').toLowerCase()}|${(a.message ?? '').toLowerCase()}`;
+      if (seen.has(key) || [...seen].some(k => k.endsWith(`|${(a.message ?? '').toLowerCase()}`))) continue; seen.add(key);
+      out.push({ key: `srv-${a.id}`, severity: (a.severity ?? 'INFO').toUpperCase(), message: a.message, code: a.type, time: a.timestamp });
+    }
+    return out;
+  }, [details?.alerts, alerts, id]);
 
-    // 1. Output Trays
-    const outTrays = suppliesDetails?.outputTrays || [
-      { name: 'Output Standard Bin', capacity: 150, level: null, status: 'Ready' }
-    ];
+  const tabBtn = (tab: Tab, icon: ReactNode, label: string) => (
+    <button
+      onClick={() => setActiveTab(tab)}
+      className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black transition-all ${
+        activeTab === tab ? 'bg-white text-sky-600 border border-slate-200 shadow-xs border-b-2 border-b-sky-600' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100/50'
+      }`}
+    >
+      {icon}{label}
+    </button>
+  );
 
-    outTrays.forEach((ot) => {
-      rows.push({
-        id: `out-${ot.name}`,
-        model: isSamsung ? 'Samsung Electronics' : (device?.brand || 'Standard Output Handler'),
-        desc: ot.name || 'Output Standard Bin',
-        media: 'Desconocido',
-        type: 'Desconocido',
-        weight: 'Desconocido',
-        capacity: ot.capacity ? String(ot.capacity).replace(/\D+/g, '') || '150' : '150',
-        level: ot.level != null ? `${ot.level}%` : 'Desconocido',
-        unit: 'Otro',
-        statusCode: '-1'
-      });
-    });
+  // ── Tarjetas reutilizables ────────────────────────────────────────────────
 
-    // 2. Input Trays
-    const inTrays = suppliesDetails?.inputTrays || [
-      { name: 'Input Tray 1', paperType: 'Plain', paperSize: 'na_letter', capacity: 250, level: null, status: 'Ready' },
-      { name: 'Input MP Tray', paperType: 'Plain', paperSize: 'iso_a4', capacity: 50, level: null, status: 'Ready' }
-    ];
+  const SuppliesTable = ({ compact = false }: { compact?: boolean }) => (
+    <Card>
+      <CardTitle icon={<Activity size={16} />} right={<span className="text-xs font-bold opacity-90">{supplyRows.length} insumos reportados</span>}>Consumibles actuales</CardTitle>
+      {supplyRows.length ? (
+        <div className="overflow-x-auto w-full">
+          <table className="w-full text-left text-[11px] border-collapse min-w-[1100px]">
+            <thead className="bg-slate-100/90 text-slate-600 font-black uppercase text-[10px] tracking-tight border-b border-slate-200">
+              <tr>
+                <th className="px-2 py-2.5 w-6 text-center">#</th>
+                <th className="px-2.5 py-2.5">Descripción</th>
+                <th className="px-2.5 py-2.5">Tipo</th>
+                <th className="px-2.5 py-2.5">Color</th>
+                <th className="px-2.5 py-2.5 min-w-[120px]">Nivel actual</th>
+                <th className="px-2.5 py-2.5">Estado</th>
+                <th className="px-2.5 py-2.5">Part number</th>
+                <th className="px-2.5 py-2.5">Nº pedido</th>
+                <th className="px-2.5 py-2.5">Nº de serie</th>
+                <th className="px-2.5 py-2.5 text-right">Págs. impresas</th>
+                <th className="px-2.5 py-2.5 text-right">Págs. restantes</th>
+                <th className="px-2.5 py-2.5 text-right">Días restantes</th>
+                {!compact && <th className="px-2.5 py-2.5 text-right">Instalado</th>}
+                {!compact && <th className="px-2.5 py-2.5 text-right">Último uso</th>}
+                <th className="px-2.5 py-2.5 text-right">Última actualización</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 text-[10px] font-medium text-slate-700">
+              {supplyRows.map((r, i) => (
+                <tr key={r.key} className="hover:bg-slate-50/90 transition-colors">
+                  <td className="px-2 py-2 text-center text-slate-400 font-bold">{i + 1}</td>
+                  <td className="px-2.5 py-2 font-bold text-slate-800 whitespace-nowrap">{r.description}</td>
+                  <td className="px-2.5 py-2 font-semibold text-slate-600 whitespace-nowrap">{r.kind}</td>
+                  <td className="px-2.5 py-2 whitespace-nowrap">
+                    <span className="inline-flex items-center gap-1.5 font-bold text-slate-700"><span className={`w-2 h-2 rounded-full ${r.colorClass}`} />{r.color}</span>
+                  </td>
+                  <td className="px-2.5 py-2">
+                    {r.percentage != null ? (
+                      <div className="flex items-center gap-1.5 min-w-[110px]">
+                        <div className="h-1.5 flex-1 bg-slate-100 rounded-full overflow-hidden">
+                          <div className={`h-full ${r.percentage <= 10 ? 'bg-rose-500' : r.colorClass} rounded-full transition-all duration-700`} style={{ width: `${Math.max(0, Math.min(100, r.percentage))}%` }} />
+                        </div>
+                        <span className="font-extrabold text-slate-800 shrink-0 text-[10px] w-8 text-right">{r.percentage}%</span>
+                      </div>
+                    ) : <span className="text-slate-400">—</span>}
+                  </td>
+                  <td className="px-2.5 py-2 whitespace-nowrap">{r.status ?? '—'}</td>
+                  <td className="px-2.5 py-2 font-mono font-bold text-sky-700 whitespace-nowrap">{r.code ?? '—'}</td>
+                  <td className="px-2.5 py-2 font-mono text-slate-600 whitespace-nowrap">{r.orderNumber ?? '—'}</td>
+                  <td className="px-2.5 py-2 font-mono text-slate-700 whitespace-nowrap">{r.serial ?? '—'}</td>
+                  <td className="px-2.5 py-2 text-right whitespace-nowrap">{fmtInt(r.printed)}</td>
+                  <td className="px-2.5 py-2 text-right font-black text-slate-800 whitespace-nowrap">{fmtInt(r.remainingPages)}</td>
+                  <td className="px-2.5 py-2 text-right font-bold whitespace-nowrap" title={rate.totalPerDay ? `Ritmo observado: ${fmtInt(rate.totalPerDay)} págs/día (${fmtInt(rate.spanDays)} días, ${rate.samples} lecturas)` : 'Sin historial suficiente para estimar'}>{fmtInt(r.remainingDays)}</td>
+                  {!compact && <td className="px-2.5 py-2 text-right whitespace-nowrap">{fmtDate(r.firstInstallDate)}</td>}
+                  {!compact && <td className="px-2.5 py-2 text-right whitespace-nowrap">{fmtDate(r.lastUseDate)}</td>}
+                  <td className="px-2.5 py-2 text-right text-slate-500 whitespace-nowrap">{fmtDateTime(device?.last_seen)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <div className="p-8 text-center text-slate-400 font-bold text-xs">El agente no reportó consumibles para este equipo</div>
+      )}
+    </Card>
+  );
 
-    inTrays.forEach((it) => {
-      const isMP = it.name.toLowerCase().includes('mp') || it.name.toLowerCase().includes('bypass');
-      const modelName = isSamsung 
-        ? (isMP ? 'Samsung External Media Handler' : 'Samsung Internal Input Tray')
-        : (isMP ? 'External Media Handler' : 'Internal Input Tray');
-      
-      const rawSize = it.paperSize || (isMP ? 'iso_a4' : 'na_letter');
-      const mediaSize = rawSize.toLowerCase().includes('a4') 
-        ? 'iso_a4' 
-        : (rawSize.toLowerCase().includes('letter') ? 'na_letter' : rawSize.toLowerCase().replace(/\s+/g, '_'));
-
-      rows.push({
-        id: `in-${it.name}`,
-        model: modelName,
-        desc: it.name.includes('Input') ? it.name : `Input ${it.name}`,
-        media: mediaSize,
-        type: it.paperType || 'Plain',
-        weight: '0',
-        capacity: it.capacity ? String(it.capacity) : (isMP ? '50' : '250'),
-        level: it.level != null ? `${it.level}%` : 'Desconocido',
-        unit: 'Hojas',
-        statusCode: '0'
-      });
-    });
-
-    return rows;
-  };
-
-  const mediaTableRows = buildMediaRows();
+  const CountersCard = () => (
+    <Card>
+      <CardTitle icon={<FileText size={16} />}>Últimos recuentos de páginas</CardTitle>
+      <div className="divide-y divide-slate-100">
+        <Row label="Páginas monocromáticas" value={fmtInt(monoPages)} />
+        <Row label="Páginas a color" value={fmtInt(colorPages)} />
+        <Row label="Número total de páginas" value={<span className="text-sky-700 font-black">{fmtInt(totalPages)}</span>} />
+        {counters?.equivalentA4 && <TripleRows label="Equivalente A4" t={counters.equivalentA4} />}
+        {counters?.print && <Row label="Impresiones" value={fmtInt(counters.print.total)} />}
+        {counters?.copy && <Row label="Copias" value={fmtInt(counters.copy.total)} />}
+        {counters?.fax && (counters.fax.total ?? 0) > 0 && <Row label="Fax" value={fmtInt(counters.fax.total)} />}
+        {counters?.scans && <Row label="Escaneos" value={fmtInt(counters.scans.total)} />}
+        {counters?.engineCycles != null && <Row label="Ciclos del motor" value={fmtInt(counters.engineCycles)} />}
+        {counters?.totalImpressions && <Row label="Impresiones totales (print/report)" value={`${fmtInt(counters.totalImpressions.print)} / ${fmtInt(counters.totalImpressions.report)}`} />}
+        <Row label="Última actualización" value={fmtDateTime(latest?.time ?? device?.last_seen)} muted />
+      </div>
+    </Card>
+  );
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
-      {/* Top Breadcrumb & Path Bar (SDS style) */}
+      {/* Breadcrumb + acciones */}
       <div className="flex flex-wrap items-center justify-between gap-4 bg-white p-3.5 px-6 rounded-2xl border border-slate-100 shadow-xs text-xs font-bold text-slate-500">
         <div className="flex items-center gap-2 flex-wrap">
-          <Link to="/" className="text-slate-400 hover:text-brand transition-colors hover:underline flex items-center gap-1">
-            Canal Directo
-          </Link>
+          <Link to="/" className="text-slate-400 hover:text-brand transition-colors hover:underline">Canal Directo</Link>
           <span className="text-slate-300">›</span>
-          
-          {device?.client_id ? (
-            <Link to={`/clients/${device.client_id}`} className="text-slate-600 hover:text-brand transition-colors hover:underline">
-              {device.client_name || 'Cliente'}
-            </Link>
-          ) : (
-            <span className="text-slate-600">{device?.client_name || 'Cliente'}</span>
-          )}
-
+          {device?.client_id ? <Link to={`/clients/${device.client_id}`} className="text-slate-600 hover:text-brand hover:underline">{device.client_name || 'Cliente'}</Link> : <span className="text-slate-600">{device?.client_name || 'Cliente'}</span>}
           <span className="text-slate-300">›</span>
-
-          {device?.agent_id ? (
-            <Link to={`/monitors/${device.agent_id}`} className="text-slate-600 hover:text-brand transition-colors hover:underline">
-              {device.monitor_name || 'Monitor'}
-            </Link>
-          ) : (
-            <span className="text-slate-600">{device?.monitor_name || 'Monitor'}</span>
-          )}
-
+          {device?.agent_id ? <Link to={`/monitors/${device.agent_id}`} className="text-slate-600 hover:text-brand hover:underline">{device.monitor_name || 'Monitor'}</Link> : <span className="text-slate-600">{device?.monitor_name || 'Monitor'}</span>}
           <span className="text-slate-300">›</span>
-
-          <span className="bg-slate-100 text-slate-800 font-extrabold px-2.5 py-1 rounded-lg">
-            {device?.serial_number || device?.ip_address || 'Dispositivo'}
-          </span>
+          <span className="bg-slate-100 text-slate-800 font-extrabold px-2.5 py-1 rounded-lg">{device?.serial_number || device?.ip_address || 'Dispositivo'}</span>
         </div>
-
         <div className="flex items-center gap-3">
-          <button className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-xl border border-slate-200 text-xs font-bold transition-all">
-            <PlusCircle size={14} className="text-brand" />
-            Agregar Nota
-          </button>
           {device && (
-            <button
-              onClick={handleDelete}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl border border-rose-200 text-xs font-bold transition-all"
-            >
-              <Trash2 size={14} />
-              Eliminar
+            <button onClick={() => setDeleteOpen(true)} className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl border border-rose-200 text-xs font-bold transition-all">
+              <Trash2 size={14} /> Eliminar
             </button>
           )}
-          <button
-            onClick={load}
-            disabled={loading}
-            className="p-1.5 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-xl border border-slate-200 transition-all disabled:opacity-40"
-            title="Actualizar"
-          >
+          <button onClick={load} disabled={loading} className="p-1.5 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-xl border border-slate-200 transition-all disabled:opacity-40" title="Actualizar">
             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
           </button>
         </div>
       </div>
 
-      {/* Tab Navigation (SDS Style) */}
-      <div className="flex items-center gap-2 border-b border-slate-200 pb-1">
-        <button
-          onClick={() => setActiveTab('general')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black transition-all ${
-            activeTab === 'general'
-              ? 'bg-white text-sky-600 border border-slate-200 shadow-xs border-b-2 border-b-sky-600'
-              : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100/50'
-          }`}
-        >
-          <Layers size={15} />
-          Vista General
-        </button>
-        <button
-          onClick={() => setActiveTab('counters')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black transition-all ${
-            activeTab === 'counters'
-              ? 'bg-white text-sky-600 border border-slate-200 shadow-xs border-b-2 border-b-sky-600'
-              : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100/50'
-          }`}
-        >
-          <TrendingUp size={15} />
-          Recuentos
-        </button>
-        <button
-          onClick={() => setActiveTab('supplies')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black transition-all ${
-            activeTab === 'supplies'
-              ? 'bg-white text-sky-600 border border-slate-200 shadow-xs border-b-2 border-b-sky-600'
-              : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100/50'
-          }`}
-        >
-          <Activity size={15} />
-          Consumibles
-        </button>
-        <button
-          onClick={() => setActiveTab('media')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black transition-all ${
-            activeTab === 'media'
-              ? 'bg-white text-sky-600 border border-slate-200 shadow-xs border-b-2 border-b-sky-600'
-              : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100/50'
-          }`}
-        >
-          <Inbox size={15} />
-          Medios (Bandejas)
-        </button>
-        <button
-          onClick={() => setActiveTab('alerts')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black transition-all ${
-            activeTab === 'alerts'
-              ? 'bg-white text-sky-600 border border-slate-200 shadow-xs border-b-2 border-b-sky-600'
-              : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100/50'
-          }`}
-        >
-          <AlertTriangle size={15} />
-          Alertas
-        </button>
+      {/* Tabs */}
+      <div className="flex items-center gap-2 border-b border-slate-200 pb-1 overflow-x-auto">
+        {tabBtn('general', <Layers size={15} />, 'Vista General')}
+        {tabBtn('counters', <TrendingUp size={15} />, 'Recuentos')}
+        {tabBtn('supplies', <Activity size={15} />, 'Consumibles')}
+        {tabBtn('media', <Inbox size={15} />, 'Medios (Bandejas)')}
+        {tabBtn('alerts', <AlertTriangle size={15} />, `Alertas${activeAlerts.length ? ` (${activeAlerts.length})` : ''}`)}
       </div>
 
-      {error && (
-        <div className="bg-rose-50 border border-rose-100 rounded-2xl p-6 text-rose-600 font-bold animate-in shake">
-          Error: {error}
-        </div>
-      )}
+      {error && <div className="bg-rose-50 border border-rose-100 rounded-2xl p-6 text-rose-600 font-bold">Error: {error}</div>}
 
-      {/* ─── TAB 1: VISTA GENERAL ───────────────────────────────────────────── */}
+      {/* ─── VISTA GENERAL ─────────────────────────────────────────────────── */}
       {!error && device && activeTab === 'general' && (
         <div className="space-y-6">
-          {/* Header Info Panel */}
-          <div className="cd-panel p-6 bg-white border border-slate-100 rounded-2xl flex flex-wrap gap-8 items-center">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-slate-50 rounded-xl text-brand"><Printer size={20}/></div>
+          <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+            {/* Foto */}
+            <Card className="xl:col-span-3">
+              <CardTitle icon={<Printer size={16} />}>{device.serial_number ?? device.ip_address}</CardTitle>
+              <div className="p-5 flex flex-col items-center gap-3">
+                <div className="w-full h-48 flex items-center justify-center bg-slate-50 rounded-xl border border-slate-100">
+                  <DeviceImage brand={device.brand} model={device.model} />
+                </div>
+                <p className="text-xs font-black text-slate-800 text-center">{device.model ?? '—'}</p>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{device.brand ?? '—'}</p>
+                <div className="flex items-center gap-2 text-[11px] font-bold">
+                  <span className={`w-2 h-2 rounded-full ${isAgentOnline ? 'bg-emerald-500 animate-pulse' : 'bg-amber-400'}`} />
+                  <span className="text-slate-600">{isAgentOnline ? 'Monitor en línea' : 'Monitor sin contacto'}</span>
+                </div>
+              </div>
+            </Card>
+
+            {/* Datos del dispositivo */}
+            <Card className="xl:col-span-5">
+              <CardTitle icon={<Info size={16} />}>Datos del dispositivo</CardTitle>
               <div>
-                <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Modelo / Marca</p>
-                <p className="text-sm font-black text-slate-700 tracking-tight">{device.model} ({device.brand})</p>
+                <Row label="ID de dispositivo" value={device.id.slice(0, 8)} mono />
+                <Row label="Fecha de descubrimiento" value={fmtDateTime(device.created_at)} />
+                <Row label="Última actualización" value={<span className="inline-flex items-center gap-1.5"><span className={`w-2 h-2 rounded-full ${isAgentOnline ? 'bg-emerald-500' : 'bg-amber-400'}`} />{fmtDateTime(device.last_seen)}</span>} />
+                <Row label="Número de serie" value={device.serial_number ?? '—'} mono />
+                <Row label="Dirección IP" value={device.ip_address} mono />
+                <Row label="Nombre del host" value={device.hostname ?? extra?.dnsName ?? '—'} mono />
+                {extra?.alias && extra.alias !== device.hostname && <Row label="Alias" value={extra.alias} />}
+                <Row label="Dirección MAC" value={device.mac ? String(device.mac).toUpperCase() : '—'} mono />
+                <Row label="Firmware" value={device.firmware ?? '—'} mono />
+                {extra?.firmwarePackage && <Row label="Paquete de firmware" value={extra.firmwarePackage} mono />}
+                {extra?.platform && <Row label="Plataforma" value={extra.platform} />}
+                <Row label="Ubicación" value={device.location ?? '—'} />
+                <Row label="Fabricante" value={extra?.manufacturer ?? device.brand ?? '—'} />
+                <Row label="Modelo" value={device.model ?? '—'} />
+                <Row label="SKU / Nº de producto" value={device.sku ?? extra?.sku ?? '—'} mono />
+                {extra?.formatterNumber && <Row label="Nº de formateador" value={extra.formatterNumber} mono />}
+                {extra?.ramMb != null && <Row label="Memoria RAM" value={`${fmtInt(extra.ramMb)} MB`} />}
+                <Row label="Método de lectura" value={POLL_LABEL[device.poll_method ?? 'unknown'] ?? device.poll_method} />
+                <Row label="Cliente / Monitor" value={`${device.client_name ?? ''} · ${device.monitor_name ?? ''}`} muted />
               </div>
-            </div>
-            <div className="w-px h-8 bg-slate-100 hidden md:block" />
-            <div>
-              <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Número de Serie</p>
-              <p className="text-sm font-black text-slate-700 tracking-tight">{device.serial_number || 'S/N Desconocido'}</p>
-            </div>
-            <div className="w-px h-8 bg-slate-100 hidden md:block" />
-            <div>
-              <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Dirección IP</p>
-              <p className="text-sm font-black text-brand tracking-tight">{device.ip_address}</p>
-            </div>
-            <div className="md:ml-auto flex items-center gap-3">
-              <div className="text-right hidden sm:block">
-                <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Cliente / Monitor</p>
-                <p className="text-xs font-bold text-slate-500">{device.client_name} · {device.monitor_name}</p>
-              </div>
-              {isAgentOnline ? (
-                <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" title="Agente en línea" />
-              ) : (
-                <div className="w-2.5 h-2.5 rounded-full bg-amber-400" title="Agente sin contacto" />
-              )}
-            </div>
-          </div>
+            </Card>
 
-          {/* Main Grid: Impression Chart & Current Counters */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 space-y-6">
-              <div className="cd-panel p-6 bg-white border border-slate-100 rounded-2xl">
-                <div className="flex items-center justify-between mb-6">
-                  <h3 className="font-extrabold text-[#1a2333] text-base flex items-center gap-2">
-                    <TrendingUp size={18} className="text-brand" />
-                    Tendencia de Impresión
-                  </h3>
-                  <span className="text-[10px] font-extrabold px-3 py-1 bg-slate-100 text-slate-500 rounded-full uppercase tracking-widest">
-                    Últimas {readings.length} lecturas
-                  </span>
-                </div>
-                
-                <div className="h-[280px] w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                      <defs>
-                        <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#0080FF" stopOpacity={0.2}/>
-                          <stop offset="95%" stopColor="#0080FF" stopOpacity={0}/>
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
-                      <XAxis dataKey="time" axisLine={false} tickLine={false} tick={{ fill: '#94A3B8', fontSize: 10, fontWeight: 700 }} />
-                      <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94A3B8', fontSize: 10, fontWeight: 700 }} />
-                      <Tooltip 
-                        contentStyle={{ backgroundColor: '#1E293B', borderRadius: '16px', color: '#FFF', border: 'none', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1)' }}
-                        itemStyle={{ color: '#FFF', fontSize: '12px', fontWeight: 800 }}
-                        labelStyle={{ color: '#94A3B8', fontSize: '10px', fontWeight: 700, marginBottom: '4px' }}
-                      />
-                      <Area type="monotone" dataKey="Total" stroke="#0080FF" strokeWidth={3} fillOpacity={1} fill="url(#colorTotal)" />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-
-              {/* Quick Status Cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="p-5 bg-white rounded-2xl border border-slate-100 flex items-center gap-4">
-                  <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl">
-                    <Activity size={20} />
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Estado Operativo</p>
-                    <p className="text-sm font-black text-slate-800 mt-0.5">
-                      {isAgentOnline ? 'En Línea' : 'Desconectado'}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="p-5 bg-white rounded-2xl border border-slate-100 flex items-center gap-4">
-                  <div className="p-3 bg-sky-50 text-sky-600 rounded-xl">
-                    <Clock size={20} />
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Última Sincronización</p>
-                    <p className="text-sm font-black text-slate-800 mt-0.5">
-                      {device.agent_last_seen ? new Date(device.agent_last_seen).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' hs' : 'Sin datos'}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Right Card: Contadores Actuales */}
-            <div className="bg-gradient-to-br from-amber-500 to-orange-600 text-white rounded-2xl p-6 shadow-md flex flex-col justify-between">
-              <div>
-                <div className="flex items-center gap-2 text-amber-100 font-extrabold text-sm mb-6">
-                  <FileText size={18} />
-                  <span>Contadores Actuales</span>
-                </div>
-
-                <div className="space-y-6">
-                  <div>
-                    <p className="text-[10px] font-black uppercase tracking-widest text-amber-200 opacity-90">Total Acumulado</p>
-                    <p className="text-4xl font-black tracking-tight mt-1">
-                      {(latest?.total_pages ?? device.total_pages ?? 0).toLocaleString('es-AR')}
-                    </p>
-                  </div>
-
-                  <div className="p-4 bg-white/10 backdrop-blur-xs rounded-xl space-y-1">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-amber-200">Monocromo</p>
-                    <p className="text-xl font-black">
-                      {(latest?.mono_pages ?? device.mono_pages ?? 0).toLocaleString('es-AR')}
-                    </p>
-                  </div>
-
-                  <div className="p-4 bg-white/10 backdrop-blur-xs rounded-xl space-y-1">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-amber-200">Color</p>
-                    <p className="text-xl font-black">
-                      {(latest?.color_pages ?? device.color_pages ?? 0).toLocaleString('es-AR')}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="pt-6 border-t border-amber-400/30 flex items-center justify-between text-[10px] font-bold text-amber-100">
-                <span>LECTURA REALIZADA EL</span>
-                <span>{latest?.time ? new Date(latest.time).toLocaleDateString('es-AR') : 'Reciente'}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Consumables Table in General View */}
-          <div className="cd-panel bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs">
-            <div className="bg-gradient-to-r from-sky-600 to-blue-700 px-4 py-2.5 text-white flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Activity size={16} />
-                <h4 className="text-sm font-black tracking-wide">Consumibles actuales</h4>
-              </div>
-              <span className="text-xs font-bold opacity-90">{suppliesTableRows.length} insumos registrados</span>
-            </div>
-
-            {suppliesTableRows.length > 0 ? (
-              <div className="overflow-x-auto w-full">
-                <table className="w-full text-left text-[11px] border-collapse min-w-[1000px]">
-                  <thead className="bg-slate-100/90 text-slate-600 font-black uppercase text-[10px] tracking-tight border-b border-slate-200">
-                    <tr>
-                      <th className="px-2 py-2.5 w-6 text-center">#</th>
-                      <th className="px-2.5 py-2.5">Descripción MIB</th>
-                      <th className="px-2.5 py-2.5">Tipo</th>
-                      <th className="px-2.5 py-2.5">Color</th>
-                      <th className="px-2.5 py-2.5 min-w-[100px]">Nivel actual</th>
-                      <th className="px-2.5 py-2.5">Número de serie</th>
-                      <th className="px-2.5 py-2.5">SKU ajustado</th>
-                      <th className="px-2.5 py-2.5 text-right">Rendimiento</th>
-                      <th className="px-2.5 py-2.5 text-right">Estimación días</th>
-                      <th className="px-2.5 py-2.5 text-right">Estimación págs</th>
-                      <th className="px-2.5 py-2.5 text-right">Última actualización</th>
-                      <th className="px-2.5 py-2.5 text-right">Ciclos trabajo</th>
-                      <th className="px-2.5 py-2.5">Solicitud</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 text-[10px] font-medium text-slate-700">
-                    {suppliesTableRows.map((r) => (
-                      <tr key={r.id} className="hover:bg-slate-50/90 transition-colors">
-                        <td className="px-2 py-2 text-center text-slate-400 font-bold">{r.id}</td>
-                        <td className="px-2.5 py-2 font-bold text-slate-800 whitespace-nowrap">{r.desc}</td>
-                        <td className="px-2.5 py-2 font-semibold text-slate-600 whitespace-nowrap">{r.type}</td>
-                        <td className="px-2.5 py-2 whitespace-nowrap">
-                          <span className="inline-flex items-center gap-1.5 font-bold text-slate-700">
-                            <span className={`w-2 h-2 rounded-full ${r.colorBar}`} />
-                            {r.color}
-                          </span>
-                        </td>
-                        <td className="px-2.5 py-2">
-                          {r.pct != null ? (
-                            <div className="flex items-center gap-1.5 min-w-[90px]">
-                              <div className="h-1.5 flex-1 bg-slate-100 rounded-full overflow-hidden">
-                                <div
-                                  className={`h-full ${r.colorBar} rounded-full transition-all duration-700`}
-                                  style={{ width: `${r.pct}%` }}
-                                />
-                              </div>
-                              <span className="font-extrabold text-slate-800 shrink-0 text-[10px] w-7 text-right">{r.pct}%</span>
-                            </div>
-                          ) : (
-                            <div className="flex items-center gap-1.5 min-w-[90px]">
-                              <div className="h-1.5 flex-1 bg-slate-100 rounded-full overflow-hidden" />
-                              <span className="font-semibold text-slate-400 shrink-0 text-[10px]">Desconocido</span>
-                            </div>
-                          )}
-                        </td>
-                        <td className="px-2.5 py-2 font-mono text-slate-700 whitespace-nowrap text-[10px]">{r.serial}</td>
-                        <td className="px-2.5 py-2 whitespace-nowrap">
-                          {r.sku !== '—' ? (
-                            <span className="text-sky-600 font-mono font-bold hover:underline cursor-pointer inline-flex items-center gap-1 text-[10px]">
-                              <Edit3 size={10} className="text-sky-500" />
-                              {r.sku}
-                            </span>
-                          ) : (
-                            <span className="text-slate-400 font-mono text-[10px]">—</span>
-                          )}
-                        </td>
-                        <td className="px-2.5 py-2 text-right font-medium text-slate-700 whitespace-nowrap text-[10px]">{r.capacity}</td>
-                        <td className="px-2.5 py-2 text-right font-bold text-slate-700 whitespace-nowrap text-[10px]">{r.days}</td>
-                        <td className="px-2.5 py-2 text-right font-black text-slate-800 whitespace-nowrap text-[10px]">{r.pages}</td>
-                        <td className="px-2.5 py-2 text-right text-slate-500 font-medium whitespace-nowrap text-[10px]">{r.updateTime}</td>
-                        <td className="px-2.5 py-2 text-right font-mono font-bold text-slate-700 whitespace-nowrap text-[10px]">{r.dutyCycles}</td>
-                        <td className="px-2.5 py-2 whitespace-nowrap">
-                          <div className="flex items-center justify-between gap-1.5 min-w-[160px]">
-                            <span className="text-[9px] text-slate-500 font-medium truncate max-w-[140px]">{r.solicitud}</span>
-                            <input type="checkbox" defaultChecked className="rounded border-slate-300 text-sky-600 shrink-0 cursor-pointer w-3 h-3" />
-                          </div>
-                        </td>
-                      </tr>
+            {/* Recuentos + alertas */}
+            <div className="xl:col-span-4 space-y-6">
+              <CountersCard />
+              <Card>
+                <CardTitle icon={<AlertTriangle size={16} />}>Alertas actuales</CardTitle>
+                {activeAlerts.length ? (
+                  <ul className="divide-y divide-slate-100">
+                    {activeAlerts.map(a => (
+                      <li key={a.key} className="px-4 py-2 flex items-start gap-2 text-[11px]">
+                        <span className={`mt-0.5 px-1.5 py-0.5 rounded text-[9px] font-black ${a.severity === 'ERROR' || a.severity === 'CRITICAL' ? 'bg-rose-100 text-rose-700' : a.severity === 'WARNING' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'}`}>{a.severity}</span>
+                        <span className="font-semibold text-slate-700">{a.message}{a.code ? <span className="text-slate-400 font-mono"> · {a.code}</span> : null}</span>
+                      </li>
                     ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <div className="p-8 text-center text-slate-400 font-bold text-xs">
-                Sin datos de consumibles reportados por el agente DCA
-              </div>
-            )}
+                  </ul>
+                ) : (
+                  <p className="px-4 py-4 text-[11px] font-semibold text-slate-500">No hay alertas actuales para este dispositivo.</p>
+                )}
+              </Card>
+            </div>
           </div>
+
+          {/* Tendencia + estado */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2 cd-panel p-6 bg-white border border-slate-100 rounded-2xl">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="font-extrabold text-[#1a2333] text-base flex items-center gap-2"><TrendingUp size={18} className="text-brand" />Tendencia de impresión</h3>
+                <span className="text-[10px] font-extrabold px-3 py-1 bg-slate-100 text-slate-500 rounded-full uppercase tracking-widest">Últimas {Math.min(readings.length, 48)} lecturas</span>
+              </div>
+              <div className="h-[260px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#0080FF" stopOpacity={0.2} /><stop offset="95%" stopColor="#0080FF" stopOpacity={0} /></linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
+                    <XAxis dataKey="time" axisLine={false} tickLine={false} tick={{ fill: '#94A3B8', fontSize: 10, fontWeight: 700 }} />
+                    <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94A3B8', fontSize: 10, fontWeight: 700 }} domain={['auto', 'auto']} />
+                    <Tooltip contentStyle={{ backgroundColor: '#1E293B', borderRadius: '16px', color: '#FFF', border: 'none' }} itemStyle={{ color: '#FFF', fontSize: '12px', fontWeight: 800 }} labelStyle={{ color: '#94A3B8', fontSize: '10px', fontWeight: 700 }} />
+                    <Area type="monotone" dataKey="Total" stroke="#0080FF" strokeWidth={3} fillOpacity={1} fill="url(#colorTotal)" />
+                    {isColorDevice && <Area type="monotone" dataKey="Color" stroke="#F7931D" strokeWidth={2} fillOpacity={0} />}
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+            <div className="space-y-4">
+              <div className="bg-gradient-to-br from-amber-500 to-orange-600 text-white rounded-2xl p-6 shadow-md">
+                <div className="flex items-center gap-2 text-amber-100 font-extrabold text-sm mb-4"><FileText size={18} /><span>Contadores actuales</span></div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-amber-200">Total acumulado</p>
+                <p className="text-4xl font-black tracking-tight mt-1">{fmtInt(totalPages)}</p>
+                <div className="grid grid-cols-2 gap-3 mt-4">
+                  <div className="p-3 bg-white/10 rounded-xl"><p className="text-[10px] font-black uppercase tracking-widest text-amber-200">Monocromo</p><p className="text-xl font-black">{fmtInt(monoPages)}</p></div>
+                  <div className="p-3 bg-white/10 rounded-xl"><p className="text-[10px] font-black uppercase tracking-widest text-amber-200">Color</p><p className="text-xl font-black">{fmtInt(colorPages)}</p></div>
+                </div>
+                <div className="pt-4 mt-4 border-t border-amber-400/30 flex items-center justify-between text-[10px] font-bold text-amber-100">
+                  <span>LECTURA</span><span>{fmtDateTime(latest?.time ?? device.last_seen)}</span>
+                </div>
+              </div>
+              <div className="p-5 bg-white rounded-2xl border border-slate-100 flex items-center gap-4">
+                <div className="p-3 bg-sky-50 text-sky-600 rounded-xl"><Clock size={20} /></div>
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Ritmo de impresión</p>
+                  <p className="text-sm font-black text-slate-800 mt-0.5">{rate.totalPerDay != null ? `${fmtInt(rate.totalPerDay)} págs/día` : 'Sin historial suficiente'}</p>
+                  {rate.spanDays != null && <p className="text-[10px] text-slate-400 font-medium">{fmtInt(rate.spanDays)} días · {rate.samples} lecturas</p>}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <SuppliesTable compact />
         </div>
       )}
 
-      {/* ─── TAB 2: RECUENTOS DETALLADOS ──────────────────────────────────────── */}
+      {/* ─── RECUENTOS ──────────────────────────────────────────────────────── */}
       {!error && device && activeTab === 'counters' && (
-        <div className="space-y-6">
-          <div className="cd-panel p-6 bg-white border border-slate-100 rounded-2xl space-y-6">
-            <div className="flex items-center justify-between">
-              <h4 className="font-extrabold text-[#1a2333] text-base flex items-center gap-2">
-                <TrendingUp size={18} className="text-brand" />
-                Desglose Completo de Contadores (Contadores)
-              </h4>
-              <span className="text-xs font-bold text-slate-400">Total: {(latest?.total_pages ?? device.total_pages ?? 0).toLocaleString('es-AR')} impresiones</span>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-              <div className="p-5 bg-slate-50 rounded-2xl border border-slate-100 space-y-2">
-                <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Impresiones Monocromo</p>
-                <p className="text-2xl font-black text-slate-800">
-                  {(latest?.mono_pages ?? device.mono_pages ?? 0).toLocaleString('es-AR')}
-                </p>
-                <p className="text-[10px] text-slate-500 font-medium">Contador de páginas blanco y negro</p>
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+          <CountersCard />
+          <Card>
+            <CardTitle icon={<Cpu size={16} />}>Desglose por función</CardTitle>
+            {counters ? (
+              <div>
+                <TripleRows label="Impresión" t={counters.print} />
+                <TripleRows label="Copia" t={counters.copy} />
+                <TripleRows label="Fax" t={counters.fax} />
+                <TripleRows label="Dúplex (equiv.)" t={counters.duplexEquivalent} />
+                {counters.scans && (
+                  <>
+                    <Row label="Escaneos — copia" value={<span className="inline-flex items-center gap-1"><Copy size={11} />{fmtInt(counters.scans.copy)}</span>} />
+                    <Row label="Escaneos — envío digital" value={<span className="inline-flex items-center gap-1"><ScanLine size={11} />{fmtInt(counters.scans.send)}</span>} />
+                    <Row label="Escaneos — fax" value={<span className="inline-flex items-center gap-1"><Phone size={11} />{fmtInt(counters.scans.fax)}</span>} />
+                    <Row label="Escaneos — total" value={fmtInt(counters.scans.total)} />
+                  </>
+                )}
+                {counters.monoSimplex && <Row label="Mono símplex (print/report/total)" value={`${fmtInt(counters.monoSimplex.print)} / ${fmtInt(counters.monoSimplex.report)} / ${fmtInt(counters.monoSimplex.total)}`} />}
+                {counters.duplex && <Row label="Dúplex (print/report/total)" value={`${fmtInt(counters.duplex.print)} / ${fmtInt(counters.duplex.report)} / ${fmtInt(counters.duplex.total)}`} />}
+                {counters.colorEngineCycles != null && <Row label="Ciclos del motor en color" value={fmtInt(counters.colorEngineCycles)} />}
               </div>
-
-              <div className="p-5 bg-slate-50 rounded-2xl border border-slate-100 space-y-2">
-                <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Impresiones Color</p>
-                <p className="text-2xl font-black text-slate-800">
-                  {(latest?.color_pages ?? device.color_pages ?? 0).toLocaleString('es-AR')}
-                </p>
-                <p className="text-[10px] text-slate-500 font-medium">Contador de páginas color</p>
-              </div>
-
-              <div className="p-5 bg-sky-50/60 rounded-2xl border border-sky-100 space-y-2">
-                <p className="text-[10px] font-black uppercase tracking-wider text-sky-600">Total General Acumulado</p>
-                <p className="text-2xl font-black text-sky-900">
-                  {(latest?.total_pages ?? device.total_pages ?? 0).toLocaleString('es-AR')}
-                </p>
-                <p className="text-[10px] text-sky-600 font-medium">Impresiones totales históricas</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ─── TAB 3: CONSUMIBLES (EXACT SDS VIEW) ─────────────────────────────── */}
-      {!error && device && activeTab === 'supplies' && (
-        <div className="space-y-6">
-          {/* Detailed Consumables & Maintenance Table (Full SDS View) */}
-          <div className="cd-panel bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs">
-            <div className="bg-gradient-to-r from-sky-600 to-blue-700 px-4 py-2.5 text-white flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Activity size={16} />
-                <h4 className="text-sm font-black tracking-wide">Consumibles actuales</h4>
-              </div>
-              <div className="flex items-center gap-3 text-xs opacity-90 font-bold">
-                <span>{suppliesTableRows.length} insumos registrados</span>
-                <button className="hover:text-white transition-colors" title="Configurar columnas">
-                  <SlidersHorizontal size={14} />
-                </button>
-                <button onClick={load} className="hover:text-white transition-colors" title="Actualizar">
-                  <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-                </button>
-              </div>
-            </div>
-
-            {suppliesTableRows.length > 0 ? (
-              <>
-                <div className="overflow-x-auto w-full">
-                  <table className="w-full text-left text-[11px] border-collapse min-w-[1000px]">
-                    <thead className="bg-slate-100/90 text-slate-600 font-black uppercase text-[10px] tracking-tight border-b border-slate-200">
-                      <tr>
-                        <th className="px-2 py-2.5 w-6 text-center">#</th>
-                        <th className="px-2.5 py-2.5">Descripción MIB</th>
-                        <th className="px-2.5 py-2.5">Tipo</th>
-                        <th className="px-2.5 py-2.5">Color</th>
-                        <th className="px-2.5 py-2.5 min-w-[100px]">Nivel actual</th>
-                        <th className="px-2.5 py-2.5">Número de serie</th>
-                        <th className="px-2.5 py-2.5">SKU ajustado</th>
-                        <th className="px-2.5 py-2.5 text-right">Rendimiento</th>
-                        <th className="px-2.5 py-2.5 text-right">Estimación días</th>
-                        <th className="px-2.5 py-2.5 text-right">Estimación págs</th>
-                        <th className="px-2.5 py-2.5 text-right">Última actualización</th>
-                        <th className="px-2.5 py-2.5 text-right">Ciclos trabajo</th>
-                        <th className="px-2.5 py-2.5">Solicitud</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 text-[10px] font-medium text-slate-700">
-                      {suppliesTableRows.map((r) => (
-                        <tr key={r.id} className="hover:bg-slate-50/90 transition-colors">
-                          <td className="px-2 py-2 text-center text-slate-400 font-bold">{r.id}</td>
-                          <td className="px-2.5 py-2 font-bold text-slate-800 whitespace-nowrap">{r.desc}</td>
-                          <td className="px-2.5 py-2 font-semibold text-slate-600 whitespace-nowrap">{r.type}</td>
-                          <td className="px-2.5 py-2 whitespace-nowrap">
-                            <span className="inline-flex items-center gap-1.5 font-bold text-slate-700">
-                              <span className={`w-2 h-2 rounded-full ${r.colorBar}`} />
-                              {r.color}
-                            </span>
-                          </td>
-                          <td className="px-2.5 py-2">
-                            {r.pct != null ? (
-                              <div className="flex items-center gap-1.5 min-w-[90px]">
-                                <div className="h-1.5 flex-1 bg-slate-100 rounded-full overflow-hidden">
-                                  <div
-                                    className={`h-full ${r.colorBar} rounded-full transition-all duration-700`}
-                                    style={{ width: `${r.pct}%` }}
-                                  />
-                                </div>
-                                <span className="font-extrabold text-slate-800 shrink-0 text-[10px] w-7 text-right">{r.pct}%</span>
-                              </div>
-                            ) : (
-                              <div className="flex items-center gap-1.5 min-w-[90px]">
-                                <div className="h-1.5 flex-1 bg-slate-100 rounded-full overflow-hidden" />
-                                <span className="font-semibold text-slate-400 shrink-0 text-[10px]">Desconocido</span>
-                              </div>
-                            )}
-                          </td>
-                          <td className="px-2.5 py-2 font-mono text-slate-700 whitespace-nowrap text-[10px]">{r.serial}</td>
-                          <td className="px-2.5 py-2 whitespace-nowrap">
-                            {r.sku !== '—' ? (
-                              <span className="text-sky-600 font-mono font-bold hover:underline cursor-pointer inline-flex items-center gap-1 text-[10px]">
-                                <Edit3 size={10} className="text-sky-500" />
-                                {r.sku}
-                              </span>
-                            ) : (
-                              <span className="text-slate-400 font-mono text-[10px]">—</span>
-                            )}
-                          </td>
-                          <td className="px-2.5 py-2 text-right font-medium text-slate-700 whitespace-nowrap text-[10px]">{r.capacity}</td>
-                          <td className="px-2.5 py-2 text-right font-bold text-slate-700 whitespace-nowrap text-[10px]">{r.days}</td>
-                          <td className="px-2.5 py-2 text-right font-black text-slate-800 whitespace-nowrap text-[10px]">{r.pages}</td>
-                          <td className="px-2.5 py-2 text-right text-slate-500 font-medium whitespace-nowrap text-[10px]">{r.updateTime}</td>
-                          <td className="px-2.5 py-2 text-right font-mono font-bold text-slate-700 whitespace-nowrap text-[10px]">{r.dutyCycles}</td>
-                          <td className="px-2.5 py-2 whitespace-nowrap">
-                            <div className="flex items-center justify-between gap-1.5 min-w-[160px]">
-                              <span className="text-[9px] text-slate-500 font-medium truncate max-w-[140px]">{r.solicitud}</span>
-                              <input type="checkbox" defaultChecked className="rounded border-slate-300 text-sky-600 shrink-0 cursor-pointer w-3 h-3" />
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* Timeline Slider (SDS History Bar) */}
-                <div className="p-3 bg-slate-50 border-t border-slate-200 text-xs">
-                  <div className="flex items-center justify-between text-[10px] font-extrabold text-slate-400 mb-1.5 px-1 tracking-wider uppercase">
-                    <span>5 ago 2026</span>
-                    <span>06:00</span>
-                    <span>12:00</span>
-                    <span>18:00</span>
-                    <span>6 ago 2026</span>
-                    <span>06:00</span>
-                    <span>12:00</span>
-                    <span>18:00</span>
-                    <span>7 ago 2026</span>
-                    <span>06:00</span>
-                    <span>12:00</span>
-                  </div>
-                  <div className="relative flex items-center px-1">
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      defaultValue="100"
-                      className="w-full h-2.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-sky-600"
-                    />
-                  </div>
-                </div>
-              </>
             ) : (
-              <div className="p-8 text-center text-slate-400 font-bold text-xs">
-                Sin datos de consumibles reportados por el agente DCA
-              </div>
+              <p className="px-4 py-4 text-[11px] font-semibold text-slate-500">El equipo no expone desglose de contadores por función (sólo total/mono/color).</p>
             )}
-          </div>
+          </Card>
         </div>
       )}
 
-      {/* ─── TAB 4: MEDIOS & BANDEJAS (EXACT SDS VIEW) ────────────────────────── */}
-      {!error && device && activeTab === 'media' && (
-        <div className="space-y-6">
-          <div className="cd-panel bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs">
-            <div className="bg-gradient-to-r from-sky-600 to-blue-700 px-4 py-2.5 text-white flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Inbox size={16} />
-                <h4 className="text-sm font-black tracking-wide">Bandejas de medios</h4>
-              </div>
-              <span className="text-xs font-bold opacity-90">{mediaTableRows.length} bandejas de medios</span>
-            </div>
+      {/* ─── CONSUMIBLES ────────────────────────────────────────────────────── */}
+      {!error && device && activeTab === 'supplies' && <SuppliesTable />}
 
-            <div className="overflow-x-auto w-full">
-              <table className="w-full text-left text-[11px] border-collapse min-w-[900px]">
+      {/* ─── MEDIOS ─────────────────────────────────────────────────────────── */}
+      {!error && device && activeTab === 'media' && (
+        <Card>
+          <CardTitle icon={<Inbox size={16} />}>Bandejas de medios</CardTitle>
+          {(details?.inputTrays?.length || details?.outputTrays?.length) ? (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-[11px] border-collapse">
                 <thead className="bg-slate-100/90 text-slate-600 font-black uppercase text-[10px] tracking-tight border-b border-slate-200">
                   <tr>
-                    <th className="px-3 py-2.5">Modelo</th>
-                    <th className="px-3 py-2.5">Descripción</th>
-                    <th className="px-3 py-2.5">Medios</th>
-                    <th className="px-3 py-2.5">Tipo</th>
-                    <th className="px-3 py-2.5">Peso</th>
-                    <th className="px-3 py-2.5 text-right">Capacidad</th>
-                    <th className="px-3 py-2.5">Nivel actual</th>
-                    <th className="px-3 py-2.5">Unidad</th>
-                    <th className="px-3 py-2.5 text-right">Código del estado</th>
+                    <th className="px-3 py-2.5">Bandeja</th><th className="px-3 py-2.5">Tipo</th><th className="px-3 py-2.5">Tamaño de papel</th><th className="px-3 py-2.5">Tipo de papel</th>
+                    <th className="px-3 py-2.5 text-right">Capacidad</th><th className="px-3 py-2.5 min-w-[120px]">Nivel</th><th className="px-3 py-2.5">Estado</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-[10px] font-medium text-slate-700">
-                  {mediaTableRows.map((r) => (
-                    <tr key={r.id} className="hover:bg-slate-50/90 transition-colors">
-                      <td className="px-3 py-2.5 font-bold text-slate-800 whitespace-nowrap">{r.model}</td>
-                      <td className="px-3 py-2.5 font-semibold text-slate-700 whitespace-nowrap">{r.desc}</td>
-                      <td className="px-3 py-2.5 font-mono text-slate-700 whitespace-nowrap">{r.media}</td>
-                      <td className="px-3 py-2.5 font-medium text-slate-600 whitespace-nowrap">{r.type}</td>
-                      <td className="px-3 py-2.5 text-slate-500 whitespace-nowrap">{r.weight}</td>
-                      <td className="px-3 py-2.5 text-right font-mono font-bold text-slate-800 whitespace-nowrap">{r.capacity}</td>
-                      <td className="px-3 py-2.5 whitespace-nowrap">
-                        <span className={r.level === 'Desconocido' ? 'text-slate-400' : 'text-slate-800 font-bold'}>
-                          {r.level}
-                        </span>
-                      </td>
-                      <td className="px-3 py-2.5 text-slate-600 whitespace-nowrap">{r.unit}</td>
-                      <td className="px-3 py-2.5 text-right font-mono font-bold text-slate-700 whitespace-nowrap">{r.statusCode}</td>
+                  {(details?.inputTrays ?? []).map(t => (
+                    <tr key={`in-${t.name}`} className="hover:bg-slate-50/90">
+                      <td className="px-3 py-2 font-bold text-slate-800">{t.name}</td><td className="px-3 py-2">Entrada</td>
+                      <td className="px-3 py-2">{t.paperSize ?? '—'}</td><td className="px-3 py-2">{t.paperType ?? '—'}</td>
+                      <td className="px-3 py-2 text-right">{t.capacity != null ? `${fmtInt(t.capacity)} hojas` : '—'}</td>
+                      <td className="px-3 py-2">{t.level != null ? (
+                        <div className="flex items-center gap-1.5"><div className="h-1.5 flex-1 bg-slate-100 rounded-full overflow-hidden"><div className={`h-full rounded-full ${t.level <= 10 ? 'bg-rose-500' : 'bg-sky-500'}`} style={{ width: `${Math.max(0, Math.min(100, t.level))}%` }} /></div><span className="font-extrabold w-8 text-right">{t.level}%</span></div>
+                      ) : '—'}</td>
+                      <td className="px-3 py-2">{t.status ?? '—'}</td>
+                    </tr>
+                  ))}
+                  {(details?.outputTrays ?? []).map(t => (
+                    <tr key={`out-${t.name}`} className="hover:bg-slate-50/90">
+                      <td className="px-3 py-2 font-bold text-slate-800">{t.name}</td><td className="px-3 py-2">Salida</td>
+                      <td className="px-3 py-2">—</td><td className="px-3 py-2">—</td>
+                      <td className="px-3 py-2 text-right">{t.capacity != null ? String(t.capacity) : '—'}</td>
+                      <td className="px-3 py-2">{t.level != null ? `${t.level}%` : '—'}</td>
+                      <td className="px-3 py-2">{t.status ?? '—'}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-          </div>
-        </div>
+          ) : (
+            <p className="px-4 py-6 text-[11px] font-semibold text-slate-500 text-center">El equipo no reportó información de bandejas.</p>
+          )}
+        </Card>
       )}
 
-      {/* ─── TAB 5: ALERTAS DETALLADAS ────────────────────────────────────────── */}
+      {/* ─── ALERTAS ────────────────────────────────────────────────────────── */}
       {!error && device && activeTab === 'alerts' && (
-        <div className="space-y-6">
-          <div className="cd-panel p-6 bg-white border border-slate-100 rounded-2xl space-y-5">
-            <h4 className="font-extrabold text-[#1a2333] text-base flex items-center gap-2">
-              <AlertTriangle size={18} className="text-brand" />
-              Alertas Activas del Dispositivo
-            </h4>
-
-            <div className="space-y-3">
-              {(() => {
-                const mergedAlerts: Array<{ id: string; code: string; severity: string; message: string }> = [];
-                const seenKeys = new Set<string>();
-
-                if (suppliesDetails?.alerts) {
-                  for (const alt of suppliesDetails.alerts) {
-                    const key = (alt.code || alt.description || '').trim();
-                    if (!key || seenKeys.has(key)) continue;
-                    seenKeys.add(key);
-                    mergedAlerts.push({
-                      id: `ews-${key}`,
-                      code: alt.code || 'ALERTA EWS',
-                      severity: alt.severity || 'WARNING',
-                      message: alt.description || alt.code || '',
-                    });
-                  }
-                }
-
-                const activeDbAlerts = alerts.filter(a => !a.resolved && (a.device_id === id || (a as any).deviceId === id));
-                for (const alt of activeDbAlerts) {
-                  const codeKey = (alt.type || '').trim();
-                  const msgKey = (alt.message || '').trim();
-                  if (seenKeys.has(codeKey) || (msgKey && Array.from(seenKeys).some(k => msgKey.includes(k) || k.includes(msgKey)))) {
-                    continue;
-                  }
-                  seenKeys.add(codeKey || msgKey);
-                  mergedAlerts.push({
-                    id: String(alt.id),
-                    code: alt.type,
-                    severity: alt.severity,
-                    message: alt.message,
-                  });
-                }
-
-                if (mergedAlerts.length === 0) {
-                  return (
-                    <div className="p-8 text-center text-slate-400 font-bold text-xs">
-                      No hay alertas activas para este dispositivo.
-                    </div>
-                  );
-                }
-
-                return mergedAlerts.map((alt) => {
-                  const isCritical = alt.severity?.toLowerCase() === 'critical' || alt.severity?.toLowerCase() === 'error' || alt.severity?.toLowerCase() === 'danger';
-                  const isInfo = alt.severity?.toLowerCase() === 'info';
-                  const containerStyle = isCritical ? 'bg-rose-50 border-rose-200' : (isInfo ? 'bg-sky-50 border-sky-200' : 'bg-amber-50 border-amber-200');
-                  const iconStyle = isCritical ? 'text-rose-600' : (isInfo ? 'text-sky-600' : 'text-amber-600');
-                  const titleStyle = isCritical ? 'text-rose-900' : (isInfo ? 'text-sky-900' : 'text-amber-900');
-                  const badgeStyle = isCritical ? 'bg-rose-200 text-rose-900' : (isInfo ? 'bg-sky-200 text-sky-900' : 'bg-amber-200 text-amber-900');
-
-                  return (
-                    <div key={alt.id} className={`p-4 ${containerStyle} border rounded-2xl flex items-start gap-3`}>
-                      <AlertTriangle size={18} className={`${iconStyle} shrink-0 mt-0.5`} />
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className={`font-black text-sm ${titleStyle}`}>{alt.code}</span>
-                          <span className={`text-[10px] uppercase font-black px-2 py-0.5 rounded ${badgeStyle}`}>{alt.severity}</span>
-                        </div>
-                        <p className="text-slate-700 font-bold text-xs mt-1">{alt.message}</p>
-                      </div>
-                    </div>
-                  );
-                });
-              })()}
-            </div>
-          </div>
-        </div>
+        <Card>
+          <CardTitle icon={<AlertTriangle size={16} />}>Alertas activas del dispositivo</CardTitle>
+          {activeAlerts.length ? (
+            <table className="w-full text-left text-[11px]">
+              <thead className="bg-slate-100/90 text-slate-600 font-black uppercase text-[10px] border-b border-slate-200"><tr><th className="px-3 py-2.5">Severidad</th><th className="px-3 py-2.5">Código</th><th className="px-3 py-2.5">Descripción</th><th className="px-3 py-2.5 text-right">Hora</th></tr></thead>
+              <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
+                {activeAlerts.map(a => (
+                  <tr key={a.key}>
+                    <td className="px-3 py-2"><span className={`px-1.5 py-0.5 rounded text-[9px] font-black ${a.severity === 'ERROR' || a.severity === 'CRITICAL' ? 'bg-rose-100 text-rose-700' : a.severity === 'WARNING' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'}`}>{a.severity}</span></td>
+                    <td className="px-3 py-2 font-mono">{a.code ?? '—'}</td><td className="px-3 py-2 font-semibold text-slate-800">{a.message}</td><td className="px-3 py-2 text-right text-slate-500">{fmtDateTime(a.time)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <p className="px-4 py-6 text-[11px] font-semibold text-slate-500 text-center">No hay alertas activas para este dispositivo.</p>
+          )}
+        </Card>
       )}
+
+      <ConfirmationModal
+        isOpen={deleteOpen}
+        onClose={() => { if (!deleting) setDeleteOpen(false); }}
+        onConfirm={handleDelete}
+        title="Eliminar dispositivo"
+        variant="destructive"
+        confirmLabel="Eliminar"
+        loading={deleting}
+        error={deleteError}
+      >
+        Se eliminará <strong>{device?.model ?? 'el dispositivo'}</strong> ({device?.serial_number ?? device?.ip_address}) junto con todo su historial de lecturas y alertas. Esta acción no se puede deshacer.
+      </ConfirmationModal>
     </div>
   );
 };

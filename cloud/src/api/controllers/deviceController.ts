@@ -1,5 +1,7 @@
 import { FastifyReply, FastifyRequest } from "fastify";
 import { Knex } from "knex";
+import type { PortalUser } from "../middlewares/authMiddleware";
+import { getClientIp } from "../utils/ip";
 
 export function createDeviceController(db: Knex) {
   return {
@@ -93,12 +95,24 @@ export function createDeviceController(db: Knex) {
         await db.transaction(async (trx) => {
           await trx("readings").where("device_id", id).del();
           await trx("alerts").where("device_id", id).del();
-          await trx("monthly_counters").where("device_id", id).del();
+          if (await trx.schema.hasTable("monthly_counters")) {
+            await trx("monthly_counters").where("device_id", id).del();
+          }
           const deleted = await trx("devices").where("id", id).del();
           if (!deleted) {
             throw new Error("Dispositivo no encontrado");
           }
         });
+
+        const user = (request as FastifyRequest & { user: PortalUser }).user;
+        await db("audit_logs").insert({
+          action: "DEVICE_DELETED",
+          target_id: id,
+          user_id: user?.userId ?? null,
+          ip_address: getClientIp(request),
+          metadata: JSON.stringify({}),
+        });
+
         return { success: true, message: "Dispositivo eliminado correctamente" };
       } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : String(e);
@@ -106,8 +120,11 @@ export function createDeviceController(db: Knex) {
       }
     },
 
-    deleteOfflineDevices: async (request: FastifyRequest) => {
+    deleteOfflineDevices: async (request: FastifyRequest, reply: FastifyReply) => {
       const { agent_id } = request.query as { agent_id?: string };
+      if (!agent_id) {
+        return reply.status(400).send({ error: "agent_id es requerido" });
+      }
       const offlineCutoff = new Date(Date.now() - 30 * 60 * 1000); // 30 min sin lecturas
 
       const targetDevices = await db("devices")
@@ -116,9 +133,7 @@ export function createDeviceController(db: Knex) {
             .orWhereNull("last_seen")
             .orWhere("active", false);
         })
-        .modify((qb) => {
-          if (agent_id) qb.andWhere({ agent_id });
-        })
+        .andWhere({ agent_id })
         .select("id");
 
       const targetIds = targetDevices.map((d: { id: string }) => d.id);
@@ -129,8 +144,19 @@ export function createDeviceController(db: Knex) {
       await db.transaction(async (trx) => {
         await trx("readings").whereIn("device_id", targetIds).del();
         await trx("alerts").whereIn("device_id", targetIds).del();
-        await trx("monthly_counters").whereIn("device_id", targetIds).del();
+        if (await trx.schema.hasTable("monthly_counters")) {
+          await trx("monthly_counters").whereIn("device_id", targetIds).del();
+        }
         await trx("devices").whereIn("id", targetIds).del();
+      });
+
+      const user = (request as FastifyRequest & { user: PortalUser }).user;
+      await db("audit_logs").insert({
+        action: "DEVICES_OFFLINE_PURGED",
+        target_id: agent_id,
+        user_id: user?.userId ?? null,
+        ip_address: getClientIp(request),
+        metadata: JSON.stringify({ count: targetIds.length }),
       });
 
       return { success: true, count: targetIds.length, message: `${targetIds.length} dispositivo(s) desconectado(s) eliminado(s)` };

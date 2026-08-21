@@ -181,8 +181,6 @@ const MonitorDetail = () => {
         <DeviceInventoryTable
           devices={devices}
           monitorName={monitor.name}
-          monitorStatus={monitor.status}
-          monitorLastSeen={monitor.last_seen}
         />
       )}
 

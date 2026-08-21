@@ -33,10 +33,18 @@ agent/src/
 │   ├── ConfigManager.ts   # Carga y descifrado de credenciales (AES-256-GCM + HWID)
 │   ├── ConsoleEngine.ts   # CLI interactiva de diagnóstico local
 │   └── SocketManager.ts   # Gestión de WebSockets seguros (WSS) bidireccionales
+├── capture/               # Motor de captura por modelo (ver capture/README.md)
+│   ├── index.ts           # captureDevice(): puertos → identidad → driver → scopes → normalización
+│   ├── registry.ts        # Familias + perfiles; resolve()
+│   ├── families/          # Lógica de protocolo por firmware (hp.devmgmt, samsung.syncthru, samsung.sws, lexmark.cgi, generic.printer-mib, ...)
+│   ├── models/<marca>/    # Un archivo declarativo por modelo de impresora (defineModel)
+│   ├── transport/         # fetchHttp (EWS) y SnmpClient (GET por lotes, GETBULK)
+│   └── normalize.ts       # CaptureResult → DeviceReading (contrato del servidor)
 ├── snmp/
-│   ├── scanner.ts         # Orquestador del escaneo y la cascada de contadores
-│   ├── ews.ts             # Raspador (Scraper) HTTP/S quirúrgico de portales de impresoras
-│   └── oids.ts            # Diccionario estricto de OIDs SNMP (HP, Lexmark, Samsung, Ricoh)
+│   ├── scanner.ts         # Fachada de compatibilidad sobre capture/ (readDevice, readViaSNMP, ...)
+│   ├── ews.ts             # Lista de endpoints EWS genéricos (familia generic.ews)
+│   ├── ews-parsers/       # Parsers HTML/JSON/XML por marca reutilizados por las familias
+│   └── oids.ts            # Diccionario de OIDs SNMP por marca (HP, Lexmark, Samsung, Ricoh, Brother, Xerox)
 ├── sync/
 │   ├── database.ts        # Cliente local SQLite de alto rendimiento (PRAGMA WAL)
 │   └── synchronizer.ts    # Transmisión y encolado tolerante a fallos WAN (Backpressure)
@@ -47,7 +55,7 @@ agent/src/
 ```
 
 ### 🎯 Garantía de Separación:
-* **Capa de Red/Protocolo (`snmp/`):** El código que dialoga directamente con los fierros (impresoras) mediante SNMP, PJL, IPP o HTTP está encapsulado aquí. No contiene lógica de negocio del servidor.
+* **Capa de Captura (`capture/` + `snmp/`):** El código que dialoga directamente con los fierros (impresoras) mediante SNMP, PJL, IPP o HTTP está encapsulado aquí: `capture/` decide *qué* leer de cada modelo (perfiles y familias) y `snmp/` aporta parsers y OIDs. No contiene lógica de negocio del servidor.
 * **Capa de Almacenamiento (`sync/`):** Resguarda y encola lecturas en SQLite. El motor de sincronización (`synchronizer.ts`) se limita a empujar datos cifrados y purgar la cola cuando el servidor confirma la recepción.
 * **Capa de Seguridad (`core/ConfigManager.ts`):** Aislado del resto de rutinas. Único módulo autorizado para derivar llaves PBKDF2 y descifrar la configuración local.
 

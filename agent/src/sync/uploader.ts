@@ -11,6 +11,7 @@ export async function uploadPending(config: AgentConfig): Promise<UploadResult &
   if (!pending.length) return { uploaded: 0, failed: 0 };
 
   const readings = pending.map(r => ({
+    reading_id:    r.reading_id,
     device_id:     r.device_id,
     ip:            r.ip,
     brand:         r.brand,

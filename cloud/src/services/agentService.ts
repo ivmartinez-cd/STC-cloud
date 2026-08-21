@@ -56,6 +56,7 @@ export interface IncomingLogEntry {
 
 /** Lectura de telemetría entrante desde el agente DCA durante la sincronización. */
 export interface IncomingReading {
+  reading_id?: string | null;
   device_id: string;
   ip?: string;
   brand?: string;
@@ -110,6 +111,7 @@ export interface SystemInfoPayload {
 /** Lectura procesada y mapeada lista para inserción en la tabla `readings`. */
 interface MappedReading {
   id?: string;
+  reading_id?: string | null;
   time: Date;
   device_id: string;
   total_pages: number | null;
@@ -146,6 +148,50 @@ function hashToken(token: string): string {
  * Todas las consultas a la base de datos utilizan Knex.js con parametrización
  * obligatoria para prevenir inyecciones SQL (ver SECURITY_AUDIT.md §3).
  */
+/**
+ * Fusión por secciones de supplies_details. Cada loop del agente es dueño de un grupo de claves:
+ *  - loop de insumos  (trae `toners`)   → reemplaza toners/drums/maintenance/alerts/inputTrays/outputTrays
+ *  - loop de contadores (trae `counters`) → reemplaza counters
+ *  - `device` se fusiona clave a clave.
+ * Así un kit que el equipo dejó de reportar (o datos viejos de otro parser) no queda "pegado" para siempre.
+ */
+function mergeSuppliesDetails(existing: Record<string, unknown>, incoming: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = { ...existing };
+  if ("toners" in incoming) {
+    for (const k of ["toners", "drums", "maintenance", "alerts", "inputTrays", "outputTrays"]) delete out[k];
+  }
+  if ("counters" in incoming) delete out["counters"];
+  for (const [k, v] of Object.entries(incoming)) {
+    if (v === undefined || v === null) continue;
+    if (k === "device" && typeof v === "object" && typeof out["device"] === "object" && out["device"]) {
+      out["device"] = { ...(out["device"] as Record<string, unknown>), ...(v as Record<string, unknown>) };
+    } else {
+      out[k] = v;
+    }
+  }
+  return out;
+}
+
+/** Extrae supplies_details.device.sku (objeto o string JSON) con tipado seguro. */
+function skuFrom(sd: unknown): string | null {
+  try {
+    const obj = typeof sd === "string" ? JSON.parse(sd) as unknown : sd;
+    if (obj && typeof obj === "object") {
+      const dev = (obj as { device?: { sku?: unknown } }).device;
+      const sku = dev?.sku;
+      if (typeof sku === "string" && sku.trim()) return sku.trim().slice(0, 50);
+    }
+  } catch { /* ignore */ }
+  return null;
+}
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Valida formato UUID antes de insertar en una columna `uuid` (evita error de tipo en Postgres). */
+function isValidUuid(v: unknown): v is string {
+  return typeof v === "string" && UUID_RE.test(v);
+}
+
 export class AgentService {
   constructor(private db: Knex, private redis?: RedisClient) {}
 
@@ -474,7 +520,7 @@ export class AgentService {
    * @param agentId - UUID del agente emisor de la telemetría.
    */
   async syncReadings(redis: RedisClient, readings: IncomingReading[], agentId: string) {
-    if (!readings || readings.length === 0) return;
+    if (!readings || readings.length === 0) return { received: 0, inserted: 0, duplicates: 0 };
 
     // 0. Actualizar la última conexión del monitor / agente emisor
     try {
@@ -565,13 +611,38 @@ export class AgentService {
 
           // Conservar modelo detallado más largo (para evitar degradaciones a 'hp' o 'generic')
           const existingModel = existingDevice.model || "";
-          const isGenericModel = cleanModel.toLowerCase() === 'generic' || cleanModel.toLowerCase() === 'unknown' || cleanModel.toLowerCase() === 'hp' || cleanModel.toLowerCase() === 'samsung';
-          const finalModel = (!isGenericModel && cleanModel.length >= existingModel.length) ? cleanModel : (existingModel || cleanModel);
+          const NOISE_MODEL = /^(generic|unknown|hp|samsung|lexmark)$|ETHERNET MULTI-ENVIRONMENT|JETDIRECT|\bSeries$/i;
+          const isGenericModel = NOISE_MODEL.test(cleanModel);
+          const existingIsNoise = NOISE_MODEL.test(existingModel);
+          // Un modelo comercial nuevo reemplaza ruido (tarjeta JetDirect, "XXX Series") aunque sea más corto.
+          const finalModel = (!isGenericModel && (existingIsNoise || cleanModel.length >= existingModel.length)) ? cleanModel : (existingModel || cleanModel);
 
           // Conservar nombre amigable si ya está bien formateado
           const existingName = existingDevice.name || "";
           const isGenericOrModelName = !existingName || existingName === finalSerial || existingName.includes("192.168") || existingName.toLowerCase() === finalModel.toLowerCase();
           const finalName = validHost || (isGenericOrModelName ? cleanModel : existingName);
+
+          // Detección de reset/decremento de contador: comparar contra el valor
+          // previo (no contra los extremos del período — eso lo corrige el cálculo
+          // de volumen mensual). Un reset de firmware o reemplazo de placa
+          // formateadora hace que el contador físico baje sin que cambie el serial.
+          const newTotal = parseCount(r.total_pages);
+          const newMono = parseCount(r.mono_pages);
+          const newColor = parseCount(r.color_pages);
+          const counterResets: string[] = [];
+          let resetValue: number | null = null;
+          if (newTotal !== null && existingDevice.total_pages !== null && newTotal < existingDevice.total_pages) {
+            counterResets.push(`total: ${existingDevice.total_pages} → ${newTotal}`);
+            resetValue = newTotal;
+          }
+          if (newMono !== null && existingDevice.mono_pages !== null && newMono < existingDevice.mono_pages) {
+            counterResets.push(`mono: ${existingDevice.mono_pages} → ${newMono}`);
+            resetValue = resetValue ?? newMono;
+          }
+          if (newColor !== null && existingDevice.color_pages !== null && newColor < existingDevice.color_pages) {
+            counterResets.push(`color: ${existingDevice.color_pages} → ${newColor}`);
+            resetValue = resetValue ?? newColor;
+          }
 
           await this.db("devices")
             .where("id", deviceId)
@@ -600,13 +671,35 @@ export class AgentService {
               cartridge_serial_magenta: r.cartridge_serial_magenta ?? existingDevice.cartridge_serial_magenta,
               cartridge_serial_yellow: r.cartridge_serial_yellow ?? existingDevice.cartridge_serial_yellow,
               firmware: (r.firmware && r.firmware.trim()) ? r.firmware.trim() : (existingDevice.firmware || null),
-              supplies_details: r.supplies_details 
-                ? JSON.stringify({
-                    ...(existingDevice.supplies_details ? (typeof existingDevice.supplies_details === 'string' ? JSON.parse(existingDevice.supplies_details) : existingDevice.supplies_details) : {}),
-                    ...r.supplies_details
-                  })
+              mac: (r.mac && /^([0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}$/.test(r.mac)) ? r.mac : (existingDevice.mac || null),
+              hostname: (r.hostname && r.hostname.trim()) ? r.hostname.trim().slice(0, 100) : (existingDevice.hostname || null),
+              location: (r.location && r.location.trim()) ? r.location.trim().slice(0, 255) : (existingDevice.location || null),
+              sku: skuFrom(r.supplies_details) ?? existingDevice.sku ?? null,
+              supplies_details: r.supplies_details
+                ? JSON.stringify(mergeSuppliesDetails(
+                    existingDevice.supplies_details ? (typeof existingDevice.supplies_details === 'string' ? JSON.parse(existingDevice.supplies_details) : existingDevice.supplies_details) : {},
+                    r.supplies_details,
+                  ))
                 : existingDevice.supplies_details,
             });
+
+          if (counterResets.length > 0) {
+            const resetMsg = `Contador(es) con reset o decremento detectado: ${counterResets.join(', ')}`;
+            const existingResetAlert = await this.db("alerts")
+              .where({ device_id: deviceId, message: resetMsg, resolved: false })
+              .first();
+            if (!existingResetAlert) {
+              await this.db("alerts").insert({
+                device_id: deviceId,
+                type: "counter_reset",
+                severity: "critical",
+                message: resetMsg,
+                value: resetValue,
+                resolved: false,
+                created_at: new Date(),
+              });
+            }
+          }
         } else {
           deviceId = crypto.randomUUID();
           await this.db("devices").insert({
@@ -636,7 +729,10 @@ export class AgentService {
             cartridge_serial_magenta: r.cartridge_serial_magenta ?? null,
             cartridge_serial_yellow: r.cartridge_serial_yellow ?? null,
             firmware: r.firmware ?? null,
-            mac: r.mac ?? null,
+            mac: (r.mac && /^([0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}$/.test(r.mac)) ? r.mac : null,
+            hostname: (r.hostname && r.hostname.trim()) ? r.hostname.trim().slice(0, 100) : null,
+            location: (r.location && r.location.trim()) ? r.location.trim().slice(0, 255) : null,
+            sku: skuFrom(r.supplies_details),
             supplies_details: r.supplies_details ? JSON.stringify(r.supplies_details) : null,
           });
         }
@@ -701,6 +797,7 @@ export class AgentService {
         }
 
         mappedReadings.push({
+          reading_id:   isValidUuid(r.reading_id) ? r.reading_id : null,
           time:         readingTime,
           device_id:    deviceId,
           total_pages:  parseCount(r.total_pages),
@@ -727,6 +824,9 @@ export class AgentService {
       }
     }
 
+    let inserted = 0;
+    let duplicates = 0;
+
     if (mappedReadings.length > 0) {
       try {
         // Filtrar lecturas para asegurar que el device_id exista en la tabla devices
@@ -739,8 +839,16 @@ export class AgentService {
         const validReadings = mappedReadings.filter(m => validDeviceSet.has(String(m.device_id)));
 
         if (validReadings.length > 0) {
-          // Inserción masiva de lecturas válidas en el historial
-          await this.db("readings").insert(validReadings);
+          // Inserción masiva de lecturas válidas en el historial.
+          // ON CONFLICT (reading_id, time) DO NOTHING: idempotencia ante reintentos
+          // del agente (mismo lote reenviado tras perder la respuesta del servidor).
+          const insertedRows = await this.db("readings")
+            .insert(validReadings)
+            .onConflict(["reading_id", "time"])
+            .ignore()
+            .returning("reading_id");
+          inserted = insertedRows.length;
+          duplicates = validReadings.length - inserted;
         }
       } catch (err: unknown) {
         const errMsg = err instanceof Error ? err.message : String(err);
@@ -764,6 +872,8 @@ export class AgentService {
 
     // Actualizar también el heartbeat del agente al sincronizar
     await this.heartbeat(agentId);
+
+    return { received: readings.length, inserted, duplicates };
   }
 
   /**

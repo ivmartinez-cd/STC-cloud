@@ -1,6 +1,6 @@
 {
   "rewrites": [
     { "source": "/api/(.*)", "destination": "https://stc-cloud.onrender.com/api/$1" },
-    { "source": "/((?!assets/|favicon.ico|logo1.png|public/).*)", "destination": "/index.html" }
+    { "source": "/((?!assets/|devices/|favicon\\.ico|favicon\\.svg|icons\\.svg|logo|public/).*)", "destination": "/index.html" }
   ]
 }

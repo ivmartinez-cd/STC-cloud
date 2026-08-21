@@ -50,8 +50,17 @@ function checkIcons(dir) {
     // Regex for <IconName followed by space, /, or >
     const usedIcons = new Set([...content.matchAll(/<([A-Z][a-zA-Z0-9]+)(?:\s|\/|>)/g)].map(m => m[1]));
 
+    // Cualquier identificador importado de otro módulo o declarado en el archivo (componentes locales,
+    // tipos usados como genéricos `api.get<Foo>`) no es un ícono faltante.
+    const knownLocal = new Set();
+    for (const m of content.matchAll(/import\s+(?:type\s+)?\{([^}]+)\}\s+from\s+['"][^'"]+['"]/g)) {
+      for (const part of m[1].split(',')) { const n = part.trim().replace(/^type\s+/, '').split(/\s+as\s+/).pop(); if (n) knownLocal.add(n); }
+    }
+    for (const m of content.matchAll(/import\s+([A-Z][A-Za-z0-9]*)\s*(?:,|from)/g)) knownLocal.add(m[1]);
+    for (const m of content.matchAll(/\b(?:const|let|function|interface|type|class)\s+([A-Z][A-Za-z0-9]*)/g)) knownLocal.add(m[1]);
+
     const missing = [...usedIcons].filter(icon => 
-      !importedIcons.includes(icon) && !IGNORED_COMPONENTS.has(icon)
+      !importedIcons.includes(icon) && !IGNORED_COMPONENTS.has(icon) && !knownLocal.has(icon)
     );
 
     if (missing.length > 0) {

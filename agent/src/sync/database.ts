@@ -1,8 +1,10 @@
 import Database from 'better-sqlite3';
+import crypto from 'crypto';
 import path from 'path';
 import fs from 'fs';
 import { DATA_DIR } from '../core/config';
-import type { DeviceReading, PollMethod } from '../snmp/scanner';
+import { log } from '../core/Logger';
+import type { DeviceReading, PollMethod } from '../capture/reading';
 
 const MAX_RETENTION_DAYS = 7;
 const BACKPRESSURE_LIMIT = 10_000;
@@ -109,6 +111,12 @@ export function openQueue(): void {
     "ALTER TABLE readings_queue ADD COLUMN cartridge_estimated_magenta INTEGER DEFAULT NULL",
     "ALTER TABLE readings_queue ADD COLUMN cartridge_estimated_yellow  INTEGER DEFAULT NULL",
     "ALTER TABLE readings_queue ADD COLUMN supplies_details            TEXT DEFAULT NULL",
+    "ALTER TABLE known_devices  ADD COLUMN driver                      TEXT DEFAULT NULL",
+    "ALTER TABLE readings_queue ADD COLUMN firmware                    TEXT DEFAULT NULL",
+    "ALTER TABLE readings_queue ADD COLUMN mac                         TEXT DEFAULT NULL",
+    "ALTER TABLE readings_queue ADD COLUMN hostname                    TEXT DEFAULT NULL",
+    "ALTER TABLE readings_queue ADD COLUMN location                    TEXT DEFAULT NULL",
+    "ALTER TABLE readings_queue ADD COLUMN reading_id                   TEXT DEFAULT NULL",
   ]) {
     try { db.exec(stmt); } catch { /* columna ya existe */ }
   }
@@ -116,6 +124,9 @@ export function openQueue(): void {
 
 export function enqueueReading(r: DeviceReading): void {
   const suppliesDetailsStr = r.supplies_details ? JSON.stringify(r.supplies_details) : null;
+  // Id estable para esta lectura puntual: viaja igual en todos los reintentos de
+  // sincronizacion de esta misma fila, permitiendo al servidor deduplicar (ON CONFLICT).
+  const readingId = crypto.randomUUID();
   db.prepare(`
     INSERT INTO readings_queue
       (device_id, ip, brand, model, time, total_pages, mono_pages, color_pages,
@@ -125,8 +136,8 @@ export function enqueueReading(r: DeviceReading): void {
        cartridge_capacity_black, cartridge_capacity_cyan, cartridge_capacity_magenta, cartridge_capacity_yellow,
        cartridge_printed_black, cartridge_printed_cyan, cartridge_printed_magenta, cartridge_printed_yellow,
        cartridge_estimated_black, cartridge_estimated_cyan, cartridge_estimated_magenta, cartridge_estimated_yellow,
-       supplies_details, poll_method)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       supplies_details, poll_method, firmware, mac, hostname, location, reading_id)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     r.serial ?? r.ip, r.ip, r.brand, r.model, r.time,
     r.total_pages, r.mono_pages, r.color_pages,
@@ -138,6 +149,8 @@ export function enqueueReading(r: DeviceReading): void {
     r.cartridge_estimated_black ?? null, r.cartridge_estimated_cyan ?? null, r.cartridge_estimated_magenta ?? null, r.cartridge_estimated_yellow ?? null,
     suppliesDetailsStr,
     r.poll_method ?? 'snmp',
+    r.firmware ?? null, r.mac ?? null, r.hostname ?? null, r.location ?? null,
+    readingId,
   );
 }
 
@@ -180,6 +193,7 @@ export interface QueueReading {
   mac?:                        string | null;
   hostname?:                   string | null;
   location?:                   string | null;
+  reading_id:    string;
   poll_method:   PollMethod;
   synced:        number;
   created_at:    string;
@@ -203,11 +217,17 @@ export function pendingCount(): number {
 }
 
 export function purgeOld(): void {
-  db.prepare(`
-    DELETE FROM readings_queue
-    WHERE synced = 1
-       OR created_at < datetime('now', '-${MAX_RETENTION_DAYS} days')
-  `).run();
+  // Diagnostico: nunca se borran lecturas sin sincronizar, solo se advierte
+  // si llevan demasiado tiempo atascadas (posible perdida de conectividad WAN prolongada).
+  const stale = db.prepare(`
+    SELECT COUNT(*) as c FROM readings_queue
+    WHERE synced = 0 AND created_at < datetime('now', '-${MAX_RETENTION_DAYS} days')
+  `).get() as { c: number } | undefined;
+  if (stale?.c) {
+    log('WARN', `${stale.c} lectura(s) sin sincronizar llevan mas de ${MAX_RETENTION_DAYS} dias en cola. Revisar conectividad del agente.`);
+  }
+
+  db.prepare(`DELETE FROM readings_queue WHERE synced = 1`).run();
 }
 
 export function isBackpressureActive(): boolean {
@@ -216,17 +236,18 @@ export function isBackpressureActive(): boolean {
 
 export function upsertKnownDevice(
   ip: string,
-  data: { serial?: string; brand?: string; model?: string; registered?: boolean; pollMethod?: PollMethod },
+  data: { serial?: string; brand?: string; model?: string; registered?: boolean; pollMethod?: PollMethod; driver?: string },
 ): void {
   db.prepare(`
-    INSERT INTO known_devices (ip, serial, brand, model, registered, poll_method, last_seen)
-    VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
+    INSERT INTO known_devices (ip, serial, brand, model, registered, poll_method, driver, last_seen)
+    VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))
     ON CONFLICT(ip) DO UPDATE SET
       serial      = COALESCE(excluded.serial,      serial),
       brand       = COALESCE(excluded.brand,       brand),
       model       = COALESCE(excluded.model,       model),
       registered  = COALESCE(excluded.registered,  registered),
       poll_method = COALESCE(excluded.poll_method, poll_method),
+      driver      = COALESCE(excluded.driver,      driver),
       last_seen   = datetime('now')
   `).run(
     ip,
@@ -235,6 +256,7 @@ export function upsertKnownDevice(
     data.model      ?? null,
     data.registered === undefined ? null : (data.registered ? 1 : 0),
     data.pollMethod ?? null,
+    data.driver     ?? null,
   );
 }
 
@@ -247,6 +269,11 @@ export function closeQueue(): void {
   if (db) db.close();
 }
 
+/** Acceso al handle nativo de SQLite. Solo para tests (manipular filas directamente). */
+export function getRawDb(): Database.Database {
+  return db;
+}
+
 export function isRegistered(ip: string): boolean {
   const row = db.prepare('SELECT registered FROM known_devices WHERE ip = ?').get(ip) as { registered: number } | undefined;
   return row?.registered === 1;
@@ -257,16 +284,26 @@ export function getDeviceCount(): number {
   return result?.c ?? 0;
 }
 
-export function getKnownDevices(): Array<{ ip: string; brand: string | null; poll_method: PollMethod | null }> {
-  return db.prepare(
-    'SELECT ip, brand, poll_method FROM known_devices WHERE registered = 1',
-  ).all() as Array<{ ip: string; brand: string | null; poll_method: PollMethod | null }>;
+export interface KnownDevice {
+  ip:          string;
+  brand:       string | null;
+  model:       string | null;
+  serial:      string | null;
+  poll_method: PollMethod | null;
+  /** Id del perfil de modelo o familia de captura (`capture/registry.ts`). */
+  driver:      string | null;
 }
 
-export function getKnownDeviceInfo(ip: string): { brand: string | null; model: string | null; serial: string | null; poll_method: PollMethod | null } | null {
+export function getKnownDevices(): KnownDevice[] {
+  return db.prepare(
+    'SELECT ip, brand, model, serial, poll_method, driver FROM known_devices WHERE registered = 1',
+  ).all() as KnownDevice[];
+}
+
+export function getKnownDeviceInfo(ip: string): KnownDevice | null {
   const row = db.prepare(
-    'SELECT brand, model, serial, poll_method FROM known_devices WHERE ip = ?',
-  ).get(ip) as { brand: string | null; model: string | null; serial: string | null; poll_method: PollMethod | null } | undefined;
+    'SELECT ip, brand, model, serial, poll_method, driver FROM known_devices WHERE ip = ?',
+  ).get(ip) as KnownDevice | undefined;
   return row ?? null;
 }
 

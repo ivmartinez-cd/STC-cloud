@@ -29,7 +29,9 @@ export function parseLexmarkEws(html: string): Partial<EwsData> {
 
   const total = pageMatch ? Number(pageMatch[1]) : undefined;
   const serial = serialMatch ? serialMatch[1].trim() : undefined;
-  const model = modelMatch ? modelMatch[1].trim() : undefined;
+  // El <title> sólo es fiable si la página trajo contador o serial (evita registrar cualquier web como "Lexmark").
+  const model = (modelMatch && (total !== undefined || serial)) ? modelMatch[1].trim() : undefined;
+  if (total === undefined && !serial) return {};
 
   return {
     brand:      'lexmark',

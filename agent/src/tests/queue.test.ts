@@ -21,11 +21,13 @@ import {
   getPendingReadings,
   markSynced,
   purgeOld,
+  isBackpressureActive,
   isRegistered,
   upsertKnownDevice,
   closeQueue,
+  getRawDb,
 } from '../sync/database';
-import type { DeviceReading } from '../snmp/scanner';
+import type { DeviceReading } from '../capture/reading';
 
 function fakeReading(ip: string, totalPages = 1000): DeviceReading {
   return {
@@ -82,6 +84,46 @@ describe('SQLite Offline Queue', () => {
     // purgeOld should clean up synced records
     purgeOld();
     assert.equal(pendingCount(), 0);
+  });
+
+  test('purgeOld conserva lecturas no sincronizadas aunque sean viejas', () => {
+    enqueueReading(fakeReading('10.0.0.4'));
+    const rows = getPendingReadings(1);
+    const id = rows[0].id as number;
+
+    // Forzar antiguedad > 7 dias sobre una fila que NUNCA se sincronizo
+    getRawDb().prepare(
+      "UPDATE readings_queue SET created_at = datetime('now', '-10 days') WHERE id = ?"
+    ).run(id);
+
+    purgeOld();
+
+    // No debe perderse: sigue pendiente de sincronizar
+    assert.equal(pendingCount(), 1);
+    const stillThere = getPendingReadings(10).find(r => r.id === id);
+    assert.ok(stillThere, 'La lectura vieja sin sincronizar no debe borrarse');
+
+    // Limpieza
+    markSynced([id]);
+    purgeOld();
+    assert.equal(pendingCount(), 0);
+  });
+
+  test('isBackpressureActive es false con la cola baja', () => {
+    assert.equal(isBackpressureActive(), false);
+  });
+
+  test('enqueueReading asigna un reading_id no vacio y distinto por lectura', () => {
+    enqueueReading(fakeReading('10.0.0.5'));
+    enqueueReading(fakeReading('10.0.0.6'));
+    const rows = getPendingReadings(10);
+    const [a, b] = rows.slice(-2);
+    assert.ok(a.reading_id && a.reading_id.length > 0, 'reading_id no debe estar vacio');
+    assert.ok(b.reading_id && b.reading_id.length > 0, 'reading_id no debe estar vacio');
+    assert.notEqual(a.reading_id, b.reading_id, 'cada lectura debe tener un reading_id distinto');
+
+    // Limpieza
+    markSynced(rows.map(r => r.id as number));
   });
 
   test('multiple enqueue + batch markSynced', () => {

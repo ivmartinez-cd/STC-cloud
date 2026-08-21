@@ -1,0 +1,1219 @@
+
+
+
+
+
+<link rel="stylesheet" type="text/css" href="../../sws/css/sws-all.css" />
+<script type="text/javascript" src="../../sws/jquery/jquery.js"></script>
+
+<script type='text/javascript' src='../../sws/js/swsIncludeCommon.js'></script>
+
+			
+<html>
+<head>
+<title>Supplies Info</title>
+
+<style>
+
+.tonerTable_tdHeader {
+width:93px;height:65px;vertical-align:top;padding-top:7px;padding-left:15px;border-bottom:1px solid #E2E2E2;font-family:Tahoma;font-size:11px;font-weight:bold;color:#1A1A1A;background-color:#F5F5F5;
+}
+.tonerTable_tdStyle {
+width:93px;height:30px;padding-left:15px;border-bottom:1px solid #E2E2E2;font-family:Tahoma;font-size:11px;font-weight:bold;color:#1A1A1A;background-color:#F5F5F5;
+}
+.tonerTable_tdFontStyle {
+padding-left:15px;border-bottom:1px solid #E2E2E2;font-family:Tahoma;font-size:11px;font-weight:normal;color:#1A1A1A;
+}
+</style>
+
+<script type="text/javascript">
+
+var gridimgpath = '/sws/images/sws/contents';
+
+
+var colModel = [
+				 {name:'imagingUnit' ,index:'index_imagingUnit'  , width:100   ,align:"center" , sortable:false }
+				,{name:'developerUnitLifeCount' ,index:'index_developerUnitLifeCount'  , width:250   ,align:"center"	, sortable:false}
+/*
+				,{name:'developerLifeCount'    ,index:'index_developerLifeCount'     , width:250   ,align:"center" , sortable:false} */
+               ];
+
+               
+	var developerdata = [
+ 					
+				{imagingUnit:'검정색',developerUnitLifeCount:'6995 인쇄'},		
+					
+				{imagingUnit:'시안',developerUnitLifeCount:'132990 인쇄'},		
+					
+				{imagingUnit:'마젠타',developerUnitLifeCount:'132990 인쇄'},		
+					
+				{imagingUnit:'노란색',developerUnitLifeCount:'23205 인쇄'},		
+							 
+			 ];   	              
+	
+var colnames = ['이미징 유니트','현상기 수명'];
+						
+jQuery(document).ready(function(){
+jQuery("#list").jqGrid(
+   {
+	 dataType: "local"
+	,rowHeight:"32"
+    ,colNames:colnames
+    ,colModel:colModel
+	,viewRecords: true
+	,imgPath: gridimgpath
+	,border: 1		
+})  
+   	       
+for(var i=0;i<=developerdata.length;i++) {
+	addTableRowData('list',i+1,developerdata[i]);
+}     
+});  //document.ready
+showRightInfo(false);
+$(document).ready(function(){
+	if("true" == "true"){
+		$("#iTBCleanerDiv").show();
+	}
+	
+	if('false' == "true")
+	{
+		document.getElementById('divFinisherInstallWarn').style.display='block';
+	} else {
+		document.getElementById('divFinisherInstallWarn').style.display='none';
+	}
+
+	if('2' == "0") {
+		$("#divBookletStapler").hide();
+	} else {
+		$("#divBookletStapler").show();
+	}
+	
+	/* Tray's Retard Rollers */
+	if('null' == "null") {
+		$("#tray1RetardRollerDiv").hide();
+	}
+	if('null' == "null") {
+		$("#tray2RetardRollerDiv").hide();
+	}
+	if('null' == "null") {
+		$("#tray3RetardRollerDiv").hide();
+	}
+	if('null' == "null") {
+		$("#tray4RetardRollerDiv").hide();
+	}
+	if('null' == "null") {
+		$("#tray5RetardRollerDiv").hide();
+	}
+	if('null' == "null") {
+		$("#mpRetardRollerDiv").hide();
+	}
+	
+	/* Tray's Forward Rollers */
+	if('null' == "null") {
+		$("#tray1ForwardRollerDiv").hide();
+	}
+	if('null' == "null") {
+		$("#tray2ForwardRollerDiv").hide();
+	}
+	if('null' == "null") {
+		$("#tray3ForwardRollerDiv").hide();
+	}
+	if('null' == "null") {
+		$("#tray4ForwardRollerDiv").hide();
+	}
+	if('null' == "null") {
+		$("#tray5ForwardRollerDiv").hide();
+	}
+	if('null' == "null") {
+		$("#mpForwardRollerDiv").hide();
+	}
+	
+ });
+</script>   
+</head>
+<body leftmargin="0" topmargin="0">
+<table id='swssuppliesFrame' style='background-color:#787878;width:100%;height:100%;' cellspacing='1' cellpadding='0'>
+  <tr id='swssupplies' tagtype='titlePanel' onClick="parent.panelClick('swssupplies')"><td valign='top' style='background-color: rgb(255,255,255);'>
+    <table id='swssuppliesTitle' style='background:url(../../sws/images/sws/contents/module_title_center_dis.gif) repeat-x left top;width:100%;height:37px;' cellspacing='0' cellpadding='0'>
+      <tr>
+        <td width='70%'> <span style='padding-left:12px;color: #FFFFFF;font-family:tahoma;font-size:14px;font-weight:bold;'>소모품</span></td>
+        <td width='30%' align='right' style='vertical-align:top;padding-top:2px;'><table cellspacing='0' cellpadding='0'>
+<tr><td  width='25px'><img src='../../sws/images/sws/button/button_reload_N.gif' tagtype='button' id='btn_swssupplies' gid=""  style='table-layout:fixed;'></td></tr>
+</table>
+<script type="text/javascript">if(countButtonObj('btn_swssupplies')) {	buttonFunc["btn_swssupplies"] = "swsIFrame_Reload();";} $('#btn_swssupplies').click(function(event){ eval(buttonFunc[this.id]); }).mouseover(function(){ btnImageChage(this,'ON'); }).mouseout (function(){ btnImageChage(this,'OUT'); }).mousedown(function(){ btnImageChage(this,'CLK'); }); </script>
+</td>
+      </tr> 
+    </table>
+<div id='swssuppliesSCROLL' class='sws_scroll_div_class' tagtype='scrollDiv' style='overflow:auto;'><table width='100%' cellspacing='0' cellpadding='0'>
+<tr height='24px'><td colspan='3'>&nbsp;</td></tr><tr><td width='30px'>&nbsp;</td><td valign='top'><!-- start main contents -->
+
+<table cellspacing='0' cellpadding='0' width="100%">
+<tr>
+<td width="48%">
+	    <table style='width:100%;' cellspacing='0' cellpadding='0'>
+      <tr height='36px'>      <td tagtype='subtitle' valign='top' id='subTitle7' style='font:bold 13px tahoma;color:#262626;width:158'>검정색 토너 카트리지</td>
+      <td valign='top' style='padding: 7px 20px 0 0px;'><table style='background-color:#BDBDBD;width:100%;height:1px' cellspacing='0' cellpadding='0'><tr height='1px'><td></td></tr></table></td>
+    </tr>
+    </table>
+    <table cellspacing='0' cellpadding='0' width='100%' border='0'>
+    <tr>
+        <td class='sws-simpleInfo-value'>
+
+	<table cellspacing='0' cellpadding='0' width="97%">
+		<tr>
+			<td align="left" width="140px">
+			<table id='tonerset1' width='100%' cellpadding='0' cellspacing='0'> 
+ <tr> 
+  <td><table height='177' cellpadding='0' cellspacing='0'> 
+   <tr> 
+    <td width='9' height='177'><img src='../../sws/images/sws/common/gage.gif'></td>
+    <td width='30'><table height='100%' cellpadding='0' cellspacing='0'> 
+     <tr><td class='cartridge_up'></td></tr> 
+     <tr><td class='cartridge_center'><table height='177' cellpadding='0' cellspacing='0'> 
+   <tr height='54%'><td></td></tr> 
+   <tr height='1'><td class='black_up'></td></tr> 
+   <tr height='*'><td class='black_center'></td></tr> 
+   <tr height='5'><td class='black_bottom'></td></tr> 
+   </table></td> 
+  </tr>
+  <tr><td class='cartridge_bottom'></td></tr> 
+ </table> 
+ </td> 
+ <td width='40' valign='top'><table height='177' border='0' cellpadding='0' cellspacing='0' class='chartnumber'> 
+   <tr height='54%'><td></td></tr> 
+   <tr height='1'><td width='5'></td> 
+ 		<td align='left'><img src='../../sws/images/sws/arrow_01.gif'></td><td width='3'></td><td>46%</td></tr>
+   <tr height='*'><td></td></tr> 
+ </table></td> 
+ </tr> 
+           </table> 
+       </td> 
+     </tr> 
+ </table> 
+
+			</td>
+			<td width="*" align="left">
+			<table cellspacing='0' cellpadding='0' width="100%" height="177px" style="border-top:1px solid #B4B4B4;border-bottom:1px solid #B4B4B4;">
+					<tr>
+						<td class="tonerTable_tdStyle"> 상태 </td>
+						<td valign='top' style='padding-top:5px;' class="tonerTable_tdFontStyle">
+						
+	          				<table cellpadding=0 cellspacing=0 border=0 style='table-layout:fixed;'><tr><td tagtype='string'  id='statusCont' class='sws_string_normal' gid=''>준비</td></tr> 
+</table>
+
+	          								
+						</td>
+					</tr>
+					<tr>
+						<td class="tonerTable_tdStyle"> 잔여량 </td>
+						<td class="tonerTable_tdFontStyle"> <table cellpadding=0 cellspacing=0 border=0 style='table-layout:fixed;'><tr><td tagtype='string'  id='remainCont' class='sws_string_normal' gid=''>46 %</td></tr> 
+</table>
+ </td>
+     		</tr>
+					<tr>
+						<td class="tonerTable_tdStyle"> 인쇄 </td>
+						<td class="tonerTable_tdFontStyle"> <table cellpadding=0 cellspacing=0 border=0 style='table-layout:fixed;'><tr><td tagtype='string'  id='pageCont' class='sws_string_normal' gid=''>4458 면 인쇄</td></tr> 
+</table>
+ </td>
+					</tr>
+					<tr>
+						<td class="tonerTable_tdStyle"> 용량 </td>
+						<td class="tonerTable_tdFontStyle"> <table cellpadding=0 cellspacing=0 border=0 style='table-layout:fixed;'><tr><td tagtype='string'  id='capacityCont' class='sws_string_normal' gid=''>23 K</td></tr> 
+</table>
+ </td>
+					</tr>
+					<tr>
+						<td class="tonerTable_tdStyle"> 모델 ID </td>
+						<td class="tonerTable_tdFontStyle"> <table cellpadding=0 cellspacing=0 border=0 style='table-layout:fixed;'><tr><td tagtype='string'  id='remainCont' class='sws_string_normal' gid=''>CLT-K808S</td></tr> 
+</table>
+ </td>
+					</tr>
+					<tr>
+						<td class="tonerTable_tdStyle"> 시리얼 넘버 </td>
+						<td class="tonerTable_tdFontStyle"> <table cellpadding=0 cellspacing=0 border=0 style='table-layout:fixed;'><tr><td tagtype='string'  id='cartCont' class='sws_string_normal' gid=''>CRUM-21061719782</td></tr> 
+</table>
+ </td>
+					</tr>
+				</table>
+			</td>
+			</tr>
+		</table>		
+	 </td>
+ </tr>
+<tr height='31px'><td>&nbsp;</td></tr>
+</table>
+
+</td>
+<td width="4%"></td>
+<td width="48%">
+	    <table style='width:100%;' cellspacing='0' cellpadding='0'>
+      <tr height='36px'>      <td tagtype='subtitle' valign='top' id='subTitle8' style='font:bold 13px tahoma;color:#262626;width:252'>검정색 이미징 유니트 (OPC 유니트)</td>
+      <td valign='top' style='padding: 7px 20px 0 0px;'><table style='background-color:#BDBDBD;width:100%;height:1px' cellspacing='0' cellpadding='0'><tr height='1px'><td></td></tr></table></td>
+    </tr>
+    </table>
+    <table cellspacing='0' cellpadding='0' width='100%' border='0'>
+    <tr>
+        <td class='sws-simpleInfo-value'>
+
+	<table cellspacing='0' cellpadding='0' width="97%">
+			<tr>
+				<td align="left" width="140px">
+				<table id='tonerset1' width='100%' cellpadding='0' cellspacing='0'> 
+ <tr> 
+  <td><table height='177' cellpadding='0' cellspacing='0'> 
+   <tr> 
+    <td width='9' height='177'><img src='../../sws/images/sws/common/gage.gif'></td>
+    <td width='30'><table height='100%' cellpadding='0' cellspacing='0'> 
+     <tr><td class='imaging_up'></td></tr> 
+     <tr><td class='imaging_center'><table height='177' cellpadding='0' cellspacing='0'> 
+   <tr height='67%'><td></td></tr> 
+   <tr height='1'><td class='black_up'></td></tr> 
+   <tr height='*'><td class='black_center'></td></tr> 
+   <tr height='5'><td class='black_bottom'></td></tr> 
+   </table></td> 
+  </tr>
+  <tr><td class='imaging_bottom'></td></tr> 
+ </table> 
+ </td> 
+ <td width='40' valign='top'><table height='177' border='0' cellpadding='0' cellspacing='0' class='chartnumber'> 
+   <tr height='67%'><td></td></tr> 
+   <tr height='1'><td width='5'></td> 
+ 		<td align='left'><img src='../../sws/images/sws/arrow_01.gif'></td><td width='3'></td><td>33%</td></tr>
+   <tr height='*'><td></td></tr> 
+ </table></td> 
+ </tr> 
+           </table> 
+       </td> 
+     </tr> 
+ </table> 
+
+				</td>
+				<td width="*" align="left">
+				<table cellspacing='0' cellpadding='0' width="100%" height="177px" style="border-top:1px solid #B4B4B4;border-bottom:1px solid #B4B4B4;">
+						<tr>
+							<td class="tonerTable_tdStyle">  상태 </td>
+							<td valign='top' style='padding-top:5px;' class="tonerTable_tdFontStyle">
+								
+		          					<table cellpadding=0 cellspacing=0 border=0 style='table-layout:fixed;'><tr><td tagtype='string'  id='statusCont' class='sws_string_normal' gid=''>준비</td></tr> 
+</table>
+
+		          				
+							 </td>
+						</tr>
+						<tr>
+							<td class="tonerTable_tdStyle"> 잔여량 </td>
+							<td class="tonerTable_tdFontStyle"> <table cellpadding=0 cellspacing=0 border=0 style='table-layout:fixed;'><tr><td tagtype='string'  id='remainCont' class='sws_string_normal' gid=''>33 %</td></tr> 
+</table>
+ </td>
+	     		</tr>
+						<tr>
+							<td class="tonerTable_tdStyle"> 인쇄 </td>
+							<td class="tonerTable_tdFontStyle"> <table cellpadding=0 cellspacing=0 border=0 style='table-layout:fixed;'><tr><td tagtype='string'  id='pageCont' class='sws_string_normal' gid=''>53220 면 인쇄</td></tr> 
+</table>
+ </td>
+						</tr>
+						<tr>
+							<td class="tonerTable_tdStyle"> 용량 </td>
+							<td class="tonerTable_tdFontStyle"> <table cellpadding=0 cellspacing=0 border=0 style='table-layout:fixed;'><tr><td tagtype='string'  id='blackImagingCapacity' class='sws_string_normal' gid=''>100 K</td></tr> 
+</table>
+ </td>
+						</tr>
+						<tr>
+							<td class="tonerTable_tdStyle"> 모델 ID </td>
+							<td class="tonerTable_tdFontStyle"> <table cellpadding=0 cellspacing=0 border=0 style='table-layout:fixed;'><tr><td tagtype='string'  id='remainCont' class='sws_string_normal' gid=''>CLT-R808</td></tr> 
+</table>
+ </td>
+						</tr>
+						<tr>
+							<td class="tonerTable_tdStyle"> 시리얼 넘버 </td>
+							<td class="tonerTable_tdFontStyle"> <table cellpadding=0 cellspacing=0 border=0 style='table-layout:fixed;'><tr><td tagtype='string'  id='cartCont' class='sws_string_normal' gid=''>CRUM-18010223951</td></tr> 
+</table>
+ </td>
+						</tr>
+					</table>
+				</td>
+				</tr>
+			</table>		
+	 </td>
+ </tr>
+<tr height='31px'><td>&nbsp;</td></tr>
+</table>
+
+</td>
+</tr>
+  <tr>
+  <td width="48%">
+      <table style='width:100%;' cellspacing='0' cellpadding='0'>
+      <tr height='36px'>      <td tagtype='subtitle' valign='top' id='subTitle1' style='font:bold 13px tahoma;color:#262626;width:144'>청색 토너 카트리지</td>
+      <td valign='top' style='padding: 7px 20px 0 0px;'><table style='background-color:#BDBDBD;width:100%;height:1px' cellspacing='0' cellpadding='0'><tr height='1px'><td></td></tr></table></td>
+    </tr>
+    </table>
+    <table cellspacing='0' cellpadding='0' width='100%' border='0'>
+    <tr>
+        <td class='sws-simpleInfo-value'>
+
+  <table cellspacing='0' cellpadding='0' width="97%">
+		<tr>
+			<td align="left" width="140px">
+			<table id='tonerset1' width='100%' cellpadding='0' cellspacing='0'> 
+ <tr> 
+  <td><table height='177' cellpadding='0' cellspacing='0'> 
+   <tr> 
+    <td width='9' height='177'><img src='../../sws/images/sws/common/gage.gif'></td>
+    <td width='30'><table height='100%' cellpadding='0' cellspacing='0'> 
+     <tr><td class='cartridge_up'></td></tr> 
+     <tr><td class='cartridge_center'><table height='177' cellpadding='0' cellspacing='0'> 
+   <tr height='24%'><td></td></tr> 
+   <tr height='1'><td class='cyan_up'></td></tr> 
+   <tr height='*'><td class='cyan_center'></td></tr> 
+   <tr height='5'><td class='cyan_bottom'></td></tr> 
+   </table></td> 
+  </tr>
+  <tr><td class='cartridge_bottom'></td></tr> 
+ </table> 
+ </td> 
+ <td width='40' valign='top'><table height='177' border='0' cellpadding='0' cellspacing='0' class='chartnumber'> 
+   <tr height='24%'><td></td></tr> 
+   <tr height='1'><td width='5'></td> 
+ 		<td align='left'><img src='../../sws/images/sws/arrow_01.gif'></td><td width='3'></td><td>76%</td></tr>
+   <tr height='*'><td></td></tr> 
+ </table></td> 
+ </tr> 
+           </table> 
+       </td> 
+     </tr> 
+ </table> 
+
+			</td>
+			<td width="*" align="left">
+			<table cellspacing='0' cellpadding='0' width="100%" height="177px" style="border-top:1px solid #B4B4B4;border-bottom:1px solid #B4B4B4;">
+					<tr>
+						<td class="tonerTable_tdStyle"> 상태 </td>
+						<td valign='top' style='padding-top:5px;' class="tonerTable_tdFontStyle">
+						
+	          				<table cellpadding=0 cellspacing=0 border=0 style='table-layout:fixed;'><tr><td tagtype='string'  id='statusCont' class='sws_string_normal' gid=''>준비</td></tr> 
+</table>
+
+	          			
+						</td>
+					</tr>
+					<tr>
+						<td class="tonerTable_tdStyle"> 잔여량 </td>
+						<td class="tonerTable_tdFontStyle"> <table cellpadding=0 cellspacing=0 border=0 style='table-layout:fixed;'><tr><td tagtype='string'  id='remainCont' class='sws_string_normal' gid=''>76 %</td></tr> 
+</table>
+ </td>
+     		</tr>
+					<tr>
+						<td class="tonerTable_tdStyle"> 인쇄 </td>
+						<td class="tonerTable_tdFontStyle"> <table cellpadding=0 cellspacing=0 border=0 style='table-layout:fixed;'><tr><td tagtype='string'  id='pageCont' class='sws_string_normal' gid=''>3089 면 인쇄</td></tr> 
+</table>
+ </td>
+					</tr>
+					<tr>
+						<td class="tonerTable_tdStyle"> 용량 </td>
+						<td class="tonerTable_tdFontStyle"> <table cellpadding=0 cellspacing=0 border=0 style='table-layout:fixed;'><tr><td tagtype='string'  id='capacityCont' class='sws_string_normal' gid=''>20 K</td></tr> 
+</table>
+ </td>
+					</tr>
+					<tr>
+						<td class="tonerTable_tdStyle"> 모델 ID </td>
+						<td class="tonerTable_tdFontStyle"> <table cellpadding=0 cellspacing=0 border=0 style='table-layout:fixed;'><tr><td tagtype='string'  id='remainCont' class='sws_string_normal' gid=''>CLT-C808S</td></tr> 
+</table>
+ </td>
+					</tr>
+					<tr>
+						<td class="tonerTable_tdStyle"> 시리얼 넘버 </td>
+						<td class="tonerTable_tdFontStyle"> <table cellpadding=0 cellspacing=0 border=0 style='table-layout:fixed;'><tr><td tagtype='string'  id='cartCont' class='sws_string_normal' gid=''>CRUM-24102207636</td></tr> 
+</table>
+ </td>
+					</tr>
+				</table>
+			</td>
+			</tr>
+		</table>		
+		 </td>
+ </tr>
+<tr height='31px'><td>&nbsp;</td></tr>
+</table>
+
+</td>
+<td width="4%"></td>
+<td width="48%">
+	    <table style='width:100%;' cellspacing='0' cellpadding='0'>
+      <tr height='36px'>      <td tagtype='subtitle' valign='top' id='subTitle2' style='font:bold 13px tahoma;color:#262626;width:238'>청색 이미징 유니트 (OPC 유니트)</td>
+      <td valign='top' style='padding: 7px 20px 0 0px;'><table style='background-color:#BDBDBD;width:100%;height:1px' cellspacing='0' cellpadding='0'><tr height='1px'><td></td></tr></table></td>
+    </tr>
+    </table>
+    <table cellspacing='0' cellpadding='0' width='100%' border='0'>
+    <tr>
+        <td class='sws-simpleInfo-value'>
+
+	<table cellspacing='0' cellpadding='0' width="97%">
+			<tr>
+				<td align="left" width="140px">
+				<table id='tonerset1' width='100%' cellpadding='0' cellspacing='0'> 
+ <tr> 
+  <td><table height='177' cellpadding='0' cellspacing='0'> 
+   <tr> 
+    <td width='9' height='177'><img src='../../sws/images/sws/common/gage.gif'></td>
+    <td width='30'><table height='100%' cellpadding='0' cellspacing='0'> 
+     <tr><td class='imaging_up'></td></tr> 
+     <tr><td class='imaging_center'><table height='177' cellpadding='0' cellspacing='0'> 
+   <tr height='6%'><td></td></tr> 
+   <tr height='1'><td class='cyan_up'></td></tr> 
+   <tr height='*'><td class='cyan_center'></td></tr> 
+   <tr height='5'><td class='cyan_bottom'></td></tr> 
+   </table></td> 
+  </tr>
+  <tr><td class='imaging_bottom'></td></tr> 
+ </table> 
+ </td> 
+ <td width='40' valign='top'><table height='177' border='0' cellpadding='0' cellspacing='0' class='chartnumber'> 
+   <tr height='6%'><td></td></tr> 
+   <tr height='1'><td width='5'></td> 
+ 		<td align='left'><img src='../../sws/images/sws/arrow_01.gif'></td><td width='3'></td><td>94%</td></tr>
+   <tr height='*'><td></td></tr> 
+ </table></td> 
+ </tr> 
+           </table> 
+       </td> 
+     </tr> 
+ </table> 
+
+				</td>
+				<td width="*" align="left">
+				<table cellspacing='0' cellpadding='0' width="100%" height="177px" style="border-top:1px solid #B4B4B4;border-bottom:1px solid #B4B4B4;">
+						<tr>
+							<td class='tonerTable_tdStyle'> 상태 </td>
+							<td valign='top' style='padding-top:5px;' class="tonerTable_tdFontStyle">
+								
+		          					<table cellpadding=0 cellspacing=0 border=0 style='table-layout:fixed;'><tr><td tagtype='string'  id='statusCont' class='sws_string_normal' gid=''>준비</td></tr> 
+</table>
+
+		          				
+							 </td>
+						</tr>
+						<tr>
+							<td class="tonerTable_tdStyle"> 잔여량 </td>
+							<td class="tonerTable_tdFontStyle"> <table cellpadding=0 cellspacing=0 border=0 style='table-layout:fixed;'><tr><td tagtype='string'  id='remainCont' class='sws_string_normal' gid=''>94 %</td></tr> 
+</table>
+ </td>
+	     		</tr>
+						<tr>
+							<td class="tonerTable_tdStyle"> 인쇄 </td>
+							<td class="tonerTable_tdFontStyle"> <table cellpadding=0 cellspacing=0 border=0 style='table-layout:fixed;'><tr><td tagtype='string'  id='pageCont' class='sws_string_normal' gid=''>4914 면 인쇄</td></tr> 
+</table>
+ </td>
+						</tr>
+						<tr>
+							<td class="tonerTable_tdStyle"> 용량 </td>
+							<td class="tonerTable_tdFontStyle"> <table cellpadding=0 cellspacing=0 border=0 style='table-layout:fixed;'><tr><td tagtype='string'  id='cyanImagingCapacity' class='sws_string_normal' gid=''>100 K</td></tr> 
+</table>
+ </td>
+						</tr>
+						<tr>
+							<td class="tonerTable_tdStyle"> 모델 ID </td>
+							<td class="tonerTable_tdFontStyle"> <table cellpadding=0 cellspacing=0 border=0 style='table-layout:fixed;'><tr><td tagtype='string'  id='remainCont' class='sws_string_normal' gid=''>CLT-R808</td></tr> 
+</table>
+ </td>
+						</tr>
+						<tr>
+							<td class="tonerTable_tdStyle"> 시리얼 넘버 </td>
+							<td class="tonerTable_tdFontStyle"> <table cellpadding=0 cellspacing=0 border=0 style='table-layout:fixed;'><tr><td tagtype='string'  id='cartCont' class='sws_string_normal' gid=''>CRUM-21061720668</td></tr> 
+</table>
+ </td>
+						</tr>
+					</table>
+				</td>
+				</tr>
+			</table>		
+	 </td>
+ </tr>
+<tr height='31px'><td>&nbsp;</td></tr>
+</table>
+
+</td>
+</tr>
+  
+<tr>
+
+<td width="48%">
+    <table style='width:100%;' cellspacing='0' cellpadding='0'>
+      <tr height='36px'>      <td tagtype='subtitle' valign='top' id='subTitle5' style='font:bold 13px tahoma;color:#262626;width:158'>심홍색 토너 카트리지</td>
+      <td valign='top' style='padding: 7px 20px 0 0px;'><table style='background-color:#BDBDBD;width:100%;height:1px' cellspacing='0' cellpadding='0'><tr height='1px'><td></td></tr></table></td>
+    </tr>
+    </table>
+    <table cellspacing='0' cellpadding='0' width='100%' border='0'>
+    <tr>
+        <td class='sws-simpleInfo-value'>
+
+<table cellspacing='0' cellpadding='0' width="97%">
+		<tr>
+			<td align="left" width="140px">
+			<table id='tonerset1' width='100%' cellpadding='0' cellspacing='0'> 
+ <tr> 
+  <td><table height='177' cellpadding='0' cellspacing='0'> 
+   <tr> 
+    <td width='9' height='177'><img src='../../sws/images/sws/common/gage.gif'></td>
+    <td width='30'><table height='100%' cellpadding='0' cellspacing='0'> 
+     <tr><td class='cartridge_up'></td></tr> 
+     <tr><td class='cartridge_center'><table height='177' cellpadding='0' cellspacing='0'> 
+   <tr height='31%'><td></td></tr> 
+   <tr height='1'><td class='magenta_up'></td></tr> 
+   <tr height='*'><td class='magenta_center'></td></tr> 
+   <tr height='5'><td class='magenta_bottom'></td></tr> 
+   </table></td> 
+  </tr>
+  <tr><td class='cartridge_bottom'></td></tr> 
+ </table> 
+ </td> 
+ <td width='40' valign='top'><table height='177' border='0' cellpadding='0' cellspacing='0' class='chartnumber'> 
+   <tr height='31%'><td></td></tr> 
+   <tr height='1'><td width='5'></td> 
+ 		<td align='left'><img src='../../sws/images/sws/arrow_01.gif'></td><td width='3'></td><td>69%</td></tr>
+   <tr height='*'><td></td></tr> 
+ </table></td> 
+ </tr> 
+           </table> 
+       </td> 
+     </tr> 
+ </table> 
+
+			</td>
+			<td width="*" align="left">
+			<table cellspacing='0' cellpadding='0' width="100%" height="177px" style="border-top:1px solid #B4B4B4;border-bottom:1px solid #B4B4B4;">
+					<tr>
+						<td class="tonerTable_tdStyle"> 상태 </td>
+						<td valign='top' style='padding-top:5px;' class="tonerTable_tdFontStyle">						
+						
+	          				<table cellpadding=0 cellspacing=0 border=0 style='table-layout:fixed;'><tr><td tagtype='string'  id='statusCont' class='sws_string_normal' gid=''>준비</td></tr> 
+</table>
+
+	          			
+						</td>
+					</tr>
+					<tr>
+						<td class="tonerTable_tdStyle"> 잔여량 </td>
+						<td class="tonerTable_tdFontStyle"> <table cellpadding=0 cellspacing=0 border=0 style='table-layout:fixed;'><tr><td tagtype='string'  id='remainCont' class='sws_string_normal' gid=''>69 %</td></tr> 
+</table>
+ </td>
+     		</tr>
+					<tr>
+						<td class="tonerTable_tdStyle"> 인쇄 </td>
+						<td class="tonerTable_tdFontStyle"> <table cellpadding=0 cellspacing=0 border=0 style='table-layout:fixed;'><tr><td tagtype='string'  id='pageCont' class='sws_string_normal' gid=''>3089 면 인쇄</td></tr> 
+</table>
+ </td>
+					</tr>
+					<tr>
+						<td class="tonerTable_tdStyle"> 용량 </td>
+						<td class="tonerTable_tdFontStyle"> <table cellpadding=0 cellspacing=0 border=0 style='table-layout:fixed;'><tr><td tagtype='string'  id='capacityCont' class='sws_string_normal' gid=''>20 K</td></tr> 
+</table>
+ </td>
+					</tr>
+					<tr>
+						<td class="tonerTable_tdStyle"> 모델 ID </td>
+						<td class="tonerTable_tdFontStyle"> <table cellpadding=0 cellspacing=0 border=0 style='table-layout:fixed;'><tr><td tagtype='string'  id='remainCont' class='sws_string_normal' gid=''>CLT-M808S</td></tr> 
+</table>
+ </td>
+					</tr>
+					<tr>
+						<td class="tonerTable_tdStyle"> 시리얼 넘버 </td>
+						<td class="tonerTable_tdFontStyle"> <table cellpadding=0 cellspacing=0 border=0 style='table-layout:fixed;'><tr><td tagtype='string'  id='cartCont' class='sws_string_normal' gid=''>CRUM-16031400800</td></tr> 
+</table>
+ </td>
+					</tr>
+				</table>
+			</td>
+			</tr>
+		</table>		
+ </td>
+ </tr>
+<tr height='31px'><td>&nbsp;</td></tr>
+</table>
+
+</td>
+<td width="4%"></td>
+<td width="48%">
+	    <table style='width:100%;' cellspacing='0' cellpadding='0'>
+      <tr height='36px'>      <td tagtype='subtitle' valign='top' id='subTitle6' style='font:bold 13px tahoma;color:#262626;width:252'>심홍색 이미징 유니트 (OPC 유니트)</td>
+      <td valign='top' style='padding: 7px 20px 0 0px;'><table style='background-color:#BDBDBD;width:100%;height:1px' cellspacing='0' cellpadding='0'><tr height='1px'><td></td></tr></table></td>
+    </tr>
+    </table>
+    <table cellspacing='0' cellpadding='0' width='100%' border='0'>
+    <tr>
+        <td class='sws-simpleInfo-value'>
+
+	<table cellspacing='0' cellpadding='0' width="97%">
+			<tr>
+				<td align="left" width="140px">
+				<table id='tonerset1' width='100%' cellpadding='0' cellspacing='0'> 
+ <tr> 
+  <td><table height='177' cellpadding='0' cellspacing='0'> 
+   <tr> 
+    <td width='9' height='177'><img src='../../sws/images/sws/common/gage.gif'></td>
+    <td width='30'><table height='100%' cellpadding='0' cellspacing='0'> 
+     <tr><td class='imaging_up'></td></tr> 
+     <tr><td class='imaging_center'><table height='177' cellpadding='0' cellspacing='0'> 
+   <tr height='59%'><td></td></tr> 
+   <tr height='1'><td class='magenta_up'></td></tr> 
+   <tr height='*'><td class='magenta_center'></td></tr> 
+   <tr height='5'><td class='magenta_bottom'></td></tr> 
+   </table></td> 
+  </tr>
+  <tr><td class='imaging_bottom'></td></tr> 
+ </table> 
+ </td> 
+ <td width='40' valign='top'><table height='177' border='0' cellpadding='0' cellspacing='0' class='chartnumber'> 
+   <tr height='59%'><td></td></tr> 
+   <tr height='1'><td width='5'></td> 
+ 		<td align='left'><img src='../../sws/images/sws/arrow_01.gif'></td><td width='3'></td><td>41%</td></tr>
+   <tr height='*'><td></td></tr> 
+ </table></td> 
+ </tr> 
+           </table> 
+       </td> 
+     </tr> 
+ </table> 
+
+				</td>
+				<td width="*" align="left">
+				<table cellspacing='0' cellpadding='0' width="100%" height="177px" style="border-top:1px solid #B4B4B4;border-bottom:1px solid #B4B4B4;">
+						<tr>
+							<td class="tonerTable_tdStyle"> 상태 </td>
+							<td valign='top' style='padding-top:5px;' class="tonerTable_tdFontStyle">
+								
+		          					<table cellpadding=0 cellspacing=0 border=0 style='table-layout:fixed;'><tr><td tagtype='string'  id='statusCont' class='sws_string_normal' gid=''>준비</td></tr> 
+</table>
+
+		          				
+							 </td>
+						</tr>
+						<tr>
+							<td class="tonerTable_tdStyle"> 잔여량 </td>
+							<td class="tonerTable_tdFontStyle"> <table cellpadding=0 cellspacing=0 border=0 style='table-layout:fixed;'><tr><td tagtype='string'  id='remainCont' class='sws_string_normal' gid=''>41 %</td></tr> 
+</table>
+ </td>
+	     		</tr>
+						<tr>
+							<td class="tonerTable_tdStyle"> 인쇄 </td>
+							<td class="tonerTable_tdFontStyle"> <table cellpadding=0 cellspacing=0 border=0 style='table-layout:fixed;'><tr><td tagtype='string'  id='pageCont' class='sws_string_normal' gid=''>42036 면 인쇄</td></tr> 
+</table>
+ </td>
+						</tr>
+						<tr>
+							<td class="tonerTable_tdStyle"> 용량 </td>
+							<td class="tonerTable_tdFontStyle"> <table cellpadding=0 cellspacing=0 border=0 style='table-layout:fixed;'><tr><td tagtype='string'  id='magentaImagingCapacity' class='sws_string_normal' gid=''>100 K</td></tr> 
+</table>
+ </td>
+						</tr>
+						<tr>
+							<td class="tonerTable_tdStyle"> 모델 ID </td>
+							<td class="tonerTable_tdFontStyle"> <table cellpadding=0 cellspacing=0 border=0 style='table-layout:fixed;'><tr><td tagtype='string'  id='remainCont' class='sws_string_normal' gid=''>CLT-R808</td></tr> 
+</table>
+ </td>
+						</tr>
+						<tr>
+							<td class="tonerTable_tdStyle"> 시리얼 넘버 </td>
+							<td class="tonerTable_tdFontStyle"> <table cellpadding=0 cellspacing=0 border=0 style='table-layout:fixed;'><tr><td tagtype='string'  id='cartCont' class='sws_string_normal' gid=''>CRUM-18010231017</td></tr> 
+</table>
+ </td>
+						</tr>
+					</table>
+				</td>
+				</tr>
+			</table>		
+	 </td>
+ </tr>
+<tr height='31px'><td>&nbsp;</td></tr>
+</table>
+
+</td>
+</tr>
+
+
+<tr>
+<td width="48%">
+	    <table style='width:100%;' cellspacing='0' cellpadding='0'>
+      <tr height='36px'>      <td tagtype='subtitle' valign='top' id='subTitle3' style='font:bold 13px tahoma;color:#262626;width:158'>노란색 토너 카트리지</td>
+      <td valign='top' style='padding: 7px 20px 0 0px;'><table style='background-color:#BDBDBD;width:100%;height:1px' cellspacing='0' cellpadding='0'><tr height='1px'><td></td></tr></table></td>
+    </tr>
+    </table>
+    <table cellspacing='0' cellpadding='0' width='100%' border='0'>
+    <tr>
+        <td class='sws-simpleInfo-value'>
+
+<table cellspacing='0' cellpadding='0' width="97%">
+		<tr>
+			<td align="left" width="140px">
+			<table id='tonerset1' width='100%' cellpadding='0' cellspacing='0'> 
+ <tr> 
+  <td><table height='177' cellpadding='0' cellspacing='0'> 
+   <tr> 
+    <td width='9' height='177'><img src='../../sws/images/sws/common/gage.gif'></td>
+    <td width='30'><table height='100%' cellpadding='0' cellspacing='0'> 
+     <tr><td class='cartridge_up'></td></tr> 
+     <tr><td class='cartridge_center'><table height='177' cellpadding='0' cellspacing='0'> 
+   <tr height='67%'><td></td></tr> 
+   <tr height='1'><td class='yellow_up'></td></tr> 
+   <tr height='*'><td class='yellow_center'></td></tr> 
+   <tr height='5'><td class='yellow_bottom'></td></tr> 
+   </table></td> 
+  </tr>
+  <tr><td class='cartridge_bottom'></td></tr> 
+ </table> 
+ </td> 
+ <td width='40' valign='top'><table height='177' border='0' cellpadding='0' cellspacing='0' class='chartnumber'> 
+   <tr height='67%'><td></td></tr> 
+   <tr height='1'><td width='5'></td> 
+ 		<td align='left'><img src='../../sws/images/sws/arrow_01.gif'></td><td width='3'></td><td>33%</td></tr>
+   <tr height='*'><td></td></tr> 
+ </table></td> 
+ </tr> 
+           </table> 
+       </td> 
+     </tr> 
+ </table> 
+
+			</td>
+			<td width="*" align="left">
+			<table cellspacing='0' cellpadding='0' width="100%" height="177px" style="border-top:1px solid #B4B4B4;border-bottom:1px solid #B4B4B4;">
+					<tr>
+						<td class="tonerTable_tdStyle"> 상태 </td>
+						<td valign='top' style='padding-top:5px;' class="tonerTable_tdFontStyle">
+						
+	          				<table cellpadding=0 cellspacing=0 border=0 style='table-layout:fixed;'><tr><td tagtype='string'  id='statusCont' class='sws_string_normal' gid=''>준비</td></tr> 
+</table>
+
+	          			
+						</td>
+					</tr>
+					<tr>
+						<td class="tonerTable_tdStyle"> 잔여량 </td>
+						<td class="tonerTable_tdFontStyle"> <table cellpadding=0 cellspacing=0 border=0 style='table-layout:fixed;'><tr><td tagtype='string'  id='remainCont' class='sws_string_normal' gid=''>33 %</td></tr> 
+</table>
+ </td>
+     		</tr>
+					<tr>
+						<td class="tonerTable_tdStyle"> 인쇄 </td>
+						<td class="tonerTable_tdFontStyle"> <table cellpadding=0 cellspacing=0 border=0 style='table-layout:fixed;'><tr><td tagtype='string'  id='pageCont' class='sws_string_normal' gid=''>9834 면 인쇄</td></tr> 
+</table>
+ </td>
+					</tr>
+					<tr>
+						<td class="tonerTable_tdStyle"> 용량 </td>
+						<td class="tonerTable_tdFontStyle"> <table cellpadding=0 cellspacing=0 border=0 style='table-layout:fixed;'><tr><td tagtype='string'  id='capacityCont' class='sws_string_normal' gid=''>20 K</td></tr> 
+</table>
+ </td>
+					</tr>
+					<tr>
+						<td class="tonerTable_tdStyle"> 모델 ID </td>
+						<td class="tonerTable_tdFontStyle"> <table cellpadding=0 cellspacing=0 border=0 style='table-layout:fixed;'><tr><td tagtype='string'  id='remainCont' class='sws_string_normal' gid=''>CLT-Y808S</td></tr> 
+</table>
+ </td>
+					</tr>
+					<tr>
+						<td class="tonerTable_tdStyle"> 시리얼 넘버 </td>
+						<td class="tonerTable_tdFontStyle"> <table cellpadding=0 cellspacing=0 border=0 style='table-layout:fixed;'><tr><td tagtype='string'  id='cartCont' class='sws_string_normal' gid=''>CRUM-17092696456</td></tr> 
+</table>
+ </td>
+					</tr>
+				</table>
+			</td>
+			</tr>
+		</table>
+	 </td>
+ </tr>
+<tr height='31px'><td>&nbsp;</td></tr>
+</table>
+
+</td>
+<td width="4%"></td>
+<td width="48%">
+	    <table style='width:100%;' cellspacing='0' cellpadding='0'>
+      <tr height='36px'>      <td tagtype='subtitle' valign='top' id='subTitle4' style='font:bold 13px tahoma;color:#262626;width:252'>노란색 이미징 유니트 (OPC 유니트)</td>
+      <td valign='top' style='padding: 7px 20px 0 0px;'><table style='background-color:#BDBDBD;width:100%;height:1px' cellspacing='0' cellpadding='0'><tr height='1px'><td></td></tr></table></td>
+    </tr>
+    </table>
+    <table cellspacing='0' cellpadding='0' width='100%' border='0'>
+    <tr>
+        <td class='sws-simpleInfo-value'>
+
+	<table cellspacing='0' cellpadding='0' width="97%">
+			<tr>
+				<td align="left" width="140px">
+				<table id='tonerset1' width='100%' cellpadding='0' cellspacing='0'> 
+ <tr> 
+  <td><table height='177' cellpadding='0' cellspacing='0'> 
+   <tr> 
+    <td width='9' height='177'><img src='../../sws/images/sws/common/gage.gif'></td>
+    <td width='30'><table height='100%' cellpadding='0' cellspacing='0'> 
+     <tr><td class='imaging_up'></td></tr> 
+     <tr><td class='imaging_center'><table height='177' cellpadding='0' cellspacing='0'> 
+   <tr height='55%'><td></td></tr> 
+   <tr height='1'><td class='yellow_up'></td></tr> 
+   <tr height='*'><td class='yellow_center'></td></tr> 
+   <tr height='5'><td class='yellow_bottom'></td></tr> 
+   </table></td> 
+  </tr>
+  <tr><td class='imaging_bottom'></td></tr> 
+ </table> 
+ </td> 
+ <td width='40' valign='top'><table height='177' border='0' cellpadding='0' cellspacing='0' class='chartnumber'> 
+   <tr height='55%'><td></td></tr> 
+   <tr height='1'><td width='5'></td> 
+ 		<td align='left'><img src='../../sws/images/sws/arrow_01.gif'></td><td width='3'></td><td>45%</td></tr>
+   <tr height='*'><td></td></tr> 
+ </table></td> 
+ </tr> 
+           </table> 
+       </td> 
+     </tr> 
+ </table> 
+
+				</td>
+				<td width="*" align="left">
+				<table cellspacing='0' cellpadding='0' width="100%" height="177px" style="border-top:1px solid #B4B4B4;border-bottom:1px solid #B4B4B4;">
+						<tr>
+							<td class="tonerTable_tdStyle"> 상태 </td>
+							<td valign='top' style='padding-top:5px;' class="tonerTable_tdFontStyle">
+								
+		          					<table cellpadding=0 cellspacing=0 border=0 style='table-layout:fixed;'><tr><td tagtype='string'  id='statusCont' class='sws_string_normal' gid=''>준비</td></tr> 
+</table>
+
+		          				
+							 </td>
+						</tr>
+						<tr>
+							<td class="tonerTable_tdStyle"> 잔여량 </td>
+							<td class="tonerTable_tdFontStyle"> <table cellpadding=0 cellspacing=0 border=0 style='table-layout:fixed;'><tr><td tagtype='string'  id='remainCont' class='sws_string_normal' gid=''>45 %</td></tr> 
+</table>
+ </td>
+	     		</tr>
+						<tr>
+							<td class="tonerTable_tdStyle"> 인쇄 </td>
+							<td class="tonerTable_tdFontStyle"> <table cellpadding=0 cellspacing=0 border=0 style='table-layout:fixed;'><tr><td tagtype='string'  id='pageCont' class='sws_string_normal' gid=''>39076 면 인쇄</td></tr> 
+</table>
+ </td>
+						</tr>
+						<tr>
+							<td class="tonerTable_tdStyle"> 용량 </td>
+							<td class="tonerTable_tdFontStyle"> <table cellpadding=0 cellspacing=0 border=0 style='table-layout:fixed;'><tr><td tagtype='string'  id='yellowImagingCapacity' class='sws_string_normal' gid=''>100 K</td></tr> 
+</table>
+ </td>
+						</tr>
+						<tr>
+							<td class="tonerTable_tdStyle"> 모델 ID </td>
+							<td class="tonerTable_tdFontStyle"> <table cellpadding=0 cellspacing=0 border=0 style='table-layout:fixed;'><tr><td tagtype='string'  id='remainCont' class='sws_string_normal' gid=''>CLT-R808</td></tr> 
+</table>
+ </td>
+						</tr>
+						<tr>
+							<td class="tonerTable_tdStyle"> 시리얼 넘버 </td>
+							<td class="tonerTable_tdFontStyle"> <table cellpadding=0 cellspacing=0 border=0 style='table-layout:fixed;'><tr><td tagtype='string'  id='cartCont' class='sws_string_normal' gid=''>CRUM-18092601223</td></tr> 
+</table>
+ </td>
+						</tr>
+					</table>
+				</td>
+				</tr>
+			</table>
+	 </td>
+ </tr>
+<tr height='31px'><td>&nbsp;</td></tr>
+</table>
+
+</td>
+</tr>
+</table>
+
+
+    <table style='width:100%;' cellspacing='0' cellpadding='0'>
+      <tr height='36px'>      <td tagtype='subtitle' valign='top' id='subTitle5' style='font:bold 13px tahoma;color:#262626;width:175'>전사 유니트 정보 (벨트)</td>
+      <td valign='top' style='padding: 7px 20px 0 0px;'><table style='background-color:#BDBDBD;width:100%;height:1px' cellspacing='0' cellpadding='0'><tr height='1px'><td></td></tr></table></td>
+    </tr>
+    </table>
+    <table cellspacing='0' cellpadding='0' width='100%' border='0'>
+    <tr>
+        <td width='23px'>&nbsp;</td>
+        <td class='sws-simpleInfo-value'>
+		
+		<table cellspacing='0' cellpadding='0' width='100%' class='sws-simpleInfo-value'>
+<tr  height='35px'><td  width='283px' style='font-size:12px;font-weight:bold;font-family:tahoma,arial,verdana,sans-serif;color:#1A1A1A;padding:5px 0 0 0;'>인쇄:</td><td style='font-size:12px;font-weight:bold;font-family:tahoma,arial,verdana,sans-serif;color:#1A1A1A;padding:5px 0 0 0;'  >
+
+			<table cellpadding=0 cellspacing=0 border=0 style='table-layout:fixed;'><tr><td tagtype='string'  id='transferUnitBeltImpressions' class='sws_string_normal' gid=''>31590/300000 (면 인쇄/수명)</td></tr> 
+</table>
+
+		 </td>
+ </tr>
+</table>
+		
+ </td>
+ <td width='28px'>&nbsp;</td>
+ </tr>
+<tr height='31px'><td colspan='3'>&nbsp;</td></tr>
+</table>
+
+
+<div id='iTBCleanerDiv' style='display:none;'>
+    <table style='width:100%;' cellspacing='0' cellpadding='0'>
+      <tr height='36px'>      <td tagtype='subtitle' valign='top' id='subTitle6' style='font:bold 13px tahoma;color:#262626;width:90'>ITB 클리너</td>
+      <td valign='top' style='padding: 7px 20px 0 0px;'><table style='background-color:#BDBDBD;width:100%;height:1px' cellspacing='0' cellpadding='0'><tr height='1px'><td></td></tr></table></td>
+    </tr>
+    </table>
+    <table cellspacing='0' cellpadding='0' width='100%' border='0'>
+    <tr>
+        <td width='23px'>&nbsp;</td>
+        <td class='sws-simpleInfo-value'>
+
+		
+		<table cellspacing='0' cellpadding='0' width='100%' class='sws-simpleInfo-value'>
+<tr  height='35px'><td  width='283px' style='font-size:12px;font-weight:bold;font-family:tahoma,arial,verdana,sans-serif;color:#1A1A1A;padding:5px 0 0 0;'>인쇄:</td><td style='font-size:12px;font-weight:bold;font-family:tahoma,arial,verdana,sans-serif;color:#1A1A1A;padding:5px 0 0 0;'  >
+
+			<table cellpadding=0 cellspacing=0 border=0 style='table-layout:fixed;'><tr><td tagtype='string'  id='transferUnitBeltCleanerImpressions' class='sws_string_normal' gid=''>31511/150000 (면 인쇄/수명)</td></tr> 
+</table>
+
+		 </td>
+ </tr>
+</table>
+	
+ </td>
+ <td width='28px'>&nbsp;</td>
+ </tr>
+<tr height='31px'><td colspan='3'>&nbsp;</td></tr>
+</table>
+
+</div>
+ 
+    <table style='width:100%;' cellspacing='0' cellpadding='0'>
+      <tr height='36px'>      <td tagtype='subtitle' valign='top' id='subTitle7' style='font:bold 13px tahoma;color:#262626;width:96'>현상기 정보</td>
+      <td valign='top' style='padding: 7px 20px 0 0px;'><table style='background-color:#BDBDBD;width:100%;height:1px' cellspacing='0' cellpadding='0'><tr height='1px'><td></td></tr></table></td>
+    </tr>
+    </table>
+    <table cellspacing='0' cellpadding='0' width='100%' border='0'>
+    <tr>
+        <td width='23px'>&nbsp;</td>
+        <td class='sws-simpleInfo-value'>
+
+			<table border='0' width='100%' cellpadding='0' cellspacing='0'>
+			   <tr><td height='150'>
+   					<table id="list" class="scroll" cellpadding="0" cellspacing="0"></table>
+				   </td>
+			   </tr>
+			</table>
+ </td>
+ <td width='28px'>&nbsp;</td>
+ </tr>
+<tr height='31px'><td colspan='3'>&nbsp;</td></tr>
+</table>
+
+
+    <table style='width:100%;' cellspacing='0' cellpadding='0'>
+      <tr height='36px'>      <td tagtype='subtitle' valign='top' id='subTitle8' style='font:bold 13px tahoma;color:#262626;width:96'>소모품 정보</td>
+      <td valign='top' style='padding: 7px 20px 0 0px;'><table style='background-color:#BDBDBD;width:100%;height:1px' cellspacing='0' cellpadding='0'><tr height='1px'><td></td></tr></table></td>
+    </tr>
+    </table>
+    <table cellspacing='0' cellpadding='0' width='100%' border='0'>
+    <tr>
+        <td width='23px'>&nbsp;</td>
+        <td class='sws-simpleInfo-value'>
+
+
+	<table cellspacing='0' cellpadding='0' width='100%' class='sws-simpleInfo-value'>
+<tr  height='35px'><td  width='283px' style='font-size:12px;font-weight:bold;font-family:tahoma,arial,verdana,sans-serif;color:#1A1A1A;padding:5px 0 0 0;'>정착기 수명:</td><td style='font-size:12px;font-weight:bold;font-family:tahoma,arial,verdana,sans-serif;color:#1A1A1A;padding:5px 0 0 0;'  >
+
+			<table cellpadding=0 cellspacing=0 border=0 style='table-layout:fixed;'><tr><td tagtype='string'  id='fuserAssemblyRemaining' class='sws_string_normal' gid=''>29101/250000 (면 인쇄/수명)</td></tr> 
+</table>
+
+	 </td>
+ </tr>
+</table>
+
+	
+	<table cellspacing='0' cellpadding='0' width='100%' class='sws-simpleInfo-value'>
+<tr  height='35px'><td  width='283px' style='font-size:12px;font-weight:bold;font-family:tahoma,arial,verdana,sans-serif;color:#1A1A1A;padding:5px 0 0 0;'>T2 롤러 수명:</td><td style='font-size:12px;font-weight:bold;font-family:tahoma,arial,verdana,sans-serif;color:#1A1A1A;padding:5px 0 0 0;'  >
+
+			<table cellpadding=0 cellspacing=0 border=0 style='table-layout:fixed;'><tr><td tagtype='string'  id='t2RollerLife' class='sws_string_normal' gid=''>71837/150000 (면 인쇄/수명)</td></tr> 
+</table>
+
+	 </td>
+ </tr>
+</table>
+
+	
+	
+		<table cellspacing='0' cellpadding='0' width='100%' class='sws-simpleInfo-value'>
+<tr  height='35px'><td  width='283px' style='font-size:12px;font-weight:bold;font-family:tahoma,arial,verdana,sans-serif;color:#1A1A1A;padding:5px 0 0 0;'>용지함 1 롤러 수명:</td><td style='font-size:12px;font-weight:bold;font-family:tahoma,arial,verdana,sans-serif;color:#1A1A1A;padding:5px 0 0 0;'  >
+
+				<table cellpadding=0 cellspacing=0 border=0 style='table-layout:fixed;'><tr><td tagtype='string'  id='tray1RollerLife' class='sws_string_normal' gid=''>160189/200000 (면 인쇄/수명)</td></tr> 
+</table>
+
+		 </td>
+ </tr>
+</table>
+
+	
+	
+	<div id='tray1ForwardRollerDiv'>
+		
+	</div>
+	
+	<div id='tray1RetardRollerDiv'>
+		
+	</div>
+	
+	
+		<table cellspacing='0' cellpadding='0' width='100%' class='sws-simpleInfo-value'>
+<tr  height='35px'><td  width='283px' style='font-size:12px;font-weight:bold;font-family:tahoma,arial,verdana,sans-serif;color:#1A1A1A;padding:5px 0 0 0;'>용지함 2 롤러 수명:</td><td style='font-size:12px;font-weight:bold;font-family:tahoma,arial,verdana,sans-serif;color:#1A1A1A;padding:5px 0 0 0;'  >
+
+				<table cellpadding=0 cellspacing=0 border=0 style='table-layout:fixed;'><tr><td tagtype='string'  id='tray2RollerLife' class='sws_string_normal' gid=''>18448/200000 (면 인쇄/수명)</td></tr> 
+</table>
+
+		 </td>
+ </tr>
+</table>
+
+	
+	
+	<div id='tray2ForwardRollerDiv'>
+		
+	</div>
+	
+	<div id='tray2RetardRollerDiv'>
+		
+	</div>
+	
+	
+	
+	<div id='tray3ForwardRollerDiv'>
+		
+	</div>
+	
+	<div id='tray3RetardRollerDiv'>
+		
+	</div>
+	
+	
+	
+	<div id='tray4ForwardRollerDiv'>
+		
+	</div>
+	
+	<div id='tray4RetardRollerDiv'>
+		
+	</div>
+	
+	
+	
+	<div id='tray5ForwardRollerDiv'>
+		
+	</div>
+	
+	<div id='tray5RetardRollerDiv'>
+		
+	</div>
+	
+	
+		<table cellspacing='0' cellpadding='0' width='100%' class='sws-simpleInfo-value'>
+<tr  height='35px'><td  width='283px' style='font-size:12px;font-weight:bold;font-family:tahoma,arial,verdana,sans-serif;color:#1A1A1A;padding:5px 0 0 0;'>다목적 용지함 롤러 수명:</td><td style='font-size:12px;font-weight:bold;font-family:tahoma,arial,verdana,sans-serif;color:#1A1A1A;padding:5px 0 0 0;'  >
+
+				<table cellpadding=0 cellspacing=0 border=0 style='table-layout:fixed;'><tr><td tagtype='string'  id='mpTrayRollerLife' class='sws_string_normal' gid=''>8059/200000 (면 인쇄/수명)</td></tr> 
+</table>
+
+		 </td>
+ </tr>
+</table>
+
+	
+	
+	<div id='mpForwardRollerDiv'>
+		
+	</div>
+	
+	<div id='mpRetardRollerDiv'>
+		
+	</div>
+	
+		
+		<table cellspacing='0' cellpadding='0' width='100%' class='sws-simpleInfo-value'>
+<tr  height='35px'><td  width='283px' style='font-size:12px;font-weight:bold;font-family:tahoma,arial,verdana,sans-serif;color:#1A1A1A;padding:5px 0 0 0;'>ADF 롤러 수명:</td><td style='font-size:12px;font-weight:bold;font-family:tahoma,arial,verdana,sans-serif;color:#1A1A1A;padding:5px 0 0 0;'  >
+
+				<table cellpadding=0 cellspacing=0 border=0 style='table-layout:fixed;'><tr><td tagtype='string'  id='aDFRollerLife' class='sws_string_normal' gid=''>90527/200000 (면 인쇄/수명)</td></tr> 
+</table>
+
+		 </td>
+ </tr>
+</table>
+
+			
+		<table cellspacing='0' cellpadding='0' width='100%' class='sws-simpleInfo-value'>
+<tr  height='35px'><td  width='283px' style='font-size:12px;font-weight:bold;font-family:tahoma,arial,verdana,sans-serif;color:#1A1A1A;padding:5px 0 0 0;'>ADF 지연 롤러 수명:</td><td style='font-size:12px;font-weight:bold;font-family:tahoma,arial,verdana,sans-serif;color:#1A1A1A;padding:5px 0 0 0;'  >
+
+				<table cellpadding=0 cellspacing=0 border=0 style='table-layout:fixed;'><tr><td tagtype='string'  id='aDFRollerPadLife' class='sws_string_normal' gid=''>84780/100000 (면 인쇄/수명)</td></tr> 
+</table>
+
+		 </td>
+ </tr>
+</table>
+
+	
+		
+	<table cellspacing='0' cellpadding='0' width='100%' class='sws-simpleInfo-value'>
+<tr  height='35px'><td  width='283px' style='font-size:12px;font-weight:bold;font-family:tahoma,arial,verdana,sans-serif;color:#1A1A1A;padding:5px 0 0 0;'>폐 토너 통:</td><td style='font-size:12px;font-weight:bold;font-family:tahoma,arial,verdana,sans-serif;color:#1A1A1A;padding:5px 0 0 0;'  >
+
+		<table cellpadding=0 cellspacing=0 border=0 style='table-layout:fixed;'><tr><td tagtype='string'  id='wasteTonerContainer' class='sws_string_normal' gid=''>거의 가득 참</td></tr> 
+</table>
+
+	 </td>
+ </tr>
+</table>
+
+		
+	<div id='divFinisherInstallWarn' style='display:none;'> 	
+		<table cellspacing='0' cellpadding='0' width='100%' class='sws-simpleInfo-value'>
+<tr  height='35px'><td  width='283px' style='font-size:12px;font-weight:bold;font-family:tahoma,arial,verdana,sans-serif;color:#1A1A1A;padding:5px 0 0 0;'>피니셔 스태플 카트리지:</td><td style='font-size:12px;font-weight:bold;font-family:tahoma,arial,verdana,sans-serif;color:#1A1A1A;padding:5px 0 0 0;'  >
+
+			<table cellpadding=0 cellspacing=0 border=0 style='table-layout:fixed;'><tr><td tagtype='string'  id='finisherStapleCatridge' class='sws_string_normal' gid=''>설치되어 있지 않음.</td></tr> 
+</table>
+
+		 </td>
+ </tr>
+</table>
+
+	</div>	
+	
+	<div id='divBookletStapler' style='display:none;'>
+	<table cellspacing='0' cellpadding='0' width='100%' class='sws-simpleInfo-value'>
+<tr  height='35px'><td  width='283px' style='font-size:12px;font-weight:bold;font-family:tahoma,arial,verdana,sans-serif;color:#1A1A1A;padding:5px 0 0 0;'>소책자 스테플러 카트리지:</td><td style='font-size:12px;font-weight:bold;font-family:tahoma,arial,verdana,sans-serif;color:#1A1A1A;padding:5px 0 0 0;'  >
+
+		<table cellpadding=0 cellspacing=0 border=0 style='table-layout:fixed;'><tr><td tagtype='string'  id='bookletStapleCatridge' class='sws_string_normal' gid=''>설치되어 있지 않음.</td></tr> 
+</table>
+
+	 </td>
+ </tr>
+</table>
+
+	
+	<table cellspacing='0' cellpadding='0' width='100%' class='sws-simpleInfo-value'>
+<tr  height='35px'><td  width='283px' style='font-size:12px;font-weight:bold;font-family:tahoma,arial,verdana,sans-serif;color:#1A1A1A;padding:5px 0 0 0;'>펀치 구멍 모음통:</td><td style='font-size:12px;font-weight:bold;font-family:tahoma,arial,verdana,sans-serif;color:#1A1A1A;padding:5px 0 0 0;'  >
+
+		<table cellpadding=0 cellspacing=0 border=0 style='table-layout:fixed;'><tr><td tagtype='string'  id='punchWasteHopper' class='sws_string_normal' gid=''>설치되어 있지 않음.</td></tr> 
+</table>
+
+	 </td>
+ </tr>
+</table>
+ 
+	</div>
+		
+ </td>
+ <td width='28px'>&nbsp;</td>
+ </tr>
+<tr height='31px'><td colspan='3'>&nbsp;</td></tr>
+</table>
+
+</td>   
+<!-- end main contents --><td width='28px'>&nbsp;</td></tr></table>
+</div>
+ </td> </tr></table>
+</body>
+</html>

@@ -78,8 +78,8 @@ export function createAgentController(
       const { readings } = request.body as SyncBody;
       const { agentId } = request.user as AgentJwtUser;
       try {
-        await agentService.syncReadings(redis, readings, agentId);
-        return { status: "success", count: readings.length };
+        const result = await agentService.syncReadings(redis, readings, agentId);
+        return { status: "success", count: readings.length, ...result };
       } catch (e: unknown) {
         const errMsg = e instanceof Error ? e.message : String(e);
         return reply.status(500).send({ error: errMsg });

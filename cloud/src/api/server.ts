@@ -36,6 +36,9 @@ if (!process.env.JWT_SECRET) {
 const fastify = Fastify({
   logger: true,
   connectionTimeout: 0,
+  // Confía en el proxy inmediato (nginx en el compose propio, el edge de Render en
+  // producción) para resolver request.ip correctamente a partir de X-Forwarded-For.
+  trustProxy: true,
 });
 
 const db = knex(knexConfig.development);
@@ -168,7 +171,7 @@ const start = async () => {
     try {
       const wsPlugin = require("@fastify/websocket");
       await fastify.register(wsPlugin);
-      await registerWebSocket(fastify, agentService);
+      await registerWebSocket(fastify, db, redis, agentService);
       fastify.log.info("WebSocket hub activo en /ws");
     } catch (err: unknown) {
       const errMsg = err instanceof Error ? err.message : String(err);

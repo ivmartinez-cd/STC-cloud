@@ -6,6 +6,7 @@
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
+import crypto from 'node:crypto';
 
 const API  = process.env.API_URL  || 'http://localhost:3000/api/v1';
 const USER = process.env.PORTAL_ADMIN_USER     || 'admin';
@@ -217,13 +218,150 @@ describe('Registro y sincronización de dispositivos', () => {
   test('Lecturas del dispositivo accesibles desde portal', async () => {
     // El device_id en la BD es un UUID asignado al serial — buscar vía /clients/:id/devices
     const { data: devicesData } = await req('GET', `/clients/${ctx.clientId}/devices`, undefined, ctx.portalToken);
-    const device = devicesData.find((d: any) => d.serial === ctx.deviceSerial);
+    const device = devicesData.find((d: any) => d.serial_number === ctx.deviceSerial);
     assert.ok(device, 'Dispositivo registrado debe aparecer en lista del cliente');
 
     const { status, data } = await req('GET', `/devices/${device.id}/readings?limit=10`, undefined, ctx.portalToken);
     assert.equal(status, 200);
     assert.ok(Array.isArray(data) && data.length > 0, 'Debe haber lecturas guardadas');
     assert.equal(data[0].total_pages, 24500, 'El valor de páginas debe coincidir');
+  });
+
+  test('Sync con reading_id repetido no duplica la lectura (idempotencia)', async () => {
+    const readingId = crypto.randomUUID();
+    const dedupReading = {
+      reading_id:   readingId,
+      device_id:    ctx.deviceSerial,
+      ip:           '192.168.100.50',
+      brand:        'hp',
+      time:         new Date().toISOString(),
+      total_pages:  99999,
+      offline:      false,
+    };
+
+    const first = await req('POST', '/devices/sync', { readings: [dedupReading] }, ctx.agentToken);
+    assert.equal(first.status, 200);
+    assert.equal(first.data.inserted, 1);
+    assert.equal(first.data.duplicates, 0);
+
+    // Reintento del mismo lote (simula respuesta perdida y reenvío del agente)
+    const retry = await req('POST', '/devices/sync', { readings: [dedupReading] }, ctx.agentToken);
+    assert.equal(retry.status, 200);
+    assert.equal(retry.data.inserted, 0);
+    assert.equal(retry.data.duplicates, 1);
+
+    // No debe haber quedado una fila duplicada con ese total_pages
+    const { data: devicesData } = await req('GET', `/clients/${ctx.clientId}/devices`, undefined, ctx.portalToken);
+    const device = devicesData.find((d: any) => d.serial_number === ctx.deviceSerial);
+    const { data: readingsData } = await req('GET', `/devices/${device.id}/readings?limit=500`, undefined, ctx.portalToken);
+    const matches = readingsData.filter((r: any) => r.total_pages === 99999);
+    assert.equal(matches.length, 1, 'Debe existir una unica fila para ese reading_id, no duplicada');
+  });
+});
+
+describe('Detección de reset de contador y volumen mensual', () => {
+  const resetDeviceSerial = `SN-E2E-RESET-${Date.now()}`;
+  let resetDeviceId = '';
+
+  test('Registrar dispositivo dedicado → 200', async () => {
+    const { status } = await req('POST', '/devices/register', {
+      devices: [{
+        ip:     '192.168.100.51',
+        mac:    null,
+        serial: resetDeviceSerial,
+        brand:  'hp',
+        model:  'HP LaserJet Pro M404n',
+        name:   'Impresora E2E Reset',
+      }],
+    }, ctx.agentToken);
+    assert.equal(status, 200);
+  });
+
+  test('Sincronizar secuencia con reset (100 → 150 → 5 → 60)', async () => {
+    const base = Date.now();
+    const sequence = [100, 150, 5, 60];
+    for (let i = 0; i < sequence.length; i++) {
+      const { status } = await req('POST', '/devices/sync', {
+        readings: [{
+          reading_id:  crypto.randomUUID(),
+          device_id:   resetDeviceSerial,
+          ip:          '192.168.100.51',
+          brand:       'hp',
+          time:        new Date(base + i * 1000).toISOString(),
+          total_pages: sequence[i],
+          offline:     false,
+        }],
+      }, ctx.agentToken);
+      assert.equal(status, 200);
+    }
+  });
+
+  test('monthly_pages usa suma de deltas positivos, no MAX-MIN', async () => {
+    const { status, data } = await req('GET', `/agents/${ctx.agentId}/devices`, undefined, ctx.portalToken);
+    assert.equal(status, 200);
+    const device = data.find((d: any) => d.serial_number === resetDeviceSerial);
+    assert.ok(device, 'El dispositivo dedicado debe aparecer en la lista del agente');
+    resetDeviceId = device.id;
+    // Con MAX-MIN hubiese dado 150-5=145 (inflado por el reset). Correcto: 50+0+55=105.
+    assert.equal(device.monthly_pages, 105, 'monthly_pages debe ser 105, no 145 (MAX-MIN)');
+  });
+
+  test('Se genera una alerta counter_reset', async () => {
+    const { status, data } = await req('GET', `/alerts?device_id=${resetDeviceId}`, undefined, ctx.portalToken);
+    assert.equal(status, 200);
+    const resetAlert = data.find((a: any) => a.type === 'counter_reset');
+    assert.ok(resetAlert, 'Debe existir una alerta de tipo counter_reset');
+    assert.equal(resetAlert.severity, 'critical');
+  });
+});
+
+describe('Seguridad mínima', () => {
+  test('Login setea cookies de sesión y CSRF; mutación sin header CSRF → 403, con header → 200', async () => {
+    const loginRes = await fetch(`${API}/portal/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: USER, password: PASS }),
+    });
+    assert.equal(loginRes.status, 200);
+
+    const setCookies = loginRes.headers.getSetCookie();
+    const sessionCookie = setCookies.find(c => c.startsWith('stc_session='))?.split(';')[0];
+    const csrfCookie = setCookies.find(c => c.startsWith('stc_csrf='))?.split(';')[0];
+    assert.ok(sessionCookie, 'Debe setear cookie de sesión stc_session');
+    assert.ok(csrfCookie, 'Debe setear cookie CSRF stc_csrf (no httpOnly)');
+    const csrfValue = csrfCookie!.split('=')[1];
+    const cookieHeader = `${sessionCookie}; ${csrfCookie}`;
+
+    const withoutCsrf = await fetch(`${API}/clients`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Cookie: cookieHeader },
+      body: JSON.stringify({ name: 'CSRF Test Client (sin header)' }),
+    });
+    assert.equal(withoutCsrf.status, 403);
+
+    const withCsrf = await fetch(`${API}/clients`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Cookie: cookieHeader, 'X-CSRF-Token': csrfValue },
+      body: JSON.stringify({ name: 'CSRF Test Client (con header)' }),
+    });
+    assert.equal(withCsrf.status, 200);
+  });
+
+  test('createClient descarta campos que no son columnas reales (mass assignment)', async () => {
+    const { status, data } = await req('POST', '/clients', {
+      name: 'Cliente Whitelist Test',
+      contact_email: 'test@example.com',
+      business_name: 'Nombre Falso Inventado',
+    }, ctx.portalToken);
+    assert.equal(status, 200);
+    assert.equal(data.name, 'Cliente Whitelist Test');
+    assert.equal(data.contact_email, 'test@example.com');
+    assert.equal(data.business_name, undefined, 'Campos que no son columnas reales no deben persistirse');
+  });
+
+  test('DELETE /devices/offline sin agent_id → 400', async () => {
+    const { status } = await req('DELETE', '/devices/offline', undefined, ctx.portalToken);
+    assert.equal(status, 400);
   });
 });
 
@@ -270,10 +408,12 @@ describe('Revocación de agente', () => {
     assert.equal(status, 200);
   });
 
-  test('Agente revocado no puede hacer heartbeat → 401', async () => {
+  test('Agente revocado no puede hacer heartbeat → 404', async () => {
+    // agentAuth responde 404 ("Agente no encontrado o revocado") antes de consultar
+    // la blacklist de Redis (que daría 401). Ver authMiddleware.ts.
     const { status } = await req('POST', `/agents/${ctx.agentId}/heartbeat`,
       { version: '1.0.0' }, ctx.agentToken);
-    assert.equal(status, 401);
+    assert.equal(status, 404);
   });
 
   test('Agente revocado aparece como revoked en lista', async () => {

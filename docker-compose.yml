@@ -5,13 +5,13 @@ services:
   postgres:
     image: timescale/timescaledb:latest-pg16
     container_name: stc_postgres
-    restart: always
+    restart: "no"
     environment:
       POSTGRES_USER: stc_admin
       POSTGRES_PASSWORD: ${DB_PASSWORD:-stc_secret}
       POSTGRES_DB: stc_cloud
     ports:
-      - "5432:5432"
+      - "5434:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
 
@@ -19,7 +19,7 @@ services:
   redis:
     image: redis:7-alpine
     container_name: stc_redis
-    restart: always
+    restart: "no"
     command: redis-server --appendonly yes
     ports:
       - "6379:6379"
@@ -30,9 +30,9 @@ services:
   api:
     build: ./cloud
     container_name: stc_api
-    restart: always
+    restart: "no"
     ports:
-      - "3000:3000"
+      - "3001:3000"
     env_file: .env
     depends_on:
       - postgres
@@ -42,7 +42,7 @@ services:
   portal:
     build: ./cloud/portal
     container_name: stc_portal
-    restart: always
+    restart: "no"
     ports:
       - "5173:80"
     depends_on:

@@ -1,4 +1,6 @@
 import { FastifyInstance, FastifyRequest } from 'fastify';
+import { Knex } from 'knex';
+import Redis from 'ioredis';
 import { AgentService } from '../services/agentService';
 
 // ─── Tipos Internos del Módulo WebSocket ──────────────────────────────────────
@@ -63,9 +65,11 @@ export function sendCommandToAgent(agentId: string, commandType: string, payload
  * y las clasifica como conexiones de agente DCA o de portal web.
  *
  * @param fastify - Instancia del servidor Fastify.
+ * @param db - Conexión Knex para validar estado del agente (mismo chequeo que `agentAuth`).
+ * @param redis - Cliente Redis para verificar blacklist de tokens revocados.
  * @param agentService - Servicio de agentes para actualización de comandos.
  */
-export async function registerWebSocket(fastify: FastifyInstance, agentService: AgentService) {
+export async function registerWebSocket(fastify: FastifyInstance, db: Knex, redis: Redis, agentService: AgentService) {
   (fastify as unknown as {
     get(
       path: string,
@@ -102,6 +106,23 @@ export async function registerWebSocket(fastify: FastifyInstance, agentService: 
 
       if (user.agentId) {
         agentId = user.agentId;
+
+        // Mismo chequeo que agentAuth (REST): un agente revocado o con token en
+        // blacklist no debe poder mantener un canal WSS vivo para recibir/enviar
+        // comandos.
+        const agent = await db('agents').where({ id: agentId }).select('status').first();
+        if (!agent || agent.status === 'revoked') {
+          fastify.log.warn(`Conexión WSS rechazada: agente ${agentId} no encontrado o revocado`);
+          socket.close(4004, 'Agente no encontrado o revocado');
+          return;
+        }
+        const blacklisted = await agentService.isBlacklisted(redis, agentId);
+        if (blacklisted) {
+          fastify.log.warn(`Conexión WSS rechazada: token de agente ${agentId} revocado`);
+          socket.close(4001, 'Token revocado');
+          return;
+        }
+
         agentClients.set(agentId!, socket);
         fastify.log.info(`Agente ${agentId} conectado vía WSS`);
       } else if (user.role === 'portal') {

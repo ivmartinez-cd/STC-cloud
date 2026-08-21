@@ -38,6 +38,8 @@ export interface OidMap {
   monoPages:   string[];
   colorPages:  string[];
   serial:      string[];
+  /** Versión de firmware principal (OIDs privados; se complementan con Entity-MIB y hrSWInstalledName). */
+  firmware?:   string[];
 }
 
 export const GENERIC_OIDS: OidMap = {
@@ -45,6 +47,7 @@ export const GENERIC_OIDS: OidMap = {
   monoPages:  ['1.3.6.1.2.1.43.10.2.1.4.1.1'],
   colorPages: [],
   serial:     ['1.3.6.1.2.1.43.5.1.1.17.1', '1.3.6.1.2.1.47.1.1.1.1.11.1'],
+  firmware:   ['1.3.6.1.2.1.47.1.1.1.1.9.1', '1.3.6.1.2.1.47.1.1.1.1.10.1'], // Entity-MIB
 };
 
 export const HP_OIDS: OidMap = {
@@ -72,6 +75,11 @@ export const HP_OIDS: OidMap = {
     '1.3.6.1.2.1.43.5.1.1.17.1',   // Standard Printer-MIB serial
     '1.3.6.1.2.1.47.1.1.1.1.11.1'  // Standard Entity-MIB serial
   ],
+  firmware: [
+    '1.3.6.1.4.1.11.2.3.9.4.2.1.1.3.6.0', // FutureSmart: bundle version (ej. 2509515_000481)
+    '1.3.6.1.4.1.11.2.3.9.4.2.1.1.3.5.0', // datecode (ej. 20260311)
+    '1.3.6.1.2.1.47.1.1.1.1.9.1', '1.3.6.1.2.1.47.1.1.1.1.10.1',
+  ],
 };
 
 export const LEXMARK_OIDS: OidMap = {
@@ -92,6 +100,10 @@ export const LEXMARK_OIDS: OidMap = {
     '1.3.6.1.4.1.641.2.1.2.1.6.1',
     '1.3.6.1.2.1.43.5.1.1.17.1',
     '1.3.6.1.2.1.47.1.1.1.1.11.1'
+  ],
+  firmware: [
+    '1.3.6.1.4.1.641.2.1.2.1.4.1', // printer firmware level (ej. LR.MN.P840-0)
+    '1.3.6.1.2.1.47.1.1.1.1.9.1', '1.3.6.1.2.1.47.1.1.1.1.10.1',
   ],
 };
 
@@ -114,6 +126,10 @@ export const SAMSUNG_OIDS: OidMap = {
     '1.3.6.1.4.1.236.11.5.1.1.1.4.0',
     '1.3.6.1.2.1.43.5.1.1.17.1',
     '1.3.6.1.2.1.47.1.1.1.1.11.1'
+  ],
+  firmware: [
+    '1.3.6.1.4.1.236.11.5.1.1.1.2.0', // SyncThru: versión principal (ej. V2.00.01.14 MAY-13-2011)
+    '1.3.6.1.2.1.47.1.1.1.1.9.1', '1.3.6.1.2.1.47.1.1.1.1.10.1',
   ],
 };
 

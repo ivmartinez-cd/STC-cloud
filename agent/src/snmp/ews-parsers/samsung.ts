@@ -615,25 +615,30 @@ export function parseSamsungSolutionSupplies(html: string): Partial<EwsData> {
     }
   }
 
-  // Fallback for HTML table rows if regex line loop didn't catch tray details
+  // Fallback: filas <tr> de bandejas. Se trabaja sobre el HTML SIN scripts/estilos (el JS embebido de SWS
+  // contiene la palabra "Tray" y antes se colaba como "bandeja" con código JavaScript como tamaño de papel).
   if (inputTrays.length === 0) {
-    const trayRows = html.match(/<tr[^>]*>[\s\S]*?(Tray\d+|Tray\s*\d+|Mp\s*Tray)[\s\S]*?<\/tr>/gi);
-    if (trayRows) {
-      for (const tr of trayRows) {
-        const cells = tr.replace(/<[^>]+>/g, '\t').split('\t').map(c => c.trim()).filter(Boolean);
-        if (cells.length >= 3) {
-          const name = cells[0];
-          const pctMatch = tr.match(/(\d+)\s*%/);
-          inputTrays.push({
-            name,
-            paperType: cells[1] || 'Plain',
-            paperSize: cells[2] || 'A4',
-            level: pctMatch ? parseInt(pctMatch[1], 10) : 0,
-            status: 'Ready',
-          });
-        }
-      }
+    const noScript = html.replace(/<script[\s\S]*?<\/script>/gi, '').replace(/<style[\s\S]*?<\/style>/gi, '');
+    const looksLikeValue = (v: string) => v.length > 0 && v.length <= 40 && !/[{}();=<>\[\]]|function|var\s/i.test(v);
+    for (const tr of noScript.match(/<tr[^>]*>[\s\S]{0,2000}?<\/tr>/gi) ?? []) {
+      const cells = tr.replace(/<[^>]+>/g, '\t').split('\t').map(c => c.replace(/&nbsp;/gi, ' ').trim()).filter(Boolean);
+      if (cells.length < 3) continue;
+      const name = cells[0];
+      if (!/^(?:Tray|Bandeja|MP\s*Tray|Multi|용지함|다목적)/i.test(name) || !looksLikeValue(name)) continue;
+      if (!looksLikeValue(cells[1]) || !looksLikeValue(cells[2])) continue;
+      const pctMatch = tr.match(/(\d+)\s*%/);
+      inputTrays.push({ name, paperType: cells[1], paperSize: cells[2], level: pctMatch ? parseInt(pctMatch[1], 10) : undefined, status: 'Ready' });
     }
+  }
+
+  // Vida útil de rodillos (XOA: "용지함 1 롤러 수명: 160189/200000", "Tray 1 Roller Life: n/m") → mantenimiento
+  const rollers: Array<{ name: string; percentage?: number | null; status?: string | null; maxCapacity?: number | null; currentCount?: number | null }> = [];
+  for (const m of cleanText.matchAll(/(용지함\s*(\d)|다목적\s*용지함|Tray\s*(\d)|MP\s*Tray|Multi-?purpose\s*Tray)[\s\S]{0,30}?(?:롤러\s*수명|Roller\s*Life)[\s\S]{0,20}?(\d[\d,]*)\s*\/\s*(\d[\d,]*)/gi)) {
+    const used = parseInt(m[4].replace(/,/g, ''), 10); const max = parseInt(m[5].replace(/,/g, ''), 10);
+    if (!Number.isFinite(used) || !Number.isFinite(max) || max <= 0) continue;
+    const trayNo = m[2] ?? m[3];
+    const name = trayNo ? `Tray ${trayNo} roller` : 'MP tray roller';
+    rollers.push({ name, percentage: Math.min(100, Math.max(0, Math.round((1 - used / max) * 100))), status: 'Ready', maxCapacity: max, currentCount: used });
   }
 
   // Default Standard Bin if outputTrays is empty
@@ -654,6 +659,7 @@ export function parseSamsungSolutionSupplies(html: string): Partial<EwsData> {
       magenta: drumMg !== null ? { percentage: drumMg, status: 'Ready' } : undefined,
       yellow:  drumYe !== null ? { percentage: drumYe, status: 'Ready' } : undefined,
     } : undefined,
+    maintenance: rollers.length ? { other: rollers } : undefined,
     inputTrays: inputTrays.length > 0 ? inputTrays : undefined,
     outputTrays: outputTrays.length > 0 ? outputTrays : undefined,
   };
