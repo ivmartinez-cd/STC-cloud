@@ -56,6 +56,20 @@ redis.on("error", (err) => {
   console.error("[Redis] Error de conexión:", err.message);
 });
 
+// Cliente dedicado para @fastify/rate-limit: enableOfflineQueue:false hace que
+// sus comandos fallen rápido si Redis no está disponible, en vez de quedar en
+// cola esperando reconexión — lo que colgaría CUALQUIER request (no sólo
+// /health), ya que el rate-limiter corre sobre casi todas las rutas. No se usa
+// el cliente `redis` compartido para esto: blacklist, WS y BullMQ sí quieren
+// esperar/reintentar, el rate-limiter no.
+const rateLimitRedis = new Redis(process.env.REDIS_URL || "redis://localhost:6379", {
+  enableOfflineQueue: false,
+});
+
+rateLimitRedis.on("error", (err) => {
+  console.error("[Redis:rate-limit] Error de conexión:", err.message);
+});
+
 const start = async () => {
   try {
     // ─── Migraciones ──────────────────────────────────────────────────────────
@@ -164,7 +178,10 @@ const start = async () => {
     await fastify.register(rateLimit, {
       max: 100,
       timeWindow: "1 minute",
-      redis,
+      redis: rateLimitRedis,
+      // Si Redis no responde, no bloquear todas las requests con 500 — el
+      // rate-limiting es una protección adicional, no debe tumbar la API.
+      skipOnError: true,
       keyGenerator: (request: FastifyRequest) => getClientIp(request),
       allowList: (request: FastifyRequest) =>
         request.url.startsWith("/ws") ||
