@@ -6,8 +6,8 @@ import { createHash, verify as cryptoVerify, createPublicKey } from 'crypto';
 import { UPDATE_PUBLIC_KEY_HEX } from './updateKey';
 import { DATA_DIR, type AgentConfig } from './config';
 import { log } from './Logger';
+import { VERSION } from './version';
 
-const VERSION = '1.0.0';
 const execAsync = promisify(exec);
 
 interface UpdateServiceDeps {

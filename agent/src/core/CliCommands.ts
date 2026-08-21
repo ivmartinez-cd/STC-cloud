@@ -1,8 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { ConfigManager, DATA_DIR, getHardwareId, type AgentConfig } from './config';
-
-const VERSION = '1.0.0';
+import { VERSION } from './version';
 
 export async function printStatus(): Promise<void> {
   const { execSync } = await import('child_process');

@@ -6,8 +6,7 @@ import { getDeviceCount, pendingCount } from '../sync/database';
 import type { AgentConfig } from './config';
 import { ConfigManager } from './config';
 import type { CommandHandler, CommandResult } from './CommandHandler';
-
-const VERSION = '1.0.0';
+import { VERSION } from './version';
 
 export interface RemoteConfigPayload {
   ip_ranges?: Array<{ start: string; end: string }>;

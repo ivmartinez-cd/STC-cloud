@@ -62,7 +62,7 @@ jobs:
 
       - run: npm ci
       - run: npm run build -w agent
-      - run: npm run test:queue -w agent    # offline SQLite queue tests only
+      - run: npm test -w agent    # capture.test.ts + queue.test.ts (suite completa)
 
       - name: Package Windows executable
         if: github.ref == 'refs/heads/main'

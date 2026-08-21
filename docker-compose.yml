@@ -1,11 +1,9 @@
-version: '3.9'
-
 services:
   # Base de datos principal con extension de series temporales
   postgres:
     image: timescale/timescaledb:latest-pg16
     container_name: stc_postgres
-    restart: "no"
+    restart: unless-stopped
     environment:
       POSTGRES_USER: stc_admin
       POSTGRES_PASSWORD: ${DB_PASSWORD:-stc_secret}
@@ -14,39 +12,71 @@ services:
       - "5434:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U stc_admin -d stc_cloud"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+          cpus: "1.0"
 
   # Cache y cola de comandos
   redis:
     image: redis:7-alpine
     container_name: stc_redis
-    restart: "no"
+    restart: unless-stopped
     command: redis-server --appendonly yes
     ports:
       - "6379:6379"
     volumes:
       - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+          cpus: "0.5"
 
   # Servidor API
   api:
     build: ./cloud
     container_name: stc_api
-    restart: "no"
+    restart: unless-stopped
     ports:
       - "3001:3000"
     env_file: .env
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: "1.0"
 
   # Frontend Portal
   portal:
     build: ./cloud/portal
     container_name: stc_portal
-    restart: "no"
+    restart: unless-stopped
     ports:
       - "5173:80"
     depends_on:
       - api
+    deploy:
+      resources:
+        limits:
+          memory: 128m
+          cpus: "0.25"
 
 volumes:
   pgdata:

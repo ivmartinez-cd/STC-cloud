@@ -12,9 +12,8 @@ import { UpdateService } from './UpdateService';
 import { TaskScheduler } from './TaskScheduler';
 import { SocketManager } from './SocketManager';
 import { ConsoleEngine } from './ConsoleEngine';
+import { VERSION } from './version';
 import type { AgentConfig } from './config';
-
-const VERSION = '1.0.0';
 
 // Instalar captura de errores fatales lo antes posible
 setupProcessErrorHandlers();

@@ -7,13 +7,13 @@ services:
     build:
       context: ./cloud
       dockerfile: Dockerfile
-    restart: "no"
+    restart: unless-stopped
     env_file: .env.production
     depends_on:
       postgres:
         condition: service_healthy
       redis:
-        condition: service_started
+        condition: service_healthy
     networks:
       - stc-network
     logging:
@@ -21,20 +21,30 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: "1.0"
 
   # ─── Portal Web (React + Vite → nginx) ────────────────────────────────────
   portal:
     build:
       context: ./cloud/portal
       dockerfile: Dockerfile
-    restart: "no"
+    restart: unless-stopped
     networks:
       - stc-network
+    deploy:
+      resources:
+        limits:
+          memory: 128m
+          cpus: "0.25"
 
   # ─── Base de datos (PostgreSQL 16 + TimescaleDB) ──────────────────────────
   postgres:
     image: timescale/timescaledb:latest-pg16
-    restart: "no"
+    restart: unless-stopped
     volumes:
       - pgdata:/var/lib/postgresql/data
     environment:
@@ -53,14 +63,24 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+          cpus: "1.0"
 
   # ─── Cache y cola de comandos ─────────────────────────────────────────────
   redis:
     image: redis:7-alpine
-    restart: "no"
+    restart: unless-stopped
     volumes:
       - redisdata:/data
     command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - stc-network
     logging:
@@ -68,11 +88,16 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+          cpus: "0.5"
 
   # ─── Reverse Proxy (nginx + SSL) ─────────────────────────────────────────
   nginx:
     image: nginx:alpine
-    restart: "no"
+    restart: unless-stopped
     ports:
       - "80:80"
       - "443:443"
@@ -81,10 +106,24 @@ services:
       - certbot-certs:/etc/letsencrypt:ro
       - certbot-www:/var/www/certbot:ro
     depends_on:
-      - api
-      - portal
+      api:
+        condition: service_healthy
+      portal:
+        condition: service_healthy
     networks:
       - stc-network
+    healthcheck:
+      # Chequeo de puerto, no de contenido: nginx.conf hace redirect/SSL propios
+      # que dependen del dominio y certificado reales, fuera de alcance acá.
+      test: ["CMD-SHELL", "nc -z localhost 80"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 128m
+          cpus: "0.25"
 
   # ─── Certbot — renovación automática SSL (cada 12h) ──────────────────────
   certbot:
@@ -93,12 +132,17 @@ services:
       - certbot-certs:/etc/letsencrypt
       - certbot-www:/var/www/certbot
     entrypoint: /bin/sh -c 'trap exit TERM; while :; do certbot renew --webroot -w /var/www/certbot --quiet; sleep 12h & wait $${!}; done'
-    restart: "no"
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 64m
+          cpus: "0.1"
 
   # ─── Backup automático PostgreSQL — diario, retención 30 días ─────────────
   backup:
     image: timescale/timescaledb:latest-pg16
-    restart: "no"
+    restart: unless-stopped
     volumes:
       - backups:/backups
     environment:
@@ -120,6 +164,11 @@ services:
         condition: service_healthy
     networks:
       - stc-network
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+          cpus: "0.5"
 
 volumes:
   pgdata:

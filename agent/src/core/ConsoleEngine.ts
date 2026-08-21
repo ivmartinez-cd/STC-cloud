@@ -2,6 +2,7 @@ import net from 'net';
 import os from 'os';
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import { VERSION } from './version';
 
 const execAsync = promisify(exec);
 
@@ -13,7 +14,7 @@ export class ConsoleEngine {
   private server: net.Server;
   private port: number;
   private engineName: string = 'STC Cloud Console Engine';
-  private version: string = '1.2.0';
+  private version: string = VERSION;
 
   constructor(port = 8000) {
     this.port = port;

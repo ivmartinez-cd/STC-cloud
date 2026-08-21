@@ -1,4 +1,4 @@
-import Fastify, { FastifyRequest } from "fastify";
+import Fastify, { FastifyRequest, FastifyReply } from "fastify";
 import cors from "@fastify/cors";
 import cookie from "@fastify/cookie";
 import helmet from "@fastify/helmet";
@@ -25,6 +25,7 @@ import { registerDeviceRoutes } from "./routes/deviceRoutes";
 import { registerDashboardRoutes } from "./routes/dashboardRoutes";
 import { registerFeedbackRoutes } from "./routes/feedbackRoutes";
 import { getClientIp } from "./utils/ip";
+import { SERVER_VERSION } from "../version";
 
 dotenv.config({ path: path.join(__dirname, "../../../.env") });
 
@@ -165,7 +166,10 @@ const start = async () => {
       timeWindow: "1 minute",
       redis,
       keyGenerator: (request: FastifyRequest) => getClientIp(request),
-      allowList: (request: FastifyRequest) => request.url.startsWith("/ws"),
+      allowList: (request: FastifyRequest) =>
+        request.url.startsWith("/ws") ||
+        request.url === "/health" ||
+        request.url === "/api/v1/health",
     });
 
     try {
@@ -184,8 +188,44 @@ const start = async () => {
     // ─── Health checks ────────────────────────────────────────────────────────
 
     fastify.get("/", async () => ({ status: "ok", service: "stc-cloud-api" }));
-    fastify.get("/health", async () => ({ status: "ok", version: "1.0.0" }));
-    fastify.get("/api/v1/health", async () => ({ status: "ok", version: "1.0.0" }));
+
+    // ioredis reintenta indefinidamente y encola comandos mientras está
+    // desconectado: sin un timeout propio, `redis.ping()` puede colgarse en
+    // vez de fallar rápido si Redis está caído. Mismo criterio para Postgres,
+    // por consistencia.
+    const withTimeout = <T>(promise: Promise<T>, ms: number): Promise<T> =>
+      Promise.race([
+        promise,
+        new Promise<T>((_, reject) => setTimeout(() => reject(new Error("timeout")), ms)),
+      ]);
+
+    const healthHandler = async (_req: FastifyRequest, reply: FastifyReply) => {
+      const checks: Record<string, "ok" | "error"> = { database: "ok", redis: "ok" };
+      let healthy = true;
+
+      try {
+        await withTimeout(db.raw("SELECT 1"), 3000);
+      } catch {
+        checks.database = "error";
+        healthy = false;
+      }
+
+      try {
+        await withTimeout(redis.ping(), 3000);
+      } catch {
+        checks.redis = "error";
+        healthy = false;
+      }
+
+      return reply.status(healthy ? 200 : 503).send({
+        status: healthy ? "ok" : "degraded",
+        version: SERVER_VERSION,
+        checks,
+      });
+    };
+
+    fastify.get("/health", healthHandler);
+    fastify.get("/api/v1/health", healthHandler);
 
     // ─── Agent Installer Public Download Endpoint ─────────────────────────────
     fastify.get("/api/v1/agents/download-installer", async (request, reply) => {
