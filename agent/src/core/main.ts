@@ -10,6 +10,7 @@ import { ScanService } from './ScanService';
 import { SyncService } from './SyncService';
 import { UpdateService } from './UpdateService';
 import { TaskScheduler } from './TaskScheduler';
+import { setConfiguredTimezone } from './TimeZoneUtils';
 import { SocketManager } from './SocketManager';
 import { ConsoleEngine } from './ConsoleEngine';
 import { VERSION } from './version';
@@ -55,6 +56,8 @@ async function main(): Promise<void> {
       process.exit(1);
     }
 
+    setConfiguredTimezone(currentConfig.businessHours?.timezone);
+
     log('INFO', `ID: ${currentConfig.agentId} | Servidor: ${currentConfig.serverUrl}`);
 
     // === Proxy HTTP corporativo (opcional) ===
@@ -83,7 +86,7 @@ async function main(): Promise<void> {
     // === Instanciar servicios ===
     const scanService = new ScanService({ getConfig });
     const syncService = new SyncService({ getConfig, setConfig });
-    const scheduler = new TaskScheduler({ scanService });
+    const scheduler = new TaskScheduler({ scanService, getConfig });
     const commandHandler = new CommandHandler();
     const updateService = new UpdateService({
       getConfig,

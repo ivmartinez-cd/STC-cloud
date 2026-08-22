@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { X, Settings, Loader2, Check, KeyRound } from 'lucide-react';
+import { X, Settings, Loader2, Check, KeyRound, Clock } from 'lucide-react';
 import { api } from '../../lib/api';
 import { useToast } from '../../context/ToastContext';
 import type { AgentConfig } from '../../types/agents';
@@ -28,6 +28,7 @@ export default function ConfigAgentModal({ modal, onClose }: Props) {
           ip_ranges: data?.ip_ranges ?? [],
           snmp_community: data?.snmp_community ?? 'public',
           snmp_credentials: data?.snmp_credentials ?? [],
+          business_hours: data?.business_hours,
         });
       } catch {
         setConfigForm(defaultConfig);
@@ -125,6 +126,19 @@ export default function ConfigAgentModal({ modal, onClose }: Props) {
                     : 'Sin credenciales SNMP adicionales configuradas.'}
                   {' '}Editalas desde el detalle del monitor, pestaña{' '}
                   <Link to={`/monitors/${modal.id}?tab=config`} className="underline hover:text-indigo-700">Configuración</Link>.
+                </p>
+              </div>
+
+              {/* Sólo informativo — el horario laboral (días, hora, TZ) se
+                  edita en el mismo lugar que arriba, el detalle del monitor. */}
+              <div className="p-5 bg-emerald-50 rounded-2xl border border-emerald-100 flex items-center gap-4">
+                <Clock className="text-emerald-600 shrink-0" size={20} />
+                <p className="text-xs text-emerald-900/80 font-bold leading-relaxed">
+                  {configForm.business_hours
+                    ? `Horario laboral: ${configForm.business_hours.start_hour}-${configForm.business_hours.end_hour}hs, ${configForm.business_hours.days.length} día(s) (${configForm.business_hours.timezone}).`
+                    : 'Horario laboral por default (Argentina, L-V, 8-18hs).'}
+                  {' '}Editalo desde el detalle del monitor, pestaña{' '}
+                  <Link to={`/monitors/${modal.id}?tab=config`} className="underline hover:text-emerald-700">Configuración</Link>.
                 </p>
               </div>
 

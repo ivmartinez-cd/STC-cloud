@@ -22,6 +22,7 @@ import Terminal from '../components/Terminal';
 import ConfirmModal from '../components/ConfirmModal';
 import { useToast } from '../context/ToastContext';
 import type { EditFormData, MonitorData, SnmpCredentialInput } from '../types/monitor';
+import { DEFAULT_BUSINESS_HOURS } from '../types/agents';
 
 type Tab = 'overview' | 'devices' | 'console' | 'config' | 'reports';
 
@@ -294,6 +295,21 @@ interface ConfigTabPanelProps {
   onSaveSnmpCredentials: (credentials: SnmpCredentialInput[], expectedRev: number) => Promise<void>;
 }
 
+/** ISO weekday: 1=lunes..7=domingo — mismo convenio que `businessHours.days`. */
+const WEEKDAY_LABELS = [
+  { iso: 1, label: 'Lun' }, { iso: 2, label: 'Mar' }, { iso: 3, label: 'Mié' },
+  { iso: 4, label: 'Jue' }, { iso: 5, label: 'Vie' }, { iso: 6, label: 'Sáb' }, { iso: 7, label: 'Dom' },
+];
+
+/** Sugerencias del `<datalist>` — el input acepta cualquier TZ IANA como texto libre. */
+const COMMON_TIMEZONES = [
+  'America/Argentina/Buenos_Aires', 'America/Santiago', 'America/Sao_Paulo', 'America/Bogota',
+  'America/Lima', 'America/Mexico_City', 'America/New_York', 'America/Chicago', 'America/Denver',
+  'America/Los_Angeles', 'America/Toronto', 'Europe/Madrid', 'Europe/London', 'Europe/Paris',
+  'Europe/Berlin', 'Europe/Lisbon', 'Africa/Johannesburg', 'Asia/Dubai', 'Asia/Kolkata',
+  'Asia/Shanghai', 'Asia/Tokyo', 'Asia/Singapore', 'Australia/Sydney', 'Pacific/Auckland', 'UTC',
+];
+
 const ConfigTabPanel = ({ monitor, onSave, onSaveSnmpCredentials }: ConfigTabPanelProps) => {
   const [form, setForm] = useState<EditFormData>(() => {
     let ranges = [];
@@ -312,6 +328,7 @@ const ConfigTabPanel = ({ monitor, onSave, onSaveSnmpCredentials }: ConfigTabPan
       snmp: monitor.config?.snmp_community ?? 'public',
       tonerWarningThreshold: monitor.config?.toner_warning_threshold ?? 20,
       tonerCriticalThreshold: monitor.config?.toner_critical_threshold ?? 10,
+      businessHours: monitor.config?.business_hours ?? DEFAULT_BUSINESS_HOURS,
     };
   });
   const [saving, setSaving] = useState(false);
@@ -335,6 +352,15 @@ const ConfigTabPanel = ({ monitor, onSave, onSaveSnmpCredentials }: ConfigTabPan
         showToast('Todos los rangos deben tener un CIDR o una IP de inicio y fin', 'warning');
         return;
       }
+    }
+
+    if (form.businessHours.days.length === 0) {
+      showToast('El horario laboral requiere al menos un día', 'warning');
+      return;
+    }
+    if (form.businessHours.start_hour >= form.businessHours.end_hour) {
+      showToast('La hora de inicio del horario laboral debe ser menor que la de fin', 'warning');
+      return;
     }
 
     setSaving(true);
@@ -445,6 +471,75 @@ const ConfigTabPanel = ({ monitor, onSave, onSaveSnmpCredentials }: ConfigTabPan
               <p className="text-xs text-slate-500 font-bold leading-relaxed">
                 El sistema evalúa cada color de tóner de forma independiente. Las alertas se resuelven automáticamente de inmediato en cuanto los niveles suben (por ejemplo, después de un cambio de cartucho).
               </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white p-8 rounded-[32px] border border-slate-100 shadow-xl shadow-blue-900/5 space-y-6 lg:col-span-2">
+          <div className="flex items-center gap-4 mb-2">
+            <div className="p-3 bg-emerald-50 text-emerald-600 rounded-2xl">
+              <Clock size={24} />
+            </div>
+            <div>
+              <h3 className="text-lg font-black text-[#1a2333] tracking-tight uppercase">Horario Laboral</h3>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5">Define la frecuencia de escaneo según día/hora y zona horaria del sitio</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="space-y-3">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Zona horaria (IANA)</label>
+              <input
+                type="text" list="tz-datalist" value={form.businessHours.timezone}
+                onChange={e => setForm(f => ({ ...f, businessHours: { ...f.businessHours, timezone: e.target.value } }))}
+                className="cd-input w-full !h-12 !bg-slate-50 border-transparent focus:!border-brand focus:!bg-white font-mono !text-xs"
+              />
+              <datalist id="tz-datalist">
+                {COMMON_TIMEZONES.map(tz => <option key={tz} value={tz} />)}
+              </datalist>
+            </div>
+
+            <div className="space-y-3">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Horario (hora local)</label>
+              <div className="flex items-center gap-3">
+                <input
+                  type="number" min={0} max={23} value={form.businessHours.start_hour}
+                  onChange={e => setForm(f => ({ ...f, businessHours: { ...f.businessHours, start_hour: parseInt(e.target.value, 10) || 0 } }))}
+                  className="cd-input w-full !h-12 !text-xs font-mono !bg-slate-50 border-transparent focus:!border-brand focus:!bg-white"
+                />
+                <span className="text-slate-300 font-black">—</span>
+                <input
+                  type="number" min={1} max={24} value={form.businessHours.end_hour}
+                  onChange={e => setForm(f => ({ ...f, businessHours: { ...f.businessHours, end_hour: parseInt(e.target.value, 10) || 1 } }))}
+                  className="cd-input w-full !h-12 !text-xs font-mono !bg-slate-50 border-transparent focus:!border-brand focus:!bg-white"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Días laborables</label>
+            <div className="flex flex-wrap gap-2">
+              {WEEKDAY_LABELS.map(({ iso, label }) => {
+                const active = form.businessHours.days.includes(iso);
+                return (
+                  <button
+                    key={iso} type="button"
+                    onClick={() => setForm(f => ({
+                      ...f,
+                      businessHours: {
+                        ...f.businessHours,
+                        days: active ? f.businessHours.days.filter(d => d !== iso) : [...f.businessHours.days, iso].sort((a, b) => a - b),
+                      },
+                    }))}
+                    className={`px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${
+                      active ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/20' : 'bg-slate-50 text-slate-400 hover:bg-slate-100'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>

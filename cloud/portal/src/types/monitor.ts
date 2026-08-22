@@ -1,4 +1,4 @@
-import type { IpRange } from './agents';
+import type { IpRange, BusinessHoursConfig } from './agents';
 
 export interface SuppliesItem {
   percentage?: number | null;
@@ -226,6 +226,7 @@ export interface MonitorData {
     toner_critical_threshold?: number;
     snmp_credentials?: MaskedSnmpCredential[];
     snmp_credentials_rev?: number;
+    business_hours?: BusinessHoursConfig;
   };
   version?: string;
   host_name?: string;
@@ -240,6 +241,7 @@ export interface EditFormData {
   snmp: string;
   tonerWarningThreshold: number;
   tonerCriticalThreshold: number;
+  businessHours: BusinessHoursConfig;
 }
 
 export interface DashboardData {

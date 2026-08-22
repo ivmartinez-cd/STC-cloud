@@ -34,7 +34,7 @@ retención** (`add_retention_policy` de TimescaleDB) para `readings`/`alerts`/
 `audit_logs`/`agent_logs` — los índices ya existen, pero nada purga datos viejos
 todavía (§2.7/R3 siguen abiertos en ese punto).
 
-### Fase 1 — Paridad operativa con SDS — parcial: 6 de 8 ítems cerrados
+### Fase 1 — Paridad operativa con SDS — parcial: 7 de 8 ítems cerrados
 - ✅ **RBAC por cliente** (commit `7a47ce6`): rol `client_viewer`, scoping por
   `client_id` en los ~19 endpoints de lectura relevantes, deny-by-default por rol y
   por ruta. §2.6 "Jerarquía" y "Auth" (parte de CSRF/backdoor) quedan resueltos.
@@ -104,15 +104,27 @@ todavía (§2.7/R3 siguen abiertos en ese punto).
   **Lo que NO se hizo**: exclusión de sub-rangos/CIDR anidados (sólo IPs
   individuales), resolución de hostname (ver arriba), IPv6.
 
+- ✅ **Horario laboral y TZ configurables por agente** (esta pasada):
+  `agents.business_hours` (jsonb nullable — `null` = default hardcodeado de
+  siempre, Argentina L-V 8-18, cero cambio de comportamiento sin configurar)
+  reemplaza el TZ/horario fijo de `BusinessHours.ts`; el mismo mecanismo
+  (`Intl.DateTimeFormat` con `timeZoneName:'longOffset'`, sin librería nueva)
+  también corrige el offset `-03:00` hardcodeado que `agentService.ts`
+  forzaba al parsear timestamps naive `DD/MM/YYYY` de logs/lecturas de
+  binarios de agente viejos — usa el TZ real configurado del agente
+  (resuelto una vez por request en `agentAuth`, sin queries extra), anclado
+  al propio timestamp parseado (no a "ahora", evita un error de 1h cerca de
+  una transición de DST con backlog). §2.1/§3 R7 queda resuelto.
+  **Lo que NO se hizo**: cosmética de locale en el portal (`es-AR`,
+  `formatDateAR` de reportes) — es un problema de visualización, no de
+  corrección de datos, se deja para una pasada de polish aparte.
+
 **Pendiente por completo de Fase 1** (sin empezar):
 1. **Resolución de hostname** en `ip_ranges` (point lookups) y
    **credenciales SNMP por rango** (hoy son por agente completo) — ambos
    quedaron deliberadamente fuera de las pasadas de SNMPv3 y CIDR (§2.1/§2.3,
    P1).
-2. **Horario laboral y TZ configurables** por agente. Hoy hardcodeado 08-18
-   L-V `America/Argentina/Buenos_Aires` en agente, servidor y portal — rompe
-   con el primer cliente fuera de Argentina (§2.1, §3 R7, P1).
-3. **`scan_schedule`** — la columna y el tipo existen desde mayo pero ni el
+2. **`scan_schedule`** — la columna y el tipo existen desde mayo pero ni el
    agente lo lee ni el portal lo envía. Implementar de punta a punta o
    eliminarlo de docs/tipos (§2.1, P1).
 
@@ -313,13 +325,13 @@ Ver §1. Especialmente `data_collection_inventory.md` (privacidad) y los HTML de
 
 ¹ `/portal/me` y la respuesta de login siguen devolviendo el token también en el body (fallback para el WS cuando no hay cookie entre orígenes) — es una decisión consciente, no un pendiente.
 
-### Fase 1 — Paridad operativa con SDS (≈ 1 mes) — parcial: 6 de 8 ítems cerrados
+### Fase 1 — Paridad operativa con SDS (≈ 1 mes) — parcial: 7 de 8 ítems cerrados
 - ✅ **Alert loop** — lifecycle server-side completo: alertas `agent_offline`, `device_offline`, `counter_reset` (ya de Fase 0), normalización de las alertas EWS que ya llegaban del agente; **ack/resolve** y filtros; **notificaciones** email + webhook. ⬜ El loop *dedicado 3/15 min del lado agente* no se tocó (las alertas del agente siguen en el loop de supplies, 60/240 min); ⬜ digest diario no implementado.
 - ✅ **Reportes por cliente**: selector de período, cierre mensual inmutable (lectura inicial/final, delta, fuente), export CSV/XLSX, y **entrega automática** (email/webhook) para reemplazar el flujo FTP/mail del STC legado. ⬜ Export a PDF y entrega por SFTP no se hicieron (quedó CSV/XLSX + email/webhook).
 - ✅ **RBAC por cliente**: rol `client_viewer`, scoping por `client_id` en todos los controladores. ⬜ Paginación server‑side no se hizo (sigue sin paginación ninguna tabla del portal).
 - ✅ **SNMPv3 y lista de credenciales** (v1/v2c/v3) por agente, hasta 8 credenciales probadas en orden, secretos cifrados at-rest, fail-fast para no multiplicar timeouts contra un host muerto. ⬜ Resolución de hostname y **credenciales por rango** (esta pasada es por agente completo) quedan para una pasada aparte.
 - ✅ **CIDR + tope de rango + exclusiones**: `ip_ranges` acepta CIDR y exclusión de IPs individuales, compilado del lado cloud a pares planos (cero cambios en el agente); tope de 2000 IPs declaradas por agente, validado en cloud y reforzado en el agente. ⬜ Resolución de hostname, exclusión de sub-rangos/CIDR anidados e IPv6 quedan fuera.
-- ⬜ **Horario laboral y TZ configurables** por agente (enviados en heartbeat config); quitar TZ fija de agente/servidor/portal. **Sin empezar.**
+- ✅ **Horario laboral y TZ configurables** por agente: `agents.business_hours` (jsonb, default = comportamiento hardcodeado de siempre), enviado en heartbeat config; de paso corrige el offset `-03:00` hardcodeado al ingerir logs/lecturas naive de agentes viejos, usando el TZ real del agente. ⬜ Cosmética de locale del portal (`es-AR`) queda para una pasada de polish aparte.
 - ⬜ `scan_schedule`: implementar de punta a punta o eliminar de docs/tipos. **Sin empezar.**
 - ✅ Identidad `(client_id, serial)` + MAC secundaria + merge de duplicados; decommission/mover/editar dispositivo.
 

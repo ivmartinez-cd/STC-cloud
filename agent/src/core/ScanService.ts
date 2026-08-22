@@ -139,7 +139,7 @@ export class ScanService {
       const config = this.deps.getConfig();
       const devices = getKnownDevices();
       if (devices.length === 0) return;
-      log('INFO', `[${label}] ${isBusinessHours() ? 'horario laboral' : 'fuera de horario'} — ${devices.length} dispositivo(s)`);
+      log('INFO', `[${label}] ${isBusinessHours(config.businessHours) ? 'horario laboral' : 'fuera de horario'} — ${devices.length} dispositivo(s)`);
 
       const queue = [...devices];
       const workers = Array(Math.min(CONCURRENCY_LIMIT, queue.length)).fill(null).map(async () => {

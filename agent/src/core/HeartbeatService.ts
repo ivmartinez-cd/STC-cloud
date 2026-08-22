@@ -8,6 +8,8 @@ import { ConfigManager } from './config';
 import type { CommandHandler, CommandResult } from './CommandHandler';
 import { VERSION } from './version';
 import type { SnmpCredential } from '../capture/transport/snmp';
+import type { BusinessHoursConfig } from './BusinessHours';
+import { setConfiguredTimezone } from './TimeZoneUtils';
 
 export interface RemoteConfigPayload {
   ip_ranges?: Array<{ start: string; end: string }>;
@@ -17,6 +19,11 @@ export interface RemoteConfigPayload {
    *  `[]` es una novedad real — "volver al legacy" — y `snmp_community`
    *  vacío también lo sería si alguna vez se mandara así). */
   snmp_credentials?: SnmpCredential[];
+  /** Horario laboral + TZ — mismo patrón que `snmp_credentials`: AUSENTE =
+   *  "sin novedad", `null` explícito = "reset al default hardcodeado" (el
+   *  cloud nunca manda `null` crudo, ver `agentService.getConfig()` — pero
+   *  el tipo lo admite por si un futuro cambio lo necesita). */
+  business_hours?: BusinessHoursConfig | null;
 }
 
 interface HeartbeatDeps {
@@ -157,6 +164,17 @@ export class HeartbeatService {
         config.snmpCredentials = remote.snmp_credentials;
         changed = true;
       }
+    }
+
+    if (remote.business_hours !== undefined) {
+      if (JSON.stringify(remote.business_hours) !== JSON.stringify(config.businessHours)) {
+        log('INFO', `Horario laboral actualizado: ${JSON.stringify(remote.business_hours)}.`);
+        config.businessHours = remote.business_hours;
+        changed = true;
+      }
+      // Se aplica siempre (no sólo si `changed`) para que Logger/LogTailer
+      // usen la TZ nueva desde el próximo log, sin esperar un restart.
+      setConfiguredTimezone(remote.business_hours?.timezone ?? null);
     }
 
     if (changed) {

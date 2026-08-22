@@ -5,6 +5,7 @@ import crypto from 'crypto';
 import { execSync } from 'child_process';
 import { SecurityUtils } from './security';
 import type { SnmpCredential } from '../capture/transport/snmp';
+import type { BusinessHoursConfig } from './BusinessHours';
 
 export interface IpRange {
   start: string;
@@ -23,6 +24,10 @@ export interface AgentConfig {
    *  venir ausente en un `config.enc` guardado antes de esta pasada —
    *  `normalizeConfig()` la sintetiza desde `snmpCommunity` en ese caso. */
   snmpCredentials?: SnmpCredential[];
+  /** Horario laboral + TZ (§2.1/§3 R7 gap analysis). Ausente/null =
+   *  `DEFAULT_BUSINESS_HOURS` (Argentina, L-V, 8-18) — mismo comportamiento
+   *  hardcodeado de siempre, `isBusinessHours()` ya resuelve el fallback. */
+  businessHours?: BusinessHoursConfig | null;
   proxyUrl?: string; // http://user:pass@proxy:8080 - opcional, para redes con proxy corporativo
 }
 

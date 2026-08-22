@@ -5,6 +5,7 @@ import { AgentService, AgentConfigUpdate } from "../../services/agentService";
 import { MissingEncryptionKeyError } from "../../services/cryptoService";
 import { SnmpCredentialValidationError } from "../../services/snmpCredentials";
 import { IpRangeValidationError } from "../../services/ipRangeSpec";
+import { BusinessHoursValidationError, DEFAULT_BUSINESS_HOURS, type BusinessHoursConfig } from "../../services/businessHours";
 import { sendCommandToAgent } from "../../ws/index";
 import type { PortalUser } from "../middlewares/authMiddleware";
 import { getClientIp } from "../utils/ip";
@@ -118,7 +119,8 @@ export function createPortalAgentController(
           ),
           ...(scope.kind === "all"
             ? ["agents.ip_ranges", "agents.snmp_community", "agents.scan_schedule",
-               "agents.toner_warning_threshold", "agents.toner_critical_threshold"]
+               "agents.toner_warning_threshold", "agents.toner_critical_threshold",
+               "agents.business_hours"]
             : [])
         )
         .leftJoin("clients", "clients.id", "agents.client_id")
@@ -151,6 +153,17 @@ export function createPortalAgentController(
         }
       }
 
+      // Igual que en agentService.getConfig(): se resuelve al default acá
+      // para que el portal siempre muestre un valor concreto, nunca `null`.
+      let businessHours: BusinessHoursConfig = DEFAULT_BUSINESS_HOURS;
+      if (agent.business_hours) {
+        try {
+          businessHours = typeof agent.business_hours === "string" ? JSON.parse(agent.business_hours) : agent.business_hours;
+        } catch (e) {
+          console.error("Error parsing business_hours in getAgent:", e);
+        }
+      }
+
       // Vista ENMASCARADA únicamente (nunca los secretos ya guardados) — evita
       // que `MonitorDetail` tenga que hacer un round-trip aparte a
       // /snmp-credentials sólo para mostrar cuántas hay configuradas.
@@ -167,6 +180,7 @@ export function createPortalAgentController(
           toner_critical_threshold: agent.toner_critical_threshold,
           snmp_credentials: maskedCreds?.credentials ?? [],
           snmp_credentials_rev: maskedCreds?.rev ?? 0,
+          business_hours: businessHours,
         },
       };
     },
@@ -227,20 +241,21 @@ export function createPortalAgentController(
     },
 
     createAgent: async (request: FastifyRequest, reply: FastifyReply) => {
-      const { clientId, name, ip_ranges, snmp_community, scan_interval_minutes } =
-        request.body as { clientId: string; name: string; ip_ranges?: unknown; snmp_community?: string; scan_interval_minutes?: number };
+      const { clientId, name, ip_ranges, snmp_community, scan_interval_minutes, business_hours } =
+        request.body as { clientId: string; name: string; ip_ranges?: unknown; snmp_community?: string; scan_interval_minutes?: number; business_hours?: unknown };
       const user = (request as FastifyRequest & { user: PortalUser }).user;
       try {
         return await agentService.createActivationKey(clientId, name, {
           ip_ranges: ip_ranges as AgentConfigUpdate["ip_ranges"],
           snmp_community,
           scan_interval_minutes,
+          business_hours: business_hours as AgentConfigUpdate["business_hours"],
         }, {
           userId: user?.userId,
           ip: getClientIp(request),
         });
       } catch (e: unknown) {
-        if (e instanceof IpRangeValidationError) {
+        if (e instanceof IpRangeValidationError || e instanceof BusinessHoursValidationError) {
           return reply.status(400).send({ error: e.message, field: e.field });
         }
         throw e;
@@ -435,7 +450,7 @@ export function createPortalAgentController(
           ip: getClientIp(request),
         });
       } catch (e: unknown) {
-        if (e instanceof IpRangeValidationError) {
+        if (e instanceof IpRangeValidationError || e instanceof BusinessHoursValidationError) {
           return reply.status(400).send({ error: e.message, field: e.field });
         }
         throw e;

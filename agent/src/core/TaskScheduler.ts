@@ -1,9 +1,11 @@
 import { log } from './Logger';
 import { isBusinessHours, INTERVALS } from './BusinessHours';
 import type { ScanService } from './ScanService';
+import type { AgentConfig } from './config';
 
 interface TaskSchedulerDeps {
   scanService: ScanService;
+  getConfig: () => AgentConfig;
 }
 
 export class TaskScheduler {
@@ -44,7 +46,7 @@ export class TaskScheduler {
     }
 
     const now = Date.now();
-    const biz = isBusinessHours();
+    const biz = isBusinessHours(this.deps.getConfig().businessHours);
 
     const discoveryInterval = biz ? INTERVALS.discovery.biz : INTERVALS.discovery.off;
     const meterInterval     = biz ? INTERVALS.meter.biz : INTERVALS.meter.off;

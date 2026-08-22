@@ -43,11 +43,12 @@ export function createAgentController(
     heartbeat: async (request: FastifyRequest) => {
       const { id } = request.params as AgentIdParams;
       const { logs, commandResults, system_info } = request.body as HeartbeatBody;
+      const { agentTimezone } = request as FastifyRequest & { agentTimezone?: string };
 
       await agentService.heartbeat(id, system_info);
 
       if (logs && Array.isArray(logs)) {
-        await agentService.ingestLogs(id, logs);
+        await agentService.ingestLogs(id, logs, agentTimezone);
       }
 
       if (commandResults && Array.isArray(commandResults)) {
@@ -77,8 +78,9 @@ export function createAgentController(
     syncDevices: async (request: FastifyRequest, reply: FastifyReply) => {
       const { readings } = request.body as SyncBody;
       const { agentId } = request.user as AgentJwtUser;
+      const { agentTimezone } = request as FastifyRequest & { agentTimezone?: string };
       try {
-        const result = await agentService.syncReadings(redis, readings, agentId);
+        const result = await agentService.syncReadings(redis, readings, agentId, agentTimezone);
         return { status: "success", count: readings.length, ...result };
       } catch (e: unknown) {
         const errMsg = e instanceof Error ? e.message : String(e);

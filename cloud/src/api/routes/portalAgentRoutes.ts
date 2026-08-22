@@ -26,6 +26,22 @@ const ipRangeItemSchema = {
   },
 };
 
+/**
+ * Shape de `business_hours` — sólo forma/tipo (`null` explícito = reset al
+ * default, ver `services/businessHours.ts`); la regla de negocio
+ * (TZ válida, días 1-7 no vacío, start_hour < end_hour) vive en
+ * `validateBusinessHours()`, no acá.
+ */
+const businessHoursSchema = {
+  type: ["object", "null"],
+  properties: {
+    timezone: { type: "string", maxLength: 64 },
+    days: { type: "array", maxItems: 7, items: { type: "integer" } },
+    start_hour: { type: "integer" },
+    end_hour: { type: "integer" },
+  },
+};
+
 const createAgentSchema = {
   body: {
     type: "object",
@@ -36,6 +52,7 @@ const createAgentSchema = {
       ip_ranges: { type: "array", maxItems: 20, items: ipRangeItemSchema },
       snmp_community: { type: "string", maxLength: 64 },
       scan_interval_minutes: { type: "integer", minimum: 1, maximum: 1440 },
+      business_hours: businessHoursSchema,
     },
   },
 };
@@ -53,6 +70,7 @@ const updateConfigSchema = {
       scan_schedule: { type: "object" },
       toner_warning_threshold: { type: "integer", minimum: 0, maximum: 100 },
       toner_critical_threshold: { type: "integer", minimum: 0, maximum: 100 },
+      business_hours: businessHoursSchema,
     },
   },
 };

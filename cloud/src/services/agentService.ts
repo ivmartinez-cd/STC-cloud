@@ -13,6 +13,10 @@ import {
   compileIpRangeSpecs, publicIpWarnings, validateIpRangeSpecs,
   type IpRangeSpecInput,
 } from "./ipRangeSpec";
+import {
+  DEFAULT_BUSINESS_HOURS, validateBusinessHours, parseNaiveLocalTimestamp,
+  type BusinessHoursConfig,
+} from "./businessHours";
 
 // ─── Interfaces de Tipado Fuerte ──────────────────────────────────────────────
 // Estas interfaces reemplazan los tipos `any` para cumplir con la Regla 5
@@ -46,6 +50,8 @@ export interface AgentConfigUpdate {
   name?: string;
   toner_warning_threshold?: number;
   toner_critical_threshold?: number;
+  /** `null` = reset explícito al default hardcodeado; `undefined` = no tocar. */
+  business_hours?: BusinessHoursConfig | null;
 }
 
 /** Dispositivo entrante desde el agente DCA durante el registro inicial. */
@@ -218,13 +224,14 @@ export class AgentService {
   async createActivationKey(
     clientId: string,
     name: string,
-    config?: Pick<AgentConfigUpdate, 'ip_ranges' | 'snmp_community' | 'scan_interval_minutes'>,
+    config?: Pick<AgentConfigUpdate, 'ip_ranges' | 'snmp_community' | 'scan_interval_minutes' | 'business_hours'>,
     audit?: AuditContext
   ) {
     // Validado acá, no sólo en updateConfig() — sin esto un agente podía
     // nacer con specs inválidos/gigantes desde el alta inicial (gap que el
     // diseño inicial de esta feature no cubría).
     const validatedRanges = config?.ip_ranges !== undefined ? validateIpRangeSpecs(config.ip_ranges) : null;
+    const validatedBusinessHours = config?.business_hours !== undefined ? validateBusinessHours(config.business_hours) : null;
 
     const key = crypto.randomBytes(32).toString("hex"); // 64 chars hex
     const agentId = crypto.randomUUID();
@@ -240,6 +247,7 @@ export class AgentService {
       ip_ranges: validatedRanges ? JSON.stringify(validatedRanges) : null,
       snmp_community: config?.snmp_community ?? "public",
       scan_interval_minutes: config?.scan_interval_minutes ?? 15,
+      business_hours: validatedBusinessHours ? JSON.stringify(validatedBusinessHours) : null,
     });
 
     await this.db("audit_logs").insert({
@@ -353,6 +361,13 @@ export class AgentService {
     }
     if (newConfig.toner_critical_threshold !== undefined) {
       updates.toner_critical_threshold = newConfig.toner_critical_threshold;
+    }
+    if (newConfig.business_hours !== undefined) {
+      // `null` explícito = reset al default hardcodeado (queda SQL NULL en
+      // la columna, no el string "null") — distinto de `undefined` (no
+      // tocar este campo), mismo criterio que `ip_ranges`/`snmp_credentials`.
+      const validated = validateBusinessHours(newConfig.business_hours);
+      updates.business_hours = validated ? JSON.stringify(validated) : null;
     }
 
     if (Object.keys(updates).length > 0) {
@@ -529,28 +544,24 @@ export class AgentService {
 
   /**
    * Ingesta de logs remotos enviados por el agente DCA.
-   * Soporta timestamps en formato DD/MM/YYYY y ISO 8601.
+   * Soporta timestamps en formato DD/MM/YYYY (agentes viejos, pre-ISO) y
+   * ISO 8601 (agente actual).
    * @param agentId - UUID del agente emisor.
    * @param logs - Array de entradas de log con timestamp, nivel y mensaje.
+   * @param timezone - TZ IANA del agente (resuelta por `agentAuth`, ver
+   *   `authMiddleware.ts`) — sólo se usa para interpretar timestamps naive
+   *   `DD/MM/YYYY` de binarios viejos; el agente actual manda ISO-UTC que no
+   *   la necesita. Default: `DEFAULT_BUSINESS_HOURS.timezone`.
    */
-  async ingestLogs(agentId: string, logs: IncomingLogEntry[]) {
+  async ingestLogs(agentId: string, logs: IncomingLogEntry[], timezone: string = DEFAULT_BUSINESS_HOURS.timezone) {
     if (!logs || logs.length === 0) return;
-    
+
     const rows = logs.map(l => {
-      let ts: Date;
+      let ts: Date | null = null;
       const raw = l.timestamp || l.time; // Soportar ambos nombres de campo
-      
+
       if (raw) {
-        // Heurística para detectar DD/MM/YYYY HH:mm:ss (formato común de agentes locales)
-        const parts = String(raw).match(/(\d{2})\/(\d{2})\/(\d{4})/);
-        if (parts) {
-          // Si parece DD/MM/YYYY, lo rearmamos a YYYY-MM-DD para que el constructor de Date no se confunda
-          const timePart = String(raw).split(' ')[1] || '00:00:00';
-          // Forzamos offset -03:00 para asegurar que se interprete como hora local de Argentina
-          ts = new Date(`${parts[3]}-${parts[2]}-${parts[1]}T${timePart}-03:00`);
-        } else {
-          ts = new Date(raw);
-        }
+        ts = parseNaiveLocalTimestamp(String(raw), timezone) ?? new Date(raw);
       } else {
         ts = new Date();
       }
@@ -559,7 +570,7 @@ export class AgentService {
         agent_id: agentId,
         level: l.level || 'INFO',
         message: l.message,
-        timestamp: isNaN(ts.getTime()) ? new Date() : ts
+        timestamp: (!ts || isNaN(ts.getTime())) ? new Date() : ts
       };
     });
 
@@ -593,7 +604,7 @@ export class AgentService {
    * @param readings - Array de lecturas crudas enviadas por el agente DCA.
    * @param agentId - UUID del agente emisor de la telemetría.
    */
-  async syncReadings(redis: RedisClient, readings: IncomingReading[], agentId: string) {
+  async syncReadings(redis: RedisClient, readings: IncomingReading[], agentId: string, timezone: string = DEFAULT_BUSINESS_HOURS.timezone) {
     if (!readings || readings.length === 0) return { received: 0, inserted: 0, duplicates: 0 };
 
     // 0. Actualizar la última conexión del monitor / agente emisor
@@ -907,15 +918,13 @@ export class AgentService {
           }
         }
 
-        // Parseo seguro de fecha (detectar DD/MM/YYYY)
+        // Parseo seguro de fecha (detectar DD/MM/YYYY — agentes viejos, pre-ISO)
         let readingTime: Date;
         const rawTime = r.time || "";
-        const dateParts = String(rawTime).match(/(\d{2})\/(\d{2})\/(\d{4})/);
-        
-        if (dateParts) {
-          const timePart = String(rawTime).split(' ')[1] || '00:00:00';
-          // Forzamos offset -03:00 para asegurar que se interprete como hora local de Argentina
-          readingTime = new Date(`${dateParts[3]}-${dateParts[2]}-${dateParts[1]}T${timePart}-03:00`);
+        const parsedNaive = parseNaiveLocalTimestamp(String(rawTime), timezone);
+
+        if (parsedNaive) {
+          readingTime = parsedNaive;
         } else {
           readingTime = new Date(rawTime);
         }
@@ -947,7 +956,7 @@ export class AgentService {
             time: new Date().toISOString(),
             level: 'ERROR',
             message: `Device Sync Fail [${r.ip || r.device_id}]: ${errMsg}`
-          }]);
+          }], timezone);
         }
       }
     }
@@ -985,7 +994,7 @@ export class AgentService {
           time: new Date().toISOString(),
           level: 'ERROR',
           message: `Readings Insert Error: ${errMsg}`
-        }]);
+        }], timezone);
         throw err;
       }
     }
@@ -1113,7 +1122,7 @@ export class AgentService {
       .where({ id: agentId })
       .select(
         "ip_ranges", "snmp_community", "scan_interval_minutes", "toner_warning_threshold",
-        "toner_critical_threshold", "scan_schedule", "snmp_credentials"
+        "toner_critical_threshold", "scan_schedule", "snmp_credentials", "business_hours"
       )
       .first();
 
@@ -1125,6 +1134,16 @@ export class AgentService {
       // callers (portal) usan `getIpRangeSpecsRaw()` para ver el spec tal
       // cual el admin lo escribió.
       agent.ip_ranges = compileIpRangeSpecs(rawSpecs);
+
+      // `business_hours` se resuelve al default ACÁ, antes de salir en el
+      // payload — el wire nunca lleva `null` crudo, sólo `undefined` (campo
+      // no soportado por versiones viejas de este método) o un objeto
+      // concreto. Esto preserva sin ambigüedad el guard `!== undefined` que
+      // usa `HeartbeatService.handleRemoteConfig()` del lado agente.
+      const storedBusinessHours: BusinessHoursConfig | null =
+        (typeof agent.business_hours === 'string' ? JSON.parse(agent.business_hours) : agent.business_hours) ?? null;
+      agent.business_hours = storedBusinessHours ?? DEFAULT_BUSINESS_HOURS;
+
       if (typeof agent.scan_schedule === 'string') {
         agent.scan_schedule = JSON.parse(agent.scan_schedule);
       }

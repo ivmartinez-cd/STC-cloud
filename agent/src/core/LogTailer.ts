@@ -1,4 +1,5 @@
 import fs from 'fs';
+import { getConfiguredTimezone, getUtcOffsetString } from './TimeZoneUtils';
 
 export class LogTailer {
   private lastPosition: number = 0;
@@ -40,8 +41,10 @@ export class LogTailer {
       if (match) {
         const [_, date, time, level, message] = match;
         const [day, month, year] = date.split('/');
-        // Forzamos el envio en formato ISO con el offset de Argentina para evitar ambiguedades en el servidor
-        const isoTimestamp = `${year}-${month}-${day}T${time}-03:00`;
+        // Offset real de la TZ configurada (no fijo a Argentina) — Logger.ts
+        // escribe estas líneas usando esa misma TZ, así que acá hay que
+        // etiquetarlas con el offset que corresponde, no uno hardcodeado.
+        const isoTimestamp = `${year}-${month}-${day}T${time}${getUtcOffsetString(getConfiguredTimezone(), new Date())}`;
         
         return {
           timestamp: isoTimestamp,

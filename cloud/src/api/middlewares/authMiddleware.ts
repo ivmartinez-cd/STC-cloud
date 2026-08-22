@@ -2,6 +2,7 @@ import { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { Knex } from "knex";
 import Redis from "ioredis";
 import { AgentService } from "../../services/agentService";
+import { DEFAULT_BUSINESS_HOURS, type BusinessHoursConfig } from "../../services/businessHours";
 import { policyFor } from "../policy/rolePolicy";
 import {
   agentIdParamMatchesScope,
@@ -71,10 +72,19 @@ export function createAuthMiddleware(
         return reply.status(403).send({ error: "No tiene permisos para acceder a este agente" });
       }
 
-      const agent = await db("agents").where({ id: user.agentId }).select("status").first();
+      const agent = await db("agents").where({ id: user.agentId }).select("status", "business_hours").first();
       if (!agent || agent.status === "revoked") {
         return reply.status(404).send({ error: "Agente no encontrado o revocado" });
       }
+
+      // TZ resuelta acá (misma query que ya hacía este middleware para
+      // chequear `revoked`, cero costo extra) para que ingestLogs/syncReadings
+      // puedan interpretar timestamps naive DD/MM/YYYY de binarios de agente
+      // viejos sin tener que volver a golpear la DB — ver businessHours.ts.
+      const storedBusinessHours: BusinessHoursConfig | null =
+        (typeof agent.business_hours === "string" ? JSON.parse(agent.business_hours) : agent.business_hours) ?? null;
+      (request as FastifyRequest & { agentTimezone?: string }).agentTimezone =
+        (storedBusinessHours ?? DEFAULT_BUSINESS_HOURS).timezone;
 
       const blacklisted = await agentService.isBlacklisted(redis, user.agentId);
       if (blacklisted) {
