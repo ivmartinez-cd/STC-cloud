@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../lib/api';
 import { useToast } from '../context/ToastContext';
+import { useAuth } from '../context/AuthContext';
 import { Users, Search, Building2, ChevronRight, Plus, X, Loader2, MapPin, Mail, AlertTriangle } from 'lucide-react';
 
 interface Client {
@@ -48,6 +49,7 @@ const Clients = () => {
   const [error, setError]     = useState('');
   const [search, setSearch]   = useState('');
   const { showToast } = useToast();
+  const { role } = useAuth();
   
   // Modal state
   const [showModal, setShowModal] = useState(false);
@@ -114,13 +116,15 @@ const Clients = () => {
             {clients.length} empresa(s) en la red de monitoreo
           </p>
         </div>
-        <button
-          onClick={() => setShowModal(true)}
-          className="bg-[#f7931d] hover:bg-[#d35400] text-white px-5 py-2.5 rounded-xl flex items-center justify-center gap-2 text-sm font-bold shadow-lg shadow-orange-900/20 transition-all active:scale-95 whitespace-nowrap"
-        >
-          <Plus size={18} />
-          Nuevo Cliente
-        </button>
+        {role !== 'client_viewer' && (
+          <button
+            onClick={() => setShowModal(true)}
+            className="bg-[#f7931d] hover:bg-[#d35400] text-white px-5 py-2.5 rounded-xl flex items-center justify-center gap-2 text-sm font-bold shadow-lg shadow-orange-900/20 transition-all active:scale-95 whitespace-nowrap"
+          >
+            <Plus size={18} />
+            Nuevo Cliente
+          </button>
+        )}
       </header>
 
       {/* Search & Stats Header */}

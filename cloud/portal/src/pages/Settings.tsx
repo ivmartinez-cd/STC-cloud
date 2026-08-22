@@ -12,8 +12,15 @@ interface DBUser {
   username: string;
   role: string;
   active: boolean;
+  client_id: string | null;
+  client_name: string | null;
   created_at: string;
   updated_at: string;
+}
+
+interface DBClient {
+  id: string;
+  name: string;
 }
 
 interface DBFeedback {
@@ -56,7 +63,14 @@ const Settings = () => {
   const [newUsername, setNewUsername] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [newRole, setNewRole] = useState('operator');
+  const [newClientId, setNewClientId] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  // Clientes disponibles para asignar a un client_viewer (nuevo o existente).
+  const [clients, setClients] = useState<DBClient[]>([]);
+  // Cambiar el rol de un usuario EXISTENTE a client_viewer requiere elegir un
+  // cliente antes de confirmar — este mini-modal reusa `clients`.
+  const [roleChangeUser, setRoleChangeUser] = useState<DBUser | null>(null);
+  const [roleChangeClientId, setRoleChangeClientId] = useState('');
   const [createLoading, setCreateLoading] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
 
@@ -102,14 +116,27 @@ const Settings = () => {
     }
   }, [isAdmin]);
 
+  // Lista de clientes para asignar a un client_viewer — el admin ya ve todos los
+  // clientes por `GET /clients` sin scoping, no hace falta un endpoint aparte.
+  const fetchClients = useCallback(async () => {
+    if (!isAdmin) return;
+    try {
+      const data = await api.get<DBClient[]>('/clients');
+      setClients(data);
+    } catch (err: unknown) {
+      console.error('Error al obtener clientes', err);
+    }
+  }, [isAdmin]);
+
   useEffect(() => {
     // Avoid synchronous setState in effect to satisfy ESLint
     const init = async () => {
       await fetchUsers();
       await fetchFeedbacks();
+      await fetchClients();
     };
     void init();
-  }, [fetchUsers, fetchFeedbacks]);
+  }, [fetchUsers, fetchFeedbacks, fetchClients]);
 
   const save = () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(thresholds));
@@ -121,6 +148,10 @@ const Settings = () => {
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newUsername.trim() || !newPassword) return;
+    if (newRole === 'client_viewer' && !newClientId) {
+      setCreateError('Un usuario Cliente requiere elegir un cliente');
+      return;
+    }
     setCreateLoading(true);
     setCreateError(null);
     try {
@@ -128,11 +159,13 @@ const Settings = () => {
         username: newUsername.trim(),
         password: newPassword,
         role: newRole,
+        ...(newRole === 'client_viewer' ? { client_id: newClientId } : {}),
       });
       setShowCreateModal(false);
       setNewUsername('');
       setNewPassword('');
       setNewRole('operator');
+      setNewClientId('');
       fetchUsers();
     } catch (err: unknown) {
       setCreateError((err as { response?: { data?: { error?: string } } })?.response?.data?.error || (err as Error).message || 'Error al crear usuario');
@@ -157,18 +190,33 @@ const Settings = () => {
     }
   };
 
-  // Cambiar rol de usuario
-  const handleRoleChange = async (user: DBUser, role: string) => {
+  // Cambiar rol de usuario. `client_viewer` necesita un client_id — la CHECK de
+  // la base lo exige, así que en vez de mandar la request y mostrar el 400 de
+  // vuelta, se abre un mini-modal a elegir cliente ANTES de confirmar (ver
+  // `roleChangeUser` más abajo). Los demás roles no necesitan ese paso.
+  const handleRoleChange = async (user: DBUser, role: string, clientId?: string) => {
     if (user.id === currentUserId) {
       alert("No puedes cambiar tu propio rol.");
       return;
     }
+    if (role === 'client_viewer' && !clientId) {
+      setRoleChangeUser(user);
+      setRoleChangeClientId(user.client_id || '');
+      return;
+    }
     try {
-      await api.put(`/portal/users/${user.id}`, { role });
+      await api.put(`/portal/users/${user.id}`, { role, ...(clientId ? { client_id: clientId } : {}) });
       fetchUsers();
     } catch (err: unknown) {
       alert((err as { response?: { data?: { error?: string } } })?.response?.data?.error || (err as Error).message || 'Error al actualizar rol');
     }
+  };
+
+  const confirmRoleChangeToClientViewer = async () => {
+    if (!roleChangeUser || !roleChangeClientId) return;
+    await handleRoleChange(roleChangeUser, 'client_viewer', roleChangeClientId);
+    setRoleChangeUser(null);
+    setRoleChangeClientId('');
   };
 
   const updateFeedbackStatus = async (id: string, status: string) => {
@@ -370,6 +418,7 @@ const Settings = () => {
                     <tr className="bg-slate-50/70 border-b border-slate-100">
                       <th className="px-6 py-4 text-[10px] font-extrabold text-slate-500 uppercase tracking-widest">Operador</th>
                       <th className="px-6 py-4 text-[10px] font-extrabold text-slate-500 uppercase tracking-widest">Rol</th>
+                      <th className="px-6 py-4 text-[10px] font-extrabold text-slate-500 uppercase tracking-widest">Cliente</th>
                       <th className="px-6 py-4 text-[10px] font-extrabold text-slate-500 uppercase tracking-widest">Estado</th>
                       <th className="px-6 py-4 text-[10px] font-extrabold text-slate-500 uppercase tracking-widest">Creado el</th>
                       <th className="px-6 py-4 text-[10px] font-extrabold text-slate-500 uppercase tracking-widest text-right">Acciones</th>
@@ -398,7 +447,11 @@ const Settings = () => {
                           >
                             <option value="operator">Operador</option>
                             <option value="admin">Administrador</option>
+                            <option value="client_viewer">Cliente</option>
                           </select>
+                        </td>
+                        <td className="px-6 py-4 text-xs font-medium text-slate-500">
+                          {u.role === 'client_viewer' ? (u.client_name || '—') : '—'}
                         </td>
                         <td className="px-6 py-4">
                           <button
@@ -622,10 +675,11 @@ const Settings = () => {
 
               <div className="space-y-2">
                 <label className="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest ml-1">Rol en el Portal</label>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-3 gap-4">
                   {[
                     { val: 'operator', title: 'Operador', desc: 'Soporte estándar' },
-                    { val: 'admin', title: 'Administrador', desc: 'Control total' }
+                    { val: 'admin', title: 'Administrador', desc: 'Control total' },
+                    { val: 'client_viewer', title: 'Cliente', desc: 'Sólo su cliente' }
                   ].map(r => (
                     <button
                       key={r.val}
@@ -643,6 +697,23 @@ const Settings = () => {
                   ))}
                 </div>
               </div>
+
+              {newRole === 'client_viewer' && (
+                <div className="space-y-2">
+                  <label className="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest ml-1">Cliente</label>
+                  <select
+                    required
+                    value={newClientId}
+                    onChange={e => setNewClientId(e.target.value)}
+                    className="cd-input w-full !bg-slate-50/50 border-transparent focus:!bg-white focus:!border-brand"
+                  >
+                    <option value="">Seleccionar cliente…</option>
+                    {clients.map(c => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               <div className="flex items-center gap-4 pt-4 border-t border-slate-50">
                 <button
@@ -736,6 +807,58 @@ const Settings = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: elegir cliente al cambiar un usuario existente a rol Cliente */}
+      {roleChangeUser && (
+        <div className="fixed inset-0 bg-[#0c111d]/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-300">
+          <div className="bg-white rounded-[32px] max-w-md w-full p-8 border border-slate-100 shadow-2xl relative animate-in zoom-in-95 duration-300">
+            <div className="flex items-center gap-4 mb-6">
+              <div className="p-3 bg-blue-50 text-brand rounded-2xl">
+                <Shield size={24} />
+              </div>
+              <div>
+                <h3 className="text-lg font-extrabold text-[#1a2333]">Asignar Cliente</h3>
+                <p className="text-xs text-slate-500 font-medium">
+                  '{roleChangeUser.username}' pasará a ver únicamente los datos de este cliente.
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-2 mb-6">
+              <label className="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest ml-1">Cliente</label>
+              <select
+                required
+                value={roleChangeClientId}
+                onChange={e => setRoleChangeClientId(e.target.value)}
+                className="cd-input w-full !bg-slate-50/50 border-transparent focus:!bg-white focus:!border-brand"
+              >
+                <option value="">Seleccionar cliente…</option>
+                {clients.map(c => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex items-center gap-4 pt-4 border-t border-slate-50">
+              <button
+                type="button"
+                onClick={() => { setRoleChangeUser(null); setRoleChangeClientId(''); }}
+                className="flex-1 px-5 py-4 border border-slate-100 hover:bg-slate-50 text-slate-600 rounded-2xl text-xs font-extrabold transition-all"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={!roleChangeClientId}
+                onClick={confirmRoleChangeToClientViewer}
+                className="flex-1 px-5 py-4 bg-brand hover:bg-[#2471a3] text-white rounded-2xl text-xs font-extrabold transition-all disabled:opacity-60"
+              >
+                Confirmar
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -13,10 +13,10 @@ import { getClientIp } from "../utils/ip";
 interface LoginBody { username: string; password: string; }
 
 /** Cuerpo de creación de usuario. */
-interface CreateUserBody { username: string; password: string; role?: string; }
+interface CreateUserBody { username: string; password: string; role?: string; client_id?: string; }
 
 /** Cuerpo de actualización de usuario. */
-interface UpdateUserBody { password?: string; role?: string; active?: boolean; }
+interface UpdateUserBody { password?: string; role?: string; active?: boolean; client_id?: string; }
 
 /** Cuerpo de activación de agente. */
 interface ActivateBody { key: string; hardwareId?: string; }
@@ -92,7 +92,7 @@ export function createAuthController(fastify: FastifyInstance, db: Knex, redis: 
     portalMe: async (request: FastifyRequest) => {
       const user = (request as FastifyRequest & { user: PortalUser }).user;
       const token = request.cookies.stc_session;
-      return { userId: user.userId, username: user.username, role: user.role, token };
+      return { userId: user.userId, username: user.username, role: user.role, clientId: user.clientId, token };
     },
 
     listUsers: async (request: FastifyRequest, reply: FastifyReply) => {
@@ -101,8 +101,18 @@ export function createAuthController(fastify: FastifyInstance, db: Knex, redis: 
         return reply.status(403).send({ error: "No autorizado. Se requiere rol de administrador." });
       }
       const users = await db("users")
-        .select("id", "username", "role", "active", "created_at", "updated_at")
-        .orderBy("username", "asc");
+        .leftJoin("clients", "clients.id", "users.client_id")
+        .select(
+          "users.id",
+          "users.username",
+          "users.role",
+          "users.active",
+          "users.client_id",
+          "clients.name as client_name",
+          "users.created_at",
+          "users.updated_at"
+        )
+        .orderBy("users.username", "asc");
       return users;
     },
 
@@ -111,10 +121,18 @@ export function createAuthController(fastify: FastifyInstance, db: Knex, redis: 
       if (currentUser.role !== "admin") {
         return reply.status(403).send({ error: "No autorizado. Se requiere rol de administrador." });
       }
-      const { username, password, role } = request.body as CreateUserBody;
+      const { username, password, role, client_id } = request.body as CreateUserBody;
 
       if (!username || !password) {
         return reply.status(400).send({ error: "Usuario y contraseña son requeridos" });
+      }
+
+      const finalRole = role || "operator";
+      // La CHECK de la migración rechazaría esto con un 23514 (500) si se dejara pasar
+      // — mejor un 400 explícito acá. `client_id` sólo tiene sentido para
+      // `client_viewer`; para otros roles se ignora (no queda un client_id residual).
+      if (finalRole === "client_viewer" && !client_id) {
+        return reply.status(400).send({ error: "Un usuario client_viewer requiere client_id" });
       }
 
       const cleanUsername = username.trim().toLowerCase();
@@ -128,17 +146,18 @@ export function createAuthController(fastify: FastifyInstance, db: Knex, redis: 
           id: db.raw("gen_random_uuid()"),
           username: cleanUsername,
           password_hash: hashPassword(password),
-          role: role || "operator",
+          role: finalRole,
+          client_id: finalRole === "client_viewer" ? client_id : null,
           active: true,
         })
-        .returning(["id", "username", "role", "active", "created_at"]);
+        .returning(["id", "username", "role", "active", "client_id", "created_at"]);
 
       await db("audit_logs").insert({
         action: "USER_CREATED",
         target_id: String(newUser.id),
         user_id: currentUser.userId !== "admin" ? currentUser.userId : null,
         ip_address: getClientIp(request),
-        metadata: JSON.stringify({ username: cleanUsername, role: role || "operator" }),
+        metadata: JSON.stringify({ username: cleanUsername, role: finalRole, client_id: newUser.client_id }),
       });
 
       return newUser;
@@ -150,7 +169,7 @@ export function createAuthController(fastify: FastifyInstance, db: Knex, redis: 
         return reply.status(403).send({ error: "No autorizado. Se requiere rol de administrador." });
       }
       const { id } = request.params as IdParams;
-      const { password, role, active } = request.body as UpdateUserBody;
+      const { password, role, active, client_id } = request.body as UpdateUserBody;
 
       const user = await db("users").where({ id }).first();
       if (!user) {
@@ -161,12 +180,24 @@ export function createAuthController(fastify: FastifyInstance, db: Knex, redis: 
         return reply.status(400).send({ error: "No puedes desactivar tu propio usuario" });
       }
 
+      // Mismo chequeo que en createUser: el rol resultante (nuevo si se manda, si no
+      // el que ya tenía) tiene que tener client_id cuando es client_viewer, y NO
+      // arrastrar uno residual cuando deja de serlo.
+      const finalRole = role ?? user.role;
+      const finalClientId = client_id ?? user.client_id;
+      if (finalRole === "client_viewer" && !finalClientId) {
+        return reply.status(400).send({ error: "Un usuario client_viewer requiere client_id" });
+      }
+
       const updates: Record<string, unknown> = { updated_at: new Date() };
       if (password) {
         updates.password_hash = hashPassword(password);
       }
       if (role !== undefined) {
         updates.role = role;
+        updates.client_id = role === "client_viewer" ? finalClientId : null;
+      } else if (client_id !== undefined) {
+        updates.client_id = finalRole === "client_viewer" ? client_id : null;
       }
       if (active !== undefined) {
         updates.active = active;
@@ -175,14 +206,14 @@ export function createAuthController(fastify: FastifyInstance, db: Knex, redis: 
       const [updatedUser] = await db("users")
         .where({ id })
         .update(updates)
-        .returning(["id", "username", "role", "active", "updated_at"]);
+        .returning(["id", "username", "role", "active", "client_id", "updated_at"]);
 
       await db("audit_logs").insert({
         action: "USER_UPDATED",
         target_id: String(id),
         user_id: currentUser.userId !== "admin" ? currentUser.userId : null,
         ip_address: getClientIp(request),
-        metadata: JSON.stringify({ changes: { password_changed: !!password, role, active } }),
+        metadata: JSON.stringify({ changes: { password_changed: !!password, role, active, client_id: updates.client_id } }),
       });
 
       return updatedUser;

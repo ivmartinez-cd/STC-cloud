@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { useClientDetail } from '../hooks/useClientDetail';
 import { useToast } from '../context/ToastContext';
+import { useAuth } from '../context/AuthContext';
 import { OFFLINE_THRESHOLD_MS } from '../lib/constants';
 import ConfirmModal from '../components/ConfirmModal';
 import ClientUsageChart from '../components/agents/ClientUsageChart';
@@ -51,6 +52,11 @@ function timeAgo(dateStr: string | null, now: number): string {
 
 const ClientDetail = () => {
   const { id } = useParams<{ id: string }>();
+  const { role } = useAuth();
+  // Alta/baja de monitor son POST/DELETE /agents — fuera del allowlist de
+  // client_viewer (ver rolePolicy.ts): sin este chequeo el botón mandaría la
+  // request y el usuario vería un 403 recién al hacer click.
+  const isReadOnlyViewer = role === 'client_viewer';
   const { showToast } = useToast();
   const now = useNow();
   const { client, monitors, usage, loading, error, createMonitor, deleteMonitor } = useClientDetail(id!);
@@ -206,13 +212,15 @@ const ClientDetail = () => {
                   {monitors.length} NODOS
                 </span>
               </h2>
-              <button
-                onClick={() => setShowMonitorModal(true)}
-                className="bg-brand hover:bg-[#2471a3] text-white px-6 py-3 rounded-2xl flex items-center gap-3 text-sm font-extrabold shadow-lg shadow-blue-900/10 transition-all active:scale-95 group"
-              >
-                <Plus size={20} className="group-hover:rotate-90 transition-transform duration-300" />
-                Registrar Nuevo Monitor
-              </button>
+              {!isReadOnlyViewer && (
+                <button
+                  onClick={() => setShowMonitorModal(true)}
+                  className="bg-brand hover:bg-[#2471a3] text-white px-6 py-3 rounded-2xl flex items-center gap-3 text-sm font-extrabold shadow-lg shadow-blue-900/10 transition-all active:scale-95 group"
+                >
+                  <Plus size={20} className="group-hover:rotate-90 transition-transform duration-300" />
+                  Registrar Nuevo Monitor
+                </button>
+              )}
             </div>
 
             <div className="cd-panel overflow-hidden animate-in slide-in-from-bottom-4 duration-500">
@@ -260,13 +268,15 @@ const ClientDetail = () => {
                           </Link>
                         </td>
                         <td className="text-right">
-                          <button
-                            onClick={() => setMonitorToDelete({ id: m.id, name: m.name })}
-                            className="p-3 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-2xl transition-all active:scale-90"
-                            title="Eliminar Monitor"
-                          >
-                            <Trash2 size={18} />
-                          </button>
+                          {!isReadOnlyViewer && (
+                            <button
+                              onClick={() => setMonitorToDelete({ id: m.id, name: m.name })}
+                              className="p-3 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-2xl transition-all active:scale-90"
+                              title="Eliminar Monitor"
+                            >
+                              <Trash2 size={18} />
+                            </button>
+                          )}
                         </td>
                       </tr>
                     ))}

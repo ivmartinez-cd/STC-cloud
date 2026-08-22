@@ -19,6 +19,19 @@ function RequireAuth() {
   return isAuthenticated ? <Outlet /> : <Navigate to="/login" replace />;
 }
 
+/**
+ * Bloquea el acceso directo por URL a rutas que no aparecen en el nav para el rol
+ * actual (ver `Layout.tsx` navItems) — sin esto, ocultar el ítem del menú no evita
+ * que un `client_viewer` navegue a `/agents` a mano. `Agents.tsx` gestiona monitores
+ * de un cliente cualquiera (revocar, regenerar clave, config) — no es sólo lectura,
+ * a diferencia de `/monitors/:id`, que sí queda accesible para un viewer (con sus
+ * propias pestañas/acciones restringidas en la página).
+ */
+function RequireRole({ allowed }: { allowed: string[] }) {
+  const { role } = useAuth();
+  return allowed.includes(role) ? <Outlet /> : <Navigate to="/" replace />;
+}
+
 function App() {
   return (
     <AuthProvider>
@@ -32,7 +45,9 @@ function App() {
                 <Route path="/clients"       element={<Clients />} />
                 <Route path="/clients/:id"   element={<ClientDetail />} />
                 <Route path="/monitors/:id"  element={<MonitorDetail />} />
-                <Route path="/agents"        element={<Agents />} />
+                <Route element={<RequireRole allowed={['admin', 'operator']} />}>
+                  <Route path="/agents"      element={<Agents />} />
+                </Route>
                 <Route path="/devices/:id"   element={<DeviceDetail />} />
                 <Route path="/settings"      element={<Settings />} />
               </Route>

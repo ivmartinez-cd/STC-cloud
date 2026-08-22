@@ -2,6 +2,7 @@ import { FastifyRequest, FastifyReply } from "fastify";
 import { Knex } from "knex";
 import type { PortalUser } from "../middlewares/authMiddleware";
 import { getClientIp } from "../utils/ip";
+import { getScope } from "../utils/scope";
 
 export function createClientController(db: Knex) {
   return {
@@ -42,8 +43,12 @@ export function createClientController(db: Knex) {
       return client;
     },
 
-    listClients: async () =>
-      await db("clients")
+    listClients: async (request: FastifyRequest) => {
+      const scope = getScope(request);
+      return await db("clients")
+        .modify((q) => {
+          if (scope.kind === "client") q.where("clients.id", scope.id);
+        })
         .select(
           "clients.*",
           db.raw(
@@ -57,7 +62,8 @@ export function createClientController(db: Knex) {
         .leftJoin("agents as a", "a.client_id", "clients.id")
         .leftJoin("devices as d", "d.agent_id", "a.id")
         .groupBy("clients.id")
-        .orderBy("clients.name"),
+        .orderBy("clients.name");
+    },
 
     getClient: async (request: FastifyRequest) => {
       const { id } = request.params as { id: string };
@@ -81,6 +87,7 @@ export function createClientController(db: Knex) {
 
     getClientMonitors: async (request: FastifyRequest) => {
       const { id } = request.params as { id: string };
+      const scope = getScope(request);
       return await db("agents")
         .where("agents.client_id", id)
         .select(
@@ -90,8 +97,10 @@ export function createClientController(db: Knex) {
           "agents.last_seen",
           "agents.hardware_id",
           "agents.host_name",
-          "agents.ip_ranges",
           "agents.scan_interval_minutes",
+          // `ip_ranges` es topología interna de la LAN del cliente — sólo para
+          // admin/operator, no para un client_viewer de sólo lectura.
+          ...(scope.kind === "all" ? ["agents.ip_ranges"] : []),
           db.raw(
             "COUNT(DISTINCT CASE WHEN d.active = true THEN d.id END)::int AS device_count"
           )

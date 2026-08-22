@@ -2,14 +2,21 @@ import { FastifyReply, FastifyRequest } from "fastify";
 import { Knex } from "knex";
 import type { PortalUser } from "../middlewares/authMiddleware";
 import { getClientIp } from "../utils/ip";
+import { getScope } from "../utils/scope";
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export function createDeviceController(db: Knex) {
   return {
-    listDevices: async () =>
-      await db("devices")
+    listDevices: async (request: FastifyRequest) => {
+      const scope = getScope(request);
+      return await db("devices")
         .join("agents", "devices.agent_id", "agents.id")
         .join("clients", "agents.client_id", "clients.id")
         .where("devices.active", true)
+        .modify((q) => {
+          if (scope.kind === "client") q.andWhere("agents.client_id", scope.id);
+        })
         .select(
           "devices.*",
           db.raw("CASE WHEN devices.active = true THEN 'online' ELSE 'offline' END as status"),
@@ -20,11 +27,13 @@ export function createDeviceController(db: Knex) {
           "agents.client_id as client_id",
           "clients.name as client_name"
         )
-        .orderBy("clients.name"),
+        .orderBy("clients.name");
+    },
 
     getDevice: async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
-      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+      const scope = getScope(request);
+      const isUuid = UUID_RE.test(id);
 
       const device = await db("devices")
         .where(function() {
@@ -35,6 +44,13 @@ export function createDeviceController(db: Knex) {
                 .orWhere("devices.serial_number", id)
                 .orWhereRaw("devices.ip_address::text = ?", [id]);
           }
+        })
+        .modify((q) => {
+          // El `.where(function(){...})` de arriba genera un grupo con paréntesis
+          // reales, así que este `andWhere` queda al nivel superior — no lo anula la
+          // precedencia de los `orWhere` internos (a diferencia del bug de
+          // `globalSearch`, donde el OR no estaba agrupado).
+          if (scope.kind === "client") q.andWhere("agents.client_id", scope.id);
         })
         .select(
           "devices.*",
@@ -53,23 +69,38 @@ export function createDeviceController(db: Knex) {
       return device;
     },
 
-    getDeviceReadings: async (request: FastifyRequest) => {
+    getDeviceReadings: async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       const { from, to, limit } = request.query as { from?: string; to?: string; limit?: string };
-      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+      const scope = getScope(request);
+      const isUuid = UUID_RE.test(id);
 
-      let targetId = id;
-      if (!isUuid) {
-        const found = await db("devices")
-          .where(function() {
+      // Resolución de alias (prefijo/serial/IP) y ownership se hacen en UNA sola query,
+      // ANTES de tocar `readings`: antes, un `:id` no-UUID que no resolvía a ningún
+      // dispositivo se pasaba tal cual a `where({device_id: id})`, y Postgres lo
+      // rechazaba con `22P02 invalid input syntax for type uuid` → 500. Ahora, si no
+      // hay fila (no existe, o existe pero es de otro cliente), es un 404 — nunca se
+      // llega a construir la query de `readings` con un id sin resolver, y nunca se
+      // le agrega un join a esa query (hace `select("*")`: un join cambiaría la forma
+      // de la respuesta agregando columnas de `agents`).
+      const owned = await db("devices")
+        .leftJoin("agents", "agents.id", "devices.agent_id")
+        .where(function () {
+          if (isUuid) {
+            this.where("devices.id", id);
+          } else {
             this.whereRaw("devices.id::text LIKE ?", [`${id}%`])
                 .orWhere("devices.serial_number", id)
                 .orWhereRaw("devices.ip_address::text = ?", [id]);
-          })
-          .select("id")
-          .first();
-        if (found) targetId = found.id;
-      }
+          }
+        })
+        .modify((q) => {
+          if (scope.kind === "client") q.andWhere("agents.client_id", scope.id);
+        })
+        .select("devices.id")
+        .first();
+      if (!owned) return reply.status(404).send({ error: "Dispositivo no encontrado" });
+      const targetId = owned.id;
 
       const query = db("readings")
         .where({ device_id: targetId })

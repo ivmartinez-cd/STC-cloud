@@ -22,22 +22,37 @@ interface WsJwtPayload {
   role?: string;
 }
 
+/** Conexión de portal ya resuelta contra la base (rol + cliente del usuario). */
+interface PortalConn {
+  socket: WebSocketClient;
+  role: string;
+  clientId: string | null;
+}
+
 // Almacena clientes conectados
-const portalClients = new Set<WebSocketClient>();
+const portalClients = new Set<PortalConn>();
 const agentClients = new Map<string, WebSocketClient>();
 
 /**
- * Realiza un broadcast (difusión) de telemetría o eventos en tiempo real a todos
- * los clientes de portal web conectados de forma activa vía WebSocket.
- * 
+ * Realiza un broadcast (difusión) de telemetría o eventos en tiempo real a los
+ * clientes de portal web conectados de forma activa vía WebSocket.
+ *
+ * Los sockets de un `client_viewer` (clientId no nulo) NUNCA reciben nada acá: hoy el
+ * único evento es `command_result` (resultado de comandos remotos a agentes), y un
+ * client_viewer no puede ejecutar comandos — no tiene ningún uso legítimo de este
+ * evento, así que se falla cerrado en vez de resolver a qué cliente pertenece el
+ * agente en cada broadcast. Cuando haga falta un evento por cliente, el handshake ya
+ * consulta `agents` para agentClients — alcanza con sumar `client_id` a ese select.
+ *
  * @param {string} event - Nombre identificador del evento (ej: 'command_result', 'device_reading').
  * @param {unknown} data - Payload del evento a difundir.
  */
 export function broadcastToPortal(event: string, data: unknown) {
   const message = JSON.stringify({ event, data, timestamp: new Date().toISOString() });
-  for (const socket of portalClients) {
-    if (socket.readyState === 1) { // OPEN
-      socket.send(message);
+  for (const conn of portalClients) {
+    if (conn.clientId !== null) continue;
+    if (conn.socket.readyState === 1) { // OPEN
+      conn.socket.send(message);
     }
   }
 }
@@ -80,6 +95,7 @@ export async function registerWebSocket(fastify: FastifyInstance, db: Knex, redi
     const socket = connection; // @fastify/websocket v11: connection IS the WebSocket directly
 
     let agentId: string | null = null;
+    let portalConn: PortalConn | null = null;
     let user: WsJwtPayload | null = null;
 
     try {
@@ -126,7 +142,20 @@ export async function registerWebSocket(fastify: FastifyInstance, db: Knex, redi
         agentClients.set(agentId!, socket);
         fastify.log.info(`Agente ${agentId} conectado vía WSS`);
       } else if (user.role === 'portal') {
-        portalClients.add(socket);
+        // A diferencia de antes, se carga la fila del usuario (mismo criterio que
+        // `portalAuth` en REST): un usuario desactivado no debe poder abrir/mantener
+        // un canal WSS, y acá es también donde se resuelve el `client_id` para poder
+        // excluirlo de `broadcastToPortal`.
+        const dbUser = user.userId
+          ? await db('users').where({ id: user.userId }).select('active', 'role', 'client_id').first()
+          : null;
+        if (!dbUser || !dbUser.active) {
+          fastify.log.warn(`Conexión WSS rechazada: usuario ${user.userId} no encontrado o desactivado`);
+          socket.close(4001, 'Usuario no encontrado o desactivado');
+          return;
+        }
+        portalConn = { socket, role: dbUser.role, clientId: dbUser.client_id ?? null };
+        portalClients.add(portalConn);
         fastify.log.info(`Cliente de Portal (${user.userId}) conectado vía WSS`);
       } else {
         socket.close(4003, 'Rol no permitido');
@@ -196,7 +225,7 @@ export async function registerWebSocket(fastify: FastifyInstance, db: Knex, redi
     socket.on('close', () => {
       if (pingInterval) { clearInterval(pingInterval); pingInterval = null; }
       if (agentId) agentClients.delete(agentId);
-      else portalClients.delete(socket);
+      else if (portalConn) portalClients.delete(portalConn);
       fastify.log.info(`WSS: Conexión cerrada (${agentId || 'portal'})`);
     });
 
@@ -205,7 +234,7 @@ export async function registerWebSocket(fastify: FastifyInstance, db: Knex, redi
       fastify.log.error(`WSS Error: ${errMsg}`);
       if (pingInterval) { clearInterval(pingInterval); pingInterval = null; }
       if (agentId) agentClients.delete(agentId);
-      else portalClients.delete(socket);
+      else if (portalConn) portalClients.delete(portalConn);
     });
 
     await closePromise;

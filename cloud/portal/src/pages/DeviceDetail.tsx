@@ -11,6 +11,7 @@ import type { Device, SuppliesDetails, CounterTriple } from '../types/monitor';
 import { parseSuppliesDetails, buildSupplyRows, usageRate, fmtDate, fmtInt, type SupplyRow, type ReadingPoint } from '../lib/supplies';
 import { deviceImageCandidates } from '../lib/deviceImage';
 import { ConfirmationModal } from '../components/ui/ConfirmationModal';
+import { useAuth } from '../context/AuthContext';
 
 // ─── Tipos locales ───────────────────────────────────────────────────────────
 
@@ -102,6 +103,7 @@ const TripleRows = ({ label, t }: { label: string; t: CounterTriple | undefined 
 
 const DeviceDetail = () => {
   const { id } = useParams<{ id: string }>();
+  const { role } = useAuth();
   const navigate = useNavigate();
   const [readings, setReadings] = useState<Reading[]>([]);
   const [device, setDevice]     = useState<DeviceDetailData | null>(null);
@@ -298,7 +300,7 @@ const DeviceDetail = () => {
           <span className="bg-slate-100 text-slate-800 font-extrabold px-2.5 py-1 rounded-lg">{device?.serial_number || device?.ip_address || 'Dispositivo'}</span>
         </div>
         <div className="flex items-center gap-3">
-          {device && (
+          {device && role !== 'client_viewer' && (
             <button onClick={() => setDeleteOpen(true)} className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl border border-rose-200 text-xs font-bold transition-all">
               <Trash2 size={14} /> Eliminar
             </button>

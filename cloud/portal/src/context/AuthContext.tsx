@@ -6,6 +6,8 @@ interface AuthContextType {
   userEmail: string;
   userId: string;
   role: string;
+  /** Cliente al que está atado un usuario `client_viewer`; `null` para admin/operator. */
+  clientId: string | null;
   checking: boolean;
   login: (username: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -18,6 +20,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [userEmail, setUserEmail] = useState<string>('');
   const [userId, setUserId] = useState<string>('');
   const [role, setRole] = useState<string>('operator');
+  const [clientId, setClientId] = useState<string | null>(null);
   const [checking, setChecking] = useState<boolean>(true);
 
   useEffect(() => {
@@ -26,13 +29,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     fetch('/api/v1/portal/me', { credentials: 'include' })
       .then(res => {
         if (!res.ok) throw new Error('not authenticated');
-        return res.json() as Promise<{ userId: string; username?: string; role: string; token?: string }>;
+        return res.json() as Promise<{ userId: string; username?: string; role: string; clientId?: string | null; token?: string }>;
       })
       .then(data => {
         setIsAuthenticated(true);
         setUserEmail(data.username || data.userId);
         setUserId(data.userId);
         setRole(data.role);
+        setClientId(data.clientId ?? null);
         if (data.token) {
           sessionStorage.setItem('stc_ws_token', data.token);
         }
@@ -62,9 +66,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const meRes = await fetch('/api/v1/portal/me', { credentials: 'include' });
       if (meRes.ok) {
-        const meData = await meRes.json() as { userId: string; username?: string; role: string };
+        const meData = await meRes.json() as { userId: string; username?: string; role: string; clientId?: string | null };
         setUserId(meData.userId);
         setRole(meData.role);
+        setClientId(meData.clientId ?? null);
         setUserEmail(meData.username || meData.userId);
       } else {
         setUserEmail(username);
@@ -83,11 +88,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUserEmail('');
     setUserId('');
     setRole('operator');
+    setClientId(null);
     window.location.replace('/login');
   }, []);
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, userEmail, userId, role, checking, login, logout }}>
+    <AuthContext.Provider value={{ isAuthenticated, userEmail, userId, role, clientId, checking, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

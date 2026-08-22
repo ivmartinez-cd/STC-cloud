@@ -7,6 +7,7 @@ import {
   Command, Terminal as TerminalIcon, Download, BarChart2,
   Plus, Trash2
 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 import { useMonitorDetail } from '../hooks/useMonitorDetail';
 import { useTime } from '../hooks/useTime';
 import { formatRelativeTime } from '../lib/formatters';
@@ -26,6 +27,12 @@ type Tab = 'overview' | 'devices' | 'console' | 'config' | 'reports';
 const MonitorDetail = () => {
   const { id } = useParams<{ id: string }>();
   const { showToast } = useToast();
+  const { role } = useAuth();
+  // El backend deniega (403) consola/config/logs para un client_viewer — ver
+  // `rolePolicy.ts` (CLIENT_VIEWER_ROUTES no incluye `/agents/:id/config` ni
+  // `/agents/:id/logs*`, y ninguna ruta de comando/revocación/regeneración).
+  // Ocultar acá evita mandar esas requests y recibir un 403 en pantalla.
+  const isReadOnlyViewer = role === 'client_viewer';
   const now = useTime(30000);
   const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState<Tab>(() => {
@@ -103,9 +110,9 @@ const MonitorDetail = () => {
   const TABS: { id: Tab; label: string; icon: typeof Activity }[] = [
     { id: 'overview', label: 'Resumen',       icon: Activity },
     { id: 'devices',  label: 'Dispositivos',  icon: HardDrive },
-    { id: 'console',  label: 'Consola',       icon: TerminalIcon },
+    ...(isReadOnlyViewer ? [] : [{ id: 'console' as Tab, label: 'Consola', icon: TerminalIcon }]),
     { id: 'reports',  label: 'Reportes',      icon: BarChart2 },
-    { id: 'config',   label: 'Configuración', icon: Settings },
+    ...(isReadOnlyViewer ? [] : [{ id: 'config' as Tab, label: 'Configuración', icon: Settings }]),
   ];
 
   return (
@@ -135,24 +142,26 @@ const MonitorDetail = () => {
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          <button onClick={() => window.open(`/api/v1/agents/${id}/logs/export`, '_blank')}
-            className="px-6 py-4 bg-white text-emerald-600 font-black text-[10px] uppercase tracking-widest rounded-2xl shadow-xl shadow-blue-900/5 hover:bg-emerald-50 transition-all active:scale-95 flex items-center gap-3">
-            <Download size={18} /> Descargar Logs
-          </button>
-          <button onClick={() => handleTabChange('config')}
-            className="px-6 py-4 bg-white text-[#1a2333] font-black text-[10px] uppercase tracking-widest rounded-2xl shadow-xl shadow-blue-900/5 hover:bg-slate-50 transition-all active:scale-95 flex items-center gap-3">
-            <Settings size={18} /> Ajustes
-          </button>
-          <button onClick={handleRegen}
-            className="px-6 py-4 bg-white text-amber-600 font-black text-[10px] uppercase tracking-widest rounded-2xl shadow-xl shadow-blue-900/5 hover:bg-amber-50 transition-all active:scale-95 flex items-center gap-3">
-            <RefreshCw size={18} /> Regenerar Llave
-          </button>
-          <button onClick={() => setShowRevokeModal(true)}
-            className="px-6 py-4 bg-rose-50 text-rose-600 font-black text-[10px] uppercase tracking-widest rounded-2xl hover:bg-rose-600 hover:text-white transition-all active:scale-95 flex items-center gap-3">
-            <ShieldOff size={18} /> Revocar
-          </button>
-        </div>
+        {!isReadOnlyViewer && (
+          <div className="flex items-center gap-3">
+            <button onClick={() => window.open(`/api/v1/agents/${id}/logs/export`, '_blank')}
+              className="px-6 py-4 bg-white text-emerald-600 font-black text-[10px] uppercase tracking-widest rounded-2xl shadow-xl shadow-blue-900/5 hover:bg-emerald-50 transition-all active:scale-95 flex items-center gap-3">
+              <Download size={18} /> Descargar Logs
+            </button>
+            <button onClick={() => handleTabChange('config')}
+              className="px-6 py-4 bg-white text-[#1a2333] font-black text-[10px] uppercase tracking-widest rounded-2xl shadow-xl shadow-blue-900/5 hover:bg-slate-50 transition-all active:scale-95 flex items-center gap-3">
+              <Settings size={18} /> Ajustes
+            </button>
+            <button onClick={handleRegen}
+              className="px-6 py-4 bg-white text-amber-600 font-black text-[10px] uppercase tracking-widest rounded-2xl shadow-xl shadow-blue-900/5 hover:bg-amber-50 transition-all active:scale-95 flex items-center gap-3">
+              <RefreshCw size={18} /> Regenerar Llave
+            </button>
+            <button onClick={() => setShowRevokeModal(true)}
+              className="px-6 py-4 bg-rose-50 text-rose-600 font-black text-[10px] uppercase tracking-widest rounded-2xl hover:bg-rose-600 hover:text-white transition-all active:scale-95 flex items-center gap-3">
+              <ShieldOff size={18} /> Revocar
+            </button>
+          </div>
+        )}
       </header>
 
       {/* Tabs */}
@@ -185,7 +194,7 @@ const MonitorDetail = () => {
       )}
 
       {/* Console Tab */}
-      {activeTab === 'console' && (
+      {activeTab === 'console' && !isReadOnlyViewer && (
         <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
           <div className="bg-white p-8 rounded-[32px] border border-slate-100 shadow-xl shadow-blue-900/5">
             <div className="flex items-center gap-4 mb-8">
@@ -214,7 +223,7 @@ const MonitorDetail = () => {
       )}
 
       {/* Config Tab */}
-      {activeTab === 'config' && (
+      {activeTab === 'config' && !isReadOnlyViewer && (
         <ConfigTabPanel monitor={monitor} onSave={saveConfig} />
       )}
 

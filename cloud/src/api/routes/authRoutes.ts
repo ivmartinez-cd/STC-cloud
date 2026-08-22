@@ -45,7 +45,8 @@ const userCreateSchema = {
     properties: {
       username: { type: "string", minLength: 3, maxLength: 50 },
       password: { type: "string", minLength: 6 },
-      role: { type: "string", enum: ["admin", "operator"] },
+      role: { type: "string", enum: ["admin", "operator", "client_viewer"] },
+      client_id: { type: "string", format: "uuid" },
     },
   },
 };
@@ -55,8 +56,9 @@ const userUpdateSchema = {
     type: "object",
     properties: {
       password: { type: "string", minLength: 6 },
-      role: { type: "string", enum: ["admin", "operator"] },
+      role: { type: "string", enum: ["admin", "operator", "client_viewer"] },
       active: { type: "boolean" },
+      client_id: { type: "string", format: "uuid" },
     },
   },
 };

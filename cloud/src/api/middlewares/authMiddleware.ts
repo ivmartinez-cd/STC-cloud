@@ -2,6 +2,15 @@ import { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { Knex } from "knex";
 import Redis from "ioredis";
 import { AgentService } from "../../services/agentService";
+import { policyFor } from "../policy/rolePolicy";
+import {
+  agentIdParamMatchesScope,
+  clientIdParamMatchesScope,
+  getRouteKey,
+  getScope,
+  isAgentIdParamRoute,
+  isClientIdParamRoute,
+} from "../utils/scope";
 
 // ─── Tipos de Autenticación Exportados ───────────────────────────────────────
 
@@ -14,6 +23,8 @@ export interface PortalUser {
   username?: string;
   role: string;
   active: boolean;
+  /** Cliente al que está atado un `client_viewer`; `null` para admin/operator. */
+  clientId: string | null;
 }
 
 /** Payload decodificado del JWT del agente. */
@@ -26,6 +37,9 @@ interface PortalJwtPayload {
   role: string;
   userId: string;
 }
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 /**
  * Crea los middlewares de autenticación JWT para rutas de agente y portal.
  * Implementa RBAC estricto: un token de agente no puede acceder a rutas de portal y viceversa.
@@ -101,10 +115,16 @@ export function createAuthMiddleware(
         return reply.status(403).send({ error: "Token de agente no puede acceder a esta ruta" });
       }
 
-      // Validar si el usuario existe y está activo
-      const user = await db("users")
-        .where(db.raw("CAST(id AS TEXT) = ? OR username = ?", [decoded.userId, decoded.userId]))
-        .first();
+      // Validar si el usuario existe y está activo. Lookup determinista: antes era
+      // `CAST(id AS TEXT) = ? OR username = ?` con `.first()` sin ORDER BY — con dos
+      // ramas que pueden matchear filas distintas, qué fila "gana" quedaba a criterio
+      // del planner. Cosmético mientras el rol no autorizaba nada; ahora que el rol
+      // decide acceso entre clientes, la identidad resuelta tiene que ser determinista.
+      // El camino por `username` se conserva explícito para tokens viejos firmados en
+      // la era del login de respaldo por variable de entorno (`userId` no-UUID).
+      const user = UUID_RE.test(decoded.userId)
+        ? await db("users").where({ id: decoded.userId }).first()
+        : await db("users").where({ username: decoded.userId }).first();
 
       if (!user) {
         return reply.status(401).send({ error: "Usuario no encontrado" });
@@ -119,9 +139,58 @@ export function createAuthMiddleware(
         username: user.username,
         role: user.role,
         active: user.active,
+        clientId: user.client_id ?? null,
       };
     } catch {
       return reply.status(401).send({ error: "Token inválido o expirado" });
+    }
+
+    // ─── RBAC por cliente ─────────────────────────────────────────────────────
+    // Deliberadamente FUERA del try/catch de arriba: ese catch traduce cualquier
+    // excepción a 401 "token inválido", que sería engañoso para un fallo de
+    // autorización (p.ej. la consulta de `agentIdParamMatchesScope` fallando). Un
+    // error acá debe verse como lo que es — un 500 — no disfrazarse de sesión expirada.
+    try {
+      const user = (request as FastifyRequest & { user: PortalUser }).user;
+      const policy = policyFor(user.role);
+
+      // Eje ROL: cualquier `role` no registrado en `rolePolicy.ts` (typo, variante de
+      // mayúsculas, dato legacy) se deniega — nunca se trata como "sin restricción".
+      // Con las CHECK constraints de la migración esto no debería poder ocurrir en
+      // producción, pero la autorización no depende de esa garantía externa.
+      if (!policy) {
+        return reply.status(403).send({ error: "Rol no reconocido" });
+      }
+
+      if (policy.scoped) {
+        // Un client_viewer sin cliente asignado es un estado que la CHECK de la
+        // migración ya debería impedir; igual se falla cerrado acá por si acaso.
+        if (!user.clientId) {
+          return reply.status(403).send({ error: "Usuario sin cliente asignado" });
+        }
+
+        const routeKey = getRouteKey(request);
+        if (!policy.routes.has(routeKey)) {
+          return reply.status(403).send({ error: "No tiene permisos para acceder a este recurso" });
+        }
+
+        // Ownership central del `:id` en rutas paramétricas de cliente/agente: así el
+        // allowlist de rutas y el scoping de cada controlador no son dos mecanismos
+        // que deban ser ambos correctos para no filtrar datos de otro cliente.
+        const routeUrl = request.routeOptions.url ?? "";
+        const scope = getScope(request);
+
+        if (isClientIdParamRoute(routeUrl) && !clientIdParamMatchesScope(request, scope)) {
+          return reply.status(404).send({ error: "Cliente no encontrado" });
+        }
+
+        if (isAgentIdParamRoute(routeUrl) && !(await agentIdParamMatchesScope(db, request, scope))) {
+          return reply.status(404).send({ error: "Monitor no encontrado" });
+        }
+      }
+    } catch (err) {
+      request.log.error(err, "Error evaluando RBAC en portalAuth");
+      return reply.status(500).send({ error: "Error de autorización" });
     }
   }
 

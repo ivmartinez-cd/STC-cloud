@@ -26,6 +26,7 @@ import { registerDashboardRoutes } from "./routes/dashboardRoutes";
 import { registerFeedbackRoutes } from "./routes/feedbackRoutes";
 import { getClientIp } from "./utils/ip";
 import { SERVER_VERSION } from "../version";
+import { CLIENT_VIEWER_ROUTES } from "./policy/rolePolicy";
 
 dotenv.config({ path: path.join(__dirname, "../../../.env") });
 
@@ -254,6 +255,16 @@ const start = async () => {
 
     const { agentAuth, portalAuth } = createAuthMiddleware(fastify, db, redis, agentService);
 
+    // Recolecta toda ruta declarada (método + url) a medida que se registra, para
+    // validar contra la allowlist de RBAC apenas termine el registro — ver abajo.
+    const declaredRoutes = new Set<string>();
+    fastify.addHook("onRoute", (routeOptions) => {
+      const methods = Array.isArray(routeOptions.method) ? routeOptions.method : [routeOptions.method];
+      for (const method of methods) {
+        declaredRoutes.add(`${method} ${routeOptions.url}`);
+      }
+    });
+
     // ─── Rutas ────────────────────────────────────────────────────────────────
 
     registerAuthRoutes(fastify, db, redis, agentService, agentAuth, portalAuth);
@@ -263,6 +274,18 @@ const start = async () => {
     registerDeviceRoutes(fastify, db, portalAuth);
     registerDashboardRoutes(fastify, db, agentService, portalAuth);
     registerFeedbackRoutes(fastify, db, portalAuth);
+
+    // Assert de arranque: si una entrada de CLIENT_VIEWER_ROUTES no corresponde a
+    // ninguna ruta real (typo, ruta renombrada), esto sería una denegación SILENCIOSA
+    // en producción — indistinguible de "el rol no tiene acceso". Mejor abortar el
+    // arranque y que se note de inmediato.
+    const missingFromAllowlist = [...CLIENT_VIEWER_ROUTES].filter((r) => !declaredRoutes.has(r));
+    if (missingFromAllowlist.length > 0) {
+      fastify.log.error(
+        `RBAC: rutas en CLIENT_VIEWER_ROUTES sin ruta real registrada: ${missingFromAllowlist.join(", ")}`
+      );
+      process.exit(1);
+    }
 
     // ─── Start ────────────────────────────────────────────────────────────────
 

@@ -11,12 +11,22 @@ type SearchClient = { id: string; name: string };
 type SearchDevice = { id: string; serial_number: string; brand: string; model: string };
 type SearchResults = { clients: SearchClient[]; devices: SearchDevice[] };
 
+// `roles` ausente = visible para cualquier rol autenticado. "Agentes" expone
+// inventario/config de monitores de TODOS los clientes vistos por ese rol — no
+// tiene sentido para un client_viewer (que además el backend le deniega esas
+// rutas con 403).
 const navItems = [
-  { name: 'Dashboard',     path: '/',          icon: LayoutDashboard },
-  { name: 'Clientes',      path: '/clients',   icon: Users           },
-  { name: 'Agentes',       path: '/agents',    icon: Shield          },
-  { name: 'Configuración', path: '/settings',  icon: Settings        },
+  { name: 'Dashboard',     path: '/',          icon: LayoutDashboard, roles: undefined as string[] | undefined },
+  { name: 'Clientes',      path: '/clients',   icon: Users,           roles: undefined as string[] | undefined },
+  { name: 'Agentes',       path: '/agents',    icon: Shield,          roles: ['admin', 'operator'] },
+  { name: 'Configuración', path: '/settings',  icon: Settings,        roles: undefined as string[] | undefined },
 ];
+
+const ROLE_LABELS: Record<string, string> = {
+  admin: 'Administrador',
+  operator: 'Operador',
+  client_viewer: 'Cliente',
+};
 
 const useDebounce = (value: string, delay: number) => {
   const [debouncedValue, setDebouncedValue] = useState(value);
@@ -172,7 +182,7 @@ const Layout = () => {
             Navegación
           </div>
           
-          {navItems.map(({ name, path, icon: Icon }) => {
+          {navItems.filter((item) => !item.roles || item.roles.includes(role)).map(({ name, path, icon: Icon }) => {
             const active = isActive(path);
             return (
               <Link
@@ -255,7 +265,7 @@ const Layout = () => {
               
               <div className={`flex flex-col min-w-0 transition-all duration-500 ${isHovered ? 'opacity-100' : 'opacity-0 w-0 h-0 overflow-hidden'}`}>
                 <span className="text-sm font-bold text-slate-800 truncate">{email?.split('@')[0] || 'admin'}</span>
-                <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">{role === 'admin' ? 'Administrador' : 'Operador'}</span>
+                <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">{ROLE_LABELS[role] ?? role}</span>
               </div>
             </div>
             

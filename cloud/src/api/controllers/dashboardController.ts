@@ -1,11 +1,14 @@
 import { FastifyRequest } from "fastify";
 import { Knex } from "knex";
 import { AgentService } from "../../services/agentService";
+import { agentIdsOf, deviceIdsOf, getScope } from "../utils/scope";
 
 export function createDashboardController(db: Knex, agentService: AgentService) {
   return {
-    getDashboard: async () => {
+    getDashboard: async (request: FastifyRequest) => {
       const fiveMinsAgo = new Date(Date.now() - 5 * 60 * 1000);
+      const scope = getScope(request);
+      const cid = scope.kind === "client" ? scope.id : null;
 
       const [
         devicesCount,
@@ -20,33 +23,47 @@ export function createDashboardController(db: Knex, agentService: AgentService) 
         lastReadingInfo,
         clientsWithAlertsCount,
       ] = await Promise.all([
-        db("devices").where({ active: true }).count("* as c").first(),
+        db("devices")
+          .where({ active: true })
+          .modify((q) => { if (cid) q.whereIn("agent_id", agentIdsOf(db, cid)); })
+          .count("* as c")
+          .first(),
 
         db("agents")
+          .modify((q) => { if (cid) q.where("client_id", cid); })
           .select(
             db.raw("COUNT(*)::int as total"),
             db.raw("COUNT(CASE WHEN last_seen >= ? THEN 1 END)::int as online", [fiveMinsAgo])
           )
           .first(),
 
-        db("clients").count("* as c").first(),
+        db("clients")
+          .modify((q) => { if (cid) q.where("id", cid); })
+          .count("* as c")
+          .first(),
 
+        // Suma de deltas positivos entre lecturas consecutivas (no MAX-MIN del período):
+        // un reset/decremento de contador dentro del mes no debe inflar el volumen.
+        // La ventana interna se extiende 40 días atrás para que la primera lectura
+        // del mes tenga como base la última lectura del mes anterior. El filtro por
+        // cliente va DENTRO del subselect con ventana (no afuera, sobre `sub`): así el
+        // LAG de cada dispositivo sigue viendo su propia lectura previa aunque se
+        // filtre por cliente.
         db
           .raw(
             `
-          -- Suma de deltas positivos entre lecturas consecutivas (no MAX-MIN del período):
-          -- un reset/decremento de contador dentro del mes no debe inflar el volumen.
-          -- La ventana interna se extiende 40 días atrás para que la primera lectura
-          -- del mes tenga como base la última lectura del mes anterior.
           SELECT SUM(GREATEST(delta, 0))::bigint as total FROM (
             SELECT
-              time,
-              total_pages - LAG(total_pages) OVER (PARTITION BY device_id ORDER BY time) as delta
-            FROM readings
-            WHERE time >= date_trunc('month', now()) - INTERVAL '40 days'
+              r.time,
+              r.total_pages - LAG(r.total_pages) OVER (PARTITION BY r.device_id ORDER BY r.time) as delta
+            FROM readings r
+            ${cid ? "JOIN devices d ON d.id = r.device_id JOIN agents a ON a.id = d.agent_id" : ""}
+            WHERE r.time >= date_trunc('month', now()) - INTERVAL '40 days'
+            ${cid ? "AND a.client_id = ?" : ""}
           ) sub
           WHERE delta IS NOT NULL AND time >= date_trunc('month', now())
-        `
+        `,
+            cid ? [cid] : []
           )
           .then((r: { rows: Array<{ total: string | null }> }) => r.rows[0]),
 
@@ -55,12 +72,14 @@ export function createDashboardController(db: Knex, agentService: AgentService) 
           .count("devices.id as device_count")
           .leftJoin("agents", "agents.client_id", "clients.id")
           .leftJoin("devices", "devices.agent_id", "agents.id")
+          .modify((q) => { if (cid) q.where("clients.id", cid); })
           .groupBy("clients.id", "clients.name")
           .orderBy("device_count", "desc")
           .limit(5),
 
         db("devices")
           .where({ active: true })
+          .modify((q) => { if (cid) q.whereIn("devices.agent_id", agentIdsOf(db, cid)); })
           .select("brand")
           .count("* as count")
           .groupBy("brand")
@@ -76,6 +95,7 @@ export function createDashboardController(db: Knex, agentService: AgentService) 
               .orWhere("agents.status", "offline");
           })
           .whereNot("agents.status", "revoked")
+          .modify((q) => { if (cid) q.andWhere("agents.client_id", cid); })
           .select(
             "agents.id",
             "agents.name",
@@ -88,11 +108,13 @@ export function createDashboardController(db: Knex, agentService: AgentService) 
         db("devices")
           .where({ active: true })
           .where("created_at", ">=", new Date(Date.now() - 30 * 24 * 60 * 60 * 1000))
+          .modify((q) => { if (cid) q.whereIn("agent_id", agentIdsOf(db, cid)); })
           .count("* as c")
           .first(),
 
         db("readings")
           .where("time", ">=", new Date(Date.now() - 24 * 60 * 60 * 1000))
+          .modify((q) => { if (cid) q.whereIn("device_id", deviceIdsOf(db, cid)); })
           .count("* as c")
           .first(),
 
@@ -100,6 +122,7 @@ export function createDashboardController(db: Knex, agentService: AgentService) 
           .join("devices", "readings.device_id", "devices.id")
           .join("agents", "devices.agent_id", "agents.id")
           .join("clients", "agents.client_id", "clients.id")
+          .modify((q) => { if (cid) q.where("agents.client_id", cid); })
           .orderBy("readings.time", "desc")
           .select("readings.time", "clients.name as client_name")
           .first(),
@@ -108,6 +131,7 @@ export function createDashboardController(db: Knex, agentService: AgentService) 
           .join("devices", "alerts.device_id", "devices.id")
           .join("agents", "devices.agent_id", "agents.id")
           .where("alerts.resolved", false)
+          .modify((q) => { if (cid) q.andWhere("agents.client_id", cid); })
           .countDistinct("agents.client_id as c")
           .first(),
       ]);
@@ -149,15 +173,23 @@ export function createDashboardController(db: Knex, agentService: AgentService) 
     globalSearch: async (request: FastifyRequest) => {
       const { q } = request.query as { q?: string };
       if (!q || q.length < 2) return { clients: [], devices: [] };
-      return await agentService.globalSearch(q);
+      const scope = getScope(request);
+      return await agentService.globalSearch(q, scope.kind === "client" ? scope.id : null);
     },
 
     getAlerts: async (request: FastifyRequest) => {
       const { resolved, device_id } = request.query as { resolved?: string; device_id?: string };
+      const scope = getScope(request);
       const query = db("alerts")
         .join("devices", "alerts.device_id", "devices.id")
         .leftJoin("agents", "devices.agent_id", "agents.id")
         .leftJoin("clients", "agents.client_id", "clients.id")
+        .modify((q) => {
+          // Convierte los leftJoin en inner de hecho para un viewer: una alerta de un
+          // equipo con `agent_id` NULL (huérfano) no pertenece a ningún cliente, así
+          // que no debe verla nadie scopeado.
+          if (scope.kind === "client") q.where("agents.client_id", scope.id);
+        })
         .select(
           "alerts.id",
           "alerts.device_id",
