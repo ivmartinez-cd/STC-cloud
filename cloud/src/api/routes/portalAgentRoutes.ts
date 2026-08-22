@@ -147,4 +147,54 @@ export function registerPortalAgentRoutes(
     },
     handler: deviceCtrl.decommissionStaleDevices,
   });
+
+  // Lista de credenciales SNMP (§2.3 gap analysis: SNMPv3 + lista de
+  // credenciales). Deliberadamente NO en CLIENT_VIEWER_ROUTES: mismo criterio
+  // que /agents/:id/config (rolePolicy.ts) — son credenciales de la LAN
+  // completa del cliente, ninguna lectura viewer las necesita. Endpoint
+  // separado de /config a propósito: así el schema de /config nunca necesita
+  // aceptar material secreto (ver comentario en agentService.updateConfig).
+  fastify.get("/api/v1/agents/:id/snmp-credentials", {
+    preHandler: portalAuth, handler: ctrl.getSnmpCredentials,
+  });
+
+  fastify.put("/api/v1/agents/:id/snmp-credentials", {
+    preHandler: portalAuth,
+    schema: {
+      body: {
+        type: "object",
+        additionalProperties: false,
+        required: ["credentials"],
+        properties: {
+          expected_rev: { type: "integer", minimum: 0 },
+          credentials: {
+            type: "array",
+            maxItems: 8,
+            items: {
+              type: "object",
+              // additionalProperties:false a propósito NO se declara acá: una
+              // entrada es o bien { ref } o bien un objeto con forma variable
+              // según version (v1/v2c vs v3) — la validación fina de forma
+              // vive en snmpCredentials.validateCredentials, no en JSON Schema
+              // (ajv no expresa bien "si version=v3 entonces..." sin if/then
+              // anidados que complican más de lo que ganan acá).
+              properties: {
+                ref: { type: "string" },
+                version: { type: "string", enum: ["v1", "v2c", "v3"] },
+                label: { type: ["string", "null"], maxLength: 100 },
+                community: { type: "string", maxLength: 64 },
+                username: { type: "string", maxLength: 64 },
+                security_level: { type: "string", enum: ["noAuthNoPriv", "authNoPriv", "authPriv"] },
+                auth_protocol: { type: "string", enum: ["md5", "sha", "sha224", "sha256", "sha384", "sha512"] },
+                auth_key: { type: "string", maxLength: 256 },
+                priv_protocol: { type: "string", enum: ["des", "aes", "aes256b", "aes256r"] },
+                priv_key: { type: "string", maxLength: 256 },
+              },
+            },
+          },
+        },
+      },
+    },
+    handler: ctrl.updateSnmpCredentials,
+  });
 }

@@ -37,7 +37,7 @@ class FakeSnmp {
 
 function ctxWith(identity: DeviceIdentity, pages: Record<string, string>, snmp: Record<string, SnmpScalar> = {}, ports: PortMap = ALL_PORTS): CaptureContext {
   return {
-    ip: identity.ip, community: 'public', ports, identity,
+    ip: identity.ip, ports, identity,
     http: async (path) => pages[path] ?? null,
     snmp: new FakeSnmp(snmp) as unknown as SnmpClient,
     pjl: async () => null,
@@ -194,7 +194,7 @@ describe('familia hp.devmgmt', () => {
   });
   test('probeIdentity reconoce un HP por ProductConfigDyn.xml', async () => {
     const f = getFamily('hp.devmgmt')!;
-    const p = await f.probeIdentity!({ ip: '10.0.0.1', community: '', ports: WEB_ONLY, http: async (path) => pages[path as keyof typeof pages] ?? null, snmp: new FakeSnmp({}) as unknown as SnmpClient, pjl: async () => null, ipp: async () => null });
+    const p = await f.probeIdentity!({ ip: '10.0.0.1', ports: WEB_ONLY, http: async (path) => pages[path as keyof typeof pages] ?? null, snmp: new FakeSnmp({}) as unknown as SnmpClient, pjl: async () => null, ipp: async () => null });
     assert.equal(p?.model, 'HP Color LaserJet Pro MFP M479fdw');
   });
 });
@@ -331,7 +331,7 @@ describe('correcciones de campo (flota real)', () => {
   });
   test('una web cualquiera ("Default Page") no pasa la sonda Lexmark', async () => {
     const f = getFamily('lexmark.cgi')!;
-    const p = await f.probeIdentity!({ ip: '10.0.0.31', community: '', ports: WEB_ONLY, http: async () => '<html><head><title>Default Page</title></head><body>It works</body></html>', snmp: new FakeSnmp({}) as unknown as SnmpClient, pjl: async () => null, ipp: async () => null });
+    const p = await f.probeIdentity!({ ip: '10.0.0.31', ports: WEB_ONLY, http: async () => '<html><head><title>Default Page</title></head><body>It works</body></html>', snmp: new FakeSnmp({}) as unknown as SnmpClient, pjl: async () => null, ipp: async () => null });
     assert.equal(p, null);
   });
   test('firmware HP: ignora la revisión LEDM', async () => {
@@ -463,7 +463,7 @@ describe('familia hp.futuresmart (E47528 real)', () => {
 describe('SNMP bloqueado por el cliente → EWS como fuente, sin esperar timeouts', () => {
   test('SnmpClient.markUnreachable cortocircuita get/getMany/subtree', async () => {
     const { SnmpClient } = await import('../capture/transport/snmp');
-    const c = new SnmpClient('10.255.255.1', 'public');
+    const c = new SnmpClient('10.255.255.1', [{ id: 'test', version: 'v2c', community: 'public' }]);
     c.markUnreachable();
     const t = Date.now();
     assert.equal(await c.get('1.3.6.1.2.1.1.1.0'), null);

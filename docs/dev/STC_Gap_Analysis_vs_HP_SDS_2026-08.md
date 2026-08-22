@@ -34,7 +34,7 @@ retención** (`add_retention_policy` de TimescaleDB) para `readings`/`alerts`/
 `audit_logs`/`agent_logs` — los índices ya existen, pero nada purga datos viejos
 todavía (§2.7/R3 siguen abiertos en ese punto).
 
-### Fase 1 — Paridad operativa con SDS — parcial
+### Fase 1 — Paridad operativa con SDS — parcial: 5 de 7 ítems cerrados
 - ✅ **RBAC por cliente** (commit `7a47ce6`): rol `client_viewer`, scoping por
   `client_id` en los ~19 endpoints de lectura relevantes, deny-by-default por rol y
   por ruta. §2.6 "Jerarquía" y "Auth" (parte de CSRF/backdoor) quedan resueltos.
@@ -59,26 +59,48 @@ todavía (§2.7/R3 siguen abiertos en ese punto).
   (el agente ya decodifica esa tabla y la manda como `AlertItem[]` — lo que
   faltaba era el lado servidor, que es lo que se cerró acá).
 
+- ✅ **Reportes por cliente** (commit `1e056a1`): selector de período, cierre
+  mensual inmutable (lectura inicial/final, delta, método/fuente, `superseded_by`
+  al reabrir), export CSV/XLSX, y entrega automática por email/webhook (mismo
+  transporte de notificaciones de Fase 1). §2.5 queda resuelto.
+  **Lo que NO se hizo de §2.5**: export a PDF (quedó CSV/XLSX), entrega por SFTP.
+- ✅ **Identidad de dispositivo por cliente** (commit `2d4eef5`): clave compuesta
+  `(client_id, serial)` en vez de `(agent_id, serial)` — dos agentes viendo la
+  misma impresora ya no la duplican; decommission (soft-delete + reactivar),
+  mover entre agentes/clientes (con confirmación explícita si cambia de
+  cliente), merge manual de duplicados (historial de lecturas sumado, el
+  registro fuente queda como lápida vía `merged_into`), editar nombre/ubicación
+  con override. §2.4 queda resuelto.
+- ✅ **SNMPv3 + lista de credenciales por agente** (esta pasada): v1/v2c/v3
+  (MD5/SHA-2, DES/AES) con lista de hasta 8 credenciales por agente probadas en
+  orden por el agente hasta que una responda; secretos cifrados at-rest
+  (AES-256-GCM, clave derivada con HKDF-SHA256) en `agents.snmp_credentials`;
+  reorder/renombrar/borrar sin re-tipear contraseñas (referencia opaca por
+  `id`); optimistic locking (`snmp_credentials_rev`) contra dos pestañas del
+  portal pisándose; `snmp_community` legado sigue viajando siempre en el
+  heartbeat para agentes sin actualizar. Fail-fast del lado agente para que una
+  lista larga no multiplique el timeout de escaneo de un host muerto (probado
+  contra un agente SNMPv3 real simulado con `net-snmp`, no sólo con sesiones
+  falsas). §2.3 (versiones y lista de credenciales) queda resuelto.
+  **Lo que NO se hizo de §2.3, y queda para una pasada aparte** (ver ítem
+  pendiente más abajo): CIDR, tope de tamaño de rango, exclusiones, resolución
+  de hostname; credenciales por RANGO (esta pasada es por agente completo —
+  el formato de alambre hacia el agente ya soporta extenderlo después sin
+  tocar el agente); rotación de la clave de cifrado (el ciphertext lleva
+  prefijo de versión `"v1:"` desde el día uno para no bloquearla, pero el
+  mecanismo en sí no está implementado).
+
 **Pendiente por completo de Fase 1** (sin empezar):
-1. **Reportes por cliente** — selector de período, cierre mensual inmutable
-   (lectura inicial/final, delta, método, fuente), export XLSX/PDF, entrega
-   automática (email/webhook/SFTP). Hoy: `DeviceDetail` con 48 puntos, sin
-   página de reportes, `/reports` del dashboard es link muerto (§2.5, P0 — es
-   el ítem P0 más grande que queda sin tocar).
-2. **SNMPv3 + lista de credenciales** por agente/rango (v1/v2c/v3, MD5/SHA-2,
-   DES/AES). Hoy v2c hardcodeado, una sola community, `snmpVersion` en config
-   es campo muerto (§2.3, P1).
-3. **Horario laboral y TZ configurables** por agente. Hoy hardcodeado 08-18
+1. **CIDR, tope de rango y exclusiones** para el escaneo — hoy `ScanService`
+   materializa el rango IP completo en memoria sin límite (bug real de
+   escalabilidad, no sólo una feature que falta); credenciales SNMP por rango
+   (hoy son por agente completo, ver arriba) (§2.1/§2.3, P1).
+2. **Horario laboral y TZ configurables** por agente. Hoy hardcodeado 08-18
    L-V `America/Argentina/Buenos_Aires` en agente, servidor y portal — rompe
    con el primer cliente fuera de Argentina (§2.1, §3 R7, P1).
-4. **`scan_schedule`** — la columna y el tipo existen desde mayo pero ni el
+3. **`scan_schedule`** — la columna y el tipo existen desde mayo pero ni el
    agente lo lee ni el portal lo envía. Implementar de punta a punta o
    eliminarlo de docs/tipos (§2.1, P1).
-5. **Identidad de dispositivo por cliente** — clave compuesta `(client_id,
-   serial)` con MAC como secundaria (hoy es `(agent_id, serial)`: dos agentes
-   viendo la misma impresora la duplican); decommission (soft-delete), mover
-   entre agentes/clientes, merge de duplicados, editar nombre/ubicación (§2.4,
-   P0 — el otro P0 grande sin tocar).
 
 ### Fase 2 — Diferenciación — sin empezar
 Ninguno de estos ítems se tocó: API pública (API keys por cliente + webhooks de
@@ -277,14 +299,14 @@ Ver §1. Especialmente `data_collection_inventory.md` (privacidad) y los HTML de
 
 ¹ `/portal/me` y la respuesta de login siguen devolviendo el token también en el body (fallback para el WS cuando no hay cookie entre orígenes) — es una decisión consciente, no un pendiente.
 
-### Fase 1 — Paridad operativa con SDS (≈ 1 mes) — parcial: 2 de 6 ítems cerrados
+### Fase 1 — Paridad operativa con SDS (≈ 1 mes) — parcial: 5 de 7 ítems cerrados
 - ✅ **Alert loop** — lifecycle server-side completo: alertas `agent_offline`, `device_offline`, `counter_reset` (ya de Fase 0), normalización de las alertas EWS que ya llegaban del agente; **ack/resolve** y filtros; **notificaciones** email + webhook. ⬜ El loop *dedicado 3/15 min del lado agente* no se tocó (las alertas del agente siguen en el loop de supplies, 60/240 min); ⬜ digest diario no implementado.
-- ⬜ **Reportes por cliente**: selector de período, cierre mensual inmutable (lectura inicial/final, delta, fuente), export CSV/XLSX, y **entrega automática** (email/webhook/SFTP) para reemplazar el flujo FTP/mail del STC legado. **Sin empezar — es el P0 más grande que queda.**
+- ✅ **Reportes por cliente**: selector de período, cierre mensual inmutable (lectura inicial/final, delta, fuente), export CSV/XLSX, y **entrega automática** (email/webhook) para reemplazar el flujo FTP/mail del STC legado. ⬜ Export a PDF y entrega por SFTP no se hicieron (quedó CSV/XLSX + email/webhook).
 - ✅ **RBAC por cliente**: rol `client_viewer`, scoping por `client_id` en todos los controladores. ⬜ Paginación server‑side no se hizo (sigue sin paginación ninguna tabla del portal).
-- ⬜ **SNMPv3 y lista de credenciales** (v1/v2c/v3) por agente/rango; CIDR, tope de rango, exclusiones. **Sin empezar.**
+- ✅ **SNMPv3 y lista de credenciales** (v1/v2c/v3) por agente, hasta 8 credenciales probadas en orden, secretos cifrados at-rest, fail-fast para no multiplicar timeouts contra un host muerto. ⬜ CIDR, tope de rango, exclusiones y **credenciales por rango** (esta pasada es por agente completo) quedan para una pasada aparte.
 - ⬜ **Horario laboral y TZ configurables** por agente (enviados en heartbeat config); quitar TZ fija de agente/servidor/portal. **Sin empezar.**
 - ⬜ `scan_schedule`: implementar de punta a punta o eliminar de docs/tipos. **Sin empezar.**
-- ⬜ Identidad `(client_id, serial)` + MAC secundaria + merge de duplicados; decommission/mover/editar dispositivo. **Sin empezar — el otro P0 grande que queda.**
+- ✅ Identidad `(client_id, serial)` + MAC secundaria + merge de duplicados; decommission/mover/editar dispositivo.
 
 ### Fase 2 — Diferenciación (2–3 meses) — sin empezar, ningún ítem tocado
 - API pública con API keys por cliente + webhooks (lecturas, alertas, cierres) → integración ERP.

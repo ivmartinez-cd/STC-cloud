@@ -2,6 +2,8 @@ import { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { Knex } from "knex";
 import Redis from "ioredis";
 import { AgentService, AgentConfigUpdate } from "../../services/agentService";
+import { MissingEncryptionKeyError } from "../../services/cryptoService";
+import { SnmpCredentialValidationError } from "../../services/snmpCredentials";
 import { sendCommandToAgent } from "../../ws/index";
 import type { PortalUser } from "../middlewares/authMiddleware";
 import { getClientIp } from "../utils/ip";
@@ -148,6 +150,11 @@ export function createPortalAgentController(
         }
       }
 
+      // Vista ENMASCARADA únicamente (nunca los secretos ya guardados) — evita
+      // que `MonitorDetail` tenga que hacer un round-trip aparte a
+      // /snmp-credentials sólo para mostrar cuántas hay configuradas.
+      const maskedCreds = await agentService.getSnmpCredentialsMasked(id);
+
       return {
         ...agent,
         config: {
@@ -157,6 +164,8 @@ export function createPortalAgentController(
           scan_schedule: parsedScanSchedule,
           toner_warning_threshold: agent.toner_warning_threshold,
           toner_critical_threshold: agent.toner_critical_threshold,
+          snmp_credentials: maskedCreds?.credentials ?? [],
+          snmp_credentials_rev: maskedCreds?.rev ?? 0,
         },
       };
     },
@@ -387,7 +396,21 @@ export function createPortalAgentController(
 
     getConfig: async (request: FastifyRequest) => {
       const { id } = request.params as AgentIdParams;
-      return await agentService.getConfig(id);
+      // `agentService.getConfig()` es el método que alimenta el HEARTBEAT del
+      // agente y por eso descifra `snmp_credentials` a texto plano — NUNCA se
+      // le puede devolver eso al portal, ni a admin/operator. Se pide la
+      // config general y se pisa el campo con la vista enmascarada (o se lo
+      // saca del todo si no hay ninguna credencial guardada).
+      const config = await agentService.getConfig(id);
+      if (config) {
+        const masked = await agentService.getSnmpCredentialsMasked(id);
+        if (masked && masked.credentials.length > 0) {
+          config.snmp_credentials = masked.credentials;
+        } else {
+          delete config.snmp_credentials;
+        }
+      }
+      return config;
     },
 
     updateConfig: async (request: FastifyRequest) => {
@@ -397,6 +420,40 @@ export function createPortalAgentController(
         userId: user?.userId,
         ip: getClientIp(request),
       });
+    },
+
+    getSnmpCredentials: async (request: FastifyRequest, reply: FastifyReply) => {
+      const { id } = request.params as AgentIdParams;
+      const result = await agentService.getSnmpCredentialsMasked(id);
+      if (!result) return reply.status(404).send({ error: "Monitor no encontrado" });
+      return result;
+    },
+
+    updateSnmpCredentials: async (request: FastifyRequest, reply: FastifyReply) => {
+      const { id } = request.params as AgentIdParams;
+      const user = (request as FastifyRequest & { user: PortalUser }).user;
+      try {
+        const result = await agentService.replaceSnmpCredentials(id, request.body, {
+          userId: user?.userId,
+          ip: getClientIp(request),
+        });
+        if (!result) return reply.status(404).send({ error: "Monitor no encontrado" });
+        if (result.status === "conflict") {
+          return reply.status(409).send({
+            error: "La lista de credenciales cambió desde que la cargaste — recargá y volvé a intentar",
+            rev: result.rev,
+          });
+        }
+        return result;
+      } catch (e: unknown) {
+        if (e instanceof MissingEncryptionKeyError) {
+          return reply.status(503).send({ error: e.message, code: e.code });
+        }
+        if (e instanceof SnmpCredentialValidationError) {
+          return reply.status(400).send({ error: e.message, field: e.field });
+        }
+        throw e;
+      }
     },
   };
 }

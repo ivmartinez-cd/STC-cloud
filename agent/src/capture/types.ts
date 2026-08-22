@@ -104,7 +104,6 @@ export interface CaptureResult {
 /** Contexto que reciben las familias. Abstrae red para que sean testeables con fixtures. */
 export interface CaptureContext {
   ip:        string;
-  community: string;
   ports:     PortMap;
   identity:  DeviceIdentity;
   /** GET HTTP/S al EWS (sigue redirecciones, descomprime gzip, `null` si falla). */

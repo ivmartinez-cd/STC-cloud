@@ -10,7 +10,7 @@
     "start": "node dist/core/main.js",
     "install-svc": "node src/install/install.js",
     "uninstall-svc": "node src/install/uninstall.js",
-    "test": "npx tsx --test src/tests/capture.test.ts src/tests/queue.test.ts",
+    "test": "npx tsx --test src/tests/capture.test.ts src/tests/queue.test.ts src/tests/snmpNegotiate.test.ts",
     "test:capture": "npx tsx --test src/tests/capture.test.ts",
     "test:queue": "npx tsx --test src/tests/queue.test.ts",
     "snmp:sim": "npx tsx src/tests/snmpSimulator.ts",

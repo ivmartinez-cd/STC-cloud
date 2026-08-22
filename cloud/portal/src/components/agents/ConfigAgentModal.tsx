@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { X, Settings, Plus, Trash2, Loader2, Check } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { X, Settings, Plus, Trash2, Loader2, Check, KeyRound } from 'lucide-react';
 import { api } from '../../lib/api';
 import { useToast } from '../../context/ToastContext';
 import type { AgentConfig } from '../../types/agents';
@@ -25,6 +26,7 @@ export default function ConfigAgentModal({ modal, onClose }: Props) {
         setConfigForm({
           ip_ranges: data?.ip_ranges ?? [],
           snmp_community: data?.snmp_community ?? 'public',
+          snmp_credentials: data?.snmp_credentials ?? [],
         });
       } catch {
         setConfigForm(defaultConfig);
@@ -148,6 +150,21 @@ export default function ConfigAgentModal({ modal, onClose }: Props) {
                   onChange={e => setConfigForm(f => ({ ...f, snmp_community: e.target.value }))}
                   className="cd-input w-full !h-14 !bg-slate-50 border-transparent focus:!border-brand focus:!bg-white font-mono"
                 />
+              </div>
+
+              {/* Sólo informativo acá — la edición completa (v1/v2c/v3, reorder,
+                  reemplazo sin repetir secretos) vive en el tab Configuración
+                  del detalle del monitor, que tiene su propio flujo de guardado
+                  con optimistic locking. */}
+              <div className="p-5 bg-indigo-50 rounded-2xl border border-indigo-100 flex items-center gap-4">
+                <KeyRound className="text-indigo-500 shrink-0" size={20} />
+                <p className="text-xs text-indigo-900/80 font-bold leading-relaxed">
+                  {configForm.snmp_credentials?.length
+                    ? `${configForm.snmp_credentials.length} credencial(es) SNMP adicional(es) configurada(s).`
+                    : 'Sin credenciales SNMP adicionales configuradas.'}
+                  {' '}Editalas desde el detalle del monitor, pestaña{' '}
+                  <Link to={`/monitors/${modal.id}?tab=config`} className="underline hover:text-indigo-700">Configuración</Link>.
+                </p>
               </div>
 
               <div className="flex gap-6 pt-6">

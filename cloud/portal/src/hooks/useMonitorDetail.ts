@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
 import { useToast } from '../context/ToastContext';
-import type { MonitorData, Device, EditFormData } from '../types/monitor';
+import type { MonitorData, Device, EditFormData, SnmpCredentialInput } from '../types/monitor';
 
 const POLL_INTERVAL_MS = 45_000;
 
@@ -100,6 +100,25 @@ export function useMonitorDetail(id: string) {
     refetch();
   }, [id, showToast, refetch]);
 
+  /**
+   * Reemplaza TODA la lista de credenciales SNMP. Separado de `saveConfig` a
+   * propósito (mismo criterio que el endpoint separado del lado cloud): así
+   * el flujo de config general nunca necesita tocar material secreto.
+   * Siempre refresca al final (éxito o error) — un 409 trae un `rev` nuevo
+   * que el formulario necesita para el próximo intento, y `refetch()` lo trae
+   * a través de `GET /agents/:id`. El error se relanza para que el panel lo
+   * muestre (mensaje de validación, 409 de conflicto, o 503 sin clave
+   * configurada del lado cloud).
+   */
+  const saveSnmpCredentials = useCallback(async (credentials: SnmpCredentialInput[], expectedRev: number) => {
+    try {
+      await api.put(`/agents/${id}/snmp-credentials`, { credentials, expected_rev: expectedRev });
+      showToast('Credenciales SNMP actualizadas', 'success');
+    } finally {
+      refetch();
+    }
+  }, [id, showToast, refetch]);
+
   const regenerateKey = useCallback(async (): Promise<string> => {
     const data = await api.post<{ activation_key: string }>(`/agents/${id}/regenerate-key`);
     refetch();
@@ -115,7 +134,7 @@ export function useMonitorDetail(id: string) {
   return {
     monitor, devices, loading, error,
     commandLoading, sendCommand,
-    saveConfig, regenerateKey, revokeMonitor,
+    saveConfig, saveSnmpCredentials, regenerateKey, revokeMonitor,
     refetch, fetchDevices,
   };
 }

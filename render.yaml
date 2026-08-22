@@ -27,6 +27,14 @@ services:
         sync: false
       - key: PORTAL_ORIGIN
         sync: false
+      # Cifrado at-rest de las credenciales SNMPv3 (agents.snmp_credentials).
+      # NO generateValue: a diferencia de JWT_SECRET, esta clave tiene que
+      # poder replicarse a mano entre entornos (restore de un pg_dump en otra
+      # instancia, disaster recovery) y guardarse junto con los backups — si
+      # se pierde, las credenciales SNMPv3 ya guardadas quedan ilegibles
+      # (community/auth/priv v1/v2c siguen funcionando via el fallback legado).
+      - key: SNMP_CREDENTIALS_KEY
+        sync: false
       - key: TONER_WARN_PCT
         value: "20"
       - key: TONER_CRITICAL_PCT

@@ -26,6 +26,7 @@ import {
   upsertKnownDevice,
   closeQueue,
   getRawDb,
+  getKnownDeviceInfo,
 } from '../sync/database';
 import type { DeviceReading } from '../capture/reading';
 
@@ -170,6 +171,27 @@ describe('Known Devices Registry', () => {
   test('unregistered device returns false even if upserted without registered:true', () => {
     upsertKnownDevice('10.99.99.100', { serial: 'SN-XYZ', brand: 'lexmark', registered: false });
     assert.equal(isRegistered('10.99.99.100'), false);
+  });
+
+  test('snmp_cred_id: se persiste y sobrevive un upsert posterior sin credencial (COALESCE, nunca se limpia en fallo)', () => {
+    upsertKnownDevice('10.99.99.101', { serial: 'SN-CRED', registered: true, snmpCredId: 'cred-xyz' });
+    assert.equal(getKnownDeviceInfo('10.99.99.101')?.snmp_cred_id, 'cred-xyz');
+
+    // Un ciclo posterior donde la negociación no encontró ninguna credencial
+    // (out.credentialId === null) NO debe borrar el hint ya guardado — la
+    // negociación simplemente reintentará toda la lista el próximo ciclo.
+    upsertKnownDevice('10.99.99.101', { pollMethod: 'snmp' });
+    assert.equal(getKnownDeviceInfo('10.99.99.101')?.snmp_cred_id, 'cred-xyz', 'no debe limpiarse cuando el nuevo valor es null');
+
+    // Pero si otra credencial sirvió, sí se actualiza.
+    upsertKnownDevice('10.99.99.101', { snmpCredId: 'cred-abc' });
+    assert.equal(getKnownDeviceInfo('10.99.99.101')?.snmp_cred_id, 'cred-abc');
+  });
+
+  test('migración en caliente de snmp_cred_id es idempotente (columna ya existe en una base fresca)', () => {
+    // openQueue() ya corrió el ALTER TABLE al principio del archivo — reabrir
+    // no debe tirar aunque la columna ya exista (try/catch por sentencia).
+    assert.doesNotThrow(() => openQueue());
   });
 });
 

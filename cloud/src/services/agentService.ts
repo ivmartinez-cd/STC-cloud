@@ -5,6 +5,10 @@ import { Queue } from "bullmq";
 import * as alertService from "./alertService";
 import { resolveDeviceIdentity, NOISE_MODEL_RE } from "./deviceIdentity";
 import { mergeDevices } from "./deviceLifecycleService";
+import {
+  auditMetadata, buildStored, legacyCommunity, maskCredentials, toWire, validateCredentials,
+  type MaskedCredential, type StoredCredential,
+} from "./snmpCredentials";
 
 // ─── Interfaces de Tipado Fuerte ──────────────────────────────────────────────
 // Estas interfaces reemplazan los tipos `any` para cumplir con la Regla 5
@@ -348,7 +352,10 @@ export class AgentService {
       target_id: agentId,
       user_id: audit?.userId ?? null,
       ip_address: audit?.ip ?? null,
-      metadata: JSON.stringify(newConfig),
+      // Redactado: `newConfig` incluía `snmp_community` en claro (única
+      // credencial de la LAN del cliente) directo en audit_logs. Se guardan
+      // los nombres de campo tocados, nunca los valores sensibles.
+      metadata: JSON.stringify({ fields: Object.keys(updates) }),
     });
 
     return { status: "success" };
@@ -1092,9 +1099,12 @@ export class AgentService {
   async getConfig(agentId: string) {
     const agent = await this.db("agents")
       .where({ id: agentId })
-      .select("ip_ranges", "snmp_community", "scan_interval_minutes", "toner_warning_threshold", "toner_critical_threshold", "scan_schedule")
+      .select(
+        "ip_ranges", "snmp_community", "scan_interval_minutes", "toner_warning_threshold",
+        "toner_critical_threshold", "scan_schedule", "snmp_credentials"
+      )
       .first();
-    
+
     if (agent) {
       if (typeof agent.ip_ranges === 'string') {
         agent.ip_ranges = JSON.parse(agent.ip_ranges);
@@ -1102,8 +1112,78 @@ export class AgentService {
       if (typeof agent.scan_schedule === 'string') {
         agent.scan_schedule = JSON.parse(agent.scan_schedule);
       }
+      const storedCredentials: StoredCredential[] =
+        (typeof agent.snmp_credentials === 'string' ? JSON.parse(agent.snmp_credentials) : agent.snmp_credentials) ?? [];
+
+      // `snmp_community` legacy SIEMPRE viaja (agentes sin actualizar sólo
+      // entienden este campo) — se deriva de la lista si hay alguna entrada
+      // v1/v2c, si no cae a la columna vieja.
+      agent.snmp_community = legacyCommunity(storedCredentials, agent.snmp_community ?? null);
+      delete agent.snmp_credentials;
+
+      // El heartbeat NUNCA puede fallar por esto: si el descifrado revienta
+      // (clave ausente/rotada/corrupta), se omite el campo del payload en vez
+      // de propagar — un 500 acá rompería scan/logs/comandos de TODOS los
+      // agentes por un problema de una sola columna de un solo agente.
+      try {
+        const wire = toWire(storedCredentials);
+        if (wire.length > 0) agent.snmp_credentials = wire;
+      } catch (err) {
+        console.error(`[AGENT_SERVICE] No se pudo armar snmp_credentials para el heartbeat de ${agentId}:`, err);
+      }
     }
     return agent;
+  }
+
+  /** Vista enmascarada para el portal — nunca material de clave. `rev` para optimistic locking. */
+  async getSnmpCredentialsMasked(agentId: string): Promise<{ credentials: MaskedCredential[]; rev: number } | null> {
+    const agent = await this.db("agents").where({ id: agentId }).select("snmp_credentials", "snmp_credentials_rev").first();
+    if (!agent) return null;
+    const stored: StoredCredential[] =
+      (typeof agent.snmp_credentials === 'string' ? JSON.parse(agent.snmp_credentials) : agent.snmp_credentials) ?? [];
+    return { credentials: maskCredentials(stored), rev: agent.snmp_credentials_rev ?? 0 };
+  }
+
+  /**
+   * Reemplaza TODA la lista de credenciales SNMP de un agente. `expected_rev`
+   * evita que dos pestañas del portal se pisen (409 si no coincide con el
+   * valor actual). Lanza `MissingEncryptionKeyError`/`SnmpCredentialValidationError`
+   * — el controller las mapea a 503/400.
+   */
+  async replaceSnmpCredentials(
+    agentId: string,
+    body: unknown,
+    audit?: AuditContext
+  ): Promise<{ status: "success"; count: number; rev: number } | { status: "conflict"; rev: number } | null> {
+    const bodyObj = (body ?? {}) as { expected_rev?: unknown; credentials?: unknown };
+    const current = await this.db("agents").where({ id: agentId }).select("snmp_credentials", "snmp_credentials_rev").first();
+    if (!current) return null;
+
+    const currentRev = current.snmp_credentials_rev ?? 0;
+    if (typeof bodyObj.expected_rev === "number" && bodyObj.expected_rev !== currentRev) {
+      return { status: "conflict", rev: currentRev };
+    }
+
+    const currentStored: StoredCredential[] =
+      (typeof current.snmp_credentials === 'string' ? JSON.parse(current.snmp_credentials) : current.snmp_credentials) ?? [];
+    const validated = validateCredentials(bodyObj.credentials);
+    const nextStored = buildStored(validated, currentStored);
+    const nextRev = currentRev + 1;
+
+    await this.db("agents").where({ id: agentId }).update({
+      snmp_credentials: JSON.stringify(nextStored),
+      snmp_credentials_rev: nextRev,
+    });
+
+    await this.db("audit_logs").insert({
+      action: "AGENT_SNMP_CREDENTIALS_UPDATED",
+      target_id: agentId,
+      user_id: audit?.userId ?? null,
+      ip_address: audit?.ip ?? null,
+      metadata: JSON.stringify(auditMetadata(nextStored)),
+    });
+
+    return { status: "success", count: nextStored.length, rev: nextRev };
   }
 
   /**

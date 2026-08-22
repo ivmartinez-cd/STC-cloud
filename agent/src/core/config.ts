@@ -4,6 +4,7 @@ import os from 'os';
 import crypto from 'crypto';
 import { execSync } from 'child_process';
 import { SecurityUtils } from './security';
+import type { SnmpCredential } from '../capture/transport/snmp';
 
 export interface IpRange {
   start: string;
@@ -17,8 +18,29 @@ export interface AgentConfig {
   refreshToken: string;
   ipRanges: IpRange[];
   snmpCommunity: string;
-  snmpVersion: 1 | 2;
+  snmpVersion: 1 | 2; // sigue muerto (nunca se lee) — reemplazado conceptualmente por SnmpCredential.version
+  /** Lista de credenciales SNMP a probar en orden (§2.3 gap analysis). Puede
+   *  venir ausente en un `config.enc` guardado antes de esta pasada —
+   *  `normalizeConfig()` la sintetiza desde `snmpCommunity` en ese caso. */
+  snmpCredentials?: SnmpCredential[];
   proxyUrl?: string; // http://user:pass@proxy:8080 - opcional, para redes con proxy corporativo
+}
+
+/**
+ * Punto único de normalización de un config recién cargado. Si
+ * `snmpCredentials` no vino (config.enc de antes de esta pasada, o un
+ * heartbeat que aún no empujó ninguna), se sintetiza una lista de una sola
+ * entrada v2c a partir de `snmpCommunity` — así el resto del código
+ * (`ScanService`, `SnmpClient`) siempre puede asumir un array no vacío, sin
+ * repetir la síntesis en cada punto de uso (los dos loops de `ScanService`,
+ * `scanner.ts`, `ConsoleEngine`).
+ */
+export function normalizeConfig(config: AgentConfig): AgentConfig {
+  if (config.snmpCredentials && config.snmpCredentials.length > 0) return config;
+  return {
+    ...config,
+    snmpCredentials: [{ id: 'legacy', version: 'v2c', community: config.snmpCommunity }],
+  };
 }
 
 // --- Hardware ID (seccion 9.1 del PDF: MAC + UUID de disco) ---
@@ -112,7 +134,7 @@ export class ConfigManager {
     try {
       const encrypted = fs.readFileSync(CONFIG_PATH, 'utf8');
       const json = await SecurityUtils.decrypt(encrypted, getHardwareId());
-      return JSON.parse(json) as AgentConfig;
+      return normalizeConfig(JSON.parse(json) as AgentConfig);
     } catch (error: unknown) {
       const msg: string = error instanceof Error ? error.message : String(error);
       // AES-256-GCM auth-tag failure = HWID del equipo cambio desde la activacion

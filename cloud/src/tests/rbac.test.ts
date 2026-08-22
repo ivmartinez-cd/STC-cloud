@@ -376,6 +376,11 @@ describe('RBAC — lecturas denegadas para client_viewer', () => {
     assert.equal(status, 403);
   });
 
+  test('/agents/:id/snmp-credentials → 403 (mismo criterio que /config)', async () => {
+    const { status } = await req('GET', `/agents/${rbac.agentAId}/snmp-credentials`, undefined, rbac.viewerToken);
+    assert.equal(status, 403);
+  });
+
   test('/agents/:id/logs y /logs/export → 403', async () => {
     const r1 = await req('GET', `/agents/${rbac.agentAId}/logs`, undefined, rbac.viewerToken);
     assert.equal(r1.status, 403);
@@ -408,6 +413,14 @@ describe('RBAC — mutaciones denegadas para client_viewer', () => {
   test('PUT /agents/:id/config → 403', async () => {
     const { status } = await req('PUT', `/agents/${rbac.agentAId}/config`, {}, rbac.viewerToken);
     assert.equal(status, 403);
+  });
+
+  test('PUT /agents/:id/snmp-credentials → 403, y no se guarda nada (verificado como admin)', async () => {
+    const denied = await req('PUT', `/agents/${rbac.agentAId}/snmp-credentials`,
+      { credentials: [{ version: 'v2c', community: 'hackeado' }] }, rbac.viewerToken);
+    assert.equal(denied.status, 403);
+    const check = await req('GET', `/agents/${rbac.agentAId}/snmp-credentials`, undefined, rbac.adminToken);
+    assert.equal(check.data.credentials.length, 0, 'El viewer no debe poder crear una credencial');
   });
 
   test('POST /agents/:id/command → 403', async () => {

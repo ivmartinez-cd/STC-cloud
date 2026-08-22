@@ -21,6 +21,13 @@ function hintFrom(d: KnownDevice | null): CaptureHint | undefined {
   return { driver: d.driver, brand: d.brand, model: d.model, serial: d.serial, pollMethod: d.poll_method };
 }
 
+/** Lista de credenciales a probar + cuál probar primero (si ya se sabe cuál
+ *  sirvió la última vez para esta IP — evita recorrer toda la lista en cada
+ *  ciclo para equipos ya conocidos). */
+function snmpArgsFor(config: AgentConfig, known: KnownDevice | null) {
+  return { credentials: config.snmpCredentials ?? [], preferredCredentialId: known?.snmp_cred_id ?? null };
+}
+
 /**
  * Orquesta los tres loops de red del agente usando el motor de captura:
  *  - scan()             : discovery sobre los rangos IP (identidad + todo), registra equipos nuevos.
@@ -64,7 +71,7 @@ export class ScanService {
             if (!ip) break;
             try {
               const known = getKnownDeviceInfo(ip);
-              const out = await captureDevice({ ip, community: config.snmpCommunity, scopes: DISCOVERY_SCOPES, hint: hintFrom(known) });
+              const out = await captureDevice({ ip, ...snmpArgsFor(config, known), scopes: DISCOVERY_SCOPES, hint: hintFrom(known) });
               if (!out) continue;
               const { reading, driver } = out;
               const driverId = driver.profile?.id ?? driver.family.id;
@@ -72,9 +79,9 @@ export class ScanService {
               if (!isRegistered(ip)) {
                 const ok = await this.registerDevice(config, reading);
                 if (!ok) log('WARN', `[${ip}] Registro fallido (HTTP Error) - se reintentara en el proximo scan.`);
-                upsertKnownDevice(ip, { serial: reading.serial ?? undefined, brand: reading.brand, model: reading.model, registered: ok, pollMethod: reading.poll_method, driver: driverId });
+                upsertKnownDevice(ip, { serial: reading.serial ?? undefined, brand: reading.brand, model: reading.model, registered: ok, pollMethod: reading.poll_method, driver: driverId, snmpCredId: out.credentialId });
               } else {
-                upsertKnownDevice(ip, { serial: reading.serial ?? undefined, model: reading.model, pollMethod: reading.poll_method, driver: driverId });
+                upsertKnownDevice(ip, { serial: reading.serial ?? undefined, model: reading.model, pollMethod: reading.poll_method, driver: driverId, snmpCredId: out.credentialId });
               }
 
               enqueueReading(reading);
@@ -121,7 +128,7 @@ export class ScanService {
           const d = queue.shift();
           if (!d) break;
           try {
-            const out = await captureDevice({ ip: d.ip, community: config.snmpCommunity, scopes, hint: hintFrom(d), trustHint: true });
+            const out = await captureDevice({ ip: d.ip, ...snmpArgsFor(config, d), scopes, hint: hintFrom(d), trustHint: true });
             if (!out || !out.result) continue; // apagada / sin respuesta: no encolar lecturas vacías
             const reading = out.reading;
             const hasData = reading.total_pages !== null || reading.toner_black != null || reading.toner_cyan != null
@@ -129,7 +136,7 @@ export class ScanService {
             if (!hasData) continue;
             if (!reading.serial && d.serial) reading.serial = d.serial;
             enqueueReading(reading);
-            upsertKnownDevice(d.ip, { pollMethod: reading.poll_method, driver: out.driver.profile?.id ?? out.driver.family.id });
+            upsertKnownDevice(d.ip, { pollMethod: reading.poll_method, driver: out.driver.profile?.id ?? out.driver.family.id, snmpCredId: out.credentialId });
             log('INFO', `[${label}] [${d.ip}] ${summarize(reading)} method=${reading.poll_method}`);
           } catch { /* continue */ }
         }

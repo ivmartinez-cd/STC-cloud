@@ -38,7 +38,7 @@ agent/src/
 │   ├── registry.ts        # Familias + perfiles; resolve()
 │   ├── families/          # Lógica de protocolo por firmware (hp.devmgmt, samsung.syncthru, samsung.sws, lexmark.cgi, generic.printer-mib, ...)
 │   ├── models/<marca>/    # Un archivo declarativo por modelo de impresora (defineModel)
-│   ├── transport/         # fetchHttp (EWS) y SnmpClient (GET por lotes, GETBULK)
+│   ├── transport/         # fetchHttp (EWS) y SnmpClient (GET por lotes, GETBULK, v1/v2c/v3 con lista de credenciales y negociación fail-fast)
 │   └── normalize.ts       # CaptureResult → DeviceReading (contrato del servidor)
 ├── snmp/
 │   ├── scanner.ts         # Fachada de compatibilidad sobre capture/ (readDevice, readViaSNMP, ...)
@@ -77,9 +77,11 @@ cloud/src/
 │   ├── middlewares/       # Validadores de tokens JWT (portalAuth y agentAuth)
 │   └── utils/             # Funciones criptográficas y formateadores comunes
 ├── services/
-│   ├── agentService.ts    # Lógica de registro, control de latidos (Heartbeats) de agentes
-│   ├── deviceService.ts   # Coalescencia e inserciones transaccionales de impresoras
-│   └── auditService.ts    # Registro inmutable de auditoría en la tabla `audit_logs`
+│   ├── agentService.ts        # Lógica de registro, control de latidos (Heartbeats) de agentes
+│   ├── deviceService.ts       # Coalescencia e inserciones transaccionales de impresoras
+│   ├── auditService.ts        # Registro inmutable de auditoría en la tabla `audit_logs`
+│   ├── snmpCredentials.ts     # Validación/enmascarado/cifrado de la lista de credenciales SNMP por agente (lógica pura, sin Knex)
+│   └── cryptoService.ts       # Cifrado at-rest (AES-256-GCM, clave HKDF-SHA256 cacheada) usado por snmpCredentials.ts
 ├── db/
 │   ├── knex.ts            # Conexión principal parametrizada con Knex.js
 │   ├── migrations/        # Scripts estructurados SQL de migración en caliente

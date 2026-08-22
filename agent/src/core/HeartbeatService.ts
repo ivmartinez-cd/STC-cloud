@@ -7,10 +7,16 @@ import type { AgentConfig } from './config';
 import { ConfigManager } from './config';
 import type { CommandHandler, CommandResult } from './CommandHandler';
 import { VERSION } from './version';
+import type { SnmpCredential } from '../capture/transport/snmp';
 
 export interface RemoteConfigPayload {
   ip_ranges?: Array<{ start: string; end: string }>;
   snmp_community?: string;
+  /** Lista completa de credenciales SNMP — AUSENTE significa "sin novedad,
+   *  conservá lo que tengas" (nunca se chequea con truthy: una lista vacía
+   *  `[]` es una novedad real — "volver al legacy" — y `snmp_community`
+   *  vacío también lo sería si alguna vez se mandara así). */
+  snmp_credentials?: SnmpCredential[];
 }
 
 interface HeartbeatDeps {
@@ -132,9 +138,25 @@ export class HeartbeatService {
     }
 
     if (remote.snmp_community && remote.snmp_community !== config.snmpCommunity) {
-      log('INFO', `Nueva comunidad SNMP: ${remote.snmp_community}`);
+      // Nunca loguear el valor: `agent_logs` viaja al cloud en cada heartbeat
+      // (ver arriba) — la community de la LAN del cliente no debe quedar en
+      // claro ahí.
+      log('INFO', 'Nueva comunidad SNMP recibida (legacy v1/v2c).');
       config.snmpCommunity = remote.snmp_community;
       changed = true;
+    }
+
+    if (remote.snmp_credentials !== undefined) {
+      const prevCount = config.snmpCredentials?.length ?? 0;
+      if (JSON.stringify(remote.snmp_credentials) !== JSON.stringify(config.snmpCredentials)) {
+        // Igual que arriba: nunca loguear community/auth_key/priv_key, sólo
+        // metadata no sensible (RFC 3414: username y protocolos no son
+        // secretos, pero se omiten igual acá para no acoplar el log al
+        // formato del payload).
+        log('INFO', `Lista de credenciales SNMP actualizada: ${prevCount} -> ${remote.snmp_credentials.length}.`);
+        config.snmpCredentials = remote.snmp_credentials;
+        changed = true;
+      }
     }
 
     if (changed) {

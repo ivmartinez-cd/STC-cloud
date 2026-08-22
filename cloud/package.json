@@ -8,7 +8,7 @@
     "build": "tsc",
     "start": "node dist/api/server.js",
     "seed": "knex seed:run --knexfile src/db/knexfile.ts",
-    "test": "npx tsx --test --test-concurrency=1 src/tests/e2e.test.ts src/tests/rbac.test.ts src/tests/alerts.test.ts src/tests/reports.test.ts src/tests/deviceLifecycle.test.ts",
+    "test": "npx tsx --test --test-concurrency=1 src/tests/e2e.test.ts src/tests/rbac.test.ts src/tests/alerts.test.ts src/tests/reports.test.ts src/tests/deviceLifecycle.test.ts src/tests/snmpCredentials.test.ts",
     "test:load": "npx tsx src/tests/loadTest.ts"
   },
   "dependencies": {

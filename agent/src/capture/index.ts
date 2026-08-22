@@ -10,7 +10,7 @@ import { readDeviceViaPJL } from '../snmp/pjl';
 import { readDeviceViaIPP } from '../snmp/ipp';
 import { detectBrandFromText } from '../snmp/oids';
 import { fetchHttp } from './transport/http';
-import { SnmpClient } from './transport/snmp';
+import { SnmpClient, type SnmpCredential } from './transport/snmp';
 import { snmpIdentity, genericPrinterMib } from './families/generic-printer-mib';
 import { resolve, listFamilies, GENERIC_FAMILY } from './registry';
 import { mergeResults } from './bridge';
@@ -20,6 +20,7 @@ import type { DeviceReading } from './reading';
 
 export type { CaptureScope, DeviceIdentity, PortMap, ResolvedDriver, CaptureResult, PollMethod } from './types';
 export type { DeviceReading } from './reading';
+export type { SnmpCredential, SecurityLevelName, AuthProtocolName, PrivProtocolName } from './transport/snmp';
 export { listFamilies, listProfiles, getFamily, getProfile, resolve } from './registry';
 
 // ─── Precalificación de puertos ──────────────────────────────────────────────
@@ -76,10 +77,13 @@ export interface CaptureHint {
 }
 
 export interface CaptureOptions {
-  ip:        string;
-  community: string;
-  scopes:    readonly CaptureScope[];
-  hint?:     CaptureHint;
+  ip:          string;
+  credentials: SnmpCredential[];
+  /** id de la credencial que sirvió la última vez para este equipo (de
+   *  `known_devices.snmp_cred_id`) — se prueba primero, sin garantía. */
+  preferredCredentialId?: string | null;
+  scopes:      readonly CaptureScope[];
+  hint?:       CaptureHint;
   /** Si true, confía en el hint (marca/modelo/serial) y no re-identifica por red. Para loops. */
   trustHint?: boolean;
   log?:      CaptureContext['log'];
@@ -91,6 +95,10 @@ export interface CaptureOutcome {
   driver:   ResolvedDriver;
   ports:    PortMap;
   result:   CaptureResult | null;
+  /** Credencial SNMP que respondió este ciclo, o `null` si ninguna (SNMP no
+   *  respondió, o la identidad vino por otra vía). Lo persiste `ScanService`
+   *  en `known_devices.snmp_cred_id` para acelerar el próximo ciclo. */
+  credentialId: string | null;
 }
 
 async function identify(ip: string, ports: PortMap, snmp: SnmpClient, log?: CaptureContext['log']): Promise<DeviceIdentity | null> {
@@ -103,7 +111,7 @@ async function identify(ip: string, ports: PortMap, snmp: SnmpClient, log?: Capt
   // 2. Sondas EWS de las familias (sólo si hay puerto de impresora o web). Timeout corto.
   if (hasWeb) {
     const http = (path: string, protocol: 'http' | 'https' = 'http') => fetchHttp(ip, path, protocol, 0, PROBE_HTTP_TIMEOUT);
-    const base = { ip, community: '', ports, http, snmp, pjl: () => readDeviceViaPJL(ip), ipp: () => readDeviceViaIPP(ip), log };
+    const base = { ip, ports, http, snmp, pjl: () => readDeviceViaPJL(ip), ipp: () => readDeviceViaIPP(ip), log };
     // Todas las sondas en paralelo (1 request c/u); gana la primera válida según la prioridad de familias.
     const families = listFamilies().filter(f => f.probeIdentity);
     const probes = await Promise.all(families.map(f => f.probeIdentity!(base).catch(() => null)));
@@ -155,9 +163,16 @@ function needs(result: CaptureResult | null, scope: CaptureScope): boolean {
  */
 export async function captureDevice(opts: CaptureOptions): Promise<CaptureOutcome | null> {
   await sem.acquire();
-  const snmp = new SnmpClient(opts.ip, opts.community);
+  const snmp = new SnmpClient(opts.ip, opts.credentials, opts.preferredCredentialId);
   try {
     const ports = await checkOpenPorts(opts.ip);
+    // Evidencia de que hay ALGO vivo en esta IP (aunque no sea SNMP) — habilita
+    // el fail-fast de la negociación a probar más de una credencial. Un
+    // dispositivo ya conocido (trustHint) cuenta como vivo aunque no tenga
+    // ningún puerto TCP abierto en este ciclo puntual.
+    if (ports.jetdirect || ports.ipp || ports.http || ports.https || opts.trustHint) {
+      snmp.markHostAlive();
+    }
 
     // Identidad
     let identity: DeviceIdentity | null = null;
@@ -180,7 +195,6 @@ export async function captureDevice(opts: CaptureOptions): Promise<CaptureOutcom
     const driver = resolve(identity, ports, opts.hint?.driver);
     const ctx: CaptureContext = {
       ip: opts.ip,
-      community: opts.community,
       ports,
       identity,
       http: (path, protocol = 'http') => fetchHttp(opts.ip, path, protocol),
@@ -229,13 +243,13 @@ export async function captureDevice(opts: CaptureOptions): Promise<CaptureOutcom
 
     if (!result && opts.scopes.some(s => s !== 'identity')) {
       // Conocemos el dispositivo pero no pudimos leer nada en este ciclo.
-      return { reading: toDeviceReading(identity, null, driver.profile), identity, driver, ports, result: null };
+      return { reading: toDeviceReading(identity, null, driver.profile), identity, driver, ports, result: null, credentialId: snmp.activeCredentialId };
     }
 
     // El método principal es el que aportó los contadores; si no hubo contadores, el de la identidad.
     if (result && !result.meters && result.method === 'snmp' && identity.source !== 'snmp') result.method = identity.source;
     const reading = toDeviceReading(identity, result, driver.profile);
-    return { reading, identity, driver, ports, result };
+    return { reading, identity, driver, ports, result, credentialId: snmp.activeCredentialId };
   } finally {
     snmp.close();
     sem.release();

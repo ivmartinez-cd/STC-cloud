@@ -16,11 +16,12 @@ import DeviceSummaryCard from '../components/monitors/DeviceSummaryCard';
 import LicenseCard from '../components/monitors/LicenseCard';
 import DeviceInventoryTable from '../components/monitors/DeviceInventoryTable';
 import ReportsTabPanel from '../components/monitors/ReportsTabPanel';
+import SnmpCredentialsPanel from '../components/monitors/SnmpCredentialsPanel';
 import RemoteToolsPanel from '../components/monitors/RemoteToolsPanel';
 import Terminal from '../components/Terminal';
 import ConfirmModal from '../components/ConfirmModal';
 import { useToast } from '../context/ToastContext';
-import type { EditFormData, MonitorData } from '../types/monitor';
+import type { EditFormData, MonitorData, SnmpCredentialInput } from '../types/monitor';
 
 type Tab = 'overview' | 'devices' | 'console' | 'config' | 'reports';
 
@@ -47,7 +48,7 @@ const MonitorDetail = () => {
   const {
     monitor, devices, loading, error,
     commandLoading, sendCommand,
-    saveConfig, regenerateKey, revokeMonitor,
+    saveConfig, saveSnmpCredentials, regenerateKey, revokeMonitor,
   } = useMonitorDetail(id!);
 
   const handleTabChange = (tab: Tab) => {
@@ -226,7 +227,7 @@ const MonitorDetail = () => {
 
       {/* Config Tab */}
       {activeTab === 'config' && !isReadOnlyViewer && (
-        <ConfigTabPanel monitor={monitor} onSave={saveConfig} />
+        <ConfigTabPanel monitor={monitor} onSave={saveConfig} onSaveSnmpCredentials={saveSnmpCredentials} />
       )}
 
       {/* Revoke Confirm */}
@@ -290,9 +291,10 @@ const MonitorDetail = () => {
 interface ConfigTabPanelProps {
   monitor: MonitorData;
   onSave: (form: EditFormData) => Promise<void>;
+  onSaveSnmpCredentials: (credentials: SnmpCredentialInput[], expectedRev: number) => Promise<void>;
 }
 
-const ConfigTabPanel = ({ monitor, onSave }: ConfigTabPanelProps) => {
+const ConfigTabPanel = ({ monitor, onSave, onSaveSnmpCredentials }: ConfigTabPanelProps) => {
   const [form, setForm] = useState<EditFormData>(() => {
     let ranges = [];
     if (monitor.config?.ip_ranges) {
@@ -499,6 +501,11 @@ const ConfigTabPanel = ({ monitor, onSave }: ConfigTabPanelProps) => {
           </div>
         </div>
 
+        <SnmpCredentialsPanel
+          credentials={monitor.config?.snmp_credentials ?? []}
+          rev={monitor.config?.snmp_credentials_rev ?? 0}
+          onSave={onSaveSnmpCredentials}
+        />
       </div>
 
       {/* Botones de acción */}

@@ -72,13 +72,14 @@ export function openQueue(): void {
     );
 
     CREATE TABLE IF NOT EXISTS known_devices (
-      ip          TEXT PRIMARY KEY,
-      serial      TEXT,
-      brand       TEXT,
-      model       TEXT,
-      registered  INTEGER DEFAULT 0,
-      poll_method TEXT    DEFAULT 'snmp',
-      last_seen   TEXT
+      ip            TEXT PRIMARY KEY,
+      serial        TEXT,
+      brand         TEXT,
+      model         TEXT,
+      registered    INTEGER DEFAULT 0,
+      poll_method   TEXT    DEFAULT 'snmp',
+      last_seen     TEXT,
+      snmp_cred_id  TEXT    DEFAULT NULL
     );
   `);
 
@@ -117,6 +118,10 @@ export function openQueue(): void {
     "ALTER TABLE readings_queue ADD COLUMN hostname                    TEXT DEFAULT NULL",
     "ALTER TABLE readings_queue ADD COLUMN location                    TEXT DEFAULT NULL",
     "ALTER TABLE readings_queue ADD COLUMN reading_id                   TEXT DEFAULT NULL",
+    // SNMPv3 + lista de credenciales: "qué credencial sirvió por IP la
+    // última vez", para que la negociación de SnmpClient la pruebe primero
+    // en vez de recorrer toda la lista en cada ciclo.
+    "ALTER TABLE known_devices  ADD COLUMN snmp_cred_id                TEXT DEFAULT NULL",
   ]) {
     try { db.exec(stmt); } catch { /* columna ya existe */ }
   }
@@ -236,19 +241,23 @@ export function isBackpressureActive(): boolean {
 
 export function upsertKnownDevice(
   ip: string,
-  data: { serial?: string; brand?: string; model?: string; registered?: boolean; pollMethod?: PollMethod; driver?: string },
+  data: { serial?: string; brand?: string; model?: string; registered?: boolean; pollMethod?: PollMethod; driver?: string; snmpCredId?: string | null },
 ): void {
   db.prepare(`
-    INSERT INTO known_devices (ip, serial, brand, model, registered, poll_method, driver, last_seen)
-    VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))
+    INSERT INTO known_devices (ip, serial, brand, model, registered, poll_method, driver, snmp_cred_id, last_seen)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
     ON CONFLICT(ip) DO UPDATE SET
-      serial      = COALESCE(excluded.serial,      serial),
-      brand       = COALESCE(excluded.brand,       brand),
-      model       = COALESCE(excluded.model,       model),
-      registered  = COALESCE(excluded.registered,  registered),
-      poll_method = COALESCE(excluded.poll_method, poll_method),
-      driver      = COALESCE(excluded.driver,      driver),
-      last_seen   = datetime('now')
+      serial       = COALESCE(excluded.serial,       serial),
+      brand        = COALESCE(excluded.brand,        brand),
+      model        = COALESCE(excluded.model,        model),
+      registered   = COALESCE(excluded.registered,   registered),
+      poll_method  = COALESCE(excluded.poll_method,  poll_method),
+      driver       = COALESCE(excluded.driver,       driver),
+      -- Se escribe sólo en éxito, nunca se limpia en fallo: si la credencial
+      -- cacheada deja de servir, la negociación simplemente prueba el resto de
+      -- la lista y sobreescribe cuando otra funciona (ver transport/snmp.ts).
+      snmp_cred_id = COALESCE(excluded.snmp_cred_id, snmp_cred_id),
+      last_seen    = datetime('now')
   `).run(
     ip,
     data.serial     ?? null,
@@ -257,6 +266,7 @@ export function upsertKnownDevice(
     data.registered === undefined ? null : (data.registered ? 1 : 0),
     data.pollMethod ?? null,
     data.driver     ?? null,
+    data.snmpCredId ?? null,
   );
 }
 
@@ -292,17 +302,19 @@ export interface KnownDevice {
   poll_method: PollMethod | null;
   /** Id del perfil de modelo o familia de captura (`capture/registry.ts`). */
   driver:      string | null;
+  /** Id de la credencial SNMP que sirvió la última vez para este equipo (ver `SnmpClient`). */
+  snmp_cred_id: string | null;
 }
 
 export function getKnownDevices(): KnownDevice[] {
   return db.prepare(
-    'SELECT ip, brand, model, serial, poll_method, driver FROM known_devices WHERE registered = 1',
+    'SELECT ip, brand, model, serial, poll_method, driver, snmp_cred_id FROM known_devices WHERE registered = 1',
   ).all() as KnownDevice[];
 }
 
 export function getKnownDeviceInfo(ip: string): KnownDevice | null {
   const row = db.prepare(
-    'SELECT ip, brand, model, serial, poll_method, driver FROM known_devices WHERE ip = ?',
+    'SELECT ip, brand, model, serial, poll_method, driver, snmp_cred_id FROM known_devices WHERE ip = ?',
   ).get(ip) as KnownDevice | undefined;
   return row ?? null;
 }

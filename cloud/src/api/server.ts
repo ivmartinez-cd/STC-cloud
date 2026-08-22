@@ -30,12 +30,25 @@ import { registerReportRoutes } from "./routes/reportRoutes";
 import { getClientIp } from "./utils/ip";
 import { SERVER_VERSION } from "../version";
 import { CLIENT_VIEWER_ROUTES } from "./policy/rolePolicy";
+import { isEncryptionConfigured } from "../services/cryptoService";
 
 dotenv.config({ path: path.join(__dirname, "../../../.env") });
 
 if (!process.env.JWT_SECRET) {
   console.error("FATAL: JWT_SECRET no está definido en .env");
   process.exit(1);
+}
+
+// A diferencia de JWT_SECRET, esto NO aborta el arranque: SNMP_CREDENTIALS_KEY
+// sólo hace falta para instalaciones que configuren credenciales SNMPv3 (la
+// mayoría no lo hará nunca) — abortar el boot por una env var opcional
+// convertiría una feature opcional en un requisito de deploy. Guardar/leer
+// credenciales sin la clave falla con un 503 explícito en el endpoint, no acá.
+if (!isEncryptionConfigured()) {
+  console.warn(
+    "[BOOT] SNMP_CREDENTIALS_KEY no definida — no se podrán guardar credenciales SNMPv3 nuevas " +
+      "(reordenar/renombrar/borrar entradas ya guardadas no la requiere)."
+  );
 }
 
 const fastify = Fastify({

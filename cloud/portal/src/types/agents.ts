@@ -18,6 +18,10 @@ export type IpRange = {
 export type AgentConfig = {
   ip_ranges: IpRange[];
   snmp_community: string;
+  /** Sólo lectura acá — la vista enmascarada completa (con reorder/reemplazo)
+   *  vive en el tab "Configuración" del detalle del monitor. Ausente cuando
+   *  no hay ninguna credencial adicional configurada. */
+  snmp_credentials?: unknown[];
 }
 
 export interface Client { id: string; name: string }
