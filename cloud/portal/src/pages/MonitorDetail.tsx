@@ -5,7 +5,6 @@ import {
   Settings, RefreshCw, Key, ShieldOff,
   AlertTriangle, Loader2, Copy,
   Command, Terminal as TerminalIcon, Download, BarChart2,
-  Plus, Trash2
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useMonitorDetail } from '../hooks/useMonitorDetail';
@@ -17,6 +16,7 @@ import LicenseCard from '../components/monitors/LicenseCard';
 import DeviceInventoryTable from '../components/monitors/DeviceInventoryTable';
 import ReportsTabPanel from '../components/monitors/ReportsTabPanel';
 import SnmpCredentialsPanel from '../components/monitors/SnmpCredentialsPanel';
+import IpRangesEditor from '../components/monitors/IpRangesEditor';
 import RemoteToolsPanel from '../components/monitors/RemoteToolsPanel';
 import Terminal from '../components/Terminal';
 import ConfirmModal from '../components/ConfirmModal';
@@ -327,10 +327,12 @@ const ConfigTabPanel = ({ monitor, onSave, onSaveSnmpCredentials }: ConfigTabPan
       return;
     }
 
-    // IP Ranges validation
+    // Validación de forma en el cliente (mejor UX inmediata) — el cloud
+    // re-valida formato/topes en serio al guardar (`validateIpRangeSpecs`).
     for (const r of form.ip_ranges) {
-      if (!r.start.trim() || !r.end.trim()) {
-        showToast('Todos los rangos deben tener IP de inicio y fin', 'warning');
+      const isCidr = r.cidr !== undefined;
+      if (isCidr ? !r.cidr?.trim() : (!r.start?.trim() || !r.end?.trim())) {
+        showToast('Todos los rangos deben tener un CIDR o una IP de inicio y fin', 'warning');
         return;
       }
     }
@@ -372,63 +374,9 @@ const ConfigTabPanel = ({ monitor, onSave, onSaveSnmpCredentials }: ConfigTabPan
 
           {/* IP Ranges Multi-List */}
           <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Segmentos IP Activos</label>
-              <button
-                type="button"
-                onClick={() => setForm(f => ({ ...f, ip_ranges: [...f.ip_ranges, { start: '', end: '' }] }))}
-                className="flex items-center gap-2 text-[10px] font-black text-brand hover:text-brand/80 uppercase tracking-widest"
-              >
-                <Plus size={14} /> ADJUNTAR RANGO
-              </button>
-            </div>
-
-            <div className="space-y-3 max-h-[220px] overflow-y-auto pr-2 custom-scrollbar">
-              {form.ip_ranges.length === 0 && (
-                <div className="py-8 text-center border border-dashed border-slate-200 rounded-[20px]">
-                  <p className="text-slate-400 text-xs font-bold uppercase tracking-widest">Sin segmentación configurada</p>
-                </div>
-              )}
-              {form.ip_ranges.map((range, idx) => (
-                <div key={idx} className="flex items-center gap-3 bg-slate-50 p-2 rounded-[20px] border border-slate-100">
-                  <input
-                    type="text"
-                    placeholder="IP Inicio"
-                    value={range.start}
-                    onChange={e => {
-                      const val = e.target.value;
-                      setForm(f => ({
-                        ...f,
-                        ip_ranges: f.ip_ranges.map((r, i) => i === idx ? { ...r, start: val } : r)
-                      }));
-                    }}
-                    className="cd-input w-full !h-12 !text-xs font-mono !bg-white border-transparent focus:!border-brand"
-                  />
-                  <span className="text-slate-300 font-black">—</span>
-                  <input
-                    type="text"
-                    placeholder="IP Fin"
-                    value={range.end}
-                    onChange={e => {
-                      const val = e.target.value;
-                      setForm(f => ({
-                        ...f,
-                        ip_ranges: f.ip_ranges.map((r, i) => i === idx ? { ...r, end: val } : r)
-                      }));
-                    }}
-                    className="cd-input w-full !h-12 !text-xs font-mono !bg-white border-transparent focus:!border-brand"
-                  />
-                  {form.ip_ranges.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => setForm(f => ({ ...f, ip_ranges: f.ip_ranges.filter((_, i) => i !== idx) }))}
-                      className="p-3 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  )}
-                </div>
-              ))}
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Segmentos IP Activos</label>
+            <div className="max-h-[360px] overflow-y-auto pr-2 custom-scrollbar">
+              <IpRangesEditor ranges={form.ip_ranges} onChange={ranges => setForm(f => ({ ...f, ip_ranges: ranges }))} />
             </div>
           </div>
 

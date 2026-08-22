@@ -34,7 +34,7 @@ retención** (`add_retention_policy` de TimescaleDB) para `readings`/`alerts`/
 `audit_logs`/`agent_logs` — los índices ya existen, pero nada purga datos viejos
 todavía (§2.7/R3 siguen abiertos en ese punto).
 
-### Fase 1 — Paridad operativa con SDS — parcial: 5 de 7 ítems cerrados
+### Fase 1 — Paridad operativa con SDS — parcial: 6 de 8 ítems cerrados
 - ✅ **RBAC por cliente** (commit `7a47ce6`): rol `client_viewer`, scoping por
   `client_id` en los ~19 endpoints de lectura relevantes, deny-by-default por rol y
   por ruta. §2.6 "Jerarquía" y "Auth" (parte de CSRF/backdoor) quedan resueltos.
@@ -83,18 +83,32 @@ todavía (§2.7/R3 siguen abiertos en ese punto).
   contra un agente SNMPv3 real simulado con `net-snmp`, no sólo con sesiones
   falsas). §2.3 (versiones y lista de credenciales) queda resuelto.
   **Lo que NO se hizo de §2.3, y queda para una pasada aparte** (ver ítem
-  pendiente más abajo): CIDR, tope de tamaño de rango, exclusiones, resolución
-  de hostname; credenciales por RANGO (esta pasada es por agente completo —
-  el formato de alambre hacia el agente ya soporta extenderlo después sin
-  tocar el agente); rotación de la clave de cifrado (el ciphertext lleva
-  prefijo de versión `"v1:"` desde el día uno para no bloquearla, pero el
-  mecanismo en sí no está implementado).
+  pendiente más abajo): resolución de hostname; credenciales por RANGO (esta
+  pasada es por agente completo — el formato de alambre hacia el agente ya
+  soporta extenderlo después sin tocar el agente); rotación de la clave de
+  cifrado (el ciphertext lleva prefijo de versión `"v1:"` desde el día uno
+  para no bloquearla, pero el mecanismo en sí no está implementado).
+- ✅ **CIDR + tope de rango + exclusiones** (esta pasada): `ip_ranges` acepta
+  bloques CIDR además de `start`/`end` manual, y una lista de IPs
+  individuales a excluir por rango. El cloud compila todo (CIDR expandido,
+  network/broadcast auto-excluidos, exclusiones aplicadas) a pares
+  `{start,end}` planos antes de mandarlo al agente por el heartbeat — CERO
+  cambios de parsing del lado agente, cero riesgo de romper agentes viejos.
+  Corrige el bug real de escalabilidad de `ScanService.ts` (materializaba el
+  rango completo en memoria sin límite): ahora hay un tope de 2000 IPs
+  declaradas por agente, validado en cloud (`PUT /agents/:id/config` y
+  `POST /agents` de alta) y reforzado en el agente como defensa en
+  profundidad (nunca materializa de más, sin importar qué diga la config
+  recibida). Warning no bloqueante si un rango incluye IPs públicas (probable
+  error de tipeo). §2.1/§2.3 (rangos) queda resuelto.
+  **Lo que NO se hizo**: exclusión de sub-rangos/CIDR anidados (sólo IPs
+  individuales), resolución de hostname (ver arriba), IPv6.
 
 **Pendiente por completo de Fase 1** (sin empezar):
-1. **CIDR, tope de rango y exclusiones** para el escaneo — hoy `ScanService`
-   materializa el rango IP completo en memoria sin límite (bug real de
-   escalabilidad, no sólo una feature que falta); credenciales SNMP por rango
-   (hoy son por agente completo, ver arriba) (§2.1/§2.3, P1).
+1. **Resolución de hostname** en `ip_ranges` (point lookups) y
+   **credenciales SNMP por rango** (hoy son por agente completo) — ambos
+   quedaron deliberadamente fuera de las pasadas de SNMPv3 y CIDR (§2.1/§2.3,
+   P1).
 2. **Horario laboral y TZ configurables** por agente. Hoy hardcodeado 08-18
    L-V `America/Argentina/Buenos_Aires` en agente, servidor y portal — rompe
    con el primer cliente fuera de Argentina (§2.1, §3 R7, P1).
@@ -299,11 +313,12 @@ Ver §1. Especialmente `data_collection_inventory.md` (privacidad) y los HTML de
 
 ¹ `/portal/me` y la respuesta de login siguen devolviendo el token también en el body (fallback para el WS cuando no hay cookie entre orígenes) — es una decisión consciente, no un pendiente.
 
-### Fase 1 — Paridad operativa con SDS (≈ 1 mes) — parcial: 5 de 7 ítems cerrados
+### Fase 1 — Paridad operativa con SDS (≈ 1 mes) — parcial: 6 de 8 ítems cerrados
 - ✅ **Alert loop** — lifecycle server-side completo: alertas `agent_offline`, `device_offline`, `counter_reset` (ya de Fase 0), normalización de las alertas EWS que ya llegaban del agente; **ack/resolve** y filtros; **notificaciones** email + webhook. ⬜ El loop *dedicado 3/15 min del lado agente* no se tocó (las alertas del agente siguen en el loop de supplies, 60/240 min); ⬜ digest diario no implementado.
 - ✅ **Reportes por cliente**: selector de período, cierre mensual inmutable (lectura inicial/final, delta, fuente), export CSV/XLSX, y **entrega automática** (email/webhook) para reemplazar el flujo FTP/mail del STC legado. ⬜ Export a PDF y entrega por SFTP no se hicieron (quedó CSV/XLSX + email/webhook).
 - ✅ **RBAC por cliente**: rol `client_viewer`, scoping por `client_id` en todos los controladores. ⬜ Paginación server‑side no se hizo (sigue sin paginación ninguna tabla del portal).
-- ✅ **SNMPv3 y lista de credenciales** (v1/v2c/v3) por agente, hasta 8 credenciales probadas en orden, secretos cifrados at-rest, fail-fast para no multiplicar timeouts contra un host muerto. ⬜ CIDR, tope de rango, exclusiones y **credenciales por rango** (esta pasada es por agente completo) quedan para una pasada aparte.
+- ✅ **SNMPv3 y lista de credenciales** (v1/v2c/v3) por agente, hasta 8 credenciales probadas en orden, secretos cifrados at-rest, fail-fast para no multiplicar timeouts contra un host muerto. ⬜ Resolución de hostname y **credenciales por rango** (esta pasada es por agente completo) quedan para una pasada aparte.
+- ✅ **CIDR + tope de rango + exclusiones**: `ip_ranges` acepta CIDR y exclusión de IPs individuales, compilado del lado cloud a pares planos (cero cambios en el agente); tope de 2000 IPs declaradas por agente, validado en cloud y reforzado en el agente. ⬜ Resolución de hostname, exclusión de sub-rangos/CIDR anidados e IPv6 quedan fuera.
 - ⬜ **Horario laboral y TZ configurables** por agente (enviados en heartbeat config); quitar TZ fija de agente/servidor/portal. **Sin empezar.**
 - ⬜ `scan_schedule`: implementar de punta a punta o eliminar de docs/tipos. **Sin empezar.**
 - ✅ Identidad `(client_id, serial)` + MAC secundaria + merge de duplicados; decommission/mover/editar dispositivo.

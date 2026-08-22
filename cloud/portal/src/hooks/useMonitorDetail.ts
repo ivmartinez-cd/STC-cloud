@@ -89,7 +89,7 @@ export function useMonitorDetail(id: string) {
   }, [id, showToast]);
 
   const saveConfig = useCallback(async (form: EditFormData) => {
-    await api.put(`/agents/${id}/config`, {
+    const result = await api.put<{ warnings?: string[] }>(`/agents/${id}/config`, {
       name: form.name,
       ip_ranges: form.ip_ranges,
       snmp_community: form.snmp,
@@ -97,6 +97,9 @@ export function useMonitorDetail(id: string) {
       toner_critical_threshold: form.tonerCriticalThreshold,
     });
     showToast('Configuración actualizada correctamente', 'success');
+    // Warnings NO bloqueantes de validateIpRangeSpecs (ej. rango con IP
+    // pública) — el guardado ya se hizo, esto es sólo informativo.
+    result?.warnings?.forEach(w => showToast(w, 'warning'));
     refetch();
   }, [id, showToast, refetch]);
 

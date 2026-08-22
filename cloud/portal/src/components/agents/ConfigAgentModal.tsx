@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { X, Settings, Plus, Trash2, Loader2, Check, KeyRound } from 'lucide-react';
+import { X, Settings, Loader2, Check, KeyRound } from 'lucide-react';
 import { api } from '../../lib/api';
 import { useToast } from '../../context/ToastContext';
 import type { AgentConfig } from '../../types/agents';
-import { emptyRange, defaultConfig } from '../../types/agents';
+import { defaultConfig } from '../../types/agents';
+import IpRangesEditor from '../monitors/IpRangesEditor';
 
 interface Props {
   modal: { id: string; name: string } | null;
@@ -42,27 +43,25 @@ export default function ConfigAgentModal({ modal, onClose }: Props) {
     onClose();
   };
 
-  const updateRange = (idx: number, field: 'start' | 'end', value: string) =>
-    setConfigForm(f => ({
-      ...f,
-      ip_ranges: f.ip_ranges.map((r, i) => i === idx ? { ...r, [field]: value } : r),
-    }));
-
   const saveConfig = async () => {
     if (!modal) return;
+    // Validación de forma en el cliente — el cloud re-valida formato/topes en
+    // serio al guardar (`validateIpRangeSpecs`).
     for (const r of configForm.ip_ranges) {
-      if (!r.start.trim() || !r.end.trim()) {
-        showToast('Todos los rangos deben tener IP de inicio y fin', 'warning');
+      const isCidr = r.cidr !== undefined;
+      if (isCidr ? !r.cidr?.trim() : (!r.start?.trim() || !r.end?.trim())) {
+        showToast('Todos los rangos deben tener un CIDR o una IP de inicio y fin', 'warning');
         return;
       }
     }
     setSavingConfig(true);
     try {
-      await api.put(`/agents/${modal.id}/config`, {
+      const result = await api.put<{ warnings?: string[] }>(`/agents/${modal.id}/config`, {
         ip_ranges: configForm.ip_ranges,
         snmp_community: configForm.snmp_community,
       });
       showToast('Configuración remota actualizada', 'success');
+      result?.warnings?.forEach(w => showToast(w, 'warning'));
       handleClose();
     } catch (e: unknown) {
       showToast('Error al guardar: ' + (e as Error).message, 'error');
@@ -98,47 +97,9 @@ export default function ConfigAgentModal({ modal, onClose }: Props) {
           ) : (
             <div className="space-y-10">
               <div className="space-y-6">
-                <div className="flex justify-between items-center">
-                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] ml-1">Segmentos IP Activos</label>
-                  <button
-                    onClick={() => setConfigForm(f => ({ ...f, ip_ranges: [...f.ip_ranges, emptyRange()] }))}
-                    className="flex items-center gap-2 text-[10px] font-black text-brand hover:text-[#2471a3] uppercase tracking-widest"
-                  >
-                    <Plus size={14} /> ADJUNTAR RANGO
-                  </button>
-                </div>
-
-                <div className="space-y-4 max-h-[250px] overflow-y-auto pr-4 custom-scrollbar">
-                  {configForm.ip_ranges.length === 0 && (
-                    <div className="py-12 text-center border-2 border-dashed border-slate-100 rounded-[32px]">
-                      <p className="text-slate-500 font-bold text-xs uppercase tracking-widest">Sin segmentación configurada</p>
-                    </div>
-                  )}
-                  {configForm.ip_ranges.map((range, idx) => (
-                    <div key={idx} className="flex items-center gap-4 animate-in slide-in-from-right-4 bg-slate-50 p-2 rounded-[24px]">
-                      <input
-                        type="text"
-                        placeholder="IP Inicio"
-                        value={range.start}
-                        onChange={e => updateRange(idx, 'start', e.target.value)}
-                        className="cd-input w-full !h-12 !text-xs font-mono !bg-white border-transparent focus:!border-brand"
-                      />
-                      <span className="text-slate-300 font-black">—</span>
-                      <input
-                        type="text"
-                        placeholder="IP Fin"
-                        value={range.end}
-                        onChange={e => updateRange(idx, 'end', e.target.value)}
-                        className="cd-input w-full !h-12 !text-xs font-mono !bg-white border-transparent focus:!border-brand"
-                      />
-                      <button
-                        onClick={() => setConfigForm(f => ({ ...f, ip_ranges: f.ip_ranges.filter((_, i) => i !== idx) }))}
-                        className="p-3 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-2xl transition-all"
-                      >
-                        <Trash2 size={20} />
-                      </button>
-                    </div>
-                  ))}
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] ml-1">Segmentos IP Activos</label>
+                <div className="max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                  <IpRangesEditor ranges={configForm.ip_ranges} onChange={ranges => setConfigForm(f => ({ ...f, ip_ranges: ranges }))} />
                 </div>
               </div>
 

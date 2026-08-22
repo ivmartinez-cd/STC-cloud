@@ -1,5 +1,5 @@
 import { log } from './Logger';
-import { ipRange } from './NetworkUtils';
+import { materializeRange } from './NetworkUtils';
 import { isBusinessHours } from './BusinessHours';
 import { captureDevice, type CaptureScope, type CaptureHint } from '../capture';
 import type { DeviceReading } from '../capture/reading';
@@ -15,6 +15,16 @@ const DISCOVERY_SCOPES: readonly CaptureScope[] = ['identity', 'meters', 'suppli
 const METER_SCOPES:     readonly CaptureScope[] = ['meters'];
 const SUPPLIES_SCOPES:  readonly CaptureScope[] = ['supplies', 'alerts', 'trays'];
 const CONCURRENCY_LIMIT = 10;
+/**
+ * Tope de seguridad TOTAL (a través de todos los rangos de un mismo ciclo de
+ * scan) — defensa en profundidad independiente de la validación cloud
+ * (`cloud/src/services/ipRangeSpec.ts`, mismo número: con
+ * CONCURRENCY_LIMIT=10 y ~2000ms peor-caso por host muerto, 2000 IPs quedan
+ * bajo el intervalo de discovery de 10 min en horario laboral). Protege
+ * contra datos viejos pre-validación o ediciones manuales de DB — nunca
+ * confía en que la config recibida ya venga acotada.
+ */
+const MAX_TOTAL_SCAN_SIZE = 2000;
 
 function hintFrom(d: KnownDevice | null): CaptureHint | undefined {
   if (!d) return undefined;
@@ -59,9 +69,18 @@ export class ScanService {
 
       log('INFO', `Iniciando scan de ${config.ipRanges.length} rango(s)`);
       let errors = 0;
+      let scanBudget = MAX_TOTAL_SCAN_SIZE;
 
       for (const range of config.ipRanges) {
-        const ips = [...ipRange(range.start, range.end)];
+        if (scanBudget <= 0) {
+          log('WARN', `Tope de seguridad de ${MAX_TOTAL_SCAN_SIZE} IPs por ciclo alcanzado — se omiten los rangos restantes.`);
+          break;
+        }
+        const { ips, truncated } = materializeRange(range, scanBudget);
+        scanBudget -= ips.length;
+        if (truncated) {
+          log('WARN', `Rango ${range.start}-${range.end} truncado a ${ips.length} IPs (tope de seguridad de ${MAX_TOTAL_SCAN_SIZE} por ciclo).`);
+        }
         log('INFO', `Escaneando ${ips.length} IPs: ${range.start} -> ${range.end} (Concurrencia: ${CONCURRENCY_LIMIT})`);
 
         const queue = [...ips];

@@ -4,6 +4,7 @@ import Redis from "ioredis";
 import { AgentService, AgentConfigUpdate } from "../../services/agentService";
 import { MissingEncryptionKeyError } from "../../services/cryptoService";
 import { SnmpCredentialValidationError } from "../../services/snmpCredentials";
+import { IpRangeValidationError } from "../../services/ipRangeSpec";
 import { sendCommandToAgent } from "../../ws/index";
 import type { PortalUser } from "../middlewares/authMiddleware";
 import { getClientIp } from "../utils/ip";
@@ -225,18 +226,25 @@ export function createPortalAgentController(
         .orderBy("devices.brand");
     },
 
-    createAgent: async (request: FastifyRequest) => {
+    createAgent: async (request: FastifyRequest, reply: FastifyReply) => {
       const { clientId, name, ip_ranges, snmp_community, scan_interval_minutes } =
-        request.body as { clientId: string; name: string; ip_ranges?: Array<{ start: string; end: string }>; snmp_community?: string; scan_interval_minutes?: number };
+        request.body as { clientId: string; name: string; ip_ranges?: unknown; snmp_community?: string; scan_interval_minutes?: number };
       const user = (request as FastifyRequest & { user: PortalUser }).user;
-      return await agentService.createActivationKey(clientId, name, {
-        ip_ranges,
-        snmp_community,
-        scan_interval_minutes,
-      }, {
-        userId: user?.userId,
-        ip: getClientIp(request),
-      });
+      try {
+        return await agentService.createActivationKey(clientId, name, {
+          ip_ranges: ip_ranges as AgentConfigUpdate["ip_ranges"],
+          snmp_community,
+          scan_interval_minutes,
+        }, {
+          userId: user?.userId,
+          ip: getClientIp(request),
+        });
+      } catch (e: unknown) {
+        if (e instanceof IpRangeValidationError) {
+          return reply.status(400).send({ error: e.message, field: e.field });
+        }
+        throw e;
+      }
     },
 
     deleteAgent: async (request: FastifyRequest, reply: FastifyReply) => {
@@ -409,17 +417,29 @@ export function createPortalAgentController(
         } else {
           delete config.snmp_credentials;
         }
+        // Mismo criterio que arriba: `getConfig()` ya viene con `ip_ranges`
+        // COMPILADO (CIDR/exclusiones expandidos a pares planos, lo que
+        // necesita el heartbeat) — el portal necesita ver el spec crudo tal
+        // cual el admin lo escribió, no una lista fragmentada de sub-rangos.
+        config.ip_ranges = await agentService.getIpRangeSpecsRaw(id);
       }
       return config;
     },
 
-    updateConfig: async (request: FastifyRequest) => {
+    updateConfig: async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as AgentIdParams;
       const user = (request as FastifyRequest & { user: PortalUser }).user;
-      return await agentService.updateConfig(id, request.body as AgentConfigUpdate, {
-        userId: user?.userId,
-        ip: getClientIp(request),
-      });
+      try {
+        return await agentService.updateConfig(id, request.body as AgentConfigUpdate, {
+          userId: user?.userId,
+          ip: getClientIp(request),
+        });
+      } catch (e: unknown) {
+        if (e instanceof IpRangeValidationError) {
+          return reply.status(400).send({ error: e.message, field: e.field });
+        }
+        throw e;
+      }
     },
 
     getSnmpCredentials: async (request: FastifyRequest, reply: FastifyReply) => {

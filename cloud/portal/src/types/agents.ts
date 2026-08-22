@@ -10,9 +10,19 @@ export type Agent = {
   client_name?: string;
 }
 
+/**
+ * Una entrada de `ip_ranges` — rango manual (`start`+`end`) O bloque CIDR
+ * (`cidr`), nunca ambos. `exclude` son IPs individuales a saltear dentro del
+ * rango/bloque. Espejo del lado cloud (`services/ipRangeSpec.ts`) — el
+ * agente nunca ve CIDR ni exclusiones, el cloud las compila a pares
+ * `{start,end}` planos antes de mandarlas por el heartbeat.
+ */
 export type IpRange = {
-  start: string;
-  end: string;
+  label?: string | null;
+  start?: string;
+  end?: string;
+  cidr?: string;
+  exclude?: string[];
 }
 
 export type AgentConfig = {

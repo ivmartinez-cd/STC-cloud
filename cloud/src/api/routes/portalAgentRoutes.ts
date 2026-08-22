@@ -6,6 +6,26 @@ import { createPortalAgentController } from "../controllers/portalAgentControlle
 import { createDeviceController } from "../controllers/deviceController";
 import type { AuthHook } from "../middlewares/authMiddleware";
 
+/**
+ * Shape de una entrada de `ip_ranges` — rango manual (`start`+`end`) O
+ * bloque CIDR (`cidr`), nunca ambos. Deliberadamente SIN `required` (a
+ * diferencia de antes, que exigía `start`+`end` siempre y bloquearía
+ * cualquier spec sólo-CIDR con un 400 de ajv antes de llegar al service
+ * layer): el schema Fastify es sólo de forma/tipo, la regla de negocio
+ * "exactamente uno de cidr o start+end" y los topes de tamaño viven en
+ * `validateIpRangeSpecs()` (`services/ipRangeSpec.ts`).
+ */
+const ipRangeItemSchema = {
+  type: "object",
+  properties: {
+    label: { type: ["string", "null"], maxLength: 100 },
+    start: { type: "string", maxLength: 15 },
+    end: { type: "string", maxLength: 15 },
+    cidr: { type: "string", maxLength: 18 },
+    exclude: { type: "array", maxItems: 32, items: { type: "string", maxLength: 15 } },
+  },
+};
+
 const createAgentSchema = {
   body: {
     type: "object",
@@ -13,17 +33,7 @@ const createAgentSchema = {
     properties: {
       clientId: { type: "string", format: "uuid" },
       name: { type: "string", minLength: 1, maxLength: 100 },
-      ip_ranges: {
-        type: "array",
-        items: {
-          type: "object",
-          required: ["start", "end"],
-          properties: {
-            start: { type: "string" },
-            end: { type: "string" },
-          },
-        },
-      },
+      ip_ranges: { type: "array", maxItems: 20, items: ipRangeItemSchema },
       snmp_community: { type: "string", maxLength: 64 },
       scan_interval_minutes: { type: "integer", minimum: 1, maximum: 1440 },
     },
@@ -35,17 +45,7 @@ const updateConfigSchema = {
     type: "object",
     properties: {
       name: { type: "string", minLength: 1, maxLength: 100 },
-      ip_ranges: {
-        type: "array",
-        items: {
-          type: "object",
-          required: ["start", "end"],
-          properties: {
-            start: { type: "string" },
-            end: { type: "string" },
-          },
-        },
-      },
+      ip_ranges: { type: "array", maxItems: 20, items: ipRangeItemSchema },
       snmp_community: { type: "string", maxLength: 64 },
       scan_interval_minutes: { type: "integer", minimum: 1, maximum: 1440 },
       // Validación superficial: el detalle de mode/custom_days/custom_times lo

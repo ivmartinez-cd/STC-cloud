@@ -1,3 +1,5 @@
+import type { IpRange } from './agents';
+
 export interface SuppliesItem {
   percentage?: number | null;
   status?: string | null;
@@ -218,7 +220,7 @@ export interface MonitorData {
   client_id: string;
   client_name: string;
   config?: {
-    ip_ranges: { start: string; end: string }[];
+    ip_ranges: IpRange[];
     snmp_community: string;
     toner_warning_threshold?: number;
     toner_critical_threshold?: number;
@@ -234,7 +236,7 @@ export interface MonitorData {
 
 export interface EditFormData {
   name: string;
-  ip_ranges: { start: string; end: string }[];
+  ip_ranges: IpRange[];
   snmp: string;
   tonerWarningThreshold: number;
   tonerCriticalThreshold: number;

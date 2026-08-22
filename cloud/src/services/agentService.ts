@@ -9,6 +9,10 @@ import {
   auditMetadata, buildStored, legacyCommunity, maskCredentials, toWire, validateCredentials,
   type MaskedCredential, type StoredCredential,
 } from "./snmpCredentials";
+import {
+  compileIpRangeSpecs, publicIpWarnings, validateIpRangeSpecs,
+  type IpRangeSpecInput,
+} from "./ipRangeSpec";
 
 // ─── Interfaces de Tipado Fuerte ──────────────────────────────────────────────
 // Estas interfaces reemplazan los tipos `any` para cumplir con la Regla 5
@@ -35,7 +39,7 @@ export interface ScanSchedule {
 
 /** Configuración de red y escaneo enviada desde el portal para actualizar un agente. */
 export interface AgentConfigUpdate {
-  ip_ranges?: Array<{ start: string; end: string }>;
+  ip_ranges?: IpRangeSpecInput[];
   snmp_community?: string;
   scan_interval_minutes?: number;
   scan_schedule?: ScanSchedule;
@@ -217,6 +221,11 @@ export class AgentService {
     config?: Pick<AgentConfigUpdate, 'ip_ranges' | 'snmp_community' | 'scan_interval_minutes'>,
     audit?: AuditContext
   ) {
+    // Validado acá, no sólo en updateConfig() — sin esto un agente podía
+    // nacer con specs inválidos/gigantes desde el alta inicial (gap que el
+    // diseño inicial de esta feature no cubría).
+    const validatedRanges = config?.ip_ranges !== undefined ? validateIpRangeSpecs(config.ip_ranges) : null;
+
     const key = crypto.randomBytes(32).toString("hex"); // 64 chars hex
     const agentId = crypto.randomUUID();
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
@@ -228,7 +237,7 @@ export class AgentService {
       activation_key: key,
       activation_expires_at: expiresAt,
       status: "pending",
-      ip_ranges: config?.ip_ranges ? JSON.stringify(config.ip_ranges) : null,
+      ip_ranges: validatedRanges ? JSON.stringify(validatedRanges) : null,
       snmp_community: config?.snmp_community ?? "public",
       scan_interval_minutes: config?.scan_interval_minutes ?? 15,
     });
@@ -320,9 +329,12 @@ export class AgentService {
    */
   async updateConfig(agentId: string, newConfig: AgentConfigUpdate, audit?: AuditContext) {
     const updates: Record<string, unknown> = {};
+    let warnings: string[] = [];
 
     if (newConfig.ip_ranges !== undefined) {
-      updates.ip_ranges = JSON.stringify(newConfig.ip_ranges);
+      const validated = validateIpRangeSpecs(newConfig.ip_ranges);
+      updates.ip_ranges = JSON.stringify(validated);
+      warnings = publicIpWarnings(validated);
     }
     if (newConfig.snmp_community !== undefined) {
       updates.snmp_community = newConfig.snmp_community;
@@ -358,7 +370,7 @@ export class AgentService {
       metadata: JSON.stringify({ fields: Object.keys(updates) }),
     });
 
-    return { status: "success" };
+    return { status: "success", warnings };
   }
 
   async regenerateActivationKey(agentId: string, audit?: AuditContext) {
@@ -1106,9 +1118,13 @@ export class AgentService {
       .first();
 
     if (agent) {
-      if (typeof agent.ip_ranges === 'string') {
-        agent.ip_ranges = JSON.parse(agent.ip_ranges);
-      }
+      const rawSpecs: IpRangeSpecInput[] =
+        (typeof agent.ip_ranges === 'string' ? JSON.parse(agent.ip_ranges) : agent.ip_ranges) ?? [];
+      // El agente NUNCA ve CIDR/exclusiones — sólo esto (el path del
+      // heartbeat) compila a pares planos {start,end}. El resto de los
+      // callers (portal) usan `getIpRangeSpecsRaw()` para ver el spec tal
+      // cual el admin lo escribió.
+      agent.ip_ranges = compileIpRangeSpecs(rawSpecs);
       if (typeof agent.scan_schedule === 'string') {
         agent.scan_schedule = JSON.parse(agent.scan_schedule);
       }
@@ -1133,6 +1149,20 @@ export class AgentService {
       }
     }
     return agent;
+  }
+
+  /**
+   * Specs de `ip_ranges` SIN compilar (CIDR/exclusiones tal cual se
+   * guardaron) — para que el portal muestre lo que el admin realmente
+   * escribió, no una lista fragmentada de sub-rangos. `getConfig()` ya
+   * devuelve la versión compilada (para el heartbeat); esta es la query
+   * separada que el handler portal usa para pisar ese campo de vuelta,
+   * mismo patrón que `getSnmpCredentialsMasked()`.
+   */
+  async getIpRangeSpecsRaw(agentId: string): Promise<IpRangeSpecInput[] | null> {
+    const agent = await this.db("agents").where({ id: agentId }).select("ip_ranges").first();
+    if (!agent) return null;
+    return (typeof agent.ip_ranges === 'string' ? JSON.parse(agent.ip_ranges) : agent.ip_ranges) ?? [];
   }
 
   /** Vista enmascarada para el portal — nunca material de clave. `rev` para optimistic locking. */
