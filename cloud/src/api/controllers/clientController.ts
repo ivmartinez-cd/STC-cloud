@@ -43,6 +43,58 @@ export function createClientController(db: Knex) {
       return client;
     },
 
+    // No existía ningún endpoint para editar un cliente ya creado — hacía falta
+    // para poder configurar `notification_email`/`notification_webhook_url` desde
+    // el portal. Mismo criterio que `createClient`: whitelist explícito, nunca
+    // `request.body` completo (mass assignment).
+    updateClient: async (request: FastifyRequest, reply: FastifyReply) => {
+      const { id } = request.params as { id: string };
+      const body = request.body as Partial<{
+        name: string;
+        contact_name: string;
+        contact_email: string;
+        contact_phone: string;
+        address: string;
+        country: string;
+        notification_email: string | null;
+        notification_webhook_url: string | null;
+      }>;
+
+      const existing = await db("clients").where({ id }).first();
+      if (!existing) return reply.status(404).send({ error: "Cliente no encontrado" });
+
+      if (body.name !== undefined && !body.name.trim()) {
+        return reply.status(400).send({ error: "El nombre del cliente no puede estar vacío" });
+      }
+
+      const updates: Record<string, unknown> = {};
+      if (body.name !== undefined) updates.name = body.name.trim();
+      if (body.contact_name !== undefined) updates.contact_name = body.contact_name?.trim() || null;
+      if (body.contact_email !== undefined) updates.contact_email = body.contact_email?.trim() || null;
+      if (body.contact_phone !== undefined) updates.contact_phone = body.contact_phone?.trim() || null;
+      if (body.address !== undefined) updates.address = body.address?.trim() || null;
+      if (body.country !== undefined) updates.country = body.country?.trim() || null;
+      // Sin fallback a contact_email: si se manda explícitamente null/"", se limpia
+      // el canal — nunca se infiere solo de otro campo.
+      if (body.notification_email !== undefined) updates.notification_email = body.notification_email?.trim() || null;
+      if (body.notification_webhook_url !== undefined) updates.notification_webhook_url = body.notification_webhook_url?.trim() || null;
+
+      if (Object.keys(updates).length === 0) {
+        return reply.status(400).send({ error: "Nada para actualizar" });
+      }
+
+      const [updated] = await db("clients").where({ id }).update(updates).returning("*");
+      const user = (request as FastifyRequest & { user: PortalUser }).user;
+      await db("audit_logs").insert({
+        action: "CLIENT_UPDATED",
+        target_id: String(id),
+        user_id: user?.userId ?? null,
+        ip_address: getClientIp(request),
+        metadata: JSON.stringify({ changes: Object.keys(updates) }),
+      });
+      return updated;
+    },
+
     listClients: async (request: FastifyRequest) => {
       const scope = getScope(request);
       return await db("clients")

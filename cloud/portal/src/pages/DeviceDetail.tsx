@@ -8,6 +8,7 @@ import {
 import { OFFLINE_THRESHOLD_MS } from '../lib/constants';
 import { XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Area, AreaChart } from 'recharts';
 import type { Device, SuppliesDetails, CounterTriple } from '../types/monitor';
+import type { Alert } from '../types/alerts';
 import { parseSuppliesDetails, buildSupplyRows, usageRate, fmtDate, fmtInt, type SupplyRow, type ReadingPoint } from '../lib/supplies';
 import { deviceImageCandidates } from '../lib/deviceImage';
 import { ConfirmationModal } from '../components/ui/ConfirmationModal';
@@ -31,17 +32,6 @@ interface DeviceDetailData extends Device {
   agent_status?:    string;
   agent_last_seen?: string | null;
   status?:          string;
-}
-
-interface DeviceAlert {
-  id: string;
-  device_id: string;
-  deviceId?: string;
-  type: string;
-  severity: string;
-  message: string;
-  timestamp: string;
-  resolved: boolean;
 }
 
 type Tab = 'general' | 'counters' | 'supplies' | 'media' | 'alerts';
@@ -107,7 +97,7 @@ const DeviceDetail = () => {
   const navigate = useNavigate();
   const [readings, setReadings] = useState<Reading[]>([]);
   const [device, setDevice]     = useState<DeviceDetailData | null>(null);
-  const [alerts, setAlerts]     = useState<DeviceAlert[]>([]);
+  const [alerts, setAlerts]     = useState<Alert[]>([]);
   const [loading, setLoading]   = useState(true);
   const [error, setError]       = useState('');
   const [now] = useState(() => Date.now());
@@ -122,7 +112,7 @@ const DeviceDetail = () => {
       api.get<DeviceDetailData>(`/devices/${id}`),
       // 400 lecturas alcanzan para ~1 semana de historial con los loops actuales → ritmo de impresión real
       api.get<Reading[]>(`/devices/${id}/readings?limit=400`),
-      api.get<DeviceAlert[]>(`/alerts?device_id=${id}`).catch(() => [] as DeviceAlert[]),
+      api.get<Alert[]>(`/alerts?device_id=${id}`).catch(() => [] as Alert[]),
     ])
       .then(([deviceData, readingsData, alertsData]) => {
         setDevice(deviceData);
@@ -181,10 +171,10 @@ const DeviceDetail = () => {
       if (seen.has(key)) continue; seen.add(key);
       out.push({ key: `dev-${key}`, severity: (a.severity ?? 'INFO').toUpperCase(), message: a.description ?? a.code ?? '', code: a.code, time: a.time });
     }
-    for (const a of alerts.filter(x => !x.resolved && (x.device_id === id || x.deviceId === id))) {
+    for (const a of alerts.filter(x => !x.resolved && x.device_id === id)) {
       const key = `${(a.type ?? '').toLowerCase()}|${(a.message ?? '').toLowerCase()}`;
       if (seen.has(key) || [...seen].some(k => k.endsWith(`|${(a.message ?? '').toLowerCase()}`))) continue; seen.add(key);
-      out.push({ key: `srv-${a.id}`, severity: (a.severity ?? 'INFO').toUpperCase(), message: a.message, code: a.type, time: a.timestamp });
+      out.push({ key: `srv-${a.id}`, severity: (a.severity ?? 'INFO').toUpperCase(), message: a.message, code: a.type, time: a.created_at });
     }
     return out;
   }, [details?.alerts, alerts, id]);

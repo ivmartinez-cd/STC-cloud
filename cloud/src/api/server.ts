@@ -14,6 +14,7 @@ import knexConfig from "../db/knexfile";
 import { AgentService } from "../services/agentService";
 import "../jobs/heartbeatMonitor";
 import "../jobs/alertWorker";
+import "../jobs/notificationWorker";
 import { registerWebSocket } from "../ws/index";
 
 import { createAuthMiddleware } from "./middlewares/authMiddleware";

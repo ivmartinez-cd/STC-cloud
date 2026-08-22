@@ -56,5 +56,10 @@ export function useClientDetail(id: string) {
     fetchData();
   }, [fetchData]);
 
-  return { client, monitors, usage, loading, error, refetch: fetchData, createMonitor, deleteMonitor };
+  const updateNotifications = useCallback(async (fields: { notification_email: string; notification_webhook_url: string }) => {
+    const updated = await api.put<Client>(`/clients/${id}`, fields);
+    setClient(updated);
+  }, [id]);
+
+  return { client, monitors, usage, loading, error, refetch: fetchData, createMonitor, deleteMonitor, updateNotifications };
 }

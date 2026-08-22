@@ -12,6 +12,7 @@ const MonitorDetail   = lazy(() => import('./pages/MonitorDetail'));
 const DeviceDetail = lazy(() => import('./pages/DeviceDetail'));
 const Settings     = lazy(() => import('./pages/Settings'));
 const Agents       = lazy(() => import('./pages/Agents'));
+const Alerts       = lazy(() => import('./pages/Alerts'));
 
 function RequireAuth() {
   const { isAuthenticated, checking } = useAuth();
@@ -42,6 +43,7 @@ function App() {
             <Route element={<RequireAuth />}>
               <Route element={<Layout />}>
                 <Route path="/"              element={<Dashboard />} />
+                <Route path="/alerts"        element={<Alerts />} />
                 <Route path="/clients"       element={<Clients />} />
                 <Route path="/clients/:id"   element={<ClientDetail />} />
                 <Route path="/monitors/:id"  element={<MonitorDetail />} />

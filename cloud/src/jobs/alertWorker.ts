@@ -2,6 +2,7 @@ import { Worker } from 'bullmq';
 import Redis from 'ioredis';
 import knex from 'knex';
 import knexConfig from '../db/knexfile';
+import * as alertService from '../services/alertService';
 
 const db    = knex(knexConfig.development);
 const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379', {
@@ -24,19 +25,20 @@ interface MappedReading {
   offline?: boolean;
 }
 
+// Adaptadores sobre `alertService` — se conservan los nombres y firmas locales para
+// no tocar los ~13 call-sites de abajo (3 aperturas + 10 resoluciones a través de
+// los colores de tóner). El dedupe por SELECT-then-INSERT que tenían antes ya
+// produjo duplicados reales en producción; `alertService.openAlert` usa el índice
+// único parcial de la migración en su lugar.
 async function openAlert(deviceId: string, type: string, severity: string, message: string, value: number) {
-  const existing = await db('alerts')
-    .where({ device_id: deviceId, type, resolved: false })
-    .first();
-  if (existing) return;
-  await db('alerts').insert({ device_id: deviceId, type, severity, message, value });
-  console.log(`[Alert] OPEN [${severity.toUpperCase()}] device=${deviceId} — ${message}`);
+  const { created } = await alertService.openAlert(db, { deviceId, type, severity: severity as 'warning' | 'critical', message, value });
+  if (created) {
+    console.log(`[Alert] OPEN [${severity.toUpperCase()}] device=${deviceId} — ${message}`);
+  }
 }
 
 async function resolveAlerts(deviceId: string, type: string) {
-  const updated = await db('alerts')
-    .where({ device_id: deviceId, type, resolved: false })
-    .update({ resolved: true, resolved_at: new Date() });
+  const updated = await alertService.resolveAlert(db, { deviceId, type });
   if (updated > 0) {
     console.log(`[Alert] CLOSE type=${type} device=${deviceId}`);
   }

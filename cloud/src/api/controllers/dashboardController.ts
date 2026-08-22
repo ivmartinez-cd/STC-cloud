@@ -1,7 +1,9 @@
-import { FastifyRequest } from "fastify";
+import { FastifyReply, FastifyRequest } from "fastify";
 import { Knex } from "knex";
 import { AgentService } from "../../services/agentService";
 import { agentIdsOf, deviceIdsOf, getScope } from "../utils/scope";
+import type { PortalUser } from "../middlewares/authMiddleware";
+import { getClientIp } from "../utils/ip";
 
 export function createDashboardController(db: Knex, agentService: AgentService) {
   return {
@@ -178,26 +180,41 @@ export function createDashboardController(db: Knex, agentService: AgentService) 
     },
 
     getAlerts: async (request: FastifyRequest) => {
-      const { resolved, device_id } = request.query as { resolved?: string; device_id?: string };
+      const { resolved, device_id, client_id, severity, type, acknowledged, limit, offset } = request.query as {
+        resolved?: string; device_id?: string; client_id?: string; severity?: string; type?: string;
+        acknowledged?: string; limit?: string; offset?: string;
+      };
       const scope = getScope(request);
+      const pageLimit = Math.min(Number(limit) || 200, 200);
+      const pageOffset = Math.max(Number(offset) || 0, 0);
+
       const query = db("alerts")
-        .join("devices", "alerts.device_id", "devices.id")
-        .leftJoin("agents", "devices.agent_id", "agents.id")
+        // LEFT JOIN (antes era join/inner): una alerta a nivel agente (agent_offline)
+        // no tiene device_id — con inner join hubiera quedado invisible para todos,
+        // admin incluido. `agents` se resuelve por COALESCE(devices.agent_id,
+        // alerts.agent_id) para que funcione para los dos casos con un solo join.
+        .leftJoin("devices", "alerts.device_id", "devices.id")
+        .leftJoin("agents", "agents.id", db.raw("COALESCE(devices.agent_id, alerts.agent_id)"))
         .leftJoin("clients", "agents.client_id", "clients.id")
         .modify((q) => {
-          // Convierte los leftJoin en inner de hecho para un viewer: una alerta de un
-          // equipo con `agent_id` NULL (huérfano) no pertenece a ningún cliente, así
-          // que no debe verla nadie scopeado.
+          // Una alerta de un equipo/agente huérfano (sin client_id) sigue sin
+          // pertenecer a ningún cliente, así que sigue sin verla nadie scopeado —
+          // el comportamiento no cambia para viewers, sólo se agrega el caso
+          // agent-scoped para admin/operator.
           if (scope.kind === "client") q.where("agents.client_id", scope.id);
         })
         .select(
           "alerts.id",
           "alerts.device_id",
+          "alerts.agent_id",
           "alerts.type",
           "alerts.severity",
           "alerts.message",
           "alerts.value",
           "alerts.resolved",
+          "alerts.resolved_at",
+          "alerts.acknowledged",
+          "alerts.ack_at",
           "alerts.created_at",
           "devices.brand",
           "devices.ip_address",
@@ -207,19 +224,76 @@ export function createDashboardController(db: Knex, agentService: AgentService) 
           "clients.name as client_name"
         )
         .orderBy("alerts.created_at", "desc")
-        .limit(200);
+        .limit(pageLimit)
+        .offset(pageOffset);
 
-      if (device_id) {
-        query.where("alerts.device_id", device_id);
-      }
-
-      if (resolved === "true") {
-        query.where("alerts.resolved", true);
-      } else if (resolved === "false") {
-        query.where("alerts.resolved", false);
-      }
+      if (device_id) query.where("alerts.device_id", device_id);
+      // `client_id` es un filtro de portal (admin/operator eligiendo "ver sólo este
+      // cliente"), independiente del scoping RBAC de arriba — un viewer ya está
+      // fijo a su propio cliente y no manda este query param.
+      if (client_id) query.where("agents.client_id", client_id);
+      if (severity) query.where("alerts.severity", severity);
+      if (type) query.where("alerts.type", type);
+      if (resolved === "true") query.where("alerts.resolved", true);
+      else if (resolved === "false") query.where("alerts.resolved", false);
+      if (acknowledged === "true") query.where("alerts.acknowledged", true);
+      else if (acknowledged === "false") query.where("alerts.acknowledged", false);
 
       return await query;
+    },
+
+    updateAlert: async (request: FastifyRequest, reply: FastifyReply) => {
+      const { id } = request.params as { id: string };
+      const { acknowledged, resolved } = request.body as { acknowledged?: boolean; resolved?: boolean };
+      const scope = getScope(request);
+      const currentUser = (request as FastifyRequest & { user: PortalUser }).user;
+
+      const alert = await db("alerts")
+        .leftJoin("devices", "alerts.device_id", "devices.id")
+        .leftJoin("agents", "agents.id", db.raw("COALESCE(devices.agent_id, alerts.agent_id)"))
+        .modify((q) => {
+          // Nunca debería llegar acá con scope "client": client_viewer no tiene esta
+          // ruta en su allowlist (rolePolicy.ts) y recibe 403 antes de esto. Se deja
+          // igual el chequeo de propiedad como defensa en profundidad, no confiar
+          // sólo en el gate de autorización para una mutación.
+          if (scope.kind === "client") q.andWhere("agents.client_id", scope.id);
+        })
+        .select("alerts.id")
+        .where("alerts.id", id)
+        .first();
+      if (!alert) return reply.status(404).send({ error: "Alerta no encontrada" });
+
+      // Whitelist explícito — nunca `request.body` completo (mismo criterio que
+      // `createClient`/`updateUser`).
+      const updates: Record<string, unknown> = {};
+      if (acknowledged !== undefined) {
+        updates.acknowledged = acknowledged;
+        updates.ack_by = acknowledged ? currentUser?.userId ?? null : null;
+        updates.ack_at = acknowledged ? new Date() : null;
+      }
+      if (resolved !== undefined) {
+        updates.resolved = resolved;
+        updates.resolved_at = resolved ? new Date() : null;
+      }
+      if (Object.keys(updates).length === 0) {
+        return reply.status(400).send({ error: "Nada para actualizar: se espera acknowledged y/o resolved" });
+      }
+
+      const [updated] = await db("alerts").where({ id }).update(updates).returning([
+        "id", "acknowledged", "ack_by", "ack_at", "resolved", "resolved_at",
+      ]);
+
+      await db("audit_logs").insert({
+        action: acknowledged !== undefined && resolved !== undefined
+          ? "ALERT_ACK_AND_RESOLVE"
+          : acknowledged !== undefined ? "ALERT_ACKNOWLEDGED" : "ALERT_RESOLVED",
+        target_id: String(id),
+        user_id: currentUser?.userId ?? null,
+        ip_address: getClientIp(request),
+        metadata: JSON.stringify({ acknowledged, resolved }),
+      });
+
+      return updated;
     },
   };
 }

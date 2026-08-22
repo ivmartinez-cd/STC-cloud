@@ -443,6 +443,16 @@ describe('RBAC — mutaciones denegadas para client_viewer', () => {
     assert.equal(status, 403);
   });
 
+  test('PUT /alerts/:id → 403 (ack/resolve queda para admin/operator, no para client_viewer)', async () => {
+    const { status } = await req('PUT', '/alerts/1', { acknowledged: true }, rbac.viewerToken);
+    assert.equal(status, 403);
+  });
+
+  test('PUT /clients/:id → 403', async () => {
+    const { status } = await req('PUT', `/clients/${rbac.clientAId}`, { notification_email: 'x@x.com' }, rbac.viewerToken);
+    assert.equal(status, 403);
+  });
+
   test('POST /feedback → 200 (la única mutación permitida: reportar un bug no requiere privilegio)', async () => {
     const { status, data } = await req('POST', '/feedback', {
       type: 'bug', title: 'Prueba RBAC', description: 'Descripción de prueba para el test de RBAC por cliente.',

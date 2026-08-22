@@ -10,6 +10,7 @@ import {
 import { useDashboard } from '../hooks/useDashboard';
 import { Tooltip, ResponsiveContainer, Cell, PieChart, Pie } from 'recharts';
 import { api } from '../lib/api';
+import type { Alert } from '../types/alerts';
 
 
 const BRAND_COLORS = ['#2980b9', '#3498db', '#1abc9c', '#f1c40f', '#f7931d', '#e74c3c'];
@@ -40,23 +41,6 @@ const StatCard = ({
   </div>
 );
 
-interface Alert {
-  id: string;
-  device_id: string;
-  type: string;
-  severity: 'critical' | 'warning';
-  message: string;
-  value: number;
-  resolved: boolean;
-  created_at: string;
-  brand: string;
-  ip_address: string;
-  device_name: string;
-  serial: string | null;
-  agent_name: string | null;
-  client_name: string | null;
-}
-
 const getTonerColorInfo = (type: string) => {
   if (type.includes('black')) {
     return { name: 'Negro', badgeClass: 'bg-slate-950 border-slate-800 text-white', barColor: '#0f172a' };
@@ -83,7 +67,13 @@ const Dashboard = () => {
   const fetchAlerts = useCallback(async () => {
     try {
       const res = await api.get<Alert[]>('/alerts?resolved=false');
-      setAlerts(res);
+      // Este panel es de CONSUMIBLES — sólo tóner. `type` es texto libre, así que
+      // el filtro se hace acá (no hay un `type=` de servidor que exprese "toner_%
+      // en cualquiera de sus variantes"). Desde que existen `agent_offline` y
+      // `device_offline` (y ya existían códigos EWS libres), sin este filtro
+      // aparecerían acá con columnas de tóner vacías — la página dedicada
+      // `/alerts` es donde se ven todos los tipos.
+      setAlerts(res.filter((a) => a.type.startsWith('toner_')));
     } catch (err) {
       console.error('Error al obtener alertas:', err);
     } finally {

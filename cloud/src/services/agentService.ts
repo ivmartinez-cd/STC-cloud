@@ -2,6 +2,7 @@ import { Knex } from "knex";
 import crypto from "crypto";
 import net from "net";
 import { Queue } from "bullmq";
+import * as alertService from "./alertService";
 
 // ─── Interfaces de Tipado Fuerte ──────────────────────────────────────────────
 // Estas interfaces reemplazan los tipos `any` para cumplir con la Regla 5
@@ -684,21 +685,21 @@ export class AgentService {
             });
 
           if (counterResets.length > 0) {
+            // Alerta de EVENTO, no de estado: dedupe por (device_id,type) — antes
+            // era por mensaje exacto, que incluye los valores del contador, así que
+            // un segundo reset con valores distintos nunca deduplicaba y las filas
+            // se acumulaban sin límite. Con la dedupe por tipo, un segundo reset
+            // mientras el primero sigue abierto queda suprimido a propósito (ya se
+            // avisó; no hace falta una segunda fila) — sólo `PUT /alerts/:id` la
+            // cierra, no hay condición de "esto ya no pasa" que la auto-resuelva.
             const resetMsg = `Contador(es) con reset o decremento detectado: ${counterResets.join(', ')}`;
-            const existingResetAlert = await this.db("alerts")
-              .where({ device_id: deviceId, message: resetMsg, resolved: false })
-              .first();
-            if (!existingResetAlert) {
-              await this.db("alerts").insert({
-                device_id: deviceId,
-                type: "counter_reset",
-                severity: "critical",
-                message: resetMsg,
-                value: resetValue,
-                resolved: false,
-                created_at: new Date(),
-              });
-            }
+            await alertService.openAlert(this.db, {
+              deviceId,
+              type: "counter_reset",
+              severity: "critical",
+              message: resetMsg,
+              value: resetValue,
+            });
           }
         } else {
           deviceId = crypto.randomUUID();
@@ -737,32 +738,31 @@ export class AgentService {
           });
         }
 
-        // Sincronizar alertas activas provenientes de EWS si están presentes
+        // Sincronizar alertas activas provenientes de EWS si están presentes. Dedupe
+        // por `type` (antes era por mensaje exacto, y nunca se resolvían solas); acá
+        // además se resuelve cualquier alerta EWS previamente abierta de este
+        // dispositivo que ya no aparezca en la lista actual — es la primera vez que
+        // las alertas EWS tienen un camino de auto-resolución.
         const suppliesObj = typeof r.supplies_details === 'string' ? JSON.parse(r.supplies_details) : r.supplies_details;
         if (suppliesObj?.alerts && Array.isArray(suppliesObj.alerts)) {
+          const currentTypes: string[] = [];
           for (const alertItem of suppliesObj.alerts) {
             if (alertItem.description || alertItem.code) {
               const alertMsg = alertItem.description || alertItem.code;
-              const alertType = alertItem.code || 'EWS_ALERT';
+              const alertType = alertService.synthesizeEwsAlertType(alertItem.code, alertMsg);
               const sevLower = String(alertItem.severity || '').toLowerCase();
               const alertSev = (sevLower === 'critical' || sevLower === 'error' || sevLower === 'danger') ? 'critical' : 'warning';
-              
-              const existingAlert = await this.db("alerts")
-                .where({ device_id: deviceId, message: alertMsg, resolved: false })
-                .first();
 
-              if (!existingAlert) {
-                await this.db("alerts").insert({
-                  device_id: deviceId,
-                  type: alertType.slice(0, 50),
-                  severity: alertSev,
-                  message: alertMsg,
-                  resolved: false,
-                  created_at: new Date(),
-                });
-              }
+              currentTypes.push(alertType);
+              await alertService.openAlert(this.db, {
+                deviceId,
+                type: alertType,
+                severity: alertSev,
+                message: alertMsg,
+              });
             }
           }
+          await alertService.resolveStaleEwsAlerts(this.db, { deviceId, currentTypes });
         }
 
         // Purgar y consolidar cualquier otro registro fantasma duplicado en esta IP

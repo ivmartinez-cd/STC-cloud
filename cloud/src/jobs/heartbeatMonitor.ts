@@ -1,47 +1,147 @@
 import knex from 'knex';
 import knexConfig from '../db/knexfile';
+import * as alertService from '../services/alertService';
 
 const db = knex(knexConfig.development);
 
 const OFFLINE_THRESHOLD_MINUTES = 5; // Si no hay heartbeat en 5 min → sin señal
+const DEVICE_OFFLINE_THRESHOLD_MINUTES = 30; // mismo criterio que deleteOfflineDevices (deviceController.ts)
+
+/**
+ * Se queda como `setInterval` a propósito — NO se convierte a un BullMQ repeatable
+ * job. La base productiva (`render.yaml`) usa Redis con `maxmemoryPolicy:
+ * allkeys-lru`; BullMQ guarda el estado de un repeatable job en claves Redis, y bajo
+ * esa política esas claves son evictables — si Redis las desaloja, el job deja de
+ * dispararse EN SILENCIO, para siempre, hasta que alguien reinicie la API a mano
+ * (nada lo reporta como error). Un `setInterval` no puede fallar así. Además hoy
+ * corre un solo `api` service sin réplicas en ambos `docker-compose*.yml`, así que
+ * el riesgo de doble-disparo que justificaría convertir a cola no es real en este
+ * entorno. Si en el futuro se pasa a multi-réplica, la forma barata de evitar el
+ * doble-disparo es un advisory lock de Postgres (`pg_try_advisory_lock`) al
+ * principio de cada check, no una cola.
+ */
 
 /**
  * Marca como 'offline' a los agentes activos que no enviaron heartbeat
- * en los últimos OFFLINE_THRESHOLD_MINUTES minutos.
- * Vuelven a 'active' automáticamente cuando retoman los heartbeats.
+ * en los últimos OFFLINE_THRESHOLD_MINUTES minutos, y abre una alerta
+ * `agent_offline` por cada uno (antes: el enum la declaraba pero ningún código la
+ * escribía). Vuelven a 'active' automáticamente cuando retoman los heartbeats, y
+ * la alerta se resuelve sola.
  */
 async function checkOfflineAgents() {
   try {
     const cutoff = new Date(Date.now() - OFFLINE_THRESHOLD_MINUTES * 60 * 1000);
 
-    // Marcar como offline los que estaban activos y dejaron de latir
+    // Marcar como offline los que estaban activos y dejaron de latir. `.returning`
+    // trae los ids afectados — antes sólo se contaban, ahora hace falta abrir una
+    // alerta POR agente.
     const markedOffline = await db('agents')
       .where('status', 'active')
       .where('last_seen', '<', cutoff)
-      .update({ status: 'offline' });
+      .update({ status: 'offline' })
+      .returning(['id', 'name']);
 
-    if (markedOffline > 0) {
-      console.log(`[HeartbeatMonitor] ${markedOffline} agente(s) marcados OFFLINE (sin señal > ${OFFLINE_THRESHOLD_MINUTES} min)`);
+    for (const agent of markedOffline) {
+      await alertService.openAlert(db, {
+        agentId: agent.id,
+        type: 'agent_offline',
+        severity: 'critical',
+        message: `Monitor sin señal (sin heartbeat hace más de ${OFFLINE_THRESHOLD_MINUTES} min)`,
+      });
+    }
+    if (markedOffline.length > 0) {
+      console.log(`[HeartbeatMonitor] ${markedOffline.length} agente(s) marcados OFFLINE (sin señal > ${OFFLINE_THRESHOLD_MINUTES} min)`);
     }
 
     // Reactivar los que volvieron (heartbeat reciente pero quedaron en offline)
     const reactivated = await db('agents')
       .where('status', 'offline')
       .where('last_seen', '>=', cutoff)
-      .update({ status: 'active' });
+      .update({ status: 'active' })
+      .returning(['id']);
 
-    if (reactivated > 0) {
-      console.log(`[HeartbeatMonitor] ${reactivated} agente(s) REACTIVADOS (heartbeat restaurado)`);
+    for (const agent of reactivated) {
+      await alertService.resolveAlert(db, { agentId: agent.id, type: 'agent_offline' });
+    }
+    if (reactivated.length > 0) {
+      console.log(`[HeartbeatMonitor] ${reactivated.length} agente(s) REACTIVADOS (heartbeat restaurado)`);
     }
   } catch (err: unknown) {
     const errMsg = err instanceof Error ? err.message : String(err);
-    console.error('[HeartbeatMonitor] Error en check:', errMsg);
+    console.error('[HeartbeatMonitor] Error en check de agentes:', errMsg);
   }
 }
 
-// Ejecutar al arrancar y luego cada 2 minutos
-checkOfflineAgents();
-const intervalMs = 2 * 60 * 1000;
-setInterval(checkOfflineAgents, intervalMs);
+/**
+ * Abre/resuelve alertas `device_offline` para equipos activos sin lecturas
+ * recientes. A diferencia de `agents.status`, `devices` no tiene una columna de
+ * estado que "voltear" — cada corrida vuelve a evaluar quién está stale y quién
+ * volvió, y confía en el índice único parcial de `alerts` para no reabrir una fila
+ * ya abierta (mismo mecanismo que el resto de `alertService`).
+ *
+ * Supresión de tormenta: se excluyen los equipos cuyo agente YA está `offline` —
+ * un agente caído deja stale a TODOS sus equipos a la vez, y ese agente ya generó
+ * su propia alerta `agent_offline`; una fila `device_offline` por cada impresora
+ * del sitio sería puro ruido redundante.
+ */
+async function checkOfflineDevices() {
+  try {
+    const cutoff = new Date(Date.now() - DEVICE_OFFLINE_THRESHOLD_MINUTES * 60 * 1000);
 
-console.log(`[HeartbeatMonitor] Iniciado — umbral de desconexión: ${OFFLINE_THRESHOLD_MINUTES} min`);
+    const staleDevices = await db('devices')
+      .join('agents', 'devices.agent_id', 'agents.id')
+      .where('devices.active', true)
+      .where('devices.last_seen', '<', cutoff)
+      .whereNot('agents.status', 'offline')
+      .select('devices.id', 'devices.name');
+
+    let opened = 0;
+    for (const device of staleDevices) {
+      // severity "warning" (no "critical") a propósito: un equipo puntual sin
+      // señal no es una caída de infraestructura, y así tampoco dispara una
+      // notificación (que sólo se activa por severity==="critical").
+      const { created } = await alertService.openAlert(db, {
+        deviceId: device.id,
+        type: 'device_offline',
+        severity: 'warning',
+        message: `Equipo sin señal (sin lecturas hace más de ${DEVICE_OFFLINE_THRESHOLD_MINUTES} min)`,
+      });
+      if (created) opened++;
+    }
+    if (opened > 0) {
+      console.log(`[HeartbeatMonitor] ${opened} equipo(s) marcados sin señal (> ${DEVICE_OFFLINE_THRESHOLD_MINUTES} min)`);
+    }
+
+    // Resolver device_offline de equipos que volvieron a reportar.
+    const toResolve = await db('alerts')
+      .join('devices', 'alerts.device_id', 'devices.id')
+      .where('alerts.type', 'device_offline')
+      .where('alerts.resolved', false)
+      .where('devices.last_seen', '>=', cutoff)
+      .select('alerts.device_id');
+
+    let resolved = 0;
+    for (const row of toResolve) {
+      const updated = await alertService.resolveAlert(db, { deviceId: row.device_id, type: 'device_offline' });
+      resolved += updated;
+    }
+    if (resolved > 0) {
+      console.log(`[HeartbeatMonitor] ${resolved} equipo(s) recuperaron señal`);
+    }
+  } catch (err: unknown) {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    console.error('[HeartbeatMonitor] Error en check de dispositivos:', errMsg);
+  }
+}
+
+async function runChecks() {
+  await checkOfflineAgents();
+  await checkOfflineDevices();
+}
+
+// Ejecutar al arrancar y luego cada 2 minutos
+runChecks();
+const intervalMs = 2 * 60 * 1000;
+setInterval(runChecks, intervalMs);
+
+console.log(`[HeartbeatMonitor] Iniciado — umbral agente: ${OFFLINE_THRESHOLD_MINUTES} min, umbral equipo: ${DEVICE_OFFLINE_THRESHOLD_MINUTES} min`);

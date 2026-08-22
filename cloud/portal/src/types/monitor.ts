@@ -205,6 +205,8 @@ export interface Client {
   address: string | null;
   country: string | null;
   contact_phone: string | null;
+  notification_email: string | null;
+  notification_webhook_url: string | null;
   monitor_count: number;
   device_count: number;
 }

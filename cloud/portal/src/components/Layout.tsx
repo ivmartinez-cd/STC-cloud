@@ -2,7 +2,7 @@ import { useState, Suspense, useEffect, useRef } from 'react';
 import { Link, useLocation, Outlet } from 'react-router-dom';
 import { api } from '../lib/api';
 import {
-  LayoutDashboard, Users, LogOut, Search, Settings, Menu, X, ChevronRight, Shield, MessageSquarePlus
+  LayoutDashboard, Users, LogOut, Search, Settings, Menu, X, ChevronRight, Shield, MessageSquarePlus, Bell
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import FeedbackModal from './FeedbackModal';
@@ -17,6 +17,7 @@ type SearchResults = { clients: SearchClient[]; devices: SearchDevice[] };
 // rutas con 403).
 const navItems = [
   { name: 'Dashboard',     path: '/',          icon: LayoutDashboard, roles: undefined as string[] | undefined },
+  { name: 'Alertas',       path: '/alerts',    icon: Bell,            roles: undefined as string[] | undefined },
   { name: 'Clientes',      path: '/clients',   icon: Users,           roles: undefined as string[] | undefined },
   { name: 'Agentes',       path: '/agents',    icon: Shield,          roles: ['admin', 'operator'] },
   { name: 'Configuración', path: '/settings',  icon: Settings,        roles: undefined as string[] | undefined },
