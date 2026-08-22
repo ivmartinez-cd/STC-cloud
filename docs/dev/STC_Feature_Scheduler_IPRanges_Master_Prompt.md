@@ -1,5 +1,19 @@
 # Master Prompt: Programación Horaria Avanzada y Multi-Rango de IPs - STC Cloud
 
+> **Histórico/superado (agosto 2026)**: ninguna de las dos features de este
+> prompt se terminó construyendo tal como está especificado acá. El rango
+> múltiple de IPs sí se implementó, pero con un diseño distinto (CIDR +
+> exclusiones compiladas del lado cloud, ver `services/ipRangeSpec.ts`) al
+> "array simple de {start,end}" descripto abajo. El planificador
+> `scan_schedule` (Modo Intervalo / Modo Custom) se implementó tal cual el
+> 23/05/2026 y se reemplazó deliberadamente 4 días después por el modelo de
+> 3 loops HP SDS-aligned + horario laboral configurable
+> (`services/businessHours.ts`) — el código del scheduler custom se eliminó
+> como código muerto en agosto de 2026 (ver
+> `docs/dev/STC_Gap_Analysis_vs_HP_SDS_2026-08.md`). Se conserva este archivo
+> como registro histórico del diseño original, no como especificación
+> vigente.
+
 Este archivo contiene las especificaciones y la directiva técnica para que un modelo de IA o un desarrollador sénior implemente la refactorización completa del planificador de escaneo (*Advanced Scheduling*) y el soporte de múltiples rangos de IP en el panel de configuración de agentes, cumpliendo estrictamente con las directrices de `docs/dev/ANTIGRAVITY_SKILLS.md`.
 
 ---

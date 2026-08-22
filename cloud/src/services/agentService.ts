@@ -34,19 +34,11 @@ export interface AuditContext {
   ip?: string;
 }
 
-export interface ScanSchedule {
-  mode: "interval" | "custom";
-  interval_minutes?: number;
-  custom_days?: number[];  // [1, 2, 3, 4, 5] (1=Lunes, 7=Domingo)
-  custom_times?: string[]; // ["09:00", "15:00"]
-}
-
 /** Configuración de red y escaneo enviada desde el portal para actualizar un agente. */
 export interface AgentConfigUpdate {
   ip_ranges?: IpRangeSpecInput[];
   snmp_community?: string;
   scan_interval_minutes?: number;
-  scan_schedule?: ScanSchedule;
   name?: string;
   toner_warning_threshold?: number;
   toner_critical_threshold?: number;
@@ -349,9 +341,6 @@ export class AgentService {
     }
     if (newConfig.scan_interval_minutes !== undefined) {
       updates.scan_interval_minutes = newConfig.scan_interval_minutes;
-    }
-    if (newConfig.scan_schedule !== undefined) {
-      updates.scan_schedule = JSON.stringify(newConfig.scan_schedule);
     }
     if (newConfig.name !== undefined) {
       updates.name = newConfig.name;
@@ -1122,7 +1111,7 @@ export class AgentService {
       .where({ id: agentId })
       .select(
         "ip_ranges", "snmp_community", "scan_interval_minutes", "toner_warning_threshold",
-        "toner_critical_threshold", "scan_schedule", "snmp_credentials", "business_hours"
+        "toner_critical_threshold", "snmp_credentials", "business_hours"
       )
       .first();
 
@@ -1144,9 +1133,6 @@ export class AgentService {
         (typeof agent.business_hours === 'string' ? JSON.parse(agent.business_hours) : agent.business_hours) ?? null;
       agent.business_hours = storedBusinessHours ?? DEFAULT_BUSINESS_HOURS;
 
-      if (typeof agent.scan_schedule === 'string') {
-        agent.scan_schedule = JSON.parse(agent.scan_schedule);
-      }
       const storedCredentials: StoredCredential[] =
         (typeof agent.snmp_credentials === 'string' ? JSON.parse(agent.snmp_credentials) : agent.snmp_credentials) ?? [];
 

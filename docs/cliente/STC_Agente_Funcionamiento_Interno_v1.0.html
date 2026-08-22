@@ -524,16 +524,16 @@
 
         <h3>C. Scheduler de Escaneo</h3>
         <p>
-            El agente soporta dos modos de programación configurables desde el portal:
+            El agente corre 3 loops independientes que se autorregulan según el horario laboral configurable del sitio (días de la semana, hora de inicio/fin y zona horaria IANA — configurable por agente desde el portal):
         </p>
         <div class="two-col">
             <div class="card">
-                <div class="card-title">Modo Intervalo</div>
-                <p>Ejecuta el scan cada N minutos de forma continua. Configurable por el cliente.</p>
+                <div class="card-title">Dentro del horario laboral</div>
+                <p>Discovery cada 10 min, contadores cada 20 min, insumos cada 60 min.</p>
             </div>
             <div class="card orange">
-                <div class="card-title">Modo Custom (Schedule)</div>
-                <p>Define días de la semana (1=Lunes … 7=Domingo) y horas específicas (p. ej. 09:00, 15:00).</p>
+                <div class="card-title">Fuera del horario laboral</div>
+                <p>Discovery cada 60 min, contadores e insumos cada 4 horas — reduce carga de red fuera de horario sin dejar de monitorear.</p>
             </div>
         </div>
 

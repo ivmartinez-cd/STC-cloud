@@ -118,7 +118,7 @@ export function createPortalAgentController(
             "COUNT(DISTINCT CASE WHEN d.decommissioned_at IS NOT NULL AND d.merged_into IS NULL THEN d.id END)::int AS decommissioned_device_count"
           ),
           ...(scope.kind === "all"
-            ? ["agents.ip_ranges", "agents.snmp_community", "agents.scan_schedule",
+            ? ["agents.ip_ranges", "agents.snmp_community",
                "agents.toner_warning_threshold", "agents.toner_critical_threshold",
                "agents.business_hours"]
             : [])
@@ -144,15 +144,6 @@ export function createPortalAgentController(
         }
       }
 
-      let parsedScanSchedule = null;
-      if (agent.scan_schedule) {
-        try {
-          parsedScanSchedule = typeof agent.scan_schedule === "string" ? JSON.parse(agent.scan_schedule) : agent.scan_schedule;
-        } catch (e) {
-          console.error("Error parsing scan_schedule in getAgent:", e);
-        }
-      }
-
       // Igual que en agentService.getConfig(): se resuelve al default acá
       // para que el portal siempre muestre un valor concreto, nunca `null`.
       let businessHours: BusinessHoursConfig = DEFAULT_BUSINESS_HOURS;
@@ -175,7 +166,6 @@ export function createPortalAgentController(
           ip_ranges: parsedIpRanges,
           snmp_community: agent.snmp_community,
           scan_interval_minutes: agent.scan_interval_minutes,
-          scan_schedule: parsedScanSchedule,
           toner_warning_threshold: agent.toner_warning_threshold,
           toner_critical_threshold: agent.toner_critical_threshold,
           snmp_credentials: maskedCreds?.credentials ?? [],

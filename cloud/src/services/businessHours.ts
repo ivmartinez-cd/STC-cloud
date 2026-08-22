@@ -7,16 +7,16 @@
  * a diferencia de `ip_ranges`, esta columna no existía antes). `null` en la
  * columna significa "usa el default hardcodeado de hoy" (Argentina, L-V,
  * 8-18) — cero cambio de comportamiento para agentes sin configurar. NO
- * confundir con `agents.scan_schedule` (jsonb, migración `20260524020000`):
- * ese es un scheduler custom de días/horas totalmente muerto (nada lo lee ni
- * en el agente ni en el portal) y sin TZ propia — un mecanismo distinto, no
- * reutilizable para esto.
+ * confundir con el extinto `agents.scan_schedule` (migración
+ * `20260524020000`, removida en `20260823020000`): era un scheduler custom
+ * de días/horas reemplazado por este mecanismo — código muerto desde mayo,
+ * eliminado en vez de revivido (ver esa migración para el porqué).
  */
 
 export interface BusinessHoursConfig {
   /** IANA TZ, ej. "America/Argentina/Buenos_Aires", "America/Santiago". */
   timezone: string;
-  /** ISO weekday: 1=lunes .. 7=domingo. Mismo convenio que `ScanSchedule.custom_days`. */
+  /** ISO weekday: 1=lunes .. 7=domingo. */
   days: number[];
   /** 0-23. */
   start_hour: number;

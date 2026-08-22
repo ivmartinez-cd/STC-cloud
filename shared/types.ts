@@ -10,13 +10,6 @@ export interface IpRange {
   end: string;
 }
 
-export interface ScanSchedule {
-  mode: "interval" | "custom";
-  interval_minutes?: number;
-  custom_days?: number[];  // [1, 2, 3, 4, 5] (1=Lunes, 7=Domingo)
-  custom_times?: string[]; // ["09:00", "15:00"]
-}
-
 // IMonitor representa una sucursal/ubicación (antes "Agent")
 export interface IMonitor {
   id: string;
@@ -26,7 +19,6 @@ export interface IMonitor {
   ip_ranges: IpRange[];
   snmp_community: string;
   scan_interval_minutes: number;
-  scan_schedule?: ScanSchedule;
   last_seen: string | null;
   created_at: string;
 }

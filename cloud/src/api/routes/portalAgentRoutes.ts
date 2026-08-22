@@ -65,9 +65,6 @@ const updateConfigSchema = {
       ip_ranges: { type: "array", maxItems: 20, items: ipRangeItemSchema },
       snmp_community: { type: "string", maxLength: 64 },
       scan_interval_minutes: { type: "integer", minimum: 1, maximum: 1440 },
-      // Validación superficial: el detalle de mode/custom_days/custom_times lo
-      // interpreta agentService.updateConfig; acá solo se bloquea basura no-objeto.
-      scan_schedule: { type: "object" },
       toner_warning_threshold: { type: "integer", minimum: 0, maximum: 100 },
       toner_critical_threshold: { type: "integer", minimum: 0, maximum: 100 },
       business_hours: businessHoursSchema,
