@@ -357,6 +357,19 @@ describe('RBAC — /dashboard, /alerts, /search', () => {
   });
 });
 
+describe('RBAC — reportes (lectura permitida, cierre denegado)', () => {
+  test('/clients/:id/reports (propio) → 200', async () => {
+    const { status, data } = await req('GET', `/clients/${rbac.clientAId}/reports`, undefined, rbac.viewerToken);
+    assert.equal(status, 200);
+    assert.ok(Array.isArray(data));
+  });
+
+  test('/clients/:id/reports de OTRO cliente → 404', async () => {
+    const { status } = await req('GET', `/clients/${rbac.clientBId}/reports`, undefined, rbac.viewerToken);
+    assert.equal(status, 404);
+  });
+});
+
 describe('RBAC — lecturas denegadas para client_viewer', () => {
   test('/agents/:id/config → 403 (expone snmp_community e ip_ranges)', async () => {
     const { status } = await req('GET', `/agents/${rbac.agentAId}/config`, undefined, rbac.viewerToken);
@@ -482,6 +495,19 @@ describe('RBAC — mutaciones denegadas para client_viewer', () => {
 
   test('PUT /clients/:id → 403', async () => {
     const { status } = await req('PUT', `/clients/${rbac.clientAId}`, { notification_email: 'x@x.com' }, rbac.viewerToken);
+    assert.equal(status, 403);
+  });
+
+  test('POST /clients/:id/reports/close → 403, y no se crea ningún cierre (verificado como admin)', async () => {
+    const period = `2026-01`;
+    const denied = await req('POST', `/clients/${rbac.clientAId}/reports/close`, { period }, rbac.viewerToken);
+    assert.equal(denied.status, 403);
+    const check = await req('GET', `/clients/${rbac.clientAId}/reports`, undefined, rbac.adminToken);
+    assert.ok(!check.data.some((c: any) => c.period?.startsWith(period)), 'No debe existir un cierre creado por el viewer');
+  });
+
+  test('POST /clients/:id/reports/:closureId/reopen → 403', async () => {
+    const { status } = await req('POST', `/clients/${rbac.clientAId}/reports/00000000-0000-0000-0000-000000000000/reopen`, {}, rbac.viewerToken);
     assert.equal(status, 403);
   });
 

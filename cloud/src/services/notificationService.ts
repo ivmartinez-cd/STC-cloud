@@ -48,37 +48,60 @@ export interface AlertNotificationPayload {
   clientName: string;
 }
 
+export interface MailAttachment {
+  filename: string;
+  content: Buffer | string;
+  contentType?: string;
+}
+
+export interface SendMailOptions {
+  to?: string;
+  bcc?: string;
+  subject: string;
+  text: string;
+  attachments?: MailAttachment[];
+}
+
+/**
+ * Envío de mail genérico — reusado por `sendAlertEmail` (alertas) y
+ * `sendReportEmail` (cierres, con adjuntos). No-opea silenciosamente si no hay
+ * transporte SMTP configurado ni destinatarios: mejor "no se mandó nada" que
+ * reventar el worker que lo llama.
+ */
+export async function sendMail(opts: SendMailOptions): Promise<void> {
+  if (!opts.to && !opts.bcc) return;
+  const mailer = getTransporter();
+  if (!mailer) return;
+  await mailer.sendMail({
+    from: process.env.SMTP_FROM || "STC Cloud <notificaciones@stc-cloud.local>",
+    to: opts.to || opts.bcc, // nodemailer requiere al menos un destinatario en "to"
+    bcc: opts.to ? opts.bcc : undefined,
+    subject: opts.subject,
+    text: opts.text,
+    attachments: opts.attachments,
+  });
+}
+
 /**
  * Manda el email de una alerta crítica a `notification_email` (si el cliente lo
  * configuró) y en BCC a `ALERT_EMAIL_TO` (si está seteado — cierra ese env var
- * documentado-pero-muerto). No-opea silenciosamente si no hay transporte SMTP
- * configurado ni destinatarios: mejor "no se mandó nada" que reventar el worker.
+ * documentado-pero-muerto). Wrapper delgado sobre `sendMail` — comportamiento
+ * sin cambios respecto de antes del refactor.
  */
 export async function sendAlertEmail(
   payload: AlertNotificationPayload,
   recipientEmail: string | null
 ): Promise<void> {
-  const to = recipientEmail;
-  const bcc = process.env.ALERT_EMAIL_TO || undefined;
-  if (!to && !bcc) return;
-
-  const mailer = getTransporter();
-  if (!mailer) return;
-
-  const subject = `[STC Cloud] Alerta crítica — ${payload.clientName}`;
   const target = payload.deviceName || payload.agentName || "—";
-  const text =
-    `Cliente: ${payload.clientName}\n` +
-    `Origen: ${target}\n` +
-    `Tipo: ${payload.type}\n` +
-    `Mensaje: ${payload.message}\n`;
-
-  await mailer.sendMail({
-    from: process.env.SMTP_FROM || "STC Cloud <notificaciones@stc-cloud.local>",
-    to: to || bcc, // nodemailer requiere al menos un destinatario en "to"
-    bcc: to ? bcc : undefined,
-    subject,
-    text,
+  await sendMail({
+    to: recipientEmail ?? undefined,
+    bcc: process.env.ALERT_EMAIL_TO || undefined,
+    subject: `[STC Cloud] Alerta crítica — ${payload.clientName}`,
+    text:
+      `Cliente: ${payload.clientName}\n` +
+      `Origen: ${target}\n` +
+      `Tipo: ${payload.type}\n` +
+      `Mensaje: ${payload.message}\n`,
   });
 }
 
@@ -146,29 +169,69 @@ async function assertSafeWebhookUrl(rawUrl: string): Promise<URL> {
 }
 
 /**
- * POST del payload de la alerta al webhook del cliente. Un solo intento (BullMQ ya
- * da reintento/backoff a nivel de job — ver `notificationWorker.ts`), timeout
- * corto, sin seguir redirects (una 3xx a una URL privada burlaría el guard de
- * arriba si se siguiera automáticamente).
+ * POST genérico contra un webhook — reusado por alertas y cierres. Un solo
+ * intento (BullMQ ya da reintento/backoff a nivel de job), timeout corto, sin
+ * seguir redirects (una 3xx a una URL privada burlaría el guard SSRF si se
+ * siguiera automáticamente).
  */
-export async function sendAlertWebhook(payload: AlertNotificationPayload, webhookUrl: string): Promise<void> {
+export async function postWebhook(webhookUrl: string, body: unknown): Promise<void> {
   const url = await assertSafeWebhookUrl(webhookUrl);
   await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      event: "alert.created",
-      alert: {
-        id: payload.alertId,
-        type: payload.type,
-        severity: payload.severity,
-        message: payload.message,
-        device_name: payload.deviceName ?? null,
-        agent_name: payload.agentName ?? null,
-      },
-      client: { id: payload.clientId, name: payload.clientName },
-    }),
+    body: JSON.stringify(body),
     redirect: "manual",
     signal: AbortSignal.timeout(5000),
+  });
+}
+
+/** Wrapper delgado sobre `postWebhook` — comportamiento sin cambios respecto de antes del refactor. */
+export async function sendAlertWebhook(payload: AlertNotificationPayload, webhookUrl: string): Promise<void> {
+  await postWebhook(webhookUrl, {
+    event: "alert.created",
+    alert: {
+      id: payload.alertId,
+      type: payload.type,
+      severity: payload.severity,
+      message: payload.message,
+      device_name: payload.deviceName ?? null,
+      agent_name: payload.agentName ?? null,
+    },
+    client: { id: payload.clientId, name: payload.clientName },
+  });
+}
+
+export interface ReportNotificationPayload {
+  closureId: string;
+  period: string;
+  clientId: string;
+  clientName: string;
+  totalPages: number;
+}
+
+/** Email de un cierre mensual, con el CSV/XLSX adjuntos. */
+export async function sendReportEmail(
+  payload: ReportNotificationPayload,
+  recipientEmail: string | null,
+  attachments: MailAttachment[]
+): Promise<void> {
+  await sendMail({
+    to: recipientEmail ?? undefined,
+    bcc: process.env.ALERT_EMAIL_TO || undefined,
+    subject: `[STC Cloud] Cierre mensual ${payload.period} — ${payload.clientName}`,
+    text:
+      `Cliente: ${payload.clientName}\n` +
+      `Período: ${payload.period}\n` +
+      `Total de páginas: ${payload.totalPages}\n\n` +
+      `Se adjunta el detalle del cierre (CSV/XLSX).`,
+    attachments,
+  });
+}
+
+export async function sendReportWebhook(payload: ReportNotificationPayload, webhookUrl: string): Promise<void> {
+  await postWebhook(webhookUrl, {
+    event: "report.closed",
+    report: { closure_id: payload.closureId, period: payload.period, total_pages: payload.totalPages },
+    client: { id: payload.clientId, name: payload.clientName },
   });
 }

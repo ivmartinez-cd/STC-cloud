@@ -15,6 +15,7 @@ import { AgentService } from "../services/agentService";
 import "../jobs/heartbeatMonitor";
 import "../jobs/alertWorker";
 import "../jobs/notificationWorker";
+import "../jobs/reportDeliveryWorker";
 import { registerWebSocket } from "../ws/index";
 
 import { createAuthMiddleware } from "./middlewares/authMiddleware";
@@ -25,6 +26,7 @@ import { registerClientRoutes } from "./routes/clientRoutes";
 import { registerDeviceRoutes } from "./routes/deviceRoutes";
 import { registerDashboardRoutes } from "./routes/dashboardRoutes";
 import { registerFeedbackRoutes } from "./routes/feedbackRoutes";
+import { registerReportRoutes } from "./routes/reportRoutes";
 import { getClientIp } from "./utils/ip";
 import { SERVER_VERSION } from "../version";
 import { CLIENT_VIEWER_ROUTES } from "./policy/rolePolicy";
@@ -275,6 +277,7 @@ const start = async () => {
     registerDeviceRoutes(fastify, db, portalAuth);
     registerDashboardRoutes(fastify, db, agentService, portalAuth);
     registerFeedbackRoutes(fastify, db, portalAuth);
+    registerReportRoutes(fastify, db, portalAuth);
 
     // Assert de arranque: si una entrada de CLIENT_VIEWER_ROUTES no corresponde a
     // ninguna ruta real (typo, ruta renombrada), esto sería una denegación SILENCIOSA
