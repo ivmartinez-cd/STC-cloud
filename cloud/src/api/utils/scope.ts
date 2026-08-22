@@ -1,7 +1,7 @@
 import { FastifyRequest } from "fastify";
 import { Knex } from "knex";
 import type { PortalUser } from "../middlewares/authMiddleware";
-import { AGENT_ID_URL_PREFIX, CLIENT_ID_URL_PREFIX } from "../policy/rolePolicy";
+import { AGENT_ID_URL_PREFIX, CLIENT_ID_URL_PREFIX, DEVICE_ID_URL_PREFIX } from "../policy/rolePolicy";
 
 /**
  * Alcance de datos resuelto para la request actual. Unión discriminada a propósito —
@@ -58,9 +58,17 @@ export function agentIdsOf(db: Knex, clientId: string): Knex.QueryBuilder {
   return db("agents").where("client_id", clientId).select("id");
 }
 
-/** Igual que `agentIdsOf`, pero para `devices.id` (dos saltos desde `clients`). */
+/**
+ * Subconsulta de OWNERSHIP (no de inventario) con los `id` de los equipos del
+ * cliente `cid`. Usa `devices.client_id` directo desde la identidad por
+ * cliente (§2.4) — un salto en vez de dos. Deliberadamente NO excluye bajas ni
+ * fusiones: angostarla mezclaría "de quién es este equipo" (RBAC) con "está
+ * vivo en el inventario" (deviceFilters.ts), y haría que un cambio de ciclo de
+ * vida altere en silencio el scoping de autorización. Quien necesite excluir
+ * bajas/fusiones lo hace explícitamente con `onlyLiveDevices`/`notMerged`.
+ */
 export function deviceIdsOf(db: Knex, clientId: string): Knex.QueryBuilder {
-  return db("devices").whereIn("agent_id", agentIdsOf(db, clientId)).select("id");
+  return db("devices").where("client_id", clientId).select("id");
 }
 
 /**
@@ -92,10 +100,55 @@ export async function agentIdParamMatchesScope(
   return !!agent && agent.client_id === scope.id;
 }
 
-/** `true` si la URL declarada de la ruta es una subruta de `/clients/:id` o `/agents/:id`. */
+const DEVICE_UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Ownership central para rutas `/devices/:id*`: un lookup contra
+ * `devices_client_id_idx`. `null` (no existe o `client_id` nulo) o distinto
+ * cliente → el llamador responde 404, no 403 (mismo criterio que
+ * `agentIdParamMatchesScope`: evita un oráculo de existencia sobre UUIDs
+ * ajenos). Antes de esta pasada NINGÚN handler de `/devices/:id*` llamaba a
+ * `getScope` (ver `deleteDevice`) — este chequeo central cierra ese hueco
+ * para toda subruta presente y futura, sin depender de que cada handler se
+ * acuerde.
+ *
+ * El `:id` de `/devices/:id*` NO es siempre un UUID: `deviceController`
+ * también resuelve por prefijo de id, serial o IP (ver `getDevice`,
+ * `getDeviceReadings`) — un `WHERE id = ?` a secas con un serial como
+ * `"SN-1234"` revienta con `invalid input syntax for type uuid` (22P02) ANTES
+ * de llegar al handler, que es exactamente el bug que ese mismo alias-lookup
+ * ya arregló una vez en `getDeviceReadings`. Este chequeo replica la misma
+ * resolución para no reintroducirlo un nivel más arriba.
+ */
+export async function deviceIdParamMatchesScope(
+  db: Knex,
+  request: FastifyRequest,
+  scope: Scope
+): Promise<boolean> {
+  if (scope.kind !== "client") return true;
+  const { id } = request.params as { id?: string };
+  if (!id) return false;
+  const isUuid = DEVICE_UUID_RE.test(id);
+  const device = await db("devices")
+    .where((b) => {
+      if (isUuid) {
+        b.where("id", id);
+      } else {
+        b.whereRaw("id::text LIKE ?", [`${id}%`]).orWhere("serial_number", id).orWhereRaw("ip_address::text = ?", [id]);
+      }
+    })
+    .select("client_id")
+    .first();
+  return !!device && device.client_id === scope.id;
+}
+
+/** `true` si la URL declarada de la ruta es una subruta de `/clients/:id`, `/agents/:id` o `/devices/:id`. */
 export function isClientIdParamRoute(routeUrl: string): boolean {
   return routeUrl.startsWith(CLIENT_ID_URL_PREFIX);
 }
 export function isAgentIdParamRoute(routeUrl: string): boolean {
   return routeUrl.startsWith(AGENT_ID_URL_PREFIX);
+}
+export function isDeviceIdParamRoute(routeUrl: string): boolean {
+  return routeUrl.startsWith(DEVICE_ID_URL_PREFIX);
 }

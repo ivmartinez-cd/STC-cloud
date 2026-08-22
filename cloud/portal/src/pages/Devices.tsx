@@ -16,6 +16,7 @@ interface Device {
   last_seen?: string | null;
   monitor_name: string;
   client_name: string;
+  decommissioned_at?: string | null;
   toner_black?:   number | null;
   toner_cyan?:    number | null;
   toner_magenta?: number | null;
@@ -27,18 +28,19 @@ const Devices = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState('');
   const [search, setSearch]   = useState('');
+  const [includeDecommissioned, setIncludeDecommissioned] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await api.get<Device[]>('/devices');
+      const data = await api.get<Device[]>(`/devices${includeDecommissioned ? '?include=decommissioned' : ''}`);
       setDevices(Array.isArray(data) ? data : []);
     } catch (e: unknown) {
       setError((e as Error).message);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [includeDecommissioned]);
 
   useEffect(() => {
     void (async () => {
@@ -77,7 +79,11 @@ const Devices = () => {
             Control global de impresoras — {devices.length} dispositivo(s)
           </p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex gap-3 items-center">
+          <label className="flex items-center gap-2 text-xs font-bold text-slate-500 select-none">
+            <input type="checkbox" checked={includeDecommissioned} onChange={(e) => setIncludeDecommissioned(e.target.checked)} />
+            Mostrar dados de baja
+          </label>
           <button onClick={load} disabled={loading}
             className="p-3 bg-white border border-slate-200 text-slate-400 hover:text-brand hover:border-brand rounded-2xl transition-all shadow-sm active:scale-95 disabled:opacity-40"
             title="Actualizar">
@@ -149,13 +155,17 @@ const Devices = () => {
                 <Link
                   key={device.id}
                   to={`/devices/${device.id}`}
-                  className="cd-panel p-6 group hover:border-brand/30 transition-all flex flex-col h-full"
+                  className={`cd-panel p-6 group hover:border-brand/30 transition-all flex flex-col h-full ${device.decommissioned_at ? 'opacity-60' : ''}`}
                 >
                   <div className="flex items-start justify-between mb-5">
                     <div className="p-3 bg-blue-50 text-brand rounded-2xl group-hover:bg-brand group-hover:text-white transition-all duration-300">
                       <Printer size={20} />
                     </div>
-                    {isDeviceOnline ? (
+                    {device.decommissioned_at ? (
+                      <span className="flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-wider text-amber-700 bg-amber-50 px-3 py-1 rounded-full">
+                        Baja
+                      </span>
+                    ) : isDeviceOnline ? (
                       <span className="flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-wider text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full">
                         <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                         Activo

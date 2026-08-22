@@ -428,8 +428,40 @@ describe('RBAC — mutaciones denegadas para client_viewer', () => {
     assert.equal(check.status, 200, 'El dispositivo no debe haberse borrado');
   });
 
-  test('DELETE /devices/offline → 403', async () => {
-    const { status } = await req('DELETE', `/devices/offline?agent_id=${rbac.agentAId}`, {}, rbac.viewerToken);
+  test('POST /agents/:id/devices/decommission-stale → 403 (reemplaza a DELETE /devices/offline)', async () => {
+    const { status } = await req('POST', `/agents/${rbac.agentAId}/devices/decommission-stale`, {}, rbac.viewerToken);
+    assert.equal(status, 403);
+  });
+
+  test('PUT /devices/:id → 403, y el nombre no cambia (verificado como admin)', async () => {
+    const denied = await req('PUT', `/devices/${rbac.deviceAId}`, { name: 'Hackeado' }, rbac.viewerToken);
+    assert.equal(denied.status, 403);
+  });
+
+  test('POST /devices/:id/decommission → 403, y el equipo sigue vivo (verificado como admin)', async () => {
+    const denied = await req('POST', `/devices/${rbac.deviceAId}/decommission`, { reason: 'test' }, rbac.viewerToken);
+    assert.equal(denied.status, 403);
+    const check = await req('GET', `/devices/${rbac.deviceAId}`, undefined, rbac.adminToken);
+    assert.equal(check.data.decommissioned_at, null, 'El equipo no debe haberse dado de baja');
+  });
+
+  test('POST /devices/:id/recommission → 403', async () => {
+    const { status } = await req('POST', `/devices/${rbac.deviceAId}/recommission`, {}, rbac.viewerToken);
+    assert.equal(status, 403);
+  });
+
+  test('POST /devices/:id/move → 403', async () => {
+    const { status } = await req('POST', `/devices/${rbac.deviceAId}/move`, { agentId: rbac.agentBId, reason: 'test' }, rbac.viewerToken);
+    assert.equal(status, 403);
+  });
+
+  test('POST /devices/:id/merge → 403', async () => {
+    const { status } = await req('POST', `/devices/${rbac.deviceAId}/merge`, { sourceDeviceId: rbac.deviceBId }, rbac.viewerToken);
+    assert.equal(status, 403);
+  });
+
+  test('GET /devices/duplicates → 403 (herramienta de operaciones, no de sólo lectura)', async () => {
+    const { status } = await req('GET', `/devices/duplicates?client_id=${rbac.clientAId}`, undefined, rbac.viewerToken);
     assert.equal(status, 403);
   });
 

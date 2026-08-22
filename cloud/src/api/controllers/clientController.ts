@@ -3,6 +3,7 @@ import { Knex } from "knex";
 import type { PortalUser } from "../middlewares/authMiddleware";
 import { getClientIp } from "../utils/ip";
 import { getScope } from "../utils/scope";
+import { onlyLiveDevices, notMerged } from "../utils/deviceFilters";
 
 export function createClientController(db: Knex) {
   return {
@@ -106,13 +107,18 @@ export function createClientController(db: Knex) {
           db.raw(
             "COUNT(DISTINCT CASE WHEN a.status != 'revoked' THEN a.id END)::int AS monitor_count"
           ),
-          db.raw("COUNT(DISTINCT CASE WHEN d.active = true THEN d.id END)::int AS device_count"),
+          db.raw(
+            "COUNT(DISTINCT CASE WHEN d.decommissioned_at IS NULL AND d.merged_into IS NULL THEN d.id END)::int AS device_count"
+          ),
+          db.raw(
+            "COUNT(DISTINCT CASE WHEN d.decommissioned_at IS NOT NULL AND d.merged_into IS NULL THEN d.id END)::int AS decommissioned_device_count"
+          ),
           db.raw(
             "COUNT(DISTINCT CASE WHEN a.status = 'active' AND a.last_seen > NOW() - INTERVAL '5 minutes' THEN a.id END)::int AS active_monitor_count"
           )
         )
         .leftJoin("agents as a", "a.client_id", "clients.id")
-        .leftJoin("devices as d", "d.agent_id", "a.id")
+        .leftJoin("devices as d", "d.client_id", "clients.id")
         .groupBy("clients.id")
         .orderBy("clients.name");
     },
@@ -126,13 +132,18 @@ export function createClientController(db: Knex) {
           db.raw(
             "COUNT(DISTINCT CASE WHEN a.status != 'revoked' THEN a.id END)::int AS monitor_count"
           ),
-          db.raw("COUNT(DISTINCT CASE WHEN d.active = true THEN d.id END)::int AS device_count"),
+          db.raw(
+            "COUNT(DISTINCT CASE WHEN d.decommissioned_at IS NULL AND d.merged_into IS NULL THEN d.id END)::int AS device_count"
+          ),
+          db.raw(
+            "COUNT(DISTINCT CASE WHEN d.decommissioned_at IS NOT NULL AND d.merged_into IS NULL THEN d.id END)::int AS decommissioned_device_count"
+          ),
           db.raw(
             "COUNT(DISTINCT CASE WHEN a.status = 'active' AND a.last_seen > NOW() - INTERVAL '5 minutes' THEN a.id END)::int AS active_monitor_count"
           )
         )
         .leftJoin("agents as a", "a.client_id", "clients.id")
-        .leftJoin("devices as d", "d.agent_id", "a.id")
+        .leftJoin("devices as d", "d.client_id", "clients.id")
         .groupBy("clients.id")
         .first();
     },
@@ -154,7 +165,7 @@ export function createClientController(db: Knex) {
           // admin/operator, no para un client_viewer de sólo lectura.
           ...(scope.kind === "all" ? ["agents.ip_ranges"] : []),
           db.raw(
-            "COUNT(DISTINCT CASE WHEN d.active = true THEN d.id END)::int AS device_count"
+            "COUNT(DISTINCT CASE WHEN d.decommissioned_at IS NULL AND d.merged_into IS NULL THEN d.id END)::int AS device_count"
           )
         )
         .leftJoin("devices as d", "d.agent_id", "agents.id")
@@ -179,8 +190,8 @@ export function createClientController(db: Knex) {
             r.color_pages - LAG(r.color_pages) OVER (PARTITION BY r.device_id ORDER BY r.time) AS color_delta
           FROM readings r
           JOIN devices d ON r.device_id = d.id
-          JOIN agents  a ON d.agent_id = a.id
-          WHERE a.client_id = ?
+          WHERE d.client_id = ?
+            AND d.merged_into IS NULL
             AND r.time >= date_trunc('month', NOW() - INTERVAL '4 months') - INTERVAL '40 days'
         )
         SELECT
@@ -200,9 +211,15 @@ export function createClientController(db: Knex) {
 
     getClientDevices: async (request: FastifyRequest) => {
       const { id } = request.params as { id: string };
+      const { include } = request.query as { include?: string };
+      const includeDecommissioned = include === "decommissioned" || include === "all";
       return await db("devices")
-        .join("agents", "devices.agent_id", "agents.id")
-        .where("agents.client_id", id)
+        .leftJoin("agents", "devices.agent_id", "agents.id")
+        .where("devices.client_id", id)
+        .modify((q) => {
+          if (!includeDecommissioned) onlyLiveDevices(q, "devices");
+          else notMerged(q, "devices");
+        })
         .select(
           "devices.*",
           db.raw(

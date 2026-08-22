@@ -11,6 +11,8 @@ interface Props {
   devices: Device[];
   monitorName: string;
   onRefresh?: () => void;
+  agentId?: string;
+  isReadOnlyViewer?: boolean;
 }
 
 function exportCountersCSV(devices: Device[], monitorName: string, discriminate: boolean) {
@@ -44,7 +46,7 @@ function exportCountersCSV(devices: Device[], monitorName: string, discriminate:
   URL.revokeObjectURL(url);
 }
 
-const DeviceInventoryTable = ({ devices, monitorName, onRefresh }: Props) => {
+const DeviceInventoryTable = ({ devices, monitorName, onRefresh, agentId, isReadOnlyViewer = false }: Props) => {
   const [showExportModal, setShowExportModal] = useState(false);
 
   const now = useNow();
@@ -67,17 +69,24 @@ const DeviceInventoryTable = ({ devices, monitorName, onRefresh }: Props) => {
   };
 
   const handleDeleteOffline = async () => {
-    const agentId = devices.find(d => d.agent_id)?.agent_id;
-    const url = agentId ? `/devices/offline?agent_id=${agentId}` : '/devices/offline';
-    if (window.confirm(`¿Deseas eliminar los ${offlineCount} equipos desconectados de este monitor?`)) {
-      try {
-        await api.delete(url);
-        if (onRefresh) onRefresh();
-        else window.location.reload();
-      } catch (e: unknown) {
-        const msg = e instanceof Error ? e.message : String(e);
-        alert('Error al eliminar equipos desconectados: ' + msg);
-      }
+    // Reemplaza el DELETE /devices/offline (borrado en duro sin scope) por
+    // decommission-stale: da de baja en vez de borrar, y muestra la lista
+    // real (dryRun) antes de confirmar, en vez de sólo un conteo.
+    const targetAgentId = agentId ?? devices.find(d => d.agent_id)?.agent_id;
+    if (!targetAgentId) return;
+    try {
+      const preview = await api.post<{ count: number; devices: Array<{ serial_number: string | null; ip_address: string | null; last_seen: string | null }> }>(
+        `/agents/${targetAgentId}/devices/decommission-stale`, { dryRun: true }
+      );
+      if (preview.count === 0) { alert('No hay equipos desconectados para dar de baja.'); return; }
+      const list = preview.devices.map(d => `• ${d.serial_number ?? d.ip_address ?? '—'}`).join('\n');
+      if (!window.confirm(`Se dará de baja ${preview.count} equipo(s) desconectado(s):\n\n${list}\n\n¿Confirmar?`)) return;
+      await api.post(`/agents/${targetAgentId}/devices/decommission-stale`, {});
+      if (onRefresh) onRefresh();
+      else window.location.reload();
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      alert('Error al dar de baja equipos desconectados: ' + msg);
     }
   };
 
@@ -95,13 +104,13 @@ const DeviceInventoryTable = ({ devices, monitorName, onRefresh }: Props) => {
             <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Dispositivos descubiertos y monitorizados por este nodo</p>
           </div>
           <div className="flex items-center gap-3">
-            {offlineCount > 0 && (
+            {offlineCount > 0 && !isReadOnlyViewer && (
               <button
                 onClick={handleDeleteOffline}
-                className="flex items-center gap-2 px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-xl text-[11px] font-black uppercase tracking-wider transition-colors border border-rose-200"
-                title="Eliminar todos los equipos desconectados de este monitor"
+                className="flex items-center gap-2 px-3.5 py-2 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-xl text-[11px] font-black uppercase tracking-wider transition-colors border border-amber-200"
+                title="Dar de baja todos los equipos desconectados de este monitor"
               >
-                <Trash2 size={13} /> Eliminar Desconectados ({offlineCount})
+                <Trash2 size={13} /> Dar de Baja Desconectados ({offlineCount})
               </button>
             )}
             {devices.length > 0 && (
@@ -126,14 +135,16 @@ const DeviceInventoryTable = ({ devices, monitorName, onRefresh }: Props) => {
                 <th className="!bg-[#004a99] !text-white">Red</th>
                 <th className="!bg-[#004a99] !text-white">Número de Serie</th>
                 <th className="!bg-[#004a99] !text-white">Tóner</th>
-                <th className="!bg-[#004a99] !text-white !text-right">Contadores (Total / Mono / Color)</th>
-                <th className="!bg-[#004a99] !text-white !text-center !rounded-tr-2xl">Acción</th>
+                <th className={`!bg-[#004a99] !text-white !text-right ${isReadOnlyViewer ? '!rounded-tr-2xl' : ''}`}>Contadores (Total / Mono / Color)</th>
+                {!isReadOnlyViewer && (
+                  <th className="!bg-[#004a99] !text-white !text-center !rounded-tr-2xl">Acción</th>
+                )}
               </tr>
             </thead>
             <tbody>
               {devices.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-8 py-20 text-center">
+                  <td colSpan={isReadOnlyViewer ? 5 : 6} className="px-8 py-20 text-center">
                     <div className="flex flex-col items-center gap-3">
                       <Printer size={48} className="text-slate-200" />
                       <p className="text-slate-500 font-bold text-xs uppercase tracking-widest">No se han descubierto dispositivos en este segmento</p>
@@ -238,29 +249,31 @@ const DeviceInventoryTable = ({ devices, monitorName, onRefresh }: Props) => {
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-5 text-center">
-                      {statusInfo.status !== 'online' ? (
-                        <button
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            handleDeleteDevice(device.id, device.model, device.ip_address);
-                          }}
-                          className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 hover:text-rose-800 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all border border-rose-200 inline-flex items-center gap-1.5 shadow-sm"
-                          title="Eliminar este equipo sin conexión"
-                        >
-                          <Trash2 size={13} /> Eliminar
-                        </button>
-                      ) : (
-                        <button
-                          disabled
-                          className="px-3 py-1.5 bg-slate-100 text-slate-300 rounded-xl text-[11px] font-black uppercase tracking-wider cursor-not-allowed inline-flex items-center gap-1.5 border border-slate-200/50 opacity-60"
-                          title="Solo se pueden eliminar equipos sin conexión"
-                        >
-                          <Trash2 size={13} /> Eliminar
-                        </button>
-                      )}
-                    </td>
+                    {!isReadOnlyViewer && (
+                      <td className="px-6 py-5 text-center">
+                        {statusInfo.status !== 'online' ? (
+                          <button
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleDeleteDevice(device.id, device.model, device.ip_address);
+                            }}
+                            className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 hover:text-rose-800 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all border border-rose-200 inline-flex items-center gap-1.5 shadow-sm"
+                            title="Eliminar este equipo sin conexión"
+                          >
+                            <Trash2 size={13} /> Eliminar
+                          </button>
+                        ) : (
+                          <button
+                            disabled
+                            className="px-3 py-1.5 bg-slate-100 text-slate-300 rounded-xl text-[11px] font-black uppercase tracking-wider cursor-not-allowed inline-flex items-center gap-1.5 border border-slate-200/50 opacity-60"
+                            title="Solo se pueden eliminar equipos sin conexión"
+                          >
+                            <Trash2 size={13} /> Eliminar
+                          </button>
+                        )}
+                      </td>
+                    )}
                   </tr>
                   );
                 })

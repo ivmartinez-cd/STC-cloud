@@ -6,10 +6,12 @@ import { policyFor } from "../policy/rolePolicy";
 import {
   agentIdParamMatchesScope,
   clientIdParamMatchesScope,
+  deviceIdParamMatchesScope,
   getRouteKey,
   getScope,
   isAgentIdParamRoute,
   isClientIdParamRoute,
+  isDeviceIdParamRoute,
 } from "../utils/scope";
 
 // ─── Tipos de Autenticación Exportados ───────────────────────────────────────
@@ -186,6 +188,14 @@ export function createAuthMiddleware(
 
         if (isAgentIdParamRoute(routeUrl) && !(await agentIdParamMatchesScope(db, request, scope))) {
           return reply.status(404).send({ error: "Monitor no encontrado" });
+        }
+
+        // Antes de esta pasada ningún handler de /devices/:id* validaba
+        // ownership (ver `deleteDevice`) — quedaba enteramente en manos del
+        // allowlist de roles. Este chequeo central cubre toda subruta
+        // presente y futura sin depender de que cada handler se acuerde.
+        if (isDeviceIdParamRoute(routeUrl) && !(await deviceIdParamMatchesScope(db, request, scope))) {
+          return reply.status(404).send({ error: "Dispositivo no encontrado" });
         }
       }
     } catch (err) {

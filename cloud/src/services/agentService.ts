@@ -3,6 +3,8 @@ import crypto from "crypto";
 import net from "net";
 import { Queue } from "bullmq";
 import * as alertService from "./alertService";
+import { resolveDeviceIdentity, NOISE_MODEL_RE } from "./deviceIdentity";
+import { mergeDevices } from "./deviceLifecycleService";
 
 // ─── Interfaces de Tipado Fuerte ──────────────────────────────────────────────
 // Estas interfaces reemplazan los tipos `any` para cumplir con la Regla 5
@@ -42,6 +44,7 @@ export interface AgentConfigUpdate {
 export interface IncomingDevice {
   ip: string;
   serial: string | null;
+  mac?: string | null;
   brand: string;
   model: string;
   name: string;
@@ -379,80 +382,128 @@ export class AgentService {
 
   /**
    * Registra o actualiza dispositivos de impresión descubiertos por el agente.
-   * Utiliza `ON CONFLICT` sobre `(agent_id, serial_number)` para evitar duplicados.
+   * Identidad por CLIENTE (serial -> mac -> ip, ver deviceIdentity.ts) — ya NO
+   * usa `ON CONFLICT (agent_id, serial_number)`: ese índice sigue existiendo
+   * (lo dropea recién la migración de dedupe, condicional), pero atarse a él
+   * en código es lo que impedía tocarlo sin romper la ingesta. El `catch` de
+   * `23505` reintenta el lookup una vez, para la carrera entre dos requests
+   * de `/devices/register` concurrentes sobre la misma impresora nueva.
    * @param agentId - UUID del agente que reporta los dispositivos.
    * @param devices - Array de dispositivos descubiertos en la red local del cliente.
    */
   async registerDevices(agentId: string, devices: IncomingDevice[]) {
+    const agentRow = await this.db("agents").where({ id: agentId }).select("client_id").first();
+    const clientId: string | null = agentRow?.client_id ?? null;
+
     for (const device of devices) {
       try {
         const ip = device.ip;
-        const serial = (device.serial || "").trim();
-        const isRealSerial = serial.length > 0 && serial !== ip;
+        const serial = (device.serial || "").trim() || null;
+        const mac = device.mac ?? null;
 
-        // 1. Si el serial es real, verificar si existe un registro fantasma en esta IP para actualizarlo
-        if (isRealSerial) {
-          const ghostDevices = await this.db("devices")
-            .where({ agent_id: agentId, ip_address: ip })
-            .andWhere((b) => b.whereNull("serial_number").orWhere("serial_number", ip))
-            .select("id");
+        if (!clientId) {
+          // Agente huérfano (sin client_id) — no debería ocurrir en producción,
+          // pero no puede tumbar el registro. Fallback al comportamiento previo,
+          // scopeado por agente.
+          await this.registerDeviceLegacyByAgent(agentId, device);
+          continue;
+        }
 
-          if (ghostDevices.length > 0) {
-            const ghostId = ghostDevices[0].id;
-            await this.db("devices")
-              .where("id", ghostId)
-              .update({
-                serial_number: serial,
+        const attemptUpsert = async () => {
+          await this.db.transaction(async (trx) => {
+            const { device: existing } = await resolveDeviceIdentity(trx, {
+              clientId, agentId, serial, mac, ip,
+            });
+
+            if (existing) {
+              if (existing.agent_id !== agentId) {
+                // resolveDeviceIdentity ya decidió (sticky, ver deviceIdentity.ts)
+                // si corresponde re-apuntar agent_id o no; acá sólo actualizamos
+                // el resto de los campos descriptivos.
+              }
+              await trx("devices").where("id", existing.id).update({
+                ip_address: ip || existing.ip_address,
+                serial_number: serial || existing.serial_number,
+                mac: mac || existing.mac,
                 brand: device.brand && device.brand !== 'unknown' ? device.brand : undefined,
                 model: device.model || undefined,
-                name: device.name || undefined,
+                name_reported: device.name || undefined,
                 last_seen: new Date(),
                 active: true,
               });
-            continue;
+              return;
+            }
+
+            const newId = crypto.randomUUID();
+            await trx("devices").insert({
+              id: newId,
+              agent_id: agentId,
+              client_id: clientId,
+              ip_address: device.ip,
+              serial_number: serial,
+              mac,
+              brand: device.brand || 'unknown',
+              model: (device.model || "").slice(0, 100),
+              name_reported: (device.name || "").slice(0, 100),
+              active: true,
+              last_seen: new Date(),
+            });
+          });
+        };
+
+        try {
+          await attemptUpsert();
+        } catch (err: unknown) {
+          const msg = err instanceof Error ? err.message : String(err);
+          if (/duplicate key|23505/i.test(msg)) {
+            // Carrera con otro registro concurrente: reintentar una vez, ahora
+            // debería resolver por el lookup en vez de insertar.
+            await attemptUpsert();
+          } else {
+            throw err;
           }
         }
-
-        // 2. Si el serial es temporal/nulo, verificar si YA EXISTE algún equipo registrado en esta IP
-        if (!isRealSerial) {
-          const existingDevices = await this.db("devices")
-            .where({ agent_id: agentId, ip_address: ip })
-            .select("id");
-
-          if (existingDevices.length > 0) {
-            await this.db("devices")
-              .where("id", existingDevices[0].id)
-              .update({ last_seen: new Date(), active: true });
-            continue;
-          }
-        }
-
-        // 3. Upsert estándar por (agent_id, serial_number)
-        await this.db.raw(`
-          INSERT INTO devices (id, agent_id, ip_address, serial_number, brand, model, name, active, last_seen)
-          VALUES (?, ?, ?, ?, ?, ?, ?, true, NOW())
-          ON CONFLICT (agent_id, serial_number) WHERE serial_number IS NOT NULL
-          DO UPDATE SET
-            ip_address = EXCLUDED.ip_address,
-            brand      = COALESCE(NULLIF(EXCLUDED.brand, 'unknown'), devices.brand),
-            model      = COALESCE(NULLIF(EXCLUDED.model, ''), devices.model),
-            name       = COALESCE(NULLIF(EXCLUDED.name, ''), devices.name),
-            last_seen  = NOW(),
-            active     = true
-        `, [
-          crypto.randomUUID(),
-          agentId,
-          device.ip,
-          serial || null,
-          device.brand || 'unknown',
-          (device.model || "").slice(0, 100),
-          (device.name || "").slice(0, 100)
-        ]);
       } catch (e: unknown) {
         const errMsg = e instanceof Error ? e.message : String(e);
         console.error(`[AGENT_SERVICE] Error registering device ${device.ip}:`, errMsg);
       }
     }
+  }
+
+  /** Fallback legacy (scopeado por agente) para el caso, no esperado en producción,
+   *  de un agente sin client_id resuelto. No usa la escalera de identidad nueva. */
+  private async registerDeviceLegacyByAgent(agentId: string, device: IncomingDevice) {
+    const ip = device.ip;
+    const serial = (device.serial || "").trim();
+    const isRealSerial = serial.length > 0 && serial !== ip;
+
+    const existingDevices = await this.db("devices")
+      .where({ agent_id: agentId, ip_address: ip })
+      .whereNull("merged_into")
+      .select("id");
+
+    if (existingDevices.length > 0) {
+      await this.db("devices")
+        .where("id", existingDevices[0].id)
+        .update({
+          serial_number: isRealSerial ? serial : undefined,
+          last_seen: new Date(),
+          active: true,
+        });
+      return;
+    }
+
+    await this.db("devices").insert({
+      id: crypto.randomUUID(),
+      agent_id: agentId,
+      ip_address: ip,
+      serial_number: isRealSerial ? serial : null,
+      brand: device.brand || 'unknown',
+      model: (device.model || "").slice(0, 100),
+      name_reported: (device.name || "").slice(0, 100),
+      active: true,
+      last_seen: new Date(),
+    });
   }
 
   // --- Remote Logs & Commands ---
@@ -512,8 +563,11 @@ export class AgentService {
    * registra la lectura en el historial de la tabla `readings`.
    *
    * @remarks
-   * - Las lecturas se asocian al dispositivo por su número de serie físico inmutable.
-   * - Utiliza `ON CONFLICT (agent_id, serial_number)` para prevenir duplicados.
+   * - La identidad del dispositivo se resuelve por CLIENTE (serial -> mac -> ip,
+   *   ver `deviceIdentity.resolveDeviceIdentity`), no por agente — dos agentes
+   *   del mismo cliente que ven la misma impresora física convergen a una sola
+   *   fila. `resolveDeviceIdentity` toma un advisory lock por identidad para
+   *   serializar sincronizaciones concurrentes, sin depender de un índice único.
    * - Los contadores se parsean con validación estricta (parseCount/parseToner).
    *
    * @param redis - Cliente Redis para encolar evaluaciones de alertas asíncronas.
@@ -548,6 +602,14 @@ export class AgentService {
       return Math.min(100, Math.max(0, n));
     };
 
+    // Identidad de dispositivo por cliente (§2.4): se resuelve una sola vez por
+    // lote, no por lectura — un agente sin client_id (huérfano) no puede
+    // identificar nada por esta vía nueva y cae al comportamiento anterior
+    // (deviceId por agente) sólo para no romper la ingesta; en la práctica
+    // todo agente activo tiene client_id.
+    const agentRow = await this.db("agents").where({ id: agentId }).select("client_id").first();
+    const clientId: string | null = agentRow?.client_id ?? null;
+
     for (const r of readings) {
       try {
         const rawDeviceId = (r.device_id || "").trim();
@@ -556,16 +618,28 @@ export class AgentService {
 
         let serialToUse: string | null = isIpAsSerial ? null : rawDeviceId;
 
-        // 1. Encontrar el equipo destino existente por IP o por Número de Serie
-        let existingDevice = null;
-        if (ip || serialToUse) {
+        // 1. Encontrar el equipo destino por identidad de CLIENTE (serial -> mac
+        //    -> ip), no por agente. Reemplaza el matcher histórico `agent_id AND
+        //    (ip OR serial)`, que hacía de la IP una identidad de facto (ver
+        //    deviceIdentity.ts para el detalle y el bug de DHCP reciclado que esto
+        //    corrige). Envuelto en una transacción propia: resolveDeviceIdentity
+        //    toma un advisory lock para serializar agentes concurrentes del mismo
+        //    cliente sobre la misma impresora.
+        let existingDevice: any = null;
+        if (clientId && (ip || serialToUse)) {
+          existingDevice = await this.db.transaction((trx) =>
+            resolveDeviceIdentity(trx, { clientId, agentId, serial: serialToUse, mac: r.mac ?? null, ip })
+          ).then((res) => res.device);
+        } else if (ip || serialToUse) {
+          // Fallback defensivo: agente sin client_id resuelto (huérfano). No
+          // debería ocurrir en producción, pero no puede tumbar la ingesta.
           existingDevice = await this.db("devices")
             .where({ agent_id: agentId })
+            .whereNull("merged_into")
             .andWhere((builder) => {
               if (ip) builder.where("ip_address", ip);
               if (serialToUse) builder.orWhere("serial_number", serialToUse);
             })
-            .orderByRaw("CASE WHEN serial_number IS NOT NULL AND serial_number != host(ip_address) THEN 0 ELSE 1 END")
             .first();
         }
 
@@ -618,8 +692,14 @@ export class AgentService {
           // Un modelo comercial nuevo reemplaza ruido (tarjeta JetDirect, "XXX Series") aunque sea más corto.
           const finalModel = (!isGenericModel && (existingIsNoise || cleanModel.length >= existingModel.length)) ? cleanModel : (existingModel || cleanModel);
 
-          // Conservar nombre amigable si ya está bien formateado
-          const existingName = existingDevice.name || "";
+          // Conservar nombre amigable si ya está bien formateado. Lee
+          // `name_reported` (lo último que reportó la ingesta), NO el `name`
+          // efectivo (columna generada COALESCE(name_override, name_reported)):
+          // si el operador puso un override manual, `existingDevice.name` nunca
+          // es "genérico" y este heurístico dejaría a `name_reported` clavado
+          // para siempre en el valor previo a la edición manual, en vez de
+          // seguir reflejando lo que el equipo realmente reporta.
+          const existingName = existingDevice.name_reported || "";
           const isGenericOrModelName = !existingName || existingName === finalSerial || existingName.includes("192.168") || existingName.toLowerCase() === finalModel.toLowerCase();
           const finalName = validHost || (isGenericOrModelName ? cleanModel : existingName);
 
@@ -652,7 +732,7 @@ export class AgentService {
               serial_number: finalSerial,
               brand: (brand !== 'unknown' && brand !== 'generic') ? brand : existingDevice.brand,
               model: finalModel,
-              name: finalName,
+              name_reported: finalName,
               last_seen: new Date(),
               active: true,
               total_pages: parseCount(r.total_pages) ?? existingDevice.total_pages,
@@ -674,7 +754,7 @@ export class AgentService {
               firmware: (r.firmware && r.firmware.trim()) ? r.firmware.trim() : (existingDevice.firmware || null),
               mac: (r.mac && /^([0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}$/.test(r.mac)) ? r.mac : (existingDevice.mac || null),
               hostname: (r.hostname && r.hostname.trim()) ? r.hostname.trim().slice(0, 100) : (existingDevice.hostname || null),
-              location: (r.location && r.location.trim()) ? r.location.trim().slice(0, 255) : (existingDevice.location || null),
+              location_reported: (r.location && r.location.trim()) ? r.location.trim().slice(0, 255) : (existingDevice.location_reported || null),
               sku: skuFrom(r.supplies_details) ?? existingDevice.sku ?? null,
               supplies_details: r.supplies_details
                 ? JSON.stringify(mergeSuppliesDetails(
@@ -706,9 +786,10 @@ export class AgentService {
           await this.db("devices").insert({
             id: deviceId,
             agent_id: agentId,
+            client_id: clientId,
             ip_address: ip || null,
             serial_number: serialToUse || null,
-            name: (validHost || friendlyName).slice(0, 255),
+            name_reported: (validHost || friendlyName).slice(0, 255),
             brand: brand.slice(0, 100),
             model: cleanModel.slice(0, 255),
             active: true,
@@ -732,9 +813,22 @@ export class AgentService {
             firmware: r.firmware ?? null,
             mac: (r.mac && /^([0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}$/.test(r.mac)) ? r.mac : null,
             hostname: (r.hostname && r.hostname.trim()) ? r.hostname.trim().slice(0, 100) : null,
-            location: (r.location && r.location.trim()) ? r.location.trim().slice(0, 255) : null,
+            location_reported: (r.location && r.location.trim()) ? r.location.trim().slice(0, 255) : null,
             sku: skuFrom(r.supplies_details),
             supplies_details: r.supplies_details ? JSON.stringify(r.supplies_details) : null,
+          });
+        }
+
+        // El matcher nunca revive una baja: sigue guardando lecturas y contadores,
+        // pero deja `decommissioned_at` intacto. Se avisa en vez de reactivar en
+        // silencio, para que un operador decida entre reactivar o retirar el
+        // equipo de la red de verdad.
+        if (existingDevice?.decommissioned_at) {
+          await alertService.openAlert(this.db, {
+            deviceId,
+            type: "device_still_reporting",
+            severity: "warning",
+            message: "Equipo dado de baja pero sigue reportando lecturas",
           });
         }
 
@@ -765,17 +859,32 @@ export class AgentService {
           await alertService.resolveStaleEwsAlerts(this.db, { deviceId, currentTypes });
         }
 
-        // Purgar y consolidar cualquier otro registro fantasma duplicado en esta IP
+        // Consolidar cualquier otro registro fantasma duplicado en esta IP, vía la
+        // primitiva única de fusión (deja lápida en vez de DELETE — antes esto
+        // borraba `alerts` por CASCADE sin reapuntarlas primero, y nunca tocaba
+        // `report_closure_lines`).
         if (ip) {
-          const ghostDeviceIds = await this.db("devices")
+          const ghostDeviceIds: string[] = await this.db("devices")
             .where({ agent_id: agentId, ip_address: ip })
             .whereNot("id", deviceId)
+            .whereNull("merged_into")
             .andWhere((b) => b.whereNull("serial_number").orWhere("serial_number", ip))
             .pluck("id");
 
-          if (ghostDeviceIds.length > 0) {
-            await this.db("readings").whereIn("device_id", ghostDeviceIds).update({ device_id: deviceId });
-            await this.db("devices").whereIn("id", ghostDeviceIds).del();
+          for (const ghostId of ghostDeviceIds) {
+            try {
+              await mergeDevices(this.db, {
+                targetId: deviceId,
+                sourceId: ghostId,
+                reason: "ghost_ip",
+                actor: "ingest",
+                onOverlap: "keep_target",
+              });
+            } catch (mergeErr: unknown) {
+              // No debe tumbar la ingesta de la lectura actual — un fantasma sin
+              // fusionar simplemente queda para revisión manual en /devices/duplicates.
+              console.error(`[SYNC] No se pudo fusionar fantasma ${ghostId} -> ${deviceId}:`, mergeErr);
+            }
           }
         }
 
@@ -1022,17 +1131,19 @@ export class AgentService {
             .orWhere("model", "ILIKE", q)
             .orWhere("name", "ILIKE", q);
         })
+        // Una lápida de fusión en el buscador lleva a un detalle con 0 lecturas
+        // propias y parece pérdida de datos -> se excluye siempre. Las bajas SÍ
+        // se incluyen (hay que poder encontrar por serial un equipo a
+        // reactivar), devolviendo `decommissioned_at` para que el portal las
+        // pinte distinto.
+        .whereNull("devices.merged_into")
         .modify((b) => {
-          if (clientId) {
-            b.whereIn(
-              "devices.id",
-              this.db("devices")
-                .whereIn("agent_id", this.db("agents").where("client_id", clientId).select("id"))
-                .select("id")
-            );
-          }
+          if (clientId) b.andWhere("devices.client_id", clientId);
         })
-        .select("devices.id", "devices.serial_number", "devices.brand", "devices.model", "devices.name")
+        .select(
+          "devices.id", "devices.serial_number", "devices.brand", "devices.model", "devices.name",
+          "devices.decommissioned_at"
+        )
         .limit(5),
     ]);
 

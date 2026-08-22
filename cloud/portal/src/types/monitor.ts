@@ -151,6 +151,16 @@ export interface Device {
   cartridge_capacity_cyan?:    number | null;
   cartridge_capacity_magenta?: number | null;
   cartridge_capacity_yellow?:  number | null;
+  // Identidad por cliente + ciclo de vida (§2.4 del gap analysis).
+  client_id?:             string | null;
+  name_override?:         string | null;
+  location_override?:     string | null;
+  decommissioned_at?:     string | null;
+  decommissioned_by?:     string | null;
+  decommission_reason?:   string | null;
+  merged_into?:           string | null;
+  merged_into_serial?:    string | null;
+  merged_at?:             string | null;
 }
 
 export interface MonitorData {

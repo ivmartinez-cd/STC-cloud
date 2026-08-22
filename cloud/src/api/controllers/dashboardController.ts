@@ -1,7 +1,8 @@
 import { FastifyReply, FastifyRequest } from "fastify";
 import { Knex } from "knex";
 import { AgentService } from "../../services/agentService";
-import { agentIdsOf, deviceIdsOf, getScope } from "../utils/scope";
+import { deviceIdsOf, getScope } from "../utils/scope";
+import { onlyLiveDevices, notMerged } from "../utils/deviceFilters";
 import type { PortalUser } from "../middlewares/authMiddleware";
 import { getClientIp } from "../utils/ip";
 
@@ -26,8 +27,8 @@ export function createDashboardController(db: Knex, agentService: AgentService) 
         clientsWithAlertsCount,
       ] = await Promise.all([
         db("devices")
-          .where({ active: true })
-          .modify((q) => { if (cid) q.whereIn("agent_id", agentIdsOf(db, cid)); })
+          .modify((q) => onlyLiveDevices(q, "devices"))
+          .modify((q) => { if (cid) q.where("client_id", cid); })
           .count("* as c")
           .first(),
 
@@ -59,9 +60,9 @@ export function createDashboardController(db: Knex, agentService: AgentService) 
               r.time,
               r.total_pages - LAG(r.total_pages) OVER (PARTITION BY r.device_id ORDER BY r.time) as delta
             FROM readings r
-            ${cid ? "JOIN devices d ON d.id = r.device_id JOIN agents a ON a.id = d.agent_id" : ""}
+            ${cid ? "JOIN devices d ON d.id = r.device_id" : ""}
             WHERE r.time >= date_trunc('month', now()) - INTERVAL '40 days'
-            ${cid ? "AND a.client_id = ?" : ""}
+            ${cid ? "AND d.client_id = ? AND d.merged_into IS NULL" : ""}
           ) sub
           WHERE delta IS NOT NULL AND time >= date_trunc('month', now())
         `,
@@ -70,18 +71,22 @@ export function createDashboardController(db: Knex, agentService: AgentService) 
           .then((r: { rows: Array<{ total: string | null }> }) => r.rows[0]),
 
         db("clients")
-          .select("clients.name", "clients.id")
-          .count("devices.id as device_count")
-          .leftJoin("agents", "agents.client_id", "clients.id")
-          .leftJoin("devices", "devices.agent_id", "agents.id")
+          .select(
+            "clients.name",
+            "clients.id",
+            db.raw(
+              "COUNT(DISTINCT CASE WHEN devices.decommissioned_at IS NULL AND devices.merged_into IS NULL THEN devices.id END)::int as device_count"
+            )
+          )
+          .leftJoin("devices", "devices.client_id", "clients.id")
           .modify((q) => { if (cid) q.where("clients.id", cid); })
           .groupBy("clients.id", "clients.name")
           .orderBy("device_count", "desc")
           .limit(5),
 
         db("devices")
-          .where({ active: true })
-          .modify((q) => { if (cid) q.whereIn("devices.agent_id", agentIdsOf(db, cid)); })
+          .modify((q) => onlyLiveDevices(q, "devices"))
+          .modify((q) => { if (cid) q.where("devices.client_id", cid); })
           .select("brand")
           .count("* as count")
           .groupBy("brand")
@@ -108,9 +113,9 @@ export function createDashboardController(db: Knex, agentService: AgentService) 
           .limit(10),
 
         db("devices")
-          .where({ active: true })
+          .modify((q) => onlyLiveDevices(q, "devices"))
           .where("created_at", ">=", new Date(Date.now() - 30 * 24 * 60 * 60 * 1000))
-          .modify((q) => { if (cid) q.whereIn("agent_id", agentIdsOf(db, cid)); })
+          .modify((q) => { if (cid) q.where("client_id", cid); })
           .count("* as c")
           .first(),
 
@@ -122,19 +127,19 @@ export function createDashboardController(db: Knex, agentService: AgentService) 
 
         db("readings")
           .join("devices", "readings.device_id", "devices.id")
-          .join("agents", "devices.agent_id", "agents.id")
-          .join("clients", "agents.client_id", "clients.id")
-          .modify((q) => { if (cid) q.where("agents.client_id", cid); })
+          .join("clients", "devices.client_id", "clients.id")
+          .modify((q) => notMerged(q, "devices"))
+          .modify((q) => { if (cid) q.where("devices.client_id", cid); })
           .orderBy("readings.time", "desc")
           .select("readings.time", "clients.name as client_name")
           .first(),
 
         db("alerts")
           .join("devices", "alerts.device_id", "devices.id")
-          .join("agents", "devices.agent_id", "agents.id")
           .where("alerts.resolved", false)
-          .modify((q) => { if (cid) q.andWhere("agents.client_id", cid); })
-          .countDistinct("agents.client_id as c")
+          .modify((q) => onlyLiveDevices(q, "devices"))
+          .modify((q) => { if (cid) q.andWhere("devices.client_id", cid); })
+          .countDistinct("devices.client_id as c")
           .first(),
       ]);
 
@@ -196,12 +201,22 @@ export function createDashboardController(db: Knex, agentService: AgentService) 
         .leftJoin("devices", "alerts.device_id", "devices.id")
         .leftJoin("agents", "agents.id", db.raw("COALESCE(devices.agent_id, alerts.agent_id)"))
         .leftJoin("clients", "agents.client_id", "clients.id")
+        // Una lápida de fusión no debe aportar `device_name` a una alerta vieja
+        // que ya se re-apuntó al superviviente — se excluye SÓLO merged_into, las
+        // bajas siguen apareciendo (su historial de alertas sigue siendo válido).
+        .andWhere((b) => { b.whereNull("devices.id").orWhereNull("devices.merged_into"); })
         .modify((q) => {
-          // Una alerta de un equipo/agente huérfano (sin client_id) sigue sin
-          // pertenecer a ningún cliente, así que sigue sin verla nadie scopeado —
-          // el comportamiento no cambia para viewers, sólo se agrega el caso
-          // agent-scoped para admin/operator.
-          if (scope.kind === "client") q.where("agents.client_id", scope.id);
+          // Scope directo por devices.client_id cuando hay device (evita depender
+          // del join a agents, que puede estar desactualizado si el equipo se
+          // movió); COALESCE con agents.client_id para las agent-scoped
+          // (agent_offline, sin device_id).
+          if (scope.kind === "client") {
+            q.andWhere((b) => {
+              b.where("devices.client_id", scope.id).orWhere((b2) => {
+                b2.whereNull("devices.id").andWhere("agents.client_id", scope.id);
+              });
+            });
+          }
         })
         .select(
           "alerts.id",
@@ -231,7 +246,13 @@ export function createDashboardController(db: Knex, agentService: AgentService) 
       // `client_id` es un filtro de portal (admin/operator eligiendo "ver sólo este
       // cliente"), independiente del scoping RBAC de arriba — un viewer ya está
       // fijo a su propio cliente y no manda este query param.
-      if (client_id) query.where("agents.client_id", client_id);
+      if (client_id) {
+        query.andWhere((b) => {
+          b.where("devices.client_id", client_id).orWhere((b2) => {
+            b2.whereNull("devices.id").andWhere("agents.client_id", client_id);
+          });
+        });
+      }
       if (severity) query.where("alerts.severity", severity);
       if (type) query.where("alerts.type", type);
       if (resolved === "true") query.where("alerts.resolved", true);
@@ -256,7 +277,13 @@ export function createDashboardController(db: Knex, agentService: AgentService) 
           // ruta en su allowlist (rolePolicy.ts) y recibe 403 antes de esto. Se deja
           // igual el chequeo de propiedad como defensa en profundidad, no confiar
           // sólo en el gate de autorización para una mutación.
-          if (scope.kind === "client") q.andWhere("agents.client_id", scope.id);
+          if (scope.kind === "client") {
+            q.andWhere((b) => {
+              b.where("devices.client_id", scope.id).orWhere((b2) => {
+                b2.whereNull("devices.id").andWhere("agents.client_id", scope.id);
+              });
+            });
+          }
         })
         .select("alerts.id")
         .where("alerts.id", id)

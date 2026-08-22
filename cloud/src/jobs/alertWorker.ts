@@ -45,6 +45,13 @@ async function resolveAlerts(deviceId: string, type: string) {
 }
 
 async function evaluateReading(r: MappedReading) {
+  // 0. Un equipo dado de baja pero todavía enchufado no debe seguir generando
+  // alertas críticas (counter_reset, toner_*_critical, device_error) que
+  // encolarían un mail al cliente por un equipo que ya retiró (ver
+  // alertService.openAlert: sólo severity "critical" encola notificationWorker).
+  const decomm = await db('devices').where('id', r.device_id).select('decommissioned_at').first();
+  if (decomm?.decommissioned_at) return;
+
   // 1. Manejo del estado offline del dispositivo
   if (r.offline) {
     await openAlert(r.device_id, 'device_error', 'critical', 'Dispositivo fuera de línea (sin respuesta)', 0);
@@ -54,7 +61,7 @@ async function evaluateReading(r: MappedReading) {
 
   // 2. Obtener umbrales dinámicos de la base de datos de acuerdo al agente asociado al dispositivo
   const device = await db('devices')
-    .join('agents', 'devices.agent_id', 'agents.id')
+    .leftJoin('agents', 'devices.agent_id', 'agents.id')
     .where('devices.id', r.device_id)
     .select(
       'devices.name as device_name',

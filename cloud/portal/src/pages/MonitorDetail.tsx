@@ -190,6 +190,8 @@ const MonitorDetail = () => {
         <DeviceInventoryTable
           devices={devices}
           monitorName={monitor.name}
+          agentId={monitor.id}
+          isReadOnlyViewer={isReadOnlyViewer}
         />
       )}
 

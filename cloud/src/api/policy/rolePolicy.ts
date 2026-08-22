@@ -77,3 +77,4 @@ export function policyFor(role: string): RolePolicy | null {
  */
 export const CLIENT_ID_URL_PREFIX = "/api/v1/clients/:id";
 export const AGENT_ID_URL_PREFIX = "/api/v1/agents/:id";
+export const DEVICE_ID_URL_PREFIX = "/api/v1/devices/:id";

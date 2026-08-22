@@ -88,9 +88,16 @@ async function checkOfflineDevices() {
   try {
     const cutoff = new Date(Date.now() - DEVICE_OFFLINE_THRESHOLD_MINUTES * 60 * 1000);
 
+    // Un equipo dado de baja tiene `last_seen` viejo por definición: sin este
+    // filtro calificaría en CADA corrida (cada 2 min) y su `device_offline`
+    // quedaría abierta para siempre (la resolución exige `last_seen >= cutoff`,
+    // que nunca vuelve a cumplirse), reabriéndose si un operador la resolviera
+    // a mano. Las lápidas de fusión tampoco deben generar alertas propias.
     const staleDevices = await db('devices')
       .join('agents', 'devices.agent_id', 'agents.id')
       .where('devices.active', true)
+      .whereNull('devices.decommissioned_at')
+      .whereNull('devices.merged_into')
       .where('devices.last_seen', '<', cutoff)
       .whereNot('agents.status', 'offline')
       .select('devices.id', 'devices.name');

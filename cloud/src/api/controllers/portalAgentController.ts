@@ -6,6 +6,7 @@ import { sendCommandToAgent } from "../../ws/index";
 import type { PortalUser } from "../middlewares/authMiddleware";
 import { getClientIp } from "../utils/ip";
 import { getScope } from "../utils/scope";
+import { onlyLiveDevices } from "../utils/deviceFilters";
 
 /**
  * Columnas seguras de `agents` para exponer por el portal. Reemplaza el `agents.*`
@@ -103,8 +104,15 @@ export function createPortalAgentController(
         .select(
           ...columns,
           "clients.name as client_name",
-          db.raw("COUNT(DISTINCT CASE WHEN d.active = true THEN d.id END)::int AS active_device_count"),
-          db.raw("COUNT(DISTINCT d.id)::int AS total_device_count"),
+          db.raw(
+            "COUNT(DISTINCT CASE WHEN d.active = true AND d.decommissioned_at IS NULL AND d.merged_into IS NULL THEN d.id END)::int AS active_device_count"
+          ),
+          db.raw(
+            "COUNT(DISTINCT CASE WHEN d.decommissioned_at IS NULL AND d.merged_into IS NULL THEN d.id END)::int AS total_device_count"
+          ),
+          db.raw(
+            "COUNT(DISTINCT CASE WHEN d.decommissioned_at IS NOT NULL AND d.merged_into IS NULL THEN d.id END)::int AS decommissioned_device_count"
+          ),
           ...(scope.kind === "all"
             ? ["agents.ip_ranges", "agents.snmp_community", "agents.scan_schedule",
                "agents.toner_warning_threshold", "agents.toner_critical_threshold"]
@@ -180,7 +188,7 @@ export function createPortalAgentController(
               color_pages - LAG(color_pages) OVER (PARTITION BY device_id ORDER BY time) AS color_pages_delta
             FROM readings
             WHERE time >= date_trunc('month', now()) - INTERVAL '40 days'
-              AND device_id IN (SELECT id FROM devices WHERE agent_id = ?)
+              AND device_id IN (SELECT id FROM devices WHERE agent_id = ? AND merged_into IS NULL)
           ) deltas
           WHERE time >= date_trunc('month', now())
           GROUP BY device_id
@@ -189,8 +197,15 @@ export function createPortalAgentController(
         [id]
       );
 
+      const { include } = request.query as { include?: string };
+      const includeDecommissioned = include === "decommissioned" || include === "all";
+
       return await db("devices")
         .where("devices.agent_id", id)
+        .modify((q) => {
+          if (!includeDecommissioned) onlyLiveDevices(q, "devices");
+          else q.whereNull("devices.merged_into");
+        })
         .leftJoin(monthlySubquery, "m.device_id", "devices.id")
         .select(
           "devices.*",
@@ -232,6 +247,18 @@ export function createPortalAgentController(
           const deviceIds = devices.map((d: { id: string }) => d.id);
 
           if (deviceIds.length > 0) {
+            // Mientras `devices.agent_id` sea ON DELETE CASCADE, borrar un agente
+            // es una puerta trasera del ciclo de vida — bloquear si algún equipo
+            // tiene historial de facturación en vez de destruirlo en silencio.
+            const hasClosureLines = await trx("report_closure_lines")
+              .whereIn("device_id", deviceIds)
+              .first();
+            if (hasClosureLines) {
+              throw Object.assign(
+                new Error("Hay equipos con historial de facturación; movelos a otro monitor o dalos de baja antes de eliminar este agente"),
+                { status: 409 }
+              );
+            }
             await trx("readings").whereIn("device_id", deviceIds).delete();
             await trx("devices").where("agent_id", id).delete();
           }
@@ -252,7 +279,10 @@ export function createPortalAgentController(
         });
 
         return { status: "deleted" };
-      } catch (err: unknown) {
+      } catch (err: any) {
+        if (err?.status === 409) {
+          return reply.status(409).send({ error: err.message });
+        }
         fastify.log.error(err, "Error al eliminar agente");
         const errMsg = err instanceof Error ? err.message : String(err);
         return reply.status(500).send({ error: "Internal Server Error", details: errMsg });

@@ -4,6 +4,7 @@ import { api } from '../lib/api';
 import {
   Printer, RefreshCw, Activity, Layers, Trash2, AlertTriangle, Inbox,
   TrendingUp, Clock, FileText, Cpu, Info, ScanLine, Copy, Phone,
+  Pencil, Archive, ArchiveRestore, ArrowRightLeft, GitMerge,
 } from 'lucide-react';
 import { OFFLINE_THRESHOLD_MS } from '../lib/constants';
 import { XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Area, AreaChart } from 'recharts';
@@ -12,6 +13,7 @@ import type { Alert } from '../types/alerts';
 import { parseSuppliesDetails, buildSupplyRows, usageRate, fmtDate, fmtInt, type SupplyRow, type ReadingPoint } from '../lib/supplies';
 import { deviceImageCandidates } from '../lib/deviceImage';
 import { ConfirmationModal } from '../components/ui/ConfirmationModal';
+import { EditDeviceModal, DecommissionDeviceModal, MoveDeviceModal, MergeDeviceModal } from '../components/devices/DeviceLifecycleModals';
 import { useAuth } from '../context/AuthContext';
 
 // ─── Tipos locales ───────────────────────────────────────────────────────────
@@ -32,6 +34,9 @@ interface DeviceDetailData extends Device {
   agent_status?:    string;
   agent_last_seen?: string | null;
   status?:          string;
+  name_reported?:      string | null;
+  location_reported?:  string | null;
+  merged_into_serial?: string | null;
 }
 
 type Tab = 'general' | 'counters' | 'supplies' | 'media' | 'alerts';
@@ -105,6 +110,11 @@ const DeviceDetail = () => {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
+  const [decommissionOpen, setDecommissionOpen] = useState(false);
+  const [recommissioning, setRecommissioning] = useState(false);
+  const [moveOpen, setMoveOpen] = useState(false);
+  const [mergeOpen, setMergeOpen] = useState(false);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -153,6 +163,18 @@ const DeviceDetail = () => {
       setDeleteError(e instanceof Error ? e.message : String(e));
     } finally {
       setDeleting(false);
+    }
+  };
+
+  const handleRecommission = async () => {
+    setRecommissioning(true);
+    try {
+      await api.post(`/devices/${id}/recommission`, {});
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setRecommissioning(false);
     }
   };
 
@@ -290,6 +312,28 @@ const DeviceDetail = () => {
           <span className="bg-slate-100 text-slate-800 font-extrabold px-2.5 py-1 rounded-lg">{device?.serial_number || device?.ip_address || 'Dispositivo'}</span>
         </div>
         <div className="flex items-center gap-3">
+          {device && role !== 'client_viewer' && !device.merged_into && (
+            <>
+              <button onClick={() => setEditOpen(true)} className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-xl border border-slate-200 text-xs font-bold transition-all">
+                <Pencil size={14} /> Editar
+              </button>
+              <button onClick={() => setMoveOpen(true)} className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-xl border border-slate-200 text-xs font-bold transition-all">
+                <ArrowRightLeft size={14} /> Mover
+              </button>
+              <button onClick={() => setMergeOpen(true)} className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-xl border border-slate-200 text-xs font-bold transition-all">
+                <GitMerge size={14} /> Fusionar
+              </button>
+              {device.decommissioned_at ? (
+                <button onClick={handleRecommission} disabled={recommissioning} className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl border border-emerald-200 text-xs font-bold transition-all disabled:opacity-50">
+                  <ArchiveRestore size={14} /> Reactivar
+                </button>
+              ) : (
+                <button onClick={() => setDecommissionOpen(true)} className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-xl border border-amber-200 text-xs font-bold transition-all">
+                  <Archive size={14} /> Dar de baja
+                </button>
+              )}
+            </>
+          )}
           {device && role !== 'client_viewer' && (
             <button onClick={() => setDeleteOpen(true)} className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl border border-rose-200 text-xs font-bold transition-all">
               <Trash2 size={14} /> Eliminar
@@ -300,6 +344,21 @@ const DeviceDetail = () => {
           </button>
         </div>
       </div>
+
+      {device?.merged_into && (
+        <div className="flex items-center gap-2 bg-slate-100 border border-slate-300 rounded-2xl px-5 py-3 text-xs font-bold text-slate-600">
+          <GitMerge size={16} />
+          Este registro fue fusionado con otro equipo{device.merged_into_serial ? ` (serial ${device.merged_into_serial})` : ''}.
+          <Link to={`/devices/${device.merged_into}`} className="text-sky-700 hover:underline">Ver el equipo superviviente →</Link>
+        </div>
+      )}
+      {device?.decommissioned_at && !device.merged_into && (
+        <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-2xl px-5 py-3 text-xs font-bold text-amber-800">
+          <Archive size={16} />
+          Equipo dado de baja el {fmtDateTime(device.decommissioned_at)}
+          {device.decommission_reason ? ` — ${device.decommission_reason}` : ''}.
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="flex items-center gap-2 border-b border-slate-200 pb-1 overflow-x-auto">
@@ -337,6 +396,10 @@ const DeviceDetail = () => {
               <CardTitle icon={<Info size={16} />}>Datos del dispositivo</CardTitle>
               <div>
                 <Row label="ID de dispositivo" value={device.id.slice(0, 8)} mono />
+                <Row
+                  label="Nombre"
+                  value={device.name_override ? <>{device.name}<span className="ml-1 text-[9px] font-bold text-sky-600">(manual)</span></> : device.name}
+                />
                 <Row label="Fecha de descubrimiento" value={fmtDateTime(device.created_at)} />
                 <Row label="Última actualización" value={<span className="inline-flex items-center gap-1.5"><span className={`w-2 h-2 rounded-full ${isAgentOnline ? 'bg-emerald-500' : 'bg-amber-400'}`} />{fmtDateTime(device.last_seen)}</span>} />
                 <Row label="Número de serie" value={device.serial_number ?? '—'} mono />
@@ -347,7 +410,10 @@ const DeviceDetail = () => {
                 <Row label="Firmware" value={device.firmware ?? '—'} mono />
                 {extra?.firmwarePackage && <Row label="Paquete de firmware" value={extra.firmwarePackage} mono />}
                 {extra?.platform && <Row label="Plataforma" value={extra.platform} />}
-                <Row label="Ubicación" value={device.location ?? '—'} />
+                <Row
+                  label="Ubicación"
+                  value={device.location_override ? <>{device.location}<span className="ml-1 text-[9px] font-bold text-sky-600">(manual)</span></> : (device.location ?? '—')}
+                />
                 <Row label="Fabricante" value={extra?.manufacturer ?? device.brand ?? '—'} />
                 <Row label="Modelo" value={device.model ?? '—'} />
                 <Row label="SKU / Nº de producto" value={device.sku ?? extra?.sku ?? '—'} mono />
@@ -541,6 +607,27 @@ const DeviceDetail = () => {
       >
         Se eliminará <strong>{device?.model ?? 'el dispositivo'}</strong> ({device?.serial_number ?? device?.ip_address}) junto con todo su historial de lecturas y alertas. Esta acción no se puede deshacer.
       </ConfirmationModal>
+
+      {device && (
+        <>
+          <EditDeviceModal
+            isOpen={editOpen} onClose={() => setEditOpen(false)} onSaved={load}
+            deviceId={device.id} currentName={device.name} currentLocation={device.location ?? null}
+            reportedName={device.name_reported ?? null} reportedLocation={device.location_reported ?? null}
+          />
+          <DecommissionDeviceModal
+            isOpen={decommissionOpen} onClose={() => setDecommissionOpen(false)} onDone={load} deviceId={device.id}
+          />
+          <MoveDeviceModal
+            isOpen={moveOpen} onClose={() => setMoveOpen(false)} onDone={load} deviceId={device.id}
+            currentClientId={device.client_id ?? null} currentAgentId={device.agent_id ?? null}
+          />
+          <MergeDeviceModal
+            isOpen={mergeOpen} onClose={() => setMergeOpen(false)} onDone={load} deviceId={device.id}
+            clientId={device.client_id ?? null}
+          />
+        </>
+      )}
     </div>
   );
 };

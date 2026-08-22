@@ -3,6 +3,7 @@ import { Knex } from "knex";
 import Redis from "ioredis";
 import { AgentService } from "../../services/agentService";
 import { createPortalAgentController } from "../controllers/portalAgentController";
+import { createDeviceController } from "../controllers/deviceController";
 import type { AuthHook } from "../middlewares/authMiddleware";
 
 const createAgentSchema = {
@@ -78,6 +79,7 @@ export function registerPortalAgentRoutes(
   portalAuth: AuthHook
 ) {
   const ctrl = createPortalAgentController(fastify, db, redis, agentService);
+  const deviceCtrl = createDeviceController(db);
 
   fastify.get("/api/v1/agents", { preHandler: portalAuth, handler: ctrl.listAgents });
 
@@ -124,5 +126,25 @@ export function registerPortalAgentRoutes(
     preHandler: portalAuth,
     schema: updateConfigSchema,
     handler: ctrl.updateConfig,
+  });
+
+  // Reemplaza a `DELETE /devices/offline`: colgada de /agents/:id hereda el
+  // chequeo central de ownership (deviceIdParamMatchesScope no aplica acá,
+  // pero agentIdParamMatchesScope sí, vía AGENT_ID_URL_PREFIX) que al `agent_id`
+  // de query string del endpoint viejo le faltaba. Da de baja, no borra.
+  fastify.post("/api/v1/agents/:id/devices/decommission-stale", {
+    preHandler: portalAuth,
+    schema: {
+      body: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          inactiveDays: { type: "integer", minimum: 7, maximum: 365 },
+          dryRun: { type: "boolean" },
+          reason: { type: "string", maxLength: 500 },
+        },
+      },
+    },
+    handler: deviceCtrl.decommissionStaleDevices,
   });
 }

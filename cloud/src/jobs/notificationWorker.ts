@@ -29,6 +29,7 @@ interface AlertRow {
   message: string;
   resolved: boolean;
   device_name: string | null;
+  device_decommissioned_at: Date | null;
   agent_name: string | null;
   client_id: string | null;
   client_name: string | null;
@@ -47,7 +48,8 @@ async function processAlertNotification(alertId: number): Promise<void> {
     .where('alerts.id', alertId)
     .select(
       'alerts.id', 'alerts.type', 'alerts.severity', 'alerts.message', 'alerts.resolved',
-      'devices.name as device_name', 'agents.name as agent_name',
+      'devices.name as device_name', 'devices.decommissioned_at as device_decommissioned_at',
+      'agents.name as agent_name',
       'clients.id as client_id', 'clients.name as client_name',
       'clients.notification_email', 'clients.notification_webhook_url'
     )
@@ -59,6 +61,13 @@ async function processAlertNotification(alertId: number): Promise<void> {
   }
   if (alert.resolved) {
     console.log(`[NotificationWorker] Alerta ${alertId} ya resuelta antes de notificar, se omite`);
+    return;
+  }
+  if (alert.device_decommissioned_at) {
+    // El equipo se dio de baja mientras el job esperaba en cola — la
+    // transacción de baja ya resolvió sus alertas, pero esto cubre el job
+    // que ya estaba encolado justo antes.
+    console.log(`[NotificationWorker] Alerta ${alertId} es de un equipo dado de baja, se omite`);
     return;
   }
   if (!alert.client_id) {
