@@ -23,6 +23,14 @@ const config: { [key: string]: Knex.Config } = {
     connection,
     migrations: {
       directory: "./migrations",
+      // .ts hace falta para correr contra src/ en dev (tsx/ts-node); contra
+      // dist/ compilado sólo debería matchear .js — pero `.d.ts` TAMBIÉN
+      // termina en ".ts", y knex lo toma como candidato a migración y trata
+      // de hacerle `require()` (revienta con "Unexpected token 'export'",
+      // las declaraciones de tipo no son JS ejecutable). El script
+      // `postbuild` de package.json borra los `.d.ts`/`.d.ts.map` de
+      // `dist/db/migrations` después de cada build para que esto nunca pase
+      // corriendo contra dist/ — no hace falta tocar esto.
       loadExtensions: [".js", ".ts"],
     },
     pool: {
