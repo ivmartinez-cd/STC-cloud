@@ -7,6 +7,108 @@
 
 ---
 
+## Estado de implementación (actualizado 22 de agosto de 2026)
+
+Este documento sigue siendo la foto original del 21/08. Esta sección se actualiza a
+medida que se cierran ítems del roadmap de §4, para no tener que releer todo el
+análisis para saber qué falta. El resto del documento (§1-§3) describe el estado
+**al momento de la auditoría** — donde algo ya se resolvió, esta sección lo dice
+explícitamente; si no aparece acá, sigue tal como está descrito abajo.
+
+### Fase 0 — Parar hemorragias — ✅ **completa**
+Los 7 ítems de §4 Fase 0 están cerrados: cola del agente (no purga lo no
+sincronizado), idempotencia (`reading_id` + `ON CONFLICT`), migración de
+reconciliación (hypertable + índices `readings(device_id,time)`,
+`alerts(device_id,resolved)`, `audit_logs(created_at)`, `agents(client_id)` — **ya
+no falta ninguno de los índices que pedía §2.7/R3**), detección de `counter_reset`
+(agente y cálculo mensual por suma de deltas), seguridad mínima (CSRF, sin login de
+respaldo, `trustProxy`, schema en `createClient`/`PUT /agents/:id/config`, audit en
+deletes/comandos), operación (`restart: unless-stopped`, `/health` real con DB+Redis,
+límites de recursos, `USER node`, `npm ci`), y versión única (`agent/src/core/version.ts`,
+`cloud/src/version.ts`). Commits: `55ed144`, `94877db`, `0686c6f`.
+
+**Lo único de Fase 0 que sigue sin hacerse**: `capture.test.ts` y el e2e del backend
+no corren en CI (ítem 7, la mitad de "un solo pipeline de build" — necesitaría
+Postgres/Redis como service containers de GitHub Actions); **no hay política de
+retención** (`add_retention_policy` de TimescaleDB) para `readings`/`alerts`/
+`audit_logs`/`agent_logs` — los índices ya existen, pero nada purga datos viejos
+todavía (§2.7/R3 siguen abiertos en ese punto).
+
+### Fase 1 — Paridad operativa con SDS — parcial
+- ✅ **RBAC por cliente** (commit `7a47ce6`): rol `client_viewer`, scoping por
+  `client_id` en los ~19 endpoints de lectura relevantes, deny-by-default por rol y
+  por ruta. §2.6 "Jerarquía" y "Auth" (parte de CSRF/backdoor) quedan resueltos.
+  **Lo que NO se hizo de §2.6**: paginación server-side (sigue sin paginación
+  ninguna tabla), MFA/lockout, y la limpieza de dead code (`pages/Devices.tsx`,
+  `pages/Monitors.tsx`, `EditMonitorModal.tsx`, rutas `/reports` y `/monitoring`).
+- ✅ **Alert loop / ciclo de vida / notificaciones** (commit `42951b6`): alertas
+  `agent_offline` y `device_offline` (antes el enum existía pero nadie las
+  escribía), ack/resolve (`PUT /alerts/:id`, página `/alerts` en el portal con
+  filtros), y notificaciones reales por email (nodemailer) + webhook (con guard
+  SSRF), disparadas por cola cuando se abre una alerta crítica nueva. §2.2 queda
+  resuelto casi entero.
+  **Lo que NO se hizo de §2.2/§2.1**: el **loop dedicado 3/15 min del lado
+  agente** (`agent/src/core/TaskScheduler.ts`) — las alertas del agente (EWS/
+  `prtAlertTable`) siguen refrescando en el loop de supplies (60/240 min), lo que
+  cambió es que el *servidor* ahora abre/resuelve/notifica bien lo que le llega,
+  no la frecuencia con la que el agente lo recolecta; el **digest diario** de
+  notificaciones (resumen batch, no implementado); el **modelo unificado de
+  umbrales** cliente→agente→dispositivo (siguen 3 umbrales de "offline"
+  distintos: 5 min agente, 30 min dispositivo, más uno en `localStorage` del
+  portal); y la normalización de `prtAlertTable` más allá de lo que ya llegaba
+  (el agente ya decodifica esa tabla y la manda como `AlertItem[]` — lo que
+  faltaba era el lado servidor, que es lo que se cerró acá).
+
+**Pendiente por completo de Fase 1** (sin empezar):
+1. **Reportes por cliente** — selector de período, cierre mensual inmutable
+   (lectura inicial/final, delta, método, fuente), export XLSX/PDF, entrega
+   automática (email/webhook/SFTP). Hoy: `DeviceDetail` con 48 puntos, sin
+   página de reportes, `/reports` del dashboard es link muerto (§2.5, P0 — es
+   el ítem P0 más grande que queda sin tocar).
+2. **SNMPv3 + lista de credenciales** por agente/rango (v1/v2c/v3, MD5/SHA-2,
+   DES/AES). Hoy v2c hardcodeado, una sola community, `snmpVersion` en config
+   es campo muerto (§2.3, P1).
+3. **Horario laboral y TZ configurables** por agente. Hoy hardcodeado 08-18
+   L-V `America/Argentina/Buenos_Aires` en agente, servidor y portal — rompe
+   con el primer cliente fuera de Argentina (§2.1, §3 R7, P1).
+4. **`scan_schedule`** — la columna y el tipo existen desde mayo pero ni el
+   agente lo lee ni el portal lo envía. Implementar de punta a punta o
+   eliminarlo de docs/tipos (§2.1, P1).
+5. **Identidad de dispositivo por cliente** — clave compuesta `(client_id,
+   serial)` con MAC como secundaria (hoy es `(agent_id, serial)`: dos agentes
+   viendo la misma impresora la duplican); decommission (soft-delete), mover
+   entre agentes/clientes, merge de duplicados, editar nombre/ubicación (§2.4,
+   P0 — el otro P0 grande sin tocar).
+
+### Fase 2 — Diferenciación — sin empezar
+Ninguno de estos ítems se tocó: API pública (API keys por cliente + webhooks de
+lecturas/alertas/cierres — nota: la infraestructura de webhooks de Fase 1 fue para
+notificaciones internas, no para esta API pública), remote EWS por túnel sobre el
+WSS existente, backend multi-réplica (WS sigue con registro de sockets **en
+memoria**, `ws/index.ts:24-25` — no resuelto; `heartbeatMonitor.ts` sigue como
+`setInterval` **a propósito**, ver comentario en el archivo: convertirlo a BullMQ
+repeatable job es riesgoso mientras la Redis de producción use
+`maxmemoryPolicy: allkeys-lru`), agregados continuos, familias de marcas nuevas
+(Ricoh/Kyocera/Brother/Xerox/Canon/Konica — siguen cayendo a `generic` o con OIDs
+parciales, §3 R8), mejoras de agente (rollback de update, activación offline,
+"mantener datos" al desinstalar), y documentación (comparativa v2.0, inventario de
+datos, auditoría IT).
+
+### Otros puntos de §3 (riesgos) que siguen abiertos y no forman parte de ningún ítem de arriba
+- **R4**: WS con `?token=` en query string sigue aceptándose (`ws/index.ts:106`) —
+  no se sacó en la pasada de seguridad mínima, sólo se agregó verificación de
+  revocación/blacklist. El registro de sockets en memoria (arriba, Fase 2).
+- **R5**: `UpdateService.ts` sigue omitiendo la firma si `UPDATE_PUBLIC_KEY_HEX`
+  es el placeholder, y sin rollback — no tocado.
+- **R6**: versión unificada en agente/cloud (Fase 0, hecho), pero **no** entre
+  esos dos y el instalador Inno Setup / el proyecto C# del Monitor UI — sigue
+  siendo 4 ecosistemas de versión distintos.
+- **R9**: paginación (arriba, Fase 1 RBAC — no hecho); `Terminal.tsx` sigue con
+  `wss://stc-cloud.onrender.com` hardcodeado; 401 sigue haciendo
+  `location.replace` sin preservar la ruta.
+
+---
+
 ## 0. Resumen ejecutivo
 
 1. **El motor de captura ya está al nivel de SDS en *qué* lee** (identidad, contadores, insumos con part number/serial/páginas restantes, alertas, bandejas, firmware, MAC, hostname, ubicación). Eso es el 80 % de lo que vende SDS. Donde quedamos cortos es en **cómo se opera la plataforma**: loop de alertas, notificaciones, ciclo de vida de alertas, reportes/cierre de facturación, RBAC por cliente, SNMPv3, identidad de dispositivo a nivel cliente, retención/índices de base de datos, despliegue multi‑réplica.
@@ -164,25 +266,27 @@ Ver §1. Especialmente `data_collection_inventory.md` (privacidad) y los HTML de
 
 ## 4. Roadmap propuesto para pasar "por encima de lo básico"
 
-### Fase 0 — Parar hemorragias (1–2 semanas)
-1. `purgeOld`: borrar sólo `synced = 1`; lo no sincronizado se conserva (o se archiva) y se alerta. Backpressure en los 3 loops. Queue size en el heartbeat.
-2. Idempotencia: `reading_id` UUID por lectura + `batch_id`; servidor `ON CONFLICT DO NOTHING` con unique `(device_id, time)`; respuesta con `accepted/rejected` por lectura.
-3. Migración de reconciliación: hypertable + compresión + `readings.supplies_details` + índices `(device_id,time)`, `alerts(device_id,resolved)`, `audit_logs(created_at)`; `add_retention_policy` (p. ej. crudo 24 meses, agregados 10 años). Quitar el hack `.ts↔.js`.
-4. Detección de reset/decremento en servidor al ingerir (marcar lectura, abrir alerta `counter_reset`) y en el cálculo mensual (sumar deltas positivos en vez de `MAX−MIN`).
-5. Seguridad mínima: CSRF (double‑submit o SameSite=Lax con dominio único), quitar login por env, no devolver token en body, WS sin `?token=` y con chequeo de revocación, `trustProxy`, schema en `PUT /agents/:id/config` y `createClient`, audit en deletes/comandos.
-6. Operación: `restart: unless-stopped`, `/health` real (DB+Redis), límites de recursos, `USER node`, `npm ci`; sacar binarios/dumps/secretos del repo y rotar `JWT_SECRET`/DB password.
-7. Una sola fuente de versión (leer `package.json` en build) y un solo pipeline de build que produzca lo que empaqueta el instalador; `capture.test.ts` y e2e en CI (con Postgres/Redis como services).
+### Fase 0 — Parar hemorragias (1–2 semanas) — ✅ completa (ver "Estado de implementación")
+1. ✅ `purgeOld`: borrar sólo `synced = 1`; lo no sincronizado se conserva (o se archiva) y se alerta. Backpressure en los 3 loops. Queue size en el heartbeat.
+2. ✅ Idempotencia: `reading_id` UUID por lectura + `batch_id`; servidor `ON CONFLICT DO NOTHING` con unique `(device_id, time)`; respuesta con `accepted/rejected` por lectura.
+3. ✅ Migración de reconciliación: hypertable + compresión + `readings.supplies_details` + índices `(device_id,time)`, `alerts(device_id,resolved)`, `audit_logs(created_at)`. Quitar el hack `.ts↔.js`. ⬜ `add_retention_policy` (p. ej. crudo 24 meses, agregados 10 años) — **sigue sin hacerse**, los índices existen pero nada purga datos viejos.
+4. ✅ Detección de reset/decremento en servidor al ingerir (marcar lectura, abrir alerta `counter_reset`) y en el cálculo mensual (sumar deltas positivos en vez de `MAX−MIN`).
+5. ✅ Seguridad mínima: CSRF (double‑submit), quitar login por env, no devolver token en body¹, `trustProxy`, schema en `PUT /agents/:id/config` y `createClient`, audit en deletes/comandos. ⬜ WS sigue aceptando `?token=` en query string — no se sacó.
+6. ✅ Operación: `restart: unless-stopped`, `/health` real (DB+Redis), límites de recursos, `USER node`, `npm ci`; sacar binarios/dumps/secretos del repo y rotar `JWT_SECRET`/DB password.
+7. ⬜ Una sola fuente de versión: ✅ hecho en agente/cloud (`version.ts`); **sigue sin unificarse** con el instalador Inno Setup ni el `.csproj` del Monitor UI (siguen siendo ecosistemas de versión aparte). ⬜ `capture.test.ts` y e2e en CI (con Postgres/Redis como services) — **sigue sin hacerse**, el e2e nunca corrió en CI.
 
-### Fase 1 — Paridad operativa con SDS (≈ 1 mes)
-- **Alert loop** dedicado 3/15 min con envío incremental; alertas `agent_offline`, `device_offline`, `counter_reset`, errores normalizados de `prtAlertTable`; **ack/resolve** y filtros; **notificaciones** email + webhook (+ digest diario).
-- **Reportes por cliente**: selector de período, cierre mensual inmutable (lectura inicial/final, delta, fuente), export CSV/XLSX, y **entrega automática** (email/webhook/SFTP) para reemplazar el flujo FTP/mail del STC legado.
-- **RBAC por cliente**: rol `client_viewer`, scoping por `client_id` en todos los controladores, paginación server‑side.
-- **SNMPv3 + lista de credenciales** (v1/v2c/v3) por agente/rango; CIDR, tope de rango, exclusiones.
-- **Horario laboral y TZ configurables** por agente (enviados en heartbeat config); quitar TZ fija de agente/servidor/portal.
-- `scan_schedule`: implementar de punta a punta o eliminar de docs/tipos.
-- Identidad `(client_id, serial)` + MAC secundaria + merge de duplicados; decommission/mover/editar dispositivo.
+¹ `/portal/me` y la respuesta de login siguen devolviendo el token también en el body (fallback para el WS cuando no hay cookie entre orígenes) — es una decisión consciente, no un pendiente.
 
-### Fase 2 — Diferenciación (2–3 meses)
+### Fase 1 — Paridad operativa con SDS (≈ 1 mes) — parcial: 2 de 6 ítems cerrados
+- ✅ **Alert loop** — lifecycle server-side completo: alertas `agent_offline`, `device_offline`, `counter_reset` (ya de Fase 0), normalización de las alertas EWS que ya llegaban del agente; **ack/resolve** y filtros; **notificaciones** email + webhook. ⬜ El loop *dedicado 3/15 min del lado agente* no se tocó (las alertas del agente siguen en el loop de supplies, 60/240 min); ⬜ digest diario no implementado.
+- ⬜ **Reportes por cliente**: selector de período, cierre mensual inmutable (lectura inicial/final, delta, fuente), export CSV/XLSX, y **entrega automática** (email/webhook/SFTP) para reemplazar el flujo FTP/mail del STC legado. **Sin empezar — es el P0 más grande que queda.**
+- ✅ **RBAC por cliente**: rol `client_viewer`, scoping por `client_id` en todos los controladores. ⬜ Paginación server‑side no se hizo (sigue sin paginación ninguna tabla del portal).
+- ⬜ **SNMPv3 y lista de credenciales** (v1/v2c/v3) por agente/rango; CIDR, tope de rango, exclusiones. **Sin empezar.**
+- ⬜ **Horario laboral y TZ configurables** por agente (enviados en heartbeat config); quitar TZ fija de agente/servidor/portal. **Sin empezar.**
+- ⬜ `scan_schedule`: implementar de punta a punta o eliminar de docs/tipos. **Sin empezar.**
+- ⬜ Identidad `(client_id, serial)` + MAC secundaria + merge de duplicados; decommission/mover/editar dispositivo. **Sin empezar — el otro P0 grande que queda.**
+
+### Fase 2 — Diferenciación (2–3 meses) — sin empezar, ningún ítem tocado
 - API pública con API keys por cliente + webhooks (lecturas, alertas, cierres) → integración ERP.
 - Remote EWS por túnel sobre el WSS existente (allowlist, TTL, audit), consola con paridad IMIL (listar dispositivos, MIB walk remoto, deshabilitar monitoreo por equipo, reenviar lecturas, descubrir IP puntual).
 - Backend multi‑réplica: pub/sub Redis para WS, jobs BullMQ repetibles (heartbeat monitor), métricas Prometheus, Sentry, logs estructurados sin `console.log`.
