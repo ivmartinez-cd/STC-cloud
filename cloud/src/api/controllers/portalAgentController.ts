@@ -92,6 +92,7 @@ export function createPortalAgentController(
           "agents.last_seen",
           "agents.client_id",
           "agents.created_at",
+          "agents.remote_ews_enabled",
           "clients.name as client_name"
         )
         .orderBy("agents.created_at", "desc");
