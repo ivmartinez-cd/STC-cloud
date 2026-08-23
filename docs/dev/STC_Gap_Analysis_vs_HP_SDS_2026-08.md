@@ -168,7 +168,7 @@ decisión de negocio, no una obligación de compliance.
   (API-only por ahora), resolución de solapamiento de rangos en runtime
   (sólo warning al guardar).
 
-### Fase 2 — Diferenciación — arrancada: 4 de 7 ítems cerrados
+### Fase 2 — Diferenciación — arrancada: 5 de 7 ítems cerrados
 ✅ **API pública con API keys por cliente + webhooks de integración ERP**
 (23/08/2026): `api_keys` (hash SHA-256 at-rest, nunca el valor en claro;
 gestión desde el portal — `POST/GET/DELETE /clients/:id/api-keys`, admin/
@@ -513,14 +513,14 @@ Ver §1. Especialmente `data_collection_inventory.md` (privacidad) y los HTML de
 - ✅ **Resolución de hostname (point lookup) + credenciales SNMP por rango**: `ip_ranges` acepta un tercer tipo de entrada `{hostname}` resuelto por el agente en cada ciclo (el cloud no tiene visibilidad de la DNS interna del cliente); cada entrada admite `credential_ids?` para restringir qué credenciales se prueban en ESE rango durante discovery, con fail-open ante ids colgantes y warnings no bloqueantes (rangos superpuestos con credenciales distintas, borrado de una credencial referenciada). ⬜ UI de asignación de `credential_ids` en el portal queda para después (API-only); restricción por rango en meter/supplies no se hizo (`known_devices` no tiene vínculo a rango, y no aporta valor real ahí).
 - ✅ Identidad `(client_id, serial)` + MAC secundaria + merge de duplicados; decommission/mover/editar dispositivo.
 
-### Fase 2 — Diferenciación (2–3 meses) — arrancada: 4 de 7 ítems cerrados
+### Fase 2 — Diferenciación (2–3 meses) — arrancada: 5 de 7 ítems cerrados
 - ✅ (23/08/2026) API pública con API keys por cliente + webhooks (lecturas, alertas, cierres) → integración ERP. Falta UI de portal (sólo REST por ahora) y expiración/retry automáticos — ver "Estado de implementación".
 - ✅ (23/08/2026) Remote EWS por túnel sobre el WSS existente (allowlist en dos capas, staleness, audit) — sólo el acceso EWS en sí, sin paridad IMIL completa (MIB walk remoto, deshabilitar monitoreo, reenviar lecturas, descubrir IP puntual quedan pendientes). Ver "Estado de implementación".
 - Backend multi‑réplica: pub/sub Redis para WS, jobs BullMQ repetibles (heartbeat monitor), métricas Prometheus, Sentry, logs estructurados sin `console.log`.
 - ✅ (23/08/2026) Agregados continuos (diario/mensual por equipo, `readings_daily_agg`/`readings_monthly_agg`) — sólo backend/endpoint, sin dashboard de portal todavía. Ver "Estado de implementación".
 - Familias nuevas: Ricoh WIM, Kyocera CCX, Brother BMS, Xerox WS, Canon, Konica; fixtures reales por modelo; matriz de cobertura de scopes visible en el portal (columna Driver + scopes).
 - ✅ (23/08/2026) Agente: rollback de update (single-file, verificado contra Windows real; el parche ZIP sólo backup manual), activación offline (retry con backoff), dedupe de lecturas idénticas (4h), detección de PJL deshabilitado, log rotation real, "mantener datos" al desinstalar (compilación verificada con Inno Setup 6.7.1 real, falta correr instalación/desinstalación de punta a punta) — ver "Estado de implementación".
-- Documentación: reescribir comparativa v2.0, inventario de datos (privacidad), auditoría IT; política de retención y DPA publicadas.
+- ✅ (23/08/2026) Documentación: comparativa v2.0, inventario de datos (privacidad) y auditoría IT reescritos reflejando todo lo de esta pasada (SNMPv3, identidad, EWS remoto, retención, API pública, resiliencia de agente); retención formalizada dentro del inventario y la auditoría IT. Falta: **DPA** (Data Processing Agreement) — deliberadamente NO redactado, es un documento contractual/legal que requiere revisión de abogado, no una tarea de documentación técnica.
 
 ---
 
