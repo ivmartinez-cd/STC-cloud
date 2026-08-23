@@ -1,198 +1,135 @@
-# 🚀 Guía de Despliegue — Vercel + Render + Neon (Free Tier)
+# 🚀 Guía de Despliegue — Self-Hosted (Docker, VPS propio)
 
-> Stack gratuito para desplegar STC Cloud en producción.
+> STC Cloud ya no corre en Render/Vercel/Neon — todo el stack (API, portal,
+> Postgres/TimescaleDB, Redis, reverse proxy con SSL) corre self-hosted en
+> Docker sobre un servidor propio (VPS o físico), orquestado por
+> `docker-compose.prod.yml` y automatizado por `deploy.sh`.
 
-| Componente | Plataforma | Tipo | Costo |
-|---|---|---|---|
-| **Portal React** | Vercel | Static Site (Vite) | $0 |
-| **Backend API** | Render | Web Service (Node.js) | $0 |
-| **PostgreSQL** | Neon | Serverless DB | $0 |
-| **Redis** | Render | Managed Redis | $0 |
-
----
-
-## 1️⃣ Neon — Base de datos (~2 min)
-
-1. Ir a [neon.tech](https://neon.tech) → **Create Project**
-2. Nombre del proyecto: `stc-cloud`
-3. Región: `US East (Ohio)` (o la más cercana a tu Render)
-4. Copiar la **connection string** que Neon genera:
-
-```
-postgresql://stc_admin:AbC123xYz@ep-cool-name-12345.us-east-2.aws.neon.tech/stc_cloud?sslmode=require
-```
-
-5. **Guardar esta URL** — la usarás en el paso siguiente
-
-### Ejecutar migraciones (desde tu PC)
-
-```bash
-cd cloud
-DATABASE_URL="postgresql://..." npx knex migrate:latest --knexfile src/db/knexfile.ts
-```
-
-> En PowerShell:
-> ```powershell
-> $env:DATABASE_URL = "postgresql://..."
-> npx knex migrate:latest --knexfile src/db/knexfile.ts
-> ```
-
----
-
-## 2️⃣ Render — Backend API (~5 min)
-
-### A. Crear Redis
-
-1. Ir a [render.com](https://render.com) → **New** → **Redis**
-2. Nombre: `stc-cloud-redis`
-3. Plan: **Free** (25 MB)
-4. Crear → copiar la **Internal URL** (algo como `redis://red-xxx:6379`)
-
-### B. Crear Web Service
-
-1. **New** → **Web Service**
-2. Conectar el repo GitHub: `ivmartinez-cd/STC-cloud`
-3. Configurar:
-
-| Campo | Valor |
-|---|---|
-| **Name** | `stc-cloud-api` |
-| **Root Directory** | `cloud` |
-| **Runtime** | Node |
-| **Build Command** | `npm install && npm run build` |
-| **Start Command** | `node dist/api/server.js` |
-| **Plan** | Free |
-
-4. **Environment Variables** — agregar todas:
-
-| Variable | Valor | Notas |
+| Componente | Dónde corre | Contenedor |
 |---|---|---|
-| `NODE_ENV` | `production` | |
-| `DATABASE_URL` | `postgresql://...` | La URL de Neon (paso 1) |
-| `REDIS_URL` | `redis://red-xxx:6379` | La Internal URL del Redis |
-| `JWT_SECRET` | *(generar)* | Ejecutar: `openssl rand -base64 64` |
-| `PORTAL_ADMIN_USER` | `admin` | |
-| `PORTAL_ADMIN_PASSWORD` | *(tu contraseña)* | Mínimo 12 caracteres |
-| `PORTAL_ORIGIN` | *(pendiente)* | Se agrega después del paso 3 |
-| `TONER_WARN_PCT` | `20` | |
-| `TONER_CRITICAL_PCT` | `10` | |
-
-5. Click **Create Web Service**
-6. Esperar a que el deploy termine (~3-5 min)
-7. Copiar la URL del servicio (ej: `https://stc-cloud-api.onrender.com`)
-
-### Verificar que funciona
-
-```
-https://stc-cloud-api.onrender.com/health
-```
-
-Debe responder: `{"status":"ok"}`
+| **Portal React** | Mismo VPS, detrás de nginx | `portal` |
+| **Backend API** | Mismo VPS | `api` |
+| **PostgreSQL + TimescaleDB** | Mismo VPS | `postgres` |
+| **Redis** | Mismo VPS | `redis` |
+| **Reverse proxy + SSL** | Mismo VPS | `nginx` (+ `certbot` para renovación automática) |
+| **Backup de base de datos** | Mismo VPS | `backup` (pg_dump diario, retención 30 días) |
 
 ---
 
-## 3️⃣ Vercel — Portal React (~3 min)
+## Prerrequisitos del servidor
 
-### A. Actualizar vercel.json
+- Un VPS (o servidor físico) con Docker y Docker Compose v2 instalados.
+- Un dominio propio con el registro DNS `A` apuntando a la IP del servidor
+  (necesario para que certbot pueda emitir el certificado SSL vía HTTP-01
+  challenge).
+- Puertos `80` y `443` abiertos hacia el servidor.
 
-Antes de desplegar, editar `cloud/portal/vercel.json` y reemplazar la URL placeholder con la URL real de Render:
-
-```json
-{
-  "rewrites": [
-    {
-      "source": "/api/:path*",
-      "destination": "https://TU-URL-REAL.onrender.com/api/:path*"
-    },
-    {
-      "source": "/health",
-      "destination": "https://TU-URL-REAL.onrender.com/health"
-    }
-  ]
-}
-```
-
-Commitear y pushear el cambio:
+## 1️⃣ Configurar variables de entorno
 
 ```bash
-git add cloud/portal/vercel.json
-git commit -m "config: update Render URL in vercel.json"
-git push origin main
+cp .env.production.example .env.production
 ```
 
-### B. Desplegar en Vercel
+Completar en `.env.production`:
 
-1. Ir a [vercel.com](https://vercel.com) → **Add New Project**
-2. Importar: `ivmartinez-cd/STC-cloud`
-3. Configurar:
+- `DOMAIN` — el dominio real (ej. `monitor.tuempresa.com`). `deploy.sh` lo
+  usa para reescribir `nginx.conf` y para pedir el certificado SSL.
+- `JWT_SECRET`, `COOKIE_SECRET` — generar con `openssl rand -base64 64` /
+  `openssl rand -base64 32`.
+- `DB_PASSWORD`, `PORTAL_ADMIN_PASSWORD` — contraseñas propias, no dejar los
+  placeholders `CAMBIAR_POR_*` (`deploy.sh` aborta si detecta que quedaron
+  sin cambiar).
+- El resto de las variables (`DB_HOST=postgres`, `REDIS_URL=redis://redis:6379`,
+  etc.) ya apuntan a los nombres de servicio correctos del propio
+  `docker-compose.prod.yml` — no hace falta tocarlos salvo que cambies la
+  topología.
 
-| Campo | Valor |
-|---|---|
-| **Root Directory** | `cloud/portal` |
-| **Framework Preset** | Vite |
-| **Build Command** | `npm run build` |
-| **Output Directory** | `dist` |
+## 2️⃣ Ejecutar el despliegue
 
-4. Click **Deploy**
-5. Copiar la URL que Vercel asigna (ej: `https://stc-cloud-xxx.vercel.app`)
-
-### C. Configurar CORS en Render
-
-Volver al dashboard de Render → tu servicio `stc-cloud-api` → **Environment**:
-
-1. Agregar/editar: `PORTAL_ORIGIN` = `https://stc-cloud-xxx.vercel.app`
-2. Render reiniciará el servicio automáticamente
-
----
-
-## 4️⃣ Configurar el Agente Windows
-
-En el agente instalado en el cliente, actualizar la URL del servidor:
-
-```
-API_URL=https://stc-cloud-api.onrender.com
+```bash
+chmod +x deploy.sh
+./deploy.sh
 ```
 
-El agente se conecta directamente al backend en Render (no pasa por Vercel).
+`deploy.sh` hace, en orden:
 
----
+1. Verifica que Docker y Docker Compose v2 estén instalados.
+2. Verifica que `.env.production` exista y que las variables críticas
+   (`JWT_SECRET`, `DB_PASSWORD`, `PORTAL_ADMIN_PASSWORD`, `DOMAIN`) estén
+   completadas (no los placeholders de ejemplo).
+3. Reemplaza el dominio placeholder en `nginx.conf` por el `DOMAIN` real.
+4. Si no existe un certificado SSL todavía, levanta `nginx` sin SSL
+   temporalmente y pide uno a Let's Encrypt vía certbot (webroot challenge).
+   Certbot corre después como su propio contenedor, renovando automáticamente
+   cada 12h mientras el certificado siga vigente.
+5. Levanta todos los servicios: `docker compose -f docker-compose.prod.yml
+   --env-file .env.production up -d --build`, y corre las migraciones dentro
+   del contenedor `api` (`npx knex migrate:latest --knexfile dist/db/knexfile.js`).
 
-## ✅ Verificación final
+Al terminar, el portal queda accesible en `https://${DOMAIN}` y la API en
+`https://${DOMAIN}/api/v1/...` (mismo dominio, nginx enruta por path).
+
+## 3️⃣ Configurar el Agente Windows
+
+En el agente instalado en el cliente, la URL del servidor apunta al dominio
+propio (no a un host de Render):
+
+```
+API_URL=https://tu-dominio.com
+```
+
+## ✅ Verificación
 
 | Test | URL | Resultado esperado |
 |---|---|---|
-| Health check | `https://TU-RENDER.onrender.com/health` | `{"status":"ok"}` |
-| Portal login | `https://TU-VERCEL.vercel.app/login` | Pantalla de login |
-| API via Vercel | `https://TU-VERCEL.vercel.app/api/v1/dashboard` | Requiere auth (401) |
+| Health check | `https://tu-dominio.com/health` | `{"status":"ok"}` |
+| Portal login | `https://tu-dominio.com/login` | Pantalla de login |
+| API | `https://tu-dominio.com/api/v1/dashboard` | Requiere auth (401 sin sesión) |
 
----
+## 🔄 Actualizar el deploy (nueva versión del backend/portal)
 
-## ⚠️ Limitaciones del Free Tier
-
-| Plataforma | Limitación | Impacto |
-|---|---|---|
-| **Render** | Servicio duerme tras 15 min sin tráfico | Primer request tarda ~30 seg (cold start) |
-| **Render** | 750 horas/mes de compute | Suficiente para 1 servicio 24/7 |
-| **Render Redis** | 25 MB máximo | Suficiente para cola de comandos y cache |
-| **Neon** | 0.5 GB storage, 190h compute/mes | Suficiente para piloto (~10k readings) |
-| **Vercel** | 100 GB bandwidth/mes | Más que suficiente |
-
-### Tip: Evitar cold starts
-
-Mientras haya al menos un agente enviando heartbeats (cada 5 min), el servicio de Render se mantiene despierto.
-
----
-
-## 🔄 Actualizar el deploy
-
-Cada vez que pushees a `main`:
-
-- **Render**: re-deploya automáticamente (auto-deploy habilitado por defecto)
-- **Vercel**: re-deploya automáticamente (conectado a GitHub)
+A diferencia de Render/Vercel, acá no hay auto-deploy al hacer `git push` —
+hay que correr el rebuild manualmente en el servidor:
 
 ```bash
-git add -A
-git commit -m "feat: tu cambio"
-git push origin main
-# → Render y Vercel se actualizan solos
+git pull origin main
+docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build
 ```
+
+Las migraciones nuevas hay que correrlas a mano después del rebuild (mismo
+comando que usa `deploy.sh` internamente):
+
+```bash
+docker compose -f docker-compose.prod.yml exec api sh -c \
+  "npx knex migrate:latest --knexfile dist/db/knexfile.js"
+```
+
+## Comandos útiles
+
+```bash
+docker compose -f docker-compose.prod.yml logs -f          # Ver logs de todos los servicios
+docker compose -f docker-compose.prod.yml logs -f api       # Ver logs sólo de la API
+docker compose -f docker-compose.prod.yml ps                # Estado de los contenedores
+docker compose -f docker-compose.prod.yml restart api       # Reiniciar sólo la API
+docker compose -f docker-compose.prod.yml down              # Detener todo (no borra volúmenes)
+```
+
+## Backups
+
+El contenedor `backup` corre `pg_dump` una vez al día automáticamente,
+comprime el resultado y lo guarda en el volumen `backups`, purgando lo que
+tenga más de 30 días. Para restaurar un backup:
+
+```bash
+docker compose -f docker-compose.prod.yml exec -T postgres \
+  psql -U stc_admin -d stc_cloud < backup_descomprimido.sql
+```
+
+## Límites y sizing (self-hosted, no free tier)
+
+Ya no aplican las limitaciones de plan gratuito de Render/Vercel/Neon
+(spin-down, horas de cómputo, storage de 0.5 GB) — el techo real ahora es el
+tamaño del VPS y los límites de recursos configurados en
+`docker-compose.prod.yml` (`deploy.resources.limits` por servicio). Ver
+`docs/cliente/STC_Analisis_Escalabilidad_Limites_v1.7.html` para el análisis
+de capacidad frente a una base de 200+ clientes.

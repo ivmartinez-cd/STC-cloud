@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>STC Cloud - Análisis de Escalabilidad y Límites Operativos v1.7</title>
+    <title>STC Cloud - Análisis de Escalabilidad y Límites Operativos v2.0</title>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Inter:wght@400;600&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -295,9 +295,9 @@
             </div>
 
             <h1 class="main-title">Análisis de Escalabilidad</h1>
-            <h1 class="main-subtitle">Riesgos de Infraestructura y Límites en Cuentas Gratuitas</h1>
+            <h1 class="main-subtitle">Capacidad Self-Hosted frente a 200+ Clientes</h1>
 
-            <div class="version-tag">Documento Técnico | v1.7 | Mayo 2026</div>
+            <div class="version-tag">Documento Técnico | v2.0 | Agosto 2026</div>
         </div>
 
         <div class="footer">
@@ -320,18 +320,18 @@
                 <span class="toc-dots"></span>
                 <span class="toc-page">2</span>
             </a>
-            <a href="#limites-proveedores" class="toc-item">
-                <span class="toc-text">2. Límites de Infraestructura (Render, Vercel & Neon)</span>
+            <a href="#infraestructura-actual" class="toc-item">
+                <span class="toc-text">2. Infraestructura Actual: Self-Hosted en Docker</span>
                 <span class="toc-dots"></span>
                 <span class="toc-page">3</span>
             </a>
-            <a href="#escenarios-colapso" class="toc-item">
-                <span class="toc-text">3. Escenarios Críticos de Colapso (Proof of Concept vs Producción)</span>
+            <a href="#hallazgos-auditoria" class="toc-item">
+                <span class="toc-text">3. Hallazgos de la Auditoría de Capacidad (Agosto 2026)</span>
                 <span class="toc-dots"></span>
                 <span class="toc-page">4</span>
             </a>
             <a href="#plan-mitigacion" class="toc-item">
-                <span class="toc-text">4. Plan de Mitigación y Presupuesto de Escalabilidad</span>
+                <span class="toc-text">4. Plan de Mitigación y Sizing Recomendado</span>
                 <span class="toc-dots"></span>
                 <span class="toc-page">5</span>
             </a>
@@ -339,13 +339,25 @@
 
         <h2 id="resumen-ejecutivo" style="margin-top: 50px;">1. Resumen Ejecutivo</h2>
         <p>
-            El presente informe tiene como objetivo analizar de forma objetiva la capacidad de la infraestructura de **STC Cloud** cuando opera bajo las capas de servicios gratuitos de sus tres proveedores clave: **Vercel** (Portal frontend), **Render** (Backend Fastify de control de agentes) y **Neon** (Base de datos PostgreSQL en la nube).
+            <strong>Cambio de infraestructura (agosto 2026):</strong> STC Cloud ya no corre sobre las
+            capas gratuitas de Vercel/Render/Neon descriptas en la v1.7 de este informe — todo el stack
+            (Portal, API, PostgreSQL/TimescaleDB, Redis, reverse proxy con SSL) corre hoy
+            <strong>self-hosted en Docker sobre un servidor propio (VPS)</strong>, orquestado por
+            `docker-compose.prod.yml` y `deploy.sh` (ver `docs/internos/DEPLOY_CLOUD.md`).
         </p>
         <p>
-            Si bien el uso de cuentas gratuitas es una opción excelente para la etapa de **Prueba de Concepto (PoC)**, desarrollo y testeo con un volumen de 1 a 3 agentes en clientes controlados, presenta restricciones estrictas y cuellos de botella inherentes que provocarán el colapso operativo del sistema en un entorno productivo real de impresión gestionada (MPS).
+            Esto elimina de raíz los tres riesgos que dominaban la v1.7 de este informe: el
+            <strong>spin-down</strong> de Render tras inactividad, el <strong>límite de 190h de cómputo
+            mensual</strong> de Neon, y el <strong>tope de 0.5 GB de almacenamiento</strong> — ninguno de
+            los tres existe en un servidor propio. El techo ahora es otro: la capacidad real del VPS
+            (CPU/RAM/disco) y cómo el código maneja la concurrencia cuando escala a una base de 200+
+            clientes reales.
         </p>
         <p>
-            Este documento expone los límites numéricos de cada plataforma, plantea 3 escenarios reales de colapso y detalla el plan de migración de bajo costo requerido para garantizar la alta disponibilidad y la trazabilidad de facturación ininterrumpida que el negocio exige.
+            Este documento reemplaza el análisis de límites de plan gratuito por una auditoría de
+            capacidad real del código y la infraestructura self-hosted, hecha en agosto 2026 pensando
+            específicamente en una base de 200+ clientes (varios agentes por cliente, decenas de
+            dispositivos por agente, sincronizando cada ~5 minutos).
         </p>
 
         <div class="footer">
@@ -360,62 +372,72 @@
             <div class="internal-doc-type">2. Límites Técnicos</div>
         </div>
 
-        <h2 id="limites-proveedores">2. Límites de Infraestructura (Render, Vercel & Neon)</h2>
+        <h2 id="infraestructura-actual">2. Infraestructura Actual: Self-Hosted en Docker</h2>
         <p>
-            El sistema STC Cloud está dividido en tres niveles lógicos. Cada nivel opera sobre un proveedor diferente, sujeto a las siguientes limitaciones de las cuentas gratuitas:
+            Los tres niveles lógicos del sistema (Portal, API, base de datos) corren hoy en el mismo
+            servidor propio, cada uno en su contenedor Docker, orquestados por
+            <code>docker-compose.prod.yml</code>. No hay spin-down, no hay límite de horas de cómputo
+            mensual, y el almacenamiento depende del disco real del servidor (típicamente decenas o
+            cientos de GB en un VPS estándar, no los 0.5 GB de la capa gratuita de Neon).
         </p>
 
         <table>
             <thead>
                 <tr>
-                    <th style="width: 25%;">Proveedor</th>
-                    <th style="width: 25%;">Límite Crítico (Free)</th>
-                    <th style="width: 30%;">Impacto en STC Cloud</th>
-                    <th style="width: 20%;">Riesgo Operativo</th>
+                    <th style="width: 20%;">Contenedor</th>
+                    <th style="width: 20%;">Límite configurado hoy</th>
+                    <th style="width: 40%;">Rol</th>
+                    <th style="width: 20%;">¿Alcanza para 200+ clientes?</th>
                 </tr>
             </thead>
             <tbody>
                 <tr>
-                    <td><strong>Render</strong> (Web Service Backend)</td>
-                    <td><strong>Spin-down</strong> tras 15 min de inactividad. 512 MB de RAM compartida.</td>
-                    <td>Retraso de 50 segundos en arranques en frío (cold start) y riesgo de caída por memoria (OOM).</td>
-                    <td style="color: var(--red-alert); font-weight: bold;">ALTO</td>
+                    <td><strong>api</strong></td>
+                    <td>512 MB RAM / 1 CPU</td>
+                    <td>Backend Fastify — WS persistente por agente, sync cada ~5 min, dashboard/reportes del portal.</td>
+                    <td style="color: #ea580c; font-weight: bold;">A REVISAR — ver §3</td>
                 </tr>
                 <tr>
-                    <td><strong>Neon</strong> (PostgreSQL)</td>
-                    <td><strong>190 horas</strong> de cómputo/mes. Autosuspend de 5 min. 0.5 GiB (500 MB) storage.</td>
-                    <td>Bloqueo total del servicio si el cómputo se agota o se llena el almacenamiento histórico.</td>
-                    <td style="color: var(--red-alert); font-weight: bold;">CRÍTICO</td>
+                    <td><strong>postgres</strong></td>
+                    <td>1 GB RAM / 1 CPU</td>
+                    <td>PostgreSQL 16 + TimescaleDB, con compresión y retención ya configuradas sobre `readings`.</td>
+                    <td style="color: #16a34a; font-weight: bold;">SÍ, con el fix de pool (ver §3)</td>
                 </tr>
                 <tr>
-                    <td><strong>Vercel</strong> (Next.js Frontend)</td>
-                    <td><strong>10s</strong> Serverless Timeout. 100 GB ancho de banda/mes.</td>
-                    <td>Fallas de carga al consultar reportes masivos. Suspensión de cuenta por exceso de ancho de banda.</td>
-                    <td style="color: #ea580c; font-weight: bold;">MEDIO</td>
+                    <td><strong>redis</strong></td>
+                    <td>256 MB RAM / 0.5 CPU</td>
+                    <td>Rate-limit store, blacklist de tokens de agente, 4 colas BullMQ (notificaciones, cierres, webhooks públicos, evaluación de alertas).</td>
+                    <td style="color: #16a34a; font-weight: bold;">SÍ — volumen estimado muy por debajo de este límite</td>
+                </tr>
+                <tr>
+                    <td><strong>portal</strong></td>
+                    <td>128 MB RAM / 0.25 CPU</td>
+                    <td>Build estático de React servido por nginx dentro del contenedor.</td>
+                    <td style="color: #16a34a; font-weight: bold;">SÍ — es un sitio estático, no procesa nada por request</td>
+                </tr>
+                <tr>
+                    <td><strong>nginx / certbot / backup</strong></td>
+                    <td>128 MB / 64 MB / 256 MB</td>
+                    <td>Reverse proxy + SSL automático (Let's Encrypt), y `pg_dump` diario con retención de 30 días.</td>
+                    <td style="color: #16a34a; font-weight: bold;">SÍ</td>
                 </tr>
             </tbody>
         </table>
 
-        <h3>El Fenómeno "Spin-Down" de Render (Suspensión Inactiva)</h3>
-        <p>
-            En la capa gratuita de Render, si el backend no recibe solicitudes HTTP o de WebSocket durante 15 minutos, el contenedor que ejecuta el servidor Fastify se apaga por completo.
-        </p>
-        <p>
-            Cuando un agente DCA local despierta en la intranet del cliente e intenta enviar datos telemétricos (por ejemplo, después de una hora de inactividad), la petición HTTP impactará contra el servidor apagado. Render debe crear el contenedor, arrancar Node.js y levantar el framework Fastify, lo cual toma **entre 45 y 60 segundos**. Durante este lapso, el agente local experimentará un timeout de red, forzándolo a encolar los datos localmente en SQLite.
-        </p>
-
-        <div class="note-callout" style="background: #f8fafc; border-left: 4px solid var(--stc-blue); color: #334155;">
-            <strong>Análisis del Parche de Uptime Robot (Keep-Alive Artificial):</strong><br>
-            Una técnica común en fases de desarrollo es configurar un monitor como <strong>Uptime Robot</strong> para pingear el endpoint del backend cada 5 minutos, previniendo el sueño de Render. Si bien este "keep-alive" artificial soluciona el tiempo de arranque en frío del backend, introduce dos graves riesgos colaterales en la arquitectura de STC Cloud:
-            <ul>
-                <li><strong>Riesgo A (Penalización y Bloqueo de Render):</strong> Render detecta activamente patrones estáticos de agentes externos de ping y cabeceras de monitores de uptime. Evitar el spin-down artificialmente viola los términos de uso justo (Fair Use Policy) de la capa gratuita, exponiendo la cuenta corporativa a suspensiones automáticas de servicios sin aviso previo.</li>
-                <li><strong>Riesgo B (Exhaustión Inducida en Neon PostgreSQL):</strong> Si el backend se mantiene encendido las 24 horas del día gracias a Uptime Robot, sus rutinas internas en segundo plano (como el monitor de latidos <code>heartbeatMonitor.ts</code>) continuarán ejecutándose de manera continua. Esto disparará consultas periódicas a la base de datos Neon, <strong>impidiendo que el motor Serverless de Neon entre en autosuspend</strong>. Como consecuencia directa, Neon consumirá sus 190 horas gratis en solo 8 días seguidos, apagando la base de datos por completo el resto del mes.</li>
-            </ul>
+        <div class="note-callout">
+            <strong>Lo que YA NO aplica de la v1.7 de este informe:</strong> el fenómeno de spin-down de
+            Render (cold start de 45-60s), el límite de 190h de cómputo mensual de Neon, y el tope de
+            almacenamiento de 0.5 GB. Los tres eran limitaciones específicas de esos planes gratuitos —
+            un servidor propio no las tiene. El parche de "Uptime Robot" que se documentaba como mitigación
+            en la v1.7 ya no hace falta ni tiene sentido (no hay nada de lo que "despertar" al backend).
         </div>
 
-        <h3>El Límite de Horas de Computación de Neon (190h / Mes)</h3>
+        <h3>Qué pasó a ser el techo real</h3>
         <p>
-            Neon computa el tiempo activo de la base de datos en base al estado de la instancia. Si no recibe consultas, entra en reposo después de 5 minutos. Sin embargo, en cuanto un agente o el portal hace una consulta, el contador empieza a correr. Si la telemetría recibe ráfagas de datos constantes de múltiples clientes, la base de datos permanecerá encendida permanentemente, agotando las 190 horas de cómputo mensuales en pocos días.
+            Sin los límites artificiales del free tier, la pregunta relevante para 200+ clientes deja de
+            ser "¿cuántas horas de cómputo gratis quedan?" y pasa a ser: ¿el código está escrito para
+            aprovechar bien los recursos del servidor bajo carga concurrente real? Eso es lo que se auditó
+            en agosto 2026 — ver §3.
         </p>
 
         <div class="footer">
@@ -430,42 +452,80 @@
             <div class="internal-doc-type">3. Escenarios Críticos</div>
         </div>
 
-        <h2 id="escenarios-colapso">3. Escenarios Críticos de Colapso</h2>
+        <h2 id="hallazgos-auditoria">3. Hallazgos de la Auditoría de Capacidad (Agosto 2026)</h2>
         <p>
-            A continuación, se presentan tres situaciones reales que causarán el bloqueo absoluto del sistema STC Cloud si se mantiene en producción con cuentas gratuitas:
+            Auditoría real del código (no hipotética) hecha pensando en una base de 200+ clientes, cada
+            uno con varios agentes y decenas de dispositivos por agente, sincronizando cada ~5 minutos.
+            Ordenado de más a menos urgente.
         </p>
 
-        <h3 style="color: var(--red-alert);">Escenario A: Agotamiento Prematuro de Neon (Día 8 del Mes)</h3>
+        <h3 style="color: var(--red-alert);">Bloqueante #1: Pool de conexiones a la base, sin distinguir producción</h3>
         <p>
-            Supongamos que la empresa despliega el agente DCA en tan solo **2 clientes corporativos**, configurados para reportar telemetría e interactuar con el canal de WebSocket cada 15 minutos de forma alterna.
+            `cloud/src/db/knexfile.ts` sólo tenía una configuración (heredada de la época Neon, donde cada
+            conexión activa contaba contra cómputo facturado), con un pool de <strong>máximo 5
+            conexiones</strong>, usada siempre sin importar el entorno. Con 200 clientes sincronizando en
+            paralelo más el tráfico normal del portal, 5 conexiones generan cola y timeouts en los picos.
         </p>
+        <div class="note-callout" style="background: #f0fdf4; border-left-color: #16a34a; color: #14532d;">
+            <strong>✅ Corregido (23/08/2026):</strong> pool configurable por variables de entorno
+            (`DB_POOL_MIN`/`DB_POOL_MAX`), default subido a 20 conexiones — margen razonable sin acercarse
+            al `max_connections` default de Postgres (100). Si en el futuro se corren varias réplicas de
+            `api`, hay que revisar este número para que N réplicas × pool no superen el límite de Postgres.
+        </div>
+
+        <h3 style="color: var(--red-alert);">Bloqueante #2: El sync de lecturas no batchea por dispositivo</h3>
+        <p>
+            `POST /devices/sync` — la ruta que recibe el tráfico masivo de los 200 clientes cada 5
+            minutos — abre una transacción propia (con `pg_advisory_xact_lock`, necesario para serializar
+            dos agentes del mismo cliente viendo la misma impresora en paralelo) por CADA dispositivo del
+            lote, en vez de una operación agregada. Sólo el INSERT final de lecturas es bulk.
+        </p>
+        <div class="note-callout">
+            <strong>Estado: identificado, no corregido todavía.</strong> Es lógica de negocio compleja
+            (resolución de identidad del dispositivo, detección de reset de contador, fusión de
+            duplicados, apertura de alertas) — no es un simple bulk-insert, y tocarla sin cuidado arriesga
+            los datos de facturación mensual. El fix del pool (arriba) alivia la presión inmediata; una
+            reescritura del batching se evalúa aparte, con más tiempo.
+        </div>
+
+        <h3 style="color: #ea580c;">Paginación: varias pantallas del portal traen todo sin límite</h3>
+        <p>
+            `GET /agents`, `GET /clients` y `GET /devices` (este último sin pantalla activa hoy, pero el
+            endpoint sigue vivo) devuelven la tabla completa sin `limit`/`offset` — confirmado en vivo con
+            330 filas en la tabla de agentes del ambiente de pruebas, sin ningún límite. Con 200 clientes
+            reales (cientos de agentes, miles de dispositivos), esto pesa tanto para transferir como para
+            renderizar (no hay virtualización de tablas en el portal). En contraste, `Alerts`, `Reports` y
+            el `Dashboard` sí paginan/agregan correctamente del lado del servidor — es el patrón a copiar
+            en el resto.
+        </p>
+
+        <h3 style="color: #ea580c;">Rate limiting global por IP, no por agente</h3>
+        <p>
+            `/devices/sync` y `/agents/:id/heartbeat` comparten el límite global de 100 req/min por IP con
+            todo el resto del tráfico de esa IP (portal, login, otros agentes). Si varios agentes de un
+            mismo cliente salen por la misma IP corporativa (NAT compartido), compiten por el mismo cupo
+            en vez de tener uno propio — la API pública sí tiene rate-limit por key, esta ruta no.
+        </p>
+
+        <h3>Reconexión del agente sin jitter</h3>
+        <p>
+            El backoff de reconexión WS del agente (`SocketManager.ts`) es puramente exponencial
+            (5s → 300s), sin aleatoriedad. Si el backend se reinicia con 200+ agentes conectados, todos
+            reintentan en oleadas sincronizadas en los mismos instantes — no es catastrófico, pero es una
+            mejora barata (agregar jitter aleatorio) que evita picos de carga coordinados innecesarios.
+        </p>
+
+        <h3 style="color: #16a34a;">Lo que ya está bien resuelto — no es un gap</h3>
         <ul>
-            <li>Al estar los reportes alternados en el tiempo, la base de datos Neon recibe una solicitud cada 7.5 minutos.</li>
-            <li>Dado que el tiempo de autosuspensión por inactividad de Neon es de 5 minutos, la instancia **nunca** alcanzará a entrar en reposo. Permanecerá activa las 24 horas del día.</li>
-            <li><strong>Cálculo de Consumo:</strong> 24 horas/día × 30 días = 720 horas de cómputo requeridas al mes.</li>
-            <li><strong>Punto de Colapso:</strong> Alrededor del **día 8 del mes**, Neon bloqueará por completo el acceso a la base de datos por haber consumido el 100% de las 190 horas gratis. La app arrojará errores de conexión de base de datos (`500 Internal Server Error`) y la telemetría quedará ciega.</li>
-        </ul>
-
-        <h3 style="color: var(--red-alert);">Escenario B: El Bucle de Conexión del Agente y OOM Crash en Render</h3>
-        <p>
-            Si el backend de Render se encuentra suspendido, la primera petición del agente tarda 50s en responder. 
-        </p>
-        <ol>
-            <li>El agente local (DCA) realiza una consulta al backend con un timeout de conexión HTTP estándar de 30 segundos.</li>
-            <li>Dado que Render tarda 50 segundos en despertar, la petición del agente **falla por timeout**.</li>
-            <li>El agente reintenta la conexión inmediatamente o a los pocos minutos, pero si coincide con que Render volvió a apagarse por inactividad, se genera un bucle infinito donde el agente nunca puede transmitir las lecturas debido al retraso del arranque en frío.</li>
-            <li><strong>Fuga de Memoria y Caída (OOM):</strong> Si se logran acumular cientos de peticiones en la cola del agente y se envían de golpe en paralelo, la instancia gratuita de Render excederá su límite de **512 MB de RAM**, provocando un cierre forzado del contenedor por Out-Of-Memory (OOM) y dejando al backend inactivo indefinidamente.</li>
-        </ol>
-
-        <h3 style="color: var(--red-alert);">Escenario C: Saturación de Almacenamiento (Límite 500 MB)</h3>
-        <p>
-            El sistema almacena contadores detallados, logs de auditoría técnica (`audit_logs`) y alertas históricas. Si tenemos 30 clientes con un promedio de 8 impresoras por cliente (240 dispositivos monitoreados) con telemetría cada hora:
-        </p>
-        <ul>
-            <li>Cada registro de telemetría e inserción histórica pesa aproximadamente 4 KB en base de datos.</li>
-            <li>240 impresoras × 24 reportes/día = 5,760 registros/día.</li>
-            <li>5,760 registros/día × 4 KB = 23,040 KB = 22.5 MB de datos generados al día.</li>
-            <li><strong>Punto de Colapso:</strong> En tan solo **22 días de operación**, el almacenamiento de Neon alcanzará los **500 MB (0.5 GB) autorizados**. A partir de ese momento, la base de datos rechazará cualquier operación de escritura (`INSERT` / `UPDATE`), impidiendo el registro de nuevos contadores y perdiendo los datos de facturación de fin de mes.</li>
+            <li><strong>TimescaleDB:</strong> `readings` es hypertable con compresión activa (7 días) y
+                retención de 24 meses; agregados continuos diarios/mensuales para tendencias sin pegarle
+                al dato crudo.</li>
+            <li><strong>Índices:</strong> cobertura razonable en las tablas calientes (`readings`,
+                `devices`, `alerts`, `agents`) para los patrones de consulta reales.</li>
+            <li><strong>Volumen de colas BullMQ:</strong> con 200 clientes sincronizando cada 5 min, el
+                estimado de jobs/minuto queda muy por debajo de cualquier volumen que preocupe.</li>
+            <li><strong>Dashboard:</strong> agrega del lado del servidor (COUNT/SUM), nunca trae listas
+                completas de clientes/agentes/dispositivos al navegador.</li>
         </ul>
 
         <div class="footer">
@@ -480,69 +540,61 @@
             <div class="internal-doc-type">4. Plan de Mitigación</div>
         </div>
 
-        <h2 id="plan-mitigacion">4. Plan de Mitigación y Presupuesto de Escalabilidad</h2>
+        <h2 id="plan-mitigacion">4. Plan de Mitigación y Sizing Recomendado</h2>
         <p>
-            Para evitar los escenarios de colapso detallados y asegurar una transición exitosa de una Prueba de Concepto a un software corporativo de grado de producción, el **Departamento de IT** propone el siguiente plan de migración de infraestructura:
+            Sin límites de plan gratuito, el plan de mitigación deja de ser "qué plan pago contratar" y
+            pasa a ser dos cosas: dimensionar el VPS correctamente, y cerrar los hallazgos de código de §3
+            en orden de urgencia.
         </p>
 
-        <h3>1. Upgrade Estratégico de Planes (Presupuesto Mensual Mínimo)</h3>
-        <p>
-            No es necesario contratar servidores dedicados costosos de miles de dólares. El siguiente esquema de bajo costo elimina el 100% de los riesgos identificados:
-        </p>
-
+        <h3>1. Sizing recomendado del VPS para 200+ clientes</h3>
         <table>
             <thead>
                 <tr>
-                    <th style="width: 25%;">Componente</th>
-                    <th style="width: 25%;">Proveedor / Plan Recomendado</th>
-                    <th style="width: 30%;">Solución Provista</th>
-                    <th style="width: 20%;">Costo Mensual</th>
+                    <th style="width: 25%;">Recurso</th>
+                    <th style="width: 25%;">Mínimo recomendado</th>
+                    <th style="width: 50%;">Motivo</th>
                 </tr>
             </thead>
             <tbody>
                 <tr>
-                    <td><strong>Base de Datos</strong></td>
-                    <td><strong>Neon Launch Tier</strong></td>
-                    <td>Cómputo ilimitado (24/7 sin apagados) y 10 GB de almacenamiento SSD.</td>
-                    <td>$19.00 USD</td>
+                    <td><strong>vCPU</strong></td>
+                    <td>4 vCPU</td>
+                    <td>Los límites actuales de `docker-compose.prod.yml` suman ~3.5 CPU entre todos los contenedores (api 1.0 + postgres 1.0 + redis 0.5 + portal 0.25 + nginx 0.25 + certbot 0.1 + backup 0.5) — 4 vCPU deja margen real, no sólo lo justo.</td>
                 </tr>
                 <tr>
-                    <td><strong>Servidor Backend</strong></td>
-                    <td><strong>Render Starter ($7/mes)</strong> o <strong>Standard ($25/mes)</strong></td>
-                    <td>Instancia siempre activa (cero spin-down) con 512MB/2GB RAM y CPU dedicada.</td>
-                    <td>$7.00 - $25.00 USD</td>
+                    <td><strong>RAM</strong></td>
+                    <td>4-8 GB</td>
+                    <td>Suma de límites actuales ~2.3 GB + margen del sistema operativo y picos de Postgres bajo el pool ampliado a 20 conexiones (cada conexión de Postgres tiene su propio costo de memoria en el lado del servidor, no sólo del lado del pool de Knex).</td>
                 </tr>
                 <tr>
-                    <td><strong>Portal Frontend</strong></td>
-                    <td><strong>Vercel Pro</strong></td>
-                    <td>Límite de Serverless Timeout extendido a 60 segundos y 1 TB de transferencia.</td>
-                    <td>$20.00 USD</td>
-                </tr>
-                <tr style="background: #f8fafc; font-weight: bold;">
-                    <td colspan="3">Presupuesto Operativo Mensual Estimado</td>
-                    <td style="color: var(--stc-blue);">$46.00 - $64.00 USD</td>
+                    <td><strong>Disco</strong></td>
+                    <td>≥100 GB SSD</td>
+                    <td>La compresión de TimescaleDB reduce mucho el tamaño de `readings`, pero el volumen real depende del número final de dispositivos monitoreados — monitorear el crecimiento real del volumen `pgdata` durante los primeros meses en vez de asumir un número, y dejar margen para los backups diarios (`pg_dump`, 30 días de retención) que viven en un volumen aparte.</td>
                 </tr>
             </tbody>
         </table>
 
-        <h3>2. Optimizaciones en la Base de Código para Cuentas Gratuitas (Mitigación Inmediata)</h3>
-        <p>
-            Mientras se mantenga la fase de prueba en cuentas gratuitas, se deben aplicar las siguientes configuraciones de software inmediatamente para retrasar el punto de colapso:
-        </p>
-        <ul>
-            <li>
-                <strong>Intervalos de Telemetría Extendidos:</strong> Cambiar el tiempo de escaneo del agente DCA de 15 minutos a **1 hora (o 4 horas)** en ambientes de pruebas. Esto reducirá el consumo de cómputo en Neon en un 75%.
-            </li>
-            <li>
-                <strong>Política de Pruning de Logs (Purga Activa):</strong> Implementar una rutina diaria que elimine logs de auditoría o escaneos repetidos de más de 30 días de antigüedad para mantener la base de datos por debajo de los 350 MB.
-            </li>
-            <li>
-                <strong>Timeouts Resilientes en el Agente (IMPLEMENTADO):</strong> Se han implementado de forma nativa timeouts controlados de **65 segundos** usando <code>AbortSignal.timeout(65_000)</code> en todos los llamados críticos de <code>fetch</code> del agente local (heartbeat, sync, register, refresh y activate). Esto garantiza que el agente DCA espere pacientemente los ~50s necesarios para que Render despierte sin abortar ni generar bucles de colisión.
-            </li>
-        </ul>
+        <h3>2. Orden recomendado para cerrar los hallazgos de §3</h3>
+        <ol>
+            <li><strong>✅ Ya hecho:</strong> pool de conexiones configurable, default subido a 20.</li>
+            <li><strong>Paginación del portal</strong> — agregar `limit`/`offset` real a `GET /agents`,
+                `GET /clients`, `GET /devices`, replicando el patrón ya usado en `Alerts`/`DeviceDetail`.</li>
+            <li><strong>Rate-limit por agente</strong> en `/devices/sync` y `/heartbeat`, no compartido por
+                IP — mismo patrón que ya usa la API pública (`apikey:${id}` en vez de IP).</li>
+            <li><strong>Jitter en la reconexión del agente</strong> — cambio pequeño, evita oleadas
+                sincronizadas de reconexión tras un restart del backend.</li>
+            <li><strong>Batching del sync de lecturas</strong> — el de mayor esfuerzo/riesgo de los cinco;
+                requiere tocar lógica de negocio sensible (identidad de dispositivo, detección de reset de
+                contador), se evalúa aparte con más tiempo dedicado.</li>
+        </ol>
 
-        <div class="note-callout">
-            <strong>Recomendación Final:</strong> Para el lanzamiento comercial del servicio, la contratación de los planes sugeridos es obligatoria. Una fuga de contadores en un cierre mensual debido a la suspensión de base de datos Neon cuesta 20 veces más de lo que representa el costo anual de la infraestructura en la nube.
+        <div class="note-callout" style="background: #f0fdf4; border-left-color: #16a34a; color: #14532d;">
+            <strong>A diferencia de la v1.7 de este informe:</strong> ya no hay una fecha de colapso
+            garantizada ("día 8 del mes", "22 días de operación") — el self-hosting eliminó esos límites
+            artificiales. Lo que queda es trabajo de ingeniería normal: cerrar los puntos de §3 en orden de
+            impacto antes de que el volumen real de 200+ clientes los convierta en un problema de
+            producción, en vez de una nota en un informe.
         </div>
 
         <div class="footer">
