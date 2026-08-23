@@ -17,6 +17,7 @@ import "../jobs/alertWorker";
 import "../jobs/notificationWorker";
 import "../jobs/reportDeliveryWorker";
 import "../jobs/retentionJob";
+import "../jobs/publicWebhookWorker";
 import { registerWebSocket } from "../ws/index";
 
 import { createAuthMiddleware } from "./middlewares/authMiddleware";
@@ -24,6 +25,7 @@ import { registerAuthRoutes } from "./routes/authRoutes";
 import { registerAgentRoutes } from "./routes/agentRoutes";
 import { registerPortalAgentRoutes } from "./routes/portalAgentRoutes";
 import { registerClientRoutes } from "./routes/clientRoutes";
+import { registerPublicApiRoutes } from "./routes/publicApiRoutes";
 import { registerDeviceRoutes } from "./routes/deviceRoutes";
 import { registerDashboardRoutes } from "./routes/dashboardRoutes";
 import { registerFeedbackRoutes } from "./routes/feedbackRoutes";
@@ -270,7 +272,7 @@ const start = async () => {
 
     // ─── Auth middleware ──────────────────────────────────────────────────────
 
-    const { agentAuth, portalAuth } = createAuthMiddleware(fastify, db, redis, agentService);
+    const { agentAuth, portalAuth, apiKeyAuth } = createAuthMiddleware(fastify, db, redis, agentService);
 
     // Recolecta toda ruta declarada (método + url) a medida que se registra, para
     // validar contra la allowlist de RBAC apenas termine el registro — ver abajo.
@@ -292,6 +294,7 @@ const start = async () => {
     registerDashboardRoutes(fastify, db, agentService, portalAuth);
     registerFeedbackRoutes(fastify, db, portalAuth);
     registerReportRoutes(fastify, db, portalAuth);
+    registerPublicApiRoutes(fastify, db, apiKeyAuth);
 
     // Assert de arranque: si una entrada de CLIENT_VIEWER_ROUTES no corresponde a
     // ninguna ruta real (typo, ruta renombrada), esto sería una denegación SILENCIOSA

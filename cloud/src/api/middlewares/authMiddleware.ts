@@ -2,6 +2,7 @@ import { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { Knex } from "knex";
 import Redis from "ioredis";
 import { AgentService } from "../../services/agentService";
+import { resolveApiKey } from "../../services/apiKeyService";
 import { DEFAULT_BUSINESS_HOURS, type BusinessHoursConfig } from "../../services/businessHours";
 import { policyFor } from "../policy/rolePolicy";
 import {
@@ -28,6 +29,12 @@ export interface PortalUser {
   active: boolean;
   /** Cliente al que está atado un `client_viewer`; `null` para admin/operator. */
   clientId: string | null;
+}
+
+/** Cliente resuelto de una API key, inyectado en `request.apiKeyClient`. */
+export interface ApiKeyClient {
+  apiKeyId: string;
+  clientId: string;
 }
 
 /** Payload decodificado del JWT del agente. */
@@ -214,5 +221,30 @@ export function createAuthMiddleware(
     }
   }
 
-  return { agentAuth, portalAuth };
+  /**
+   * Autenticación de la API pública (integración ERP) — header `X-Api-Key`,
+   * NO JWT. Un actor estructuralmente distinto de agente/portal: no inyecta
+   * `request.user` (eso rompería el RBAC de `portalAuth` de arriba, pensado
+   * sólo para JWT de portal) sino `request.apiKeyClient`, que los
+   * controladores de `publicApiController.ts` usan directo como scope fijo
+   * (siempre `client_id = X`, nunca "todos").
+   */
+  async function apiKeyAuth(request: FastifyRequest, reply: FastifyReply) {
+    try {
+      const rawKey = request.headers["x-api-key"];
+      if (!rawKey || Array.isArray(rawKey)) {
+        return reply.status(401).send({ error: "Falta el header X-Api-Key" });
+      }
+      const resolved = await resolveApiKey(db, rawKey);
+      if (!resolved) {
+        return reply.status(401).send({ error: "API key inválida o revocada" });
+      }
+      (request as FastifyRequest & { apiKeyClient: ApiKeyClient }).apiKeyClient = resolved;
+    } catch (err) {
+      request.log.error(err, "Error evaluando API key");
+      return reply.status(401).send({ error: "API key inválida" });
+    }
+  }
+
+  return { agentAuth, portalAuth, apiKeyAuth };
 }

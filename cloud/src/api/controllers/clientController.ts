@@ -4,6 +4,7 @@ import type { PortalUser } from "../middlewares/authMiddleware";
 import { getClientIp } from "../utils/ip";
 import { getScope } from "../utils/scope";
 import { onlyLiveDevices, notMerged } from "../utils/deviceFilters";
+import * as apiKeyService from "../../services/apiKeyService";
 
 export function createClientController(db: Knex) {
   return {
@@ -229,6 +230,27 @@ export function createClientController(db: Knex) {
           "agents.last_seen as monitor_last_seen"
         )
         .orderBy("devices.brand");
+    },
+
+    listApiKeys: async (request: FastifyRequest) => {
+      const { id } = request.params as { id: string };
+      return apiKeyService.listApiKeys(db, id);
+    },
+
+    createApiKey: async (request: FastifyRequest, reply: FastifyReply) => {
+      const { id } = request.params as { id: string };
+      const { name } = request.body as { name?: string };
+      if (!name?.trim()) return reply.status(400).send({ error: "name es requerido" });
+      const created = await apiKeyService.createApiKey(db, id, name.trim());
+      // El valor en claro se devuelve UNA sola vez acá — no se puede recuperar después.
+      return reply.status(201).send(created);
+    },
+
+    revokeApiKey: async (request: FastifyRequest, reply: FastifyReply) => {
+      const { id, keyId } = request.params as { id: string; keyId: string };
+      const updated = await apiKeyService.revokeApiKey(db, id, keyId);
+      if (updated === 0) return reply.status(404).send({ error: "API key no encontrada o ya revocada" });
+      return { ok: true };
     },
   };
 }

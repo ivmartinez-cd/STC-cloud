@@ -17,6 +17,7 @@ const TEST_FILES = [
   "src/tests/ipRangeSpec.test.ts",
   "src/tests/businessHours.test.ts",
   "src/tests/ipRangesCredentials.test.ts",
+  "src/tests/publicApi.test.ts",
 ];
 
 function runFile(file) {

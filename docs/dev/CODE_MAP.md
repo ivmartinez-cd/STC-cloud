@@ -83,7 +83,9 @@ cloud/src/
 │   ├── snmpCredentials.ts     # Validación/enmascarado/cifrado de la lista de credenciales SNMP por agente (lógica pura, sin Knex)
 │   ├── cryptoService.ts       # Cifrado at-rest (AES-256-GCM, clave HKDF-SHA256 cacheada) usado por snmpCredentials.ts
 │   ├── ipRangeSpec.ts         # Validación de ip_ranges (CIDR + tope + exclusiones + hostname + credenciales por rango) y compilación a pares {start,end} planos para el agente (lógica pura, sin Knex)
-│   └── businessHours.ts       # Horario laboral + TZ configurable por agente; offset UTC real (sin librería) para corregir el parseo de timestamps naive de logs/lecturas
+│   ├── businessHours.ts       # Horario laboral + TZ configurable por agente; offset UTC real (sin librería) para corregir el parseo de timestamps naive de logs/lecturas
+│   ├── apiKeyService.ts       # API keys de la API pública (integración ERP): alta/listado/revocación, hash SHA-256 at-rest
+│   └── publicWebhookService.ts # Webhooks de integración ERP por cliente (distintos de los webhooks de notificación interna); firma HMAC-SHA256, reusa el guard SSRF de notificationService.ts
 ├── db/
 │   ├── knex.ts            # Conexión principal parametrizada con Knex.js
 │   ├── migrations/        # Scripts estructurados SQL de migración en caliente

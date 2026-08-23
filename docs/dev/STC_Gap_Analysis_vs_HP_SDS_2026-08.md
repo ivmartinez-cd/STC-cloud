@@ -168,19 +168,39 @@ decisión de negocio, no una obligación de compliance.
   (API-only por ahora), resolución de solapamiento de rangos en runtime
   (sólo warning al guardar).
 
-### Fase 2 — Diferenciación — sin empezar
-Ninguno de estos ítems se tocó: API pública (API keys por cliente + webhooks de
-lecturas/alertas/cierres — nota: la infraestructura de webhooks de Fase 1 fue para
-notificaciones internas, no para esta API pública), remote EWS por túnel sobre el
-WSS existente, backend multi-réplica (WS sigue con registro de sockets **en
+### Fase 2 — Diferenciación — arrancada: 1 de 7 ítems cerrados
+✅ **API pública con API keys por cliente + webhooks de integración ERP**
+(23/08/2026): `api_keys` (hash SHA-256 at-rest, nunca el valor en claro;
+gestión desde el portal — `POST/GET/DELETE /clients/:id/api-keys`, admin/
+operator) + `api_webhooks` (una fila por cliente, no por key, para que rotar
+una key no rompa la suscripción; firma HMAC-SHA256 vía header
+`X-STC-Signature`). Endpoints nuevos bajo `/api/v1/public/` (`devices`,
+`devices/:id/readings`, `alerts`, `reports/closures`, `webhook`), scope
+SIEMPRE fijo al cliente de la key (controladores propios, no reusan
+`scope.ts`/`getScope` — pensado para `PortalUser`, no para este actor
+distinto), rate-limit propio de 60/min por key. Webhooks salientes reusan el
+guard SSRF ya existente de `notificationService.ts` (`postWebhook`) tal
+cual, sin reescribirlo — enganchados en `notificationWorker.ts`/
+`reportDeliveryWorker.ts` (alertas/cierres, mismo patrón defensivo de releer
+por id) y un worker nuevo (`publicWebhookWorker.ts`, lecturas, un webhook
+por BATCH de sync, no por lectura individual). §2.3/tabla comparativa "API
+pública / ISV" queda resuelto.
+**Lo que NO se hizo**: UI de portal para gestionar keys/webhooks (sólo REST
+por ahora — deliberado, otra sesión trabajaba en simultáneo sobre
+`cloud/portal/`), expiración automática de keys, retry con backoff para
+webhooks fallidos, documentación pública tipo OpenAPI/Swagger.
+
+Ítems de Fase 2 que siguen sin tocar: remote EWS por túnel sobre el WSS
+existente, backend multi-réplica (WS sigue con registro de sockets **en
 memoria**, `ws/index.ts:24-25` — no resuelto; `heartbeatMonitor.ts` sigue como
 `setInterval` **a propósito**, ver comentario en el archivo: convertirlo a BullMQ
 repeatable job es riesgoso mientras la Redis de producción use
 `maxmemoryPolicy: allkeys-lru`), agregados continuos, familias de marcas nuevas
 (Ricoh/Kyocera/Brother/Xerox/Canon/Konica — siguen cayendo a `generic` o con OIDs
-parciales, §3 R8), mejoras de agente (rollback de update, activación offline,
-"mantener datos" al desinstalar), y documentación (comparativa v2.0, inventario de
-datos, auditoría IT).
+parciales, §3 R8; requiere hardware real para captura/fixtures, no completable
+sin acceso a equipos reales), mejoras de agente (rollback de update, activación
+offline, "mantener datos" al desinstalar), y documentación (comparativa v2.0,
+inventario de datos, auditoría IT).
 
 ### Otros puntos de §3 (riesgos) que siguen abiertos y no forman parte de ningún ítem de arriba
 - ✅ **R4 (parcial, 23/08/2026)**: el WS del portal ya NO acepta el JWT de
@@ -296,7 +316,7 @@ Leyenda de prioridad: **P0** bloquea facturación/seguridad · **P1** paridad op
 | Esquema | — | Migraciones ≠ prod (hypertable comentada en `20260506000000:55-58`; `readings.supplies_details` y drop de `readings.id` sólo en prod) | Migración de reconciliación | P0 |
 | Índices | — | Sólo `readings(time)`; falta `(device_id,time)`, `alerts(device_id,resolved)`, `audit_logs`, `agents(client_id)` | Índices | P0 |
 | Certificaciones | ISO 27001/27017, SOC 2, NIST CSF | Ninguna (decisión consciente) | Al menos: política de retención, DPA, inventario de datos actualizado | P2 |
-| API pública / ISV | SDS API para MPS | Ninguna (sin API keys, sin webhooks) | API keys por cliente + webhooks (lecturas, alertas, cierres) | P1 |
+| API pública / ISV | SDS API para MPS | ✅ (23/08/2026) API keys por cliente (`api_keys`, hash SHA-256) + webhooks de integración ERP (`api_webhooks`, firma HMAC) para lecturas/alertas/cierres, endpoints `/api/v1/public/*` | Falta UI de portal para gestionar keys/webhooks, documentación OpenAPI | P1 |
 | Remote EWS | Sí (túnel, whitelist, expira) | No | Túnel HTTP sobre el WSS existente, con allowlist y TTL | P2 |
 | Firmware push / reboot remoto | Sí | No | — (fuera de scope declarado) | — |
 | Equipos USB | SDA (agente en PC) | No; el STC legado usaba HP FleetAdminPro SnmpAgent | Documentar el camino (mismo truco: SNMP agent local) | P2 |
@@ -387,8 +407,8 @@ Ver §1. Especialmente `data_collection_inventory.md` (privacidad) y los HTML de
 - ✅ **Resolución de hostname (point lookup) + credenciales SNMP por rango**: `ip_ranges` acepta un tercer tipo de entrada `{hostname}` resuelto por el agente en cada ciclo (el cloud no tiene visibilidad de la DNS interna del cliente); cada entrada admite `credential_ids?` para restringir qué credenciales se prueban en ESE rango durante discovery, con fail-open ante ids colgantes y warnings no bloqueantes (rangos superpuestos con credenciales distintas, borrado de una credencial referenciada). ⬜ UI de asignación de `credential_ids` en el portal queda para después (API-only); restricción por rango en meter/supplies no se hizo (`known_devices` no tiene vínculo a rango, y no aporta valor real ahí).
 - ✅ Identidad `(client_id, serial)` + MAC secundaria + merge de duplicados; decommission/mover/editar dispositivo.
 
-### Fase 2 — Diferenciación (2–3 meses) — sin empezar, ningún ítem tocado
-- API pública con API keys por cliente + webhooks (lecturas, alertas, cierres) → integración ERP.
+### Fase 2 — Diferenciación (2–3 meses) — arrancada: 1 de 7 ítems cerrados
+- ✅ (23/08/2026) API pública con API keys por cliente + webhooks (lecturas, alertas, cierres) → integración ERP. Falta UI de portal (sólo REST por ahora) y expiración/retry automáticos — ver "Estado de implementación".
 - Remote EWS por túnel sobre el WSS existente (allowlist, TTL, audit), consola con paridad IMIL (listar dispositivos, MIB walk remoto, deshabilitar monitoreo por equipo, reenviar lecturas, descubrir IP puntual).
 - Backend multi‑réplica: pub/sub Redis para WS, jobs BullMQ repetibles (heartbeat monitor), métricas Prometheus, Sentry, logs estructurados sin `console.log`.
 - Agregados continuos (diario/mensual por equipo) y dashboard sobre ellos.

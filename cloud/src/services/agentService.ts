@@ -952,6 +952,11 @@ export class AgentService {
 
     let inserted = 0;
     let duplicates = 0;
+    // Filas REALMENTE insertadas (no duplicados de reintento) — usadas para el
+    // webhook de "reading.created" de la API pública (`publicWebhookWorker.ts`).
+    // Ojo: nunca usar `mappedReadings` crudo para esto, notificaría lecturas que
+    // el ON CONFLICT descartó silenciosamente.
+    let newlyInsertedReadings: Array<{ device_id: string; time: Date; total_pages: number | null; mono_pages: number | null; color_pages: number | null }> = [];
 
     if (mappedReadings.length > 0) {
       try {
@@ -972,9 +977,10 @@ export class AgentService {
             .insert(validReadings)
             .onConflict(["reading_id", "time"])
             .ignore()
-            .returning("reading_id");
+            .returning(["reading_id", "device_id", "time", "total_pages", "mono_pages", "color_pages"]);
           inserted = insertedRows.length;
           duplicates = validReadings.length - inserted;
+          newlyInsertedReadings = insertedRows;
         }
       } catch (err: unknown) {
         const errMsg = err instanceof Error ? err.message : String(err);
@@ -994,6 +1000,18 @@ export class AgentService {
       await readingsQueue.add("evaluate-readings", { readings: mappedReadings });
     } catch (e: unknown) {
       console.error("[SYNC] BullMQ no disponible:", e);
+    }
+
+    // Webhook "reading.created" de la API pública — un job por BATCH de sync
+    // (no uno por lectura individual, evitaría saturar de POSTs a un ERP), con
+    // las filas REALMENTE insertadas (no `mappedReadings` crudo).
+    if (newlyInsertedReadings.length > 0) {
+      try {
+        const publicReadingsQueue = new Queue("public-api-readings-queue", { connection: this.redis as any });
+        await publicReadingsQueue.add("notify-readings", { readings: newlyInsertedReadings });
+      } catch (e: unknown) {
+        console.error("[SYNC] BullMQ (public-api-readings-queue) no disponible:", e);
+      }
     }
 
     // Actualizar también el heartbeat del agente al sincronizar

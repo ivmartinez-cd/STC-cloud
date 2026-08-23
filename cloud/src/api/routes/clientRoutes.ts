@@ -37,6 +37,16 @@ const updateClientSchema = {
   },
 };
 
+const createApiKeySchema = {
+  body: {
+    type: "object",
+    required: ["name"],
+    properties: {
+      name: { type: "string", minLength: 1, maxLength: 100 },
+    },
+  },
+};
+
 export function registerClientRoutes(
   fastify: FastifyInstance,
   db: Knex,
@@ -75,5 +85,24 @@ export function registerClientRoutes(
   fastify.get("/api/v1/clients/:id/devices", {
     preHandler: portalAuth,
     handler: ctrl.getClientDevices,
+  });
+
+  // Gestión de API keys de la API pública (integración ERP) — deliberadamente
+  // NO se agregan a CLIENT_VIEWER_ROUTES: gestionar credenciales de
+  // integración no es rol de un client_viewer, deny-by-default.
+  fastify.get("/api/v1/clients/:id/api-keys", {
+    preHandler: portalAuth,
+    handler: ctrl.listApiKeys,
+  });
+
+  fastify.post("/api/v1/clients/:id/api-keys", {
+    schema: createApiKeySchema,
+    preHandler: portalAuth,
+    handler: ctrl.createApiKey,
+  });
+
+  fastify.delete("/api/v1/clients/:id/api-keys/:keyId", {
+    preHandler: portalAuth,
+    handler: ctrl.revokeApiKey,
   });
 }

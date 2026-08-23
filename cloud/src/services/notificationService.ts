@@ -174,11 +174,15 @@ async function assertSafeWebhookUrl(rawUrl: string): Promise<URL> {
  * seguir redirects (una 3xx a una URL privada burlaría el guard SSRF si se
  * siguiera automáticamente).
  */
-export async function postWebhook(webhookUrl: string, body: unknown): Promise<void> {
+export async function postWebhook(
+  webhookUrl: string,
+  body: unknown,
+  extraHeaders?: Record<string, string>
+): Promise<void> {
   const url = await assertSafeWebhookUrl(webhookUrl);
   await fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...extraHeaders },
     body: JSON.stringify(body),
     redirect: "manual",
     signal: AbortSignal.timeout(5000),

@@ -3,6 +3,7 @@ import Redis from 'ioredis';
 import knex from 'knex';
 import knexConfig from '../db/knexfile';
 import { sendReportEmail, sendReportWebhook } from '../services/notificationService';
+import { sendPublicApiWebhook } from '../services/publicWebhookService';
 import { buildClosureCsv, buildClosureXlsx } from '../services/reportExportService';
 import { formatPeriod } from '../services/reportService';
 
@@ -57,9 +58,10 @@ async function processReportDelivery(closureId: string): Promise<void> {
     console.log(`[ReportDeliveryWorker] Cierre ${closureId} ya no está 'closed' (reabierto), se omite`);
     return;
   }
-  if (!closure.notification_email && !closure.notification_webhook_url) {
-    return; // Cliente sin canales configurados — nada que mandar.
-  }
+  // Nota: ya NO se corta acá si el cliente no tiene canales de notificación
+  // interna configurados — `sendPublicApiWebhook` es un mecanismo aparte
+  // (`api_webhooks`, integración ERP) que igual debe dispararse aunque el
+  // cliente no tenga `notification_email`/`notification_webhook_url`.
 
   const period = formatPeriod(closure.period);
   const payload = {
@@ -83,6 +85,9 @@ async function processReportDelivery(closureId: string): Promise<void> {
       ]);
     })(),
     closure.notification_webhook_url ? sendReportWebhook(payload, closure.notification_webhook_url) : Promise.resolve(),
+    sendPublicApiWebhook(db, closure.client_id, 'report.closed', {
+      closure_id: closure.id, period, total_pages: Number(closure.total_pages),
+    }),
   ]);
   for (const r of results) {
     if (r.status === 'rejected') {

@@ -3,6 +3,7 @@ import Redis from 'ioredis';
 import knex from 'knex';
 import knexConfig from '../db/knexfile';
 import { sendAlertEmail, sendAlertWebhook } from '../services/notificationService';
+import { sendPublicApiWebhook } from '../services/publicWebhookService';
 
 /**
  * Procesa la cola `notifications-queue` (encolada desde `alertService.openAlert`,
@@ -86,11 +87,16 @@ async function processAlertNotification(alertId: number): Promise<void> {
     clientName: alert.client_name || 'Cliente',
   };
 
-  // Email y webhook son independientes — que uno falle no debe impedir el otro
-  // (ni hacer fallar el job entero si el que sí estaba bien configurado ya salió).
+  // Email, webhook de notificación interna, y webhook de la API pública
+  // (integración ERP, distinto mecanismo — `api_webhooks` por cliente, no
+  // `clients.notification_webhook_url`) son independientes entre sí.
   const results = await Promise.allSettled([
     sendAlertEmail(payload, alert.notification_email),
     alert.notification_webhook_url ? sendAlertWebhook(payload, alert.notification_webhook_url) : Promise.resolve(),
+    sendPublicApiWebhook(db, alert.client_id, 'alert.created', {
+      id: alert.id, type: alert.type, severity: alert.severity, message: alert.message,
+      device_name: alert.device_name, agent_name: alert.agent_name,
+    }),
   ]);
   for (const r of results) {
     if (r.status === 'rejected') {
