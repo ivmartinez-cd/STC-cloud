@@ -31,10 +31,51 @@ jobs:
       - run: npm run check    # ESLint + TypeScript + icon validation
       - run: npm run build
 
-  # ─── API (Fastify + TypeScript) ────────────────────────────────────────────
+  # ─── API (Fastify + TypeScript) — build + tests de integración reales ─────
   api:
-    name: API — typecheck & build
+    name: API — typecheck, build & tests (Postgres + Redis)
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: timescale/timescaledb:latest-pg16
+        env:
+          POSTGRES_USER: stc_admin
+          POSTGRES_PASSWORD: stc_secret
+          POSTGRES_DB: stc_cloud
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U stc_admin -d stc_cloud"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DB_HOST: localhost
+      DB_USER: stc_admin
+      DB_PASSWORD: stc_secret
+      DB_NAME: stc_cloud
+      REDIS_URL: redis://localhost:6379
+      JWT_SECRET: una_clave_super_secreta_de_al_menos_32_caracteres_para_ci
+      PORTAL_ADMIN_USER: admin
+      PORTAL_ADMIN_PASSWORD: Admin1234
+      API_URL: http://localhost:3000/api/v1
+      PORT: "3000"
+      # rbac.test.ts/alerts.test.ts abren una conexión pg propia (fuera de la
+      # app) para probar cosas que la API no expone (CHECK constraints, LEFT
+      # JOIN crudo) — por defecto asumen el mapeo de puerto no estándar del
+      # docker-compose local (5434→5432); acá el service de Postgres publica
+      # el puerto estándar, así que hay que pisar el default explícitamente.
+      RBAC_TEST_DB_PORT: "5432"
+      ALERTS_TEST_DB_PORT: "5432"
     steps:
       - uses: actions/checkout@v4
 
@@ -46,6 +87,35 @@ jobs:
 
       - run: npm ci
       - run: npm run build -w cloud
+
+      - name: Iniciar API en background (migra + bootstrap admin en el boot)
+        working-directory: cloud
+        run: |
+          node dist/api/server.js &
+          echo $! > /tmp/api.pid
+
+      - name: Esperar a que /health responda
+        run: |
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:3000/health > /dev/null; then
+              echo "API lista"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "La API no respondió /health a tiempo"
+          exit 1
+
+      - name: Seed mínimo (e2e.test.ts necesita al menos un cliente existente)
+        run: npm run seed -w cloud
+
+      - name: Tests de integración (flush de Redis entre archivos — ver ci-test-runner.mjs)
+        working-directory: cloud
+        run: node scripts/ci-test-runner.mjs
+
+      - name: Detener API
+        if: always()
+        run: kill "$(cat /tmp/api.pid)" 2>/dev/null || true
 
   # ─── Agent (SNMP scanner → Windows .exe) ──────────────────────────────────
   agent:
