@@ -22,7 +22,15 @@ export type IpRange = {
   start?: string;
   end?: string;
   cidr?: string;
+  /** Point lookup — el agente resuelve por DNS en cada ciclo de discovery. */
+  hostname?: string;
   exclude?: string[];
+  /** Restringe qué credenciales de `snmp_credentials` se prueban para esta
+   *  entrada durante discovery. Ausente = pool completo (comportamiento de
+   *  siempre). Sin UI de asignación en el portal todavía (API-only) — el
+   *  campo existe en el tipo para que un valor ya seteado por API no se
+   *  pierda si se edita otra parte de la misma entrada acá. */
+  credential_ids?: string[];
 }
 
 /**

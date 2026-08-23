@@ -34,7 +34,7 @@ retención** (`add_retention_policy` de TimescaleDB) para `readings`/`alerts`/
 `audit_logs`/`agent_logs` — los índices ya existen, pero nada purga datos viejos
 todavía (§2.7/R3 siguen abiertos en ese punto).
 
-### Fase 1 — Paridad operativa con SDS — parcial: 8 de 9 ítems cerrados
+### Fase 1 — Paridad operativa con SDS — completa: 9 de 9 ítems cerrados
 - ✅ **RBAC por cliente** (commit `7a47ce6`): rol `client_viewer`, scoping por
   `client_id` en los ~19 endpoints de lectura relevantes, deny-by-default por rol y
   por ruta. §2.6 "Jerarquía" y "Auth" (parte de CSRF/backdoor) quedan resueltos.
@@ -129,12 +129,27 @@ todavía (§2.7/R3 siguen abiertos en ese punto).
   spec vigente que pidiera que un scheduler tipo cron conviviera con el
   horario laboral recién cerrado, así que no se reimplementó. §2.1 (fila
   "Scheduler custom") queda resuelto.
-
-**Pendiente por completo de Fase 1** (sin empezar):
-1. **Resolución de hostname** en `ip_ranges` (point lookups) y
-   **credenciales SNMP por rango** (hoy son por agente completo) — ambos
-   quedaron deliberadamente fuera de las pasadas de SNMPv3 y CIDR (§2.1/§2.3,
-   P1). Es el único ítem real que queda de Fase 1.
+- ✅ **Resolución de hostname (point lookup) + credenciales SNMP por rango**
+  (esta pasada, último ítem de Fase 1): `ip_ranges` acepta un tercer
+  discriminante `{hostname}` — el cloud NO resuelve (sin visibilidad de la
+  DNS interna del cliente), el agente resuelve por `dns.lookup()` en cada
+  ciclo de discovery (sin cache, `family:4`, timeout explícito de 4s propio
+  — `dns.lookup()` no tiene timeout nativo y corre sobre el mismo threadpool
+  de libuv que `fs`) y trata la IP resuelta como cualquier otra descubierta;
+  las reasignaciones DHCP se resuelven solas vía la deduplicación por serial
+  ya existente. Cada entrada de `ip_ranges` (rango/CIDR/hostname) admite
+  `credential_ids?: string[]` — referencia a la lista existente de
+  `agents.snmp_credentials`, restringe qué credenciales prueba el agente en
+  ESE rango durante discovery (meter/supplies siguen con el pool completo:
+  `known_devices` no tiene vínculo a rango, y un dispositivo ya conocido
+  casi siempre acierta con la credencial cacheada sin necesitar fail-fast).
+  IDs colgantes se resuelven fail-open al pool completo en
+  `agentService.getConfig()`; rangos superpuestos con credenciales distintas
+  y borrado de una credencial todavía referenciada generan warnings no
+  bloqueantes. §2.1/§2.3 quedan resueltos — **Fase 1 completa**.
+  **Lo que NO se hizo**: UI de asignación de `credential_ids` en el portal
+  (API-only por ahora), resolución de solapamiento de rangos en runtime
+  (sólo warning al guardar).
 
 ### Fase 2 — Diferenciación — sin empezar
 Ninguno de estos ítems se tocó: API pública (API keys por cliente + webhooks de
@@ -333,14 +348,15 @@ Ver §1. Especialmente `data_collection_inventory.md` (privacidad) y los HTML de
 
 ¹ `/portal/me` y la respuesta de login siguen devolviendo el token también en el body (fallback para el WS cuando no hay cookie entre orígenes) — es una decisión consciente, no un pendiente.
 
-### Fase 1 — Paridad operativa con SDS (≈ 1 mes) — parcial: 8 de 9 ítems cerrados
+### Fase 1 — Paridad operativa con SDS (≈ 1 mes) — completa: 9 de 9 ítems cerrados
 - ✅ **Alert loop** — lifecycle server-side completo: alertas `agent_offline`, `device_offline`, `counter_reset` (ya de Fase 0), normalización de las alertas EWS que ya llegaban del agente; **ack/resolve** y filtros; **notificaciones** email + webhook. ⬜ El loop *dedicado 3/15 min del lado agente* no se tocó (las alertas del agente siguen en el loop de supplies, 60/240 min); ⬜ digest diario no implementado.
 - ✅ **Reportes por cliente**: selector de período, cierre mensual inmutable (lectura inicial/final, delta, fuente), export CSV/XLSX, y **entrega automática** (email/webhook) para reemplazar el flujo FTP/mail del STC legado. ⬜ Export a PDF y entrega por SFTP no se hicieron (quedó CSV/XLSX + email/webhook).
 - ✅ **RBAC por cliente**: rol `client_viewer`, scoping por `client_id` en todos los controladores. ⬜ Paginación server‑side no se hizo (sigue sin paginación ninguna tabla del portal).
-- ✅ **SNMPv3 y lista de credenciales** (v1/v2c/v3) por agente, hasta 8 credenciales probadas en orden, secretos cifrados at-rest, fail-fast para no multiplicar timeouts contra un host muerto. ⬜ Resolución de hostname y **credenciales por rango** (esta pasada es por agente completo) quedan para una pasada aparte.
-- ✅ **CIDR + tope de rango + exclusiones**: `ip_ranges` acepta CIDR y exclusión de IPs individuales, compilado del lado cloud a pares planos (cero cambios en el agente); tope de 2000 IPs declaradas por agente, validado en cloud y reforzado en el agente. ⬜ Resolución de hostname, exclusión de sub-rangos/CIDR anidados e IPv6 quedan fuera.
+- ✅ **SNMPv3 y lista de credenciales** (v1/v2c/v3) por agente, hasta 8 credenciales probadas en orden, secretos cifrados at-rest, fail-fast para no multiplicar timeouts contra un host muerto.
+- ✅ **CIDR + tope de rango + exclusiones**: `ip_ranges` acepta CIDR y exclusión de IPs individuales, compilado del lado cloud a pares planos (cero cambios en el agente); tope de 2000 IPs declaradas por agente, validado en cloud y reforzado en el agente. ⬜ Exclusión de sub-rangos/CIDR anidados e IPv6 quedan fuera.
 - ✅ **Horario laboral y TZ configurables** por agente: `agents.business_hours` (jsonb, default = comportamiento hardcodeado de siempre), enviado en heartbeat config; de paso corrige el offset `-03:00` hardcodeado al ingerir logs/lecturas naive de agentes viejos, usando el TZ real del agente. ⬜ Cosmética de locale del portal (`es-AR`) queda para una pasada de polish aparte.
 - ✅ `scan_schedule`: eliminado como código muerto (columna, tipo, y todo su manejo en cloud) — se había implementado y reemplazado deliberadamente por el modelo de 3 loops + horario laboral 4 días después, en mayo; el backend nunca se limpió hasta ahora. No se reimplementó: sin spec vigente que pida un scheduler tipo cron conviviendo con horario laboral.
+- ✅ **Resolución de hostname (point lookup) + credenciales SNMP por rango**: `ip_ranges` acepta un tercer tipo de entrada `{hostname}` resuelto por el agente en cada ciclo (el cloud no tiene visibilidad de la DNS interna del cliente); cada entrada admite `credential_ids?` para restringir qué credenciales se prueban en ESE rango durante discovery, con fail-open ante ids colgantes y warnings no bloqueantes (rangos superpuestos con credenciales distintas, borrado de una credencial referenciada). ⬜ UI de asignación de `credential_ids` en el portal queda para después (API-only); restricción por rango en meter/supplies no se hizo (`known_devices` no tiene vínculo a rango, y no aporta valor real ahí).
 - ✅ Identidad `(client_id, serial)` + MAC secundaria + merge de duplicados; decommission/mover/editar dispositivo.
 
 ### Fase 2 — Diferenciación (2–3 meses) — sin empezar, ningún ítem tocado

@@ -3,7 +3,7 @@ import { log, logTailer } from './Logger';
 import { getLocalIp, getHostOS } from './NetworkUtils';
 import { tryRefresh } from '../sync/uploader';
 import { getDeviceCount, pendingCount } from '../sync/database';
-import type { AgentConfig } from './config';
+import type { AgentConfig, IpRange, IpHost } from './config';
 import { ConfigManager } from './config';
 import type { CommandHandler, CommandResult } from './CommandHandler';
 import { VERSION } from './version';
@@ -12,7 +12,12 @@ import type { BusinessHoursConfig } from './BusinessHours';
 import { setConfiguredTimezone } from './TimeZoneUtils';
 
 export interface RemoteConfigPayload {
-  ip_ranges?: Array<{ start: string; end: string }>;
+  ip_ranges?: IpRange[];
+  /** Hosts puntuales a resolver por DNS (point lookup, §2.1/§2.3 gap
+   *  analysis) — campo NUEVO y ADITIVO, agentes viejos que nunca lo vieron
+   *  simplemente no lo entienden y lo ignoran. Mismo guard `!== undefined`
+   *  que el resto de los campos nuevos. */
+  ip_hosts?: IpHost[];
   snmp_community?: string;
   /** Lista completa de credenciales SNMP — AUSENTE significa "sin novedad,
    *  conservá lo que tengas" (nunca se chequea con truthy: una lista vacía
@@ -141,6 +146,14 @@ export class HeartbeatService {
         triggerImmediateScan = true;
       }
       config.ipRanges = remote.ip_ranges;
+      changed = true;
+    }
+
+    // `!== undefined` (no truthy): una lista vacía es una novedad real
+    // ("ya no hay hosts puntuales"), mismo criterio que `snmp_credentials`.
+    if (remote.ip_hosts !== undefined && JSON.stringify(remote.ip_hosts) !== JSON.stringify(config.ipHosts)) {
+      log('INFO', `Lista de hosts puntuales actualizada: ${config.ipHosts?.length ?? 0} -> ${remote.ip_hosts.length}.`);
+      config.ipHosts = remote.ip_hosts;
       changed = true;
     }
 

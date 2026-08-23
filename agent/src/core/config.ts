@@ -10,6 +10,20 @@ import type { BusinessHoursConfig } from './BusinessHours';
 export interface IpRange {
   start: string;
   end: string;
+  /** Referencia a `id`s de `snmpCredentials` — restringe qué credenciales se
+   *  prueban para ESTE rango durante discovery. Ausente = pool completo
+   *  (comportamiento de siempre). El cloud ya resuelve ids colgantes antes
+   *  de mandar esto (ver `agentService.getConfig()`), así que acá siempre
+   *  son ids que existen en `snmpCredentials`, si el campo viene presente. */
+  credential_ids?: string[];
+}
+
+/** Point lookup (§2.1/§2.3 gap analysis) — un host puntual que el agente
+ *  resuelve él mismo en cada ciclo de discovery (el cloud no tiene
+ *  visibilidad de la DNS interna del cliente). */
+export interface IpHost {
+  hostname: string;
+  credential_ids?: string[];
 }
 
 export interface AgentConfig {
@@ -18,6 +32,9 @@ export interface AgentConfig {
   token: string;
   refreshToken: string;
   ipRanges: IpRange[];
+  /** Hosts puntuales a resolver por DNS en cada ciclo de discovery. Ausente
+   *  = ninguno (comportamiento de siempre). */
+  ipHosts?: IpHost[];
   snmpCommunity: string;
   snmpVersion: 1 | 2; // sigue muerto (nunca se lee) — reemplazado conceptualmente por SnmpCredential.version
   /** Lista de credenciales SNMP a probar en orden (§2.3 gap analysis). Puede

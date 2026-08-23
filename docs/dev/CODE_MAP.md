@@ -82,7 +82,7 @@ cloud/src/
 │   ├── auditService.ts        # Registro inmutable de auditoría en la tabla `audit_logs`
 │   ├── snmpCredentials.ts     # Validación/enmascarado/cifrado de la lista de credenciales SNMP por agente (lógica pura, sin Knex)
 │   ├── cryptoService.ts       # Cifrado at-rest (AES-256-GCM, clave HKDF-SHA256 cacheada) usado por snmpCredentials.ts
-│   ├── ipRangeSpec.ts         # Validación de ip_ranges (CIDR + tope + exclusiones) y compilación a pares {start,end} planos para el agente (lógica pura, sin Knex)
+│   ├── ipRangeSpec.ts         # Validación de ip_ranges (CIDR + tope + exclusiones + hostname + credenciales por rango) y compilación a pares {start,end} planos para el agente (lógica pura, sin Knex)
 │   └── businessHours.ts       # Horario laboral + TZ configurable por agente; offset UTC real (sin librería) para corregir el parseo de timestamps naive de logs/lecturas
 ├── db/
 │   ├── knex.ts            # Conexión principal parametrizada con Knex.js

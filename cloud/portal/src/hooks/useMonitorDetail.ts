@@ -116,8 +116,11 @@ export function useMonitorDetail(id: string) {
    */
   const saveSnmpCredentials = useCallback(async (credentials: SnmpCredentialInput[], expectedRev: number) => {
     try {
-      await api.put(`/agents/${id}/snmp-credentials`, { credentials, expected_rev: expectedRev });
+      const result = await api.put<{ warnings?: string[] }>(`/agents/${id}/snmp-credentials`, { credentials, expected_rev: expectedRev });
       showToast('Credenciales SNMP actualizadas', 'success');
+      // Warning no bloqueante si se borró una credencial que algún rango de
+      // ip_ranges todavía referenciaba (ver agentService.replaceSnmpCredentials).
+      result?.warnings?.forEach(w => showToast(w, 'warning'));
     } finally {
       refetch();
     }

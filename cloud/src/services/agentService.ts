@@ -10,8 +10,8 @@ import {
   type MaskedCredential, type StoredCredential,
 } from "./snmpCredentials";
 import {
-  compileIpRangeSpecs, publicIpWarnings, validateIpRangeSpecs,
-  type IpRangeSpecInput,
+  compileIpRangeSpecs, publicIpWarnings, validateIpRangeSpecs, extractHostSpecs, overlappingCredentialWarnings,
+  type IpRangeSpecInput, type CompiledRange, type HostSpec,
 } from "./ipRangeSpec";
 import {
   DEFAULT_BUSINESS_HOURS, validateBusinessHours, parseNaiveLocalTimestamp,
@@ -334,7 +334,7 @@ export class AgentService {
     if (newConfig.ip_ranges !== undefined) {
       const validated = validateIpRangeSpecs(newConfig.ip_ranges);
       updates.ip_ranges = JSON.stringify(validated);
-      warnings = publicIpWarnings(validated);
+      warnings = [...publicIpWarnings(validated), ...overlappingCredentialWarnings(validated)];
     }
     if (newConfig.snmp_community !== undefined) {
       updates.snmp_community = newConfig.snmp_community;
@@ -1118,11 +1118,41 @@ export class AgentService {
     if (agent) {
       const rawSpecs: IpRangeSpecInput[] =
         (typeof agent.ip_ranges === 'string' ? JSON.parse(agent.ip_ranges) : agent.ip_ranges) ?? [];
-      // El agente NUNCA ve CIDR/exclusiones — sólo esto (el path del
-      // heartbeat) compila a pares planos {start,end}. El resto de los
-      // callers (portal) usan `getIpRangeSpecsRaw()` para ver el spec tal
-      // cual el admin lo escribió.
-      agent.ip_ranges = compileIpRangeSpecs(rawSpecs);
+
+      const storedCredentials: StoredCredential[] =
+        (typeof agent.snmp_credentials === 'string' ? JSON.parse(agent.snmp_credentials) : agent.snmp_credentials) ?? [];
+      const liveCredentialIds = new Set(storedCredentials.map((c) => c.id));
+
+      // El agente NUNCA ve CIDR/exclusiones/hostname sin resolver — sólo
+      // esto (el path del heartbeat) compila a pares planos {start,end}. El
+      // resto de los callers (portal) usan `getIpRangeSpecsRaw()` para ver
+      // el spec tal cual el admin lo escribió.
+      const compiledRanges: CompiledRange[] = compileIpRangeSpecs(rawSpecs);
+      // Fail-open: si `credential_ids` de un rango ya no matchea NINGÚN id
+      // vivo (colgante total o parcial — mismo criterio para ambos), se
+      // manda el campo AUSENTE (el agente prueba el pool completo) en vez de
+      // una lista vacía que dejaría ese rango sin ninguna credencial
+      // utilizable. Sólo se puede resolver ACÁ porque es el único lugar con
+      // ambos datos (rangos + credenciales) cargados a la vez — `ip_ranges`
+      // y `agents.snmp_credentials` se editan por endpoints separados, sin
+      // transacción compartida (ver `replaceSnmpCredentials` para el aviso
+      // en sentido contrario: borrar una credencial que un rango referencia).
+      agent.ip_ranges = compiledRanges.map((r) => {
+        if (!r.credential_ids) return r;
+        const live = r.credential_ids.filter((id) => liveCredentialIds.has(id));
+        return live.length > 0 ? { ...r, credential_ids: live } : { start: r.start, end: r.end };
+      });
+
+      // `ip_hosts`: campo de heartbeat NUEVO y ADITIVO — agentes viejos que
+      // nunca lo vieron lo ignoran. El agente resuelve cada hostname él
+      // mismo en cada ciclo de discovery (DNS interno del cliente, el cloud
+      // no tiene visibilidad). Mismo fail-open de `credential_ids` que arriba.
+      const hostSpecs: HostSpec[] = extractHostSpecs(rawSpecs).map((h) => {
+        if (!h.credential_ids) return h;
+        const live = h.credential_ids.filter((id) => liveCredentialIds.has(id));
+        return live.length > 0 ? { ...h, credential_ids: live } : { hostname: h.hostname, label: h.label };
+      });
+      if (hostSpecs.length > 0) agent.ip_hosts = hostSpecs;
 
       // `business_hours` se resuelve al default ACÁ, antes de salir en el
       // payload — el wire nunca lleva `null` crudo, sólo `undefined` (campo
@@ -1132,9 +1162,6 @@ export class AgentService {
       const storedBusinessHours: BusinessHoursConfig | null =
         (typeof agent.business_hours === 'string' ? JSON.parse(agent.business_hours) : agent.business_hours) ?? null;
       agent.business_hours = storedBusinessHours ?? DEFAULT_BUSINESS_HOURS;
-
-      const storedCredentials: StoredCredential[] =
-        (typeof agent.snmp_credentials === 'string' ? JSON.parse(agent.snmp_credentials) : agent.snmp_credentials) ?? [];
 
       // `snmp_community` legacy SIEMPRE viaja (agentes sin actualizar sólo
       // entienden este campo) — se deriva de la lista si hay alguna entrada
@@ -1189,9 +1216,9 @@ export class AgentService {
     agentId: string,
     body: unknown,
     audit?: AuditContext
-  ): Promise<{ status: "success"; count: number; rev: number } | { status: "conflict"; rev: number } | null> {
+  ): Promise<{ status: "success"; count: number; rev: number; warnings: string[] } | { status: "conflict"; rev: number } | null> {
     const bodyObj = (body ?? {}) as { expected_rev?: unknown; credentials?: unknown };
-    const current = await this.db("agents").where({ id: agentId }).select("snmp_credentials", "snmp_credentials_rev").first();
+    const current = await this.db("agents").where({ id: agentId }).select("snmp_credentials", "snmp_credentials_rev", "ip_ranges").first();
     if (!current) return null;
 
     const currentRev = current.snmp_credentials_rev ?? 0;
@@ -1218,7 +1245,27 @@ export class AgentService {
       metadata: JSON.stringify(auditMetadata(nextStored)),
     });
 
-    return { status: "success", count: nextStored.length, rev: nextRev };
+    // Warning no bloqueante: ¿algún rango de ip_ranges referencia una
+    // credencial que acaba de desaparecer de la lista? Ese rango cae al
+    // fail-open (pool completo) en el próximo heartbeat, ver `getConfig()`
+    // — no queda sin ninguna credencial, pero vale avisar en el momento del
+    // borrado en vez de que la deriva se descubra en silencio después.
+    const nextIds = new Set(nextStored.map((c) => c.id));
+    const removedIds = currentStored.map((c) => c.id).filter((id) => !nextIds.has(id));
+    const warnings: string[] = [];
+    if (removedIds.length > 0) {
+      const rawSpecs: IpRangeSpecInput[] =
+        (typeof current.ip_ranges === 'string' ? JSON.parse(current.ip_ranges) : current.ip_ranges) ?? [];
+      const removedSet = new Set(removedIds);
+      const affected = rawSpecs.filter((s) => s.credential_ids?.some((id) => removedSet.has(id)));
+      if (affected.length > 0) {
+        warnings.push(
+          `${affected.length} rango(s) de ip_ranges referencian una credencial que se acaba de eliminar — probarán el pool completo de credenciales en el próximo ciclo.`
+        );
+      }
+    }
+
+    return { status: "success", count: nextStored.length, rev: nextRev, warnings };
   }
 
   /**

@@ -1,10 +1,11 @@
 import { log } from './Logger';
-import { materializeRange } from './NetworkUtils';
+import { materializeRange, resolveHostname, isPrivateOrReservedIp } from './NetworkUtils';
 import { isBusinessHours } from './BusinessHours';
 import { captureDevice, type CaptureScope, type CaptureHint } from '../capture';
 import type { DeviceReading } from '../capture/reading';
 import { enqueueReading, pendingCount, isBackpressureActive, upsertKnownDevice, isRegistered, getKnownDevices, getKnownDeviceInfo, type KnownDevice } from '../sync/database';
-import type { AgentConfig } from './config';
+import type { AgentConfig, IpHost } from './config';
+import type { SnmpCredential } from '../capture/transport/snmp';
 
 interface ScanServiceDeps {
   getConfig: () => AgentConfig;
@@ -34,8 +35,24 @@ function hintFrom(d: KnownDevice | null): CaptureHint | undefined {
 /** Lista de credenciales a probar + cuál probar primero (si ya se sabe cuál
  *  sirvió la última vez para esta IP — evita recorrer toda la lista en cada
  *  ciclo para equipos ya conocidos). */
-function snmpArgsFor(config: AgentConfig, known: KnownDevice | null) {
-  return { credentials: config.snmpCredentials ?? [], preferredCredentialId: known?.snmp_cred_id ?? null };
+function snmpArgsFor(credentials: SnmpCredential[], known: KnownDevice | null) {
+  return { credentials, preferredCredentialId: known?.snmp_cred_id ?? null };
+}
+
+/**
+ * Filtra el pool de credenciales del agente a las que un rango/host puntual
+ * declaró vía `credential_ids` (§2.3 gap analysis: "credenciales por
+ * rango") — ausente = pool completo (comportamiento de siempre). Preserva
+ * el ORDEN del pool original: es un filtro/subset, no una re-priorización,
+ * para no alterar la semántica de fail-fast ya establecida en
+ * `SnmpClient.negotiate()`. El cloud ya resolvió ids colgantes antes de
+ * mandar esto (ver `agentService.getConfig()`), así que acá `credentialIds`
+ * sólo contiene ids que existen en el pool, cuando viene presente.
+ */
+export function credentialsForRange(pool: SnmpCredential[], credentialIds: string[] | undefined): SnmpCredential[] {
+  if (!credentialIds || credentialIds.length === 0) return pool;
+  const idSet = new Set(credentialIds);
+  return pool.filter((c) => idSet.has(c.id));
 }
 
 /**
@@ -67,9 +84,28 @@ export class ScanService {
         return;
       }
 
-      log('INFO', `Iniciando scan de ${config.ipRanges.length} rango(s)`);
+      log('INFO', `Iniciando scan de ${config.ipRanges.length} rango(s) y ${config.ipHosts?.length ?? 0} host(s) puntuales`);
       let errors = 0;
       let scanBudget = MAX_TOTAL_SCAN_SIZE;
+
+      // Hosts puntuales (point lookup) ANTES que los rangos masivos — un
+      // dispositivo pineado a propósito por hostname no debería perder
+      // lugar en el presupuesto compartido frente a un rango grande.
+      // Resolución + captura SECUENCIAL (acotada por MAX_SPECS≤32 del lado
+      // cloud): el peor caso (todos con DNS caído) es `32 × timeout`,
+      // insignificante contra un ciclo de 10-60 min, y evita saturar el
+      // threadpool de libuv con lookups en paralelo (ver `resolveHostname`).
+      for (const host of config.ipHosts ?? []) {
+        if (scanBudget <= 0) {
+          log('WARN', `Tope de seguridad de ${MAX_TOTAL_SCAN_SIZE} IPs por ciclo alcanzado — se omiten los hosts puntuales restantes.`);
+          break;
+        }
+        const ip = await this.resolveHost(host);
+        if (!ip) continue;
+        scanBudget -= 1;
+        const creds = credentialsForRange(config.snmpCredentials ?? [], host.credential_ids);
+        if (await this.captureAndRecord(ip, config, creds)) errors++;
+      }
 
       for (const range of config.ipRanges) {
         if (scanBudget <= 0) {
@@ -83,32 +119,13 @@ export class ScanService {
         }
         log('INFO', `Escaneando ${ips.length} IPs: ${range.start} -> ${range.end} (Concurrencia: ${CONCURRENCY_LIMIT})`);
 
+        const creds = credentialsForRange(config.snmpCredentials ?? [], range.credential_ids);
         const queue = [...ips];
         const workers = Array(Math.min(CONCURRENCY_LIMIT, queue.length)).fill(null).map(async () => {
           while (queue.length > 0) {
             const ip = queue.shift();
             if (!ip) break;
-            try {
-              const known = getKnownDeviceInfo(ip);
-              const out = await captureDevice({ ip, ...snmpArgsFor(config, known), scopes: DISCOVERY_SCOPES, hint: hintFrom(known) });
-              if (!out) continue;
-              const { reading, driver } = out;
-              const driverId = driver.profile?.id ?? driver.family.id;
-
-              if (!isRegistered(ip)) {
-                const ok = await this.registerDevice(config, reading);
-                if (!ok) log('WARN', `[${ip}] Registro fallido (HTTP Error) - se reintentara en el proximo scan.`);
-                upsertKnownDevice(ip, { serial: reading.serial ?? undefined, brand: reading.brand, model: reading.model, registered: ok, pollMethod: reading.poll_method, driver: driverId, snmpCredId: out.credentialId });
-              } else {
-                upsertKnownDevice(ip, { serial: reading.serial ?? undefined, model: reading.model, pollMethod: reading.poll_method, driver: driverId, snmpCredId: out.credentialId });
-              }
-
-              enqueueReading(reading);
-              log('INFO', `[${ip}] ${reading.model} | Total: ${reading.total_pages ?? '-'} | Method: ${reading.poll_method} | Driver: ${driverId}${driver.via === 'generic' ? ' (sin perfil)' : ''} | Id: ${out.identity.source}/${out.identity.brand}`);
-            } catch (e: unknown) {
-              errors++;
-              log('WARN', `[${ip}] Scan: ${e instanceof Error ? e.message : String(e)}`);
-            }
+            if (await this.captureAndRecord(ip, config, creds)) errors++;
           }
         });
         await Promise.all(workers);
@@ -118,6 +135,52 @@ export class ScanService {
       log('INFO', `Scan completado. Pendientes en cola: ${pendingCount()} | Errores: ${errors}`);
     } finally {
       this._isScanning = false;
+    }
+  }
+
+  /** Resuelve un host puntual con timeout (ver `resolveHostname` en
+   *  `NetworkUtils.ts`); tolerante (NXDOMAIN/timeout → WARN, `null`, se
+   *  reintenta el próximo ciclo — nunca rompe el resto del scan). Si
+   *  resuelve a una IP pública, sólo lo loguea (WARN, no bloqueante) — el
+   *  cloud no puede chequear esto sin resolver la DNS interna del cliente. */
+  private async resolveHost(host: IpHost): Promise<string | null> {
+    const ip = await resolveHostname(host.hostname);
+    if (!ip) {
+      log('WARN', `[${host.hostname}] No se pudo resolver (DNS caído, NXDOMAIN, o timeout) — se reintenta el próximo ciclo.`);
+      return null;
+    }
+    if (!isPrivateOrReservedIp(ip)) {
+      log('WARN', `[${host.hostname}] resolvió a una IP pública (${ip}) — revisar la configuración DNS del sitio.`);
+    }
+    return ip;
+  }
+
+  /** Captura+registra una IP ya resuelta (de un rango o de un host puntual)
+   *  — factorizado porque ambos loops de `scan()` necesitan exactamente la
+   *  misma lógica de captura/registro/encolado. Devuelve `true` si hubo un
+   *  error (para que el caller lleve el conteo de `errors`), nunca lanza. */
+  private async captureAndRecord(ip: string, config: AgentConfig, creds: SnmpCredential[]): Promise<boolean> {
+    try {
+      const known = getKnownDeviceInfo(ip);
+      const out = await captureDevice({ ip, ...snmpArgsFor(creds, known), scopes: DISCOVERY_SCOPES, hint: hintFrom(known) });
+      if (!out) return false;
+      const { reading, driver } = out;
+      const driverId = driver.profile?.id ?? driver.family.id;
+
+      if (!isRegistered(ip)) {
+        const ok = await this.registerDevice(config, reading);
+        if (!ok) log('WARN', `[${ip}] Registro fallido (HTTP Error) - se reintentara en el proximo scan.`);
+        upsertKnownDevice(ip, { serial: reading.serial ?? undefined, brand: reading.brand, model: reading.model, registered: ok, pollMethod: reading.poll_method, driver: driverId, snmpCredId: out.credentialId });
+      } else {
+        upsertKnownDevice(ip, { serial: reading.serial ?? undefined, model: reading.model, pollMethod: reading.poll_method, driver: driverId, snmpCredId: out.credentialId });
+      }
+
+      enqueueReading(reading);
+      log('INFO', `[${ip}] ${reading.model} | Total: ${reading.total_pages ?? '-'} | Method: ${reading.poll_method} | Driver: ${driverId}${driver.via === 'generic' ? ' (sin perfil)' : ''} | Id: ${out.identity.source}/${out.identity.brand}`);
+      return false;
+    } catch (e: unknown) {
+      log('WARN', `[${ip}] Scan: ${e instanceof Error ? e.message : String(e)}`);
+      return true;
     }
   }
 
@@ -147,7 +210,12 @@ export class ScanService {
           const d = queue.shift();
           if (!d) break;
           try {
-            const out = await captureDevice({ ip: d.ip, ...snmpArgsFor(config, d), scopes, hint: hintFrom(d), trustHint: true });
+            // Sin restricción por rango acá a propósito: `known_devices` no
+            // tiene vínculo a qué rango descubrió cada IP, y un dispositivo
+            // ya conocido casi siempre acierta con `snmp_cred_id` cacheado
+            // en el primer intento (sin fail-fast) — restringir por rango
+            // no aporta nada real en meter/supplies, sólo en discovery.
+            const out = await captureDevice({ ip: d.ip, ...snmpArgsFor(config.snmpCredentials ?? [], d), scopes, hint: hintFrom(d), trustHint: true });
             if (!out || !out.result) continue; // apagada / sin respuesta: no encolar lecturas vacías
             const reading = out.reading;
             const hasData = reading.total_pages !== null || reading.toner_black != null || reading.toner_cyan != null

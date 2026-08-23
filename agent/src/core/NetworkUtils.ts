@@ -1,4 +1,5 @@
 import os from 'os';
+import dns from 'dns';
 import { log } from './Logger';
 
 // --- IP Range Generator ---
@@ -29,6 +30,75 @@ export function materializeRange(range: { start: string; end: string }, cap: num
     ips.push(ip);
   }
   return { ips, truncated };
+}
+
+// --- Hostname resolution (point lookup, §2.1/§2.3 gap analysis) ---
+
+const DNS_LOOKUP_TIMEOUT_MS = 4000;
+
+/** Seam de test: firma mínima de `dns.lookup` con las opciones que usamos
+ *  (no reutiliza `typeof dns.lookup` porque sus overloads reales son más
+ *  complejos de lo que necesitamos acá — un fake sólo tiene que matchear
+ *  esta forma). */
+type LookupFn = (
+  hostname: string,
+  options: { family: number; verbatim: boolean },
+  callback: (err: NodeJS.ErrnoException | null, address: string) => void
+) => void;
+
+/**
+ * Resuelve un hostname a IPv4 con timeout explícito propio.
+ * `dns.lookup()` no tiene timeout nativo en la API de Node y corre sobre el
+ * mismo threadpool de libuv que usa `fs` (`UV_THREADPOOL_SIZE=4` default,
+ * también usado para guardar `config.enc`) — sin este timeout, varios hosts
+ * con DNS caído en el mismo ciclo podrían agotar el pool y bloquear I/O de
+ * archivos no relacionado. `family:4` fuerza IPv4 (todo el pipeline de
+ * captura/SNMP es IPv4-only); `verbatim:true` explícito para no depender del
+ * default de ordenamiento de direcciones de `dns.lookup`, que cambió entre
+ * versiones de Node. `null` cubre tanto un error real (NXDOMAIN, etc.) como
+ * un timeout — el caller no necesita distinguirlos, ambos significan "no se
+ * pudo resolver esta vez, probar de nuevo el próximo ciclo".
+ */
+export async function resolveHostname(
+  hostname: string,
+  timeoutMs = DNS_LOOKUP_TIMEOUT_MS,
+  lookupFn: LookupFn = dns.lookup
+): Promise<string | null> {
+  const lookup = new Promise<string | null>((resolve) => {
+    try {
+      lookupFn(hostname, { family: 4, verbatim: true }, (err, address) => {
+        resolve(err ? null : address);
+      });
+    } catch {
+      resolve(null);
+    }
+  });
+  const timeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), timeoutMs));
+  return Promise.race([lookup, timeout]);
+}
+
+function safeIpToInt(ip: string): number {
+  return ip.split('.').reduce((a, o) => a * 256 + Number(o), 0);
+}
+
+const PRIVATE_BLOCKS: Array<[number, number]> = [
+  [safeIpToInt('10.0.0.0'), safeIpToInt('10.255.255.255')],
+  [safeIpToInt('172.16.0.0'), safeIpToInt('172.31.255.255')],
+  [safeIpToInt('192.168.0.0'), safeIpToInt('192.168.255.255')],
+  [safeIpToInt('127.0.0.0'), safeIpToInt('127.255.255.255')], // loopback
+  [safeIpToInt('169.254.0.0'), safeIpToInt('169.254.255.255')], // link-local
+];
+
+/**
+ * Mismo criterio que `cloud/src/services/ipRangeSpec.ts::isPrivateOrReserved`
+ * (duplicado — no hay paquete compartido entre `agent/` y `cloud/`), pero
+ * resuelto ACÁ porque sólo el agente conoce la IP real detrás de un
+ * hostname resuelto — el cloud no puede chequearlo sin resolver la DNS
+ * interna del cliente. Sólo informativo (WARN de log), nunca bloquea el scan.
+ */
+export function isPrivateOrReservedIp(ip: string): boolean {
+  const n = safeIpToInt(ip);
+  return PRIVATE_BLOCKS.some(([s, e]) => n >= s && n <= e);
 }
 
 // --- System Info ---

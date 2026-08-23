@@ -4,7 +4,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  validateIpRangeSpecs, compileIpRangeSpecs, publicIpWarnings,
+  validateIpRangeSpecs, compileIpRangeSpecs, publicIpWarnings, extractHostSpecs, overlappingCredentialWarnings,
   IpRangeValidationError, type IpRangeSpecInput,
 } from '../services/ipRangeSpec';
 
@@ -46,8 +46,8 @@ describe('ipRangeSpec — validateIpRangeSpecs', () => {
     assert.throws(() => validateIpRangeSpecs([{ start: '10.0.0.10', end: '10.0.0.1' }]), IpRangeValidationError);
   });
 
-  test('más de 20 specs → error', () => {
-    const many = Array.from({ length: 21 }, (_, i) => ({ start: `10.0.${i}.1`, end: `10.0.${i}.2` }));
+  test('más de 32 specs → error', () => {
+    const many = Array.from({ length: 33 }, (_, i) => ({ start: `10.${Math.floor(i / 250)}.${i % 250}.1`, end: `10.${Math.floor(i / 250)}.${i % 250}.2` }));
     assert.throws(() => validateIpRangeSpecs(many), IpRangeValidationError);
   });
 
@@ -87,6 +87,63 @@ describe('ipRangeSpec — validateIpRangeSpecs', () => {
 
   test('no es un array → error', () => {
     assert.throws(() => validateIpRangeSpecs({} as unknown), IpRangeValidationError);
+  });
+
+  test('hostname válido se conserva', () => {
+    const out = validateIpRangeSpecs([{ hostname: 'printer-3flo.corp.local', label: 'Piso 3' }]);
+    assert.deepEqual(out, [{ label: 'Piso 3', hostname: 'printer-3flo.corp.local' }]);
+  });
+
+  test('hostname de un solo label (sin dominio) también es válido', () => {
+    assert.doesNotThrow(() => validateIpRangeSpecs([{ hostname: 'printer1' }]));
+  });
+
+  test('hostname vacío → error', () => {
+    assert.throws(() => validateIpRangeSpecs([{ hostname: '' }]), IpRangeValidationError);
+  });
+
+  test('hostname con caracteres inválidos → error', () => {
+    assert.throws(() => validateIpRangeSpecs([{ hostname: 'no espacios permitidos' }]), IpRangeValidationError);
+    assert.throws(() => validateIpRangeSpecs([{ hostname: '-empieza-con-guion' }]), IpRangeValidationError);
+  });
+
+  test('hostname Y cidr a la vez → error (mutuamente excluyentes)', () => {
+    assert.throws(() => validateIpRangeSpecs([{ hostname: 'algo.local', cidr: '10.0.0.0/24' }]), IpRangeValidationError);
+  });
+
+  test('hostname Y start/end a la vez → error', () => {
+    assert.throws(() => validateIpRangeSpecs([{ hostname: 'algo.local', start: '10.0.0.1', end: '10.0.0.2' }]), IpRangeValidationError);
+  });
+
+  test('un hostname cuenta 1 hacia el tope total de IPs declaradas', () => {
+    // 2000 (un rango exacto) + 1 hostname = 2001 → debe superar el tope
+    assert.throws(() => validateIpRangeSpecs([
+      { start: '10.0.0.0', end: '10.0.7.207' }, // exactamente 2000
+      { hostname: 'uno-de-mas.local' },
+    ]), IpRangeValidationError);
+  });
+
+  test('credential_ids válido se conserva, deduplicado', () => {
+    const out = validateIpRangeSpecs([{ start: '10.0.0.1', end: '10.0.0.2', credential_ids: ['a', 'b', 'a'] }]);
+    assert.deepEqual(out[0].credential_ids, ['a', 'b']);
+  });
+
+  test('credential_ids no es un array → error', () => {
+    assert.throws(() => validateIpRangeSpecs([{ start: '10.0.0.1', end: '10.0.0.2', credential_ids: 'a' as unknown as string[] }]), IpRangeValidationError);
+  });
+
+  test('más de 8 credential_ids → error', () => {
+    const credential_ids = Array.from({ length: 9 }, (_, i) => `id-${i}`);
+    assert.throws(() => validateIpRangeSpecs([{ start: '10.0.0.1', end: '10.0.0.2', credential_ids }]), IpRangeValidationError);
+  });
+
+  test('credential_ids con un elemento vacío → error', () => {
+    assert.throws(() => validateIpRangeSpecs([{ start: '10.0.0.1', end: '10.0.0.2', credential_ids: ['', 'ok'] }]), IpRangeValidationError);
+  });
+
+  test('un hostname también admite credential_ids', () => {
+    const out = validateIpRangeSpecs([{ hostname: 'algo.local', credential_ids: ['cred-1'] }]);
+    assert.deepEqual(out[0].credential_ids, ['cred-1']);
   });
 });
 
@@ -184,6 +241,50 @@ describe('ipRangeSpec — compileIpRangeSpecs', () => {
     const out = compileIpRangeSpecs([{ start: '127.255.255.254', end: '128.0.0.1' }]);
     assert.deepEqual(out, [{ start: '127.255.255.254', end: '128.0.0.1' }]);
   });
+
+  test('un spec de hostname se salta (no compila a un par, tampoco loguea error)', () => {
+    const specs: IpRangeSpecInput[] = [
+      { start: '10.0.0.1', end: '10.0.0.2' },
+      { hostname: 'algo.local' },
+      { start: '10.0.1.1', end: '10.0.1.2' },
+    ];
+    assert.deepEqual(compileIpRangeSpecs(specs), [
+      { start: '10.0.0.1', end: '10.0.0.2' },
+      { start: '10.0.1.1', end: '10.0.1.2' },
+    ]);
+  });
+
+  test('credential_ids se propaga a cada sub-rango compilado (incluso partido por exclusiones)', () => {
+    const out = compileIpRangeSpecs([{ start: '10.0.0.1', end: '10.0.0.10', exclude: ['10.0.0.5'], credential_ids: ['cred-a'] }]);
+    assert.deepEqual(out, [
+      { start: '10.0.0.1', end: '10.0.0.4', credential_ids: ['cred-a'] },
+      { start: '10.0.0.6', end: '10.0.0.10', credential_ids: ['cred-a'] },
+    ]);
+  });
+
+  test('sin credential_ids, el compilado no tiene el campo', () => {
+    const out = compileIpRangeSpecs([{ start: '10.0.0.1', end: '10.0.0.2' }]);
+    assert.equal(out[0].credential_ids, undefined);
+  });
+});
+
+describe('ipRangeSpec — extractHostSpecs', () => {
+  test('extrae sólo las entradas de hostname, con label y credential_ids', () => {
+    const specs: IpRangeSpecInput[] = [
+      { start: '10.0.0.1', end: '10.0.0.2' },
+      { hostname: 'printer1.local', label: 'Piso 3', credential_ids: ['cred-a'] },
+      { cidr: '10.0.1.0/30' },
+      { hostname: 'printer2.local' },
+    ];
+    assert.deepEqual(extractHostSpecs(specs), [
+      { hostname: 'printer1.local', label: 'Piso 3', credential_ids: ['cred-a'] },
+      { hostname: 'printer2.local', label: null },
+    ]);
+  });
+
+  test('sin hosts, devuelve un array vacío', () => {
+    assert.deepEqual(extractHostSpecs([{ start: '10.0.0.1', end: '10.0.0.2' }]), []);
+  });
 });
 
 describe('ipRangeSpec — publicIpWarnings', () => {
@@ -206,5 +307,54 @@ describe('ipRangeSpec — publicIpWarnings', () => {
 
   test('nunca lanza — es sólo informativo, nunca bloquea el guardado', () => {
     assert.doesNotThrow(() => publicIpWarnings([{ cidr: 'basura' } as IpRangeSpecInput]));
+  });
+});
+
+describe('ipRangeSpec — overlappingCredentialWarnings', () => {
+  test('rangos superpuestos con credential_ids distintos → warning', () => {
+    const warnings = overlappingCredentialWarnings([
+      { label: 'A', start: '10.0.0.1', end: '10.0.0.50', credential_ids: ['cred-a'] },
+      { label: 'B', cidr: '10.0.0.0/24' },
+    ]);
+    assert.equal(warnings.length, 1);
+    assert.match(warnings[0], /"A"/);
+    assert.match(warnings[0], /"B"/);
+    assert.match(warnings[0], /superpon/);
+  });
+
+  test('rangos superpuestos con las MISMAS credential_ids → sin warning', () => {
+    const warnings = overlappingCredentialWarnings([
+      { start: '10.0.0.1', end: '10.0.0.50', credential_ids: ['cred-a'] },
+      { cidr: '10.0.0.0/24', credential_ids: ['cred-a'] },
+    ]);
+    assert.deepEqual(warnings, []);
+  });
+
+  test('rangos superpuestos sin ningún credential_ids (ambos agent-wide) → sin warning', () => {
+    const warnings = overlappingCredentialWarnings([
+      { start: '10.0.0.1', end: '10.0.0.50' },
+      { cidr: '10.0.0.0/24' },
+    ]);
+    assert.deepEqual(warnings, []);
+  });
+
+  test('rangos que NO se superponen, con credential_ids distintos → sin warning (no falso positivo)', () => {
+    const warnings = overlappingCredentialWarnings([
+      { start: '10.0.0.1', end: '10.0.0.10', credential_ids: ['cred-a'] },
+      { start: '10.0.1.1', end: '10.0.1.10', credential_ids: ['cred-b'] },
+    ]);
+    assert.deepEqual(warnings, []);
+  });
+
+  test('hostname no participa de la heurística (no se puede saber su rango sin resolver)', () => {
+    const warnings = overlappingCredentialWarnings([
+      { hostname: 'algo.local', credential_ids: ['cred-a'] },
+      { start: '10.0.0.1', end: '10.0.0.10', credential_ids: ['cred-b'] },
+    ]);
+    assert.deepEqual(warnings, []);
+  });
+
+  test('nunca lanza, incluso con specs inválidos mezclados', () => {
+    assert.doesNotThrow(() => overlappingCredentialWarnings([{ cidr: 'basura' } as IpRangeSpecInput, { start: '10.0.0.1', end: '10.0.0.2' }]));
   });
 });

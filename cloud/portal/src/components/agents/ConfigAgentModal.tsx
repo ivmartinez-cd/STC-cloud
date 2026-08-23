@@ -49,9 +49,11 @@ export default function ConfigAgentModal({ modal, onClose }: Props) {
     // Validación de forma en el cliente — el cloud re-valida formato/topes en
     // serio al guardar (`validateIpRangeSpecs`).
     for (const r of configForm.ip_ranges) {
-      const isCidr = r.cidr !== undefined;
-      if (isCidr ? !r.cidr?.trim() : (!r.start?.trim() || !r.end?.trim())) {
-        showToast('Todos los rangos deben tener un CIDR o una IP de inicio y fin', 'warning');
+      const invalid = r.hostname !== undefined ? !r.hostname.trim()
+        : r.cidr !== undefined ? !r.cidr.trim()
+        : (!r.start?.trim() || !r.end?.trim());
+      if (invalid) {
+        showToast('Todos los rangos deben tener un CIDR, un hostname, o una IP de inicio y fin', 'warning');
         return;
       }
     }

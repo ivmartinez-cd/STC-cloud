@@ -2,15 +2,25 @@ import { useState } from 'react';
 import { Plus, Trash2, X } from 'lucide-react';
 import type { IpRange } from '../../types/agents';
 
+type Mode = 'range' | 'cidr' | 'hostname';
+
 /**
- * Editor de `ip_ranges` — rango manual (start/end, como siempre) o CIDR, más
- * una lista opcional de IPs a excluir. Factoriza la edición que antes vivía
+ * Editor de `ip_ranges` — rango manual (start/end, como siempre), CIDR, o un
+ * hostname puntual (point lookup — el agente lo resuelve por DNS en cada
+ * ciclo de discovery, el cloud no lo resuelve), más una lista opcional de
+ * IPs a excluir (no aplica a hostname). Factoriza la edición que antes vivía
  * duplicada casi byte-a-byte en `MonitorDetail.tsx` (ConfigTabPanel) y
  * `ConfigAgentModal.tsx`. Controlado (`ranges`/`onChange`) — el guardado
  * real sigue viviendo en el `PUT /agents/:id/config` de cada consumidor, acá
  * sólo se edita el array en memoria; el cloud valida formato/topes en serio
  * al guardar (`services/ipRangeSpec.ts`) y puede devolver `warnings` no
- * bloqueantes (ej. rango con IP pública) que cada consumidor muestra aparte.
+ * bloqueantes (ej. rango con IP pública, o rangos superpuestos con
+ * credenciales distintas) que cada consumidor muestra aparte.
+ *
+ * `credential_ids` (credenciales SNMP por rango) es API-only por ahora — no
+ * hay UI acá para asignarlo, pero un valor ya seteado por API se preserva
+ * intacto si se edita otro campo de la misma entrada (ver `update()`, que
+ * spreadea el objeto entero, nunca reconstruye uno "limpio").
  */
 interface Props {
   ranges: IpRange[];
@@ -29,9 +39,11 @@ export default function IpRangesEditor({ ranges, onChange }: Props) {
 
   const add = () => onChange([...ranges, emptyRangeEntry()]);
 
-  const setMode = (idx: number, mode: 'range' | 'cidr') => {
-    if (mode === 'cidr') update(idx, { cidr: ranges[idx].cidr ?? '', start: undefined, end: undefined });
-    else update(idx, { start: ranges[idx].start ?? '', end: ranges[idx].end ?? '', cidr: undefined });
+  const setMode = (idx: number, mode: Mode) => {
+    const current = ranges[idx];
+    if (mode === 'cidr') update(idx, { cidr: current.cidr ?? '', start: undefined, end: undefined, hostname: undefined });
+    else if (mode === 'hostname') update(idx, { hostname: current.hostname ?? '', start: undefined, end: undefined, cidr: undefined, exclude: undefined });
+    else update(idx, { start: current.start ?? '', end: current.end ?? '', cidr: undefined, hostname: undefined });
   };
 
   return (
@@ -43,17 +55,18 @@ export default function IpRangesEditor({ ranges, onChange }: Props) {
       )}
 
       {ranges.map((range, idx) => {
-        const mode: 'range' | 'cidr' = range.cidr !== undefined ? 'cidr' : 'range';
+        const mode: Mode = range.hostname !== undefined ? 'hostname' : range.cidr !== undefined ? 'cidr' : 'range';
         return (
           <div key={idx} className="bg-slate-50 p-3 rounded-[20px] border border-slate-100 space-y-3">
             <div className="flex items-center gap-2">
               <select
                 value={mode}
-                onChange={e => setMode(idx, e.target.value as 'range' | 'cidr')}
-                className="cd-input !h-10 !w-28 !text-[11px] font-bold !bg-white border-transparent focus:!border-brand"
+                onChange={e => setMode(idx, e.target.value as Mode)}
+                className="cd-input !h-10 !w-32 !text-[11px] font-bold !bg-white border-transparent focus:!border-brand"
               >
                 <option value="range">Rango</option>
                 <option value="cidr">CIDR</option>
+                <option value="hostname">Hostname</option>
               </select>
 
               <input
@@ -93,7 +106,7 @@ export default function IpRangesEditor({ ranges, onChange }: Props) {
                   className="cd-input w-full !h-12 !text-xs font-mono !bg-white border-transparent focus:!border-brand"
                 />
               </div>
-            ) : (
+            ) : mode === 'cidr' ? (
               <input
                 type="text"
                 placeholder="Ej: 10.0.1.0/24"
@@ -101,12 +114,22 @@ export default function IpRangesEditor({ ranges, onChange }: Props) {
                 onChange={e => update(idx, { cidr: e.target.value })}
                 className="cd-input w-full !h-12 !text-xs font-mono !bg-white border-transparent focus:!border-brand"
               />
+            ) : (
+              <input
+                type="text"
+                placeholder="Ej: impresora-piso3.corp.local"
+                value={range.hostname ?? ''}
+                onChange={e => update(idx, { hostname: e.target.value })}
+                className="cd-input w-full !h-12 !text-xs font-mono !bg-white border-transparent focus:!border-brand"
+              />
             )}
 
-            <ExcludeList
-              exclude={range.exclude ?? []}
-              onChange={excl => update(idx, { exclude: excl.length > 0 ? excl : undefined })}
-            />
+            {mode !== 'hostname' && (
+              <ExcludeList
+                exclude={range.exclude ?? []}
+                onChange={excl => update(idx, { exclude: excl.length > 0 ? excl : undefined })}
+              />
+            )}
           </div>
         );
       })}

@@ -347,9 +347,11 @@ const ConfigTabPanel = ({ monitor, onSave, onSaveSnmpCredentials }: ConfigTabPan
     // Validación de forma en el cliente (mejor UX inmediata) — el cloud
     // re-valida formato/topes en serio al guardar (`validateIpRangeSpecs`).
     for (const r of form.ip_ranges) {
-      const isCidr = r.cidr !== undefined;
-      if (isCidr ? !r.cidr?.trim() : (!r.start?.trim() || !r.end?.trim())) {
-        showToast('Todos los rangos deben tener un CIDR o una IP de inicio y fin', 'warning');
+      const invalid = r.hostname !== undefined ? !r.hostname.trim()
+        : r.cidr !== undefined ? !r.cidr.trim()
+        : (!r.start?.trim() || !r.end?.trim());
+      if (invalid) {
+        showToast('Todos los rangos deben tener un CIDR, un hostname, o una IP de inicio y fin', 'warning');
         return;
       }
     }
