@@ -27,9 +27,16 @@ deletes/comandos), operación (`restart: unless-stopped`, `/health` real con DB+
 límites de recursos, `USER node`, `npm ci`), y versión única (`agent/src/core/version.ts`,
 `cloud/src/version.ts`). Commits: `55ed144`, `94877db`, `0686c6f`.
 
-**Lo único de Fase 0 que sigue sin hacerse**: `capture.test.ts` y el e2e del backend
-no corren en CI (ítem 7, la mitad de "un solo pipeline de build" — necesitaría
-Postgres/Redis como service containers de GitHub Actions).
+✅ **CI completo — Fase 0 ahora 7 de 7 ítems cerrados** (23/08/2026): el job
+`agent` ya corría `capture.test.ts`; faltaba el e2e del backend. El job `api`
+de `.github/workflows/ci.yml` ahora levanta Postgres (TimescaleDB) + Redis
+como service containers, arranca la API compilada (migra + bootstrap admin en
+su propio boot), corre `npm run seed` y ejecuta los 9 archivos de test de
+`cloud` vía `cloud/scripts/ci-test-runner.mjs` (FLUSHDB de Redis entre
+archivo y archivo, evita 429 falsos del rate-limiter compartiendo ventana).
+Validado localmente replicando la topología real de un runner (Postgres/Redis
+en contenedores aislados, proceso de Node corriendo fuera de Docker) — 263/263
+tests verdes.
 
 ✅ **Política de retención** (23/08/2026): `readings` usa `add_retention_policy`
 nativo de TimescaleDB (`drop_after: 2 years` — confirmado corriendo en
@@ -365,7 +372,7 @@ Ver §1. Especialmente `data_collection_inventory.md` (privacidad) y los HTML de
 4. ✅ Detección de reset/decremento en servidor al ingerir (marcar lectura, abrir alerta `counter_reset`) y en el cálculo mensual (sumar deltas positivos en vez de `MAX−MIN`).
 5. ✅ Seguridad mínima: CSRF (double‑submit), quitar login por env, no devolver token en body¹, `trustProxy`, schema en `PUT /agents/:id/config` y `createClient`, audit en deletes/comandos. ⬜ WS sigue aceptando `?token=` en query string — no se sacó.
 6. ✅ Operación: `restart: unless-stopped`, `/health` real (DB+Redis), límites de recursos, `USER node`, `npm ci`; sacar binarios/dumps/secretos del repo y rotar `JWT_SECRET`/DB password.
-7. ⬜ Una sola fuente de versión: ✅ hecho en agente/cloud (`version.ts`); **sigue sin unificarse** con el instalador Inno Setup ni el `.csproj` del Monitor UI (siguen siendo ecosistemas de versión aparte). ⬜ `capture.test.ts` y e2e en CI (con Postgres/Redis como services) — **sigue sin hacerse**, el e2e nunca corrió en CI.
+7. ⬜ Una sola fuente de versión: ✅ hecho en agente/cloud (`version.ts`); **sigue sin unificarse** con el instalador Inno Setup ni el `.csproj` del Monitor UI (siguen siendo ecosistemas de versión aparte). ✅ (23/08/2026) `capture.test.ts` y e2e de `cloud` corren en CI (Postgres/Redis como service containers en `.github/workflows/ci.yml`, job `api`).
 
 ¹ `/portal/me` y la respuesta de login siguen devolviendo el token también en el body (fallback para el WS cuando no hay cookie entre orígenes) — es una decisión consciente, no un pendiente.
 
