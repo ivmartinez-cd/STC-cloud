@@ -29,10 +29,20 @@ límites de recursos, `USER node`, `npm ci`), y versión única (`agent/src/core
 
 **Lo único de Fase 0 que sigue sin hacerse**: `capture.test.ts` y el e2e del backend
 no corren en CI (ítem 7, la mitad de "un solo pipeline de build" — necesitaría
-Postgres/Redis como service containers de GitHub Actions); **no hay política de
-retención** (`add_retention_policy` de TimescaleDB) para `readings`/`alerts`/
-`audit_logs`/`agent_logs` — los índices ya existen, pero nada purga datos viejos
-todavía (§2.7/R3 siguen abiertos en ese punto).
+Postgres/Redis como service containers de GitHub Actions).
+
+✅ **Política de retención** (23/08/2026): `readings` usa `add_retention_policy`
+nativo de TimescaleDB (`drop_after: 2 years` — confirmado corriendo en
+`timescaledb_information.jobs`); `agent_logs` (>90 días) y `alerts` **resueltas**
+(>12 meses; las abiertas nunca se purgan) se purgan vía job periódico app-level
+(`cloud/src/jobs/retentionJob.ts`, mismo patrón `setInterval` que
+`heartbeatMonitor.ts` — se descartó BullMQ por el riesgo de eviction de Redis en
+prod y `pg_cron` porque prod corre sobre Neon gestionado sin la extensión).
+`audit_logs` queda **sin purga automática** por decisión explícita: es un trail
+de auditoría write-only (sin ningún endpoint que lo lea), purgarlo por defecto
+sería la decisión incorrecta. No hay ningún número de retención comprometido
+como requisito legal en la documentación — las ventanas elegidas son una
+decisión de negocio, no una obligación de compliance.
 
 ### Fase 1 — Paridad operativa con SDS — completa: 9 de 9 ítems cerrados
 - ✅ **RBAC por cliente** (commit `7a47ce6`): rol `client_viewer`, scoping por
@@ -264,7 +274,7 @@ Leyenda de prioridad: **P0** bloquea facturación/seguridad · **P1** paridad op
 ### 2.7 Plataforma, datos y cumplimiento
 | | HP SDS | STC hoy | Gap | Prio |
 |---|---|---|---|---|
-| Retención | 10 años, política publicada | **Ninguna** (ni readings, ni alerts, ni audit_logs, ni agent_logs); compresión 7 d sólo en prod | Política formal + `add_retention_policy` + agregados continuos | P0 |
+| Retención | 10 años, política publicada | **readings**: 24 meses (`add_retention_policy` nativo); **agent_logs**: 90 días; **alerts resueltas**: 12 meses (job app-level); **audit_logs**: sin purga (write-only, decisión de negocio); compresión 7 d en readings | Política formal publicada + agregados continuos | P2 |
 | Esquema | — | Migraciones ≠ prod (hypertable comentada en `20260506000000:55-58`; `readings.supplies_details` y drop de `readings.id` sólo en prod) | Migración de reconciliación | P0 |
 | Índices | — | Sólo `readings(time)`; falta `(device_id,time)`, `alerts(device_id,resolved)`, `audit_logs`, `agents(client_id)` | Índices | P0 |
 | Certificaciones | ISO 27001/27017, SOC 2, NIST CSF | Ninguna (decisión consciente) | Al menos: política de retención, DPA, inventario de datos actualizado | P2 |
@@ -340,7 +350,7 @@ Ver §1. Especialmente `data_collection_inventory.md` (privacidad) y los HTML de
 ### Fase 0 — Parar hemorragias (1–2 semanas) — ✅ completa (ver "Estado de implementación")
 1. ✅ `purgeOld`: borrar sólo `synced = 1`; lo no sincronizado se conserva (o se archiva) y se alerta. Backpressure en los 3 loops. Queue size en el heartbeat.
 2. ✅ Idempotencia: `reading_id` UUID por lectura + `batch_id`; servidor `ON CONFLICT DO NOTHING` con unique `(device_id, time)`; respuesta con `accepted/rejected` por lectura.
-3. ✅ Migración de reconciliación: hypertable + compresión + `readings.supplies_details` + índices `(device_id,time)`, `alerts(device_id,resolved)`, `audit_logs(created_at)`. Quitar el hack `.ts↔.js`. ⬜ `add_retention_policy` (p. ej. crudo 24 meses, agregados 10 años) — **sigue sin hacerse**, los índices existen pero nada purga datos viejos.
+3. ✅ Migración de reconciliación: hypertable + compresión + `readings.supplies_details` + índices `(device_id,time)`, `alerts(device_id,resolved)`, `audit_logs(created_at)`. Quitar el hack `.ts↔.js`. ✅ `add_retention_policy` (23/08/2026): `readings` 24 meses nativo TimescaleDB; `agent_logs` 90 días y `alerts` resueltas 12 meses vía job app-level (`retentionJob.ts`); `audit_logs` sin purga (write-only, decisión de negocio). Agregados continuos siguen sin implementarse (Fase 2).
 4. ✅ Detección de reset/decremento en servidor al ingerir (marcar lectura, abrir alerta `counter_reset`) y en el cálculo mensual (sumar deltas positivos en vez de `MAX−MIN`).
 5. ✅ Seguridad mínima: CSRF (double‑submit), quitar login por env, no devolver token en body¹, `trustProxy`, schema en `PUT /agents/:id/config` y `createClient`, audit en deletes/comandos. ⬜ WS sigue aceptando `?token=` en query string — no se sacó.
 6. ✅ Operación: `restart: unless-stopped`, `/health` real (DB+Redis), límites de recursos, `USER node`, `npm ci`; sacar binarios/dumps/secretos del repo y rotar `JWT_SECRET`/DB password.

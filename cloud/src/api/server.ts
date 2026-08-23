@@ -16,6 +16,7 @@ import "../jobs/heartbeatMonitor";
 import "../jobs/alertWorker";
 import "../jobs/notificationWorker";
 import "../jobs/reportDeliveryWorker";
+import "../jobs/retentionJob";
 import { registerWebSocket } from "../ws/index";
 
 import { createAuthMiddleware } from "./middlewares/authMiddleware";
