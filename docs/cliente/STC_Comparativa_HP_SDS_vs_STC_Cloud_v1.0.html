@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>STC Cloud - Comparativa HP SDS vs STC Cloud v1.0</title>
+    <title>STC Cloud - Comparativa HP SDS vs STC Cloud v2.0</title>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Inter:wght@400;600&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -392,7 +392,7 @@
         <h1 class="main-title">COMPARATIVA TÉCNICA</h1>
         <h1 class="main-subtitle">HP SDS vs STC CLOUD MONITOR</h1>
 
-        <div class="version-tag">Análisis de Ingeniería | v1.0 | Mayo 2026</div>
+        <div class="version-tag">Análisis de Ingeniería | v2.0 | Agosto 2026</div>
     </div>
 
     <div class="footer">
@@ -462,25 +462,39 @@
             <span class="toc-dots"></span>
             <span class="toc-page">8</span>
         </a>
+        <a href="#api-publica" class="toc-item">
+            <span class="toc-text">11. API Pública e Integración con Terceros (ISV/ERP)</span>
+            <span class="toc-dots"></span>
+            <span class="toc-page">8</span>
+        </a>
+        <a href="#mejoras-agente" class="toc-item">
+            <span class="toc-text">12. Resiliencia del Agente</span>
+            <span class="toc-dots"></span>
+            <span class="toc-page">8</span>
+        </a>
         <a href="#seguridad-certificaciones" class="toc-item">
-            <span class="toc-text">11. Certificaciones de Seguridad y Cumplimiento</span>
+            <span class="toc-text">13. Certificaciones de Seguridad y Cumplimiento</span>
             <span class="toc-dots"></span>
             <span class="toc-page">9</span>
         </a>
         <a href="#tabla-resumen" class="toc-item">
-            <span class="toc-text">12. Tabla Resumen Global de Diferencias</span>
+            <span class="toc-text">14. Tabla Resumen Global de Diferencias</span>
             <span class="toc-dots"></span>
             <span class="toc-page">9</span>
         </a>
         <a href="#roadmap" class="toc-item">
-            <span class="toc-text">13. Hoja de Ruta de Mejoras Priorizadas</span>
+            <span class="toc-text">15. Hoja de Ruta de Mejoras Priorizadas</span>
             <span class="toc-dots"></span>
             <span class="toc-page">10</span>
         </a>
     </div>
 
     <div class="note-callout" style="margin-top: 40px;">
-        <strong>Propósito del documento.</strong> Este análisis compara el sistema HP Smart Device Services (SDS) con el agente STC Cloud Monitor tal como está implementado a mayo de 2026. Para cada diferencia se indica si es una <strong>decisión de diseño intencional</strong> (justificada por el contexto multi-marca y de despliegue) o un <strong>punto de mejora</strong> con su prioridad correspondiente.
+        <strong>Propósito del documento.</strong> Este análisis compara el sistema HP Smart Device Services (SDS) con el agente STC Cloud Monitor tal como está implementado a agosto de 2026. Para cada diferencia se indica si es una <strong>decisión de diseño intencional</strong> (justificada por el contexto multi-marca y de despliegue) o un <strong>punto de mejora</strong> con su prioridad correspondiente.
+    </div>
+
+    <div class="info-callout">
+        <strong>Novedades desde v1.0 (mayo 2026).</strong> De los 7 puntos de mejora identificados entonces, <strong>5 ya están resueltos</strong>: SNMPv3, identidad persistente (MAC + composite key), acceso EWS remoto vía nube, política de retención formal, y agregados continuos para tendencias de largo plazo. Se sumaron además: API pública con webhooks para integración ERP, y mejoras de resiliencia del agente (rollback de update, activación offline, dedupe de lecturas). Quedan pendientes: certificaciones formales (fuera de scope, ver §13) y múltiples agentes por site.
     </div>
 
     <div class="footer">
@@ -732,7 +746,7 @@ STC Cloud Discovery:
     </div>
 
     <h2 id="snmp">5. Soporte de Protocolo SNMP</h2>
-    <span class="badge badge-mejorar">A mejorar</span> &nbsp; <span class="badge badge-p2">Prioridad 2</span>
+    <span class="badge badge-ok">Resuelto (agosto 2026)</span>
 
     <div class="two-col">
         <div class="col-box col-hp">
@@ -748,22 +762,23 @@ STC Cloud Discovery:
         <div class="col-box col-stc">
             <div class="col-box-title">STC Cloud Monitor</div>
             <ul>
-                <li>SNMPv2c únicamente</li>
-                <li>Comunidad única configurable (<code>snmpCommunity</code>)</li>
-                <li>Sin soporte v3 (sin autenticación por usuario, sin privacidad)</li>
-                <li>Rol de SNMP: solo identificación de marca/modelo; EWS es primario para contadores</li>
+                <li>SNMPv1, v2c, y <strong>v3</strong> (MD5/SHA-2, DES/AES)</li>
+                <li>Lista de hasta 8 credenciales por agente, probadas en orden hasta que una responda (fail-fast si el host no da señal de vida)</li>
+                <li>Credenciales cifradas at-rest (AES-256-GCM, clave derivada con HKDF-SHA256) — nunca en claro en DB ni logs</li>
+                <li><strong>Credenciales por rango de IP</strong>: un rango puede restringirse a un subconjunto de la lista (útil si distintas VLANs de impresoras usan comunidades distintas)</li>
+                <li>Reorder/renombrar/borrar sin re-tipear secretos (referencia opaca por id); optimistic locking contra ediciones concurrentes en el portal</li>
             </ul>
         </div>
     </div>
 
-    <p>SNMPv3 es el único protocolo SNMP que provee autenticación de mensajes (HMAC) y cifrado de payload. En redes con política de seguridad estricta, SNMPv2c es inaceptable porque las comunidades viajan en claro y cualquier observador de red puede leer o falsificar respuestas. Añadir v3 ampliaría la compatibilidad con entornos enterprise y reduciría la exposición a man-in-the-middle en segmentos de red compartidos.</p>
+    <p>SNMPv3 provee autenticación de mensajes (HMAC) y cifrado de payload — cierra la brecha que existía en v1.0, donde SNMPv2c en redes con política estricta era inaceptable (comunidades en claro). Probado contra un agente SNMPv3 real simulado con <code>net-snmp</code>, no sólo con sesiones mockeadas.</p>
 
-    <div class="note-callout">
-        <strong>Mejora sugerida.</strong> Extender <code>AgentConfig</code> con campos opcionales <code>snmpV3User</code>, <code>snmpV3AuthProto</code>, <code>snmpV3AuthKey</code>, <code>snmpV3PrivProto</code>, <code>snmpV3PrivKey</code>. La librería <code>net-snmp</code> ya usada en el proyecto soporta v3 sin dependencias adicionales.
+    <div class="info-callout">
+        <strong>Lo que no se hizo:</strong> rotación de la clave de cifrado en sí (el ciphertext ya lleva un prefijo de versión para no bloquearla a futuro, pero el mecanismo de rotación no está implementado).
     </div>
 
     <h2 id="identidad">6. Identidad Persistente del Dispositivo</h2>
-    <span class="badge badge-mejorar">A mejorar</span> &nbsp; <span class="badge badge-p3">Prioridad 3</span>
+    <span class="badge badge-ok">Resuelto (agosto 2026)</span>
 
     <div class="two-col">
         <div class="col-box col-hp">
@@ -778,17 +793,20 @@ STC Cloud Discovery:
         <div class="col-box col-stc">
             <div class="col-box-title">STC Cloud Monitor</div>
             <ul>
-                <li>Identidad primaria: <strong>Serial Number</strong> (EWS)</li>
-                <li>Fallback a <strong>IP address</strong> si no hay serial</li>
-                <li>Sin tracking de MAC address</li>
-                <li>Si una impresora cambia de IP sin serial conocido, se crea un registro duplicado</li>
+                <li>Identidad primaria: <strong>(client_id, Serial Number)</strong> — clave compuesta, no sólo el serial</li>
+                <li><strong>MAC address</strong> capturada y almacenada como campo secundario</li>
+                <li>Decommission (soft-delete + reactivar) en vez de borrado directo</li>
+                <li>Mover un equipo entre agentes/clientes con confirmación explícita si cambia de cliente</li>
+                <li>Merge manual de duplicados ya creados: historial de lecturas sumado, el registro fuente queda como lápida (<code>merged_into</code>) en vez de desaparecer</li>
             </ul>
         </div>
     </div>
 
-    <p>En instalaciones con DHCP dinámico, las impresoras pueden cambiar de IP entre ciclos de escaneo. Si el serial ya fue capturado en un ciclo anterior, STC Cloud lo usa como clave estable y el cambio de IP no genera duplicado. El riesgo real es en el primer scan de una impresora que no responde al EWS (sólo SNMP) y cuya comunidad no devuelve serial — en ese caso, la IP se usa como fallback y un cambio de IP genera un registro huérfano.</p>
+    <p>La clave compuesta <code>(client_id, serial)</code> — en vez de <code>(agent_id, serial)</code> como antes — resuelve el caso que v1.0 no cubría: dos agentes del mismo cliente viendo la misma impresora (ej. tras reinstalar el agente) ya no la duplican. Para los duplicados que ya existían antes de este cambio, se agregó una herramienta de fusión manual desde el portal en vez de intentar una migración automática (que podría fusionar equipos que en realidad son distintos).</p>
 
-    <p>Añadir captura de MAC vía SNMP OID <code>1.3.6.1.2.1.2.2.1.6</code> (<code>ifPhysAddress</code>) como campo secundario de identidad eliminaría esta clase de duplicados sin necesidad de cambios en la arquitectura del servidor.</p>
+    <div class="info-callout">
+        <strong>Lo que no se hizo:</strong> corrección 100% automática de duplicados por reasignación de IP — sigue habiendo una ventana de staleness entre que DHCP reasigna una IP y el próximo scan corrige la identidad (mitigada, no eliminada; ver también la nota de staleness del acceso remoto EWS en §7).
+    </div>
 
     <div class="footer">
         © 2026 CANAL DIRECTO | STC CLOUD | ANÁLISIS TÉCNICO | DOCUMENTACIÓN INTERNA | CONFIDENCIAL
@@ -805,14 +823,37 @@ STC Cloud Discovery:
     </div>
 
     <h2 id="ews-remoto">7. Acceso EWS Remoto vía Nube</h2>
-    <span class="badge badge-mejorar">A mejorar</span> &nbsp; <span class="badge badge-p3">Prioridad 3</span>
+    <span class="badge badge-ok">Resuelto (agosto 2026)</span>
 
     <p>HP SDS provee una funcionalidad llamada <strong>Remote EWS</strong>: el administrador puede acceder a la interfaz web integrada (EWS) de cualquier impresora HP a través de un túnel cifrado establecido desde HP SDS Cloud hacia el JAMC local, sin necesidad de VPN ni de IP pública en la impresora. Esta funcionalidad está <em>desactivada por defecto</em> y requiere whitelisting explícito del cliente.</p>
 
-    <p>STC Cloud no implementa ningún mecanismo equivalente. El acceso a EWS es únicamente local: el agente consulta directamente la IP de la impresora desde la LAN. Un administrador remoto (fuera de la red del cliente) no puede acceder al EWS de la impresora a través de la plataforma STC Cloud.</p>
+    <p>STC Cloud implementa un mecanismo equivalente reusando el canal WSS ya existente (el mismo que hoy manda comandos remotos): el cloud le pide al agente un único GET a una ruta de la EWS de un dispositivo específico, el agente lo ejecuta dentro de la LAN del cliente y devuelve el resultado por el mismo canal — sin sesión de túnel persistente, cada llamada es un request/response independiente.</p>
 
-    <div class="note-callout">
-        <strong>Mejora sugerida (largo plazo).</strong> Un túnel EWS remoto requeriría un proxy inverso en la infraestructura cloud y un canal bidireccional permanente (ya disponible vía WebSocket). La implementación es arquitectónicamente compleja pero se apoya en la infraestructura existente. Es candidato para una fase futura del roadmap, no un bloqueante actual.
+    <div class="two-col">
+        <div class="col-box col-hp">
+            <div class="col-box-title">HP SDS / JAMC</div>
+            <ul>
+                <li>Desactivado por defecto, whitelisting explícito del cliente</li>
+                <li>Túnel cifrado persistente vía XMPP/HTTPS</li>
+            </ul>
+        </div>
+        <div class="col-box col-stc">
+            <div class="col-box-title">STC Cloud Monitor</div>
+            <ul>
+                <li><strong>Desactivado por defecto</strong> (<code>agents.remote_ews_enabled</code>), opt-in explícito por agente</li>
+                <li>Proxy de un solo GET por vez, sin sesión persistente, sobre el WSS ya existente</li>
+                <li>Allowlist en <strong>dos capas</strong>: el cloud sólo permite IPs de dispositivos ya sincronizados de ese agente (nunca una IP tipeada a mano); el agente vuelve a validar contra su catálogo local antes de conectar</li>
+                <li>Rechaza si el dispositivo no reportó recientemente (ventana de staleness — mitiga el riesgo de una IP reasignada por DHCP apuntando a otro equipo)</li>
+                <li>Sólo <code>GET</code> — nunca puede mutar configuración de la impresora, mismo principio que el resto del motor de captura</li>
+                <li>Tope de 2MB por respuesta, cortado en streaming; auditado (qué ruta se pidió, nunca el contenido) en cada llamada</li>
+            </ul>
+        </div>
+    </div>
+
+    <p>Un detalle de diseño no trivial: la implementación tuvo que asegurarse de que el contenido de la EWS de un cliente sólo llegue a quien lo pidió, no a cualquier otro administrador con sesión abierta en el portal en simultáneo — el canal de difusión de resultados de comandos que ya existía enviaba a todos los portales conectados, y hubo que resolver este caso puntual por separado antes de exponerlo.</p>
+
+    <div class="info-callout">
+        <strong>Lo que no se hizo:</strong> paridad completa con las funciones IMIL de HP SDS que acompañan a su Remote EWS (MIB walk remoto, deshabilitar monitoreo por equipo desde la consola, reenviar lecturas puntuales, descubrir una IP puntual desde el portal) — sólo se implementó el acceso a la EWS en sí. Tampoco hay todavía UI de portal para invocarlo (por ahora es un endpoint REST); y la activación del flag y su uso comparten el mismo nivel de permiso (admin/operator), sin un consentimiento explícito adicional del cliente como sugiere el modelo de whitelisting de HP.
     </div>
 
     <h2 id="secure-by-default">8. HP Secure by Default y Riesgos en FutureSmart 4.5+</h2>
@@ -904,7 +945,7 @@ STC Cloud Discovery:
     <p>HP JAMC permite desplegar múltiples instancias DCA en el mismo site para escanear subredes distintas o proporcionar alta disponibilidad. STC Cloud contempla un único agente por site. En clientes con múltiples VLANs de impresoras que no se rutan entre sí, el agente actual no puede cubrir todas las subredes desde un único punto de instalación.</p>
 
     <h2 id="datos-retencion">10. Modelo de Datos y Retención</h2>
-    <span class="badge badge-mejorar">A mejorar</span> &nbsp; <span class="badge badge-p2">Prioridad 2</span>
+    <span class="badge badge-ok">Resuelto (agosto 2026)</span>
 
     <div class="two-col">
         <div class="col-box col-hp">
@@ -919,15 +960,74 @@ STC Cloud Discovery:
         <div class="col-box col-stc">
             <div class="col-box-title">STC Cloud Monitor</div>
             <ul>
-                <li>Retención local (SQLite): <strong>7 días</strong> de backlog</li>
-                <li>Retención cloud: no especificada en documentación actual</li>
-                <li>Sin política formal de retención documentada</li>
-                <li>Sin anonimización de datos de cliente definida</li>
+                <li>Retención local (SQLite): <strong>7 días</strong> de backlog (sin cambios)</li>
+                <li>Retención cloud, ahora formal: <strong>readings crudo 24 meses</strong> (TimescaleDB, <code>add_retention_policy</code> nativo), <strong>agent_logs 90 días</strong>, <strong>alertas resueltas 12 meses</strong> (las abiertas nunca se purgan)</li>
+                <li><code>audit_logs</code> deliberadamente <strong>sin purga automática</strong> — un trail de auditoría no debe autopurgarse solo</li>
+                <li><strong>Agregados diario/mensual sin vencimiento</strong> — sobreviven a la purga del dato crudo, pensados para tendencias de largo plazo sin necesitar 24 meses de filas individuales</li>
             </ul>
         </div>
     </div>
 
-    <p>Una política de retención de 10 años permite a los clientes analizar tendencias de uso a largo plazo, planificar reemplazos de equipos y documentar el historial de consumibles para auditorías. Definir y comunicar la política de retención de STC Cloud es relevante tanto para la propuesta comercial como para el cumplimiento con RGPD (datos de actividad de impresoras pueden contener metadatos de usuario en modelos con autenticación de usuario).</p>
+    <p>Las ventanas elegidas (24 meses de dato crudo, agregados indefinidos) son una decisión de negocio — no hay ningún requisito regulatorio específico que exija un número exacto para este tipo de dato operativo, a diferencia de lo que podría sugerir el ejemplo de "10 años" de HP SDS (que además aplica a un contexto de certificación ISO 27001/SOC2 distinto al de STC, ver §13). Los agregados continuos (TimescaleDB continuous aggregates, refresco automático cada 1-6h) acercan la propuesta de "tendencias de largo plazo" de HP sin necesitar retener el dato crudo indefinidamente.</p>
+
+    <div class="info-callout">
+        <strong>Lo que no se hizo:</strong> anonimización explícita de datos de cliente (no aplica igual que en HP SDS — STC Cloud no recolecta PII de por sí, ver el inventario de datos, así que no hay dato de persona que anonimizar).
+    </div>
+
+    <div class="footer">
+        © 2026 CANAL DIRECTO | STC CLOUD | ANÁLISIS TÉCNICO | DOCUMENTACIÓN INTERNA | CONFIDENCIAL
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- PÁGINA 8-BIS: CAPACIDADES NUEVAS (FASE 2, no existían en v1.0) -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="page">
+    <div class="internal-header">
+        <div class="internal-brand">STC <span>CLOUD</span></div>
+        <div class="internal-doc-type">Comparativa HP SDS</div>
+    </div>
+
+    <h2 id="api-publica">11. API Pública e Integración con Terceros (ISV/ERP)</h2>
+    <span class="badge badge-ok">Nuevo (agosto 2026)</span>
+
+    <div class="two-col">
+        <div class="col-box col-hp">
+            <div class="col-box-title">HP SDS</div>
+            <ul>
+                <li>API para MPS/ISV con historial completo de contadores</li>
+                <li>Integración pensada para partners de facturación grandes</li>
+            </ul>
+        </div>
+        <div class="col-box col-stc">
+            <div class="col-box-title">STC Cloud Monitor</div>
+            <ul>
+                <li>API keys por cliente (hash SHA-256 at-rest, se muestra en claro una sola vez al crearla)</li>
+                <li>Endpoints de lectura: dispositivos, lecturas, alertas, cierres de reporte — siempre acotados al cliente dueño de la key</li>
+                <li>Webhooks de integración (lecturas/alertas/cierres) firmados con HMAC-SHA256, para que el ERP del cliente verifique autenticidad</li>
+                <li>Reusa el mismo guard anti-SSRF ya construido para las notificaciones internas (HTTPS únicamente, rechaza IPs privadas/loopback/metadata)</li>
+            </ul>
+        </div>
+    </div>
+
+    <p>A diferencia de HP SDS (pensado para partners grandes de MPS), la API pública de STC Cloud está orientada a que el propio cliente final conecte su ERP o sistema de facturación interno sin intervención de STC. Cada cliente gestiona sus propias keys y su propio webhook — STC no necesita mediar la integración.</p>
+
+    <div class="info-callout">
+        <strong>Lo que no se hizo:</strong> UI de portal para gestionar keys/webhooks (por ahora sólo REST); expiración automática de keys (se revocan a mano, igual que un token de acceso personal de GitHub); documentación pública tipo OpenAPI/Swagger.
+    </div>
+
+    <h2 id="mejoras-agente">12. Resiliencia del Agente</h2>
+    <span class="badge badge-ok">Nuevo (agosto 2026)</span>
+
+    <p>Un conjunto de mejoras operativas al agente DCA, sin equivalente directo en la comparativa original pero relevantes para la robustez de un despliegue de largo plazo:</p>
+
+    <ul>
+        <li><strong>Rollback de actualización:</strong> antes, una actualización remota reemplazaba el binario in-place sin ningún respaldo — un release roto no tenía forma de revertirse salvo reinstalar a mano. Ahora se guarda una copia de la versión anterior antes de reemplazar, restaurable bajo demanda.</li>
+        <li><strong>Activación resiliente a cortes de red:</strong> antes, si no había conectividad al momento de instalar, la activación fallaba una sola vez y el servicio quedaba detenido indefinidamente. Ahora reintenta con backoff creciente ante error de red (nunca ante una clave inválida, para no encadenar intentos inútiles).</li>
+        <li><strong>Dedupe de lecturas idénticas:</strong> un equipo ocioso generaba una fila nueva en cada ciclo de meter/consumibles aunque nada hubiera cambiado. Ahora sólo se envía si cambió algo relevante o pasaron 4 horas desde el último envío (para no perder la señal de "sigo vivo").</li>
+        <li><strong>Detección de PJL deshabilitado:</strong> HP FutureSmart 4.5+ desactiva PJL por defecto (ver §8) — ahora el agente detecta y loguea cuando un equipo deja de responder a PJL de forma consistente, en vez de fallar en silencio.</li>
+        <li><strong>Rotación de logs real:</strong> antes un solo nivel de respaldo (se pisaba en cada corte). Ahora rota en cadena hasta 5 archivos, mismo criterio que <code>logrotate</code>.</li>
+    </ul>
 
     <div class="footer">
         © 2026 CANAL DIRECTO | STC CLOUD | ANÁLISIS TÉCNICO | DOCUMENTACIÓN INTERNA | CONFIDENCIAL
@@ -943,7 +1043,7 @@ STC Cloud Discovery:
         <div class="internal-doc-type">Comparativa HP SDS</div>
     </div>
 
-    <h2 id="seguridad-certificaciones">11. Certificaciones de Seguridad y Cumplimiento</h2>
+    <h2 id="seguridad-certificaciones">13. Certificaciones de Seguridad y Cumplimiento</h2>
     <span class="badge badge-mejorar">A mejorar</span> &nbsp; <span class="badge badge-p2">Prioridad 2</span>
 
     <table>
@@ -990,7 +1090,7 @@ STC Cloud Discovery:
 
     <p>La ausencia de certificaciones formales no es un bloqueante para el perfil de cliente objetivo de STC Cloud (empresas medianas en Argentina y Latinoamérica). La certificación ISO 27001 requiere un proceso de 12–18 meses con costos de auditoría e implementación que no están en el plan actual. Esta diferencia se documenta como conocida y conscientemente fuera de scope, no como una deuda técnica.</p>
 
-    <h2 id="tabla-resumen">12. Tabla Resumen Global de Diferencias</h2>
+    <h2 id="tabla-resumen">14. Tabla Resumen Global de Diferencias</h2>
 
     <table>
         <thead>
@@ -1029,20 +1129,26 @@ STC Cloud Discovery:
             <tr>
                 <td>Soporte SNMPv3</td>
                 <td>v1 + v2c + v3 completo</td>
-                <td>v2c únicamente</td>
-                <td><span class="badge badge-mejorar">Mejorar</span></td>
+                <td>v1 + v2c + v3, lista de hasta 8 credenciales por agente/rango</td>
+                <td><span class="badge badge-ok">Resuelto</span></td>
             </tr>
             <tr>
                 <td>Identidad persistente</td>
                 <td>MAC + Serial</td>
-                <td>Serial (fallback IP)</td>
-                <td><span class="badge badge-mejorar">Mejorar</span></td>
+                <td>MAC + (client_id, Serial) compuesta + merge manual de duplicados</td>
+                <td><span class="badge badge-ok">Resuelto</span></td>
             </tr>
             <tr>
                 <td>Acceso EWS remoto via nube</td>
                 <td>Sí (túnel cloud)</td>
-                <td>No</td>
-                <td><span class="badge badge-mejorar">Mejorar</span></td>
+                <td>Sí (proxy de un GET por vez sobre el WSS existente, opt-in, allowlist en 2 capas)</td>
+                <td><span class="badge badge-ok">Resuelto</span></td>
+            </tr>
+            <tr>
+                <td>API pública / integración ERP</td>
+                <td>API para ISV/MPS</td>
+                <td>API keys por cliente + webhooks firmados (HMAC)</td>
+                <td><span class="badge badge-ok">Nuevo</span></td>
             </tr>
             <tr>
                 <td>Riesgo PJL en FS4.5+</td>
@@ -1077,8 +1183,8 @@ STC Cloud Discovery:
             <tr>
                 <td>Retención de datos cloud</td>
                 <td>10 años</td>
-                <td>No especificada</td>
-                <td><span class="badge badge-mejorar">Mejorar</span></td>
+                <td>Crudo 24 meses + agregados diario/mensual sin vencimiento</td>
+                <td><span class="badge badge-ok">Resuelto</span></td>
             </tr>
             <tr>
                 <td>ISO 27001 / SOC2</td>
@@ -1115,41 +1221,48 @@ STC Cloud Discovery:
         <div class="internal-doc-type">Comparativa HP SDS</div>
     </div>
 
-    <h2 id="roadmap">13. Hoja de Ruta de Mejoras Priorizadas</h2>
+    <h2 id="roadmap">15. Hoja de Ruta de Mejoras Priorizadas</h2>
 
-    <p>Las mejoras identificadas en este análisis se ordenan según su impacto operativo y complejidad de implementación. La prioridad se asigna en tres niveles: <span class="badge badge-p1">P1 Urgente</span>, <span class="badge badge-p2">P2 Medio plazo</span> y <span class="badge badge-p3">P3 Largo plazo</span>.</p>
+    <p>De los 6 puntos de mejora priorizados en v1.0 (mayo 2026), <strong>5 ya están resueltos</strong> (marcados abajo). Quedan genuinamente pendientes 2 ítems — uno operativo, uno de certificación formal — más los que surgieron de esta misma pasada de trabajo (remote EWS con paridad IMIL completa, UI de portal para API pública, backend multi-réplica).</p>
 
-    <div class="improvement-card p1">
+    <div class="improvement-card p1" style="border-left-color: #16a34a;">
         <div class="improvement-card-header">
             <div class="improvement-card-title">Auditoría de uso de PJL en HP FutureSmart 4.5+</div>
-            <span class="badge badge-p1">P1 Urgente</span>
+            <span class="badge badge-ok">Resuelto</span>
         </div>
-        <p>Confirmar que ninguna ruta de código actual depende de PJL Device Access Commands para la lectura de contadores en impresoras HP enterprise. FutureSmart 4.5 deshabilita PJL por defecto; si el agente lo usa como fallback, falla silenciosamente sobre equipos HP modernos sin diagnóstico visible. Acción: trazar el código de recolección HP y añadir test unitario que verifique que EWS es la fuente primaria.</p>
+        <p>El motor de captura ya usa EWS como fuente primaria de contadores, con PJL sólo como fallback — y desde agosto 2026 el agente además detecta y loguea cuando un equipo deja de responder a PJL de forma consistente (posible firewall/firmware con PJL deshabilitado), en vez de fallar en silencio.</p>
     </div>
 
-
-    <div class="improvement-card p2">
+    <div class="improvement-card p1" style="border-left-color: #16a34a;">
         <div class="improvement-card-header">
             <div class="improvement-card-title">Soporte SNMPv3</div>
-            <span class="badge badge-p2">P2 Medio plazo</span>
+            <span class="badge badge-ok">Resuelto</span>
         </div>
-        <p>Extender la configuración del agente con credenciales SNMPv3 opcionales (usuario, protocolo de auth, clave de auth, protocolo de privacidad, clave de privacidad). La librería <code>net-snmp</code> ya usada en el proyecto soporta v3 sin dependencias adicionales. Impacto: desbloquea redes enterprise que han desactivado SNMPv2c por política de seguridad.</p>
+        <p>v1/v2c/v3 (MD5/SHA-2, DES/AES), lista de hasta 8 credenciales por agente o por rango de IP, cifradas at-rest. Ver §5.</p>
     </div>
 
-    <div class="improvement-card p2">
+    <div class="improvement-card p1" style="border-left-color: #16a34a;">
         <div class="improvement-card-header">
             <div class="improvement-card-title">Política formal de retención de datos cloud</div>
-            <span class="badge badge-p2">P2 Medio plazo</span>
+            <span class="badge badge-ok">Resuelto</span>
         </div>
-        <p>Definir y documentar la política de retención de datos en el servidor cloud: período mínimo garantizado, proceso de borrado a solicitud del cliente, tratamiento de datos bajo RGPD. Publicar esta información en el contrato de servicio y en la documentación de seguridad. Es prerequisito para licitaciones públicas y clientes con auditorías de proveedor.</p>
+        <p>Crudo 24 meses (TimescaleDB nativo), agregados diario/mensual sin vencimiento, agent_logs 90 días, alertas resueltas 12 meses. Ver §10.</p>
     </div>
 
-    <div class="improvement-card p3">
+    <div class="improvement-card p1" style="border-left-color: #16a34a;">
         <div class="improvement-card-header">
             <div class="improvement-card-title">Identidad de dispositivo con MAC address</div>
-            <span class="badge badge-p3">P3 Largo plazo</span>
+            <span class="badge badge-ok">Resuelto</span>
         </div>
-        <p>Capturar la dirección MAC vía SNMP OID <code>1.3.6.1.2.1.2.2.1.6</code> (ifPhysAddress) durante el escaneo inicial y almacenarla como campo secundario de identidad. Permite correlacionar registros cuando una impresora cambia de IP, eliminando duplicados en instalaciones con DHCP dinámico.</p>
+        <p>MAC capturada como campo secundario, más una solución más completa de lo planteado originalmente: clave compuesta (client_id, serial) y herramienta de fusión manual de duplicados ya existentes. Ver §6.</p>
+    </div>
+
+    <div class="improvement-card p1" style="border-left-color: #16a34a;">
+        <div class="improvement-card-header">
+            <div class="improvement-card-title">Acceso EWS remoto vía nube</div>
+            <span class="badge badge-ok">Resuelto (parcial)</span>
+        </div>
+        <p>Implementado el acceso a la EWS en sí (proxy de un GET, opt-in, allowlist en dos capas). Ver §7 para el detalle de lo que queda pendiente (paridad IMIL completa, UI de portal).</p>
     </div>
 
     <div class="improvement-card p3">
@@ -1157,11 +1270,27 @@ STC Cloud Discovery:
             <div class="improvement-card-title">Múltiples agentes por site (multi-subred)</div>
             <span class="badge badge-p3">P3 Largo plazo</span>
         </div>
-        <p>Permitir registrar y gestionar más de un agente bajo el mismo site/cliente en la plataforma cloud. Imprescindible para clientes con redes segmentadas (múltiples VLANs de impresoras sin enrutamiento entre sí) o con oficinas remotas bajo el mismo contrato. Requiere cambios en el modelo de datos del servidor y en la interfaz de administración.</p>
+        <p>Sigue sin resolverse. Permitir registrar y gestionar más de un agente bajo el mismo site/cliente en la plataforma cloud. Imprescindible para clientes con redes segmentadas (múltiples VLANs de impresoras sin enrutamiento entre sí) o con oficinas remotas bajo el mismo contrato. Requiere cambios en el modelo de datos del servidor y en la interfaz de administración.</p>
+    </div>
+
+    <div class="improvement-card p3">
+        <div class="improvement-card-header">
+            <div class="improvement-card-title">Backend multi-réplica</div>
+            <span class="badge badge-p3">P3 Largo plazo</span>
+        </div>
+        <p>Sigue sin resolverse — decisión de arquitectura pendiente, no un descuido. El registro de sockets WS activos vive en memoria de un único proceso; escalar a múltiples réplicas del backend requeriría pub/sub Redis para el WS y decidir si vale la pena migrar los jobs periódicos (hoy <code>setInterval</code> simple, deliberadamente NO BullMQ repeatable — la Redis de producción usa una política de desalojo que podría perder el estado de un job repetible en silencio).</p>
+    </div>
+
+    <div class="improvement-card p3">
+        <div class="improvement-card-header">
+            <div class="improvement-card-title">UI de portal para API pública y Remote EWS</div>
+            <span class="badge badge-p3">P3 Largo plazo</span>
+        </div>
+        <p>Ambas funcionalidades (§7 y §11) son sólo REST por ahora — un administrador necesita <code>curl</code>/Postman hasta que exista una UI dedicada en el portal.</p>
     </div>
 
     <div class="info-callout" style="margin-top: 30px;">
-        <strong>Ventajas diferenciales de STC Cloud que no tiene HP SDS.</strong> STC Cloud presenta ventajas estructurales propias que no son mejoras de HP sino diferenciadores: (1) soporte nativo de 9+ fabricantes frente al ecosistema exclusivamente HP de SDS; (2) sincronización al servidor cada 30 segundos frente a lotes diarios para contadores; (3) despliegue sin apertura de puertos adicionales (sólo 443); (4) agente sin dependencia de infraestructura HP Cloud, eliminando el riesgo de discontinuación del servicio por parte del fabricante.
+        <strong>Ventajas diferenciales de STC Cloud que no tiene HP SDS.</strong> STC Cloud presenta ventajas estructurales propias que no son mejoras de HP sino diferenciadores: (1) soporte nativo de 9+ fabricantes frente al ecosistema exclusivamente HP de SDS; (2) sincronización al servidor cada 30 segundos frente a lotes diarios para contadores; (3) despliegue sin apertura de puertos adicionales (sólo 443); (4) agente sin dependencia de infraestructura HP Cloud, eliminando el riesgo de discontinuación del servicio por parte del fabricante; (5) agregados continuos de TimescaleDB para tendencias de largo plazo sin necesitar retener el dato crudo indefinidamente; (6) API pública orientada a que el cliente final integre su propio ERP, sin intermediación de STC.
     </div>
 
     <div class="footer">
