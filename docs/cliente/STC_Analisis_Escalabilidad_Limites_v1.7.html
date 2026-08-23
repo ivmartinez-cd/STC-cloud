@@ -491,29 +491,45 @@
         <h3 style="color: #ea580c;">Paginación: varias pantallas del portal traen todo sin límite</h3>
         <p>
             `GET /agents`, `GET /clients` y `GET /devices` (este último sin pantalla activa hoy, pero el
-            endpoint sigue vivo) devuelven la tabla completa sin `limit`/`offset` — confirmado en vivo con
+            endpoint sigue vivo) devolvían la tabla completa sin `limit`/`offset` — confirmado en vivo con
             330 filas en la tabla de agentes del ambiente de pruebas, sin ningún límite. Con 200 clientes
             reales (cientos de agentes, miles de dispositivos), esto pesa tanto para transferir como para
             renderizar (no hay virtualización de tablas en el portal). En contraste, `Alerts`, `Reports` y
-            el `Dashboard` sí paginan/agregan correctamente del lado del servidor — es el patrón a copiar
-            en el resto.
+            el `Dashboard` sí paginan/agregan correctamente del lado del servidor.
         </p>
+        <div class="note-callout" style="background: #f0fdf4; border-left-color: #16a34a; color: #14532d;">
+            <strong>✅ Corregido (23/08/2026, parcial):</strong> techo de seguridad agregado a las tres
+            consultas (2000 agentes/clientes, 5000 dispositivos) — cubre con margen la escala objetivo. No
+            es paginación real con controles de página todavía; eso queda como tarea aparte si se supera
+            ese volumen.
+        </div>
 
         <h3 style="color: #ea580c;">Rate limiting global por IP, no por agente</h3>
         <p>
-            `/devices/sync` y `/agents/:id/heartbeat` comparten el límite global de 100 req/min por IP con
+            `/devices/sync` y `/agents/:id/heartbeat` compartían el límite global de 100 req/min por IP con
             todo el resto del tráfico de esa IP (portal, login, otros agentes). Si varios agentes de un
-            mismo cliente salen por la misma IP corporativa (NAT compartido), compiten por el mismo cupo
-            en vez de tener uno propio — la API pública sí tiene rate-limit por key, esta ruta no.
+            mismo cliente salen por la misma IP corporativa (NAT compartido), competían por el mismo cupo
+            en vez de tener uno propio.
         </p>
+        <div class="note-callout" style="background: #f0fdf4; border-left-color: #16a34a; color: #14532d;">
+            <strong>✅ Corregido (23/08/2026):</strong> rate-limit propio de 20/min por agente en ambas
+            rutas. Al implementarlo se encontró un bug real: el `keyGenerator` custom (acá y en la API
+            pública) nunca veía la identidad del agente/key porque corría en el hook `onRequest` de
+            @fastify/rate-limit, ANTES de que el `preHandler` de autenticación la resolviera — caía siempre
+            al fallback por IP. Verificado en runtime con dos agentes reales: compartían balde antes del
+            fix (el segundo quedaba bloqueado por el tráfico del primero), aislados correctamente después.
+        </div>
 
         <h3>Reconexión del agente sin jitter</h3>
         <p>
-            El backoff de reconexión WS del agente (`SocketManager.ts`) es puramente exponencial
+            El backoff de reconexión WS del agente (`SocketManager.ts`) era puramente exponencial
             (5s → 300s), sin aleatoriedad. Si el backend se reinicia con 200+ agentes conectados, todos
-            reintentan en oleadas sincronizadas en los mismos instantes — no es catastrófico, pero es una
-            mejora barata (agregar jitter aleatorio) que evita picos de carga coordinados innecesarios.
+            reintentarían en oleadas sincronizadas en los mismos instantes.
         </p>
+        <div class="note-callout" style="background: #f0fdf4; border-left-color: #16a34a; color: #14532d;">
+            <strong>✅ Corregido (23/08/2026):</strong> jitter ±30% agregado sobre cada escalón del backoff,
+            sin cambiar el techo de 5 minutos ni la progresión exponencial.
+        </div>
 
         <h3 style="color: #16a34a;">Lo que ya está bien resuelto — no es un gap</h3>
         <ul>
@@ -578,15 +594,22 @@
         <h3>2. Orden recomendado para cerrar los hallazgos de §3</h3>
         <ol>
             <li><strong>✅ Ya hecho:</strong> pool de conexiones configurable, default subido a 20.</li>
-            <li><strong>Paginación del portal</strong> — agregar `limit`/`offset` real a `GET /agents`,
-                `GET /clients`, `GET /devices`, replicando el patrón ya usado en `Alerts`/`DeviceDetail`.</li>
-            <li><strong>Rate-limit por agente</strong> en `/devices/sync` y `/heartbeat`, no compartido por
-                IP — mismo patrón que ya usa la API pública (`apikey:${id}` en vez de IP).</li>
-            <li><strong>Jitter en la reconexión del agente</strong> — cambio pequeño, evita oleadas
-                sincronizadas de reconexión tras un restart del backend.</li>
+            <li><strong>✅ Ya hecho:</strong> techo de seguridad en `GET /agents` (2000), `GET /clients`
+                (2000) y `GET /devices` (5000) — antes sin ningún límite. No es paginación real con
+                controles de página todavía (misma forma de respuesta), pero cubre con margen la escala
+                objetivo de 200+ clientes.</li>
+            <li><strong>✅ Ya hecho:</strong> rate-limit por agente en `/devices/sync` y `/heartbeat` (20/min
+                por agente, no compartido por IP) — mismo patrón que la API pública. De paso se encontró y
+                corrigió un bug real: el `keyGenerator` custom de ambas rutas nunca veía la identidad del
+                agente/key (corría en `onRequest`, antes de que el `preHandler` de auth la resolviera) y
+                caía siempre al fallback por IP — verificado en runtime con dos agentes reales compartiendo
+                balde antes del fix, aislados correctamente después.</li>
+            <li><strong>✅ Ya hecho:</strong> jitter (±30%) en el backoff de reconexión WS del agente — evita
+                oleadas sincronizadas de reconexión tras un restart del backend.</li>
             <li><strong>Batching del sync de lecturas</strong> — el de mayor esfuerzo/riesgo de los cinco;
                 requiere tocar lógica de negocio sensible (identidad de dispositivo, detección de reset de
-                contador), se evalúa aparte con más tiempo dedicado.</li>
+                contador), se evalúa aparte con más tiempo dedicado. Es el único punto de §3 que sigue
+                abierto.</li>
         </ol>
 
         <div class="note-callout" style="background: #f0fdf4; border-left-color: #16a34a; color: #14532d;">
