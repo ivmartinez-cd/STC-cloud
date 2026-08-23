@@ -130,7 +130,7 @@ export class SocketManager {
 
     this.ws.on('close', (code, reason) => {
       const reasonStr = reason ? reason.toString() : '';
-      this.onLog('WARN', `WSS desconectado. Codigo: ${code} | Razon: ${reasonStr || 'ninguna'}. Reintento en ${this.reconnectDelay / 1000}s (Exponential Backoff).`);
+      this.onLog('WARN', `WSS desconectado. Codigo: ${code} | Razon: ${reasonStr || 'ninguna'}.`);
       this.ws = null;
       if (this.pingInterval) { clearInterval(this.pingInterval); this.pingInterval = null; }
       this.scheduleReconnect();
@@ -143,8 +143,16 @@ export class SocketManager {
 
   private scheduleReconnect() {
     if (this.reconnectTimer) return;
-    const delay = this.reconnectDelay;
+    // Jitter (±30%) sobre el backoff exponencial puro: si el backend se
+    // reinicia con 200+ agentes conectados, un backoff sin aleatoriedad hace
+    // que todos reintenten en la misma oleada sincronizada en cada escalón
+    // (5s, 10s, 20s...). El jitter desincroniza los reintentos sin cambiar el
+    // techo de 5 minutos ni la progresión exponencial de `reconnectDelay`.
+    const base = this.reconnectDelay;
+    const jitterFactor = 0.7 + Math.random() * 0.6; // 0.7x - 1.3x
+    const delay = Math.round(base * jitterFactor);
     this.reconnectDelay = Math.min(this.reconnectDelay * 2, this.maxReconnectDelay);
+    this.onLog('WARN', `Reintentando conexion WSS en ${Math.round(delay / 1000)}s (Exponential Backoff + jitter).`);
     this.reconnectTimer = setTimeout(() => {
       this.reconnectTimer = null;
       this.connect();
