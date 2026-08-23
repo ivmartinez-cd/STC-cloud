@@ -10,16 +10,16 @@ const DEVICE_OFFLINE_THRESHOLD_MINUTES = 30; // mismo criterio que deleteOffline
 
 /**
  * Se queda como `setInterval` a propósito — NO se convierte a un BullMQ repeatable
- * job. La base productiva (`render.yaml`) usa Redis con `maxmemoryPolicy:
- * allkeys-lru`; BullMQ guarda el estado de un repeatable job en claves Redis, y bajo
- * esa política esas claves son evictables — si Redis las desaloja, el job deja de
- * dispararse EN SILENCIO, para siempre, hasta que alguien reinicie la API a mano
- * (nada lo reporta como error). Un `setInterval` no puede fallar así. Además hoy
- * corre un solo `api` service sin réplicas en ambos `docker-compose*.yml`, así que
- * el riesgo de doble-disparo que justificaría convertir a cola no es real en este
- * entorno. Si en el futuro se pasa a multi-réplica, la forma barata de evitar el
- * doble-disparo es un advisory lock de Postgres (`pg_try_advisory_lock`) al
- * principio de cada check, no una cola.
+ * job. NOTA (23/08/2026): el riesgo original citado acá (Redis de producción con
+ * `maxmemoryPolicy: allkeys-lru` en `render.yaml`, evictando en silencio las claves
+ * de un repeatable job) ya NO aplica — producción dejó de correr en Render, y el
+ * Redis self-hosted actual (`docker-compose.prod.yml`) no fija ningún
+ * `maxmemory-policy` explícito (default de Redis, sin eviction). La razón que sigue
+ * vigente es más simple: hoy corre un solo `api` service sin réplicas en ambos
+ * `docker-compose*.yml`, así que el riesgo de doble-disparo que justificaría
+ * convertir a cola no es real en este entorno. Si en el futuro se pasa a
+ * multi-réplica, la forma barata de evitar el doble-disparo es un advisory lock de
+ * Postgres (`pg_try_advisory_lock`) al principio de cada check, no una cola.
  */
 
 /**

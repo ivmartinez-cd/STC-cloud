@@ -321,18 +321,24 @@ pino interno (mismo `LOG_LEVEL`) — pasarle la instancia externa vía
 `loggerInstance` rompe la inferencia de tipos de `FastifyInstance` en las
 funciones `registerXRoutes`. El resto sigue sin tocar: WS con registro de
 sockets **en memoria** (`ws/index.ts:24-25`), `heartbeatMonitor.ts` como
-`setInterval` **a propósito** (ver comentario en el archivo: convertirlo a
-BullMQ repeatable job es riesgoso mientras la Redis de producción use
-`maxmemoryPolicy: allkeys-lru`), y sin métricas Prometheus ni Sentry — todos
-requieren una decisión de arquitectura del usuario, no se tocan sin eso.
-**Decisión (23/08/2026)**: dejarlo como está. Hoy corre un solo `api` service
-sin réplicas en ambos `docker-compose*.yml` — nada obliga hoy a multi-réplica,
-y convertir `heartbeatMonitor` a BullMQ repeatable ahora mismo sólo agregaría
-el riesgo de desaparición silenciosa documentado, sin ningún beneficio real
-todavía. Se retoma el día que haya una razón concreta para correr más de una
-réplica de la API (no antes) — ese día también hay que resolver la política
-de Redis (`allkeys-lru` → algo que no evict-ee claves de BullMQ/pub-sub) antes
-de convertir nada.
+`setInterval` **a propósito** (ver comentario en el archivo), y sin métricas
+Prometheus ni Sentry — todos requieren una decisión de arquitectura del
+usuario, no se tocan sin eso.
+**Nota (23/08/2026, tras la migración a self-hosted)**: el riesgo original de
+`heartbeatMonitor.ts` (Redis de producción con `maxmemoryPolicy: allkeys-lru`
+en `render.yaml`, evictando en silencio las claves de un repeatable job) ya no
+existe — producción dejó Render, y el Redis self-hosted actual
+(`docker-compose.prod.yml`) no fija ningún `maxmemory-policy` (default sin
+eviction). Comentario del archivo corregido para no citar una config que ya
+no aplica.
+**Decisión (23/08/2026)**: dejarlo como está de todos modos. Hoy corre un solo
+`api` service sin réplicas en ambos `docker-compose*.yml` — nada obliga hoy a
+multi-réplica, y convertir `heartbeatMonitor` a BullMQ repeatable ahora mismo
+no aportaría ningún beneficio real todavía (sin el riesgo de eviction de por
+medio, tampoco hay urgencia en evitarlo). Se retoma el día que haya una razón
+concreta para correr más de una réplica de la API — ese día conviene el
+advisory lock de Postgres (`pg_try_advisory_lock`) mencionado en el
+comentario del archivo, más simple que resolver una cola.
 También sigue sin tocar: familias de marcas nuevas
 (Ricoh/Kyocera/Brother/Xerox/Canon/Konica — siguen cayendo a `generic` o con OIDs
 parciales, §3 R8; requiere hardware real para captura/fixtures, no completable

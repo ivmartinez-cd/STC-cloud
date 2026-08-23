@@ -62,15 +62,11 @@ const Terminal: React.FC<TerminalProps> = ({ agentId }) => {
       }
       if (cancelled) return;
 
-      let wsUrl: string;
-      if (window.location.hostname.includes('vercel.app')) {
-        // Vercel doesn't proxy WebSockets. Connect directly to Render backend.
-        wsUrl = `wss://stc-cloud.onrender.com/ws?token=${ticket}`;
-      } else {
-        // Local or same-domain deployment
-        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        wsUrl = `${protocol}//${window.location.host}/ws?token=${ticket}`;
-      }
+      // Self-hosted: portal y API sirven del mismo dominio detrás de nginx —
+      // no hace falta distinguir hosting separado (Vercel no proxeaba WS,
+      // Render era el backend real; eso ya no aplica).
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${protocol}//${window.location.host}/ws?token=${ticket}`;
 
       const socket = new WebSocket(wsUrl);
       wsRef.current = socket;

@@ -260,7 +260,7 @@ if "!GITHUB_TOKEN!"=="" (
     echo [AVISO] Variable GITHUB_TOKEN no configurada. Saltando.
     echo         Para configurar una vez:  setx GITHUB_TOKEN "ghp_xxxx" /M
     echo         Luego abrir nueva ventana de cmd y volver a ejecutar el build.
-    goto :step8
+    goto :api_update
 )
 
 set PS_GH=%TEMP%\stc_gh_%RANDOM%.ps1
@@ -308,68 +308,29 @@ if !GH_EXIT! neq 0 (
 )
 echo       OK: GitHub Release v!APP_VERSION! publicado.
 
-:step8
-:: ── Paso 8: Actualizar variables de entorno en Render ────────────────────────
-echo.
-echo [8/8] Actualizando Render (AGENT_VERSION + AGENT_DOWNLOAD_URL)...
-if "!RENDER_API_KEY!"=="" (
-    echo [AVISO] Variable RENDER_API_KEY no configurada. Saltando.
-    echo         Para configurar:
-    echo           setx RENDER_API_KEY  "rnd_xxxxxxxxxxxx" /M
-    echo           setx RENDER_SERVICE_ID "srv-xxxxxxxxxxxx" /M
-    echo         El service ID se encuentra en la URL del servicio en el dashboard de Render.
-    goto :done
-)
-if "!RENDER_SERVICE_ID!"=="" (
-    echo [AVISO] Variable RENDER_SERVICE_ID no configurada. Saltando.
-    echo         Ejemplo: setx RENDER_SERVICE_ID "srv-xxxxxxxxxxxx" /M
-    goto :done
-)
-
-set DLURL=https://github.com/!GITHUB_REPO!/releases/download/v!APP_VERSION!/stc-update.zip
-set PS_RND=%TEMP%\stc_rnd_%RANDOM%.ps1
-echo param^($ServiceId, $Version, $DownloadUrl, $Hash^) > "!PS_RND!"
-echo $apiKey = $env:RENDER_API_KEY >> "!PS_RND!"
-echo $hdr = @{ Authorization = "Bearer $apiKey"; Accept = 'application/json'; 'Content-Type' = 'application/json' } >> "!PS_RND!"
-echo. >> "!PS_RND!"
-echo $current = Invoke-RestMethod "https://api.render.com/v1/services/$ServiceId/env-vars" -Headers $hdr -ErrorAction Stop >> "!PS_RND!"
-echo $filtered = @^($current ^| ForEach-Object { @{ key = $_.envVar.key; value = $_.envVar.value } } ^| Where-Object { $_.key -ne '' -and $_.key -notin @^('AGENT_VERSION', 'AGENT_DOWNLOAD_URL', 'AGENT_HASH'^) }^) >> "!PS_RND!"
-echo $filtered += @{ key = 'AGENT_VERSION'; value = $Version } >> "!PS_RND!"
-echo $filtered += @{ key = 'AGENT_DOWNLOAD_URL'; value = $DownloadUrl } >> "!PS_RND!"
-echo $filtered += @{ key = 'AGENT_HASH'; value = $Hash } >> "!PS_RND!"
-echo $body = ConvertTo-Json @^($filtered^) -Depth 3 >> "!PS_RND!"
-echo Invoke-RestMethod "https://api.render.com/v1/services/$ServiceId/env-vars" -Method Put -Headers $hdr -Body $body -ContentType 'application/json' -ErrorAction Stop ^| Out-Null >> "!PS_RND!"
-echo Write-Host "  AGENT_VERSION=$Version" >> "!PS_RND!"
-echo Write-Host "  AGENT_DOWNLOAD_URL=$DownloadUrl" >> "!PS_RND!"
-echo Write-Host "  AGENT_HASH=$Hash" >> "!PS_RND!"
-echo. >> "!PS_RND!"
-echo $deployBody = '{}' >> "!PS_RND!"
-echo $deploy = Invoke-RestMethod "https://api.render.com/v1/services/$ServiceId/deploys" -Method Post -Headers $hdr -Body $deployBody -ContentType 'application/json' -ErrorAction Stop >> "!PS_RND!"
-echo Write-Host "  Deploy en Render disparado: id=$($deploy.id) status=$($deploy.status)" >> "!PS_RND!"
-
-powershell -NoProfile -ExecutionPolicy Bypass -File "!PS_RND!" -ServiceId "!RENDER_SERVICE_ID!" -Version "!APP_VERSION!" -DownloadUrl "!DLURL!" -Hash "!UPDATE_HASH!"
-set RND_EXIT=!errorlevel!
-del "!PS_RND!" 2>nul
-if !RND_EXIT! neq 0 (
-    echo [ERROR] Fallo al actualizar Render.
-    pause & exit /b 1
-)
-echo       OK: Render actualizado con el paquete ZIP.
-
 :api_update
-:: ── Paso 8.5: Actualizacion Dinamica por API (Recomendado / Sin redeploys) ───
+:: ── Paso 8: Actualizacion Dinamica por API (self-hosted, sin redeploy) ───────
+:: NOTA (23/08/2026): el paso anterior de este script actualizaba variables de
+:: entorno en Render y disparaba un redeploy ahi -- se elimino por completo,
+:: produccion ya no corre en Render. Este paso (API dinamica) sigue siendo
+:: valido: le pega directo al propio backend self-hosted para actualizar la
+:: version/URL/hash que ven los agentes, sin tocar el deploy del servidor.
 echo.
-echo [8.5/8] Actualizando version en la API dinamica de STC Cloud...
+echo [8/8] Actualizando version en la API dinamica de STC Cloud...
 if "!STC_PORTAL_TOKEN!"=="" (
     echo [AVISO] Variable STC_PORTAL_TOKEN no configurada. Saltando actualizacion por API.
     echo         Para configurarla en su maquina:
     echo           setx STC_PORTAL_TOKEN "tu_jwt_token_del_portal" /M
-    echo         Esto le permite actualizar las versiones al instante sin redespliegues de Render.
     goto :done
 )
-
-set API_URL=https://stc-cloud-api.onrender.com
-if not "!STC_API_URL!"=="" set API_URL=!STC_API_URL!
+set DLURL=https://github.com/!GITHUB_REPO!/releases/download/v!APP_VERSION!/stc-update.zip
+if "!STC_API_URL!"=="" (
+    echo [AVISO] Variable STC_API_URL no configurada. Saltando actualizacion por API.
+    echo         Configurarla apuntando a su dominio propio, ej.:
+    echo           setx STC_API_URL "https://tu-dominio.com" /M
+    goto :done
+)
+set API_URL=!STC_API_URL!
 
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
     "$body = @{ version = '!APP_VERSION!'; url = '!DLURL!'; hash = '!UPDATE_HASH!' } | ConvertTo-Json;" ^
