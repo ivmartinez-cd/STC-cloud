@@ -168,7 +168,7 @@ decisión de negocio, no una obligación de compliance.
   (API-only por ahora), resolución de solapamiento de rangos en runtime
   (sólo warning al guardar).
 
-### Fase 2 — Diferenciación — arrancada: 1 de 7 ítems cerrados
+### Fase 2 — Diferenciación — arrancada: 2 de 7 ítems cerrados
 ✅ **API pública con API keys por cliente + webhooks de integración ERP**
 (23/08/2026): `api_keys` (hash SHA-256 at-rest, nunca el valor en claro;
 gestión desde el portal — `POST/GET/DELETE /clients/:id/api-keys`, admin/
@@ -190,6 +190,47 @@ por ahora — deliberado, otra sesión trabajaba en simultáneo sobre
 `cloud/portal/`), expiración automática de keys, retry con backoff para
 webhooks fallidos, documentación pública tipo OpenAPI/Swagger.
 
+✅ **Mejoras de agente** (23/08/2026), 5 de 6 ítems del roadmap, verificados
+con tests reales salvo el marcado (c):
+- **Rollback de update**: el bundle single-file ahora guarda `.bak` +
+  `.bak.version` ANTES de reemplazar (`UpdateService.ts`, antes reemplazo
+  in-place sin ningún respaldo); `rollbackToPreviousVersion()` restaura. El
+  parche ZIP (`.bat`/robocopy, Windows-only) ahora también hace un backup de
+  `installDir` antes del robocopy destructivo — red de seguridad MANUAL (un
+  admin restaura a mano), no rollback automático (ese flujo corre fuera del
+  proceso Node, sin nadie vivo para decidir revertir después).
+- **Activación offline**: `activate()` reintentaba una sola vez y fallaba
+  (exit 3) si no había red al momento de instalar, dejando el servicio en
+  `SERVICE_DEMAND_START` indefinidamente. Ahora reintenta con backoff
+  (5s/15s/30s/60s) SÓLO ante error de red — una key inválida/revocada sigue
+  fallando de inmediato, sin reintentar en vano.
+- **Dedupe de lecturas idénticas** (`sync/database.ts`,
+  `shouldEnqueueReading`/`recordLastReadingSnapshot`): antes se encolaba
+  TODA lectura de meter/supplies sin comparar contra la anterior (el "72
+  filas/día" de un equipo ocioso, R3). Ahora sólo se manda si cambió algo
+  relevante (contadores/tóner) o pasaron 4h desde el último envío (para no
+  perder la señal de "sigo vivo").
+- **Detección de PJL deshabilitado** (`snmp/pjl.ts`): antes un fallo de PJL
+  se trataba igual que cualquier método sin datos, sin log específico. Ahora
+  cuenta fallos consecutivos por IP y loguea un WARN al llegar a 3
+  (firewall/driver bloqueando el puerto 9100, o firmware con PJL apagado).
+- **"Mantener datos" al desinstalar** (`installer/STC-Monitor.iss`): antes
+  `[UninstallDelete]` borraba `config.enc`/`local.db`/logs siempre, sin
+  excepción. Ahora `InitializeUninstall` pregunta y sólo borra `DataDir` si
+  el usuario no eligió conservarlo. **(c) NO verificado en runtime real** —
+  este entorno no tiene Inno Setup/Windows para compilar y correr el
+  instalador; la sintaxis Pascal sigue la API documentada de Inno Setup 6.x
+  pero no se pudo probar el flujo real de desinstalación.
+- **Log rotation real** (`core/Logger.ts`): antes un solo nivel (`.1` se
+  pisaba en cada corte). Ahora rota en cadena hasta 5 archivos, borrando el
+  más viejo (mismo criterio que logrotate).
+**Lo que NO se hizo**: dedupe de lecturas del loop de discovery (sólo
+meter/supplies — discovery corre cada 10-60 min, dedupear ahí aporta menos);
+detección de PJL deshabilitado no distingue firewall vs firmware apagado,
+sólo loguea "no responde"; rollback automático (auto-detección de "la nueva
+versión crasheó, revertir sola") — sólo restauración manual/on-demand.
+136/136 tests de agente verdes (112 previos + 24 nuevos).
+
 Ítems de Fase 2 que siguen sin tocar: remote EWS por túnel sobre el WSS
 existente, backend multi-réplica (WS sigue con registro de sockets **en
 memoria**, `ws/index.ts:24-25` — no resuelto; `heartbeatMonitor.ts` sigue como
@@ -198,8 +239,7 @@ repeatable job es riesgoso mientras la Redis de producción use
 `maxmemoryPolicy: allkeys-lru`), agregados continuos, familias de marcas nuevas
 (Ricoh/Kyocera/Brother/Xerox/Canon/Konica — siguen cayendo a `generic` o con OIDs
 parciales, §3 R8; requiere hardware real para captura/fixtures, no completable
-sin acceso a equipos reales), mejoras de agente (rollback de update, activación
-offline, "mantener datos" al desinstalar), y documentación (comparativa v2.0,
+sin acceso a equipos reales), y documentación (comparativa v2.0,
 inventario de datos, auditoría IT).
 
 ### Otros puntos de §3 (riesgos) que siguen abiertos y no forman parte de ningún ítem de arriba
@@ -407,13 +447,13 @@ Ver §1. Especialmente `data_collection_inventory.md` (privacidad) y los HTML de
 - ✅ **Resolución de hostname (point lookup) + credenciales SNMP por rango**: `ip_ranges` acepta un tercer tipo de entrada `{hostname}` resuelto por el agente en cada ciclo (el cloud no tiene visibilidad de la DNS interna del cliente); cada entrada admite `credential_ids?` para restringir qué credenciales se prueban en ESE rango durante discovery, con fail-open ante ids colgantes y warnings no bloqueantes (rangos superpuestos con credenciales distintas, borrado de una credencial referenciada). ⬜ UI de asignación de `credential_ids` en el portal queda para después (API-only); restricción por rango en meter/supplies no se hizo (`known_devices` no tiene vínculo a rango, y no aporta valor real ahí).
 - ✅ Identidad `(client_id, serial)` + MAC secundaria + merge de duplicados; decommission/mover/editar dispositivo.
 
-### Fase 2 — Diferenciación (2–3 meses) — arrancada: 1 de 7 ítems cerrados
+### Fase 2 — Diferenciación (2–3 meses) — arrancada: 2 de 7 ítems cerrados
 - ✅ (23/08/2026) API pública con API keys por cliente + webhooks (lecturas, alertas, cierres) → integración ERP. Falta UI de portal (sólo REST por ahora) y expiración/retry automáticos — ver "Estado de implementación".
 - Remote EWS por túnel sobre el WSS existente (allowlist, TTL, audit), consola con paridad IMIL (listar dispositivos, MIB walk remoto, deshabilitar monitoreo por equipo, reenviar lecturas, descubrir IP puntual).
 - Backend multi‑réplica: pub/sub Redis para WS, jobs BullMQ repetibles (heartbeat monitor), métricas Prometheus, Sentry, logs estructurados sin `console.log`.
 - Agregados continuos (diario/mensual por equipo) y dashboard sobre ellos.
 - Familias nuevas: Ricoh WIM, Kyocera CCX, Brother BMS, Xerox WS, Canon, Konica; fixtures reales por modelo; matriz de cobertura de scopes visible en el portal (columna Driver + scopes).
-- Agente: rollback de update, activación offline, "mantener datos" al desinstalar, dedupe de lecturas idénticas (enviar si cambia o cada N horas), detección de PJL deshabilitado, log rotation real.
+- ✅ (23/08/2026) Agente: rollback de update (single-file; el parche ZIP sólo backup manual), activación offline (retry con backoff), dedupe de lecturas idénticas (4h), detección de PJL deshabilitado, log rotation real. "Mantener datos" al desinstalar escrito pero NO verificado (sin Windows/Inno Setup en este entorno) — ver "Estado de implementación".
 - Documentación: reescribir comparativa v2.0, inventario de datos (privacidad), auditoría IT; política de retención y DPA publicadas.
 
 ---

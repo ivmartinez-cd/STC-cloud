@@ -77,10 +77,35 @@ Filename: "{app}\nssm.exe";  Parameters: "remove {#ServiceName} confirm";  Flags
 Type: filesandordirs; Name: "{app}\node_modules"
 Type: files; Name: "{app}\*"
 Type: filesandordirs; Name: "{app}"
-Type: files; Name: "{#DataDir}\*"
-Type: filesandordirs; Name: "{#DataDir}"
+; DataDir (config.enc, local.db, logs) SOLO se borra si el usuario no eligio
+; "conservar datos" en el prompt de InitializeUninstall (Check: NotKeepingData,
+; ver [Code]) -- antes se borraba siempre sin excepcion.
+Type: files; Name: "{#DataDir}\*"; Check: NotKeepingData
+Type: filesandordirs; Name: "{#DataDir}"; Check: NotKeepingData
 
 [Code]
+
+// "Mantener datos al desinstalar" -- antes [UninstallDelete] borraba
+// config.enc/local.db/logs siempre, sin excepcion. KeepUserData se decide UNA
+// vez al arrancar la desinstalacion (InitializeUninstall) y NotKeepingData
+// (usada como Check: en [UninstallDelete]) expone el resultado invertido.
+var
+  KeepUserData: Boolean;
+
+function InitializeUninstall: Boolean;
+begin
+  Result := True;
+  KeepUserData := (MsgBox(
+    'Conservar los datos del agente (configuracion cifrada, cola local de lecturas, logs)?' + #13#10#13#10 +
+    'Elegi "Si" si vas a reinstalar y queres mantener la activacion/historial existente.' + #13#10 +
+    'Elegi "No" para una desinstalacion completa, sin dejar rastro.',
+    mbConfirmation, MB_YESNO) = IDYES);
+end;
+
+function NotKeepingData: Boolean;
+begin
+  Result := not KeepUserData;
+end;
 
 // Inicializacion: verificar instalacion previa
 function InitializeSetup: Boolean;

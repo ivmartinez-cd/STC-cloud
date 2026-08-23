@@ -3,7 +3,7 @@ import { materializeRange, resolveHostname, isPrivateOrReservedIp } from './Netw
 import { isBusinessHours } from './BusinessHours';
 import { captureDevice, type CaptureScope, type CaptureHint } from '../capture';
 import type { DeviceReading } from '../capture/reading';
-import { enqueueReading, pendingCount, isBackpressureActive, upsertKnownDevice, isRegistered, getKnownDevices, getKnownDeviceInfo, type KnownDevice } from '../sync/database';
+import { enqueueReading, pendingCount, isBackpressureActive, upsertKnownDevice, isRegistered, getKnownDevices, getKnownDeviceInfo, shouldEnqueueReading, recordLastReadingSnapshot, type KnownDevice } from '../sync/database';
 import type { AgentConfig, IpHost } from './config';
 import type { SnmpCredential } from '../capture/transport/snmp';
 
@@ -26,6 +26,15 @@ const CONCURRENCY_LIMIT = 10;
  * confía en que la config recibida ya venga acotada.
  */
 const MAX_TOTAL_SCAN_SIZE = 2000;
+/**
+ * Dedupe de lecturas idénticas en meter/supplies (gap analysis: un equipo
+ * ocioso mandaba 72 filas/día sin comparar contra la anterior). Se manda si
+ * cambió algo relevante (contadores/tóner) o ya pasaron estas horas desde el
+ * último envío — para no perder la señal de "sigo vivo" indefinidamente.
+ * Sólo aplica acá (meter/supplies, loop frecuente); discovery no se dedupea
+ * (corre cada 10-60 min, y siempre puede estar registrando un equipo nuevo).
+ */
+const DEDUPE_WINDOW_HOURS = 4;
 
 function hintFrom(d: KnownDevice | null): CaptureHint | undefined {
   if (!d) return undefined;
@@ -222,9 +231,14 @@ export class ScanService {
               || reading.toner_magenta != null || reading.toner_yellow != null || !!reading.supplies_details;
             if (!hasData) continue;
             if (!reading.serial && d.serial) reading.serial = d.serial;
-            enqueueReading(reading);
             upsertKnownDevice(d.ip, { pollMethod: reading.poll_method, driver: out.driver.profile?.id ?? out.driver.family.id, snmpCredId: out.credentialId });
-            log('INFO', `[${label}] [${d.ip}] ${summarize(reading)} method=${reading.poll_method}`);
+            if (shouldEnqueueReading(d.ip, reading, DEDUPE_WINDOW_HOURS)) {
+              enqueueReading(reading);
+              recordLastReadingSnapshot(d.ip, reading);
+              log('INFO', `[${label}] [${d.ip}] ${summarize(reading)} method=${reading.poll_method}`);
+            } else {
+              log('INFO', `[${label}] [${d.ip}] sin cambios — no se encola (dedupe)`);
+            }
           } catch { /* continue */ }
         }
       });

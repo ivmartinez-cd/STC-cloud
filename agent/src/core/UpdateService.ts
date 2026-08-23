@@ -143,8 +143,17 @@ export class UpdateService {
       }
 
       try {
+        // Backup ANTES de reemplazar — antes no se conservaba ninguna versión
+        // previa (reemplazo in-place puro), así que un binario nuevo roto no
+        // tenía forma de revertirse salvo reinstalar a mano. `.bak` + un
+        // archivo de versión al lado para que `rollbackToPreviousVersion()`
+        // sepa a qué está volviendo.
+        if (fs.existsSync(bundlePath)) {
+          fs.copyFileSync(bundlePath, bundlePath + '.bak');
+          fs.writeFileSync(bundlePath + '.bak.version', VERSION, 'utf8');
+        }
         fs.renameSync(tempPath, bundlePath);
-        log('INFO', `Actualizacion aplicada (v${data.version}). Reiniciando para aplicar cambios...`);
+        log('INFO', `Actualizacion aplicada (v${data.version}). Backup de v${VERSION} conservado. Reiniciando para aplicar cambios...`);
         process.exit(0);
       } catch (e: unknown) {
         const errMsg = e instanceof Error ? e.message : String(e);
@@ -184,6 +193,41 @@ export class UpdateService {
     }
   }
 
+  /**
+   * Restaura el bundle single-file al `.bak` guardado en el último update
+   * (ver `checkForUpdate` — se guarda ANTES de reemplazar). No reinicia el
+   * proceso — el caller decide cuándo (`process.exit(0)` para que el
+   * supervisor de servicio lo relance con el binario restaurado).
+   * Sólo cubre el bundle single-file (SEA); el parche ZIP vía `.bat`/robocopy
+   * es Windows-only y no se puede revertir automáticamente desde acá — ver
+   * comentario en `applyZipUpdate` sobre el backup por robocopy previo al
+   * reemplazo, pensado como red de seguridad manual, no rollback automático.
+   */
+  async rollbackToPreviousVersion(): Promise<boolean> {
+    const bundlePath = this.getBundlePath();
+    if (!bundlePath) {
+      log('WARN', 'Rollback: no se pudo determinar la ruta del bundle (¿corriendo en dev?).');
+      return false;
+    }
+    const backupPath = bundlePath + '.bak';
+    if (!fs.existsSync(backupPath)) {
+      log('WARN', 'Rollback: no hay backup disponible (.bak no existe).');
+      return false;
+    }
+    try {
+      const backupVersion = fs.existsSync(backupPath + '.version')
+        ? fs.readFileSync(backupPath + '.version', 'utf8').trim()
+        : 'desconocida';
+      fs.copyFileSync(backupPath, bundlePath);
+      log('INFO', `Rollback aplicado: restaurada la versión v${backupVersion} desde backup.`);
+      return true;
+    } catch (e: unknown) {
+      const errMsg = e instanceof Error ? e.message : String(e);
+      log('ERROR', `Rollback falló: ${errMsg}`);
+      return false;
+    }
+  }
+
   private getBundlePath(): string | null {
     const arg = process.argv[1];
     // En dev (tsx), argv[1] apunta a main.ts → skip update en ese caso
@@ -220,6 +264,14 @@ export class UpdateService {
       );
       fs.unlinkSync(zipFilePath);
 
+      // Backup de la instalación ANTES del robocopy destructivo — antes no
+      // se conservaba ninguna copia previa. Red de seguridad MANUAL (un
+      // admin puede restaurar `${installDir}_backup` a mano si el parche
+      // rompe algo) — no hay rollback automático acá, a diferencia del
+      // bundle single-file (`rollbackToPreviousVersion`): este flujo corre
+      // en un `.bat` fire-and-forget fuera del proceso Node, sin nadie
+      // vivo para decidir "esto falló, revertí" después del robocopy.
+      const backupDir = `${installDir}_backup`;
       const bat = [
         '@echo off',
         'ping -n 4 127.0.0.1 > nul',
@@ -227,6 +279,8 @@ export class UpdateService {
         'ping -n 4 127.0.0.1 > nul',
         'taskkill /im STC.Monitor.UI.exe /f > nul 2>&1',
         'taskkill /im stc-node.exe /f > nul 2>&1',
+        `rd /s /q "${backupDir}" 2>nul`,
+        `robocopy "${installDir}" "${backupDir}" /E /IS /IT /IM /NFL /NDL /NJH /NJS /R:3 /W:1 > nul`,
         `robocopy "${stagingDir}" "${installDir}" /E /IS /IT /IM /NFL /NDL /NJH /NJS /R:3 /W:1 > nul`,
         `rd /s /q "${stagingDir}" 2>nul`,
         'sc start STCCloudMonitor > nul 2>&1',

@@ -113,6 +113,80 @@ export async function setProxy(): Promise<void> {
   }
 }
 
+export function isNetworkError(err: Error & { code?: string }): boolean {
+  const errMsg = err.message ?? '';
+  return (
+    err.code === 'ECONNREFUSED' || err.code === 'ENOTFOUND' || err.code === 'ETIMEDOUT' ||
+    err.name === 'TimeoutError' || err.name === 'AbortError' ||
+    errMsg.includes('fetch failed')
+  );
+}
+
+/** Un solo intento — separado de `activate()` para poder reintentarlo con backoff sin duplicar la lógica de clasificación de error. */
+export async function attemptActivation(
+  serverUrl: string,
+  key: string
+): Promise<{ agentId: string; token: string; refresh_token: string }> {
+  const res = await fetch(`${serverUrl}/api/v1/agents/activate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ key, hardwareId: getHardwareId() }),
+    signal: AbortSignal.timeout(65_000)
+  });
+
+  if (!res.ok) {
+    let errorMsg = `HTTP ${res.status}`;
+    try {
+      const err = await res.json() as { error?: string; message?: string };
+      errorMsg = err.error || err.message || errorMsg;
+    } catch { /* ignore parse error */ }
+    // exit(2) = clave invalida/no autorizada; exit(1) = error de servidor
+    const invalidKey = res.status === 400 || res.status === 401 || res.status === 403;
+    throw Object.assign(new Error(errorMsg), { _stcExitCode: invalidKey ? 2 : 1 });
+  }
+
+  return res.json() as Promise<{ agentId: string; token: string; refresh_token: string }>;
+}
+
+// Activación offline: antes, sin red en el momento de instalar, `activate()`
+// fallaba en el primer intento (exit(3)) y el instalador dejaba el servicio
+// en SERVICE_DEMAND_START indefinidamente — nadie reintentaba. Ahora
+// reintenta con backoff SÓLO ante error de red (una key inválida/revocada no
+// se reintenta, fallaría igual y podría activar rate-limiting del lado
+// servidor) — cubre el caso común de "el instalador corrió antes de que DHCP/
+// DNS terminaran de asentarse" sin necesitar que un humano vuelva a correr
+// `--activate` a mano.
+const ACTIVATION_RETRY_DELAYS_MS = [5_000, 15_000, 30_000, 60_000];
+
+/**
+ * Corre `attemptFn` hasta que resuelva, o se agoten los reintentos. Extraída
+ * de `activate()` para poder testearla sin `process.exit` real ni delays de
+ * verdad (inyectando `sleepFn`/`delays` cortos en tests).
+ */
+export async function activateWithRetry<T>(
+  attemptFn: () => Promise<T>,
+  delays: number[] = ACTIVATION_RETRY_DELAYS_MS,
+  sleepFn: (ms: number) => Promise<void> = (ms) => new Promise((r) => setTimeout(r, ms)),
+  onRetry?: (errMsg: string, delayMs: number) => void
+): Promise<T> {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await attemptFn();
+    } catch (e: unknown) {
+      const err = e as Error & { _stcExitCode?: number; code?: string };
+      // Clave invalida/revocada u otro error de servidor ya identificado —
+      // no tiene sentido reintentar, falla siempre igual.
+      if (err._stcExitCode) throw err;
+
+      const delay = isNetworkError(err) ? delays[attempt] : undefined;
+      if (delay === undefined) throw err; // no es error de red, o se agotaron los reintentos
+
+      onRetry?.(err.message ?? String(e), delay);
+      await sleepFn(delay);
+    }
+  }
+}
+
 export async function activate(): Promise<void> {
   const args = process.argv.slice(2);
   const keyIdx = args.indexOf('--activate');
@@ -134,26 +208,14 @@ export async function activate(): Promise<void> {
   if (serverUrl.endsWith('/')) serverUrl = serverUrl.slice(0, -1);
 
   console.log(`Activando en ${serverUrl}...`);
+
   try {
-    const res = await fetch(`${serverUrl}/api/v1/agents/activate`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ key, hardwareId: getHardwareId() }),
-      signal: AbortSignal.timeout(65_000)
-    });
-
-    if (!res.ok) {
-      let errorMsg = `HTTP ${res.status}`;
-      try {
-        const err = await res.json() as { error?: string; message?: string };
-        errorMsg = err.error || err.message || errorMsg;
-      } catch { /* ignore parse error */ }
-      // exit(2) = clave invalida/no autorizada; exit(1) = error de servidor
-      const invalidKey = res.status === 400 || res.status === 401 || res.status === 403;
-      throw Object.assign(new Error(errorMsg), { _stcExitCode: invalidKey ? 2 : 1 });
-    }
-
-    const data = await res.json() as { agentId: string; token: string; refresh_token: string };
+    const data = await activateWithRetry(
+      () => attemptActivation(serverUrl, key),
+      ACTIVATION_RETRY_DELAYS_MS,
+      undefined,
+      (errMsg, delayMs) => console.error(`Error de red (${errMsg}). Reintentando en ${delayMs / 1000}s...`)
+    );
 
     await ConfigManager.save({
       serverUrl,
@@ -172,15 +234,8 @@ export async function activate(): Promise<void> {
     const err = e as Error & { _stcExitCode?: number; code?: string };
     const errMsg = err.message ?? String(e);
     console.error(`Error de activacion: ${errMsg}`);
-    // Propagamos exit code especifico si viene del bloque de respuesta HTTP
-    if (err._stcExitCode) {
-      process.exit(err._stcExitCode);
-    }
-    // exit(3) = error de red/conectividad; exit(1) = error generico
-    const networkError =
-      err.code === 'ECONNREFUSED' || err.code === 'ENOTFOUND' || err.code === 'ETIMEDOUT' ||
-      err.name === 'TimeoutError' || err.name === 'AbortError' ||
-      errMsg.includes('fetch failed');
-    process.exit(networkError ? 3 : 1);
+    if (err._stcExitCode) process.exit(err._stcExitCode);
+    // exit(3) = error de red/conectividad (reintentos agotados); exit(1) = error generico
+    process.exit(isNetworkError(err) ? 3 : 1);
   }
 }

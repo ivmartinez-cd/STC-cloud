@@ -122,9 +122,57 @@ export function openQueue(): void {
     // última vez", para que la negociación de SnmpClient la pruebe primero
     // en vez de recorrer toda la lista en cada ciclo.
     "ALTER TABLE known_devices  ADD COLUMN snmp_cred_id                TEXT DEFAULT NULL",
+    // Dedupe de lecturas idénticas (meter/supplies): snapshot de los campos
+    // comparables de la última lectura ENCOLADA para este dispositivo + cuándo,
+    // para no encolar de nuevo si no cambió nada y todavía no pasó la ventana
+    // de "igual manda cada N horas" (ver shouldEnqueueReading/METER_TASK abajo).
+    "ALTER TABLE known_devices  ADD COLUMN last_reading_snapshot       TEXT DEFAULT NULL",
+    "ALTER TABLE known_devices  ADD COLUMN last_reading_sent_at        TEXT DEFAULT NULL",
   ]) {
     try { db.exec(stmt); } catch { /* columna ya existe */ }
   }
+}
+
+/** Subconjunto de `DeviceReading` relevante para decidir si "cambió" — ignora metadata (firmware, hostname, etc.) que no importa para dedupe. */
+function readingSnapshotKey(r: DeviceReading): string {
+  return JSON.stringify({
+    total_pages: r.total_pages, mono_pages: r.mono_pages, color_pages: r.color_pages,
+    toner_black: r.toner_black ?? null, toner_cyan: r.toner_cyan ?? null,
+    toner_magenta: r.toner_magenta ?? null, toner_yellow: r.toner_yellow ?? null,
+  });
+}
+
+/**
+ * Dedupe de lecturas idénticas (gap analysis: un equipo ocioso generaba 72
+ * filas/día sin comparar contra la anterior). Se manda si: no hay snapshot
+ * previo (primera lectura de este equipo), cambió algo relevante, o ya pasó
+ * `dedupeWindowHours` desde la última vez que SÍ se mandó (para no perder la
+ * señal de "sigo vivo" indefinidamente aunque nunca cambie nada).
+ */
+export function shouldEnqueueReading(ip: string, r: DeviceReading, dedupeWindowHours: number): boolean {
+  const row = db.prepare('SELECT last_reading_snapshot, last_reading_sent_at FROM known_devices WHERE ip = ?').get(ip) as
+    { last_reading_snapshot: string | null; last_reading_sent_at: string | null } | undefined;
+  if (!row || !row.last_reading_snapshot || !row.last_reading_sent_at) return true;
+
+  const changed = row.last_reading_snapshot !== readingSnapshotKey(r);
+  if (changed) return true;
+
+  // `datetime('now')` de SQLite devuelve "YYYY-MM-DD HH:MM:SS" en UTC sin
+  // sufijo — se normaliza a ISO 8601 estricto (espacio→'T' + 'Z') antes de
+  // parsear, el formato con espacio no es parseable de forma confiable en
+  // todos los motores JS.
+  const isoUtc = row.last_reading_sent_at.replace(' ', 'T') + 'Z';
+  const elapsedMs = Date.now() - new Date(isoUtc).getTime();
+  return elapsedMs >= dedupeWindowHours * 60 * 60 * 1000;
+}
+
+/** Se llama sólo cuando la lectura SÍ se encoló — actualiza el snapshot de comparación para la próxima vez. */
+export function recordLastReadingSnapshot(ip: string, r: DeviceReading): void {
+  db.prepare(`
+    UPDATE known_devices
+    SET last_reading_snapshot = ?, last_reading_sent_at = datetime('now')
+    WHERE ip = ?
+  `).run(readingSnapshotKey(r), ip);
 }
 
 export function enqueueReading(r: DeviceReading): void {
