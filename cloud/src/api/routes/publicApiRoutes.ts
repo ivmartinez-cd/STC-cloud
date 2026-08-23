@@ -31,7 +31,13 @@ function apiKeyRateLimitKey(request: FastifyRequest): string {
  */
 export function registerPublicApiRoutes(fastify: FastifyInstance, db: Knex, apiKeyAuth: AuthHook) {
   const ctrl = createPublicApiController(db);
-  const rateLimit = { max: 60, timeWindow: "1 minute", keyGenerator: apiKeyRateLimitKey };
+  // `hook: 'preHandler'` imprescindible: @fastify/rate-limit por default
+  // engancha en `onRequest`, que corre ANTES que `preHandler: apiKeyAuth` —
+  // sin esto `apiKeyClient` todavía no existe cuando corre
+  // `apiKeyRateLimitKey`, y el rate-limit cae siempre al fallback por IP (dos
+  // API keys distintas desde la misma IP comparten balde). Confirmado en
+  // runtime con el mismo bug real en agentRoutes.ts (ver ahí el detalle).
+  const rateLimit = { max: 60, timeWindow: "1 minute", hook: "preHandler" as const, keyGenerator: apiKeyRateLimitKey };
 
   fastify.get("/api/v1/public/devices", {
     preHandler: apiKeyAuth,

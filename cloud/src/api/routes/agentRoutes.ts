@@ -3,6 +3,28 @@ import Redis from "ioredis";
 import { AgentService } from "../../services/agentService";
 import { createAgentController } from "../controllers/agentController";
 import type { AuthHook } from "../middlewares/authMiddleware";
+import { getClientIp } from "../utils/ip";
+
+/**
+ * Rate-limit por agente, no por IP compartida — mismo criterio que
+ * `apiKeyRateLimitKey` de la API pública. Sin esto, varios agentes del mismo
+ * cliente detrás de un NAT corporativo compartido compiten por el mismo cupo
+ * de 100/min global que el resto del tráfico de esa IP (portal, login, otros
+ * agentes).
+ */
+function agentRateLimitKey(request: FastifyRequest): string {
+  const agentId = (request.user as { agentId?: string } | undefined)?.agentId;
+  return agentId ? `agent:${agentId}` : getClientIp(request);
+}
+
+// `hook: 'preHandler'` es imprescindible: @fastify/rate-limit por default
+// engancha en `onRequest`, que corre ANTES que el `preHandler: agentAuth` de
+// la ruta — sin esto, `request.user` todavía no existe cuando corre
+// `agentRateLimitKey`, y el rate-limit cae siempre al fallback por IP
+// (confirmado en runtime: dos agentes distintos desde la misma IP compartían
+// el mismo balde). Con `preHandler`, el rate-limit se engancha DESPUÉS del
+// `preHandler` ya declarado en la ruta (agentAuth), en el mismo array.
+const agentRateLimit = { max: 20, timeWindow: "1 minute", hook: "preHandler" as const, keyGenerator: agentRateLimitKey };
 
 const syncSchema = {
   body: {
@@ -79,12 +101,14 @@ export function registerAgentRoutes(
 
   fastify.post("/api/v1/agents/:id/heartbeat", {
     preHandler: agentAuth,
+    config: { rateLimit: agentRateLimit },
     handler: ctrl.heartbeat,
   });
 
   fastify.post("/api/v1/devices/sync", {
     preHandler: agentAuth,
     schema: syncSchema,
+    config: { rateLimit: agentRateLimit },
     preValidation: async (_request: FastifyRequest) => {
       // Hook de validación — no-op en producción (logs ruidosos eliminados)
     },
