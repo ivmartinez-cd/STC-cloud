@@ -57,18 +57,29 @@ if !errorlevel! neq 0 (
 )
 set APP_VERSION=!NEW_VERSION!
 
-:: Actualizar ambos archivos via PS1 temporal (evita problemas de escaping con comillas)
+:: Actualizar los 3 archivos via PS1 temporal (evita problemas de escaping con comillas).
+:: NOTA (23/08/2026): antes apuntaba a agent\src\core\main.ts buscando el literal
+:: '1.0.0' — ese literal se movio a version.ts en la extraccion de Fase 0 y el
+:: -replace de PowerShell no falla si no encuentra el patron, asi que el .iss se
+:: actualizaba bien pero version.ts quedaba desincronizado EN SILENCIO. Se corrige
+:: el target y se suma el .csproj del Monitor UI, que nunca estuvo en este mecanismo.
 set PS_VER=%TEMP%\stc_ver_%RANDOM%.ps1
-echo param^($OldV, $NewV, $IssPath, $MainPath^) > "!PS_VER!"
+echo param^($OldV, $NewV, $IssPath, $VersionPath, $CsprojPath^) > "!PS_VER!"
 echo $dq = [char]34 >> "!PS_VER!"
 echo $sq = [char]39 >> "!PS_VER!"
 echo $issOld = $dq + $OldV + $dq >> "!PS_VER!"
 echo $issNew = $dq + $NewV + $dq >> "!PS_VER!"
-echo $mainOld = $sq + $OldV + $sq >> "!PS_VER!"
-echo $mainNew = $sq + $NewV + $sq >> "!PS_VER!"
-echo (Get-Content $IssPath) -replace [regex]::Escape^($issOld^), $issNew ^| Set-Content $IssPath -Encoding UTF8 >> "!PS_VER!"
-echo (Get-Content $MainPath) -replace [regex]::Escape^($mainOld^), $mainNew ^| Set-Content $MainPath -Encoding UTF8 >> "!PS_VER!"
-powershell -NoProfile -ExecutionPolicy Bypass -File "!PS_VER!" -OldV "!OLD_VERSION!" -NewV "!APP_VERSION!" -IssPath "!SCRIPT_DIR!STC-Monitor.iss" -MainPath "!AGENT_DIR!\src\core\main.ts"
+echo $verOld = $sq + $OldV + $sq >> "!PS_VER!"
+echo $verNew = $sq + $NewV + $sq >> "!PS_VER!"
+echo $csprojVerOld = '^<Version^>' + $OldV + '^</Version^>' >> "!PS_VER!"
+echo $csprojVerNew = '^<Version^>' + $NewV + '^</Version^>' >> "!PS_VER!"
+echo $csprojFileVerOld = '^<FileVersion^>' + $OldV + '.0^</FileVersion^>' >> "!PS_VER!"
+echo $csprojFileVerNew = '^<FileVersion^>' + $NewV + '.0^</FileVersion^>' >> "!PS_VER!"
+echo (Get-Content -Encoding UTF8 $IssPath) -replace [regex]::Escape^($issOld^), $issNew ^| Set-Content $IssPath -Encoding UTF8 >> "!PS_VER!"
+echo (Get-Content -Encoding UTF8 $VersionPath) -replace [regex]::Escape^($verOld^), $verNew ^| Set-Content $VersionPath -Encoding UTF8 >> "!PS_VER!"
+echo (Get-Content -Encoding UTF8 $CsprojPath) -replace [regex]::Escape^($csprojVerOld^), $csprojVerNew ^| Set-Content $CsprojPath -Encoding UTF8 >> "!PS_VER!"
+echo (Get-Content -Encoding UTF8 $CsprojPath) -replace [regex]::Escape^($csprojFileVerOld^), $csprojFileVerNew ^| Set-Content $CsprojPath -Encoding UTF8 >> "!PS_VER!"
+powershell -NoProfile -ExecutionPolicy Bypass -File "!PS_VER!" -OldV "!OLD_VERSION!" -NewV "!APP_VERSION!" -IssPath "!SCRIPT_DIR!STC-Monitor.iss" -VersionPath "!AGENT_DIR!\src\core\version.ts" -CsprojPath "!UI_DIR!\STC.Monitor.UI.csproj"
 set VER_EXIT=!errorlevel!
 del "!PS_VER!" 2>nul
 if !VER_EXIT! neq 0 (
