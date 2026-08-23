@@ -124,7 +124,11 @@ export function createClientController(db: Knex) {
         .leftJoin("agents as a", "a.client_id", "clients.id")
         .leftJoin("devices as d", "d.client_id", "clients.id")
         .groupBy("clients.id")
-        .orderBy("clients.name");
+        .orderBy("clients.name")
+        // Antes sin límite (auditoría de capacidad, 200+ clientes) — techo de
+        // seguridad, no paginación real todavía. Ver mismo comentario en
+        // portalAgentController.listAgents.
+        .limit(2000);
     },
 
     getClient: async (request: FastifyRequest) => {

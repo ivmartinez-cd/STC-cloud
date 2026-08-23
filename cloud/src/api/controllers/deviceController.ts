@@ -39,7 +39,12 @@ export function createDeviceController(db: Knex) {
           "agents.last_seen as agent_last_seen",
           "clients.name as client_name"
         )
-        .orderBy("clients.name");
+        .orderBy("clients.name")
+        // Sin ruta activa en el portal hoy (Devices.tsx no está montada en
+        // App.tsx), pero el endpoint sigue vivo — techo de seguridad igual
+        // que listAgents/listClients, más alto acá porque dispositivos es la
+        // tabla de mayor volumen (200 clientes × decenas c/u).
+        .limit(5000);
     },
 
     getDevice: async (request: FastifyRequest, reply: FastifyReply) => {

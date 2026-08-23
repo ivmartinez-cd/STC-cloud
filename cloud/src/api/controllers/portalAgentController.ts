@@ -95,7 +95,13 @@ export function createPortalAgentController(
           "agents.remote_ews_enabled",
           "clients.name as client_name"
         )
-        .orderBy("agents.created_at", "desc");
+        .orderBy("agents.created_at", "desc")
+        // Antes sin límite — confirmado en vivo con 330 filas devueltas de
+        // una (auditoría de capacidad, 200+ clientes). No es paginación real
+        // todavía (misma forma de respuesta, sin offset) — sólo un techo de
+        // seguridad; 2000 cubre con margen la escala objetivo (200 clientes
+        // × algunos agentes cada uno).
+        .limit(2000);
     },
 
     getAgent: async (request: FastifyRequest, reply: FastifyReply) => {
