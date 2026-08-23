@@ -310,6 +310,14 @@ sockets **en memoria** (`ws/index.ts:24-25`), `heartbeatMonitor.ts` como
 BullMQ repeatable job es riesgoso mientras la Redis de producción use
 `maxmemoryPolicy: allkeys-lru`), y sin métricas Prometheus ni Sentry — todos
 requieren una decisión de arquitectura del usuario, no se tocan sin eso.
+**Decisión (23/08/2026)**: dejarlo como está. Hoy corre un solo `api` service
+sin réplicas en ambos `docker-compose*.yml` — nada obliga hoy a multi-réplica,
+y convertir `heartbeatMonitor` a BullMQ repeatable ahora mismo sólo agregaría
+el riesgo de desaparición silenciosa documentado, sin ningún beneficio real
+todavía. Se retoma el día que haya una razón concreta para correr más de una
+réplica de la API (no antes) — ese día también hay que resolver la política
+de Redis (`allkeys-lru` → algo que no evict-ee claves de BullMQ/pub-sub) antes
+de convertir nada.
 También sigue sin tocar: familias de marcas nuevas
 (Ricoh/Kyocera/Brother/Xerox/Canon/Konica — siguen cayendo a `generic` o con OIDs
 parciales, §3 R8; requiere hardware real para captura/fixtures, no completable
@@ -332,14 +340,26 @@ inventario de datos y auditoría IT ya reescritos — falta sólo el DPA
   registro de sockets en memoria (multi-réplica) sigue en Fase 2; el
   cross-origin Vercel/Render de raíz sigue sin resolverse (fuera de alcance,
   ver plan de esta pasada).
-- **R5**: `UpdateService.ts` sigue omitiendo la firma si `UPDATE_PUBLIC_KEY_HEX`
-  es el placeholder (`updateKey.ts` nunca corrió la generación real de claves) —
-  no tocado. ✅ Lo que sí se cerró esta pasada (23/08/2026): rollback a la
-  versión anterior si la actualización falla, verificado contra Windows real
-  — ver "Estado de implementación", ítem "Mejoras de agente".
-- **R6**: versión unificada en agente/cloud (Fase 0, hecho), pero **no** entre
-  esos dos y el instalador Inno Setup / el proyecto C# del Monitor UI — sigue
-  siendo 4 ecosistemas de versión distintos.
+- ✅ **R5 (23/08/2026)**: cerrado. Se corrió `installer/gen-keys.js` — clave
+  real generada, `updateKey.ts` ya no tiene el placeholder. La privada
+  (`installer/signing.key`) queda fuera del repo, no recuperable si se pierde
+  — resguardarla es responsabilidad operativa, no de código. De acá en más
+  `build-installer.bat` firma cada release (bundle.js + stc-update.zip) con
+  `sign-bundle.js` antes de publicarlo; sin ese paso los agentes rechazan la
+  actualización. También cerrado esta pasada: rollback a la versión anterior
+  si la actualización falla, verificado contra Windows real — ver "Estado de
+  implementación", ítem "Mejoras de agente".
+- ✅ **R6 (23/08/2026)**: cerrado. `build-installer.bat` tenía ya un mecanismo
+  de sync de versión, pero apuntaba a `agent/src/core/main.ts` buscando un
+  literal que se había movido a `version.ts` en Fase 0 — el `-replace` de
+  PowerShell no falla si no encuentra el patrón, así que `version.ts` quedaba
+  desincronizado **en silencio** en cada build desde entonces (hallazgo, no
+  sólo fix). Corregido el target y sumado el `.csproj` del Monitor UI
+  (`<Version>`/`<FileVersion>`), que nunca había estado cubierto. De paso se
+  corrigió un bug de encoding que este cambio hizo evidente (`Get-Content`
+  sin `-Encoding UTF8` corrompía acentos). Validado corriendo el bloque real
+  contra `powershell.exe` real vía interop WSL2, con copias descartables —
+  no se tocó ningún archivo de producción durante la verificación.
 - **R9**: paginación (arriba, Fase 1 RBAC — no hecho); `Terminal.tsx` sigue con
   `wss://stc-cloud.onrender.com` hardcodeado; 401 sigue haciendo
   `location.replace` sin preservar la ruta.
