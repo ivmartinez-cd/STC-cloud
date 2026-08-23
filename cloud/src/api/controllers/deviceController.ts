@@ -119,6 +119,52 @@ export function createDeviceController(db: Knex) {
       return await query.select("*", db.raw("CASE WHEN offline = true THEN 'offline' ELSE 'online' END as status"));
     },
 
+    /**
+     * Historial de uso desde los agregados continuos (`readings_daily_agg`/
+     * `readings_monthly_agg`, migración `20260823050000`) — pensado para
+     * gráficos de tendencia de largo plazo sin escanear `readings` crudo.
+     * Sólo visualización: último valor del período por dispositivo, NO
+     * deltas validados contra counter_reset (eso sigue siendo
+     * `reportService.ts`/`report_closures`, la fuente de verdad de
+     * facturación). Sobrevive a la retención de 2 años sobre `readings`
+     * crudo — el agregado ya materializado no depende de la fila cruda.
+     * OJO: no es de lectura inmediata — una lectura recién insertada
+     * aparece acá recién con el próximo refresh programado (1h para
+     * diario, 6h para mensual), no al instante como `/readings` crudo.
+     */
+    getDeviceUsageHistory: async (request: FastifyRequest, reply: FastifyReply) => {
+      const { id } = request.params as { id: string };
+      const { granularity, limit } = request.query as { granularity?: string; limit?: string };
+      const scope = getScope(request);
+      const isUuid = UUID_RE.test(id);
+
+      const owned = await db("devices")
+        .where(function () {
+          if (isUuid) this.where("devices.id", id);
+          else this.whereRaw("devices.id::text LIKE ?", [`${id}%`]).orWhere("devices.serial_number", id);
+        })
+        .modify((q) => {
+          if (scope.kind === "client") q.andWhere("devices.client_id", scope.id);
+        })
+        .select("devices.id")
+        .first();
+      if (!owned) return reply.status(404).send({ error: "Dispositivo no encontrado" });
+
+      const isMonthly = granularity === "monthly";
+      const table = isMonthly ? "readings_monthly_agg" : "readings_daily_agg";
+      const bucketCol = isMonthly ? "month" : "day";
+
+      return db(table)
+        .where({ device_id: owned.id })
+        .orderBy(bucketCol, "desc")
+        .limit(Math.min(Number(limit) || 90, 365))
+        .select(
+          `${bucketCol} as period`,
+          "total_pages", "mono_pages", "color_pages", "reading_count",
+          ...(isMonthly ? [] : ["toner_black", "toner_cyan", "toner_magenta", "toner_yellow"])
+        );
+    },
+
     updateDevice: async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       const scope = getScope(request);

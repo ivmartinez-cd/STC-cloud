@@ -58,6 +58,7 @@ export const CLIENT_VIEWER_ROUTES: ReadonlySet<string> = new Set([
   "GET /api/v1/devices",
   "GET /api/v1/devices/:id",
   "GET /api/v1/devices/:id/readings",
+  "GET /api/v1/devices/:id/usage-history",
   "POST /api/v1/feedback",
 ]);
 

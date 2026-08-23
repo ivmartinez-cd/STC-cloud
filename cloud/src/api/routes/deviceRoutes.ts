@@ -76,6 +76,15 @@ export function registerDeviceRoutes(fastify: FastifyInstance, db: Knex, portalA
     handler: ctrl.getDeviceReadings,
   });
 
+  // Historial de uso desde los agregados continuos — ver comentario en el
+  // controller. Sin UI de portal todavía (deliberado, misma razón que la
+  // API pública de esta pasada: otra sesión trabajaba en simultáneo sobre
+  // cloud/portal/).
+  fastify.get("/api/v1/devices/:id/usage-history", {
+    preHandler: portalAuth,
+    handler: ctrl.getDeviceUsageHistory,
+  });
+
   // Ninguna de las mutaciones de abajo entra a CLIENT_VIEWER_ROUTES: quedan en
   // 403 automático por deny-by-default (ver rolePolicy.ts).
   fastify.put("/api/v1/devices/:id", {

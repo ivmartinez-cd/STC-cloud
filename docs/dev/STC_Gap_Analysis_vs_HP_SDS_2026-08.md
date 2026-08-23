@@ -168,7 +168,7 @@ decisión de negocio, no una obligación de compliance.
   (API-only por ahora), resolución de solapamiento de rangos en runtime
   (sólo warning al guardar).
 
-### Fase 2 — Diferenciación — arrancada: 2 de 7 ítems cerrados
+### Fase 2 — Diferenciación — arrancada: 3 de 7 ítems cerrados
 ✅ **API pública con API keys por cliente + webhooks de integración ERP**
 (23/08/2026): `api_keys` (hash SHA-256 at-rest, nunca el valor en claro;
 gestión desde el portal — `POST/GET/DELETE /clients/:id/api-keys`, admin/
@@ -231,12 +231,33 @@ sólo loguea "no responde"; rollback automático (auto-detección de "la nueva
 versión crasheó, revertir sola") — sólo restauración manual/on-demand.
 136/136 tests de agente verdes (112 previos + 24 nuevos).
 
+✅ **Agregados continuos** (23/08/2026): `readings_daily_agg`/
+`readings_monthly_agg` (TimescaleDB continuous aggregates, migración
+`20260823050000`) — último valor de contadores/tóner por dispositivo por
+día/mes, con `add_continuous_aggregate_policy` (refresh cada 1h/6h) y
+`materialized_only=false` (agregación en tiempo real; default de esta
+versión de TimescaleDB es `true` — sin esto una lectura recién insertada
+quedaba invisible hasta el próximo refresh, encontrado corriendo la
+migración real). **Sólo visualización**, deliberadamente NO reemplaza la
+lógica de deltas con detección de `counter_reset` de `reportService.ts`
+(demasiado stateful/secuencial para un agregado continuo; replicarla mal acá
+arriesgaría números de facturación sutilmente incorrectos) — `report_closures`
+sigue siendo la única fuente de verdad de facturación. Nuevo endpoint
+`GET /devices/:id/usage-history?granularity=daily|monthly` (scope por
+cliente, agregado a `CLIENT_VIEWER_ROUTES` — mismo criterio que
+`/readings`), sobrevive a la retención de 2 años sobre `readings` crudo (el
+agregado ya materializado no depende de la fila cruda). **Lo que NO se
+hizo**: dashboard de portal consumiéndolo (deliberado, otra sesión estaba
+trabajando en simultáneo sobre `cloud/portal/`); no es de lectura inmediata
+(hasta 1h/6h de lag según el `schedule_interval` de cada policy, a
+diferencia de `/readings` crudo). 288/288 tests de cloud verdes.
+
 Ítems de Fase 2 que siguen sin tocar: remote EWS por túnel sobre el WSS
 existente, backend multi-réplica (WS sigue con registro de sockets **en
 memoria**, `ws/index.ts:24-25` — no resuelto; `heartbeatMonitor.ts` sigue como
 `setInterval` **a propósito**, ver comentario en el archivo: convertirlo a BullMQ
 repeatable job es riesgoso mientras la Redis de producción use
-`maxmemoryPolicy: allkeys-lru`), agregados continuos, familias de marcas nuevas
+`maxmemoryPolicy: allkeys-lru`), familias de marcas nuevas
 (Ricoh/Kyocera/Brother/Xerox/Canon/Konica — siguen cayendo a `generic` o con OIDs
 parciales, §3 R8; requiere hardware real para captura/fixtures, no completable
 sin acceso a equipos reales), y documentación (comparativa v2.0,
@@ -447,11 +468,11 @@ Ver §1. Especialmente `data_collection_inventory.md` (privacidad) y los HTML de
 - ✅ **Resolución de hostname (point lookup) + credenciales SNMP por rango**: `ip_ranges` acepta un tercer tipo de entrada `{hostname}` resuelto por el agente en cada ciclo (el cloud no tiene visibilidad de la DNS interna del cliente); cada entrada admite `credential_ids?` para restringir qué credenciales se prueban en ESE rango durante discovery, con fail-open ante ids colgantes y warnings no bloqueantes (rangos superpuestos con credenciales distintas, borrado de una credencial referenciada). ⬜ UI de asignación de `credential_ids` en el portal queda para después (API-only); restricción por rango en meter/supplies no se hizo (`known_devices` no tiene vínculo a rango, y no aporta valor real ahí).
 - ✅ Identidad `(client_id, serial)` + MAC secundaria + merge de duplicados; decommission/mover/editar dispositivo.
 
-### Fase 2 — Diferenciación (2–3 meses) — arrancada: 2 de 7 ítems cerrados
+### Fase 2 — Diferenciación (2–3 meses) — arrancada: 3 de 7 ítems cerrados
 - ✅ (23/08/2026) API pública con API keys por cliente + webhooks (lecturas, alertas, cierres) → integración ERP. Falta UI de portal (sólo REST por ahora) y expiración/retry automáticos — ver "Estado de implementación".
 - Remote EWS por túnel sobre el WSS existente (allowlist, TTL, audit), consola con paridad IMIL (listar dispositivos, MIB walk remoto, deshabilitar monitoreo por equipo, reenviar lecturas, descubrir IP puntual).
 - Backend multi‑réplica: pub/sub Redis para WS, jobs BullMQ repetibles (heartbeat monitor), métricas Prometheus, Sentry, logs estructurados sin `console.log`.
-- Agregados continuos (diario/mensual por equipo) y dashboard sobre ellos.
+- ✅ (23/08/2026) Agregados continuos (diario/mensual por equipo, `readings_daily_agg`/`readings_monthly_agg`) — sólo backend/endpoint, sin dashboard de portal todavía. Ver "Estado de implementación".
 - Familias nuevas: Ricoh WIM, Kyocera CCX, Brother BMS, Xerox WS, Canon, Konica; fixtures reales por modelo; matriz de cobertura de scopes visible en el portal (columna Driver + scopes).
 - ✅ (23/08/2026) Agente: rollback de update (single-file; el parche ZIP sólo backup manual), activación offline (retry con backoff), dedupe de lecturas idénticas (4h), detección de PJL deshabilitado, log rotation real. "Mantener datos" al desinstalar escrito pero NO verificado (sin Windows/Inno Setup en este entorno) — ver "Estado de implementación".
 - Documentación: reescribir comparativa v2.0, inventario de datos (privacidad), auditoría IT; política de retención y DPA publicadas.

@@ -18,6 +18,7 @@ const TEST_FILES = [
   "src/tests/businessHours.test.ts",
   "src/tests/ipRangesCredentials.test.ts",
   "src/tests/publicApi.test.ts",
+  "src/tests/deviceUsageHistory.test.ts",
 ];
 
 function runFile(file) {
