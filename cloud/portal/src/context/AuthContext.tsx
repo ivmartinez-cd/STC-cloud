@@ -29,7 +29,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     fetch('/api/v1/portal/me', { credentials: 'include' })
       .then(res => {
         if (!res.ok) throw new Error('not authenticated');
-        return res.json() as Promise<{ userId: string; username?: string; role: string; clientId?: string | null; token?: string }>;
+        return res.json() as Promise<{ userId: string; username?: string; role: string; clientId?: string | null }>;
       })
       .then(data => {
         setIsAuthenticated(true);
@@ -37,9 +37,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUserId(data.userId);
         setRole(data.role);
         setClientId(data.clientId ?? null);
-        if (data.token) {
-          sessionStorage.setItem('stc_ws_token', data.token);
-        }
       })
       .catch(() => setIsAuthenticated(false))
       .finally(() => setChecking(false));
@@ -55,11 +52,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
       throw new Error(data.error || 'Credenciales inválidas');
-    }
-    
-    // Save token for WS fallback (browsers on Vercel)
-    if (data.token) {
-      sessionStorage.setItem('stc_ws_token', data.token);
     }
 
     // Volver a consultar /me para obtener el rol y el ID real del usuario recién autenticado
@@ -83,7 +75,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(async () => {
     await api.post('/portal/logout').catch(() => {});
-    sessionStorage.removeItem('stc_ws_token');
     setIsAuthenticated(false);
     setUserEmail('');
     setUserId('');

@@ -46,17 +46,30 @@ const Terminal: React.FC<TerminalProps> = ({ agentId }) => {
 
   // WebSocket for real-time results
   useEffect(() => {
-    const connect = () => {
+    let cancelled = false;
+
+    const connect = async () => {
+      // Ticket de un solo uso — hay que pedir uno nuevo en cada intento de
+      // conexión (inicial y cada reconexión), no se puede reusar.
+      let ticket: string | undefined;
+      try {
+        const res = await api.post<{ ticket: string }>('/portal/ws-ticket');
+        ticket = res.ticket;
+      } catch (e) {
+        addLog('error', `No se pudo obtener ticket de WS: ${e instanceof Error ? e.message : String(e)}`);
+        setTimeout(() => { if (!cancelled) void connect(); }, 3000);
+        return;
+      }
+      if (cancelled) return;
+
       let wsUrl: string;
-      const token = sessionStorage.getItem('stc_ws_token');
-      
       if (window.location.hostname.includes('vercel.app')) {
         // Vercel doesn't proxy WebSockets. Connect directly to Render backend.
-        wsUrl = `wss://stc-cloud.onrender.com/ws${token ? `?token=${token}` : ''}`;
+        wsUrl = `wss://stc-cloud.onrender.com/ws?token=${ticket}`;
       } else {
         // Local or same-domain deployment
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        wsUrl = `${protocol}//${window.location.host}/ws${token ? `?token=${token}` : ''}`;
+        wsUrl = `${protocol}//${window.location.host}/ws?token=${ticket}`;
       }
 
       const socket = new WebSocket(wsUrl);
@@ -82,15 +95,16 @@ const Terminal: React.FC<TerminalProps> = ({ agentId }) => {
 
       socket.onclose = () => {
         addLog('info', 'Conexión de consola perdida. Reconectando...');
-        setTimeout(connect, 3000);
+        setTimeout(() => { if (!cancelled) void connect(); }, 3000);
       };
     };
 
     // Solo conectar si estamos en el portal
     // En producción /api es una ruta, pero el WS suele estar en la misma base
-    connect();
+    void connect();
 
     return () => {
+      cancelled = true;
       wsRef.current?.close();
     };
   }, [agentId]);
@@ -168,7 +182,7 @@ const Terminal: React.FC<TerminalProps> = ({ agentId }) => {
           <div key={line.id} className={`flex gap-3 animate-in fade-in slide-in-from-left-2 duration-300 ${
             line.type === 'input' ? 'text-slate-200' : 
             line.type === 'error' ? 'text-rose-400' :
-            line.type === 'info' ? 'text-blue-400 font-bold italic' : 
+            line.type === 'info' ? 'text-brand font-bold italic' :
             'text-emerald-400'
           }`}>
             <span className="shrink-0 opacity-30 text-[10px] mt-1 font-sans">
