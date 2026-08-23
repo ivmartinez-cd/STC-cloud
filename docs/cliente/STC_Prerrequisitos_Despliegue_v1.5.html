@@ -363,13 +363,13 @@
                 <tr>
                     <td><strong>443</strong></td>
                     <td>TCP (HTTPS)</td>
-                    <td>stc-cloud-api.onrender.com</td>
+                    <td>${DOMAIN} (dominio propio de su instalación)</td>
                     <td>Telemetría, Activación y Heartbeat</td>
                 </tr>
                 <tr>
                     <td><strong>443</strong></td>
                     <td>TCP (WSS)</td>
-                    <td>stc-cloud-api.onrender.com</td>
+                    <td>${DOMAIN} (dominio propio de su instalación)</td>
                     <td>Canal de control en tiempo real (WebSockets)</td>
                 </tr>
                 <tr>
@@ -454,7 +454,7 @@
 
         <h3>Ejemplo de Instalación Silenciosa</h3>
         <div class="note-callout" style="font-family: monospace; background: #f1f5f9; border-color: #475569; color: #1e293b;">
-            STC-Monitor-Setup.exe /VERYSILENT /KEY=TU_CLAVE_DE_ACTIVACION /SERVER=https://stc-cloud-api.onrender.com
+            STC-Monitor-Setup.exe /VERYSILENT /KEY=TU_CLAVE_DE_ACTIVACION /SERVER=https://${DOMAIN}
         </div>
 
         <h3>Directorio de Datos</h3>

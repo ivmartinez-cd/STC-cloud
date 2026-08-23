@@ -65,7 +65,7 @@ Para disipar el temor sobre la rigurosidad técnica de la aplicación, certifica
 4. **Firma Digital de Actualizaciones (Supply Chain Shield):** Para prevenir que se introduzca un binario malicioso simulando ser una actualización, el agente valida que el paquete de actualización cuente con una firma criptográfica asimétrica válida generada mediante **Ed25519**, contrastándola contra una clave pública inmutable quemada en el ejecutable.
 
 ### D. Resiliencia de Red y Mitigaciones ante Caídas Temporales [NUEVO]
-Para garantizar la continuidad de la telemetría ante microcortes de red o la hibernación periódica de servidores en la nube (ej: límites de capas gratuitas como *spin-down* de Render):
+Para garantizar la continuidad de la telemetría ante microcortes de red o la hibernación periódica de servidores en la nube (ej: límites de capas gratuitas como *spin-down* de Render; **Nota:** esta limitación quedó obsoleta desde la migración a hosting self-hosted en VPS propio, donde no aplica spin-down):
 1. **Timeouts Resilientes Nativos (AbortSignal):** Todos los llamados HTTP críticos del agente local (sincronización de lecturas, envío de latidos, renovación de tokens y activación) cuentan con un timeout explícito de **65 segundos** implementado de forma nativa mediante `AbortSignal.timeout(65_000)`. Esto permite al agente DCA tolerar con paciencia los ~50s que toma el servidor en la nube para despertar de su reposo sin abortar el socket.
 2. **Buffer de Telemetría Offline (SQLite WAL):** Si el canal de red o el servidor fallan de forma prolongada, el agente encola de forma ininterrumpida las lecturas de las impresoras en una base de datos SQLite persistente local con la configuración de alto rendimiento Write-Ahead Logging (WAL). Al restablecerse el canal, se realiza una subida secuencial inteligente libre de colisiones.
 
@@ -82,7 +82,7 @@ Si el Gerente de Sistemas desea auditar la robustez del ecosistema rápidamente,
 
 ### Paso 2: Verificar la Robustez frente a SQL Injection
 * Revise el archivo `cloud/src/db/knex.ts` y las carpetas de servicios en `cloud/src/services/`.
-* Verá que el 100% de las consultas utilizan el query builder **Knex.js**, el cual aplica parametrización obligatoria por defecto sobre el driver de Postgres (Neon).
+* Verá que el 100% de las consultas utilizan el query builder **Knex.js**, el cual aplica parametrización obligatoria por defecto sobre el driver de Postgres/TimescaleDB self-hosted (contenedor `postgres` en el mismo docker-compose).
 * Las escasas consultas nativas directas utilizan placeholders parametrizados `?`, bloqueando de raíz ataques SQLi.
 
 ### Paso 3: Validar el Cumplimiento de Cifrado

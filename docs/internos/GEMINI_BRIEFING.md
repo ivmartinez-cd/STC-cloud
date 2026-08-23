@@ -121,7 +121,7 @@ fastify.get("/api/v1/agents/version", async () => ({
 }));
 ```
 
-Requiere dos variables de entorno nuevas en Render para funcionar en producción:
+Requiere dos variables de entorno nuevas en el VPS propio (self-hosted, Docker) para funcionar en producción:
 - `AGENT_VERSION` → versión actual del agente (ej: `"1.4.0"`)
 - `AGENT_DOWNLOAD_URL` → URL pública del `bundle.js` a descargar
 

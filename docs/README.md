@@ -11,7 +11,7 @@ Este directorio contiene la documentación unificada del proyecto **STC Cloud**,
 | :--- | :--- | :--- | :--- |
 | **[Dossier de Operaciones](file:///j:/Dev/Trabajo/STCcloud/STC-cloud/docs/cliente/STC_Dossier_Gerencia_Operaciones_v1.7.html)** | **Gerente de Operaciones y Contadores** | Explicación comercial del flujo de recolección de contadores, conciliación de dúplex, alertas "Just-in-Time" y prevención de fugas de facturación. **PRESENTAR.** | `v1.7` (Última) |
 | **[Auditoría de Sistemas e IT](file:///j:/Dev/Trabajo/STCcloud/STC-cloud/docs/cliente/STC_Auditoria_Sistemas_IT_v1.7.html)** | **Gerente de Sistemas (IT) y Auditor** | Demostración técnica de seguridad de red (Zero-Inbound), firma digital Ed25519 de firmware, cifrado de HWID (AES-256-GCM) e integridad de código. **PRESENTAR.** | `v1.7` (Última) |
-| **[Análisis de Escalabilidad y Límites](file:///j:/Dev/Trabajo/STCcloud/STC-cloud/docs/cliente/STC_Analisis_Escalabilidad_Limites_v1.7.html)** | **IT, Sistemas y Operaciones** | Evaluación objetiva de riesgos al usar planes gratuitos de Render, Vercel y Neon. Detalla escenarios de colapso y el presupuesto de migración. **PRESENTAR.** | `v1.7` (Última) |
+| **[Análisis de Escalabilidad y Límites](file:///j:/Dev/Trabajo/STCcloud/STC-cloud/docs/cliente/STC_Analisis_Escalabilidad_Limites_v1.7.html)** | **IT, Sistemas y Operaciones** | Auditoría de capacidad real (self-hosted en VPS propio vía Docker) pensada para 200+ clientes: sizing de servidor y hallazgos de código priorizados. **PRESENTAR.** | `v2.0` (Última) |
 | **[Manual del Administrador de IT](file:///j:/Dev/Trabajo/STCcloud/STC-cloud/docs/cliente/STC_Manual_Administrador_IT_v1.5.html)** | **Personal de Sistemas del Cliente** | Guía de configuración del portal, gestión de accesos, tokens y monitorización. **ENTREGAR.** | `v1.5` (Activo) |
 | **[Requisitos del Sistema Cliente](file:///j:/Dev/Trabajo/STCcloud/STC-cloud/docs/cliente/STC_Requisitos_Sistema_Cliente_v1.6.html)** | **IT del Cliente Final** | Requisitos mínimos de hardware y sistemas operativos para instalar el agente DCA local. **ENTREGAR.** | `v1.6` (Activo) |
 | **[Prerrequisitos de Despliegue de Red](file:///j:/Dev/Trabajo/STCcloud/STC-cloud/docs/cliente/STC_Prerrequisitos_Despliegue_v1.5.html)** | **SysAdmins / NetEngineers** | Puertos WAN requeridos (443 outbound) y permisos locales en la intranet. **ENTREGAR.** | `v1.5` (Activo) |
@@ -40,7 +40,7 @@ Este directorio contiene la documentación unificada del proyecto **STC Cloud**,
 ## 💼 4. Manuales Operativos Internos y Negocio (`docs/internos/`)
 *Guías internas de despliegue comercial y configuración técnica del entorno en la nube.*
 
-* **[DEPLOY_CLOUD.md](file:///j:/Dev/Trabajo/STCcloud/STC-cloud/docs/internos/DEPLOY_CLOUD.md):** Procedimiento para desplegar la base de datos (Neon), backend (Render) y portal frontend (Vercel).
+* **[DEPLOY_CLOUD.md](file:///j:/Dev/Trabajo/STCcloud/STC-cloud/docs/internos/DEPLOY_CLOUD.md):** Procedimiento para desplegar la base de datos (Postgres/TimescaleDB self-hosted), backend y portal frontend, todo en el VPS propio (self-hosted, Docker) vía `deploy.sh` / `docker-compose.prod.yml`.
 * **[PROD_READINESS_GUIDE.md](file:///j:/Dev/Trabajo/STCcloud/STC-cloud/docs/internos/PROD_READINESS_GUIDE.md):** Lista de chequeo previa al lanzamiento a producción.
 * **[CLIENT_VALUE_PROPOSITION.md](file:///j:/Dev/Trabajo/STCcloud/STC-cloud/docs/internos/CLIENT_VALUE_PROPOSITION.md):** Argumentos comerciales de venta y valor del software para clientes.
 

@@ -13,7 +13,7 @@ STC Cloud utiliza una arquitectura híbrida de alta disponibilidad:
 Para el correcto funcionamiento, los agentes deben tener salida a internet por los siguientes puertos:
 | Destino | Puerto | Protocolo | Función |
 | :--- | :--- | :--- | :--- |
-| `stc-cloud-api.render.com` | 443 | HTTPS/WSS | Heartbeat, Logs y Comandos |
+| `https://${DOMAIN}` | 443 | HTTPS/WSS | Heartbeat, Logs y Comandos |
 | `127.0.0.1` | 8000 | TCP (Local) | Bridge de Diagnóstico Local |
 
 ### Ciclos de Monitoreo STC (Engine Loops)

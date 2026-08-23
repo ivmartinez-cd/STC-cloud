@@ -44,7 +44,7 @@ Analiza cada archivo de la base de código aplicando de manera implacable los si
 *   **Type Guards:** Para el procesamiento de datos dinámicos o capturas de errores (`catch (err: unknown)`), exige el uso estricto de Type Guards (`err instanceof Error`, etc.) en lugar de asunciones débiles.
 
 ### 5. 🌐 Pilar de Resiliencia en Red y Desempeño
-*   **Arranque en Frío de Render (Mitigación de Timeouts):** Verifica que todos los llamados de red `fetch` en el agente DCA (`uploader.ts`, `main.ts`, etc.) utilicen de forma explícita e inquebrantable un timeout controlado de **65 segundos** mediante `AbortSignal.timeout(65_000)`. Esto permite tolerar la hibernación y latencia de cold starts de servidores en la nube sin interrumpir flujos de telemetría.
+*   **Arranque en Frío de Render (Mitigación de Timeouts):** Verifica que todos los llamados de red `fetch` en el agente DCA (`uploader.ts`, `main.ts`, etc.) utilicen de forma explícita e inquebrantable un timeout controlado de **65 segundos** mediante `AbortSignal.timeout(65_000)`. Esto permite tolerar la hibernación y latencia de cold starts de servidores en la nube sin interrumpir flujos de telemetría. **Nota:** la razón original (cold starts de Render) ya no aplica tras la migración a hosting self-hosted en VPS propio (sin spin-down); el timeout de 65s en el agente se mantiene igualmente como margen de tolerancia ante latencia de red.
 *   **Doble Deduplicación en Cola Offline:** Inspecciona la persistencia del agente en SQLite (WAL mode). Confirma que las lecturas pendientes se encolen localmente ante fallas de red y se suban secuencialmente sin duplicación de series de dispositivos ni saltos de contadores.
 
 ### 6. 🎨 Pilar de Estética Visual y UX de Alta Gama

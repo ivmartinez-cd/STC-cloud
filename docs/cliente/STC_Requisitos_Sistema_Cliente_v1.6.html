@@ -381,13 +381,13 @@
                 <tr>
                     <td><strong>443</strong></td>
                     <td>TCP (HTTPS)</td>
-                    <td>stc-cloud-api.onrender.com</td>
+                    <td>${DOMAIN} (dominio propio de su instalación)</td>
                     <td>Registro inicial del agente, descarga de rangos de red e ingesta de logs.</td>
                 </tr>
                 <tr>
                     <td><strong>443</strong></td>
                     <td>TCP (WSS)</td>
-                    <td>stc-cloud-api.onrender.com</td>
+                    <td>${DOMAIN} (dominio propio de su instalación)</td>
                     <td>Canal persistente WebSocket bidireccional seguro para comandos interactivos y forzar sincronización instantánea.</td>
                 </tr>
                 <tr>
@@ -477,7 +477,7 @@
         </p>
         
         <div class="note-callout" style="font-family: monospace; background: #f1f5f9; border-color: #475569; color: #1e293b; padding: 15px; font-size: 12px; border-radius: 4px;">
-            STC-Monitor-Setup.exe /VERYSILENT /KEY="LLAVE_DE_ACTIVACION_DE_64_CARACTERES" /SERVER="https://stc-cloud-api.onrender.com"
+            STC-Monitor-Setup.exe /VERYSILENT /KEY="LLAVE_DE_ACTIVACION_DE_64_CARACTERES" /SERVER="https://${DOMAIN}"
         </div>
 
         <p style="font-size: 13px;">
