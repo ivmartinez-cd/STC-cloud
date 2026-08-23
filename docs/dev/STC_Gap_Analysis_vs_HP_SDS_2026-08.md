@@ -333,7 +333,10 @@ inventario de datos y auditoría IT ya reescritos — falta sólo el DPA
   cross-origin Vercel/Render de raíz sigue sin resolverse (fuera de alcance,
   ver plan de esta pasada).
 - **R5**: `UpdateService.ts` sigue omitiendo la firma si `UPDATE_PUBLIC_KEY_HEX`
-  es el placeholder, y sin rollback — no tocado.
+  es el placeholder (`updateKey.ts` nunca corrió la generación real de claves) —
+  no tocado. ✅ Lo que sí se cerró esta pasada (23/08/2026): rollback a la
+  versión anterior si la actualización falla, verificado contra Windows real
+  — ver "Estado de implementación", ítem "Mejoras de agente".
 - **R6**: versión unificada en agente/cloud (Fase 0, hecho), pero **no** entre
   esos dos y el instalador Inno Setup / el proyecto C# del Monitor UI — sigue
   siendo 4 ecosistemas de versión distintos.
