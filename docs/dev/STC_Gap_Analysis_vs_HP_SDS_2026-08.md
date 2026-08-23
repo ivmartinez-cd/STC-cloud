@@ -185,10 +185,17 @@ cual, sin reescribirlo — enganchados en `notificationWorker.ts`/
 por id) y un worker nuevo (`publicWebhookWorker.ts`, lecturas, un webhook
 por BATCH de sync, no por lectura individual). §2.3/tabla comparativa "API
 pública / ISV" queda resuelto.
-**Lo que NO se hizo**: UI de portal para gestionar keys/webhooks (sólo REST
-por ahora — deliberado, otra sesión trabajaba en simultáneo sobre
-`cloud/portal/`), expiración automática de keys, retry con backoff para
-webhooks fallidos, documentación pública tipo OpenAPI/Swagger.
+✅ **UI de portal** (23/08/2026): `ApiKeysCard.tsx` en `ClientDetail.tsx` —
+crear/listar/revocar API keys (modal "mostrar una sola vez") y configurar
+el webhook (url, eventos, ver/regenerar secret). De paso se cerró un hueco
+real que no tenía este ítem: `GET/PUT /clients/:id/webhook` nuevo del lado
+cloud, porque el webhook sólo se podía configurar antes autenticado con una
+API key ya existente (huevo y gallina para un cliente nuevo). Verificado
+con Playwright real contra el stack Docker (login, crear key, ver el
+secret, configurar webhook) — capturas revisadas antes de commitear.
+
+**Lo que NO se hizo**: expiración automática de keys, retry con backoff
+para webhooks fallidos, documentación pública tipo OpenAPI/Swagger.
 
 ✅ **Mejoras de agente** (23/08/2026), 5 de 6 ítems del roadmap, verificados
 con tests reales salvo el marcado (c):
@@ -290,13 +297,21 @@ en base64, nunca `toString('utf8')` (una EWS con imágenes se corrompía).
 `POST /agents/:id/ews-proxy`, con su propia validación. Verificado en vivo
 con una conexión WS real simulando el agente (no un mock) — round-trip
 completo, error del agente, agente offline, staleness, flag apagado.
-**Lo que NO se hizo**: UI de portal (deliberado, otra sesión trabajaba en
-simultáneo sobre `cloud/portal/`); paridad completa con IMIL (MIB walk
-remoto, deshabilitar monitoreo por equipo, reenviar lecturas, descubrir IP
-puntual — sólo se implementó el acceso EWS en sí); separación de roles
-entre quien activa el flag y quien lo usa (ambos son admin/operator sin
-distinción, señalado como límite conocido, no un consentimiento explícito
-del cliente como sugiere HP SDS). 307/307 tests de cloud, 146/146 de agente.
+✅ **UI de portal** (23/08/2026): toggle en `ConfigAgentModal.tsx`, guardado
+independiente del botón "Aplicar Configuración" (sin el problema de
+optimistic locking que sí tienen SNMP credentials/business hours). De paso
+se encontró y corrigió un bug real: `listAgents()` (usado por `GET /agents`,
+lo que alimenta la tabla del portal) tenía su propio `select()` sin
+`remote_ews_enabled` — el toggle siempre arrancaba en "Deshabilitado" sin
+importar el valor real. Verificado con Playwright real (login, abrir modal,
+confirmar que lee "Habilitado" de un agente que ya lo tenía así, togglear).
+
+**Lo que NO se hizo**: paridad completa con IMIL (MIB walk remoto,
+deshabilitar monitoreo por equipo, reenviar lecturas, descubrir IP puntual
+— sólo se implementó el acceso EWS en sí); separación de roles entre quien
+activa el flag y quien lo usa (ambos son admin/operator sin distinción,
+señalado como límite conocido, no un consentimiento explícito del cliente
+como sugiere HP SDS). 313/313 tests de cloud, 146/146 de agente.
 
 Ítems de Fase 2 que siguen sin tocar: backend multi-réplica — parcialmente
 arrancado. ✅ (23/08/2026) logs estructurados: `console.log/warn/error`
@@ -454,7 +469,7 @@ Leyenda de prioridad: **P0** bloquea facturación/seguridad · **P1** paridad op
 | Esquema | — | Migraciones ≠ prod (hypertable comentada en `20260506000000:55-58`; `readings.supplies_details` y drop de `readings.id` sólo en prod) | Migración de reconciliación | P0 |
 | Índices | — | Sólo `readings(time)`; falta `(device_id,time)`, `alerts(device_id,resolved)`, `audit_logs`, `agents(client_id)` | Índices | P0 |
 | Certificaciones | ISO 27001/27017, SOC 2, NIST CSF | Ninguna (decisión consciente) | Al menos: política de retención, DPA, inventario de datos actualizado | P2 |
-| API pública / ISV | SDS API para MPS | ✅ (23/08/2026) API keys por cliente (`api_keys`, hash SHA-256) + webhooks de integración ERP (`api_webhooks`, firma HMAC) para lecturas/alertas/cierres, endpoints `/api/v1/public/*` | Falta UI de portal para gestionar keys/webhooks, documentación OpenAPI | P1 |
+| API pública / ISV | SDS API para MPS | ✅ (23/08/2026) API keys por cliente (`api_keys`, hash SHA-256) + webhooks de integración ERP (`api_webhooks`, firma HMAC) para lecturas/alertas/cierres, endpoints `/api/v1/public/*` | UI de portal para keys/webhooks ya hecha (23/08/2026); falta documentación OpenAPI | P1 |
 | Remote EWS | Sí (túnel, whitelist, expira) | No | Túnel HTTP sobre el WSS existente, con allowlist y TTL | P2 |
 | Firmware push / reboot remoto | Sí | No | — (fuera de scope declarado) | — |
 | Equipos USB | SDA (agente en PC) | No; el STC legado usaba HP FleetAdminPro SnmpAgent | Documentar el camino (mismo truco: SNMP agent local) | P2 |
@@ -546,7 +561,7 @@ Ver §1. Especialmente `data_collection_inventory.md` (privacidad) y los HTML de
 - ✅ Identidad `(client_id, serial)` + MAC secundaria + merge de duplicados; decommission/mover/editar dispositivo.
 
 ### Fase 2 — Diferenciación (2–3 meses) — arrancada: 5 de 7 ítems cerrados
-- ✅ (23/08/2026) API pública con API keys por cliente + webhooks (lecturas, alertas, cierres) → integración ERP. Falta UI de portal (sólo REST por ahora) y expiración/retry automáticos — ver "Estado de implementación".
+- ✅ (23/08/2026) API pública con API keys por cliente + webhooks (lecturas, alertas, cierres) → integración ERP. UI de portal ya hecha (23/08/2026); falta expiración/retry automáticos — ver "Estado de implementación".
 - ✅ (23/08/2026) Remote EWS por túnel sobre el WSS existente (allowlist en dos capas, staleness, audit) — sólo el acceso EWS en sí, sin paridad IMIL completa (MIB walk remoto, deshabilitar monitoreo, reenviar lecturas, descubrir IP puntual quedan pendientes). Ver "Estado de implementación".
 - Backend multi‑réplica: pub/sub Redis para WS, jobs BullMQ repetibles (heartbeat monitor), métricas Prometheus, Sentry. ✅ (23/08/2026) **Sub-ítem cerrado**: logs estructurados con pino en vez de `console.log` (`cloud/src/logger.ts`), sin dependencia de ninguna decisión de arquitectura pendiente — ver "Estado de implementación". El resto (pub/sub Redis, BullMQ repeatable, Prometheus, Sentry) sigue sin tocar.
 - ✅ (23/08/2026) Agregados continuos (diario/mensual por equipo, `readings_daily_agg`/`readings_monthly_agg`) — sólo backend/endpoint, sin dashboard de portal todavía. Ver "Estado de implementación".
