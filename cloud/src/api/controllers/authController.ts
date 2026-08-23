@@ -9,6 +9,7 @@ import { mintWsTicket } from "../../services/wsTicketService";
 import { hashPassword, verifyPassword } from "../utils/password";
 import type { PortalUser } from "../middlewares/authMiddleware";
 import { getClientIp } from "../utils/ip";
+import { logger } from "../../logger";
 
 /** Cuerpo de login del portal. */
 interface LoginBody { username: string; password: string; }
@@ -277,7 +278,7 @@ export function createAuthController(fastify: FastifyInstance, db: Knex, redis: 
       try {
         if (!key) throw new Error("La clave de activacion es requerida");
         if (key.length !== 64) {
-          console.warn(`[AUTH] Clave de activación con longitud inválida: ${key.length}`);
+          logger.warn(`[AUTH] Clave de activación con longitud inválida: ${key.length}`);
           throw new Error("La clave de activación debe tener exactamente 64 caracteres");
         }
         const result = await agentService.activateAgent(key, hardwareId);

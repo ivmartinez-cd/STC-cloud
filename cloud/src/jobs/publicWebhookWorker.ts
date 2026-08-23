@@ -3,6 +3,7 @@ import Redis from 'ioredis';
 import knex from 'knex';
 import knexConfig from '../db/knexfile';
 import { sendPublicApiWebhook } from '../services/publicWebhookService';
+import { logger } from '../logger';
 
 /**
  * Procesa `public-api-readings-queue` (encolada desde `agentService.syncReadings`,
@@ -51,7 +52,7 @@ async function processPublicReadingsNotification(readings: InsertedReading[]): P
   );
   for (const r of results) {
     if (r.status === 'rejected') {
-      console.error('[PublicWebhookWorker] Error enviando webhook de lecturas:', r.reason);
+      logger.error({ err: r.reason }, '[PublicWebhookWorker] Error enviando webhook de lecturas');
     }
   }
 }
@@ -65,7 +66,7 @@ export const publicWebhookWorker = new Worker(
 );
 
 publicWebhookWorker.on('failed', (job, err) => {
-  console.error(`[PublicWebhookWorker] Job ${job?.id} falló:`, err);
+  logger.error({ err }, `[PublicWebhookWorker] Job ${job?.id} falló`);
 });
 
-console.log('[PublicWebhookWorker] Iniciado — webhooks de lecturas de la API pública');
+logger.info('[PublicWebhookWorker] Iniciado — webhooks de lecturas de la API pública');

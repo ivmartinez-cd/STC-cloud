@@ -6,6 +6,7 @@ import { sendReportEmail, sendReportWebhook } from '../services/notificationServ
 import { sendPublicApiWebhook } from '../services/publicWebhookService';
 import { buildClosureCsv, buildClosureXlsx } from '../services/reportExportService';
 import { formatPeriod } from '../services/reportService';
+import { logger } from '../logger';
 
 /**
  * Procesa la cola `report-delivery-queue` (encolada desde `reportService.closePeriod`,
@@ -51,11 +52,11 @@ async function processReportDelivery(closureId: string): Promise<void> {
     .first() as ClosureRow | undefined;
 
   if (!closure) {
-    console.warn(`[ReportDeliveryWorker] Cierre ${closureId} no encontrado, se omite`);
+    logger.warn(`[ReportDeliveryWorker] Cierre ${closureId} no encontrado, se omite`);
     return;
   }
   if (closure.status !== 'closed') {
-    console.log(`[ReportDeliveryWorker] Cierre ${closureId} ya no está 'closed' (reabierto), se omite`);
+    logger.info(`[ReportDeliveryWorker] Cierre ${closureId} ya no está 'closed' (reabierto), se omite`);
     return;
   }
   // Nota: ya NO se corta acá si el cliente no tiene canales de notificación
@@ -91,7 +92,7 @@ async function processReportDelivery(closureId: string): Promise<void> {
   ]);
   for (const r of results) {
     if (r.status === 'rejected') {
-      console.error(`[ReportDeliveryWorker] Error entregando cierre ${closureId}:`, r.reason);
+      logger.error({ err: r.reason }, `[ReportDeliveryWorker] Error entregando cierre ${closureId}`);
     }
   }
 }
@@ -106,7 +107,7 @@ export const reportDeliveryWorker = new Worker(
 );
 
 reportDeliveryWorker.on('failed', (job, err) => {
-  console.error(`[ReportDeliveryWorker] Job ${job?.id} falló:`, err.message);
+  logger.error({ err: err.message }, `[ReportDeliveryWorker] Job ${job?.id} falló`);
 });
 
-console.log('[ReportDeliveryWorker] Iniciado — entrega automática de cierres mensuales');
+logger.info('[ReportDeliveryWorker] Iniciado — entrega automática de cierres mensuales');

@@ -4,6 +4,7 @@ import knex from 'knex';
 import knexConfig from '../db/knexfile';
 import { sendAlertEmail, sendAlertWebhook } from '../services/notificationService';
 import { sendPublicApiWebhook } from '../services/publicWebhookService';
+import { logger } from '../logger';
 
 /**
  * Procesa la cola `notifications-queue` (encolada desde `alertService.openAlert`,
@@ -57,18 +58,18 @@ async function processAlertNotification(alertId: number): Promise<void> {
     .first() as AlertRow | undefined;
 
   if (!alert) {
-    console.warn(`[NotificationWorker] Alerta ${alertId} no encontrada, se omite`);
+    logger.warn(`[NotificationWorker] Alerta ${alertId} no encontrada, se omite`);
     return;
   }
   if (alert.resolved) {
-    console.log(`[NotificationWorker] Alerta ${alertId} ya resuelta antes de notificar, se omite`);
+    logger.info(`[NotificationWorker] Alerta ${alertId} ya resuelta antes de notificar, se omite`);
     return;
   }
   if (alert.device_decommissioned_at) {
     // El equipo se dio de baja mientras el job esperaba en cola — la
     // transacción de baja ya resolvió sus alertas, pero esto cubre el job
     // que ya estaba encolado justo antes.
-    console.log(`[NotificationWorker] Alerta ${alertId} es de un equipo dado de baja, se omite`);
+    logger.info(`[NotificationWorker] Alerta ${alertId} es de un equipo dado de baja, se omite`);
     return;
   }
   if (!alert.client_id) {
@@ -100,7 +101,7 @@ async function processAlertNotification(alertId: number): Promise<void> {
   ]);
   for (const r of results) {
     if (r.status === 'rejected') {
-      console.error(`[NotificationWorker] Error enviando notificación de alerta ${alertId}:`, r.reason);
+      logger.error({ err: r.reason }, `[NotificationWorker] Error enviando notificación de alerta ${alertId}`);
     }
   }
 }
@@ -115,7 +116,7 @@ export const notificationWorker = new Worker(
 );
 
 notificationWorker.on('failed', (job, err) => {
-  console.error(`[NotificationWorker] Job ${job?.id} falló:`, err.message);
+  logger.error({ err: err.message }, `[NotificationWorker] Job ${job?.id} falló`);
 });
 
-console.log('[NotificationWorker] Iniciado — notificaciones de alertas críticas');
+logger.info('[NotificationWorker] Iniciado — notificaciones de alertas críticas');

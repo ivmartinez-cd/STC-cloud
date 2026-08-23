@@ -3,6 +3,7 @@ import Redis from 'ioredis';
 import knex from 'knex';
 import knexConfig from '../db/knexfile';
 import * as alertService from '../services/alertService';
+import { logger } from '../logger';
 
 const db    = knex(knexConfig.development);
 const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379', {
@@ -33,14 +34,14 @@ interface MappedReading {
 async function openAlert(deviceId: string, type: string, severity: string, message: string, value: number) {
   const { created } = await alertService.openAlert(db, { deviceId, type, severity: severity as 'warning' | 'critical', message, value });
   if (created) {
-    console.log(`[Alert] OPEN [${severity.toUpperCase()}] device=${deviceId} — ${message}`);
+    logger.info(`[Alert] OPEN [${severity.toUpperCase()}] device=${deviceId} — ${message}`);
   }
 }
 
 async function resolveAlerts(deviceId: string, type: string) {
   const updated = await alertService.resolveAlert(db, { deviceId, type });
   if (updated > 0) {
-    console.log(`[Alert] CLOSE type=${type} device=${deviceId}`);
+    logger.info(`[Alert] CLOSE type=${type} device=${deviceId}`);
   }
 }
 
@@ -131,8 +132,8 @@ export const alertWorker = new Worker(
 );
 
 alertWorker.on('failed', (job, err) => {
-  console.error(`[AlertWorker] Job ${job?.id} failed:`, err.message);
+  logger.error({ err: err.message }, `[AlertWorker] Job ${job?.id} failed`);
 });
 
-console.log('[AlertWorker] Iniciado — Sistema de Toma de Contadores');
+logger.info('[AlertWorker] Iniciado — Sistema de Toma de Contadores');
 

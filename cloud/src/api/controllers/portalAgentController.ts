@@ -12,6 +12,7 @@ import type { PortalUser } from "../middlewares/authMiddleware";
 import { getClientIp } from "../utils/ip";
 import { getScope } from "../utils/scope";
 import { onlyLiveDevices } from "../utils/deviceFilters";
+import { logger } from "../../logger";
 
 /**
  * Columnas seguras de `agents` para exponer por el portal. Reemplaza el `agents.*`
@@ -142,7 +143,7 @@ export function createPortalAgentController(
         try {
           parsedIpRanges = typeof agent.ip_ranges === "string" ? JSON.parse(agent.ip_ranges) : agent.ip_ranges;
         } catch (e) {
-          console.error("Error parsing ip_ranges in getAgent:", e);
+          logger.error({ err: e }, "Error parsing ip_ranges in getAgent");
         }
       }
 
@@ -153,7 +154,7 @@ export function createPortalAgentController(
         try {
           businessHours = typeof agent.business_hours === "string" ? JSON.parse(agent.business_hours) : agent.business_hours;
         } catch (e) {
-          console.error("Error parsing business_hours in getAgent:", e);
+          logger.error({ err: e }, "Error parsing business_hours in getAgent");
         }
       }
 

@@ -17,6 +17,7 @@ import {
   DEFAULT_BUSINESS_HOURS, validateBusinessHours, parseNaiveLocalTimestamp,
   type BusinessHoursConfig,
 } from "./businessHours";
+import { logger } from "../logger";
 
 // ─── Interfaces de Tipado Fuerte ──────────────────────────────────────────────
 // Estas interfaces reemplazan los tipos `any` para cumplir con la Regla 5
@@ -488,7 +489,7 @@ export class AgentService {
         }
       } catch (e: unknown) {
         const errMsg = e instanceof Error ? e.message : String(e);
-        console.error(`[AGENT_SERVICE] Error registering device ${device.ip}:`, errMsg);
+        logger.error({ err: errMsg }, `[AGENT_SERVICE] Error registering device ${device.ip}`);
       }
     }
   }
@@ -902,7 +903,7 @@ export class AgentService {
             } catch (mergeErr: unknown) {
               // No debe tumbar la ingesta de la lectura actual — un fantasma sin
               // fusionar simplemente queda para revisión manual en /devices/duplicates.
-              console.error(`[SYNC] No se pudo fusionar fantasma ${ghostId} -> ${deviceId}:`, mergeErr);
+              logger.error({ err: mergeErr }, `[SYNC] No se pudo fusionar fantasma ${ghostId} -> ${deviceId}`);
             }
           }
         }
@@ -938,7 +939,7 @@ export class AgentService {
         });
       } catch (err: unknown) {
         const errMsg = err instanceof Error ? err.stack || err.message : String(err);
-        console.error(`[SYNC] Error procesando dispositivo ${r.device_id}:`, errMsg);
+        logger.error({ err: errMsg }, `[SYNC] Error procesando dispositivo ${r.device_id}`);
         // Continuamos con el resto de la tanda para no bloquear todo el agente
         if (agentId) {
           await this.ingestLogs(agentId, [{
@@ -984,7 +985,7 @@ export class AgentService {
         }
       } catch (err: unknown) {
         const errMsg = err instanceof Error ? err.message : String(err);
-        console.error("[SYNC] Error al insertar lecturas:", errMsg);
+        logger.error({ err: errMsg }, "[SYNC] Error al insertar lecturas");
         await this.ingestLogs(agentId, [{
           time: new Date().toISOString(),
           level: 'ERROR',
@@ -999,7 +1000,7 @@ export class AgentService {
       const readingsQueue = new Queue("readings-queue", { connection: this.redis as any });
       await readingsQueue.add("evaluate-readings", { readings: mappedReadings });
     } catch (e: unknown) {
-      console.error("[SYNC] BullMQ no disponible:", e);
+      logger.error({ err: e }, "[SYNC] BullMQ no disponible");
     }
 
     // Webhook "reading.created" de la API pública — un job por BATCH de sync
@@ -1010,7 +1011,7 @@ export class AgentService {
         const publicReadingsQueue = new Queue("public-api-readings-queue", { connection: this.redis as any });
         await publicReadingsQueue.add("notify-readings", { readings: newlyInsertedReadings });
       } catch (e: unknown) {
-        console.error("[SYNC] BullMQ (public-api-readings-queue) no disponible:", e);
+        logger.error({ err: e }, "[SYNC] BullMQ (public-api-readings-queue) no disponible");
       }
     }
 
@@ -1195,7 +1196,7 @@ export class AgentService {
         const wire = toWire(storedCredentials);
         if (wire.length > 0) agent.snmp_credentials = wire;
       } catch (err) {
-        console.error(`[AGENT_SERVICE] No se pudo armar snmp_credentials para el heartbeat de ${agentId}:`, err);
+        logger.error({ err }, `[AGENT_SERVICE] No se pudo armar snmp_credentials para el heartbeat de ${agentId}`);
       }
     }
     return agent;

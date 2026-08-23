@@ -25,6 +25,8 @@
  * ignoran.
  */
 
+import { logger } from "../logger";
+
 export interface IpRangeSpecInput {
   label?: string | null;
   start?: string;
@@ -312,7 +314,7 @@ export function compileIpRangeSpecs(specs: IpRangeSpecInput[]): CompiledRange[] 
     try {
       out.push(...compileOne(spec));
     } catch (err) {
-      console.error(`[ipRangeSpec] No se pudo compilar el rango (label=${spec.label ?? "-"}), se omite:`, err);
+      logger.error({ err }, `[ipRangeSpec] No se pudo compilar el rango (label=${spec.label ?? "-"}), se omite`);
     }
   }
   return out;

@@ -1,5 +1,6 @@
 import crypto from "crypto";
 import { decryptSecret, encryptSecret, isEncryptionConfigured, MissingEncryptionKeyError } from "./cryptoService";
+import { logger } from "../logger";
 
 /**
  * Lista ordenada de credenciales SNMP por agente (§2.3 del gap analysis:
@@ -261,7 +262,7 @@ export function toWire(stored: StoredCredential[]): WireCredential[] {
         });
       }
     } catch (err) {
-      console.error(`[snmpCredentials] No se pudo descifrar la credencial ${c.id} (${c.version}), se omite:`, err);
+      logger.error({ err }, `[snmpCredentials] No se pudo descifrar la credencial ${c.id} (${c.version}), se omite`);
     }
   }
   return out;

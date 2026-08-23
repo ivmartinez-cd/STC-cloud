@@ -1,6 +1,7 @@
 import knex from 'knex';
 import knexConfig from '../db/knexfile';
 import * as alertService from '../services/alertService';
+import { logger } from '../logger';
 
 const db = knex(knexConfig.development);
 
@@ -50,7 +51,7 @@ async function checkOfflineAgents() {
       });
     }
     if (markedOffline.length > 0) {
-      console.log(`[HeartbeatMonitor] ${markedOffline.length} agente(s) marcados OFFLINE (sin señal > ${OFFLINE_THRESHOLD_MINUTES} min)`);
+      logger.info(`[HeartbeatMonitor] ${markedOffline.length} agente(s) marcados OFFLINE (sin señal > ${OFFLINE_THRESHOLD_MINUTES} min)`);
     }
 
     // Reactivar los que volvieron (heartbeat reciente pero quedaron en offline)
@@ -64,11 +65,11 @@ async function checkOfflineAgents() {
       await alertService.resolveAlert(db, { agentId: agent.id, type: 'agent_offline' });
     }
     if (reactivated.length > 0) {
-      console.log(`[HeartbeatMonitor] ${reactivated.length} agente(s) REACTIVADOS (heartbeat restaurado)`);
+      logger.info(`[HeartbeatMonitor] ${reactivated.length} agente(s) REACTIVADOS (heartbeat restaurado)`);
     }
   } catch (err: unknown) {
     const errMsg = err instanceof Error ? err.message : String(err);
-    console.error('[HeartbeatMonitor] Error en check de agentes:', errMsg);
+    logger.error({ err: errMsg }, '[HeartbeatMonitor] Error en check de agentes');
   }
 }
 
@@ -116,7 +117,7 @@ async function checkOfflineDevices() {
       if (created) opened++;
     }
     if (opened > 0) {
-      console.log(`[HeartbeatMonitor] ${opened} equipo(s) marcados sin señal (> ${DEVICE_OFFLINE_THRESHOLD_MINUTES} min)`);
+      logger.info(`[HeartbeatMonitor] ${opened} equipo(s) marcados sin señal (> ${DEVICE_OFFLINE_THRESHOLD_MINUTES} min)`);
     }
 
     // Resolver device_offline de equipos que volvieron a reportar.
@@ -133,11 +134,11 @@ async function checkOfflineDevices() {
       resolved += updated;
     }
     if (resolved > 0) {
-      console.log(`[HeartbeatMonitor] ${resolved} equipo(s) recuperaron señal`);
+      logger.info(`[HeartbeatMonitor] ${resolved} equipo(s) recuperaron señal`);
     }
   } catch (err: unknown) {
     const errMsg = err instanceof Error ? err.message : String(err);
-    console.error('[HeartbeatMonitor] Error en check de dispositivos:', errMsg);
+    logger.error({ err: errMsg }, '[HeartbeatMonitor] Error en check de dispositivos');
   }
 }
 
@@ -151,4 +152,4 @@ runChecks();
 const intervalMs = 2 * 60 * 1000;
 setInterval(runChecks, intervalMs);
 
-console.log(`[HeartbeatMonitor] Iniciado — umbral agente: ${OFFLINE_THRESHOLD_MINUTES} min, umbral equipo: ${DEVICE_OFFLINE_THRESHOLD_MINUTES} min`);
+logger.info(`[HeartbeatMonitor] Iniciado — umbral agente: ${OFFLINE_THRESHOLD_MINUTES} min, umbral equipo: ${DEVICE_OFFLINE_THRESHOLD_MINUTES} min`);

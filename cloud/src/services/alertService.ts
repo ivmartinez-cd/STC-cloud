@@ -2,6 +2,7 @@ import { Knex } from "knex";
 import crypto from "crypto";
 import { Queue } from "bullmq";
 import Redis from "ioredis";
+import { logger } from "../logger";
 
 /**
  * Fuente única para abrir/resolver alertas. Antes de esto había 3 escritores
@@ -104,7 +105,7 @@ export async function openAlert(db: Knex, params: OpenAlertParams): Promise<Open
     } catch (err) {
       // Best-effort: una notificación perdida no debe tumbar la ingesta de la
       // alerta en sí, que ya se insertó correctamente.
-      console.error("[alertService] No se pudo encolar la notificación:", err);
+      logger.error({ err }, "[alertService] No se pudo encolar la notificación");
     }
   }
 

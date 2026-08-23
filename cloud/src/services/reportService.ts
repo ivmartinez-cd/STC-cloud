@@ -1,6 +1,7 @@
 import { Knex } from "knex";
 import { Queue } from "bullmq";
 import Redis from "ioredis";
+import { logger } from "../logger";
 
 /**
  * Cierre mensual inmutable por cliente. `computePeriodUsage` es la única consulta
@@ -293,7 +294,7 @@ export async function closePeriod(
       { attempts: 3, backoff: { type: "exponential", delay: 5000 } }
     );
   } catch (err) {
-    console.error("[reportService] No se pudo encolar la entrega del cierre:", err);
+    logger.error({ err }, "[reportService] No se pudo encolar la entrega del cierre");
   }
 
   return closure;

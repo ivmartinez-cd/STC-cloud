@@ -1,5 +1,6 @@
 import knex from 'knex';
 import knexConfig from '../db/knexfile';
+import { logger } from '../logger';
 
 const db = knex(knexConfig.development);
 
@@ -32,11 +33,11 @@ async function purgeOldAgentLogs() {
       .where('timestamp', '<', db.raw(`now() - interval '${AGENT_LOGS_RETENTION_DAYS} days'`))
       .del();
     if (deleted > 0) {
-      console.log(`[RetentionJob] ${deleted} fila(s) de agent_logs purgadas (> ${AGENT_LOGS_RETENTION_DAYS} días)`);
+      logger.info(`[RetentionJob] ${deleted} fila(s) de agent_logs purgadas (> ${AGENT_LOGS_RETENTION_DAYS} días)`);
     }
   } catch (err: unknown) {
     const errMsg = err instanceof Error ? err.message : String(err);
-    console.error('[RetentionJob] Error purgando agent_logs:', errMsg);
+    logger.error({ err: errMsg }, '[RetentionJob] Error purgando agent_logs');
   }
 }
 
@@ -47,11 +48,11 @@ async function purgeResolvedAlerts() {
       .where('resolved_at', '<', db.raw(`now() - interval '${RESOLVED_ALERTS_RETENTION_MONTHS} months'`))
       .del();
     if (deleted > 0) {
-      console.log(`[RetentionJob] ${deleted} alerta(s) resuelta(s) purgadas (> ${RESOLVED_ALERTS_RETENTION_MONTHS} meses)`);
+      logger.info(`[RetentionJob] ${deleted} alerta(s) resuelta(s) purgadas (> ${RESOLVED_ALERTS_RETENTION_MONTHS} meses)`);
     }
   } catch (err: unknown) {
     const errMsg = err instanceof Error ? err.message : String(err);
-    console.error('[RetentionJob] Error purgando alerts resueltas:', errMsg);
+    logger.error({ err: errMsg }, '[RetentionJob] Error purgando alerts resueltas');
   }
 }
 
@@ -64,4 +65,4 @@ export async function runRetentionChecks() {
 runRetentionChecks();
 setInterval(runRetentionChecks, INTERVAL_HOURS * 60 * 60 * 1000);
 
-console.log(`[RetentionJob] Iniciado — agent_logs > ${AGENT_LOGS_RETENTION_DAYS}d, alerts resueltas > ${RESOLVED_ALERTS_RETENTION_MONTHS}m, cada ${INTERVAL_HOURS}h`);
+logger.info(`[RetentionJob] Iniciado — agent_logs > ${AGENT_LOGS_RETENTION_DAYS}d, alerts resueltas > ${RESOLVED_ALERTS_RETENTION_MONTHS}m, cada ${INTERVAL_HOURS}h`);

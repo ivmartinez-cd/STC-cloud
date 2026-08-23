@@ -34,11 +34,12 @@ import { getClientIp } from "./utils/ip";
 import { SERVER_VERSION } from "../version";
 import { CLIENT_VIEWER_ROUTES } from "./policy/rolePolicy";
 import { isEncryptionConfigured } from "../services/cryptoService";
+import { logger } from "../logger";
 
 dotenv.config({ path: path.join(__dirname, "../../../.env") });
 
 if (!process.env.JWT_SECRET) {
-  console.error("FATAL: JWT_SECRET no está definido en .env");
+  logger.error("FATAL: JWT_SECRET no está definido en .env");
   process.exit(1);
 }
 
@@ -48,14 +49,18 @@ if (!process.env.JWT_SECRET) {
 // convertiría una feature opcional en un requisito de deploy. Guardar/leer
 // credenciales sin la clave falla con un 503 explícito en el endpoint, no acá.
 if (!isEncryptionConfigured()) {
-  console.warn(
+  logger.warn(
     "[BOOT] SNMP_CREDENTIALS_KEY no definida — no se podrán guardar credenciales SNMPv3 nuevas " +
       "(reordenar/renombrar/borrar entradas ya guardadas no la requiere)."
   );
 }
 
 const fastify = Fastify({
-  logger: true,
+  // Instancia propia (no la de `../logger`, ver ahí el porqué): `loggerInstance`
+  // rompe la inferencia de tipos de Fastify a través de las funciones
+  // `registerXRoutes(fastify: FastifyInstance)`. Mismo nivel via LOG_LEVEL para
+  // que los logs de request y los de boot/workers queden consistentes igual.
+  logger: { level: process.env.LOG_LEVEL || "info" },
   connectionTimeout: 0,
   // Confía en el proxy inmediato (nginx en el compose propio, el edge de Render en
   // producción) para resolver request.ip correctamente a partir de X-Forwarded-For.
@@ -73,7 +78,7 @@ const redis = new Redis(process.env.REDIS_URL || "redis://localhost:6379", {
 const agentService = new AgentService(db, redis);
 
 redis.on("error", (err) => {
-  console.error("[Redis] Error de conexión:", err.message);
+  logger.error({ err: err.message }, "[Redis] Error de conexión");
 });
 
 // Cliente dedicado para @fastify/rate-limit: enableOfflineQueue:false hace que
@@ -87,14 +92,14 @@ const rateLimitRedis = new Redis(process.env.REDIS_URL || "redis://localhost:637
 });
 
 rateLimitRedis.on("error", (err) => {
-  console.error("[Redis:rate-limit] Error de conexión:", err.message);
+  logger.error({ err: err.message }, "[Redis:rate-limit] Error de conexión");
 });
 
 const start = async () => {
   try {
     // ─── Migraciones ──────────────────────────────────────────────────────────
 
-    console.log("[DB] Verificando y ejecutando migraciones...");
+    logger.info("[DB] Verificando y ejecutando migraciones...");
 
     try {
       const hasTable = await db.schema.hasTable("knex_migrations");
@@ -104,40 +109,40 @@ const start = async () => {
           await db.raw(
             `UPDATE knex_migrations SET name = REPLACE(name, '.js', '.ts') WHERE name LIKE '%.js'`
           );
-          console.log("[DB] Normalizadas migraciones a .ts para ejecución de desarrollo.");
+          logger.info("[DB] Normalizadas migraciones a .ts para ejecución de desarrollo.");
         } else {
           await db.raw(
             `UPDATE knex_migrations SET name = REPLACE(name, '.ts', '.js') WHERE name LIKE '%.ts'`
           );
-          console.log("[DB] Normalizadas migraciones a .js para ejecución de producción/compilada.");
+          logger.info("[DB] Normalizadas migraciones a .js para ejecución de producción/compilada.");
         }
       }
     } catch {
-      console.warn("[DB] No se pudo normalizar knex_migrations (posiblemente primera ejecución)");
+      logger.warn("[DB] No se pudo normalizar knex_migrations (posiblemente primera ejecución)");
     }
 
     try {
       const fs = require("fs");
       const migDir = path.join(__dirname, "../db/migrations");
-      console.log(`[DB] Directorio de migraciones: ${migDir}`);
+      logger.info(`[DB] Directorio de migraciones: ${migDir}`);
       if (fs.existsSync(migDir)) {
         const files = fs.readdirSync(migDir);
-        console.log(`[DB] Archivos encontrados: ${files.join(", ")}`);
+        logger.info(`[DB] Archivos encontrados: ${files.join(", ")}`);
       } else {
-        console.error(`[DB] ERROR: El directorio de migraciones NO existe: ${migDir}`);
+        logger.error(`[DB] ERROR: El directorio de migraciones NO existe: ${migDir}`);
       }
     } catch {}
 
     try {
       const applied = await db("knex_migrations").select("name");
-      console.log(`[DB] Migraciones en DB: ${applied.map((m: { name: string }) => m.name).join(", ")}`);
+      logger.info(`[DB] Migraciones en DB: ${applied.map((m: { name: string }) => m.name).join(", ")}`);
     } catch {}
 
     await db.migrate.latest({
       directory: path.join(__dirname, "../db/migrations"),
       loadExtensions: __filename.endsWith(".ts") ? [".ts", ".js"] : [".js"],
     });
-    console.log("[DB] Migraciones al día.");
+    logger.info("[DB] Migraciones al día.");
 
     // Bootstrapping: Auto-inicializar primer administrador si la tabla 'users' está vacía
     try {
@@ -145,7 +150,7 @@ const start = async () => {
       const usersCount = await db("users").count("id as count").first();
       const count = parseInt((usersCount?.count as string) || "0", 10);
       if (count === 0) {
-        console.log("[DB] Inicializando usuario administrador por defecto...");
+        logger.info("[DB] Inicializando usuario administrador por defecto...");
         const adminUser = (process.env.PORTAL_ADMIN_USER || "admin").toLowerCase();
         const adminPass = process.env.PORTAL_ADMIN_PASSWORD || "stc123456";
         await db("users").insert({
@@ -155,11 +160,11 @@ const start = async () => {
           role: "admin",
           active: true,
         });
-        console.log(`[DB] Usuario administrador '${adminUser}' inicializado con éxito.`);
+        logger.info(`[DB] Usuario administrador '${adminUser}' inicializado con éxito.`);
       }
     } catch (bootErr: unknown) {
       const errMsg = bootErr instanceof Error ? bootErr.message : String(bootErr);
-      console.error("[DB] Error al inicializar administrador:", errMsg);
+      logger.error({ err: errMsg }, "[DB] Error al inicializar administrador");
     }
 
     // ─── Plugins ──────────────────────────────────────────────────────────────
