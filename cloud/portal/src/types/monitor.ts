@@ -272,6 +272,28 @@ export interface Client {
   device_count: number;
 }
 
+/** `GET /clients/:id/api-keys` — nunca trae el valor en claro (sólo al crearla). */
+export interface ApiKeyRecord {
+  id: string;
+  client_id: string;
+  name: string;
+  key_prefix: string;
+  revoked_at: string | null;
+  last_used_at: string | null;
+  created_at: string;
+}
+
+export type PublicApiEvent = 'reading.created' | 'alert.created' | 'report.closed';
+
+/** `GET/PUT /clients/:id/webhook` — config del webhook de la API pública
+ *  (integración ERP), no confundir con `notification_webhook_url` de arriba. */
+export interface WebhookConfig {
+  url: string;
+  events: PublicApiEvent[];
+  secret: string;
+  active: boolean;
+}
+
 export interface Monitor {
   id: string;
   name: string;

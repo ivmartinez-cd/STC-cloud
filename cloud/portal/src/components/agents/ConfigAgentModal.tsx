@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { X, Settings, Loader2, Check, KeyRound, Clock } from 'lucide-react';
+import { X, Settings, Loader2, Check, KeyRound, Clock, Radio } from 'lucide-react';
 import { api } from '../../lib/api';
 import { useToast } from '../../context/ToastContext';
 import type { AgentConfig } from '../../types/agents';
@@ -8,7 +8,7 @@ import { defaultConfig } from '../../types/agents';
 import IpRangesEditor from '../monitors/IpRangesEditor';
 
 interface Props {
-  modal: { id: string; name: string } | null;
+  modal: { id: string; name: string; remote_ews_enabled?: boolean } | null;
   onClose: () => void;
 }
 
@@ -17,6 +17,30 @@ export default function ConfigAgentModal({ modal, onClose }: Props) {
   const [configForm, setConfigForm] = useState<AgentConfig>(defaultConfig);
   const [loadingConfig, setLoadingConfig] = useState(false);
   const [savingConfig, setSavingConfig] = useState(false);
+  const [remoteEwsEnabled, setRemoteEwsEnabled] = useState(false);
+  const [savingRemoteEws, setSavingRemoteEws] = useState(false);
+
+  useEffect(() => {
+    setRemoteEwsEnabled(modal?.remote_ews_enabled ?? false);
+  }, [modal]);
+
+  // Guardado independiente del botón "Aplicar Configuración" de abajo: es un
+  // PUT directo sin optimistic locking (a diferencia de SNMP credentials/
+  // business_hours), así que no tiene sentido acumularlo con esos cambios.
+  const toggleRemoteEws = async () => {
+    if (!modal) return;
+    const next = !remoteEwsEnabled;
+    setSavingRemoteEws(true);
+    try {
+      await api.put(`/agents/${modal.id}/remote-ews`, { enabled: next });
+      setRemoteEwsEnabled(next);
+      showToast(next ? 'Remote EWS habilitado para este agente' : 'Remote EWS deshabilitado', 'success');
+    } catch (e: unknown) {
+      showToast('Error al cambiar Remote EWS: ' + (e as Error).message, 'error');
+    } finally {
+      setSavingRemoteEws(false);
+    }
+  };
 
   useEffect(() => {
     const init = async () => {
@@ -142,6 +166,28 @@ export default function ConfigAgentModal({ modal, onClose }: Props) {
                   {' '}Editalo desde el detalle del monitor, pestaña{' '}
                   <Link to={`/monitors/${modal.id}?tab=config`} className="underline hover:text-emerald-700">Configuración</Link>.
                 </p>
+              </div>
+
+              {/* Remote EWS — a diferencia de SNMP credentials/business_hours,
+                  es un flag booleano simple (sin optimistic locking), así que
+                  se guarda al toque en vez de acumularse con "Aplicar Configuración". */}
+              <div className="p-5 bg-brand/5 rounded-2xl border border-brand/20 flex items-center gap-4">
+                <Radio className="text-brand shrink-0" size={20} />
+                <div className="flex-1">
+                  <p className="text-xs text-brand-charcoal/80 font-bold leading-relaxed">
+                    Acceso remoto a la EWS del dispositivo vía túnel sobre el WSS existente. Deshabilitado por defecto.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={toggleRemoteEws}
+                  disabled={savingRemoteEws}
+                  className={`shrink-0 px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider transition-all disabled:opacity-50 ${
+                    remoteEwsEnabled ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-slate-100 text-slate-500 border border-slate-200'
+                  }`}
+                >
+                  {savingRemoteEws ? <Loader2 size={12} className="animate-spin" /> : remoteEwsEnabled ? 'Habilitado' : 'Deshabilitado'}
+                </button>
               </div>
 
               <div className="flex gap-6 pt-6">

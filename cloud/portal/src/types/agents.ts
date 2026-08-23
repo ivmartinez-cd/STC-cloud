@@ -8,6 +8,9 @@ export type Agent = {
   last_seen: string | null;
   client_id: string;
   client_name?: string;
+  /** Opt-in, default false — acceso remoto controlado a la EWS del dispositivo
+   *  vía túnel sobre el WSS existente. Ver PUT /agents/:id/remote-ews. */
+  remote_ews_enabled?: boolean;
 }
 
 /**

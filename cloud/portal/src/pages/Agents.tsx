@@ -17,7 +17,7 @@ const Agents = () => {
   const [regenLoading, setRegenLoading]     = useState<string | null>(null);
   const [searchTerm, setSearchTerm]         = useState('');
   const [agentToRevoke, setAgentToRevoke]   = useState<Agent | null>(null);
-  const [configModal, setConfigModal]       = useState<{ id: string; name: string } | null>(null);
+  const [configModal, setConfigModal]       = useState<{ id: string; name: string; remote_ews_enabled?: boolean } | null>(null);
   const [regenModal, setRegenModal]         = useState<{ agentName: string; key: string; expiresAt: string } | null>(null);
 
   const now = useTime();
@@ -93,7 +93,7 @@ const Agents = () => {
         now={now}
         regenLoading={regenLoading}
         revoking={revoking}
-        onConfig={agent => setConfigModal({ id: agent.id, name: agent.name })}
+        onConfig={agent => setConfigModal({ id: agent.id, name: agent.name, remote_ews_enabled: agent.remote_ews_enabled })}
         onRegen={regenerateKey}
         onRevoke={setAgentToRevoke}
       />

@@ -14,6 +14,7 @@ import ConfirmModal from '../components/ConfirmModal';
 import ClientUsageChart from '../components/agents/ClientUsageChart';
 import CreateMonitorModal from '../components/monitors/CreateMonitorModal';
 import { MergeDeviceModal } from '../components/devices/DeviceLifecycleModals';
+import ApiKeysCard from '../components/clients/ApiKeysCard';
 import { api } from '../lib/api';
 
 function MonitorStatusBadge({ status, last_seen, now }: { status: string; last_seen: string | null; now: number }) {
@@ -384,6 +385,8 @@ const ClientDetail = () => {
 
             {/* Usage Chart */}
             <ClientUsageChart usage={usage} />
+
+            {!isReadOnlyViewer && id && <ApiKeysCard clientId={id} canEdit={!isReadOnlyViewer} />}
           </div>
 
           {/* Monitor List */}
