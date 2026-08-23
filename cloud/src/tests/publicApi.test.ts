@@ -150,6 +150,50 @@ describe('API keys — crear/listar/revocar', () => {
   });
 });
 
+describe('Webhook desde el portal — /clients/:id/webhook', () => {
+  test('GET sin configurar aún → 404', async () => {
+    const res = await req('GET', `/clients/${ctx.clientAId}/webhook`, undefined, ctx.adminToken);
+    assert.equal(res.status, 404);
+  });
+
+  test('PUT setea url + events, devuelve el secret (no hace falta API key para configurarlo)', async () => {
+    const res = await req('PUT', `/clients/${ctx.clientAId}/webhook`, {
+      url: 'https://example.invalid/webhook',
+      events: ['reading.created', 'alert.created'],
+      active: true,
+    }, ctx.adminToken);
+    assert.equal(res.status, 200);
+    assert.equal(res.data.url, 'https://example.invalid/webhook');
+    assert.deepEqual(res.data.events, ['reading.created', 'alert.created']);
+    assert.ok(res.data.secret, 'debe devolver el secret HMAC');
+  });
+
+  test('GET después de configurar → 200, mismo contenido', async () => {
+    const res = await req('GET', `/clients/${ctx.clientAId}/webhook`, undefined, ctx.adminToken);
+    assert.equal(res.status, 200);
+    assert.equal(res.data.url, 'https://example.invalid/webhook');
+  });
+
+  test('lo configurado por el portal es visible vía la API pública con la key real del cliente', async () => {
+    const res = await pub('GET', '/public/webhook', undefined, ctx.apiKeyA);
+    assert.equal(res.status, 200);
+    assert.equal(res.data.url, 'https://example.invalid/webhook');
+  });
+
+  test('events con un valor inválido → 400', async () => {
+    const res = await req('PUT', `/clients/${ctx.clientAId}/webhook`, { events: ['no-existe'] }, ctx.adminToken);
+    assert.equal(res.status, 400);
+  });
+
+  test('regenerate_secret cambia el secret sin tocar url/events', async () => {
+    const before = await req('GET', `/clients/${ctx.clientAId}/webhook`, undefined, ctx.adminToken);
+    const res = await req('PUT', `/clients/${ctx.clientAId}/webhook`, { regenerate_secret: true }, ctx.adminToken);
+    assert.equal(res.status, 200);
+    assert.notEqual(res.data.secret, before.data.secret);
+    assert.equal(res.data.url, 'https://example.invalid/webhook', 'url no debe cambiar');
+  });
+});
+
 describe('API pública — scoping y datos', () => {
   test('sync de una lectura real para el dispositivo de prueba', async () => {
     const sync = await req('POST', '/devices/sync', {

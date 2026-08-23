@@ -47,6 +47,18 @@ const createApiKeySchema = {
   },
 };
 
+const putWebhookSchema = {
+  body: {
+    type: "object",
+    properties: {
+      url: { type: "string", maxLength: 500 },
+      events: { type: "array", items: { type: "string" }, maxItems: 3 },
+      active: { type: "boolean" },
+      regenerate_secret: { type: "boolean" },
+    },
+  },
+};
+
 export function registerClientRoutes(
   fastify: FastifyInstance,
   db: Knex,
@@ -104,5 +116,18 @@ export function registerClientRoutes(
   fastify.delete("/api/v1/clients/:id/api-keys/:keyId", {
     preHandler: portalAuth,
     handler: ctrl.revokeApiKey,
+  });
+
+  // Config del webhook de la API pública (`api_webhooks`) — mismo criterio de
+  // deny-by-default para client_viewer que las API keys de arriba.
+  fastify.get("/api/v1/clients/:id/webhook", {
+    preHandler: portalAuth,
+    handler: ctrl.getWebhook,
+  });
+
+  fastify.put("/api/v1/clients/:id/webhook", {
+    schema: putWebhookSchema,
+    preHandler: portalAuth,
+    handler: ctrl.putWebhook,
   });
 }

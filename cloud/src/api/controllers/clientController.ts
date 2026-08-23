@@ -5,6 +5,9 @@ import { getClientIp } from "../utils/ip";
 import { getScope } from "../utils/scope";
 import { onlyLiveDevices, notMerged } from "../utils/deviceFilters";
 import * as apiKeyService from "../../services/apiKeyService";
+import { getWebhookConfig, upsertWebhookConfig, type PublicApiEvent } from "../../services/publicWebhookService";
+
+const VALID_WEBHOOK_EVENTS: PublicApiEvent[] = ["reading.created", "alert.created", "report.closed"];
 
 export function createClientController(db: Knex) {
   return {
@@ -251,6 +254,33 @@ export function createClientController(db: Knex) {
       const updated = await apiKeyService.revokeApiKey(db, id, keyId);
       if (updated === 0) return reply.status(404).send({ error: "API key no encontrada o ya revocada" });
       return { ok: true };
+    },
+
+    // Gestión del webhook de la API pública (`api_webhooks`) desde el portal —
+    // reusa el mismo service que `/api/v1/public/webhook` (autenticado por API
+    // key), acá scopeado por :id de la URL en vez de por el cliente resuelto
+    // desde la key. Sin esto, un admin no tenía forma de configurar el webhook
+    // sin ya tener una key generada (huevo y gallina).
+    getWebhook: async (request: FastifyRequest, reply: FastifyReply) => {
+      const { id } = request.params as { id: string };
+      const config = await getWebhookConfig(db, id);
+      if (!config) return reply.status(404).send({ error: "Sin webhook configurado" });
+      return config;
+    },
+
+    putWebhook: async (request: FastifyRequest, reply: FastifyReply) => {
+      const { id } = request.params as { id: string };
+      const body = request.body as { url?: string; events?: string[]; active?: boolean; regenerate_secret?: boolean };
+      if (body.events && !body.events.every((e) => VALID_WEBHOOK_EVENTS.includes(e as PublicApiEvent))) {
+        return reply.status(400).send({ error: `events debe ser subconjunto de ${VALID_WEBHOOK_EVENTS.join(", ")}` });
+      }
+      const config = await upsertWebhookConfig(db, id, {
+        url: body.url,
+        events: body.events as PublicApiEvent[] | undefined,
+        active: body.active,
+        regenerateSecret: body.regenerate_secret,
+      });
+      return config;
     },
   };
 }
