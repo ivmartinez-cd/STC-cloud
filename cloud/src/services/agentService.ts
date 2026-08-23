@@ -203,6 +203,27 @@ function isValidUuid(v: unknown): v is string {
   return typeof v === "string" && UUID_RE.test(v);
 }
 
+/**
+ * Ejecuta `fn` sobre `items` con un techo de tareas concurrentes (no todas a
+ * la vez, no una por una). Usado en `syncReadings` para no mantener una
+ * conexión del pool ocupada todo el tiempo que dura procesar un lote grande
+ * en serie — sin librería externa, un pool simple de N workers que van
+ * tomando el próximo item de la cola.
+ */
+async function mapWithConcurrency<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
+  const results: R[] = new Array(items.length);
+  let nextIndex = 0;
+  async function worker() {
+    while (true) {
+      const current = nextIndex++;
+      if (current >= items.length) return;
+      results[current] = await fn(items[current]);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, () => worker()));
+  return results;
+}
+
 export class AgentService {
   constructor(private db: Knex, private redis?: RedisClient) {}
 
@@ -630,7 +651,35 @@ export class AgentService {
     const agentRow = await this.db("agents").where({ id: agentId }).select("client_id").first();
     const clientId: string | null = agentRow?.client_id ?? null;
 
+    // Auditoría de capacidad (200+ clientes, 23/08/2026): antes este loop era
+    // estrictamente secuencial, manteniendo una conexión del pool ocupada
+    // todo el tiempo que durara procesar el lote completo. Se paraleliza con
+    // un techo de concurrencia (`processReading` no cambia NADA de la lógica
+    // de negocio por dispositivo, sólo se ejecuta con varios workers en vez
+    // de uno).
+    //
+    // Advertencia de concurrencia deliberada: se agrupa por identidad CRUDA
+    // (`device_id`/`ip` tal como los manda el agente) para que dos lecturas
+    // del MISMO dispositivo dentro de un mismo lote se sigan procesando en
+    // orden estricto entre sí (evita un lost-update si ambas leen el estado
+    // viejo del dispositivo antes de que la otra escriba) — grupos
+    // DISTINTOS corren en paralelo. Esto cubre el caso realista (un agente
+    // nunca manda dos lecturas de la misma impresora en un mismo ciclo); NO
+    // cubre el caso extremo de que dos identidades crudas *distintas*
+    // terminen resolviendo al mismo `device_id` ya existente en la resolución
+    // de identidad — ese caso ya era una ventana de carrera preexistente
+    // entre agentes concurrentes distintos (el UPDATE del dispositivo corre
+    // fuera del advisory lock, que sólo protege la resolución de identidad
+    // en sí), no algo que este cambio introduzca nuevo.
+    const READING_CONCURRENCY = 5;
+    const groups = new Map<string, IncomingReading[]>();
     for (const r of readings) {
+      const rawKey = (r.device_id || r.ip || "").trim().toLowerCase() || `__no-identity-${groups.size}`;
+      const group = groups.get(rawKey);
+      if (group) group.push(r); else groups.set(rawKey, [r]);
+    }
+
+    const processReading = async (r: IncomingReading): Promise<MappedReading | null> => {
       try {
         const rawDeviceId = (r.device_id || "").trim();
         const ip = (r.ip || "").trim();
@@ -923,7 +972,7 @@ export class AgentService {
           readingTime = new Date(); 
         }
 
-        mappedReadings.push({
+        return {
           reading_id:   isValidUuid(r.reading_id) ? r.reading_id : null,
           time:         readingTime,
           device_id:    deviceId,
@@ -936,7 +985,7 @@ export class AgentService {
           toner_yellow: parseToner(r.toner_yellow),
           supplies_details: r.supplies_details ? JSON.stringify(r.supplies_details) : null,
           offline:      r.offline ?? false,
-        });
+        };
       } catch (err: unknown) {
         const errMsg = err instanceof Error ? err.stack || err.message : String(err);
         logger.error({ err: errMsg }, `[SYNC] Error procesando dispositivo ${r.device_id}`);
@@ -948,8 +997,25 @@ export class AgentService {
             message: `Device Sync Fail [${r.ip || r.device_id}]: ${errMsg}`
           }], timezone);
         }
+        return null;
       }
-    }
+    };
+
+    // Cada grupo (misma identidad cruda) se procesa en orden estricto puertas
+    // adentro; grupos distintos corren con el techo de concurrencia de arriba.
+    const groupResults = await mapWithConcurrency(
+      Array.from(groups.values()),
+      READING_CONCURRENCY,
+      async (group) => {
+        const out: MappedReading[] = [];
+        for (const r of group) {
+          const mapped = await processReading(r);
+          if (mapped) out.push(mapped);
+        }
+        return out;
+      }
+    );
+    mappedReadings.push(...groupResults.flat());
 
     let inserted = 0;
     let duplicates = 0;

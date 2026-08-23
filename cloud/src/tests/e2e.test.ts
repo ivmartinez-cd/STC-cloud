@@ -259,6 +259,71 @@ describe('Registro y sincronización de dispositivos', () => {
   });
 });
 
+describe('Concurrencia del sync (batching, auditoría de capacidad 200+ clientes)', () => {
+  test('Lote con 12 dispositivos distintos en un solo sync → los 12 se registran e insertan', async () => {
+    const prefix = `SN-CONC-${Date.now()}`;
+    const readings = Array.from({ length: 12 }, (_, i) => ({
+      device_id:   `${prefix}-${i}`,
+      ip:          `192.168.101.${10 + i}`,
+      brand:       'hp',
+      model:       `HP Concurrencia ${i}`,
+      time:        new Date().toISOString(),
+      total_pages: 1000 + i,
+      offline:     false,
+    }));
+    const { status, data } = await req('POST', '/devices/sync', { readings }, ctx.agentToken);
+    assert.equal(status, 200);
+    assert.equal(data.inserted, 12, 'las 12 lecturas de dispositivos distintos deben insertarse');
+
+    const { data: devicesData } = await req('GET', `/clients/${ctx.clientId}/devices`, undefined, ctx.portalToken);
+    for (let i = 0; i < 12; i++) {
+      const device = devicesData.find((d: any) => d.serial_number === `${prefix}-${i}`);
+      assert.ok(device, `dispositivo ${i} debe existir`);
+      // devices.total_pages es BIGINT -> node-pg lo devuelve como string.
+      assert.equal(Number(device.total_pages), 1000 + i, `dispositivo ${i} debe tener su propio total_pages, sin mezclarse con otro del lote`);
+    }
+  });
+
+  test('Una lectura con supplies_details corrupto no tumba el resto del lote (aislamiento por lectura preservado)', async () => {
+    const prefix = `SN-CONC-BAD-${Date.now()}`;
+    const readings = [
+      { device_id: `${prefix}-ok1`, ip: '192.168.101.201', brand: 'hp', time: new Date().toISOString(), total_pages: 500, offline: false },
+      // supplies_details string no-JSON → JSON.parse tira adentro de processReading
+      { device_id: `${prefix}-bad`, ip: '192.168.101.202', brand: 'hp', time: new Date().toISOString(), total_pages: 600, offline: false, supplies_details: '{esto no es json' },
+      { device_id: `${prefix}-ok2`, ip: '192.168.101.203', brand: 'hp', time: new Date().toISOString(), total_pages: 700, offline: false },
+    ];
+    const { status, data } = await req('POST', '/devices/sync', { readings }, ctx.agentToken);
+    assert.equal(status, 200);
+    assert.equal(data.inserted, 2, 'las 2 lecturas buenas deben insertarse aunque la del medio falle');
+
+    const { data: devicesData } = await req('GET', `/clients/${ctx.clientId}/devices`, undefined, ctx.portalToken);
+    assert.ok(devicesData.find((d: any) => d.serial_number === `${prefix}-ok1`), 'ok1 debe existir');
+    assert.ok(devicesData.find((d: any) => d.serial_number === `${prefix}-ok2`), 'ok2 debe existir');
+    // El upsert del dispositivo corre ANTES del JSON.parse que revienta (más
+    // abajo, al sincronizar alertas EWS) — comportamiento preexistente, no
+    // introducido por el refactor: el dispositivo "bad" sí se crea/actualiza,
+    // sólo su LECTURA queda afuera de `readings` (ya cubierto arriba por
+    // `inserted === 2`, no 3).
+    assert.ok(devicesData.find((d: any) => d.serial_number === `${prefix}-bad`), 'bad sí debe existir como dispositivo (el upsert corre antes del parseo que falla)');
+  });
+
+  test('Dos lecturas del MISMO dispositivo en un solo lote se procesan en orden (sin lost-update)', async () => {
+    const serial = `SN-CONC-SAME-${Date.now()}`;
+    const readings = [
+      { device_id: serial, ip: '192.168.101.210', brand: 'hp', model: 'HP Same-Device', time: new Date(Date.now() - 1000).toISOString(), total_pages: 100, offline: false },
+      { device_id: serial, ip: '192.168.101.210', brand: 'hp', model: 'HP Same-Device', time: new Date().toISOString(), total_pages: 200, offline: false },
+    ];
+    const { status, data } = await req('POST', '/devices/sync', { readings }, ctx.agentToken);
+    assert.equal(status, 200);
+    assert.equal(data.inserted, 2, 'ambas lecturas del mismo dispositivo deben insertarse en el historial');
+
+    const { data: devicesData } = await req('GET', `/clients/${ctx.clientId}/devices`, undefined, ctx.portalToken);
+    const device = devicesData.find((d: any) => d.serial_number === serial);
+    assert.ok(device, 'el dispositivo debe existir una sola vez, no duplicado');
+    assert.equal(Number(device.total_pages), 200, 'el estado final debe reflejar la ÚLTIMA lectura del lote (100→200), no quedar en un valor intermedio por una carrera');
+  });
+});
+
 describe('Detección de reset de contador y volumen mensual', () => {
   const resetDeviceSerial = `SN-E2E-RESET-${Date.now()}`;
   let resetDeviceId = '';
