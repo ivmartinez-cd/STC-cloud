@@ -298,15 +298,24 @@ entre quien activa el flag y quien lo usa (ambos son admin/operator sin
 distinción, señalado como límite conocido, no un consentimiento explícito
 del cliente como sugiere HP SDS). 307/307 tests de cloud, 146/146 de agente.
 
-Ítems de Fase 2 que siguen sin tocar: backend multi-réplica (WS sigue con registro de sockets **en
-memoria**, `ws/index.ts:24-25` — no resuelto; `heartbeatMonitor.ts` sigue como
-`setInterval` **a propósito**, ver comentario en el archivo: convertirlo a BullMQ
-repeatable job es riesgoso mientras la Redis de producción use
-`maxmemoryPolicy: allkeys-lru`), familias de marcas nuevas
+Ítems de Fase 2 que siguen sin tocar: backend multi-réplica — parcialmente
+arrancado. ✅ (23/08/2026) logs estructurados: `console.log/warn/error`
+reemplazado por un logger `pino` compartido (`cloud/src/logger.ts`) en los 13
+archivos de jobs/servicios/boot que lo usaban; Fastify sigue con su propio
+pino interno (mismo `LOG_LEVEL`) — pasarle la instancia externa vía
+`loggerInstance` rompe la inferencia de tipos de `FastifyInstance` en las
+funciones `registerXRoutes`. El resto sigue sin tocar: WS con registro de
+sockets **en memoria** (`ws/index.ts:24-25`), `heartbeatMonitor.ts` como
+`setInterval` **a propósito** (ver comentario en el archivo: convertirlo a
+BullMQ repeatable job es riesgoso mientras la Redis de producción use
+`maxmemoryPolicy: allkeys-lru`), y sin métricas Prometheus ni Sentry — todos
+requieren una decisión de arquitectura del usuario, no se tocan sin eso.
+También sigue sin tocar: familias de marcas nuevas
 (Ricoh/Kyocera/Brother/Xerox/Canon/Konica — siguen cayendo a `generic` o con OIDs
 parciales, §3 R8; requiere hardware real para captura/fixtures, no completable
-sin acceso a equipos reales), y documentación (comparativa v2.0,
-inventario de datos, auditoría IT).
+sin acceso a equipos reales). ✅ (23/08/2026) Documentación: comparativa v2.0,
+inventario de datos y auditoría IT ya reescritos — falta sólo el DPA
+(documento legal, no técnico, deliberadamente no redactado).
 
 ### Otros puntos de §3 (riesgos) que siguen abiertos y no forman parte de ningún ítem de arriba
 - ✅ **R4 (parcial, 23/08/2026)**: el WS del portal ya NO acepta el JWT de
@@ -516,7 +525,7 @@ Ver §1. Especialmente `data_collection_inventory.md` (privacidad) y los HTML de
 ### Fase 2 — Diferenciación (2–3 meses) — arrancada: 5 de 7 ítems cerrados
 - ✅ (23/08/2026) API pública con API keys por cliente + webhooks (lecturas, alertas, cierres) → integración ERP. Falta UI de portal (sólo REST por ahora) y expiración/retry automáticos — ver "Estado de implementación".
 - ✅ (23/08/2026) Remote EWS por túnel sobre el WSS existente (allowlist en dos capas, staleness, audit) — sólo el acceso EWS en sí, sin paridad IMIL completa (MIB walk remoto, deshabilitar monitoreo, reenviar lecturas, descubrir IP puntual quedan pendientes). Ver "Estado de implementación".
-- Backend multi‑réplica: pub/sub Redis para WS, jobs BullMQ repetibles (heartbeat monitor), métricas Prometheus, Sentry, logs estructurados sin `console.log`.
+- Backend multi‑réplica: pub/sub Redis para WS, jobs BullMQ repetibles (heartbeat monitor), métricas Prometheus, Sentry. ✅ (23/08/2026) **Sub-ítem cerrado**: logs estructurados con pino en vez de `console.log` (`cloud/src/logger.ts`), sin dependencia de ninguna decisión de arquitectura pendiente — ver "Estado de implementación". El resto (pub/sub Redis, BullMQ repeatable, Prometheus, Sentry) sigue sin tocar.
 - ✅ (23/08/2026) Agregados continuos (diario/mensual por equipo, `readings_daily_agg`/`readings_monthly_agg`) — sólo backend/endpoint, sin dashboard de portal todavía. Ver "Estado de implementación".
 - Familias nuevas: Ricoh WIM, Kyocera CCX, Brother BMS, Xerox WS, Canon, Konica; fixtures reales por modelo; matriz de cobertura de scopes visible en el portal (columna Driver + scopes).
 - ✅ (23/08/2026) Agente: rollback de update (single-file, verificado contra Windows real; el parche ZIP sólo backup manual), activación offline (retry con backoff), dedupe de lecturas idénticas (4h), detección de PJL deshabilitado, log rotation real, "mantener datos" al desinstalar (compilación verificada con Inno Setup 6.7.1 real, falta correr instalación/desinstalación de punta a punta) — ver "Estado de implementación".
