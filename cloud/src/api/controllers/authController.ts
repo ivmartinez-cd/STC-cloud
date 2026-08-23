@@ -5,6 +5,7 @@ import path from "path";
 import { Knex } from "knex";
 import Redis from "ioredis";
 import { AgentService } from "../../services/agentService";
+import { mintWsTicket } from "../../services/wsTicketService";
 import { hashPassword, verifyPassword } from "../utils/password";
 import type { PortalUser } from "../middlewares/authMiddleware";
 import { getClientIp } from "../utils/ip";
@@ -80,6 +81,14 @@ export function createAuthController(fastify: FastifyInstance, db: Knex, redis: 
       const csrfToken = crypto.randomBytes(32).toString("hex");
       reply.setCookie("stc_csrf", csrfToken, { ...cookieOpts, httpOnly: false });
 
+      // `token` se mantiene en el body a propósito: es el mecanismo soportado de
+      // Bearer auth para consumidores que no son el browser del portal (tests,
+      // scripts, clientes API). El browser del portal, en cambio, ya NO lo
+      // guarda en sessionStorage (ver AuthContext.tsx) — antes lo hacía como
+      // fallback para el handshake WS en Vercel (que no proxea WS), lo que
+      // anulaba la protección de `httpOnly` exponiendo el mismo secreto de
+      // sesión a JS de la página. El portal pide un ticket de un solo uso y
+      // corta duración en su lugar (`POST /portal/ws-ticket`, `wsTicketService.ts`).
       return { ok: true, token };
     },
 
@@ -93,6 +102,12 @@ export function createAuthController(fastify: FastifyInstance, db: Knex, redis: 
       const user = (request as FastifyRequest & { user: PortalUser }).user;
       const token = request.cookies.stc_session;
       return { userId: user.userId, username: user.username, role: user.role, clientId: user.clientId, token };
+    },
+
+    portalWsTicket: async (request: FastifyRequest) => {
+      const user = (request as FastifyRequest & { user: PortalUser }).user;
+      const ticket = await mintWsTicket(redis, { userId: user.userId, role: "portal" });
+      return { ticket };
     },
 
     listUsers: async (request: FastifyRequest, reply: FastifyReply) => {

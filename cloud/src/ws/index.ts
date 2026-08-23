@@ -2,6 +2,7 @@ import { FastifyInstance, FastifyRequest } from 'fastify';
 import { Knex } from 'knex';
 import Redis from 'ioredis';
 import { AgentService } from '../services/agentService';
+import { consumeWsTicket } from '../services/wsTicketService';
 
 // ─── Tipos Internos del Módulo WebSocket ──────────────────────────────────────
 
@@ -103,15 +104,18 @@ export async function registerWebSocket(fastify: FastifyInstance, db: Knex, redi
 
       const authHeader = request.headers.authorization;
       const cookieToken = request.cookies?.stc_session;
-      const queryToken = (request.query as Record<string, string>)?.token;
+      const queryTicket = (request.query as Record<string, string>)?.token;
 
       if (authHeader) {
         await request.jwtVerify();
         user = request.user as WsJwtPayload;
       } else if (cookieToken) {
         user = fastify.jwt.verify<WsJwtPayload>(cookieToken);
-      } else if (queryToken) {
-        user = fastify.jwt.verify<WsJwtPayload>(queryToken);
+      } else if (queryTicket) {
+        // Ticket de un solo uso (`POST /portal/ws-ticket`), NO el JWT de sesión:
+        // el portal en Vercel conecta directo contra Render (Vercel no proxea
+        // WS), y la cookie de sesión no cruza de dominio en ese handshake.
+        user = await consumeWsTicket(redis, queryTicket);
       }
 
       if (!user) {

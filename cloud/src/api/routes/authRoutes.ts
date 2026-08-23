@@ -98,6 +98,13 @@ export function registerAuthRoutes(
     handler: ctrl.portalMe,
   });
 
+  // Ticket de un solo uso para el handshake WS (ver `wsTicketService.ts`) —
+  // reemplaza el JWT de sesión que antes viajaba por `?token=`.
+  fastify.post("/api/v1/portal/ws-ticket", {
+    preHandler: portalAuth,
+    handler: ctrl.portalWsTicket,
+  });
+
   // Endpoints para gestión de operadores (protegidos por portalAuth y validados por rol en el controlador)
   fastify.get("/api/v1/portal/users", {
     preHandler: portalAuth,

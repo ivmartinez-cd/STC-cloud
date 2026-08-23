@@ -176,9 +176,20 @@ parciales, §3 R8), mejoras de agente (rollback de update, activación offline,
 datos, auditoría IT).
 
 ### Otros puntos de §3 (riesgos) que siguen abiertos y no forman parte de ningún ítem de arriba
-- **R4**: WS con `?token=` en query string sigue aceptándose (`ws/index.ts:106`) —
-  no se sacó en la pasada de seguridad mínima, sólo se agregó verificación de
-  revocación/blacklist. El registro de sockets en memoria (arriba, Fase 2).
+- ✅ **R4 (parcial, 23/08/2026)**: el WS del portal ya NO acepta el JWT de
+  sesión por query string. Investigado antes de tocarlo: no era vestigial —
+  `Terminal.tsx` conecta directo a Render cuando el portal corre en Vercel
+  (Vercel no proxea WS), y la cookie de sesión no cruza de `vercel.app` a
+  `onrender.com` en ese handshake, así que sacarlo sin más habría roto la
+  consola WS en producción. Se reemplazó por un **ticket de un solo uso, TTL
+  60s** (`cloud/src/services/wsTicketService.ts`, `POST /portal/ws-ticket`,
+  consumido atómicamente vía `GETDEL` en `ws/index.ts`) — el portal ya no
+  cachea el JWT de sesión en `sessionStorage` (antes anulaba `httpOnly`
+  exponiendo el mismo secreto a JS de la página). El agente DCA nunca usó
+  esta vía (ya manda `Authorization: Bearer` como header nativo). El
+  registro de sockets en memoria (multi-réplica) sigue en Fase 2; el
+  cross-origin Vercel/Render de raíz sigue sin resolverse (fuera de alcance,
+  ver plan de esta pasada).
 - **R5**: `UpdateService.ts` sigue omitiendo la firma si `UPDATE_PUBLIC_KEY_HEX`
   es el placeholder, y sin rollback — no tocado.
 - **R6**: versión unificada en agente/cloud (Fase 0, hecho), pero **no** entre
