@@ -1,6 +1,11 @@
 import { log } from './Logger';
 import { ConsoleConnector } from './ConsoleConnector';
 import type { SocketManager } from './SocketManager';
+import { proxyEwsRequest } from '../capture/transport/http';
+
+/** Tope de tamaño de una respuesta de EWS proxyeada — un WS sin `maxPayload` explícito no debe recibir un frame arbitrariamente grande. */
+const EWS_PROXY_MAX_BYTES = 2 * 1024 * 1024;
+const EWS_PROXY_TIMEOUT_MS = 10_000;
 
 export interface CommandResult {
   status: 'success' | 'error';
@@ -19,6 +24,10 @@ export class CommandHandler {
   private scanTrigger: ScanTrigger | null = null;
   private forceUpdateFn: ForceUpdateFn | null = null;
   private isNetworkBusy: () => boolean = () => false;
+  // Fail-closed a propósito: si nadie lo configura (ej. un test que no lo
+  // necesita), EWS_PROXY rechaza siempre en vez de asumir que cualquier IP
+  // es válida.
+  private isKnownDeviceIp: (ip: string) => boolean = () => false;
 
   setSocket(socket: SocketManager | null): void {
     this.socket = socket;
@@ -34,6 +43,11 @@ export class CommandHandler {
 
   setNetworkBusyCheck(fn: () => boolean): void {
     this.isNetworkBusy = fn;
+  }
+
+  /** Defensa en profundidad: el cloud ya resuelve la IP desde `devices` (nunca confía en una IP tipeada a mano), pero el agente re-valida contra su propio `known_devices` local antes de tunelear. */
+  setKnownDeviceCheck(fn: (ip: string) => boolean): void {
+    this.isKnownDeviceIp = fn;
   }
 
   isProcessed(id: string): boolean {
@@ -88,6 +102,28 @@ export class CommandHandler {
         case 'FORCE_UPDATE': {
           const applied = this.forceUpdateFn ? await this.forceUpdateFn() : false;
           result = { message: applied ? 'Actualizacion aplicada. Reiniciando...' : 'Sin actualizacion disponible o verificacion fallida.' };
+          break;
+        }
+        case 'EWS_PROXY': {
+          const p = payload as { ip?: string; path?: string; method?: string };
+          if (p.method && p.method !== 'GET') {
+            throw new Error('EWS_PROXY sólo soporta GET');
+          }
+          if (!p.ip || !this.isKnownDeviceIp(p.ip)) {
+            // El cloud ya resuelve la IP desde `devices`, pero si este agente
+            // no la conoce localmente (equipo dado de baja acá, o
+            // desincronizado), no se hace el request — nunca confiar
+            // ciegamente en una IP que llega por WS.
+            throw new Error(`IP ${p.ip ?? '(vacía)'} no está en known_devices de este agente`);
+          }
+          if (!p.path || !p.path.startsWith('/')) {
+            throw new Error('path inválido');
+          }
+          const proxied = await proxyEwsRequest(p.ip, p.path, EWS_PROXY_MAX_BYTES, EWS_PROXY_TIMEOUT_MS);
+          if (!proxied) {
+            throw new Error('No se pudo contactar la EWS del dispositivo (timeout o conexión rechazada)');
+          }
+          result = { status: proxied.status, headers: proxied.headers, bodyBase64: proxied.bodyBase64, truncated: proxied.truncated };
           break;
         }
         default:

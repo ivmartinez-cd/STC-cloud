@@ -3,6 +3,7 @@ import { Knex } from 'knex';
 import Redis from 'ioredis';
 import { AgentService } from '../services/agentService';
 import { consumeWsTicket } from '../services/wsTicketService';
+import { resolveEwsProxy, rejectEwsProxy, rejectAllPendingForAgent } from '../services/ewsProxyService';
 
 // ─── Tipos Internos del Módulo WebSocket ──────────────────────────────────────
 
@@ -212,6 +213,20 @@ export async function registerWebSocket(fastify: FastifyInstance, db: Knex, redi
             });
           }
 
+          // EWS_PROXY se resuelve DIRECTO contra la request HTTP que lo pidió
+          // (ver `ewsProxyService.ts`) — nunca por `broadcastToPortal`: ese
+          // canal manda cualquier command_result a TODOS los portales
+          // admin/operator conectados, y el contenido de la EWS de un
+          // cliente sólo debe llegar a quien lo pidió.
+          if (msg.data?.type === 'EWS_PROXY' && msg.data?.id) {
+            if (msg.data.status === 'success') {
+              resolveEwsProxy(msg.data.id, msg.data.result);
+            } else {
+              rejectEwsProxy(msg.data.id, msg.data.result?.error || 'Error desconocido del agente');
+            }
+            return;
+          }
+
           broadcastToPortal('command_result', {
             agentId,
             ...msg.data
@@ -228,8 +243,12 @@ export async function registerWebSocket(fastify: FastifyInstance, db: Knex, redi
 
     socket.on('close', () => {
       if (pingInterval) { clearInterval(pingInterval); pingInterval = null; }
-      if (agentId) agentClients.delete(agentId);
-      else if (portalConn) portalClients.delete(portalConn);
+      if (agentId) {
+        agentClients.delete(agentId);
+        // Nunca dejar una request de EWS_PROXY colgada hasta el timeout si
+        // ya sabemos que el agente se desconectó.
+        rejectAllPendingForAgent(agentId);
+      } else if (portalConn) portalClients.delete(portalConn);
       fastify.log.info(`WSS: Conexión cerrada (${agentId || 'portal'})`);
     });
 
@@ -237,8 +256,10 @@ export async function registerWebSocket(fastify: FastifyInstance, db: Knex, redi
       const errMsg = err instanceof Error ? err.message : String(err);
       fastify.log.error(`WSS Error: ${errMsg}`);
       if (pingInterval) { clearInterval(pingInterval); pingInterval = null; }
-      if (agentId) agentClients.delete(agentId);
-      else if (portalConn) portalClients.delete(portalConn);
+      if (agentId) {
+        agentClients.delete(agentId);
+        rejectAllPendingForAgent(agentId);
+      } else if (portalConn) portalClients.delete(portalConn);
     });
 
     await closePromise;

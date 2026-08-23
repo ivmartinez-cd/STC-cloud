@@ -168,7 +168,7 @@ decisión de negocio, no una obligación de compliance.
   (API-only por ahora), resolución de solapamiento de rangos en runtime
   (sólo warning al guardar).
 
-### Fase 2 — Diferenciación — arrancada: 3 de 7 ítems cerrados
+### Fase 2 — Diferenciación — arrancada: 4 de 7 ítems cerrados
 ✅ **API pública con API keys por cliente + webhooks de integración ERP**
 (23/08/2026): `api_keys` (hash SHA-256 at-rest, nunca el valor en claro;
 gestión desde el portal — `POST/GET/DELETE /clients/:id/api-keys`, admin/
@@ -264,8 +264,41 @@ trabajando en simultáneo sobre `cloud/portal/`); no es de lectura inmediata
 (hasta 1h/6h de lag según el `schedule_interval` de cada policy, a
 diferencia de `/readings` crudo). 288/288 tests de cloud verdes.
 
-Ítems de Fase 2 que siguen sin tocar: remote EWS por túnel sobre el WSS
-existente, backend multi-réplica (WS sigue con registro de sockets **en
+✅ **Remote EWS por túnel sobre el WSS existente** (23/08/2026): proxy
+SÍNCRONO de un GET a la EWS de un dispositivo específico, sin sesión de
+túnel persistente — reusa el canal de comandos WS ya existente
+(`sendCommandToAgent`), pero resuelto vía un mapa de resolvers en memoria
+(`ewsProxyService.ts`) en vez de `broadcastToPortal` (que manda cualquier
+`command_result` a TODOS los portales admin/operator conectados — un
+Plan-agent detectó que usarlo acá filtraría contenido de la EWS de un
+cliente a cualquier admin conectado en simultáneo, no sólo a quien lo pidió).
+Opt-in explícito por agente (`agents.remote_ews_enabled`, default `false`,
+imitando que HP SDS lo tiene desactivado por defecto), toggle auditado
+aparte del uso (`REMOTE_EWS_TOGGLE` vs `REMOTE_EWS_ACCESS`, nunca el body
+completo en `audit_logs`). Allowlist en dos capas: cloud resuelve la IP
+ACTUAL desde `devices` (nunca una IP tipeada a mano) y rechaza si
+`last_seen` es más viejo que 2x el intervalo de scan (ventana de staleness
+por reasignación DHCP); agente re-valida contra su `known_devices` local
+antes de tunelear (`CommandHandler.ts`, fail-closed si no está configurado).
+GET-only forzado en ambas capas — mismo principio ya documentado en la
+comparativa v1.0 ("STC Cloud sólo hace GET de lectura, no modifica
+configuración"). Descarga con tope de tamaño (2MB) cortado en streaming
+(no post-buffer, que sí podía inflar memoria sin límite antes) — body
+en base64, nunca `toString('utf8')` (una EWS con imágenes se corrompía).
+`EWS_PROXY` deliberadamente NO está en el enum del comando genérico
+(`/agents/:id/command`) — la única vía es el endpoint dedicado
+`POST /agents/:id/ews-proxy`, con su propia validación. Verificado en vivo
+con una conexión WS real simulando el agente (no un mock) — round-trip
+completo, error del agente, agente offline, staleness, flag apagado.
+**Lo que NO se hizo**: UI de portal (deliberado, otra sesión trabajaba en
+simultáneo sobre `cloud/portal/`); paridad completa con IMIL (MIB walk
+remoto, deshabilitar monitoreo por equipo, reenviar lecturas, descubrir IP
+puntual — sólo se implementó el acceso EWS en sí); separación de roles
+entre quien activa el flag y quien lo usa (ambos son admin/operator sin
+distinción, señalado como límite conocido, no un consentimiento explícito
+del cliente como sugiere HP SDS). 307/307 tests de cloud, 146/146 de agente.
+
+Ítems de Fase 2 que siguen sin tocar: backend multi-réplica (WS sigue con registro de sockets **en
 memoria**, `ws/index.ts:24-25` — no resuelto; `heartbeatMonitor.ts` sigue como
 `setInterval` **a propósito**, ver comentario en el archivo: convertirlo a BullMQ
 repeatable job es riesgoso mientras la Redis de producción use
@@ -480,9 +513,9 @@ Ver §1. Especialmente `data_collection_inventory.md` (privacidad) y los HTML de
 - ✅ **Resolución de hostname (point lookup) + credenciales SNMP por rango**: `ip_ranges` acepta un tercer tipo de entrada `{hostname}` resuelto por el agente en cada ciclo (el cloud no tiene visibilidad de la DNS interna del cliente); cada entrada admite `credential_ids?` para restringir qué credenciales se prueban en ESE rango durante discovery, con fail-open ante ids colgantes y warnings no bloqueantes (rangos superpuestos con credenciales distintas, borrado de una credencial referenciada). ⬜ UI de asignación de `credential_ids` en el portal queda para después (API-only); restricción por rango en meter/supplies no se hizo (`known_devices` no tiene vínculo a rango, y no aporta valor real ahí).
 - ✅ Identidad `(client_id, serial)` + MAC secundaria + merge de duplicados; decommission/mover/editar dispositivo.
 
-### Fase 2 — Diferenciación (2–3 meses) — arrancada: 3 de 7 ítems cerrados
+### Fase 2 — Diferenciación (2–3 meses) — arrancada: 4 de 7 ítems cerrados
 - ✅ (23/08/2026) API pública con API keys por cliente + webhooks (lecturas, alertas, cierres) → integración ERP. Falta UI de portal (sólo REST por ahora) y expiración/retry automáticos — ver "Estado de implementación".
-- Remote EWS por túnel sobre el WSS existente (allowlist, TTL, audit), consola con paridad IMIL (listar dispositivos, MIB walk remoto, deshabilitar monitoreo por equipo, reenviar lecturas, descubrir IP puntual).
+- ✅ (23/08/2026) Remote EWS por túnel sobre el WSS existente (allowlist en dos capas, staleness, audit) — sólo el acceso EWS en sí, sin paridad IMIL completa (MIB walk remoto, deshabilitar monitoreo, reenviar lecturas, descubrir IP puntual quedan pendientes). Ver "Estado de implementación".
 - Backend multi‑réplica: pub/sub Redis para WS, jobs BullMQ repetibles (heartbeat monitor), métricas Prometheus, Sentry, logs estructurados sin `console.log`.
 - ✅ (23/08/2026) Agregados continuos (diario/mensual por equipo, `readings_daily_agg`/`readings_monthly_agg`) — sólo backend/endpoint, sin dashboard de portal todavía. Ver "Estado de implementación".
 - Familias nuevas: Ricoh WIM, Kyocera CCX, Brother BMS, Xerox WS, Canon, Konica; fixtures reales por modelo; matriz de cobertura de scopes visible en el portal (columna Driver + scopes).

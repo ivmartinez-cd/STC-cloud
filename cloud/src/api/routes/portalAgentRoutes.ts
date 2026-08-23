@@ -212,4 +212,35 @@ export function registerPortalAgentRoutes(
     },
     handler: ctrl.updateSnmpCredentials,
   });
+
+  // Remote EWS por túnel sobre el WSS existente (Fase 2). `EWS_PROXY`
+  // deliberadamente NO se agrega al enum de `commandSchema` de arriba: la
+  // única vía para dispararlo es este endpoint dedicado, con su propia
+  // validación de allowlist/staleness/path — aceptarlo también en el
+  // comando genérico permitiría bypassear esos chequeos mandando
+  // {type:"EWS_PROXY", payload:{ip: cualquiera}} directo.
+  fastify.put("/api/v1/agents/:id/remote-ews", {
+    preHandler: portalAuth,
+    schema: { body: { type: "object", required: ["enabled"], properties: { enabled: { type: "boolean" } } } },
+    handler: ctrl.setRemoteEwsEnabled,
+  });
+
+  fastify.post("/api/v1/agents/:id/ews-proxy", {
+    preHandler: portalAuth,
+    schema: {
+      body: {
+        type: "object",
+        required: ["device_id", "path"],
+        properties: {
+          device_id: { type: "string", format: "uuid" },
+          path: { type: "string", minLength: 1, maxLength: 500 },
+        },
+      },
+    },
+    // Más estricto que el resto de este router (sin rate-limit propio hoy) —
+    // habilita reconocimiento de known_devices si se abusa, y cada llamada
+    // dispara un round-trip real hacia la LAN del cliente.
+    config: { rateLimit: { max: 20, timeWindow: "1 minute" } },
+    handler: ctrl.ewsProxy,
+  });
 }

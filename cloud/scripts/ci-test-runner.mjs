@@ -19,6 +19,8 @@ const TEST_FILES = [
   "src/tests/ipRangesCredentials.test.ts",
   "src/tests/publicApi.test.ts",
   "src/tests/deviceUsageHistory.test.ts",
+  "src/tests/ewsProxyService.test.ts",
+  "src/tests/portalAgentEws.test.ts",
 ];
 
 function runFile(file) {

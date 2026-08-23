@@ -159,6 +159,94 @@ export function httpRequest(ip: string, opts: HttpRequestOptions): Promise<HttpR
   });
 }
 
+export interface EwsProxyResponse {
+  status: number;
+  headers: Record<string, string>;
+  bodyBase64: string;
+  truncated: boolean;
+}
+
+/**
+ * Proxy de un GET a la EWS para el túnel remoto (Fase 2, `CommandHandler.ts`
+ * caso `EWS_PROXY`) — a diferencia de `httpRequest`/`fetchHttp`:
+ * - Corta la descarga apenas se supera `maxBytes` (destruye la conexión),
+ *   en vez de acumular todo en memoria antes de chequear tamaño (así era
+ *   `httpRequest` — un EWS grande/malicioso podía inflar memoria sin límite).
+ * - Devuelve el body en base64, nunca `toString('utf8')` — una página EWS
+ *   con imágenes embebidas (gráficos de estado) se corrompería con utf8.
+ * - Nunca sigue redirects (mismo criterio que `httpRequest`, no
+ *   `fetchHttp` — evita el bug ya conocido de reusar la IP original en un
+ *   `Location` absoluto).
+ */
+/** `port` es parametrizable sólo para poder testear con un servidor TCP local — en producción siempre es 80, ningún caller real lo pasa. */
+export function proxyEwsRequest(
+  ip: string,
+  path: string,
+  maxBytes: number,
+  timeoutMs = EWS_TIMEOUT_MS,
+  port = 80
+): Promise<EwsProxyResponse | null> {
+  return new Promise((resolve) => {
+    let settled = false;
+    const finish = (result: EwsProxyResponse | null) => {
+      if (settled) return;
+      settled = true;
+      resolve(result);
+    };
+
+    const req = http.request(
+      {
+        hostname: ip, port, path, method: 'GET',
+        timeout: timeoutMs,
+        headers: { 'User-Agent': USER_AGENT, 'Accept-Encoding': 'gzip, deflate, identity' },
+      },
+      (res) => {
+        const chunks: Buffer[] = [];
+        let total = 0;
+        let truncated = false;
+
+        res.on('data', (c: Buffer) => {
+          if (truncated) return;
+          total += c.length;
+          if (total > maxBytes) {
+            truncated = true;
+            res.destroy();
+            return;
+          }
+          chunks.push(c);
+        });
+        res.on('end', () => {
+          try {
+            const buffer = Buffer.concat(chunks);
+            const enc = String(res.headers['content-encoding'] ?? '').toLowerCase();
+            const decoded = enc.includes('gzip') ? zlib.gunzipSync(buffer)
+              : enc.includes('deflate') ? zlib.inflateSync(buffer) : buffer;
+            const headers: Record<string, string> = {};
+            for (const [k, v] of Object.entries(res.headers)) {
+              if (typeof v === 'string') headers[k] = v;
+              else if (Array.isArray(v)) headers[k] = v.join(', ');
+            }
+            finish({ status: res.statusCode ?? 0, headers, bodyBase64: decoded.toString('base64'), truncated });
+          } catch {
+            finish(null);
+          }
+        });
+        // `destroy()` por el corte de tamaño dispara 'close', no 'end' — sin
+        // este handler, la promesa nunca se resolvería en ese caso.
+        res.on('close', () => {
+          if (!settled && truncated) {
+            const buffer = Buffer.concat(chunks);
+            finish({ status: res.statusCode ?? 0, headers: {}, bodyBase64: buffer.toString('base64'), truncated: true });
+          }
+        });
+      },
+    );
+    req.on('error', () => finish(null));
+    req.on('timeout', () => { req.destroy(); finish(null); });
+    req.end();
+  });
+}
+
 /** Extrae pares `nombre=valor` de `Set-Cookie` y los fusiona sobre una cookie previa. */
 export function mergeCookies(previous: string, res: HttpResponse | null): string {
   const jar = new Map<string, string>();

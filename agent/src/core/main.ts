@@ -2,7 +2,7 @@
 import { log, setupProcessErrorHandlers } from './Logger';
 import { waitForConnectivity } from './NetworkUtils';
 import { ConfigManager, DATA_DIR } from './config';
-import { openQueue, closeQueue } from '../sync/database';
+import { openQueue, closeQueue, isRegistered } from '../sync/database';
 import { printStatus, setProxy, activate } from './CliCommands';
 import { CommandHandler } from './CommandHandler';
 import { HeartbeatService } from './HeartbeatService';
@@ -106,6 +106,7 @@ async function main(): Promise<void> {
     commandHandler.setNetworkBusyCheck(() => scheduler.isBusy);
     commandHandler.setScanTrigger(() => { scanService.scan(); });
     commandHandler.setForceUpdateFn(() => updateService.checkForUpdate(true));
+    commandHandler.setKnownDeviceCheck((ip) => isRegistered(ip));
 
     // === Conexion WebSocket ===
     const socket = new SocketManager(
