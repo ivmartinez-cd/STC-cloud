@@ -68,14 +68,14 @@ export default function CreateAgentModal({ show, clients, activationKey, onClose
   return (
     <>
       {show && (
-        <div className="cd-panel overflow-hidden animate-in slide-in-from-top-4 duration-500 border-none shadow-2xl shadow-blue-900/5">
+        <div className="cd-panel overflow-hidden animate-in slide-in-from-top-4 duration-500 border-none shadow-2xl shadow-brand/5">
           <div className="bg-[#1a2333] px-10 py-6 flex items-center gap-4 text-white">
             <div className="p-3 bg-white/10 rounded-2xl">
               <Key size={24} />
             </div>
             <div>
               <h3 className="text-lg font-black uppercase tracking-tight">Configuración de Despliegue</h3>
-              <p className="text-[10px] font-bold text-blue-300/60 uppercase tracking-widest">Defina los parámetros del nuevo nodo de monitoreo</p>
+              <p className="text-[10px] font-bold text-white/50 uppercase tracking-widest">Defina los parámetros del nuevo nodo de monitoreo</p>
             </div>
           </div>
 
@@ -116,7 +116,7 @@ export default function CreateAgentModal({ show, clients, activationKey, onClose
                 <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] ml-1">Segmentos de Red Permitidos</label>
                 <button
                   onClick={() => setFormRanges(rs => [...rs, emptyRange()])}
-                  className="flex items-center gap-2 text-[10px] font-black text-brand hover:text-[#2471a3] uppercase tracking-widest transition-colors"
+                  className="flex items-center gap-2 text-[10px] font-black text-brand hover:text-brand-hover uppercase tracking-widest transition-colors"
                 >
                   <Plus size={14} /> AGREGAR RANGO
                 </button>
@@ -166,7 +166,7 @@ export default function CreateAgentModal({ show, clients, activationKey, onClose
               <button
                 onClick={generateKey}
                 disabled={!formClientId || !formName.trim() || creating}
-                className="bg-brand hover:bg-[#2471a3] disabled:opacity-40 text-white rounded-2xl py-5 px-12 text-xs font-black shadow-2xl shadow-blue-900/20 transition-all active:scale-95 flex items-center gap-3"
+                className="bg-brand hover:bg-brand-hover disabled:opacity-40 text-white rounded-2xl py-5 px-12 text-xs font-black shadow-2xl shadow-brand/20 transition-all active:scale-95 flex items-center gap-3"
               >
                 {creating ? <RefreshCw className="animate-spin" size={18} /> : <Key size={18} />}
                 {creating ? 'GENERANDO CREDENCIALES...' : 'GENERAR LLAVE MAESTRA'}
@@ -203,7 +203,7 @@ export default function CreateAgentModal({ show, clients, activationKey, onClose
                 </div>
                 <a
                   href="/api/v1/agents/download-installer"
-                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-brand hover:bg-[#2471a3] text-white rounded-xl text-xs font-black tracking-wider shadow-lg shadow-blue-500/10 transition-all hover:-translate-y-0.5 active:translate-y-0"
+                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-brand hover:bg-brand-hover text-white rounded-xl text-xs font-black tracking-wider shadow-lg shadow-brand/20 transition-all hover:-translate-y-0.5 active:translate-y-0"
                 >
                   <Download size={14} /> DESCARGAR AGENTE (.EXE)
                 </a>

@@ -8,10 +8,10 @@ interface Props {
 }
 
 const MonitorSpecsCard = ({ monitor, now }: Props) => (
-  <div className="cd-panel overflow-hidden border-none shadow-xl shadow-blue-900/5 relative bg-white h-full">
-    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-brand via-blue-400 to-indigo-500" />
-    <div className="cd-header-blue flex items-center gap-3 px-6 py-5 text-white">
-      <TerminalIcon size={18} className="text-blue-300" />
+  <div className="cd-panel overflow-hidden border-none shadow-xl shadow-brand/5 relative bg-white h-full">
+    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-brand via-brand-hover to-brand-gray" />
+    <div className="cd-header-primary flex items-center gap-3 px-6 py-5 text-white">
+      <TerminalIcon size={18} className="text-white/70" />
       <span className="font-black uppercase tracking-widest text-sm text-white">Estado del Monitor</span>
     </div>
     <div className="p-6">
@@ -43,7 +43,7 @@ const MonitorSpecsCard = ({ monitor, now }: Props) => (
           </li>
           <li className="flex justify-between items-center px-4 py-3.5 hover:bg-white rounded-2xl transition-all">
             <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Dirección IP</span>
-            <span className="text-[11px] font-black text-blue-600 font-mono tracking-tighter">{monitor.host_ip || '---'}</span>
+            <span className="text-[11px] font-black text-brand-gray font-mono tracking-tighter">{monitor.host_ip || '---'}</span>
           </li>
           <li className="flex justify-between items-center px-4 py-3.5 hover:bg-white rounded-2xl transition-all">
             <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Último Contacto</span>

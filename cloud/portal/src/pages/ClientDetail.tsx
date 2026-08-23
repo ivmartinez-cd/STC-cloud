@@ -95,11 +95,11 @@ function NotificationSettingsCard({
     <div className="cd-panel p-8">
       <div className="flex items-center justify-between mb-6">
         <h3 className="text-sm font-black text-[#1a2333] tracking-tight flex items-center gap-3">
-          <div className="p-2 bg-blue-50 text-brand rounded-xl"><Bell size={18} /></div>
+          <div className="p-2 bg-brand/10 text-brand rounded-xl"><Bell size={18} /></div>
           Notificaciones de Alertas
         </h3>
         {canEdit && !editing && (
-          <button onClick={startEditing} className="p-2 text-slate-400 hover:text-brand hover:bg-blue-50 rounded-xl transition-all">
+          <button onClick={startEditing} className="p-2 text-slate-400 hover:text-brand hover:bg-brand/10 rounded-xl transition-all">
             <Edit2 size={16} />
           </button>
         )}
@@ -131,7 +131,7 @@ function NotificationSettingsCard({
               <X size={14} /> Cancelar
             </button>
             <button onClick={handleSave} disabled={saving}
-              className="flex-1 px-4 py-2.5 bg-brand hover:bg-[#2471a3] text-white rounded-xl text-xs font-extrabold transition-all disabled:opacity-60 flex items-center justify-center gap-2">
+              className="flex-1 px-4 py-2.5 bg-brand hover:bg-brand-hover text-white rounded-xl text-xs font-extrabold transition-all disabled:opacity-60 flex items-center justify-center gap-2">
               {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} Guardar
             </button>
           </div>
@@ -297,7 +297,7 @@ const ClientDetail = () => {
             {/* Metrics */}
             <div className="flex flex-col gap-4">
               <div className="cd-panel p-5 border-l-4 border-l-brand flex items-center gap-5">
-                <div className="p-3 bg-blue-50 text-brand rounded-2xl"><HardDrive size={24} /></div>
+                <div className="p-3 bg-brand/10 text-brand rounded-2xl"><HardDrive size={24} /></div>
                 <div>
                   <div className="text-2xl font-black text-[#1a2333] tracking-tighter">{client.device_count}</div>
                   <div className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Dispositivos</div>
@@ -325,7 +325,7 @@ const ClientDetail = () => {
             <div className="cd-panel p-8 flex flex-col justify-between">
               <div>
                 <div className="flex items-center gap-5 mb-8">
-                  <div className="w-16 h-16 bg-blue-50 text-brand rounded-2xl flex items-center justify-center shadow-sm">
+                  <div className="w-16 h-16 bg-brand/10 text-brand rounded-2xl flex items-center justify-center shadow-sm">
                     <Users size={32} />
                   </div>
                   <div>
@@ -336,7 +336,7 @@ const ClientDetail = () => {
                 <div className="space-y-4">
                   {client.contact_name && (
                     <div className="flex items-center gap-4 group">
-                      <div className="p-2 bg-slate-50 text-slate-400 rounded-xl group-hover:bg-blue-50 group-hover:text-brand transition-colors">
+                      <div className="p-2 bg-slate-50 text-slate-400 rounded-xl group-hover:bg-brand/10 group-hover:text-brand transition-colors">
                         <Users size={16} />
                       </div>
                       <span className="font-bold text-sm text-[#1a2333]">{client.contact_name}</span>
@@ -344,7 +344,7 @@ const ClientDetail = () => {
                   )}
                   {client.contact_email && (
                     <div className="flex items-center gap-4 group">
-                      <div className="p-2 bg-slate-50 text-slate-400 rounded-xl group-hover:bg-blue-50 group-hover:text-brand transition-colors">
+                      <div className="p-2 bg-slate-50 text-slate-400 rounded-xl group-hover:bg-brand/10 group-hover:text-brand transition-colors">
                         <Mail size={16} />
                       </div>
                       <span className="text-sm text-slate-600 truncate font-medium">{client.contact_email}</span>
@@ -352,7 +352,7 @@ const ClientDetail = () => {
                   )}
                   {client.contact_phone && (
                     <div className="flex items-center gap-4 group">
-                      <div className="p-2 bg-slate-50 text-slate-400 rounded-xl group-hover:bg-blue-50 group-hover:text-brand transition-colors">
+                      <div className="p-2 bg-slate-50 text-slate-400 rounded-xl group-hover:bg-brand/10 group-hover:text-brand transition-colors">
                         <Phone size={16} />
                       </div>
                       <span className="text-sm text-slate-600 font-medium">{client.contact_phone}</span>
@@ -360,7 +360,7 @@ const ClientDetail = () => {
                   )}
                   {(client.address || client.country) && (
                     <div className="flex items-center gap-4 group">
-                      <div className="p-2 bg-slate-50 text-slate-400 rounded-xl group-hover:bg-blue-50 group-hover:text-brand transition-colors">
+                      <div className="p-2 bg-slate-50 text-slate-400 rounded-xl group-hover:bg-brand/10 group-hover:text-brand transition-colors">
                         <MapPin size={16} />
                       </div>
                       <span className="text-xs text-slate-500 font-medium leading-tight">
@@ -390,7 +390,7 @@ const ClientDetail = () => {
           <div className="space-y-6 pt-4">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-black text-[#1a2333] tracking-tight flex items-center gap-4">
-                <div className="p-2 bg-blue-50 text-brand rounded-xl shadow-sm"><Radio size={20} /></div>
+                <div className="p-2 bg-brand/10 text-brand rounded-xl shadow-sm"><Radio size={20} /></div>
                 Infraestructura de Monitoreo
                 <span className="ml-2 px-2.5 py-0.5 bg-slate-100 text-slate-500 text-[10px] font-extrabold rounded-full tracking-widest">
                   {monitors.length} NODOS
@@ -399,7 +399,7 @@ const ClientDetail = () => {
               {!isReadOnlyViewer && (
                 <button
                   onClick={() => setShowMonitorModal(true)}
-                  className="bg-brand hover:bg-[#2471a3] text-white px-6 py-3 rounded-2xl flex items-center gap-3 text-sm font-extrabold shadow-lg shadow-blue-900/10 transition-all active:scale-95 group"
+                  className="bg-brand hover:bg-brand-hover text-white px-6 py-3 rounded-2xl flex items-center gap-3 text-sm font-extrabold shadow-lg shadow-brand/10 transition-all active:scale-95 group"
                 >
                   <Plus size={20} className="group-hover:rotate-90 transition-transform duration-300" />
                   Registrar Nuevo Monitor
@@ -430,7 +430,7 @@ const ClientDetail = () => {
                       <tr key={m.id} className="hover:bg-slate-50/50 transition-colors">
                         <td>
                           <Link to={`/monitors/${m.id}`} className="flex items-center gap-4 group/m">
-                            <div className="p-3 bg-slate-50 rounded-2xl group-hover/m:bg-blue-50 transition-colors">
+                            <div className="p-3 bg-slate-50 rounded-2xl group-hover/m:bg-brand/10 transition-colors">
                               <Radio size={16} className="text-slate-400 group-hover/m:text-brand" />
                             </div>
                             <div>
@@ -447,7 +447,7 @@ const ClientDetail = () => {
                         </td>
                         <td className="text-center">
                           <Link to={`/monitors/${m.id}?tab=devices`}
-                            className="inline-flex items-center justify-center min-w-[40px] h-10 px-3 rounded-2xl bg-slate-100 text-sm font-black text-brand hover:bg-brand hover:text-white hover:shadow-lg hover:shadow-blue-500/20 transition-all active:scale-90">
+                            className="inline-flex items-center justify-center min-w-[40px] h-10 px-3 rounded-2xl bg-slate-100 text-sm font-black text-brand hover:bg-brand hover:text-white hover:shadow-lg hover:shadow-brand/20 transition-all active:scale-90">
                             {m.device_count}
                           </Link>
                         </td>

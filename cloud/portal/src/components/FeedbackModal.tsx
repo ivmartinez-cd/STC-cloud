@@ -65,10 +65,10 @@ export default function FeedbackModal({ onClose }: Props) {
   };
 
   const isBug = type === 'bug';
-  const accentFrom  = isBug ? 'from-rose-500'   : 'from-[#004a99]';
-  const accentTo    = isBug ? 'to-orange-500'   : 'to-blue-400';
-  const accentRing  = isBug ? 'ring-rose-400/40' : 'ring-blue-400/40';
-  const accentGlow  = isBug ? 'shadow-rose-500/20' : 'shadow-blue-500/20';
+  const accentFrom  = isBug ? 'from-rose-500'   : 'from-brand-charcoal';
+  const accentTo    = isBug ? 'to-orange-500'   : 'to-brand-gray';
+  const accentRing  = isBug ? 'ring-rose-400/40' : 'ring-brand-gray/40';
+  const accentGlow  = isBug ? 'shadow-rose-500/20' : 'shadow-brand-gray/20';
 
   return (
     <div
@@ -146,7 +146,7 @@ export default function FeedbackModal({ onClose }: Props) {
                 </p>
                 <div className="grid grid-cols-2 gap-3">
                   {([ ['bug', 'Problema', Bug, 'from-rose-500 to-orange-500', 'ring-rose-400/50'],
-                       ['enhancement', 'Mejora', Sparkles, 'from-[#004a99] to-blue-400', 'ring-blue-400/50'],
+                       ['enhancement', 'Mejora', Sparkles, 'from-brand-charcoal to-brand-gray', 'ring-brand-gray/50'],
                   ] as const).map(([val, label, Icon, grad, ring]) => (
                     <button
                       key={val}

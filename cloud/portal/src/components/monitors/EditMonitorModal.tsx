@@ -49,10 +49,10 @@ const EditMonitorModal = ({ isOpen, onClose, monitor, onSave }: Props) => {
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 bg-[#1a2333]/60 backdrop-blur-md animate-overlay-in">
       <div className="bg-white rounded-[32px] shadow-2xl w-full max-w-2xl overflow-hidden animate-modal-in">
-        <header className="px-10 py-10 bg-gradient-to-r from-[#1a2333] to-[#2c3e50] text-white flex justify-between items-center relative overflow-hidden">
+        <header className="px-10 py-10 bg-gradient-to-r from-[#1a2333] to-[#58595b] text-white flex justify-between items-center relative overflow-hidden">
           <div className="relative z-10">
             <h2 className="text-2xl font-black tracking-tight uppercase">Configuración del Nodo</h2>
-            <p className="text-[10px] font-black text-blue-300 uppercase tracking-[0.2em] mt-1">Ajustes técnicos de escaneo</p>
+            <p className="text-[10px] font-black text-brand-muted uppercase tracking-[0.2em] mt-1">Ajustes técnicos de escaneo</p>
           </div>
           <button onClick={onClose} className="relative z-10 p-3 hover:bg-white/10 rounded-2xl transition-all active:scale-90">
             <X size={28} />
@@ -101,7 +101,7 @@ const EditMonitorModal = ({ isOpen, onClose, monitor, onSave }: Props) => {
               Cancelar
             </button>
             <button type="submit" disabled={saving}
-              className="flex-1 py-5 bg-brand text-white rounded-[24px] font-black uppercase tracking-widest text-xs shadow-xl shadow-blue-900/20 flex items-center justify-center gap-3 disabled:opacity-50"
+              className="flex-1 py-5 bg-brand text-white rounded-[24px] font-black uppercase tracking-widest text-xs shadow-xl shadow-brand/20 flex items-center justify-center gap-3 disabled:opacity-50"
             >
               {saving ? <Loader2 size={18} className="animate-spin" /> : 'Guardar Cambios'}
             </button>

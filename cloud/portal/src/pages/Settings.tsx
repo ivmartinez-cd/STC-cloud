@@ -275,7 +275,7 @@ const Settings = () => {
       {/* Monitor threshold */}
       <div className="cd-panel p-8">
         <div className="flex items-center gap-4 mb-6">
-          <div className="p-3 bg-blue-50 text-brand rounded-2xl">
+          <div className="p-3 bg-brand/10 text-brand rounded-2xl">
             <Bell size={24} />
           </div>
           <div>
@@ -300,7 +300,7 @@ const Settings = () => {
             />
           </div>
           <div className="mt-4 flex items-start gap-2 px-1">
-            <Shield size={12} className="text-blue-400 mt-0.5 shrink-0" />
+            <Shield size={12} className="text-brand-muted mt-0.5 shrink-0" />
             <p className="text-[11px] text-slate-500 leading-relaxed font-medium">
               Si el sistema no recibe un "heartbeat" del monitor durante este intervalo, 
               se disparará automáticamente el estado <span className="text-rose-500 font-bold uppercase tracking-tighter">Offline</span>.
@@ -313,7 +313,7 @@ const Settings = () => {
       <div className="cd-panel p-8">
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
-            <div className="p-3 bg-blue-50 text-brand rounded-2xl">
+            <div className="p-3 bg-brand/10 text-brand rounded-2xl">
               <Mail size={24} />
             </div>
             <div>
@@ -369,7 +369,7 @@ const Settings = () => {
       <div className="cd-panel p-8">
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
-            <div className="p-3 bg-blue-50 text-brand rounded-2xl">
+            <div className="p-3 bg-brand/10 text-brand rounded-2xl">
               <User size={24} />
             </div>
             <div>
@@ -381,7 +381,7 @@ const Settings = () => {
           {isAdmin && (
             <button
               onClick={() => setShowCreateModal(true)}
-              className="flex items-center gap-2 bg-brand hover:bg-[#2471a3] text-white px-5 py-2.5 rounded-2xl text-xs font-extrabold shadow-md hover:shadow-lg transition-all"
+              className="flex items-center gap-2 bg-brand hover:bg-brand-hover text-white px-5 py-2.5 rounded-2xl text-xs font-extrabold shadow-md hover:shadow-lg transition-all"
             >
               <UserPlus size={16} />
               Registrar Operador
@@ -480,7 +480,7 @@ const Settings = () => {
                             <button
                               onClick={() => setResettingUser(u)}
                               title="Restablecer Contraseña"
-                              className="p-2 text-slate-400 hover:text-brand hover:bg-blue-50 rounded-xl transition-all"
+                              className="p-2 text-slate-400 hover:text-brand hover:bg-brand/10 rounded-xl transition-all"
                             >
                               <Key size={16} />
                             </button>
@@ -508,7 +508,7 @@ const Settings = () => {
       {isAdmin && (
         <div className="cd-panel p-8">
           <div className="flex items-center gap-4 mb-8">
-            <div className="p-3 bg-blue-50 text-brand rounded-2xl">
+            <div className="p-3 bg-brand/10 text-brand rounded-2xl">
               <MessageSquare size={24} />
             </div>
             <div>
@@ -534,7 +534,7 @@ const Settings = () => {
                     {/* Header del card */}
                     <div className="p-5 flex items-center justify-between cursor-pointer" onClick={() => setExpandedFeedbackId(isExpanded ? null : fb.id)}>
                       <div className="flex items-center gap-4">
-                        <div className={`p-2 rounded-xl text-white ${fb.type === 'bug' ? 'bg-rose-500 shadow-rose-500/20' : 'bg-[#004a99] shadow-blue-500/20'} shadow-lg`}>
+                        <div className={`p-2 rounded-xl text-white ${fb.type === 'bug' ? 'bg-rose-500 shadow-rose-500/20' : 'bg-brand-gray shadow-brand-gray/20'} shadow-lg`}>
                           <MessageSquare size={16} />
                         </div>
                         <div>
@@ -555,7 +555,7 @@ const Settings = () => {
                           onChange={(e) => updateFeedbackStatus(fb.id, e.target.value)}
                           className={`text-xs font-bold px-3 py-1.5 rounded-xl border outline-none cursor-pointer transition-colors ${
                             fb.status === 'open' ? 'bg-amber-50 text-amber-700 border-amber-200 focus:border-amber-400' :
-                            fb.status === 'in_progress' ? 'bg-blue-50 text-blue-700 border-blue-200 focus:border-blue-400' :
+                            fb.status === 'in_progress' ? 'bg-brand-gray/10 text-brand-gray border-brand-gray/30 focus:border-brand-gray' :
                             'bg-emerald-50 text-emerald-700 border-emerald-200 focus:border-emerald-400'
                           }`}
                         >
@@ -599,7 +599,7 @@ const Settings = () => {
       <div className="flex items-center gap-6 pt-4">
         <button
           onClick={save}
-          className="flex items-center gap-3 bg-brand hover:bg-[#2471a3] text-white px-10 py-5 rounded-[24px] text-sm font-extrabold shadow-xl shadow-blue-900/10 transition-all active:scale-95 group"
+          className="flex items-center gap-3 bg-brand hover:bg-brand-hover text-white px-10 py-5 rounded-[24px] text-sm font-extrabold shadow-xl shadow-brand/10 transition-all active:scale-95 group"
         >
           <Save size={18} className="group-hover:scale-110 transition-transform" />
           Guardar Cambios
@@ -620,7 +620,7 @@ const Settings = () => {
         <div className="fixed inset-0 bg-[#0c111d]/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-300">
           <div className="bg-white rounded-[32px] max-w-md w-full p-8 border border-slate-100 shadow-2xl relative animate-in zoom-in-95 duration-300">
             <div className="flex items-center gap-4 mb-6">
-              <div className="p-3 bg-blue-50 text-brand rounded-2xl">
+              <div className="p-3 bg-brand/10 text-brand rounded-2xl">
                 <UserPlus size={24} />
               </div>
               <div>
@@ -687,7 +687,7 @@ const Settings = () => {
                       onClick={() => setNewRole(r.val)}
                       className={`p-4 rounded-2xl border text-left transition-all ${
                         newRole === r.val
-                          ? 'border-brand bg-blue-50/30 ring-2 ring-brand/10'
+                          ? 'border-brand bg-brand/10 ring-2 ring-brand/10'
                           : 'border-slate-100 hover:bg-slate-50'
                       }`}
                     >
@@ -729,7 +729,7 @@ const Settings = () => {
                 <button
                   type="submit"
                   disabled={createLoading}
-                  className="flex-1 px-5 py-4 bg-brand hover:bg-[#2471a3] text-white rounded-2xl text-xs font-extrabold transition-all disabled:opacity-60 flex items-center justify-center gap-2"
+                  className="flex-1 px-5 py-4 bg-brand hover:bg-brand-hover text-white rounded-2xl text-xs font-extrabold transition-all disabled:opacity-60 flex items-center justify-center gap-2"
                 >
                   {createLoading ? (
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
@@ -746,7 +746,7 @@ const Settings = () => {
         <div className="fixed inset-0 bg-[#0c111d]/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-300">
           <div className="bg-white rounded-[32px] max-w-md w-full p-8 border border-slate-100 shadow-2xl relative animate-in zoom-in-95 duration-300">
             <div className="flex items-center gap-4 mb-6">
-              <div className="p-3 bg-blue-50 text-brand rounded-2xl">
+              <div className="p-3 bg-brand/10 text-brand rounded-2xl">
                 <Key size={24} />
               </div>
               <div>
@@ -799,7 +799,7 @@ const Settings = () => {
                 <button
                   type="submit"
                   disabled={resetLoading}
-                  className="flex-1 px-5 py-4 bg-brand hover:bg-[#2471a3] text-white rounded-2xl text-xs font-extrabold transition-all disabled:opacity-60 flex items-center justify-center gap-2"
+                  className="flex-1 px-5 py-4 bg-brand hover:bg-brand-hover text-white rounded-2xl text-xs font-extrabold transition-all disabled:opacity-60 flex items-center justify-center gap-2"
                 >
                   {resetLoading ? (
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
@@ -816,7 +816,7 @@ const Settings = () => {
         <div className="fixed inset-0 bg-[#0c111d]/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-300">
           <div className="bg-white rounded-[32px] max-w-md w-full p-8 border border-slate-100 shadow-2xl relative animate-in zoom-in-95 duration-300">
             <div className="flex items-center gap-4 mb-6">
-              <div className="p-3 bg-blue-50 text-brand rounded-2xl">
+              <div className="p-3 bg-brand/10 text-brand rounded-2xl">
                 <Shield size={24} />
               </div>
               <div>
@@ -854,7 +854,7 @@ const Settings = () => {
                 type="button"
                 disabled={!roleChangeClientId}
                 onClick={confirmRoleChangeToClientViewer}
-                className="flex-1 px-5 py-4 bg-brand hover:bg-[#2471a3] text-white rounded-2xl text-xs font-extrabold transition-all disabled:opacity-60"
+                className="flex-1 px-5 py-4 bg-brand hover:bg-brand-hover text-white rounded-2xl text-xs font-extrabold transition-all disabled:opacity-60"
               >
                 Confirmar
               </button>

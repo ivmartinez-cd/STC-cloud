@@ -29,7 +29,7 @@ const ConfirmModal = ({
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-overlay-in">
       <div className="bg-white rounded-[24px] shadow-2xl w-full max-w-sm overflow-hidden animate-modal-in">
         <header className={`px-8 py-5 flex items-center justify-between text-white ${
-          isDanger ? 'bg-gradient-to-r from-rose-500 to-rose-600' : 'bg-gradient-to-r from-[#2c3e50] to-[#1a2333]'
+          isDanger ? 'bg-gradient-to-r from-rose-500 to-rose-600' : 'bg-gradient-to-r from-[#58595b] to-[#1a2333]'
         }`}>
           <div>
             <h2 className="font-extrabold text-sm uppercase tracking-widest">{title}</h2>
@@ -41,7 +41,7 @@ const ConfirmModal = ({
 
         <div className="p-8">
           <div className="flex flex-col items-center text-center gap-4 mb-8">
-            <div className={`p-4 rounded-2xl ${isDanger ? 'bg-rose-50 text-rose-500' : 'bg-blue-50 text-brand'}`}>
+            <div className={`p-4 rounded-2xl ${isDanger ? 'bg-rose-50 text-rose-500' : 'bg-brand/10 text-brand'}`}>
               <AlertTriangle size={32} />
             </div>
             <p className="text-sm font-medium text-slate-600 leading-relaxed">

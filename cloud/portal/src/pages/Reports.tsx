@@ -181,7 +181,7 @@ const Reports = () => {
             onClick={handleClose}
             disabled={closing || !selectedClientId || alreadyClosed}
             title={alreadyClosed ? 'Este período ya está cerrado — reabrilo primero si necesitás uno nuevo' : undefined}
-            className="ml-auto flex items-center gap-2 px-5 py-2.5 bg-brand hover:bg-[#2471a3] text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all disabled:opacity-50"
+            className="ml-auto flex items-center gap-2 px-5 py-2.5 bg-brand hover:bg-brand-hover text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all disabled:opacity-50"
           >
             {closing ? <Loader2 size={14} className="animate-spin" /> : <Lock size={14} />}
             {alreadyClosed ? 'Período cerrado' : 'Cerrar período'}
@@ -190,7 +190,7 @@ const Reports = () => {
       </div>
 
       {/* Preview del período seleccionado */}
-      <div className="bg-white rounded-3xl border border-slate-100 shadow-xl shadow-blue-900/5 overflow-hidden">
+      <div className="bg-white rounded-3xl border border-slate-100 shadow-xl shadow-brand/5 overflow-hidden">
         <header className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
           <h3 className="text-xs font-black text-slate-500 uppercase tracking-widest">Vista previa — {period}</h3>
           <div className="flex items-center gap-4 text-[11px] font-bold text-slate-500">
@@ -201,7 +201,7 @@ const Reports = () => {
         </header>
         {previewError && <div className="p-4 text-xs font-medium text-rose-600 bg-rose-50">{previewError}</div>}
         {previewLoading ? (
-          <div className="h-32 flex items-center justify-center"><Loader2 size={24} className="animate-spin text-blue-500" /></div>
+          <div className="h-32 flex items-center justify-center"><Loader2 size={24} className="animate-spin text-brand" /></div>
         ) : previewLines.length === 0 ? (
           <div className="h-32 flex items-center justify-center text-xs font-bold text-slate-400 uppercase tracking-widest">
             Sin equipos o sin lecturas en este período
@@ -252,12 +252,12 @@ const Reports = () => {
       </div>
 
       {/* Historial de cierres */}
-      <div className="bg-white rounded-3xl border border-slate-100 shadow-xl shadow-blue-900/5 overflow-hidden">
+      <div className="bg-white rounded-3xl border border-slate-100 shadow-xl shadow-brand/5 overflow-hidden">
         <header className="px-6 py-4 border-b border-slate-100">
           <h3 className="text-xs font-black text-slate-500 uppercase tracking-widest">Historial de cierres</h3>
         </header>
         {closuresLoading ? (
-          <div className="h-24 flex items-center justify-center"><Loader2 size={20} className="animate-spin text-blue-500" /></div>
+          <div className="h-24 flex items-center justify-center"><Loader2 size={20} className="animate-spin text-brand" /></div>
         ) : closures.length === 0 ? (
           <div className="h-24 flex items-center justify-center text-xs font-bold text-slate-400 uppercase tracking-widest">
             Sin cierres todavía
@@ -280,7 +280,7 @@ const Reports = () => {
                   <span className="text-[11px] text-slate-500 font-medium">{fmtDate(c.closed_at)}</span>
                   <span className="text-[11px] font-black text-slate-700 ml-auto">{Number(c.total_pages).toLocaleString()} págs.</span>
                   <button onClick={() => downloadExport(c.id, 'csv')} title="Descargar CSV"
-                    className="p-2 bg-slate-50 text-slate-500 hover:text-brand hover:bg-blue-50 rounded-xl transition-all">
+                    className="p-2 bg-slate-50 text-slate-500 hover:text-brand hover:bg-brand/10 rounded-xl transition-all">
                     <Download size={14} />
                   </button>
                   <button onClick={() => downloadExport(c.id, 'xlsx')} title="Descargar XLSX"
@@ -297,7 +297,7 @@ const Reports = () => {
                 {expandedId === c.id && (
                   <div className="px-6 pb-4 bg-slate-50/50">
                     {detailLoading ? (
-                      <div className="py-6 flex items-center justify-center"><Loader2 size={18} className="animate-spin text-blue-500" /></div>
+                      <div className="py-6 flex items-center justify-center"><Loader2 size={18} className="animate-spin text-brand" /></div>
                     ) : detail && detail.id === c.id ? (
                       <div className="overflow-x-auto rounded-xl border border-slate-100 bg-white mt-2">
                         <table className="w-full text-left border-collapse whitespace-nowrap">

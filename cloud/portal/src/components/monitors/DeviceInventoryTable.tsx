@@ -97,7 +97,7 @@ const DeviceInventoryTable = ({ devices, monitorName, onRefresh, agentId, isRead
 
   return (
     <>
-      <div className="cd-panel overflow-hidden border-none shadow-xl shadow-blue-900/5 animate-in slide-in-from-bottom-4 duration-500">
+      <div className="cd-panel overflow-hidden border-none shadow-xl shadow-brand/5 animate-in slide-in-from-bottom-4 duration-500">
         <header className="px-8 py-6 bg-white border-b border-slate-100 flex items-center justify-between flex-wrap gap-3">
           <div>
             <h3 className="text-sm font-black text-[#1a2333] uppercase tracking-tight">Parque de Impresión</h3>
@@ -131,13 +131,13 @@ const DeviceInventoryTable = ({ devices, monitorName, onRefresh, agentId, isRead
           <table className="cd-table">
             <thead>
               <tr>
-                <th className="!bg-[#004a99] !text-white !rounded-tl-2xl">Dispositivo</th>
-                <th className="!bg-[#004a99] !text-white">Red</th>
-                <th className="!bg-[#004a99] !text-white">Número de Serie</th>
-                <th className="!bg-[#004a99] !text-white">Tóner</th>
-                <th className={`!bg-[#004a99] !text-white !text-right ${isReadOnlyViewer ? '!rounded-tr-2xl' : ''}`}>Contadores (Total / Mono / Color)</th>
+                <th className="!bg-brand-charcoal !text-white !rounded-tl-2xl">Dispositivo</th>
+                <th className="!bg-brand-charcoal !text-white">Red</th>
+                <th className="!bg-brand-charcoal !text-white">Número de Serie</th>
+                <th className="!bg-brand-charcoal !text-white">Tóner</th>
+                <th className={`!bg-brand-charcoal !text-white !text-right ${isReadOnlyViewer ? '!rounded-tr-2xl' : ''}`}>Contadores (Total / Mono / Color)</th>
                 {!isReadOnlyViewer && (
-                  <th className="!bg-[#004a99] !text-white !text-center !rounded-tr-2xl">Acción</th>
+                  <th className="!bg-brand-charcoal !text-white !text-center !rounded-tr-2xl">Acción</th>
                 )}
               </tr>
             </thead>

@@ -26,9 +26,9 @@ const DeviceSummaryCard = ({ devices, monitor }: Props) => {
   const ringColor = activeRatio === 1 ? '#10b981' : activeRatio > 0 ? '#f59e0b' : '#ef4444';
 
   return (
-    <div className="cd-panel overflow-hidden border-none shadow-xl shadow-blue-900/5 relative bg-white h-full">
+    <div className="cd-panel overflow-hidden border-none shadow-xl shadow-brand/5 relative bg-white h-full">
       <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-400 to-teal-500" />
-      <div className="cd-header-blue flex items-center justify-between px-6 py-5">
+      <div className="cd-header-primary flex items-center justify-between px-6 py-5">
         <div className="flex items-center gap-3 text-white">
           <Printer size={18} className="text-emerald-400" />
           <span className="font-black uppercase tracking-widest text-sm text-white">Dispositivos</span>

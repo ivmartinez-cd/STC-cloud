@@ -30,7 +30,7 @@ const ChartContent = ({ usage }: Props) => (
                   boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: '11px', fontWeight: '800'
                 }}
               />
-              <Bar dataKey="mono" name="Mono" fill="#2980b9" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="mono" name="Mono" fill="#58595b" radius={[4, 4, 0, 0]} />
               <Bar dataKey="color" name="Color" fill="#f39c12" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>

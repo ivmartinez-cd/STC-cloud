@@ -160,9 +160,9 @@ export default function SnmpCredentialsPanel({ credentials, rev, onSave }: Props
   };
 
   return (
-    <div className="bg-white p-8 rounded-[32px] border border-slate-100 shadow-xl shadow-blue-900/5 space-y-6 lg:col-span-2">
+    <div className="bg-white p-8 rounded-[32px] border border-slate-100 shadow-xl shadow-brand/5 space-y-6 lg:col-span-2">
       <div className="flex items-center gap-4 mb-2">
-        <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl">
+        <div className="p-3 bg-brand-gray/10 text-brand-gray rounded-2xl">
           <KeyRound size={24} />
         </div>
         <div>
@@ -188,7 +188,7 @@ export default function SnmpCredentialsPanel({ credentials, rev, onSave }: Props
                 {row.kind === 'kept' ? (
                   <CredentialChip masked={row.masked} />
                 ) : (
-                  <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">
+                  <span className="text-[10px] font-black text-brand-gray uppercase tracking-widest">
                     {row.kind === 'replace' ? 'Reemplazando credencial' : 'Credencial nueva'}
                   </span>
                 )}
@@ -204,7 +204,7 @@ export default function SnmpCredentialsPanel({ credentials, rev, onSave }: Props
                 </button>
                 {row.kind === 'kept' && (
                   <button type="button" onClick={() => startReplace(idx)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-black text-indigo-600 hover:bg-indigo-50 uppercase tracking-widest rounded-lg transition-all">
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-black text-brand-gray hover:bg-brand-gray/10 uppercase tracking-widest rounded-lg transition-all">
                     <Pencil size={12} /> Reemplazar
                   </button>
                 )}
@@ -234,7 +234,7 @@ export default function SnmpCredentialsPanel({ credentials, rev, onSave }: Props
           <Plus size={14} /> Agregar credencial
         </button>
         <button type="button" onClick={handleSave} disabled={saving}
-          className="px-8 py-4 bg-indigo-600 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-xl shadow-indigo-900/20 flex items-center gap-3 disabled:opacity-50 hover:bg-indigo-700 transition-all active:scale-95">
+          className="px-8 py-4 bg-brand text-white rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-xl shadow-brand/20 flex items-center gap-3 disabled:opacity-50 hover:bg-brand-hover transition-all active:scale-95">
           {saving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />} Guardar Credenciales
         </button>
       </div>

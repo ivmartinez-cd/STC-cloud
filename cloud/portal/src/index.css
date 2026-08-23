@@ -1,8 +1,20 @@
 @import "tailwindcss";
 
 @theme {
-  --color-brand: #f7931d;   /* Canal Directo Orange */
-  --color-primary: #004a99; /* Canal Directo Blue */
+  /* Paleta institucional exacta de "Manual de marca.pdf" (Canal Directo) —
+     línea Institucional/MPS, la única que aplica a STC Cloud. Nunca usar los
+     colores de otras líneas de servicio (DaaS #662D91, Soluciones de
+     Digitalización #E32D91, Digital Signage #3DB1CA). */
+  --color-brand: #f7941d;         /* Institucional (naranja) */
+  --color-brand-hover: #d97e0f;
+  --color-brand-charcoal: #232323;
+  --color-brand-gray: #58595b;    /* MPS (gris) — combinación oficial: naranja + gris */
+  --color-brand-muted: #b5b5b5;
+  --color-primary: #f7941d;
+
+  /* Tipografía de "Manual de marca.pdf": Montserrat (Título) + Source Sans Pro (Cuerpo). */
+  --font-sans: 'Source Sans 3', 'Source Sans Pro', system-ui, -apple-system, sans-serif;
+  --font-heading: 'Montserrat', sans-serif;
 
   /* Z-index scale — single source of truth */
   --z-sidebar: 50;
@@ -13,17 +25,17 @@
 }
 
 :root {
-  /* Brand Colors — Canal Directo Premium Palette */
-  --color-primary: #004a99;       /* Corporate Blue */
-  --color-primary-dark: #003366;
-  --color-accent: #f7931d;        /* Corporate Orange */
+  /* Brand Colors — Canal Directo Institucional (Manual de marca.pdf) */
+  --color-primary: #f7941d;       /* Institucional — Naranja */
+  --color-primary-dark: #d97e0f;
+  --color-accent: #58595b;        /* MPS — Gris (combinación oficial: naranja + gris) */
   --color-bg: #f4f7fa;            /* Light Professional Gray */
   --color-panel: #ffffff;
   --color-text: #1a2333;
   --color-text-muted: #64748b;
   --color-border: #e2e8f0;
 
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-family: var(--font-sans);
   color: var(--color-text);
   background-color: var(--color-bg);
   -webkit-font-smoothing: antialiased;
@@ -31,7 +43,7 @@
 
 /* Base Styles */
 h1, h2, h3, h4, .font-montserrat {
-  font-family: 'Montserrat', sans-serif;
+  font-family: var(--font-heading);
   letter-spacing: -0.02em;
 }
 
@@ -63,7 +75,7 @@ body {
 }
 
 /* Header Variations (from Canal Directo screenshots) */
-.cd-header-blue {
+.cd-header-primary {
   background: var(--color-primary);
   color: white;
   padding: 1rem 1.5rem;
@@ -74,7 +86,7 @@ body {
   letter-spacing: 0.1em;
 }
 
-.cd-header-orange {
+.cd-header-gray {
   background: var(--color-accent);
   color: white;
   padding: 1rem 1.5rem;
@@ -137,7 +149,7 @@ body {
 .cd-input:focus {
   background: white;
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 4px rgba(41, 128, 185, 0.08);
+  box-shadow: 0 0 0 4px rgba(247, 148, 29, 0.12);
 }
 
 .cd-input::placeholder {

@@ -56,7 +56,7 @@ const CreateMonitorModal = ({ isOpen, onClose, onCreate }: Props) => {
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 bg-[#1a2333]/60 backdrop-blur-md animate-overlay-in">
       <div className="bg-white rounded-[32px] shadow-2xl w-full max-w-xl overflow-hidden animate-modal-in">
-        <header className="px-8 py-8 border-b border-slate-50 flex items-center justify-between bg-gradient-to-r from-brand to-[#3498db] text-white">
+        <header className="px-8 py-8 border-b border-slate-50 flex items-center justify-between bg-gradient-to-r from-brand to-brand-hover text-white">
           <div className="flex items-center gap-4">
             <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-sm">
               <Radio size={24} />
@@ -65,7 +65,7 @@ const CreateMonitorModal = ({ isOpen, onClose, onCreate }: Props) => {
               <h2 className="text-xl font-black tracking-tight">
                 {activationKey ? 'Instalación del Agente' : 'Nuevo Nodo de Monitoreo'}
               </h2>
-              <p className="text-xs text-blue-100 font-medium">
+              <p className="text-xs text-white/75 font-medium">
                 {activationKey ? 'Clave de activación generada' : 'Configura los parámetros de escaneo'}
               </p>
             </div>
@@ -102,7 +102,7 @@ const CreateMonitorModal = ({ isOpen, onClose, onCreate }: Props) => {
                   </div>
                   <a
                     href="/api/v1/agents/download-installer"
-                    className="inline-flex items-center gap-2 px-4 py-2.5 bg-brand hover:bg-[#2471a3] text-white rounded-xl text-xs font-black tracking-wider shadow-lg shadow-blue-500/10 transition-all hover:-translate-y-0.5 active:translate-y-0"
+                    className="inline-flex items-center gap-2 px-4 py-2.5 bg-brand hover:bg-brand-hover text-white rounded-xl text-xs font-black tracking-wider shadow-lg shadow-brand/20 transition-all hover:-translate-y-0.5 active:translate-y-0"
                   >
                     <Download size={14} /> DESCARGAR AGENTE (.EXE)
                   </a>
@@ -178,7 +178,7 @@ const CreateMonitorModal = ({ isOpen, onClose, onCreate }: Props) => {
             <div className="flex gap-4 pt-2">
               <button
                 onClick={handleClose}
-                className="w-full py-4 rounded-2xl bg-brand text-white text-xs font-black uppercase tracking-wider hover:bg-[#2471a3] transition-all shadow-xl shadow-blue-900/10 active:scale-95"
+                className="w-full py-4 rounded-2xl bg-brand text-white text-xs font-black uppercase tracking-wider hover:bg-brand-hover transition-all shadow-xl shadow-brand/20 active:scale-95"
               >
                 ENTENDIDO, VOLVER AL CLIENTE
               </button>
@@ -242,7 +242,7 @@ const CreateMonitorModal = ({ isOpen, onClose, onCreate }: Props) => {
                 Cancelar
               </button>
               <button type="submit" disabled={submitting}
-                className="flex-1 py-5 rounded-[24px] bg-brand text-white font-black hover:bg-[#2471a3] transition-all shadow-xl shadow-blue-900/10 active:scale-95 flex items-center justify-center gap-3 disabled:opacity-50"
+                className="flex-1 py-5 rounded-[24px] bg-brand text-white font-black hover:bg-brand-hover transition-all shadow-xl shadow-brand/20 active:scale-95 flex items-center justify-center gap-3 disabled:opacity-50"
               >
                 {submitting ? <Loader2 size={24} className="animate-spin" /> : 'Confirmar Registro'}
               </button>

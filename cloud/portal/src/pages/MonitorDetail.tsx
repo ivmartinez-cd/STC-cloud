@@ -126,7 +126,7 @@ const MonitorDetail = () => {
             <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" /> Volver a Infraestructura
           </Link>
           <div className="flex items-center gap-6">
-            <div className="p-5 bg-white shadow-xl shadow-blue-900/5 rounded-[28px] text-brand">
+            <div className="p-5 bg-white shadow-xl shadow-brand/5 rounded-[28px] text-brand">
               <HardDrive size={32} />
             </div>
             <div>
@@ -147,15 +147,15 @@ const MonitorDetail = () => {
         {!isReadOnlyViewer && (
           <div className="flex items-center gap-3">
             <button onClick={() => window.open(`/api/v1/agents/${id}/logs/export`, '_blank')}
-              className="px-6 py-4 bg-white text-emerald-600 font-black text-[10px] uppercase tracking-widest rounded-2xl shadow-xl shadow-blue-900/5 hover:bg-emerald-50 transition-all active:scale-95 flex items-center gap-3">
+              className="px-6 py-4 bg-white text-emerald-600 font-black text-[10px] uppercase tracking-widest rounded-2xl shadow-xl shadow-brand/5 hover:bg-emerald-50 transition-all active:scale-95 flex items-center gap-3">
               <Download size={18} /> Descargar Logs
             </button>
             <button onClick={() => handleTabChange('config')}
-              className="px-6 py-4 bg-white text-[#1a2333] font-black text-[10px] uppercase tracking-widest rounded-2xl shadow-xl shadow-blue-900/5 hover:bg-slate-50 transition-all active:scale-95 flex items-center gap-3">
+              className="px-6 py-4 bg-white text-[#1a2333] font-black text-[10px] uppercase tracking-widest rounded-2xl shadow-xl shadow-brand/5 hover:bg-slate-50 transition-all active:scale-95 flex items-center gap-3">
               <Settings size={18} /> Ajustes
             </button>
             <button onClick={handleRegen}
-              className="px-6 py-4 bg-white text-amber-600 font-black text-[10px] uppercase tracking-widest rounded-2xl shadow-xl shadow-blue-900/5 hover:bg-amber-50 transition-all active:scale-95 flex items-center gap-3">
+              className="px-6 py-4 bg-white text-amber-600 font-black text-[10px] uppercase tracking-widest rounded-2xl shadow-xl shadow-brand/5 hover:bg-amber-50 transition-all active:scale-95 flex items-center gap-3">
               <RefreshCw size={18} /> Regenerar Llave
             </button>
             <button onClick={() => setShowRevokeModal(true)}
@@ -171,7 +171,7 @@ const MonitorDetail = () => {
         {TABS.map(({ id: tabId, label, icon: Icon }) => (
           <button key={tabId} onClick={() => handleTabChange(tabId)}
             className={`px-8 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${
-              activeTab === tabId ? 'bg-white text-brand shadow-sm shadow-blue-900/5' : 'text-slate-400 hover:text-slate-600'
+              activeTab === tabId ? 'bg-white text-brand shadow-sm shadow-brand/5' : 'text-slate-400 hover:text-slate-600'
             }`}>
             <Icon size={14} /> {label}
           </button>
@@ -200,7 +200,7 @@ const MonitorDetail = () => {
       {/* Console Tab */}
       {activeTab === 'console' && !isReadOnlyViewer && (
         <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
-          <div className="bg-white p-8 rounded-[32px] border border-slate-100 shadow-xl shadow-blue-900/5">
+          <div className="bg-white p-8 rounded-[32px] border border-slate-100 shadow-xl shadow-brand/5">
             <div className="flex items-center gap-4 mb-8">
               <div className="p-3 bg-slate-900 text-white rounded-2xl"><Command size={24} /></div>
               <h3 className="text-lg font-black text-[#1a2333] tracking-tight">Consola de STC Cloud</h3>
@@ -380,9 +380,9 @@ const ConfigTabPanel = ({ monitor, onSave, onSaveSnmpCredentials }: ConfigTabPan
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         
         {/* Panel Izquierdo: Ajustes de Escaneo */}
-        <div className="bg-white p-8 rounded-[32px] border border-slate-100 shadow-xl shadow-blue-900/5 space-y-6">
+        <div className="bg-white p-8 rounded-[32px] border border-slate-100 shadow-xl shadow-brand/5 space-y-6">
           <div className="flex items-center gap-4 mb-2">
-            <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl">
+            <div className="p-3 bg-brand/10 text-brand rounded-2xl">
               <Settings size={24} />
             </div>
             <div>
@@ -421,7 +421,7 @@ const ConfigTabPanel = ({ monitor, onSave, onSaveSnmpCredentials }: ConfigTabPan
         </div>
 
         {/* Panel Derecho: Umbrales de Tóner */}
-        <div className="bg-white p-8 rounded-[32px] border border-slate-100 shadow-xl shadow-blue-900/5 space-y-8">
+        <div className="bg-white p-8 rounded-[32px] border border-slate-100 shadow-xl shadow-brand/5 space-y-8">
           <div className="flex items-center gap-4 mb-2">
             <div className="p-3 bg-amber-50 text-amber-600 rounded-2xl">
               <AlertTriangle size={24} />
@@ -477,7 +477,7 @@ const ConfigTabPanel = ({ monitor, onSave, onSaveSnmpCredentials }: ConfigTabPan
           </div>
         </div>
 
-        <div className="bg-white p-8 rounded-[32px] border border-slate-100 shadow-xl shadow-blue-900/5 space-y-6 lg:col-span-2">
+        <div className="bg-white p-8 rounded-[32px] border border-slate-100 shadow-xl shadow-brand/5 space-y-6 lg:col-span-2">
           <div className="flex items-center gap-4 mb-2">
             <div className="p-3 bg-emerald-50 text-emerald-600 rounded-2xl">
               <Clock size={24} />
@@ -557,7 +557,7 @@ const ConfigTabPanel = ({ monitor, onSave, onSaveSnmpCredentials }: ConfigTabPan
       <div className="flex justify-end gap-4">
         <button
           type="submit" disabled={saving}
-          className="px-8 py-4 bg-brand text-white rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-xl shadow-blue-900/20 flex items-center gap-3 disabled:opacity-50 hover:bg-brand/90 transition-all active:scale-95"
+          className="px-8 py-4 bg-brand text-white rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-xl shadow-brand/20 flex items-center gap-3 disabled:opacity-50 hover:bg-brand/90 transition-all active:scale-95"
         >
           {saving ? <Loader2 size={18} className="animate-spin" /> : <Settings size={18} />} Guardar Cambios
         </button>

@@ -1,8 +1,14 @@
 /**
- * Resolución de la foto del equipo (ver public/devices/README.md).
- *  1. /devices/<slug(brand model)>.png
+ * Resolución de la foto del equipo (ver public/device-images/README.md).
+ *  1. /device-images/<slug(brand model)>.png
  *  2. coincidencia por palabra clave (KEYWORD_IMAGES)
  *  3. placeholder genérico según tipo (MFP / impresora)
+ *
+ * El directorio NO puede llamarse "devices" — colisiona con la ruta de
+ * React Router `/devices`: nginx (`try_files $uri $uri/ /index.html`) la
+ * resuelve como el directorio estático real y devuelve un 301 a `/devices/`
+ * que además pierde el puerto (bug de nginx con `$host`), colgando la carga
+ * directa/refresh de esa página.
  */
 const KEYWORD_IMAGES: Array<[RegExp, string]> = [
   // Samsung
@@ -42,8 +48,8 @@ export function isMfp(model: string | null | undefined): boolean {
 export function deviceImageCandidates(brand: string | null | undefined, model: string | null | undefined): string[] {
   const out: string[] = [];
   const slug = deviceSlug(brand, model);
-  if (slug) out.push(`/devices/${slug}.png`, `/devices/${slug}.jpg`);
-  for (const [rx, file] of KEYWORD_IMAGES) if (rx.test(model ?? '')) out.push(`/devices/${file}`);
-  out.push(isMfp(model) ? '/devices/generic-mfp.svg' : '/devices/generic-printer.svg');
+  if (slug) out.push(`/device-images/${slug}.png`, `/device-images/${slug}.jpg`);
+  for (const [rx, file] of KEYWORD_IMAGES) if (rx.test(model ?? '')) out.push(`/device-images/${file}`);
+  out.push(isMfp(model) ? '/device-images/generic-mfp.svg' : '/device-images/generic-printer.svg');
   return [...new Set(out)];
 }

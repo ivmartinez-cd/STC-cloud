@@ -159,12 +159,12 @@ const Layout = () => {
                 className={`h-10 w-auto object-contain transition-all duration-500 ${!isHovered ? 'opacity-100 scale-110' : 'opacity-0 scale-125 absolute pointer-events-none'}`} 
                 style={{ filter: 'url(#precise-orange)' }}
               />
-              <div className="absolute inset-0 bg-blue-500/5 blur-xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+              <div className="absolute inset-0 bg-brand/5 blur-xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
             </div>
             
             <div className={`flex items-center gap-1.5 relative z-10 transition-all duration-500 -mt-2 ${isHovered ? 'opacity-100' : 'opacity-0 scale-90 h-0 overflow-hidden'}`}>
-              <span className="font-montserrat font-black text-base tracking-tight text-[#004a99]">STC</span>
-              <span className="font-montserrat font-black text-base tracking-tight text-[#f7931d]">CLOUD</span>
+              <span className="font-montserrat font-black text-base tracking-tight text-brand-charcoal">STC</span>
+              <span className="font-montserrat font-black text-base tracking-tight text-brand">CLOUD</span>
             </div>
           </Link>
           
@@ -197,7 +197,7 @@ const Layout = () => {
                 `}
               >
                 {active && isHovered && (
-                  <div className="absolute inset-0 bg-blue-600/10 rounded-2xl border border-blue-500/10 shadow-[0_4px_12px_rgba(0,0,0,0.1)]" />
+                  <div className="absolute inset-0 bg-brand/10 rounded-2xl border border-brand/10 shadow-[0_4px_12px_rgba(0,0,0,0.1)]" />
                 )}
                 
                 <div className="flex items-center gap-4 relative z-10 w-full justify-center md:justify-start">
@@ -208,7 +208,7 @@ const Layout = () => {
                     <Icon
                       size={isHovered ? 19 : 24}
                       strokeWidth={active ? 2.5 : 2}
-                      className={active ? 'text-blue-400 drop-shadow-[0_0_8px_rgba(96,165,250,0.4)]' : 'text-slate-500 group-hover:text-slate-300 transition-colors duration-300'}
+                      className={active ? 'text-brand drop-shadow-[0_0_8px_rgba(247,148,29,0.4)]' : 'text-slate-500 group-hover:text-slate-300 transition-colors duration-300'}
                     />
                   </div>
                   
@@ -220,13 +220,13 @@ const Layout = () => {
                     {name}
                   </span>
                   
-                  {active && isHovered && <ChevronRight size={14} className="ml-auto mr-4 text-blue-400/50" />}
+                  {active && isHovered && <ChevronRight size={14} className="ml-auto mr-4 text-brand/50" />}
                 </div>
 
                 {/* Active Indicator - Canal Directo Style */}
                 {active && (
                   <div className={`
-                    absolute left-0 bg-[#f7931d] rounded-r-full transition-all duration-500 shadow-[0_0_15px_rgba(230,126,34,0.4)]
+                    absolute left-0 bg-brand rounded-r-full transition-all duration-500 shadow-[0_0_15px_rgba(247,148,29,0.4)]
                     ${isHovered ? 'w-1.5 top-3 bottom-3' : 'w-2 top-4 bottom-4'}
                   `} />
                 )}
@@ -312,7 +312,7 @@ const Layout = () => {
 
           <div className="flex items-center gap-4">
             <div className="relative hidden sm:flex items-center group" ref={searchRef}>
-              <div className="absolute left-3.5 text-slate-400 group-focus-within:text-blue-500 transition-colors pointer-events-none">
+              <div className="absolute left-3.5 text-slate-400 group-focus-within:text-brand transition-colors pointer-events-none">
                 <Search size={16} />
               </div>
               <input
@@ -322,7 +322,7 @@ const Layout = () => {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onFocus={() => setShowResults(true)}
-                className="cd-input w-64 !pl-11 !pr-10 !bg-slate-100/50 border-transparent focus:!bg-white focus:!border-blue-500/30 h-10 text-sm transition-all rounded-xl"
+                className="cd-input w-64 !pl-11 !pr-10 !bg-slate-100/50 border-transparent focus:!bg-white focus:!border-brand/30 h-10 text-sm transition-all rounded-xl"
               />
               <div className="absolute right-3 px-1.5 py-0.5 rounded-md bg-white border border-slate-200 text-[10px] font-bold text-slate-400 pointer-events-none">
                 Ctrl K
@@ -333,7 +333,7 @@ const Layout = () => {
                 <div className="absolute top-full left-0 right-0 mt-2 bg-white/95 backdrop-blur-xl border border-slate-200 rounded-2xl shadow-[0_20px_40px_rgba(0,0,0,0.1)] overflow-hidden z-[100] animate-in fade-in slide-in-from-top-2 duration-300">
                   {isSearching && (
                     <div className="p-4 flex items-center justify-center">
-                      <div className="w-5 h-5 border-2 border-slate-200 border-t-blue-500 rounded-full animate-spin" />
+                      <div className="w-5 h-5 border-2 border-slate-200 border-t-brand rounded-full animate-spin" />
                     </div>
                   )}
                   
@@ -347,7 +347,7 @@ const Layout = () => {
                           onClick={() => { setShowResults(false); setSearchQuery(''); }}
                           className="flex items-center gap-3 px-3 py-2 hover:bg-slate-50 rounded-xl transition-colors group"
                         >
-                          <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-500 group-hover:bg-blue-500 group-hover:text-white transition-colors">
+                          <div className="w-8 h-8 rounded-lg bg-brand-gray/10 flex items-center justify-center text-brand-gray group-hover:bg-brand-gray group-hover:text-white transition-colors">
                             <Users size={14} />
                           </div>
                           <span className="text-sm font-semibold text-slate-700">{client.name}</span>
@@ -399,7 +399,7 @@ const Layout = () => {
             <Suspense fallback={
               <div className="flex items-center justify-center min-h-[400px]">
                 <div className="flex flex-col items-center gap-4">
-                  <div className="w-12 h-12 border-4 border-slate-200 border-t-blue-500 rounded-full animate-spin" />
+                  <div className="w-12 h-12 border-4 border-slate-200 border-t-brand rounded-full animate-spin" />
                   <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] animate-pulse">
                     Cargando Módulo...
                   </span>
@@ -420,9 +420,9 @@ const Layout = () => {
           fixed bottom-8 right-8 z-[90] group
           flex items-center gap-0 overflow-hidden
           h-12 w-12 hover:w-48
-          bg-gradient-to-r from-[#004a99] to-[#f7931d]
-          text-white rounded-full shadow-[0_8px_30px_rgba(0,74,153,0.4)]
-          hover:shadow-[0_12px_40px_rgba(247,147,29,0.45)]
+          bg-gradient-to-r from-brand-charcoal to-brand
+          text-white rounded-full shadow-[0_8px_30px_rgba(35,35,35,0.35)]
+          hover:shadow-[0_12px_40px_rgba(247,148,29,0.45)]
           transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]
         "
       >

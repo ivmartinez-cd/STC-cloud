@@ -19,7 +19,7 @@ const COMMANDS: CommandDef[] = [
     action: 'RESCAN',
     label: 'Rescan',
     tooltip: 'Escanea la red local en busca de nuevos dispositivos',
-    colorClass: 'text-brand border-blue-100',
+    colorClass: 'text-brand border-brand/20',
     hoverClass: 'hover:bg-brand hover:text-white',
     icon: RefreshCw,
   },

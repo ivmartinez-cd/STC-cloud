@@ -66,7 +66,7 @@ export function BrandModal({ isOpen, onClose, title, children, widthPx = 480, er
         className="flex max-h-[90vh] w-full max-w-[92vw] flex-col overflow-hidden rounded-[16px] bg-white focus:outline-none animate-modal-in"
       >
         <div className="flex items-center justify-between px-[30px] pt-7 pb-2">
-          <h2 id={titleId} className="text-[20px] font-extrabold tracking-[.01em] text-[#1a2333]" style={{ fontFamily: 'Montserrat, Inter, sans-serif' }}>
+          <h2 id={titleId} className="text-[20px] font-extrabold tracking-[.01em] text-[#1a2333]" style={{ fontFamily: "Montserrat, 'Source Sans 3', sans-serif" }}>
             {title}
           </h2>
           <button onClick={onClose} aria-label="Cerrar" className="cursor-pointer rounded-[8px] p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700">

@@ -78,10 +78,10 @@ export default function ConfigAgentModal({ modal, onClose }: Props) {
   return (
     <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 sm:p-6 bg-[#1a2333]/70 backdrop-blur-md animate-overlay-in">
       <div className="bg-white rounded-[40px] shadow-2xl w-full max-w-2xl overflow-hidden animate-modal-in border border-white/20">
-        <header className="px-10 py-10 bg-gradient-to-r from-[#1a2333] to-[#2c3e50] text-white flex justify-between items-center relative overflow-hidden">
+        <header className="px-10 py-10 bg-gradient-to-r from-[#1a2333] to-[#58595b] text-white flex justify-between items-center relative overflow-hidden">
           <div className="relative z-10">
             <h2 className="text-2xl font-black tracking-tight uppercase">Control Remoto</h2>
-            <p className="text-[10px] font-black text-blue-300 uppercase tracking-[0.2em] mt-1">Ajustes del nodo: {modal.name}</p>
+            <p className="text-[10px] font-black text-brand-muted uppercase tracking-[0.2em] mt-1">Ajustes del nodo: {modal.name}</p>
           </div>
           <button onClick={handleClose} className="relative z-10 p-3 hover:bg-white/10 rounded-2xl transition-all active:scale-90">
             <X size={28} />
@@ -120,14 +120,14 @@ export default function ConfigAgentModal({ modal, onClose }: Props) {
                   reemplazo sin repetir secretos) vive en el tab Configuración
                   del detalle del monitor, que tiene su propio flujo de guardado
                   con optimistic locking. */}
-              <div className="p-5 bg-indigo-50 rounded-2xl border border-indigo-100 flex items-center gap-4">
-                <KeyRound className="text-indigo-500 shrink-0" size={20} />
-                <p className="text-xs text-indigo-900/80 font-bold leading-relaxed">
+              <div className="p-5 bg-brand-gray/10 rounded-2xl border border-brand-gray/20 flex items-center gap-4">
+                <KeyRound className="text-brand-gray shrink-0" size={20} />
+                <p className="text-xs text-brand-charcoal/80 font-bold leading-relaxed">
                   {configForm.snmp_credentials?.length
                     ? `${configForm.snmp_credentials.length} credencial(es) SNMP adicional(es) configurada(s).`
                     : 'Sin credenciales SNMP adicionales configuradas.'}
                   {' '}Editalas desde el detalle del monitor, pestaña{' '}
-                  <Link to={`/monitors/${modal.id}?tab=config`} className="underline hover:text-indigo-700">Configuración</Link>.
+                  <Link to={`/monitors/${modal.id}?tab=config`} className="underline hover:text-brand-hover">Configuración</Link>.
                 </p>
               </div>
 
@@ -154,7 +154,7 @@ export default function ConfigAgentModal({ modal, onClose }: Props) {
                 <button
                   onClick={saveConfig}
                   disabled={savingConfig}
-                  className="flex-2 px-12 py-5 bg-[#f7931d] hover:bg-[#d35400] disabled:opacity-40 text-white text-xs font-black rounded-[24px] shadow-2xl shadow-orange-900/20 transition-all active:scale-95 flex items-center justify-center gap-3 uppercase tracking-widest"
+                  className="flex-2 px-12 py-5 bg-brand hover:bg-brand-hover disabled:opacity-40 text-white text-xs font-black rounded-[24px] shadow-2xl shadow-brand/20 transition-all active:scale-95 flex items-center justify-center gap-3 uppercase tracking-widest"
                 >
                   {savingConfig ? <Loader2 className="animate-spin" size={20} /> : <Check size={20} />}
                   {savingConfig ? 'Sincronizando...' : 'APLICAR CONFIGURACIÓN'}

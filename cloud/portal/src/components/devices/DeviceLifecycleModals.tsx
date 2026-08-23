@@ -61,7 +61,7 @@ export function EditDeviceModal({ isOpen, onClose, onSaved, deviceId, currentNam
         </div>
         <div className="flex justify-end gap-2 pt-2">
           <button onClick={onClose} className="px-4 py-2 rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-100">Cancelar</button>
-          <button onClick={save} disabled={saving} className="px-4 py-2 rounded-xl text-xs font-bold bg-sky-600 text-white hover:bg-sky-700 disabled:opacity-50">
+          <button onClick={save} disabled={saving} className="px-4 py-2 rounded-xl text-xs font-bold bg-brand text-white hover:bg-brand-hover disabled:opacity-50">
             {saving ? 'Guardando…' : 'Guardar'}
           </button>
         </div>
@@ -201,7 +201,7 @@ export function MoveDeviceModal({ isOpen, onClose, onDone, deviceId, currentClie
           <button
             onClick={move}
             disabled={loading || !agentId || !reason.trim() || (clientChanged && !confirmClientChange)}
-            className="px-4 py-2 rounded-xl text-xs font-bold bg-sky-600 text-white hover:bg-sky-700 disabled:opacity-50"
+            className="px-4 py-2 rounded-xl text-xs font-bold bg-brand text-white hover:bg-brand-hover disabled:opacity-50"
           >
             {loading ? 'Moviendo…' : 'Mover'}
           </button>

@@ -29,10 +29,10 @@ export default function AgentTable({
   ), [agents, searchTerm]);
 
   return (
-    <div className="cd-panel overflow-hidden border-none shadow-xl shadow-blue-900/5">
+    <div className="cd-panel overflow-hidden border-none shadow-xl shadow-brand/5">
       <header className="px-10 py-8 border-b border-slate-50 flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white">
         <div className="flex items-center gap-4">
-          <div className="p-3 bg-blue-50 text-brand rounded-2xl">
+          <div className="p-3 bg-brand/10 text-brand rounded-2xl">
             <Cpu size={24} />
           </div>
           <div>
@@ -118,7 +118,7 @@ export default function AgentTable({
                   </td>
                   <td className="text-slate-500">
                     <div className="flex items-center gap-3">
-                      <div className="p-2 bg-slate-50 rounded-xl group-hover/row:bg-blue-50 transition-colors">
+                      <div className="p-2 bg-slate-50 rounded-xl group-hover/row:bg-brand/10 transition-colors">
                         <Clock size={14} className="text-slate-400 group-hover/row:text-brand" />
                       </div>
                       <span className="text-xs font-bold uppercase text-slate-600">{formatRelativeTime(agent.last_seen, now)}</span>
@@ -152,7 +152,7 @@ export default function AgentTable({
                         <button
                           onClick={() => onConfig(agent)}
                           aria-label={`Configurar agente ${agent.name}`}
-                          className="p-3 bg-blue-50 text-brand hover:bg-brand hover:text-white rounded-2xl transition-all active:scale-90 shadow-sm"
+                          className="p-3 bg-brand/10 text-brand hover:bg-brand hover:text-white rounded-2xl transition-all active:scale-90 shadow-sm"
                           title="Ajustes Remotos"
                         >
                           <Settings size={20} />

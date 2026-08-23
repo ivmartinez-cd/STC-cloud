@@ -68,7 +68,7 @@ export default function RegenKeyModal({ modal, onClose }: Props) {
           <div className="flex justify-end">
             <button
               onClick={onClose}
-              className="px-10 py-4 bg-[#1a2333] text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-[#2c3e50] transition-all active:scale-95"
+              className="px-10 py-4 bg-[#1a2333] text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-[#58595b] transition-all active:scale-95"
             >
               Entendido
             </button>

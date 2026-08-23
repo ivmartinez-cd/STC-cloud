@@ -9,9 +9,9 @@ interface Props {
 }
 
 const LicenseCard = ({ monitor, keyCopied, onCopyKey }: Props) => (
-  <div className="cd-panel overflow-hidden border-none shadow-xl shadow-blue-900/5 bg-white h-full relative">
+  <div className="cd-panel overflow-hidden border-none shadow-xl shadow-brand/5 bg-white h-full relative">
     <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-amber-400 to-orange-500" />
-    <div className="cd-header-blue flex items-center gap-3 px-6 py-5 text-white">
+    <div className="cd-header-primary flex items-center gap-3 px-6 py-5 text-white">
       <Shield size={18} className="text-amber-400" />
       <span className="font-black uppercase tracking-widest text-sm text-white">Detalles de la Licencia</span>
     </div>
@@ -20,15 +20,15 @@ const LicenseCard = ({ monitor, keyCopied, onCopyKey }: Props) => (
         <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2 block">Organización Vinculada</label>
         <Link
           to={`/clients/${monitor.client_id}`}
-          className="block p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-3xl group hover:shadow-lg hover:shadow-blue-900/10 transition-all hover:-translate-y-0.5 relative overflow-hidden"
+          className="block p-4 bg-gradient-to-r from-brand/10 to-brand-gray/10 border border-brand/20 rounded-3xl group hover:shadow-lg hover:shadow-brand/10 transition-all hover:-translate-y-0.5 relative overflow-hidden"
         >
           <div className="flex items-center gap-3 relative z-10">
-            <div className="w-10 h-10 rounded-2xl bg-white shadow-sm flex items-center justify-center text-brand font-black text-lg border border-blue-100/50 group-hover:scale-105 transition-transform">
+            <div className="w-10 h-10 rounded-2xl bg-white shadow-sm flex items-center justify-center text-brand font-black text-lg border border-brand/10 group-hover:scale-105 transition-transform">
               {monitor.client_name?.charAt(0)}
             </div>
             <div>
               <p className="text-xs font-black text-brand uppercase tracking-tight">{monitor.client_name}</p>
-              <p className="text-[9px] font-bold text-blue-500 uppercase tracking-widest group-hover:text-blue-600 transition-colors">
+              <p className="text-[9px] font-bold text-brand-gray uppercase tracking-widest group-hover:text-brand-hover transition-colors">
                 Ver Perfil &rarr;
               </p>
             </div>
@@ -66,11 +66,11 @@ const LicenseCard = ({ monitor, keyCopied, onCopyKey }: Props) => (
           </p>
         </div>
       ) : (
-        <div className="p-5 bg-blue-50 border border-blue-100 rounded-3xl flex items-center gap-3">
+        <div className="p-5 bg-brand/10 border border-brand/20 rounded-3xl flex items-center gap-3">
           <div className="p-2 bg-white rounded-xl shadow-sm text-brand"><Check size={16} /></div>
           <div>
             <p className="text-[9px] font-black text-brand uppercase tracking-widest">Enlace Cifrado</p>
-            <p className="text-[10px] font-bold text-blue-900 uppercase">Telemetría Activa</p>
+            <p className="text-[10px] font-bold text-brand-charcoal uppercase">Telemetría Activa</p>
           </div>
         </div>
       )}

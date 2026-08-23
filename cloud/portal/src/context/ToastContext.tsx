@@ -49,14 +49,14 @@ const ToastItem: React.FC<Toast & { onClose: () => void }> = ({ message, type, o
     success: <CheckCircle className="text-emerald-500" size={18} />,
     error:   <AlertCircle className="text-rose-500" size={18} />,
     warning: <AlertTriangle className="text-amber-500" size={18} />,
-    info:    <Info className="text-blue-500" size={18} />,
+    info:    <Info className="text-brand-gray" size={18} />,
   };
 
   const bgColors = {
     success: 'bg-emerald-50 border-emerald-100',
     error:   'bg-rose-50 border-rose-100',
     warning: 'bg-amber-50 border-amber-100',
-    info:    'bg-blue-50 border-blue-100',
+    info:    'bg-brand-gray/10 border-brand-gray/20',
   };
 
   return (

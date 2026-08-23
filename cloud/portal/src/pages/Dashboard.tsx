@@ -13,33 +13,47 @@ import { api } from '../lib/api';
 import type { Alert } from '../types/alerts';
 
 
-const BRAND_COLORS = ['#2980b9', '#3498db', '#1abc9c', '#f1c40f', '#f7931d', '#e74c3c'];
+// Paleta institucional (Manual de marca Canal Directo): naranja + gris MPS.
+// Nunca colores de otras líneas de servicio (violeta DaaS, magenta Digitalización, celeste Signage).
+const BRAND_COLORS = ['#f7941d', '#58595b', '#1abc9c', '#f1c40f', '#232323', '#e74c3c'];
+
+// Tailwind necesita ver las clases completas de forma literal para generarlas —
+// `bg-${color}-50` como template string no lo detecta el scanner. Por eso el mapa.
+const STAT_COLOR_VARIANTS = {
+  charcoal: { glow: 'bg-brand-charcoal/5 group-hover:bg-brand-charcoal/10', iconBg: 'bg-brand-charcoal/10 text-brand-charcoal' },
+  emerald: { glow: 'bg-emerald-500/5 group-hover:bg-emerald-500/10', iconBg: 'bg-emerald-50 text-emerald-600' },
+  gray: { glow: 'bg-brand-gray/5 group-hover:bg-brand-gray/10', iconBg: 'bg-brand-gray/10 text-brand-gray' },
+  orange: { glow: 'bg-brand/5 group-hover:bg-brand/10', iconBg: 'bg-brand/10 text-brand' },
+} as const;
 
 const StatCard = ({
   title, value, subtitle, icon: Icon, color, trend
 }: {
   title: string; value: string | number; subtitle?: string;
-  icon: React.ElementType; color: string; trend?: string;
-}) => (
-  <div className="cd-panel p-6 relative overflow-hidden group hover:shadow-2xl hover:shadow-blue-900/5 transition-all duration-500">
-    <div className={`absolute top-0 right-0 w-24 h-24 -mr-8 -mt-8 bg-${color}-500/5 rounded-full blur-2xl group-hover:bg-${color}-500/10 transition-colors duration-500`} />
-    <div className="flex justify-between items-start relative z-10">
-      <div className={`p-3 rounded-2xl bg-${color}-50 text-${color}-600`}>
-        <Icon size={24} />
+  icon: React.ElementType; color: keyof typeof STAT_COLOR_VARIANTS; trend?: string;
+}) => {
+  const variant = STAT_COLOR_VARIANTS[color];
+  return (
+    <div className="cd-panel p-6 relative overflow-hidden group hover:shadow-2xl hover:shadow-brand/5 transition-all duration-500">
+      <div className={`absolute top-0 right-0 w-24 h-24 -mr-8 -mt-8 rounded-full blur-2xl transition-colors duration-500 ${variant.glow}`} />
+      <div className="flex justify-between items-start relative z-10">
+        <div className={`p-3 rounded-2xl ${variant.iconBg}`}>
+          <Icon size={24} />
+        </div>
+        {trend && (
+          <span className="flex items-center gap-1 text-[10px] font-black text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full uppercase tracking-tighter">
+            <ArrowUpRight size={10} /> {trend}
+          </span>
+        )}
       </div>
-      {trend && (
-        <span className="flex items-center gap-1 text-[10px] font-black text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full uppercase tracking-tighter">
-          <ArrowUpRight size={10} /> {trend}
-        </span>
-      )}
+      <div className="mt-6 relative z-10">
+        <div className="text-3xl font-black text-[#1a2333] tracking-tighter leading-none">{value}</div>
+        <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2">{title}</div>
+        {subtitle && <div className="text-[10px] font-bold text-slate-500 mt-1">{subtitle}</div>}
+      </div>
     </div>
-    <div className="mt-6 relative z-10">
-      <div className="text-3xl font-black text-[#1a2333] tracking-tighter leading-none">{value}</div>
-      <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2">{title}</div>
-      {subtitle && <div className="text-[10px] font-bold text-slate-500 mt-1">{subtitle}</div>}
-    </div>
-  </div>
-);
+  );
+};
 
 const getTonerColorInfo = (type: string) => {
   if (type.includes('black')) {
@@ -94,7 +108,7 @@ const Dashboard = () => {
   if (loading && !data) {
     return (
       <div className="flex flex-col items-center justify-center py-40 animate-pulse">
-        <Activity size={48} className="text-blue-500 animate-spin mb-4" />
+        <Activity size={48} className="text-brand animate-spin mb-4" />
         <p className="text-slate-400 font-black uppercase tracking-widest text-xs">Cargando inteligencia de flota...</p>
       </div>
     );
@@ -114,28 +128,28 @@ const Dashboard = () => {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <Link to="/clients" className="flex items-center gap-2 px-5 py-3 bg-white text-[#1a2333] font-black text-xs uppercase tracking-widest rounded-2xl border border-slate-200 hover:border-blue-500 transition-all active:scale-95">
+          <Link to="/clients" className="flex items-center gap-2 px-5 py-3 bg-white text-[#1a2333] font-black text-xs uppercase tracking-widest rounded-2xl border border-slate-200 hover:border-brand transition-all active:scale-95">
             <Plus size={16} /> Nuevo Cliente
           </Link>
-          <Link to="/agents" className="flex items-center gap-2 px-5 py-3 bg-[#1a2333] text-white font-black text-xs uppercase tracking-widest rounded-2xl hover:bg-blue-600 transition-all active:scale-95 shadow-xl shadow-blue-900/10">
+          <Link to="/agents" className="flex items-center gap-2 px-5 py-3 bg-[#1a2333] text-white font-black text-xs uppercase tracking-widest rounded-2xl hover:bg-brand-hover transition-all active:scale-95 shadow-xl shadow-brand/10">
             <Cpu size={16} /> Gestionar Agentes
           </Link>
         </div>
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard title="Parque Global" value={data?.stats?.devices?.toLocaleString() ?? '0'} subtitle="Impresoras Monitoreadas" icon={HardDrive} color="blue" trend={data?.stats?.deviceTrend || undefined} />
+        <StatCard title="Parque Global" value={data?.stats?.devices?.toLocaleString() ?? '0'} subtitle="Impresoras Monitoreadas" icon={HardDrive} color="charcoal" trend={data?.stats?.deviceTrend || undefined} />
         <StatCard title="Monitores" value={`${data?.stats?.agents?.online ?? 0}/${data?.stats?.agents?.total ?? 0}`} subtitle="Nodos en línea" icon={Radio} color="emerald" />
-        <StatCard title="Clientes" value={data?.stats?.clients?.toLocaleString() ?? '0'} subtitle="Empresas Registradas" icon={Users} color="indigo" />
+        <StatCard title="Clientes" value={data?.stats?.clients?.toLocaleString() ?? '0'} subtitle="Empresas Registradas" icon={Users} color="gray" />
         <StatCard title="Volumen Mensual" value={data?.stats?.volume?.toLocaleString() ?? '0'} subtitle="Páginas Procesadas" icon={BarChart3} color="orange" />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
         {/* Brand Distribution */}
         <div className="cd-panel p-8 flex flex-col space-y-10">
           <div>
             <h3 className="text-lg font-black text-[#1a2333] tracking-tight flex items-center gap-3">
-              <PieChartIcon size={20} className="text-blue-500" /> Distribución de Marcas
+              <PieChartIcon size={20} className="text-brand" /> Distribución de Marcas
             </h3>
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Composición del parque activo</p>
           </div>
@@ -161,7 +175,7 @@ const Dashboard = () => {
                     <div key={b.brand} className="flex items-center justify-between group">
                       <div className="flex items-center gap-3">
                         <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: BRAND_COLORS[i % BRAND_COLORS.length] }} />
-                        <span className="text-[11px] font-black text-[#1a2333] uppercase group-hover:text-blue-600 transition-colors cursor-default">{b.brand}</span>
+                        <span className="text-[11px] font-black text-[#1a2333] uppercase group-hover:text-brand-hover transition-colors cursor-default">{b.brand}</span>
                       </div>
                       <span className="text-[11px] font-black text-slate-400">{b.count}</span>
                     </div>
@@ -177,7 +191,7 @@ const Dashboard = () => {
           <div className="flex items-center justify-between mb-8">
             <div>
               <h3 className="text-lg font-black text-[#1a2333] tracking-tight flex items-center gap-3">
-                <Building2 size={20} className="text-indigo-500" /> Top Cuentas
+                <Building2 size={20} className="text-brand-gray" /> Top Cuentas
               </h3>
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Mayores flotas administradas</p>
             </div>
@@ -188,14 +202,14 @@ const Dashboard = () => {
           <div className="space-y-4">
             {data?.topClients.map((c, i) => (
               <Link to={`/clients/${c.id}`} key={c.id} className="flex items-center gap-4 p-4 rounded-3xl hover:bg-slate-50 border border-transparent hover:border-slate-100 transition-all group">
-                <div className="w-10 h-10 rounded-2xl bg-white border border-slate-100 shadow-sm flex items-center justify-center text-xs font-black text-slate-400 group-hover:border-indigo-200 group-hover:text-indigo-500 transition-all">
+                <div className="w-10 h-10 rounded-2xl bg-white border border-slate-100 shadow-sm flex items-center justify-center text-xs font-black text-slate-400 group-hover:border-brand-gray/40 group-hover:text-brand-gray transition-all">
                   {i + 1}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="text-xs font-black text-[#1a2333] truncate uppercase tracking-tight group-hover:text-indigo-600 transition-colors">{c.name}</div>
+                  <div className="text-xs font-black text-[#1a2333] truncate uppercase tracking-tight group-hover:text-brand-gray transition-colors">{c.name}</div>
                   <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{c.device_count} Dispositivos</div>
                 </div>
-                <ArrowUpRight size={16} className="text-slate-200 group-hover:text-indigo-500 transition-all" />
+                <ArrowUpRight size={16} className="text-slate-200 group-hover:text-brand-gray transition-all" />
               </Link>
             ))}
           </div>
@@ -216,7 +230,7 @@ const Dashboard = () => {
               </span>
             )}
           </div>
-          <div className="space-y-4">
+          <div className="space-y-4 max-h-[420px] overflow-y-auto custom-scrollbar pr-1">
             {data?.offlineAgents.length === 0 ? (
               <div className="h-64 flex flex-col items-center justify-center text-emerald-500/50 bg-emerald-50/50 rounded-3xl border border-emerald-100 border-dashed">
                 <Activity size={32} className="mb-3 animate-pulse" />
@@ -245,7 +259,7 @@ const Dashboard = () => {
       {/* Active Alerts */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Consumibles en Alerta */}
-        <div className="cd-panel p-8 flex flex-col space-y-6 lg:col-span-3 hover:shadow-2xl hover:shadow-blue-900/5 transition-all duration-500">
+        <div className="cd-panel p-8 flex flex-col space-y-6 lg:col-span-3 hover:shadow-2xl hover:shadow-brand/5 transition-all duration-500">
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-lg font-black text-[#1a2333] tracking-tight flex items-center gap-3">
@@ -267,7 +281,7 @@ const Dashboard = () => {
           <div className="flex-1 min-h-[250px] max-h-[350px] overflow-y-auto pr-2 space-y-4">
             {alertsLoading ? (
               <div className="h-64 flex flex-col items-center justify-center animate-pulse">
-                <Activity size={32} className="text-blue-500 animate-spin mb-3" />
+                <Activity size={32} className="text-brand animate-spin mb-3" />
                 <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Consultando alertas...</p>
               </div>
             ) : alerts.length === 0 ? (
@@ -354,8 +368,8 @@ const Dashboard = () => {
 
       {/* Quick Access */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
-        <Link to="/reports" className="flex items-center gap-4 p-6 bg-white border border-slate-200 rounded-[2.5rem] hover:border-blue-500 hover:shadow-2xl hover:shadow-blue-900/5 transition-all group">
-          <div className="p-4 bg-blue-50 text-blue-600 rounded-3xl group-hover:scale-110 transition-transform">
+        <Link to="/reports" className="flex items-center gap-4 p-6 bg-white border border-slate-200 rounded-[2.5rem] hover:border-brand hover:shadow-2xl hover:shadow-brand/5 transition-all group">
+          <div className="p-4 bg-brand/10 text-brand rounded-3xl group-hover:scale-110 transition-transform">
             <FileText size={24} />
           </div>
           <div>

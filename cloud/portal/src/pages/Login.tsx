@@ -28,8 +28,8 @@ const Login = () => {
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6 relative overflow-hidden font-sans">
       {/* Soft Ambient Background Decoration - Dashboard Style */}
-      <div className="absolute top-[-20%] right-[-10%] w-[70%] h-[70%] bg-[#f7931d]/5 blur-[120px] rounded-full pointer-events-none" />
-      <div className="absolute bottom-[-10%] left-[-10%] w-[60%] h-[60%] bg-[#004a99]/5 blur-[100px] rounded-full pointer-events-none" />
+      <div className="absolute top-[-20%] right-[-10%] w-[70%] h-[70%] bg-brand/5 blur-[120px] rounded-full pointer-events-none" />
+      <div className="absolute bottom-[-10%] left-[-10%] w-[60%] h-[60%] bg-brand-gray/5 blur-[100px] rounded-full pointer-events-none" />
       
       {/* Subtle Pattern overlay */}
       <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-[0.02] pointer-events-none" />
@@ -43,8 +43,8 @@ const Login = () => {
             </div>
             
             <div className="flex items-center justify-center gap-1.5 relative z-10 -mt-2">
-              <span className="font-montserrat font-black text-base tracking-tight text-[#004a99] uppercase">STC</span>
-              <span className="font-montserrat font-black text-base tracking-tight text-[#f7931d] uppercase">CLOUD</span>
+              <span className="font-montserrat font-black text-base tracking-tight text-brand-charcoal uppercase">STC</span>
+              <span className="font-montserrat font-black text-base tracking-tight text-brand uppercase">CLOUD</span>
             </div>
             <p className="text-slate-400 text-[8px] font-black uppercase tracking-[0.4em] mt-3 opacity-70">Portal de Gestión de Contadores</p>
           </div>
@@ -70,14 +70,14 @@ const Login = () => {
             <div className="space-y-2.5">
               <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Usuario</label>
               <div className="relative group/input">
-                <div className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within/input:text-[#f7931d] transition-colors duration-300">
+                <div className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within/input:text-brand transition-colors duration-300">
                   <User size={18} />
                 </div>
                 <input
                   type="text"
                   value={username}
                   onChange={e => setUsername(e.target.value)}
-                  className="w-full h-14 pl-14 pr-6 bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 text-sm transition-all duration-300 focus:bg-white focus:border-[#f7931d]/50 focus:ring-[10px] focus:ring-[#f7931d]/5 outline-none placeholder:text-slate-400 font-medium"
+                  className="w-full h-14 pl-14 pr-6 bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 text-sm transition-all duration-300 focus:bg-white focus:border-brand/50 focus:ring-[10px] focus:ring-brand/5 outline-none placeholder:text-slate-400 font-medium"
                   placeholder=""
                   required
                   autoFocus
@@ -88,14 +88,14 @@ const Login = () => {
             <div className="space-y-2.5">
               <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Contraseña</label>
               <div className="relative group/input">
-                <div className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within/input:text-[#f7931d] transition-colors duration-300">
+                <div className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within/input:text-brand transition-colors duration-300">
                   <Lock size={18} />
                 </div>
                 <input
                   type="password"
                   value={password}
                   onChange={e => setPassword(e.target.value)}
-                  className="w-full h-14 pl-14 pr-6 bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 text-sm transition-all duration-300 focus:bg-white focus:border-[#f7931d]/50 focus:ring-[10px] focus:ring-[#f7931d]/5 outline-none placeholder:text-slate-400 font-medium"
+                  className="w-full h-14 pl-14 pr-6 bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 text-sm transition-all duration-300 focus:bg-white focus:border-brand/50 focus:ring-[10px] focus:ring-brand/5 outline-none placeholder:text-slate-400 font-medium"
                   placeholder="••••••••"
                   required
                 />
@@ -105,7 +105,7 @@ const Login = () => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full h-14 bg-[#f7931d] hover:bg-[#ff9d2b] disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-[0_10px_25px_rgba(247,147,29,0.15)] hover:shadow-[0_12px_30px_rgba(247,147,29,0.25)] transition-all duration-500 active:scale-[0.97] flex items-center justify-center gap-3 mt-8"
+              className="w-full h-14 bg-brand hover:bg-brand-hover disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-[0_10px_25px_rgba(247,148,29,0.15)] hover:shadow-[0_12px_30px_rgba(247,148,29,0.25)] transition-all duration-500 active:scale-[0.97] flex items-center justify-center gap-3 mt-8"
             >
               {loading ? <Loader2 size={18} className="animate-spin" /> : <ShieldCheck size={18} />}
               {loading ? 'Verificando...' : 'Acceder al Portal'}
@@ -120,8 +120,8 @@ const Login = () => {
           </p>
           <div className="flex items-center justify-center gap-4 mt-5">
             <div className="h-px w-10 bg-slate-200" />
-            <div className="w-1.5 h-1.5 rounded-full bg-[#004a99]/20" />
-            <div className="w-1.5 h-1.5 rounded-full bg-[#f7931d]/40" />
+            <div className="w-1.5 h-1.5 rounded-full bg-brand-gray/40" />
+            <div className="w-1.5 h-1.5 rounded-full bg-brand/40" />
             <div className="h-px w-10 bg-slate-200" />
           </div>
         </div>

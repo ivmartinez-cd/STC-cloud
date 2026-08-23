@@ -119,7 +119,7 @@ const Clients = () => {
         {role !== 'client_viewer' && (
           <button
             onClick={() => setShowModal(true)}
-            className="bg-[#f7931d] hover:bg-[#d35400] text-white px-5 py-2.5 rounded-xl flex items-center justify-center gap-2 text-sm font-bold shadow-lg shadow-orange-900/20 transition-all active:scale-95 whitespace-nowrap"
+            className="bg-brand hover:bg-brand-hover text-white px-5 py-2.5 rounded-xl flex items-center justify-center gap-2 text-sm font-bold shadow-lg shadow-brand/20 transition-all active:scale-95 whitespace-nowrap"
           >
             <Plus size={18} />
             Nuevo Cliente
@@ -182,7 +182,7 @@ const Clients = () => {
               </thead>
               <tbody className="divide-y divide-slate-50">
                 {filtered.map(client => (
-                  <tr key={client.id} className="hover:bg-blue-50/30 transition-colors group">
+                  <tr key={client.id} className="hover:bg-brand/5 transition-colors group">
                     <td className="px-6 py-4">
                       <Link to={`/clients/${client.id}`} className="flex items-center gap-4">
                         <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center shrink-0 group-hover:bg-brand group-hover:text-white transition-all">
@@ -248,10 +248,10 @@ const Clients = () => {
       {showModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-overlay-in">
           <div className="bg-white rounded-[24px] shadow-2xl w-full max-w-lg overflow-hidden animate-modal-in">
-            <header className="px-8 py-6 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-brand to-[#2c3e50] text-white">
+            <header className="px-8 py-6 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-brand to-brand-gray text-white">
               <div>
                 <h2 className="text-xl font-extrabold tracking-tight">Nuevo Cliente</h2>
-                <p className="text-blue-100/70 text-xs font-bold uppercase tracking-wider mt-1">Registro de empresa</p>
+                <p className="text-white/70 text-xs font-bold uppercase tracking-wider mt-1">Registro de empresa</p>
               </div>
               <button onClick={() => setShowModal(false)} className="p-2 hover:bg-white/10 rounded-xl transition-colors">
                 <X size={24} />
@@ -316,7 +316,7 @@ const Clients = () => {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="flex-1 px-6 py-3 rounded-xl bg-[#f7931d] text-white font-extrabold hover:bg-[#d35400] transition-all disabled:opacity-50 flex items-center justify-center gap-2 text-sm shadow-lg shadow-orange-900/20"
+                  className="flex-1 px-6 py-3 rounded-xl bg-brand text-white font-extrabold hover:bg-brand-hover transition-all disabled:opacity-50 flex items-center justify-center gap-2 text-sm shadow-lg shadow-brand/20"
                 >
                   {isSubmitting ? <Loader2 size={20} className="animate-spin" /> : 'Registrar Cliente'}
                 </button>

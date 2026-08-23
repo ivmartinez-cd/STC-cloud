@@ -338,7 +338,7 @@ const Monitors = () => {
               <button 
                 onClick={generateKey} 
                 disabled={!formClientId || !formName.trim() || creating}
-                className="bg-brand hover:bg-[#2c3e50] disabled:opacity-40 text-white rounded-xl py-3 px-8 text-sm font-extrabold transition-all shadow-lg shadow-blue-900/20 flex items-center gap-2"
+                className="bg-brand hover:bg-brand-hover disabled:opacity-40 text-white rounded-xl py-3 px-8 text-sm font-extrabold transition-all shadow-lg shadow-brand/20 flex items-center gap-2"
               >
                 {creating ? <Loader2 size={18} className="animate-spin" /> : <Key size={18} />}
                 {creating ? 'Generando...' : 'Generar Llave de Activación'}
@@ -406,7 +406,7 @@ const Monitors = () => {
                   </tr>
                 )}
                 {monitors.map(monitor => (
-                  <tr key={monitor.id} className="hover:bg-blue-50/30 transition-colors group">
+                  <tr key={monitor.id} className="hover:bg-brand/5 transition-colors group">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
@@ -487,7 +487,7 @@ const Monitors = () => {
       {configModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-overlay-in">
           <div className="bg-white rounded-[24px] shadow-2xl w-full max-w-2xl overflow-hidden animate-modal-in">
-            <header className="px-8 py-6 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-[#2c3e50] to-[#1a2333] text-white">
+            <header className="px-8 py-6 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-[#58595b] to-[#1a2333] text-white">
               <div>
                 <h2 className="text-xl font-extrabold tracking-tight">Configuración Remota</h2>
                 <p className="text-slate-400 text-xs font-bold uppercase tracking-wider mt-1">{configModal.name}</p>

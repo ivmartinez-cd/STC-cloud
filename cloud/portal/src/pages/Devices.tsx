@@ -106,7 +106,7 @@ const Devices = () => {
 
       {loading && (
         <div className="flex flex-col items-center justify-center py-20 animate-pulse">
-          <div className="p-4 bg-blue-50 rounded-full text-brand mb-4">
+          <div className="p-4 bg-brand/10 rounded-full text-brand mb-4">
             <RefreshCw size={32} className="animate-spin" />
           </div>
           <p className="text-slate-500 font-bold uppercase tracking-widest text-xs">Cargando inventario...</p>
@@ -158,7 +158,7 @@ const Devices = () => {
                   className={`cd-panel p-6 group hover:border-brand/30 transition-all flex flex-col h-full ${device.decommissioned_at ? 'opacity-60' : ''}`}
                 >
                   <div className="flex items-start justify-between mb-5">
-                    <div className="p-3 bg-blue-50 text-brand rounded-2xl group-hover:bg-brand group-hover:text-white transition-all duration-300">
+                    <div className="p-3 bg-brand/10 text-brand rounded-2xl group-hover:bg-brand group-hover:text-white transition-all duration-300">
                       <Printer size={20} />
                     </div>
                     {device.decommissioned_at ? (
@@ -229,7 +229,7 @@ const Devices = () => {
 
                 <div className="mt-6 pt-5 border-t border-slate-50 flex items-center justify-between">
                   <div className="space-y-1">
-                    <div className="text-[11px] font-mono font-bold text-brand bg-blue-50 px-2 py-0.5 rounded-md inline-block">
+                    <div className="text-[11px] font-mono font-bold text-brand bg-brand/10 px-2 py-0.5 rounded-md inline-block">
                       {device.ip}
                     </div>
                     <div className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest truncate max-w-[140px]">

@@ -110,7 +110,7 @@ const ChartTooltip = ({
   if (!active || !payload?.length) return null;
   const item = data.find(d => d.name === label);
   return (
-    <div className="bg-white rounded-2xl shadow-xl shadow-blue-900/10 border border-slate-100 p-4 min-w-[190px]">
+    <div className="bg-white rounded-2xl shadow-xl shadow-brand-charcoal/10 border border-slate-100 p-4 min-w-[190px]">
       <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-3 leading-snug">
         {item?.fullName}
       </p>
@@ -158,7 +158,7 @@ const ReportsTabPanel = ({ devices, monitor }: Props) => {
     <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500">
 
       {/* ── Panel header + KPI cards ─────────────────────────────── */}
-      <div className="cd-panel overflow-hidden border-none shadow-xl shadow-blue-900/5">
+      <div className="cd-panel overflow-hidden border-none shadow-xl shadow-brand/5">
         <header className="px-8 py-6 bg-white border-b border-slate-100 flex items-center justify-between">
           <div>
             <h3 className="text-sm font-black text-[#1a2333] uppercase tracking-tight">Reportes del Nodo</h3>
@@ -179,7 +179,7 @@ const ReportsTabPanel = ({ devices, monitor }: Props) => {
 
             <div className="p-6 bg-slate-50 rounded-3xl border border-slate-100 space-y-3 group hover:shadow-md hover:-translate-y-0.5 transition-all duration-300">
               <div className="flex items-center gap-3">
-                <div className="p-2.5 bg-blue-50 text-[#004a99] rounded-xl">
+                <div className="p-2.5 bg-brand-gray/10 text-brand-gray rounded-xl">
                   <Printer size={18} />
                 </div>
                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Equipos</span>
@@ -190,7 +190,7 @@ const ReportsTabPanel = ({ devices, monitor }: Props) => {
 
             <div className="p-6 bg-slate-50 rounded-3xl border border-slate-100 space-y-3 group hover:shadow-md hover:-translate-y-0.5 transition-all duration-300">
               <div className="flex items-center gap-3">
-                <div className="p-2.5 bg-[#004a99]/10 text-[#004a99] rounded-xl">
+                <div className="p-2.5 bg-brand-charcoal/10 text-brand-charcoal rounded-xl">
                   <TrendingUp size={18} />
                 </div>
                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Páginas</span>
@@ -235,9 +235,9 @@ const ReportsTabPanel = ({ devices, monitor }: Props) => {
       </div>
 
       {/* ── Reporte Ejecutivo de Uso ──────────────────────────────── */}
-      <div className="bg-white rounded-[32px] border border-slate-100 shadow-xl shadow-blue-900/5 overflow-hidden">
+      <div className="bg-white rounded-[32px] border border-slate-100 shadow-xl shadow-brand/5 overflow-hidden">
         <header className="px-8 py-6 border-b border-slate-100 flex items-center gap-4">
-          <div className="p-3 bg-blue-50 text-[#004a99] rounded-2xl">
+          <div className="p-3 bg-brand/10 text-brand rounded-2xl">
             <BarChart2 size={22} />
           </div>
           <div>
@@ -275,7 +275,7 @@ const ReportsTabPanel = ({ devices, monitor }: Props) => {
                     tickFormatter={(v: number) => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v)}
                   />
                   <Tooltip
-                    cursor={{ fill: 'rgba(0,74,153,0.04)', radius: 12 }}
+                    cursor={{ fill: 'rgba(35,35,35,0.05)', radius: 12 }}
                     content={<ChartTooltip data={chartData} />}
                   />
                   <Legend
@@ -287,8 +287,8 @@ const ReportsTabPanel = ({ devices, monitor }: Props) => {
                       </span>
                     )}
                   />
-                  <Bar dataKey="mono"  fill="#004a99" radius={[6, 6, 0, 0]} maxBarSize={40} />
-                  <Bar dataKey="color" fill="#f7931d" radius={[6, 6, 0, 0]} maxBarSize={40} />
+                  <Bar dataKey="mono"  fill="#58595b" radius={[6, 6, 0, 0]} maxBarSize={40} />
+                  <Bar dataKey="color" fill="#f7941d" radius={[6, 6, 0, 0]} maxBarSize={40} />
                 </BarChart>
               </ResponsiveContainer>
 
@@ -299,14 +299,14 @@ const ReportsTabPanel = ({ devices, monitor }: Props) => {
                 )[0];
                 if (!top || Number(top.monthly_pages ?? 0) === 0) return null;
                 return (
-                  <div className="mt-6 flex items-center gap-4 p-5 bg-[#004a99]/5 rounded-2xl border border-[#004a99]/10">
-                    <div className="p-3 bg-[#004a99]/10 text-[#004a99] rounded-xl">
+                  <div className="mt-6 flex items-center gap-4 p-5 bg-brand/5 rounded-2xl border border-brand/10">
+                    <div className="p-3 bg-brand/10 text-brand rounded-xl">
                       <TrendingUp size={20} />
                     </div>
                     <div className="flex-1">
                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Mayor Productor del Mes</p>
                       <p className="text-sm font-black text-[#1a2333] tracking-tight">
-                        {top.model ?? 'N/A'} · <span className="font-mono text-[#004a99]">{top.serial_number ?? 'S/N'}</span>
+                        {top.model ?? 'N/A'} · <span className="font-mono text-brand">{top.serial_number ?? 'S/N'}</span>
                       </p>
                     </div>
                     <div className="text-right">
@@ -324,7 +324,7 @@ const ReportsTabPanel = ({ devices, monitor }: Props) => {
       </div>
 
       {/* ── Reporte de Insumos ───────────────────────────────────── */}
-      <div className="bg-white rounded-[32px] border border-slate-100 shadow-xl shadow-blue-900/5 overflow-hidden">
+      <div className="bg-white rounded-[32px] border border-slate-100 shadow-xl shadow-brand/5 overflow-hidden">
         <header className="px-8 py-6 border-b border-slate-100 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div className="p-3 bg-amber-50 text-amber-600 rounded-2xl">

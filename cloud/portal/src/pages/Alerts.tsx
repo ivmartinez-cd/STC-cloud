@@ -176,7 +176,7 @@ const Alerts = () => {
 
       {loading ? (
         <div className="h-64 flex flex-col items-center justify-center animate-pulse">
-          <Loader2 size={32} className="text-blue-500 animate-spin mb-3" />
+          <Loader2 size={32} className="text-brand animate-spin mb-3" />
           <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Cargando alertas...</p>
         </div>
       ) : filtered.length === 0 ? (
@@ -233,7 +233,7 @@ const Alerts = () => {
                         {a.resolved ? 'Resuelta' : 'Activa'}
                       </span>
                       {a.acknowledged && (
-                        <span className="text-[9px] font-bold uppercase tracking-wider text-blue-500">Reconocida</span>
+                        <span className="text-[9px] font-bold uppercase tracking-wider text-brand-gray">Reconocida</span>
                       )}
                     </div>
                   </td>
@@ -245,7 +245,7 @@ const Alerts = () => {
                             disabled={pendingId === a.id}
                             onClick={() => updateAlert(a.id, { acknowledged: true })}
                             title="Reconocer"
-                            className="p-2 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-all disabled:opacity-50"
+                            className="p-2 bg-brand/10 text-brand rounded-xl hover:bg-brand/20 transition-all disabled:opacity-50"
                           >
                             <Check size={14} />
                           </button>
