@@ -192,13 +192,21 @@ webhooks fallidos, documentación pública tipo OpenAPI/Swagger.
 
 ✅ **Mejoras de agente** (23/08/2026), 5 de 6 ítems del roadmap, verificados
 con tests reales salvo el marcado (c):
-- **Rollback de update**: el bundle single-file ahora guarda `.bak` +
-  `.bak.version` ANTES de reemplazar (`UpdateService.ts`, antes reemplazo
-  in-place sin ningún respaldo); `rollbackToPreviousVersion()` restaura. El
-  parche ZIP (`.bat`/robocopy, Windows-only) ahora también hace un backup de
-  `installDir` antes del robocopy destructivo — red de seguridad MANUAL (un
-  admin restaura a mano), no rollback automático (ese flujo corre fuera del
-  proceso Node, sin nadie vivo para decidir revertir después).
+- **Rollback de update** — ✅ **verificado contra Windows real** (23/08/2026,
+  vía interop WSL2 sobre el Windows real del usuario): el bundle single-file
+  ahora guarda `.bak` + `.bak.version` ANTES de reemplazar (`UpdateService.ts`,
+  antes reemplazo in-place sin ningún respaldo); `rollbackToPreviousVersion()`
+  restaura. Corrida la clase compilada real (`dist/core/UpdateService.js`,
+  no una réplica) contra una COPIA del `bundle.js` real de la instalación
+  existente (`C:\Program Files\STC\Monitor\bundle.js`, 723.621 bytes) en un
+  directorio aislado (`C:\Temp\stc-rollback-test`, nunca la instalación
+  viva) — backup, "actualización" simulada rota, y rollback restauraron el
+  archivo original byte a byte. El parche ZIP (`.bat`/robocopy, Windows-only)
+  ahora también hace un backup de `installDir` antes del robocopy destructivo
+  — red de seguridad MANUAL (un admin restaura a mano), no rollback
+  automático (ese flujo corre fuera del proceso Node, sin nadie vivo para
+  decidir revertir después) — esta parte NO se probó en runtime (requeriría
+  tocar el servicio real, fuera del alcance acordado).
 - **Activación offline**: `activate()` reintentaba una sola vez y fallaba
   (exit 3) si no había red al momento de instalar, dejando el servicio en
   `SERVICE_DEMAND_START` indefinidamente. Ahora reintenta con backoff
@@ -214,13 +222,17 @@ con tests reales salvo el marcado (c):
   se trataba igual que cualquier método sin datos, sin log específico. Ahora
   cuenta fallos consecutivos por IP y loguea un WARN al llegar a 3
   (firewall/driver bloqueando el puerto 9100, o firmware con PJL apagado).
-- **"Mantener datos" al desinstalar** (`installer/STC-Monitor.iss`): antes
-  `[UninstallDelete]` borraba `config.enc`/`local.db`/logs siempre, sin
-  excepción. Ahora `InitializeUninstall` pregunta y sólo borra `DataDir` si
-  el usuario no eligió conservarlo. **(c) NO verificado en runtime real** —
-  este entorno no tiene Inno Setup/Windows para compilar y correr el
-  instalador; la sintaxis Pascal sigue la API documentada de Inno Setup 6.x
-  pero no se pudo probar el flujo real de desinstalación.
+- **"Mantener datos" al desinstalar** (`installer/STC-Monitor.iss`) — ✅
+  **compilación verificada contra Inno Setup 6.7.1 real** (23/08/2026, vía
+  interop WSL2): antes `[UninstallDelete]` borraba `config.enc`/`local.db`/
+  logs siempre, sin excepción. Ahora `InitializeUninstall` pregunta y sólo
+  borra `DataDir` si el usuario no eligió conservarlo. Compilado con
+  `ISCC.exe` real ("Successful compile") — la sintaxis Pascal nueva
+  (`InitializeUninstall`/`KeepUserData`/`NotKeepingData`) es válida. **Lo que
+  falta**: correr una instalación/desinstalación real de punta a punta (no
+  se hizo — tocaría la instalación existente del usuario o requeriría
+  redirigir el `.iss` a una carpeta de prueba, fuera del alcance acordado
+  para esta pasada).
 - **Log rotation real** (`core/Logger.ts`): antes un solo nivel (`.1` se
   pisaba en cada corte). Ahora rota en cadena hasta 5 archivos, borrando el
   más viejo (mismo criterio que logrotate).
@@ -474,7 +486,7 @@ Ver §1. Especialmente `data_collection_inventory.md` (privacidad) y los HTML de
 - Backend multi‑réplica: pub/sub Redis para WS, jobs BullMQ repetibles (heartbeat monitor), métricas Prometheus, Sentry, logs estructurados sin `console.log`.
 - ✅ (23/08/2026) Agregados continuos (diario/mensual por equipo, `readings_daily_agg`/`readings_monthly_agg`) — sólo backend/endpoint, sin dashboard de portal todavía. Ver "Estado de implementación".
 - Familias nuevas: Ricoh WIM, Kyocera CCX, Brother BMS, Xerox WS, Canon, Konica; fixtures reales por modelo; matriz de cobertura de scopes visible en el portal (columna Driver + scopes).
-- ✅ (23/08/2026) Agente: rollback de update (single-file; el parche ZIP sólo backup manual), activación offline (retry con backoff), dedupe de lecturas idénticas (4h), detección de PJL deshabilitado, log rotation real. "Mantener datos" al desinstalar escrito pero NO verificado (sin Windows/Inno Setup en este entorno) — ver "Estado de implementación".
+- ✅ (23/08/2026) Agente: rollback de update (single-file, verificado contra Windows real; el parche ZIP sólo backup manual), activación offline (retry con backoff), dedupe de lecturas idénticas (4h), detección de PJL deshabilitado, log rotation real, "mantener datos" al desinstalar (compilación verificada con Inno Setup 6.7.1 real, falta correr instalación/desinstalación de punta a punta) — ver "Estado de implementación".
 - Documentación: reescribir comparativa v2.0, inventario de datos (privacidad), auditoría IT; política de retención y DPA publicadas.
 
 ---
