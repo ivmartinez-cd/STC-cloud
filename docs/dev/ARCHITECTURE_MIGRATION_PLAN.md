@@ -2,8 +2,8 @@
 
 **Estado:** Fase 0, Fase 1 y Fase 2 (backend) completas — incluidas las 2
 pasadas diferidas de alto riesgo (`syncReadings`, `mergeDevices`); Fase 2
-(frontend) arrancada — `Settings.tsx` dividido, 6 archivos grandes de
-`portal/src` pendientes — 2026-08-24  
+(frontend) en curso — `Settings.tsx` y `Monitors.tsx` divididos, 5 archivos
+grandes de `portal/src` pendientes — 2026-08-24  
 **Origen:** `docs/dev/ARCHITECTURE_GUIDE.md` (copiado desde `helpdesk-manager`, 2026-08-24)  
 **Reemplaza (parcialmente) a:** `docs/dev/PROJECT_GUIDELINES.md`, que hoy documenta la
 convención opuesta (`api/` para rutas + `services/` para lógica de negocio, sin capas).
@@ -455,15 +455,71 @@ empeorar" — no le quita mérito ni commitea su código por mí, y cuando ellos
 commiteen su propio trabajo `check-sizes.mjs` no va a mostrar nada nuevo
 para esos archivos porque ya quedaron reflejados acá.
 
-**Pendiente de Fase 2 frontend:** `DeviceDetail.tsx` (772), `Monitors.tsx`
-(615), `DeviceLifecycleModals.tsx` (603), `ClientDetail.tsx` (571),
-`MonitorDetail.tsx` (569), `Dashboard.tsx` (507) sin dividir. De estos,
-`DeviceLifecycleModals.tsx`, `ClientDetail.tsx`, `Dashboard.tsx` y
-`DeviceDetail.tsx` tienen cambios sin commitear de la Fase 11 de
-`close-hp-sds-gaps` (confirmados "terminados, no se van a seguir editando"
-pero sin commitear) — si se dividen, hacerlo sobre el working tree actual,
-no sobre HEAD, para no perder ese trabajo. `Layout.tsx` está reservado por
-`close-hp-sds-gaps` hasta nuevo aviso (activo en su Fase 4.1).
+**Pendiente de Fase 2 frontend (al cerrar `Settings.tsx`):** `DeviceDetail.tsx`
+(772), `Monitors.tsx` (615), `DeviceLifecycleModals.tsx` (603),
+`ClientDetail.tsx` (571), `MonitorDetail.tsx` (569), `Dashboard.tsx` (507)
+sin dividir. De estos, `DeviceLifecycleModals.tsx`, `ClientDetail.tsx`,
+`Dashboard.tsx` y `DeviceDetail.tsx` tienen cambios sin commitear de la
+Fase 11 de `close-hp-sds-gaps` (confirmados "terminados, no se van a seguir
+editando" pero sin commitear) — si se dividen, hacerlo sobre el working
+tree actual, no sobre HEAD, para no perder ese trabajo. `Layout.tsx` está
+reservado por `close-hp-sds-gaps` hasta nuevo aviso (activo en su Fase 4.1).
+
+## Fase 2 (frontend) — `Monitors.tsx` dividido (2026-08-24)
+
+Segundo archivo del frontend, elegido por ser el siguiente más grande que
+seguía genuinamente libre en `git status` (ni `close-hp-sds-gaps` ni las
+otras 2 sesiones hermanas lo tocan — reconfirmado con `ListAgents` +
+`git status` justo antes de arrancar, mismo roster de 3 sesiones).
+
+`Monitors.tsx` (615L) tenía sus propios tipos locales `Monitor`/`Client` que
+NO son los mismos que `types/monitor.ts` (que ya exporta un `Monitor` y un
+`Client` con formas distintas, usados por otras páginas contra otros
+endpoints) — se nombraron `MonitorListItem`/`ClientOption` en un archivo de
+tipos nuevo (`types/monitorsPage.ts`) para no pisar ni confundir con los
+existentes.
+
+División:
+- `types/monitorsPage.ts` (23L, nuevo) — `MonitorListItem`, `IpRange`,
+  `MonitorConfig`, `ClientOption`.
+- `components/monitors/RegisterMonitorPanel.tsx` (167L, nuevo) — panel de
+  alta autocontenido (estado del formulario + su propio `api.post`), recibe
+  `clients` y un callback `onCreated(key)`.
+- `components/monitors/MonitorsTable.tsx` (146L, nuevo) — tabla presentacional
+  + `formatLastSeen`.
+- `components/monitors/MonitorConfigModal.tsx` (172L, nuevo) — autocontenido
+  (fetch de config al abrir + su propio `api.put`), recibe `monitor`/`onClose`.
+- `pages/Monitors.tsx` (615L → 162L) — orquestador: sólo agentes/clientes,
+  `loadMonitors`, `revokeMonitor`, `confirmDeleteMonitor`, y composición de
+  las 3 piezas de arriba + `ConfirmModal` para el borrado.
+
+Nota: no se creó ningún componente/botón nuevo — el `RegisterMonitorPanel`
+quedó sin un botón "Cancelar" propio (se probó agregar uno y se revirtió) al
+notar que el original sólo colapsa el panel desde el botón del header; el
+`resetForm()` original queda implícito porque el panel ahora es un
+componente separado que se desmonta (y por lo tanto pierde su estado) al
+cerrarse, mismo efecto neto sin código explícito.
+
+Ya existían en `components/monitors/` otros componentes con nombres
+similares (`CreateMonitorModal.tsx`, `EditMonitorModal.tsx`) — **no son
+reutilizables acá**: pertenecen a un flujo distinto (alta/edición de
+monitor desde `ClientDetail.tsx`/`MonitorDetail.tsx`, con
+`types/monitor.ts::CreateMonitorForm`, sin selector de cliente porque ya
+vienen scopeados a uno). Se verificó con grep antes de asumir que había
+que tocarlos.
+
+**Validación:** `cloud/portal` → `npm run check` (icons+tsc+eslint) limpio.
+Vite dev server (:5180) transforma los 5 archivos nuevos/tocados sin error.
+Misma limitación que en `Settings.tsx`: sin prueba visual real en
+navegador en este entorno. `check-sizes.mjs` limpio tras regenerar baseline
+(271 archivos) — mismo criterio de archivo-sí/función-JSX-no que ya se
+documentó arriba; el regen también capturó crecimiento en curso de
+`close-hp-sds-gaps` (`App.tsx`, `Layout.tsx`, `components/reports/
+ScheduledReportModal.tsx` nuevo, `pages/ScheduledReports.tsx`).
+
+**Pendiente de Fase 2 frontend:** `DeviceDetail.tsx` (772), `DeviceLifecycleModals.tsx`
+(603), `ClientDetail.tsx` (571), `MonitorDetail.tsx` (569), `Dashboard.tsx`
+(507).
 
 ## 0. Punto de partida (medido 2026-08-24)
 

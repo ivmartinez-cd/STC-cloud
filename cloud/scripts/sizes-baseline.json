@@ -186,12 +186,12 @@
     "src/tests/supplyOrigin.test.ts": 164,
     "src/version.ts": 6,
     "src/ws/index.ts": 268,
-    "portal/src/App.tsx": 78,
+    "portal/src/App.tsx": 80,
     "portal/src/components/BulkActionBar.tsx": 29,
     "portal/src/components/ConfirmModal.tsx": 80,
     "portal/src/components/ErrorBoundary.tsx": 59,
     "portal/src/components/FeedbackModal.tsx": 335,
-    "portal/src/components/Layout.tsx": 484,
+    "portal/src/components/Layout.tsx": 485,
     "portal/src/components/Terminal.tsx": 244,
     "portal/src/components/agents/AgentTable.tsx": 194,
     "portal/src/components/agents/ClientUsageChart.tsx": 54,
@@ -209,10 +209,14 @@
     "portal/src/components/monitors/EditMonitorModal.tsx": 116,
     "portal/src/components/monitors/IpRangesEditor.tsx": 192,
     "portal/src/components/monitors/LicenseCard.tsx": 82,
+    "portal/src/components/monitors/MonitorConfigModal.tsx": 173,
     "portal/src/components/monitors/MonitorSpecsCard.tsx": 59,
+    "portal/src/components/monitors/MonitorsTable.tsx": 147,
+    "portal/src/components/monitors/RegisterMonitorPanel.tsx": 168,
     "portal/src/components/monitors/RemoteToolsPanel.tsx": 72,
     "portal/src/components/monitors/ReportsTabPanel.tsx": 451,
     "portal/src/components/monitors/SnmpCredentialsPanel.tsx": 354,
+    "portal/src/components/reports/ScheduledReportModal.tsx": 169,
     "portal/src/components/settings/FeedbackCard.tsx": 122,
     "portal/src/components/settings/MonitorThresholdCard.tsx": 43,
     "portal/src/components/settings/SmtpInfoCard.tsx": 71,
@@ -249,9 +253,10 @@
     "portal/src/pages/Incidents.tsx": 211,
     "portal/src/pages/Login.tsx": 146,
     "portal/src/pages/MonitorDetail.tsx": 570,
-    "portal/src/pages/Monitors.tsx": 616,
+    "portal/src/pages/Monitors.tsx": 163,
     "portal/src/pages/PendingDevices.tsx": 270,
     "portal/src/pages/Reports.tsx": 367,
+    "portal/src/pages/ScheduledReports.tsx": 160,
     "portal/src/pages/Settings.tsx": 72,
     "portal/src/pages/Supplies.tsx": 253,
     "portal/src/types/agents.ts": 83,
@@ -260,8 +265,10 @@
     "portal/src/types/incidents.ts": 75,
     "portal/src/types/inventory.ts": 24,
     "portal/src/types/monitor.ts": 347,
+    "portal/src/types/monitorsPage.ts": 24,
     "portal/src/types/pendingDevices.ts": 24,
     "portal/src/types/reports.ts": 78,
+    "portal/src/types/scheduledReports.ts": 43,
     "portal/src/types/settings.ts": 31,
     "portal/src/types/supplies.ts": 45
   },
@@ -1629,7 +1636,7 @@
     "portal/src/App.tsx": [
       {
         "name": "App",
-        "length": 34
+        "length": 35
       }
     ],
     "portal/src/components/ConfirmModal.tsx": [
@@ -1838,6 +1845,32 @@
         "length": 44
       }
     ],
+    "portal/src/components/monitors/MonitorConfigModal.tsx": [
+      {
+        "name": "MonitorConfigModal",
+        "length": 159
+      },
+      {
+        "name": "saveConfig",
+        "length": 21
+      }
+    ],
+    "portal/src/components/monitors/MonitorsTable.tsx": [
+      {
+        "name": "MonitorsTable",
+        "length": 131
+      }
+    ],
+    "portal/src/components/monitors/RegisterMonitorPanel.tsx": [
+      {
+        "name": "RegisterMonitorPanel",
+        "length": 159
+      },
+      {
+        "name": "generateKey",
+        "length": 24
+      }
+    ],
     "portal/src/components/monitors/ReportsTabPanel.tsx": [
       {
         "name": "exportReportCSV",
@@ -1876,6 +1909,16 @@
       {
         "name": "DraftForm",
         "length": 84
+      }
+    ],
+    "portal/src/components/reports/ScheduledReportModal.tsx": [
+      {
+        "name": "ScheduledReportModal",
+        "length": 141
+      },
+      {
+        "name": "save",
+        "length": 26
       }
     ],
     "portal/src/components/settings/FeedbackCard.tsx": [
@@ -2131,15 +2174,7 @@
     "portal/src/pages/Monitors.tsx": [
       {
         "name": "Monitors",
-        "length": 566
-      },
-      {
-        "name": "generateKey",
-        "length": 27
-      },
-      {
-        "name": "saveConfig",
-        "length": 22
+        "length": 150
       }
     ],
     "portal/src/pages/PendingDevices.tsx": [
@@ -2152,6 +2187,12 @@
       {
         "name": "Reports",
         "length": 341
+      }
+    ],
+    "portal/src/pages/ScheduledReports.tsx": [
+      {
+        "name": "ScheduledReports",
+        "length": 136
       }
     ],
     "portal/src/pages/Settings.tsx": [
