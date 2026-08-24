@@ -35,9 +35,10 @@ import { registerFeedbackRoutes } from "../modules/feedback/presentation/feedbac
 import { registerScheduledReportRoutes } from "../modules/scheduled-reports/presentation/scheduled-report-routes";
 import { registerSupplyRequestRoutes } from "../modules/supply-requests/presentation/supply-request-routes";
 import { registerMessageTemplateRoutes } from "../modules/message-templates/presentation/template-routes";
+import { registerEmailLogRoutes } from "../modules/email-log/presentation/email-log-routes";
 import { registerReportRoutes } from "./routes/reportRoutes";
 import { registerAuditRoutes } from "../modules/audit/presentation/audit-routes";
-import { registerInventoryRoutes } from "./routes/inventoryRoutes";
+import { registerInventoryRoutes } from "../modules/inventory/presentation/inventory-routes";
 import { registerSuppliesRoutes } from "./routes/suppliesRoutes";
 import { registerIncidentRoutes } from "./routes/incidentRoutes";
 import { getClientIp } from "./utils/ip";
@@ -311,6 +312,7 @@ const start = async () => {
     registerScheduledReportRoutes(fastify, db, portalAuth);
     registerSupplyRequestRoutes(fastify, db, portalAuth);
     registerMessageTemplateRoutes(fastify, db, portalAuth);
+    registerEmailLogRoutes(fastify, db, portalAuth);
     registerReportRoutes(fastify, db, portalAuth);
     registerAuditRoutes(fastify, db, portalAuth);
     registerInventoryRoutes(fastify, db, portalAuth);

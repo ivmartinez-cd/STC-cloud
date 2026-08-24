@@ -3,8 +3,8 @@ import type { Knex } from "knex";
 import { getClientIp } from "../../utils/ip";
 import { getScope } from "../../utils/scope";
 import { writeAudit } from "../../../services/auditService";
-import * as customFieldService from "../../../services/customFieldService";
-import { CustomFieldError } from "../../../services/customFieldService";
+import * as customFieldService from "../../../modules/inventory";
+import { CustomFieldError } from "../../../modules/inventory";
 import { currentUser } from "./shared";
 
 async function updateDevice(db: Knex, request: FastifyRequest, reply: FastifyReply) {

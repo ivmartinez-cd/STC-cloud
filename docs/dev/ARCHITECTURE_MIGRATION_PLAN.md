@@ -5,8 +5,8 @@ incluidas las 2 pasadas diferidas de alto riesgo del backend
 (`syncReadings`, `mergeDevices`) y los 7 archivos grandes del frontend
 (`Settings.tsx`, `Monitors.tsx`, `MonitorDetail.tsx`, `DeviceDetail.tsx`,
 `ClientDetail.tsx`, `DeviceLifecycleModals.tsx`, `Dashboard.tsx`). Fase 3
-(migrar módulos existentes a capas completas) arrancada: `audit` migrado a
-`modules/audit/` — 2026-08-24  
+(migrar módulos existentes a capas completas) en curso: `audit` e
+`inventory` migrados a `modules/` — 2026-08-24  
 **Origen:** `docs/dev/ARCHITECTURE_GUIDE.md` (copiado desde `helpdesk-manager`, 2026-08-24)  
 **Reemplaza (parcialmente) a:** `docs/dev/PROJECT_GUIDELINES.md`, que hoy documenta la
 convención opuesta (`api/` para rutas + `services/` para lógica de negocio, sin capas).
@@ -761,6 +761,8 @@ sección de `Settings.tsx` arriba). Con Fase 0, Fase 1 y Fase 2
 las fases 3+ (mover módulos ya divididos a la estructura completa
 domain/application/infrastructure/presentation de `ARCHITECTURE_GUIDE.md`)
 no fueron pedidas todavía y no deberían asumirse como pre-aprobadas.
+(Nota: esto quedó obsoleto — Ivan pidió explícitamente arrancar Fase 3
+más tarde el mismo día, ver sección "Fase 3" más abajo.)
 
 ## Fase 3 — arranca con `audit` (2026-08-24)
 
@@ -858,6 +860,105 @@ reports, audit, inventory, pending-devices` sugerido más abajo en este
 documento sigue vigente tal cual (además tiene una inconsistencia interna:
 pone `devices`/`agents` en 2º/3º lugar pese a decir que deberían dejarse
 para el final).
+
+## Fase 3 — `inventory` migrado (2026-08-24)
+
+Segundo módulo. `clients`/`devices`/`agents`/`alerts`/`reports` seguían
+(y siguen) activos por `close-hp-sds-gaps` (Fase 4.3 cerrando, Fase 4.4
+"auditoría de correo" arrancando — pidieron explícitamente no tocar
+`notificationService.ts`/`notificationWorker.ts`/`reportDeliveryWorker.ts`/
+`clientRoutes.ts`/`clientController.ts`/`server.ts` hasta nuevo aviso).
+`inventory` (campos personalizados + catálogo de modelos de equipo, Fase 4
+del gap analysis) seguía quieto: ~390 líneas en 3 archivos
+(`inventoryController.ts`, `inventoryRoutes.ts`, `customFieldService.ts`).
+
+**Dos sub-dominios bajo un mismo módulo** (`inventory` ya los agrupaba en
+un solo controller/rutas en el código original, no se inventó una
+separación nueva): definiciones de campos personalizados por cliente
+(con reglas de negocio reales: formato de `key`, límite de 25 campos
+vivos por alcance, validación de `options` para type=select) y catálogo
+global de modelos de equipo (CRUD directo sobre `device_models`, sin
+reglas de negocio más allá de unicidad brand/model_key).
+
+**Mismo criterio que con `writeAudit` en la pasada de `audit`, pero con
+una conclusión DISTINTA esta vez:** `customFieldService.ts` también tenía
+un consumidor externo (`deviceController/crud.ts`, vía
+`validateAndMerge`) — pero a diferencia de `writeAudit` (infraestructura
+transversal sin lógica de negocio propia), `validateAndMerge` SÍ es lógica
+de negocio central de `inventory` (las reglas de tipos/validación de
+`custom_data`). Se migró igual, y `deviceController/crud.ts` (quieto,
+confirmado con `git status`) pasa a importar el facade
+`modules/inventory/index.ts::validateAndMerge` — misma firma exacta que
+la función vieja, cero cambios en el call-site más allá del import.
+
+División (`modules/inventory/`, 15 archivos, ~830 líneas):
+- `domain/entities/{custom-field-def,device-model}.ts`.
+- `domain/errors/custom-field-error.ts` — `CustomFieldError` (con
+  `statusCode`, tal cual el original, no se "arregló" a
+  `shared/domain/errors`).
+- `domain/services/custom-field-rules.ts` — las reglas puras
+  (`KEY_RX`/`VALID_TYPES`/`MAX_LIVE_FIELDS_PER_SCOPE`, validación de
+  key/label/options, `mergeCustomFieldData` — el switch de coerción por
+  tipo que antes vivía en `validateAndMerge`).
+- `domain/repositories/{custom-field-def,device-model}-repository.ts`.
+- `application/dtos/inventory-dtos.ts` +
+  `application/use-cases/{custom-field-def,device-model}-use-cases.ts`
+  (varios casos de uso chicos agrupados por agregado en un mismo archivo,
+  no uno por archivo como en `feedback`/`audit` — siguen bajo el límite
+  de líneas con margen de sobra, evita 8 archivos casi vacíos).
+- `infrastructure/database/knex-{custom-field-def,device-model}-repository.ts`.
+- `presentation/{inventory-controller,inventory-routes,inventory-view}.ts`
+  — `inventory-routes.ts` conserva los JSON schemas de Fastify literales
+  (único módulo migrado hasta ahora que los tenía).
+- `index.ts` — facade `validateAndMerge(db, clientId, currentData, patch)`
+  + re-export de `CustomFieldError`, para `deviceController/crud.ts`.
+
+**Detalle preservado a propósito:** `createCustomField` y
+`createDeviceModel` conservan el chequeo de "campos requeridos" en el
+controller/use-case ANTES de tocar las reglas de dominio más finas (ej.
+`key` vacío da un mensaje distinto — "key, label y type son requeridos"
+— al de una `key` presente pero con formato inválido). No se colapsó en
+una sola validación de dominio: cambiar el orden/mensaje de error hubiera
+sido un cambio de comportamiento observable, no sólo estructural.
+
+`api/server.ts` — una línea (import de `registerInventoryRoutes`).
+Borrados `api/controllers/inventoryController.ts`,
+`api/routes/inventoryRoutes.ts`, `services/customFieldService.ts`
+(confirmado sin otros consumidores fuera de `deviceController/crud.ts`,
+ya migrado).
+
+**Validación:** `npx tsc --noEmit` limpio. Entorno efímero aislado
+(puerto 3025) — **`inventoryFields.test.ts` 15/15 verde**, incluye
+override de `asset_number`/`asset_tag`/`duty_cycle_monthly`, creación de
+campo `select`, valor fuera de opciones → 400, key desconocida → 400,
+merge sin pisar otros campos, archivado, `duty_cycle_effective` leyendo
+del catálogo de `device_models`, y RBAC (client_viewer sólo lectura). 3
+fallas ajenas (una en `rbac.test.ts` sobre `/email-log`, dos suites
+completas en `messageTemplates.test.ts`/`emailLog.test.ts`) — todas del
+trabajo en curso de `close-hp-sds-gaps` (Fase 4.3/4.4, `messageTemplates`
+confirmado por ellos mismos como artefacto de imagen desactualizada en
+este entorno efímero, `emailLog` es un módulo nuevo suyo con rutas
+todavía devolviendo 404). `cloud/portal` → `npm run check` limpio (cambio
+puramente backend). `check-sizes.mjs` limpio tras regenerar baseline (358
+archivos) — capturó de nuevo crecimiento en curso de `close-hp-sds-gaps`.
+
+**Nota operativa de esta pasada:** el primer intento de arrancar el
+servidor efímero con `nohup node ... &` en el mismo bloque que el health
+check subsiguiente se colgó (probablemente el proceso murió al mover el
+bloque a background por el timeout de 120s del harness, pese al
+`nohup`). Se resolvió arrancando el servidor con la opción
+`run_in_background` dedicada del tool de Bash en su propia llamada,
+separada de la verificación de salud — más robusto que
+`nohup ... & echo $! > pidfile` en este entorno. Usar ese patrón de acá
+en más para levantar el server efímero.
+
+**Siguiente candidato para Fase 3:** seguir evitando `clients`/`devices`/
+`agents`/`alerts`/`reports` hasta que `close-hp-sds-gaps` avise que cerró
+4.3/4.4. Dominios que podrían seguir quietos: `pending-devices` (pero no
+tiene un service dedicado, está repartido entre varios archivos de
+`agentService`/`deviceController` — evaluar si vale la pena como módulo
+propio o si conviene esperar). Re-chequear `git status`/coordinar de
+nuevo antes de elegir.
 
 ## 0. Punto de partida (medido 2026-08-24)
 
