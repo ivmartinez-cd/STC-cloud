@@ -4,7 +4,7 @@
     "src/api/controllers/authController/agent-auth.ts": 65,
     "src/api/controllers/authController/agent-version.ts": 82,
     "src/api/controllers/authController/index.ts": 24,
-    "src/api/controllers/authController/session.ts": 109,
+    "src/api/controllers/authController/session.ts": 120,
     "src/api/controllers/authController/shared.ts": 24,
     "src/api/controllers/authController/users.ts": 175,
     "src/api/controllers/clientController/api-keys.ts": 33,
@@ -15,8 +15,8 @@
     "src/api/controllers/clientController/webhook.ts": 40,
     "src/api/controllers/dashboardController/alerts-mutations.ts": 144,
     "src/api/controllers/dashboardController/alerts-reads.ts": 118,
-    "src/api/controllers/dashboardController/dashboard-queries.ts": 224,
-    "src/api/controllers/dashboardController/dashboard.ts": 124,
+    "src/api/controllers/dashboardController/dashboard-queries.ts": 249,
+    "src/api/controllers/dashboardController/dashboard.ts": 132,
     "src/api/controllers/dashboardController/index.ts": 20,
     "src/api/controllers/dashboardController/shared.ts": 79,
     "src/api/controllers/deviceController/bulk.ts": 100,
@@ -39,7 +39,7 @@
     "src/api/controllers/reportController.ts": 133,
     "src/api/controllers/suppliesController.ts": 59,
     "src/api/middlewares/authMiddleware.ts": 265,
-    "src/api/policy/rolePolicy.ts": 111,
+    "src/api/policy/rolePolicy.ts": 112,
     "src/api/routes/agentRoutes.ts": 127,
     "src/api/routes/authRoutes.ts": 153,
     "src/api/routes/clientRoutes.ts": 185,
@@ -75,7 +75,7 @@
     "src/modules/audit/application/use-cases/list-audit-logs.ts": 76,
     "src/modules/audit/domain/entities/audit-log.ts": 28,
     "src/modules/audit/domain/repositories/audit-log-repository.ts": 51,
-    "src/modules/audit/domain/services/audit-action-catalog.ts": 101,
+    "src/modules/audit/domain/services/audit-action-catalog.ts": 103,
     "src/modules/audit/infrastructure/database/knex-audit-log-repository.ts": 95,
     "src/modules/audit/presentation/audit-controller.ts": 48,
     "src/modules/audit/presentation/audit-routes.ts": 30,
@@ -158,8 +158,10 @@
     "src/modules/supply-requests/presentation/supply-request-controller.ts": 173,
     "src/modules/supply-requests/presentation/supply-request-routes.ts": 54,
     "src/modules/supply-requests/presentation/supply-request-schemas.ts": 85,
+    "src/modules/two-factor/domain/recovery-codes.ts": 37,
     "src/modules/two-factor/domain/totp.ts": 83,
-    "src/modules/two-factor/presentation/two-factor-routes.ts": 92,
+    "src/modules/two-factor/infrastructure/database/knex-recovery-code-repository.ts": 45,
+    "src/modules/two-factor/presentation/two-factor-routes.ts": 119,
     "src/services/agentService/agent-service.ts": 146,
     "src/services/agentService/commands.ts": 55,
     "src/services/agentService/config.ts": 263,
@@ -245,7 +247,7 @@
     "src/tests/supplies.test.ts": 211,
     "src/tests/supplyOrigin.test.ts": 164,
     "src/tests/supplyRequests.test.ts": 258,
-    "src/tests/twoFactor.test.ts": 158,
+    "src/tests/twoFactor.test.ts": 222,
     "src/version.ts": 6,
     "src/ws/index.ts": 310,
     "portal/src/App.tsx": 86,
@@ -271,15 +273,16 @@
     "portal/src/components/clients/NotificationEventsCard.tsx": 87,
     "portal/src/components/clients/NotificationSettingsCard.tsx": 108,
     "portal/src/components/clients/SupplyRequestSettingsCard.tsx": 79,
-    "portal/src/components/dashboard/ActionTileChip.tsx": 40,
-    "portal/src/components/dashboard/AgentVersionsCard.tsx": 44,
-    "portal/src/components/dashboard/AlertsByClassCard.tsx": 52,
-    "portal/src/components/dashboard/BrandDistributionCard.tsx": 54,
-    "portal/src/components/dashboard/OfflineAgentsCard.tsx": 50,
-    "portal/src/components/dashboard/ScrollFade.tsx": 10,
-    "portal/src/components/dashboard/StatCard.tsx": 41,
-    "portal/src/components/dashboard/SupplyAlertsTable.tsx": 166,
-    "portal/src/components/dashboard/TopClientsCard.tsx": 40,
+    "portal/src/components/dashboard/AgentVersionsCard.tsx": 52,
+    "portal/src/components/dashboard/AlertsByClassCard.tsx": 60,
+    "portal/src/components/dashboard/BrandDistributionCard.tsx": 45,
+    "portal/src/components/dashboard/CounterPanel.tsx": 60,
+    "portal/src/components/dashboard/MiniBar.tsx": 21,
+    "portal/src/components/dashboard/MonitorPresenceCard.tsx": 48,
+    "portal/src/components/dashboard/SdsPanel.tsx": 37,
+    "portal/src/components/dashboard/StatsStrip.tsx": 51,
+    "portal/src/components/dashboard/SuppliesPanel.tsx": 24,
+    "portal/src/components/dashboard/TopClientsCard.tsx": 35,
     "portal/src/components/devices/DeviceLifecycleModals/BulkDecommissionModal.tsx": 50,
     "portal/src/components/devices/DeviceLifecycleModals/BulkMonitorStateModal.tsx": 63,
     "portal/src/components/devices/DeviceLifecycleModals/BulkMoveDevicesModal.tsx": 95,
@@ -326,6 +329,7 @@
     "portal/src/components/settings/MessageTemplatesCard.tsx": 129,
     "portal/src/components/settings/MonitorThresholdCard.tsx": 43,
     "portal/src/components/settings/SmtpInfoCard.tsx": 71,
+    "portal/src/components/settings/TwoFactorCard.tsx": 168,
     "portal/src/components/settings/operators/CreateUserModal.tsx": 162,
     "portal/src/components/settings/operators/OperatorsCard.tsx": 188,
     "portal/src/components/settings/operators/ResetPasswordModal.tsx": 95,
@@ -334,10 +338,11 @@
     "portal/src/components/supplies/SupplyRequestDetailModal.tsx": 132,
     "portal/src/components/ui/BrandModal.tsx": 91,
     "portal/src/components/ui/ConfirmationModal.tsx": 105,
-    "portal/src/context/AuthContext.tsx": 99,
+    "portal/src/context/AuthContext.tsx": 102,
     "portal/src/context/ToastContext.tsx": 79,
     "portal/src/hooks/useClientDetail.ts": 71,
     "portal/src/hooks/useDashboard.ts": 62,
+    "portal/src/hooks/useDashboardExtras.ts": 24,
     "portal/src/hooks/useMonitorDetail.ts": 148,
     "portal/src/hooks/useNow.ts": 17,
     "portal/src/hooks/useRowSelection.ts": 33,
@@ -345,7 +350,7 @@
     "portal/src/lib/api.ts": 84,
     "portal/src/lib/constants.ts": 54,
     "portal/src/lib/deviceImage.ts": 56,
-    "portal/src/lib/formatters.ts": 104,
+    "portal/src/lib/formatters.ts": 113,
     "portal/src/lib/supplies.ts": 172,
     "portal/src/main.tsx": 14,
     "portal/src/pages/Activity.tsx": 248,
@@ -353,20 +358,20 @@
     "portal/src/pages/Alerts.tsx": 447,
     "portal/src/pages/ClientDetail.tsx": 162,
     "portal/src/pages/Clients.tsx": 334,
-    "portal/src/pages/Dashboard.tsx": 142,
+    "portal/src/pages/Dashboard.tsx": 115,
     "portal/src/pages/DeviceDetail.tsx": 287,
     "portal/src/pages/Devices.tsx": 261,
     "portal/src/pages/EmailLog.tsx": 145,
     "portal/src/pages/IncidentDetail.tsx": 264,
     "portal/src/pages/Incidents.tsx": 211,
-    "portal/src/pages/Login.tsx": 146,
+    "portal/src/pages/Login.tsx": 176,
     "portal/src/pages/MonitorDetail.tsx": 253,
     "portal/src/pages/Monitors.tsx": 163,
     "portal/src/pages/PendingDevices.tsx": 270,
     "portal/src/pages/RemoteActions.tsx": 251,
     "portal/src/pages/Reports.tsx": 367,
     "portal/src/pages/ScheduledReports.tsx": 160,
-    "portal/src/pages/Settings.tsx": 74,
+    "portal/src/pages/Settings.tsx": 76,
     "portal/src/pages/Supplies.tsx": 253,
     "portal/src/pages/SupplyRequests.tsx": 135,
     "portal/src/types/agents.ts": 83,
@@ -375,7 +380,7 @@
     "portal/src/types/deviceDetailPage.ts": 35,
     "portal/src/types/incidents.ts": 75,
     "portal/src/types/inventory.ts": 24,
-    "portal/src/types/monitor.ts": 347,
+    "portal/src/types/monitor.ts": 351,
     "portal/src/types/monitorsPage.ts": 24,
     "portal/src/types/pendingDevices.ts": 24,
     "portal/src/types/reports.ts": 78,
@@ -414,7 +419,7 @@
     "src/api/controllers/authController/session.ts": [
       {
         "name": "portalLogin",
-        "length": 69
+        "length": 77
       }
     ],
     "src/api/controllers/authController/users.ts": [
@@ -474,7 +479,7 @@
     "src/api/controllers/dashboardController/dashboard.ts": [
       {
         "name": "getDashboard",
-        "length": 75
+        "length": 82
       }
     ],
     "src/api/controllers/dashboardController/shared.ts": [
@@ -1854,7 +1859,7 @@
       },
       {
         "name": "describe(2FA — ciclo completo e2e)",
-        "length": 83
+        "length": 119
       }
     ],
     "src/ws/index.ts": [
@@ -2033,56 +2038,46 @@
         "length": 66
       }
     ],
-    "portal/src/components/dashboard/ActionTileChip.tsx": [
-      {
-        "name": "ActionTileChip",
-        "length": 26
-      }
-    ],
     "portal/src/components/dashboard/AgentVersionsCard.tsx": [
       {
         "name": "AgentVersionsCard",
-        "length": 39
+        "length": 46
       }
     ],
     "portal/src/components/dashboard/AlertsByClassCard.tsx": [
       {
         "name": "AlertsByClassCard",
-        "length": 35
+        "length": 41
       }
     ],
     "portal/src/components/dashboard/BrandDistributionCard.tsx": [
       {
         "name": "BrandDistributionCard",
-        "length": 44
+        "length": 35
       }
     ],
-    "portal/src/components/dashboard/OfflineAgentsCard.tsx": [
+    "portal/src/components/dashboard/CounterPanel.tsx": [
       {
-        "name": "OfflineAgentsCard",
-        "length": 45
-      }
-    ],
-    "portal/src/components/dashboard/StatCard.tsx": [
-      {
-        "name": "StatCard",
+        "name": "CounterPanel",
         "length": 28
       }
     ],
-    "portal/src/components/dashboard/SupplyAlertsTable.tsx": [
+    "portal/src/components/dashboard/MonitorPresenceCard.tsx": [
       {
-        "name": "SupplyAlertsTable",
-        "length": 142
-      },
+        "name": "MonitorPresenceCard",
+        "length": 38
+      }
+    ],
+    "portal/src/components/dashboard/SdsPanel.tsx": [
       {
-        "name": "anonymous",
-        "length": 52
+        "name": "SdsPanel",
+        "length": 30
       }
     ],
     "portal/src/components/dashboard/TopClientsCard.tsx": [
       {
         "name": "TopClientsCard",
-        "length": 34
+        "length": 29
       }
     ],
     "portal/src/components/devices/DeviceLifecycleModals/BulkDecommissionModal.tsx": [
@@ -2397,6 +2392,12 @@
         "length": 52
       }
     ],
+    "portal/src/components/settings/TwoFactorCard.tsx": [
+      {
+        "name": "TwoFactorCard",
+        "length": 151
+      }
+    ],
     "portal/src/components/settings/operators/CreateUserModal.tsx": [
       {
         "name": "CreateUserModal",
@@ -2452,11 +2453,11 @@
     "portal/src/context/AuthContext.tsx": [
       {
         "name": "AuthProvider",
-        "length": 74
+        "length": 77
       },
       {
         "name": "useCallback",
-        "length": 30
+        "length": 33
       }
     ],
     "portal/src/context/ToastContext.tsx": [
@@ -2556,7 +2557,7 @@
     "portal/src/pages/Dashboard.tsx": [
       {
         "name": "Dashboard",
-        "length": 121
+        "length": 92
       }
     ],
     "portal/src/pages/DeviceDetail.tsx": [
@@ -2596,7 +2597,7 @@
     "portal/src/pages/Login.tsx": [
       {
         "name": "Login",
-        "length": 137
+        "length": 167
       }
     ],
     "portal/src/pages/MonitorDetail.tsx": [
@@ -2638,7 +2639,7 @@
     "portal/src/pages/Settings.tsx": [
       {
         "name": "Settings",
-        "length": 52
+        "length": 53
       }
     ],
     "portal/src/pages/Supplies.tsx": [

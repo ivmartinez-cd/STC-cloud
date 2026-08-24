@@ -1382,7 +1382,7 @@ replicas` + LB — es decisión de infraestructura aparte), dashboards de
 Grafana/alerting sobre las métricas (solo el endpoint), y el relay
 request/reply para afinidad de socket del proxy EWS.
 
-### Fase 6 — Seguridad (24/08/2026) — arrancada: 1 de 1 ítems del primer corte
+### Fase 6 — Seguridad (24/08/2026) — arrancada: 2 ítems cerrados
 
 ✅ **6.1 — 2FA TOTP opt-in para el portal** (anotado en los parciales de la
 Fase 4 — el SDS lo ofrece en Preferencias — y ligado al riesgo R5).
@@ -1416,10 +1416,24 @@ código 401/con inválido 401/con válido 200→sin oráculo→setup con activo
 Playwright del ciclo entero por la UI real (activación desde la card y
 login con segundo paso, con el TOTP calculado en el script de prueba).
 
-**Pendientes del corte de seguridad** (para próximos ítems): códigos de
-recuperación (hoy, perder el teléfono requiere que un admin borre el flag
-por base), enforcement de 2FA por rol (obligatorio para admin), y el resto
-de los pendientes R5 del doc.
+✅ **6.2 — Códigos de recuperación de 2FA** (24/08/2026). 10 códigos de un
+solo uso (formato XXXXX-XXXXX sobre alfabeto sin ambiguos, ~48 bits de
+entropía) generados al activar 2FA y mostrados UNA sola vez. En reposo van
+**hasheados SHA-256** (nunca en claro; hash rápido correcto para secretos
+de alta entropía del servidor — el costo de un KDF lento solo se justifica
+contra secretos débiles). El login acepta un código de recuperación donde
+iría el TOTP (`looksLikeRecoveryCode` los distingue por formato), con
+**consumo atómico** (un código usado se marca `used_at` — no se borra:
+auditabilidad de cuándo se quemó) y auditoría USER_2FA_RECOVERY_USED.
+Regenerar el juego exige un TOTP vigente e invalida los anteriores
+(auditado); disable limpia todo. `status` expone `recovery_remaining` y la
+card lo muestra. Verificado: 18/18 tests (dominio puro + e2e: login con
+recovery → 200, reuso → 401, regeneración invalida viejos, disable → 0
+restantes).
+
+**Pendientes del corte de seguridad** (para próximos ítems): enforcement
+de 2FA por rol (obligatorio para admin) y el resto de los pendientes R5
+del doc.
 
 ### Otros puntos de §3 (riesgos) que siguen abiertos y no forman parte de ningún ítem de arriba
 - ✅ **R4 (parcial, 23/08/2026)**: el WS del portal ya NO acepta el JWT de

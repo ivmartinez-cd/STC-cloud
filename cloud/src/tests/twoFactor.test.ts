@@ -12,6 +12,12 @@ import {
   totpAt,
   verifyTotp,
 } from '../modules/two-factor/domain/totp';
+import {
+  formatRecoveryCode,
+  hashRecoveryCode,
+  looksLikeRecoveryCode,
+  normalizeRecoveryCode,
+} from '../modules/two-factor/domain/recovery-codes';
 
 const API  = process.env.API_URL  || 'http://localhost:3000/api/v1';
 const USER = process.env.PORTAL_ADMIN_USER     || 'admin';
@@ -69,8 +75,30 @@ describe('TOTP — dominio puro (vectores RFC 6238, SHA-1)', () => {
   });
 });
 
+describe('Códigos de recuperación — dominio puro', () => {
+  test('formato XXXXX-XXXXX sin caracteres ambiguos, determinista por bytes', () => {
+    const code = formatRecoveryCode(Buffer.alloc(16, 7));
+    assert.match(code, /^[A-HJ-KM-NP-Z2-9]{5}-[A-HJ-KM-NP-Z2-9]{5}$/);
+    assert.equal(code, formatRecoveryCode(Buffer.alloc(16, 7)));
+  });
+
+  test('looksLikeRecoveryCode distingue TOTP de recovery', () => {
+    assert.equal(looksLikeRecoveryCode('ABCDE-FGHJK'), true);
+    assert.equal(looksLikeRecoveryCode('abcdefghjk'), true, 'sin guión también');
+    assert.equal(looksLikeRecoveryCode('123456'), false, 'un TOTP no matchea');
+  });
+
+  test('hash normaliza mayúsculas y guión (el usuario puede tipearlo como sea)', () => {
+    assert.equal(hashRecoveryCode('abcde-fghjk'), hashRecoveryCode('ABCDEFGHJK'));
+    assert.equal(normalizeRecoveryCode('ab2de-fg4jk'), 'AB2DE-FG4JK');
+  });
+});
+
 const ts = Date.now();
-const ctx = { adminToken: '', username: `twofa_user_${ts}`, password: 'TwoFa1234!', userToken: '', secret: '' };
+const ctx = {
+  adminToken: '', username: `twofa_user_${ts}`, password: 'TwoFa1234!', userToken: '', secret: '',
+  recoveryCodes: [] as string[],
+};
 
 describe('2FA — ciclo completo e2e', () => {
   test('setup: admin crea un operador de prueba y este loguea', async () => {
@@ -101,13 +129,17 @@ describe('2FA — ciclo completo e2e', () => {
     assert.equal(status.data.enabled, false, 'pendiente hasta confirmar con código');
   });
 
-  test('enable con código inválido → 400; con código real → activo', async () => {
+  test('enable con código inválido → 400; con código real → activo + 10 códigos de recuperación', async () => {
     const bad = await req('POST', '/portal/2fa/enable', { code: '000000' }, ctx.userToken);
     assert.equal(bad.status, 400);
     const ok = await req('POST', '/portal/2fa/enable', { code: totpAt(ctx.secret, Date.now()) }, ctx.userToken);
     assert.equal(ok.status, 200);
+    assert.equal(ok.data.recovery_codes.length, 10);
+    assert.ok(ok.data.recovery_codes.every((c: string) => looksLikeRecoveryCode(c)));
+    ctx.recoveryCodes = ok.data.recovery_codes;
     const status = await req('GET', '/portal/2fa/status', undefined, ctx.userToken);
     assert.equal(status.data.enabled, true);
+    assert.equal(status.data.recovery_remaining, 10);
   });
 
   test('login sin código → 401 con totp_required; con código inválido → 401; con código válido → 200', async () => {
@@ -135,6 +167,36 @@ describe('2FA — ciclo completo e2e', () => {
     assert.equal(res.data.totp_required, undefined);
   });
 
+  test('login con código de recuperación → 200 y el código queda quemado', async () => {
+    const rc = ctx.recoveryCodes[0];
+    const withRecovery = await req('POST', '/portal/login', {
+      username: ctx.username, password: ctx.password, totp_code: rc,
+    });
+    assert.equal(withRecovery.status, 200);
+    const reuse = await req('POST', '/portal/login', {
+      username: ctx.username, password: ctx.password, totp_code: rc,
+    });
+    assert.equal(reuse.status, 401, 'un código de recuperación es de un solo uso');
+    const status = await req('GET', '/portal/2fa/status', undefined, ctx.userToken);
+    assert.equal(status.data.recovery_remaining, 9);
+  });
+
+  test('regenerar códigos exige TOTP vigente e invalida los anteriores', async () => {
+    const bad = await req('POST', '/portal/2fa/recovery-codes', { code: '000000' }, ctx.userToken);
+    assert.equal(bad.status, 400);
+    const ok = await req('POST', '/portal/2fa/recovery-codes', { code: totpAt(ctx.secret, Date.now()) }, ctx.userToken);
+    assert.equal(ok.status, 200);
+    assert.equal(ok.data.recovery_codes.length, 10);
+    // uno de los VIEJOS (índice 1, nunca usado) ya no sirve
+    const oldCode = await req('POST', '/portal/login', {
+      username: ctx.username, password: ctx.password, totp_code: ctx.recoveryCodes[1],
+    });
+    assert.equal(oldCode.status, 401);
+    ctx.recoveryCodes = ok.data.recovery_codes;
+    const status = await req('GET', '/portal/2fa/status', undefined, ctx.userToken);
+    assert.equal(status.data.recovery_remaining, 10);
+  });
+
   test('setup con 2FA activo → 409 (no se puede regenerar sin código)', async () => {
     const res = await req('POST', '/portal/2fa/setup', {}, ctx.userToken);
     assert.equal(res.status, 409);
@@ -147,6 +209,8 @@ describe('2FA — ciclo completo e2e', () => {
     assert.equal(ok.status, 200);
     const plain = await req('POST', '/portal/login', { username: ctx.username, password: ctx.password });
     assert.equal(plain.status, 200);
+    const status = await req('GET', '/portal/2fa/status', undefined, ctx.userToken);
+    assert.equal(status.data.recovery_remaining, 0, 'disable limpia los códigos');
   });
 
   test('queda auditado el alta y la baja de 2FA', async () => {

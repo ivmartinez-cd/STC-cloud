@@ -74,6 +74,8 @@ const AUDIT_ACTION_META: Record<string, AuditActionMeta> = {
   USER_DELETED: { label: "Usuario eliminado", category: "user" },
   USER_2FA_ENABLED: { label: "2FA activado", category: "user" },
   USER_2FA_DISABLED: { label: "2FA desactivado", category: "user" },
+  USER_2FA_RECOVERY_USED: { label: "Código de recuperación 2FA usado", category: "user" },
+  USER_2FA_RECOVERY_REGENERATED: { label: "Códigos de recuperación 2FA regenerados", category: "user" },
 
   // Alertas
   ALERT_ACKNOWLEDGED: { label: "Alerta reconocida", category: "alert" },

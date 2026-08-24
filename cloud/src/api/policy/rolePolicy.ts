@@ -76,6 +76,7 @@ export const CLIENT_VIEWER_ROUTES: ReadonlySet<string> = new Set([
   "POST /api/v1/portal/2fa/setup",
   "POST /api/v1/portal/2fa/enable",
   "POST /api/v1/portal/2fa/disable",
+  "POST /api/v1/portal/2fa/recovery-codes",
   "GET /api/v1/supply-requests",
   "GET /api/v1/supply-requests/stats",
   "GET /api/v1/supply-requests/:id",

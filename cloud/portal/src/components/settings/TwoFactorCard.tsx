@@ -4,6 +4,7 @@ import { api } from '../../lib/api';
 import { useToast } from '../../context/ToastContext';
 
 interface SetupData { secret: string; otpauth_uri: string; }
+interface StatusData { enabled: boolean; recovery_remaining?: number; }
 
 const inputCls = 'w-40 bg-slate-50 text-slate-700 text-lg font-bold tracking-[0.4em] text-center px-3 py-2 rounded-xl border border-slate-100 outline-none focus:border-brand';
 
@@ -16,13 +17,15 @@ const inputCls = 'w-40 bg-slate-50 text-slate-700 text-lg font-bold tracking-[0.
 export default function TwoFactorCard() {
   const { showToast } = useToast();
   const [enabled, setEnabled] = useState<boolean | null>(null);
+  const [recoveryRemaining, setRecoveryRemaining] = useState(0);
   const [setup, setSetup] = useState<SetupData | null>(null);
+  const [recoveryCodes, setRecoveryCodes] = useState<string[] | null>(null);
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
 
   const loadStatus = useCallback(() => {
-    api.get<{ enabled: boolean }>('/portal/2fa/status')
-      .then((d) => setEnabled(d.enabled))
+    api.get<StatusData>('/portal/2fa/status')
+      .then((d) => { setEnabled(d.enabled); setRecoveryRemaining(d.recovery_remaining ?? 0); })
       .catch(() => setEnabled(null));
   }, []);
 
@@ -43,10 +46,27 @@ export default function TwoFactorCard() {
   const confirm = async (action: 'enable' | 'disable') => {
     setBusy(true);
     try {
-      await api.post(`/portal/2fa/${action}`, { code });
+      const res = await api.post<{ recovery_codes?: string[] }>(`/portal/2fa/${action}`, { code });
       showToast(action === 'enable' ? '2FA activado' : '2FA desactivado', 'success');
+      // Los códigos de recuperación se muestran UNA sola vez, recién activado.
+      setRecoveryCodes(action === 'enable' ? res.recovery_codes ?? null : null);
       setSetup(null);
       setCode('');
+      loadStatus();
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Código inválido', 'error');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const regenerateRecovery = async () => {
+    setBusy(true);
+    try {
+      const res = await api.post<{ recovery_codes: string[] }>('/portal/2fa/recovery-codes', { code });
+      setRecoveryCodes(res.recovery_codes);
+      setCode('');
+      showToast('Códigos regenerados — los anteriores quedaron invalidados', 'success');
       loadStatus();
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Código inválido', 'error');
@@ -108,11 +128,33 @@ export default function TwoFactorCard() {
         </div>
       )}
 
+      {recoveryCodes && (
+        <div className="mb-5 p-4 bg-amber-50 border border-amber-100 rounded-2xl">
+          <p className="text-[10px] font-black text-amber-700 uppercase tracking-widest mb-2">
+            Códigos de recuperación — guardalos ahora, no se vuelven a mostrar
+          </p>
+          <div className="grid grid-cols-2 gap-1 font-mono text-sm font-bold text-slate-700">
+            {recoveryCodes.map((rc) => <span key={rc}>{rc}</span>)}
+          </div>
+          <button onClick={() => copy(recoveryCodes.join('\n'))}
+            className="mt-2 flex items-center gap-1.5 text-[10px] text-amber-700 font-black uppercase tracking-wider hover:underline">
+            <Copy size={11} /> Copiar todos
+          </button>
+        </div>
+      )}
+
       {enabled === true && (
         <div>
-          <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Desactivar (requiere un código vigente)</p>
+          <p className="text-[10px] text-slate-500 font-bold mb-3">
+            Códigos de recuperación sin usar: {recoveryRemaining} — regenerarlos o desactivar requiere un código vigente.
+          </p>
+          <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Código vigente</p>
           <div className="flex items-center gap-2">
             <input value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))} maxLength={6} placeholder="000000" className={inputCls} />
+            <button onClick={regenerateRecovery} disabled={busy || code.length !== 6}
+              className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all disabled:opacity-50">
+              Regenerar códigos
+            </button>
             <button onClick={() => confirm('disable')} disabled={busy || code.length !== 6}
               className="px-5 py-2.5 bg-rose-500 hover:bg-rose-600 text-white rounded-xl text-[11px] font-black uppercase tracking-wider transition-all disabled:opacity-50">
               {busy ? <Loader2 size={13} className="animate-spin" /> : 'Desactivar'}

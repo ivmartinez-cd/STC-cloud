@@ -118,16 +118,17 @@ const Login = () => {
                 </label>
                 <input
                   type="text"
-                  inputMode="numeric"
                   autoFocus
-                  maxLength={6}
+                  maxLength={11}
                   value={totpCode}
-                  onChange={e => setTotpCode(e.target.value.replace(/\D/g, ''))}
-                  className="w-full h-14 px-6 bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 text-lg tracking-[0.5em] text-center transition-all duration-300 focus:bg-white focus:border-brand/50 outline-none font-bold"
+                  onChange={e => setTotpCode(e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, ''))}
+                  className="w-full h-14 px-6 bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 text-lg tracking-[0.3em] text-center transition-all duration-300 focus:bg-white focus:border-brand/50 outline-none font-bold"
                   placeholder="000000"
                   required
                 />
-                <p className="text-[10px] text-slate-400 font-medium">Ingresá el código de 6 dígitos de tu app de autenticación.</p>
+                <p className="text-[10px] text-slate-400 font-medium">
+                  Código de 6 dígitos de tu app — o un código de recuperación (XXXXX-XXXXX) si perdiste el teléfono.
+                </p>
               </div>
             )}
 
