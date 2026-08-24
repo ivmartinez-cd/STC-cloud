@@ -119,7 +119,9 @@
     "src/services/notificationService.ts": 279,
     "src/services/publicWebhookService.ts": 80,
     "src/services/reportExportService.ts": 93,
-    "src/services/reportService.ts": 356,
+    "src/services/reportService/closure.ts": 209,
+    "src/services/reportService/index.ts": 11,
+    "src/services/reportService/period-usage.ts": 154,
     "src/services/snmpCredentials.ts": 296,
     "src/services/suppliesService.ts": 302,
     "src/services/supplyOrigin.ts": 40,
@@ -924,18 +926,18 @@
         "length": 28
       }
     ],
-    "src/services/reportService.ts": [
+    "src/services/reportService/closure.ts": [
       {
-        "name": "computePeriodUsage",
-        "length": 95
+        "name": "buildClosureLineRows",
+        "length": 24
+      },
+      {
+        "name": "runClosePeriod",
+        "length": 66
       },
       {
         "name": "closePeriod",
-        "length": 109
-      },
-      {
-        "name": "anonymous",
-        "length": 86
+        "length": 21
       },
       {
         "name": "reopenPeriod",
@@ -944,6 +946,12 @@
       {
         "name": "anonymous",
         "length": 24
+      }
+    ],
+    "src/services/reportService/period-usage.ts": [
+      {
+        "name": "computePeriodUsage",
+        "length": 95
       }
     ],
     "src/services/snmpCredentials.ts": [

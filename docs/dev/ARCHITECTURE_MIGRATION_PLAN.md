@@ -1,6 +1,6 @@
 # Plan de Migración a ARCHITECTURE_GUIDE.md
 
-**Estado:** Fase 0, Fase 1 (módulo piloto) y Fase 2 en curso (7 de N) — 2026-08-24  
+**Estado:** Fase 0, Fase 1 (módulo piloto) y Fase 2 en curso (8 de N) — 2026-08-24  
 **Origen:** `docs/dev/ARCHITECTURE_GUIDE.md` (copiado desde `helpdesk-manager`, 2026-08-24)  
 **Reemplaza (parcialmente) a:** `docs/dev/PROJECT_GUIDELINES.md`, que hoy documenta la
 convención opuesta (`api/` para rutas + `services/` para lógica de negocio, sin capas).
@@ -232,11 +232,26 @@ import). Validado: 21/21 archivos en el entorno efímero (incluye
 `e2e.test.ts`, que ejercita login/activate/refresh), 0 fallas, tsc y portal
 check limpios.
 
+### 8 de N — `reportService.ts` (355 líneas: cierre mensual de facturación)
+
+Dos responsabilidades: cálculo de volumen del período (`computePeriodUsage`,
+sin escritura — la usan tanto el preview como el cierre real) y cierre/
+reapertura (con escritura + auditoría + entrega asíncrona). Dividido en
+`reportService/{period-usage,closure,index}.ts`. A diferencia de
+`mergeDevices`/`syncReadings`, acá sí se decompuso: el cuerpo de la
+transacción de `closePeriod` se extrajo a `runClosePeriod` (función nombrada
+aparte, mismo código) y el mapeo de líneas a `buildClosureLineRows` — riesgo
+bajo porque es una extracción mecánica 1:1, no una reescritura de lógica.
+Cero consumidores tocados (`reportController.ts`, `reportDeliveryWorker.ts`,
+`reportExportService.ts`, bare imports). Validado: 21/21 archivos en el
+entorno efímero (incluye `reports.test.ts`), 0 fallas, tsc y portal check
+limpios.
+
 **Pendiente de Fase 2** (orden descendente de tamaño, tabla de Fase 0):
 `services/agentService/telemetry.ts` (decomponer `syncReadings`) y
 `services/deviceLifecycleService/merge.ts` (decomponer `mergeDevices`) —
 ambas pasadas dedicadas y de alto riesgo, deliberadamente pospuestas — luego
-`reportService.ts` (355) → `clientController.ts` (345) → `suppliesService.ts`
+`clientController.ts` (345) → `suppliesService.ts`
 (301) — más lo que haya crecido por encima de 300 desde que se congeló esa
 tabla. Frontend (`Settings.tsx` 869, `DeviceDetail.tsx` 772, etc.) sigue sin
 arrancar.
