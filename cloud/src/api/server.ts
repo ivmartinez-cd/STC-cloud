@@ -49,6 +49,7 @@ import { registerRemoteActionRoutes } from "../modules/remote-actions/presentati
 import { registerTwoFactorRoutes } from "../modules/two-factor/presentation/two-factor-routes";
 import { registerReportRoutes } from "./routes/reportRoutes";
 import { registerAuditRoutes } from "../modules/audit/presentation/audit-routes";
+import { registerAlertRoutes } from "../modules/alerts/presentation/alert-routes";
 import { registerInventoryRoutes } from "../modules/inventory/presentation/inventory-routes";
 import { registerSuppliesRoutes } from "./routes/suppliesRoutes";
 import { registerIncidentRoutes } from "./routes/incidentRoutes";
@@ -350,6 +351,7 @@ const start = async () => {
     registerClientRoutes(fastify, db, portalAuth);
     registerDeviceRoutes(fastify, db, portalAuth);
     registerDashboardRoutes(fastify, db, agentService, portalAuth, redis);
+    registerAlertRoutes(fastify, db, portalAuth);
     registerFeedbackRoutes(fastify, db, portalAuth);
     registerScheduledReportRoutes(fastify, db, portalAuth);
     registerSupplyRequestRoutes(fastify, db, portalAuth);

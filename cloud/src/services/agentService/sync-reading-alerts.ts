@@ -1,5 +1,5 @@
 import type { Knex } from "knex";
-import * as alertService from "../alertService";
+import * as alertService from "../../modules/alerts";
 import { mergeDevices } from "../deviceLifecycleService";
 import { logger } from "../../logger";
 

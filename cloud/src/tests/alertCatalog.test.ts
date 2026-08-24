@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import {
   classifyAlert, ALERT_CLASS_LABELS, RESPONDER_LABELS,
   type AlertClass, type Responder,
-} from '../services/alertCatalog';
+} from '../modules/alerts';
 
 describe('alertCatalog — invariantes', () => {
   test('toda AlertClass tiene label en español', () => {

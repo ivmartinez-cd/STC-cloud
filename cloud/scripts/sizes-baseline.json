@@ -4,7 +4,7 @@
     "src/api/controllers/authController/agent-auth.ts": 65,
     "src/api/controllers/authController/agent-version.ts": 82,
     "src/api/controllers/authController/index.ts": 24,
-    "src/api/controllers/authController/session.ts": 127,
+    "src/api/controllers/authController/session.ts": 157,
     "src/api/controllers/authController/shared.ts": 24,
     "src/api/controllers/authController/users.ts": 178,
     "src/api/controllers/clientController/api-keys.ts": 33,
@@ -13,12 +13,9 @@
     "src/api/controllers/clientController/pending-devices.ts": 63,
     "src/api/controllers/clientController/reads.ts": 131,
     "src/api/controllers/clientController/webhook.ts": 40,
-    "src/api/controllers/dashboardController/alerts-mutations.ts": 144,
-    "src/api/controllers/dashboardController/alerts-reads.ts": 118,
-    "src/api/controllers/dashboardController/dashboard-queries.ts": 249,
-    "src/api/controllers/dashboardController/dashboard.ts": 132,
-    "src/api/controllers/dashboardController/index.ts": 20,
-    "src/api/controllers/dashboardController/shared.ts": 79,
+    "src/api/controllers/dashboardController/dashboard-queries.ts": 237,
+    "src/api/controllers/dashboardController/dashboard.ts": 128,
+    "src/api/controllers/dashboardController/index.ts": 14,
     "src/api/controllers/deviceController/bulk.ts": 100,
     "src/api/controllers/deviceController/crud.ts": 116,
     "src/api/controllers/deviceController/index.ts": 24,
@@ -43,14 +40,14 @@
     "src/api/routes/agentRoutes.ts": 127,
     "src/api/routes/authRoutes.ts": 153,
     "src/api/routes/clientRoutes.ts": 185,
-    "src/api/routes/dashboardRoutes.ts": 78,
+    "src/api/routes/dashboardRoutes.ts": 21,
     "src/api/routes/deviceRoutes.ts": 221,
     "src/api/routes/incidentRoutes.ts": 143,
     "src/api/routes/portalAgentRoutes.ts": 247,
     "src/api/routes/publicApiRoutes.ts": 85,
     "src/api/routes/reportRoutes.ts": 78,
     "src/api/routes/suppliesRoutes.ts": 17,
-    "src/api/server.ts": 392,
+    "src/api/server.ts": 394,
     "src/api/utils/deviceFilters.ts": 60,
     "src/api/utils/ip.ts": 16,
     "src/api/utils/password.ts": 28,
@@ -70,12 +67,37 @@
     "src/jobs/scheduledReportsWorker.ts": 51,
     "src/jobs/supplyRequestWorker.ts": 64,
     "src/logger.ts": 13,
+    "src/modules/alerts/application/dtos/alert-dtos.ts": 79,
+    "src/modules/alerts/application/ports/alert-unit-of-work.ts": 17,
+    "src/modules/alerts/application/ports/audit-log-writer.ts": 17,
+    "src/modules/alerts/application/ports/notification-enqueuer.ts": 10,
+    "src/modules/alerts/application/use-cases/bulk-update-alerts.ts": 57,
+    "src/modules/alerts/application/use-cases/get-alert-summary.ts": 28,
+    "src/modules/alerts/application/use-cases/list-alerts.ts": 39,
+    "src/modules/alerts/application/use-cases/open-alert.ts": 68,
+    "src/modules/alerts/application/use-cases/resolve-alerts.ts": 34,
+    "src/modules/alerts/application/use-cases/update-alert.ts": 42,
+    "src/modules/alerts/domain/entities/alert.ts": 119,
+    "src/modules/alerts/domain/errors/alert-error.ts": 29,
+    "src/modules/alerts/domain/repositories/alert-repository.ts": 95,
+    "src/modules/alerts/domain/services/alert-catalog.ts": 166,
+    "src/modules/alerts/domain/services/alert-rules.ts": 81,
+    "src/modules/alerts/domain/services/ews-alert-type.ts": 16,
+    "src/modules/alerts/index.ts": 46,
+    "src/modules/alerts/infrastructure/database/backfill-alert-classification.ts": 38,
+    "src/modules/alerts/infrastructure/database/knex-alert-repository.ts": 166,
+    "src/modules/alerts/infrastructure/database/knex-alert-unit-of-work.ts": 16,
+    "src/modules/alerts/infrastructure/database/knex-audit-log-writer.ts": 23,
+    "src/modules/alerts/infrastructure/queue/bullmq-notification-enqueuer.ts": 38,
+    "src/modules/alerts/presentation/alert-controller.ts": 88,
+    "src/modules/alerts/presentation/alert-routes.ts": 75,
+    "src/modules/alerts/presentation/alert-view.ts": 58,
     "src/modules/audit/application/dtos/audit-dtos.ts": 12,
     "src/modules/audit/application/use-cases/list-audit-actions.ts": 40,
     "src/modules/audit/application/use-cases/list-audit-logs.ts": 76,
     "src/modules/audit/domain/entities/audit-log.ts": 28,
     "src/modules/audit/domain/repositories/audit-log-repository.ts": 51,
-    "src/modules/audit/domain/services/audit-action-catalog.ts": 103,
+    "src/modules/audit/domain/services/audit-action-catalog.ts": 105,
     "src/modules/audit/infrastructure/database/knex-audit-log-repository.ts": 95,
     "src/modules/audit/presentation/audit-controller.ts": 48,
     "src/modules/audit/presentation/audit-routes.ts": 30,
@@ -177,8 +199,6 @@
     "src/services/agentService/telemetry.ts": 243,
     "src/services/agentService/types.ts": 125,
     "src/services/agentVersionService.ts": 39,
-    "src/services/alertCatalog.ts": 255,
-    "src/services/alertService.ts": 213,
     "src/services/apiKeyService.ts": 84,
     "src/services/auditService.ts": 42,
     "src/services/businessHours.ts": 125,
@@ -220,7 +240,7 @@
     "src/shared/domain/errors/infrastructure-error.ts": 11,
     "src/tests/alertCatalog.test.ts": 159,
     "src/tests/alerts.test.ts": 499,
-    "src/tests/auditFeed.test.ts": 188,
+    "src/tests/auditFeed.test.ts": 234,
     "src/tests/businessHours.test.ts": 128,
     "src/tests/deviceCosts.test.ts": 134,
     "src/tests/deviceLifecycle.test.ts": 465,
@@ -234,7 +254,7 @@
     "src/tests/ipRangesCredentials.test.ts": 169,
     "src/tests/loadTest.ts": 260,
     "src/tests/messageTemplates.test.ts": 159,
-    "src/tests/monitorState.test.ts": 249,
+    "src/tests/monitorState.test.ts": 251,
     "src/tests/observability.test.ts": 156,
     "src/tests/pendingDevices.test.ts": 267,
     "src/tests/portalAgentEws.test.ts": 177,
@@ -250,7 +270,7 @@
     "src/tests/twoFactor.test.ts": 278,
     "src/version.ts": 6,
     "src/ws/index.ts": 310,
-    "portal/src/App.tsx": 86,
+    "portal/src/App.tsx": 90,
     "portal/src/components/BulkActionBar.tsx": 29,
     "portal/src/components/ConfirmModal.tsx": 80,
     "portal/src/components/ErrorBoundary.tsx": 59,
@@ -347,10 +367,11 @@
     "portal/src/hooks/useNow.ts": 17,
     "portal/src/hooks/useRowSelection.ts": 33,
     "portal/src/hooks/useTime.ts": 12,
-    "portal/src/lib/api.ts": 84,
+    "portal/src/lib/api.ts": 87,
     "portal/src/lib/constants.ts": 54,
     "portal/src/lib/deviceImage.ts": 56,
     "portal/src/lib/formatters.ts": 113,
+    "portal/src/lib/postLoginRedirect.ts": 21,
     "portal/src/lib/supplies.ts": 172,
     "portal/src/main.tsx": 14,
     "portal/src/pages/Activity.tsx": 248,
@@ -364,11 +385,11 @@
     "portal/src/pages/EmailLog.tsx": 145,
     "portal/src/pages/IncidentDetail.tsx": 264,
     "portal/src/pages/Incidents.tsx": 211,
-    "portal/src/pages/Login.tsx": 176,
+    "portal/src/pages/Login.tsx": 177,
     "portal/src/pages/MonitorDetail.tsx": 253,
     "portal/src/pages/Monitors.tsx": 163,
     "portal/src/pages/PendingDevices.tsx": 270,
-    "portal/src/pages/RemoteActions.tsx": 251,
+    "portal/src/pages/RemoteActions.tsx": 313,
     "portal/src/pages/Reports.tsx": 367,
     "portal/src/pages/ScheduledReports.tsx": 160,
     "portal/src/pages/Settings.tsx": 76,
@@ -419,7 +440,7 @@
     "src/api/controllers/authController/session.ts": [
       {
         "name": "portalLogin",
-        "length": 80
+        "length": 92
       }
     ],
     "src/api/controllers/authController/users.ts": [
@@ -456,36 +477,10 @@
         "length": 29
       }
     ],
-    "src/api/controllers/dashboardController/alerts-mutations.ts": [
-      {
-        "name": "updateAlert",
-        "length": 59
-      },
-      {
-        "name": "bulkUpdateAlerts",
-        "length": 31
-      }
-    ],
-    "src/api/controllers/dashboardController/alerts-reads.ts": [
-      {
-        "name": "getAlerts",
-        "length": 60
-      },
-      {
-        "name": "getAlertSummary",
-        "length": 34
-      }
-    ],
     "src/api/controllers/dashboardController/dashboard.ts": [
       {
         "name": "getDashboard",
         "length": 82
-      }
-    ],
-    "src/api/controllers/dashboardController/shared.ts": [
-      {
-        "name": "buildScopedAlertQuery",
-        "length": 37
       }
     ],
     "src/api/controllers/deviceController/bulk.ts": [
@@ -698,12 +693,6 @@
         "length": 91
       }
     ],
-    "src/api/routes/dashboardRoutes.ts": [
-      {
-        "name": "registerDashboardRoutes",
-        "length": 40
-      }
-    ],
     "src/api/routes/deviceRoutes.ts": [
       {
         "name": "registerDeviceRoutes",
@@ -737,7 +726,7 @@
     "src/api/server.ts": [
       {
         "name": "start",
-        "length": 270
+        "length": 271
       },
       {
         "name": "healthHandler",
@@ -814,6 +803,30 @@
       {
         "name": "purgeResolvedAlerts",
         "length": 25
+      }
+    ],
+    "src/modules/alerts/domain/services/alert-catalog.ts": [
+      {
+        "name": "classifyAlert",
+        "length": 36
+      }
+    ],
+    "src/modules/alerts/infrastructure/database/backfill-alert-classification.ts": [
+      {
+        "name": "backfillAlertClassification",
+        "length": 25
+      }
+    ],
+    "src/modules/alerts/presentation/alert-routes.ts": [
+      {
+        "name": "registerAlertRoutes",
+        "length": 22
+      }
+    ],
+    "src/modules/alerts/presentation/alert-view.ts": [
+      {
+        "name": "toAlertListView",
+        "length": 29
       }
     ],
     "src/modules/audit/application/use-cases/list-audit-logs.ts": [
@@ -998,22 +1011,6 @@
       {
         "name": "getPublishedAgentVersion",
         "length": 23
-      }
-    ],
-    "src/services/alertCatalog.ts": [
-      {
-        "name": "classifyAlert",
-        "length": 36
-      },
-      {
-        "name": "backfillAlertClassification",
-        "length": 28
-      }
-    ],
-    "src/services/alertService.ts": [
-      {
-        "name": "openAlert",
-        "length": 83
       }
     ],
     "src/services/businessHours.ts": [
@@ -1316,6 +1313,10 @@
       {
         "name": "describe(Audit feed — filtros)",
         "length": 46
+      },
+      {
+        "name": "describe(Audit feed — login (R5 del gap analysis: \"audit logs ausentes para... logins\"))",
+        "length": 36
       },
       {
         "name": "describe(Audit feed — RBAC (sólo admin/operator))",
@@ -1629,11 +1630,11 @@
       },
       {
         "name": "describe(Estado de monitoreo — invariante de escritura única de alertas)",
-        "length": 24
+        "length": 26
       },
       {
-        "name": "test(ningún archivo fuera de alertService.ts inserta directo en la tabla alerts)",
-        "length": 22
+        "name": "test(ningún archivo fuera del repositorio de alertas inserta directo en la tabla alerts)",
+        "length": 24
       }
     ],
     "src/tests/observability.test.ts": [
@@ -2505,7 +2506,7 @@
     "portal/src/lib/api.ts": [
       {
         "name": "request",
-        "length": 53
+        "length": 54
       }
     ],
     "portal/src/lib/formatters.ts": [
@@ -2629,7 +2630,7 @@
     "portal/src/pages/RemoteActions.tsx": [
       {
         "name": "RemoteActions",
-        "length": 193
+        "length": 241
       }
     ],
     "portal/src/pages/Reports.tsx": [

@@ -1,4 +1,4 @@
-import type { AlertClass } from "./alertCatalog";
+import type { AlertClass } from "../modules/alerts";
 
 /**
  * Fase 11 del gap analysis vs HP SDS — único punto de acoplamiento entre

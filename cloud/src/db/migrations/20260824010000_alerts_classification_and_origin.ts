@@ -1,5 +1,5 @@
 import type { Knex } from "knex";
-import { backfillAlertClassification } from "../../services/alertCatalog";
+import { backfillAlertClassification } from "../../modules/alerts/infrastructure/database/backfill-alert-classification";
 
 /**
  * Fase 3 del gap analysis vs HP SDS (docs/dev/STC_Gap_Analysis_vs_HP_SDS_2026-08.md)

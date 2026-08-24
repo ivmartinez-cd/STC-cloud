@@ -1,11 +1,10 @@
-import { Knex } from "knex";
+import type { AlertClassification } from "../entities/alert";
 
 /**
  * Traduce el `type` crudo de una alerta (código de vendor sin traducir) a un
  * motivo legible en español + una clase estilo HP SDS Manager + quién debe
  * actuar. Antes de esto, `alerts.type`/`alerts.message` llegaban tal cual desde
- * tres fuentes sin ningún diccionario intermedio (ver
- * `alertService.synthesizeEwsAlertType`):
+ * tres fuentes sin ningún diccionario intermedio (ver `ews-alert-type.ts`):
  *
  *   1. `prtAlertCode` (RFC 3805, Printer-MIB `1.3.6.1.2.1.43.18.1.1.7`) — un
  *      entero de la tabla `PrtAlertCodeTC`, guardado como string sin traducir
@@ -22,60 +21,8 @@ import { Knex } from "knex";
  *
  * `classifyAlert` es PURA (sin Knex/Fastify) — mismo criterio que
  * `rolePolicy.ts` ("no depende de Knex ni de Fastify para poder testearse sin
- * base ni servidor"). El portal NUNCA duplica este mapa: consume `alert_class`/
- * `alert_reason`/`responder` ya resueltos (ver migración
- * `20260824010000_alerts_classification_and_origin.ts`) y la lista de clases
- * vía `GET /api/v1/alerts/classes`.
+ * base ni servidor").
  */
-
-export type AlertClass =
-  | "consumable_out"
-  | "consumable_low"
-  | "system_failure"
-  | "system_warning"
-  | "user_action"
-  | "system_change"
-  | "jam"
-  | "media_out"
-  | "media_low"
-  | "information"
-  | "subunit_low"
-  | "subunit_out"
-  | "availability"
-  | "other";
-
-export type Responder = "none" | "untrained" | "trained" | "field_service" | "management";
-
-export const ALERT_CLASS_LABELS: Record<AlertClass, string> = {
-  consumable_out: "Consumible agotado",
-  consumable_low: "Nivel bajo del consumible",
-  system_failure: "Fallo del sistema",
-  system_warning: "Advertencia del sistema",
-  user_action: "Acción del usuario",
-  system_change: "Cambio del sistema",
-  jam: "Atasco",
-  media_out: "Soporte fuera",
-  media_low: "Soporte bajo",
-  information: "Información",
-  subunit_low: "Subunidad baja",
-  subunit_out: "Subunidad fuera",
-  availability: "Disponibilidad",
-  other: "Otro",
-};
-
-export const RESPONDER_LABELS: Record<Responder, string> = {
-  none: "Sin intervención",
-  untrained: "Sin formación",
-  trained: "Con formación",
-  field_service: "Servicio de campo",
-  management: "Gestión",
-};
-
-export interface AlertClassification {
-  reason: string;
-  klass: AlertClass;
-  responder: Responder;
-}
 
 const REASON_MAX_LEN = 120;
 
@@ -215,40 +162,4 @@ export function classifyAlert(type: string, message?: string | null): AlertClass
   }
 
   return { reason: sanitize(message, trimmed), klass: "other", responder: "trained" };
-}
-
-/**
- * Reclasifica alertas existentes en lotes (usado por la migración de backfill y,
- * en el futuro, si el catálogo crece). `onlyNull: true` sólo toca filas sin
- * clasificar todavía — una migración vieja re-corrida en una base limpia usa el
- * catálogo ACTUAL (es metadata derivada, no historia; ver docblock de la
- * migración `20260824010000`).
- */
-export async function backfillAlertClassification(
-  knex: Knex,
-  opts: { onlyNull: boolean } = { onlyNull: true }
-): Promise<number> {
-  const BATCH_SIZE = 5000;
-  let totalUpdated = 0;
-
-  for (;;) {
-    const query = knex("alerts").select("id", "type", "message").orderBy("id").limit(BATCH_SIZE);
-    if (opts.onlyNull) query.whereNull("alert_class");
-    const rows: Array<{ id: number; type: string; message: string | null }> = await query;
-    if (rows.length === 0) break;
-
-    await knex.transaction(async (trx) => {
-      for (const row of rows) {
-        const { reason, klass, responder } = classifyAlert(row.type, row.message);
-        await trx("alerts")
-          .where("id", row.id)
-          .update({ alert_class: klass, alert_reason: reason, responder });
-      }
-    });
-
-    totalUpdated += rows.length;
-    if (!opts.onlyNull || rows.length < BATCH_SIZE) break;
-  }
-
-  return totalUpdated;
 }

@@ -3,13 +3,13 @@ import type { Knex } from "knex";
 import type Redis from "ioredis";
 import type { AgentService } from "../../../services/agentService";
 import { getScope } from "../../utils/scope";
-import { ALERT_CLASS_LABELS, type AlertClass } from "../../../services/alertCatalog";
+import { ALERT_CLASS_LABELS, countOpenAlertsByClass, type AlertClass } from "../../../modules/alerts";
 import { getPublishedAgentVersion } from "../../../services/agentVersionService";
 import {
   queryDevicesCount, queryAgentsStats, queryClientsCount, queryMonthlyVolume, queryTopClients,
   queryBrandStats, queryOfflineAgents, queryNewDevicesCount, queryReadings24hCount, queryLastReadingInfo,
   queryClientsWithAlertsCount, queryDevicesUnmanagedCount, queryAgentsReportingCount, queryAgentVersionRows,
-  queryAlertsByClassRows, queryDiscoveredTodayCount, queryDiscoveredYesterdayCount, queryPendingDevicesTotalCount,
+  queryDiscoveredTodayCount, queryDiscoveredYesterdayCount, queryPendingDevicesTotalCount,
   queryDevicesReportingCount, queryMovementsCounts,
 } from "./dashboard-queries";
 
@@ -22,14 +22,10 @@ function computeDeviceTrend(devicesCount: { c?: string | number } | undefined, n
   return { total, deviceTrend: `+${pct}% este mes` };
 }
 
-function mapAlertsByClass(rows: Array<{ alert_class: AlertClass | null; count: string }>) {
+function mapAlertsByClass(rows: Array<{ alertClass: AlertClass | null; count: number }>) {
   return rows
-    .filter((r) => r.alert_class)
-    .map((r) => ({
-      alert_class: r.alert_class as AlertClass,
-      label: ALERT_CLASS_LABELS[r.alert_class as AlertClass] ?? r.alert_class,
-      count: Number(r.count),
-    }))
+    .filter((r): r is { alertClass: AlertClass; count: number } => r.alertClass !== null)
+    .map((r) => ({ alert_class: r.alertClass, label: ALERT_CLASS_LABELS[r.alertClass] ?? r.alertClass, count: r.count }))
     .sort((a, b) => b.count - a.count);
 }
 
@@ -62,7 +58,7 @@ async function getDashboard(db: Knex, redis: Redis, request: FastifyRequest) {
     queryDevicesUnmanagedCount(db, cid),
     queryAgentsReportingCount(db, cid, twentyFourHoursAgo),
     queryAgentVersionRows(db, cid),
-    queryAlertsByClassRows(db, scope),
+    countOpenAlertsByClass(db, scope),
     queryDiscoveredTodayCount(db, cid, startOfToday),
     queryDiscoveredYesterdayCount(db, cid, startOfYesterday, startOfToday),
     queryPendingDevicesTotalCount(db, cid),
@@ -72,7 +68,7 @@ async function getDashboard(db: Knex, redis: Redis, request: FastifyRequest) {
   ]);
 
   const { total, deviceTrend } = computeDeviceTrend(devicesCount, newDevicesCount);
-  const alertsByClass = mapAlertsByClass(alertsByClassRows as Array<{ alert_class: AlertClass | null; count: string }>);
+  const alertsByClass = mapAlertsByClass(alertsByClassRows);
 
   return {
     stats: {

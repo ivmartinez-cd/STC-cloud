@@ -223,12 +223,14 @@ describe('Estado de monitoreo — RBAC', () => {
 });
 
 describe('Estado de monitoreo — invariante de escritura única de alertas', () => {
-  test('ningún archivo fuera de alertService.ts inserta directo en la tabla alerts', () => {
+  test('ningún archivo fuera del repositorio de alertas inserta directo en la tabla alerts', () => {
     // Regresión estática: el guard de monitor_state vive SÓLO en
-    // `alertService.openAlert` — si algún archivo nuevo empieza a hacer
-    // `db("alerts").insert(...)` por su cuenta, se saltea el guard en
-    // silencio. Mismo criterio que motivó extraer `openAlert` en primer lugar
-    // (ver el docblock de alertService.ts).
+    // `OpenAlertUseCase` (modules/alerts), cuya única primitiva de escritura
+    // es `KnexAlertRepository.insertIfNotOpen` — si algún archivo nuevo
+    // empieza a hacer `db("alerts").insert(...)` por su cuenta, se saltea el
+    // guard en silencio. Mismo criterio que motivó extraer `openAlert` en
+    // primer lugar (ver el docblock del caso de uso).
+    const ALLOWED = path.join('modules', 'alerts', 'infrastructure', 'database', 'knex-alert-repository.ts');
     const srcDir = path.resolve(__dirname, '..');
     const offenders: string[] = [];
     const walk = (dir: string) => {
@@ -237,12 +239,12 @@ describe('Estado de monitoreo — invariante de escritura única de alertas', ()
         const full = path.join(dir, entry.name);
         if (entry.isDirectory()) { walk(full); continue; }
         if (!entry.name.endsWith('.ts')) continue;
-        if (full.endsWith(path.join('services', 'alertService.ts'))) continue;
+        if (full.endsWith(ALLOWED)) continue;
         const content = fs.readFileSync(full, 'utf8');
         if (/\balerts["']\)\s*\.\s*insert\s*\(/.test(content)) offenders.push(full);
       }
     };
     walk(srcDir);
-    assert.deepEqual(offenders, [], `hay inserts directos a "alerts" fuera de alertService.ts: ${offenders.join(', ')}`);
+    assert.deepEqual(offenders, [], `hay inserts directos a "alerts" fuera de ${ALLOWED}: ${offenders.join(', ')}`);
   });
 });

@@ -1,7 +1,6 @@
 import type { Knex } from "knex";
-import { deviceIdsOf, type Scope } from "../../utils/scope";
+import { deviceIdsOf } from "../../utils/scope";
 import { onlyLiveDevices, notMerged } from "../../utils/deviceFilters";
-import { buildScopedAlertQuery } from "./shared";
 
 export function queryDevicesCount(db: Knex, cid: string | null) {
   return db("devices")
@@ -179,17 +178,6 @@ export function queryAgentVersionRows(db: Knex, cid: string | null) {
     .groupBy("version")
     .orderBy("count", "desc")
     .limit(10);
-}
-
-// Alertas activas por clase — reusa el mismo LEFT JOIN triple + scoping de
-// `getAlerts`/`getAlertSummary` (Fase 1), factorizado en `buildScopedAlertQuery`
-// para no reimplementar sus tres sutilezas acá (agent-scoped sin device_id,
-// exclusión de lápidas, scope RBAC).
-export function queryAlertsByClassRows(db: Knex, scope: Scope) {
-  return buildScopedAlertQuery(db, scope, { resolved: "false" })
-    .select("alerts.alert_class")
-    .count("alerts.id as count")
-    .groupBy("alerts.alert_class");
 }
 
 // "Descubiertos hoy/ayer" — `devices.created_at` YA es la fecha de

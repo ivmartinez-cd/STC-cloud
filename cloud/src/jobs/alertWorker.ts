@@ -2,7 +2,7 @@ import { Worker } from 'bullmq';
 import Redis from 'ioredis';
 import knex from 'knex';
 import knexConfig from '../db/knexfile';
-import * as alertService from '../services/alertService';
+import * as alertService from '../modules/alerts';
 import { logger } from '../logger';
 
 const db    = knex(knexConfig.development);

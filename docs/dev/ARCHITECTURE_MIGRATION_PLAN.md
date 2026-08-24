@@ -960,6 +960,109 @@ tiene un service dedicado, está repartido entre varios archivos de
 propio o si conviene esperar). Re-chequear `git status`/coordinar de
 nuevo antes de elegir.
 
+## Fase 3 — `alerts` migrado (2026-08-24)
+
+Tercer módulo. Ivan pidió "terminar con la Fase 3"; `close-hp-sds-gaps`
+confirmó por mensaje que ya había cerrado sus Fases 4.x/5/6/7 (2FA, agente
+v1.2.0, remote-actions) y que no tenía planeado tocar `alerts`/`reports`/
+`clients` — se preguntó ANTES de tocar nada y se esperó la respuesta (regla
+nueva de Ivan, mismo día: "no se pisen entre agentes — pregunten, esperen y
+luego hagan"; aplica también a lo pesado de CPU: la suite de backend se
+lanzó recién con el OK explícito de las 3 sesiones activas).
+
+`alerts` estaba repartido en 5 archivos (~800 líneas): `services/alertService.ts`
+(las primitivas de escritura `openAlert`/`resolveAlert`/`resolveStaleDeviceAlerts`
++ `synthesizeEwsAlertType`), `services/alertCatalog.ts` (clasificación pura +
+`backfillAlertClassification` con Knex), y tres archivos del
+`dashboardController/` (`alerts-reads.ts`, `alerts-mutations.ts`, `shared.ts`
+con el `buildScopedAlertQuery` compartido con el dashboard).
+
+División (`modules/alerts/`, 24 archivos, ~1.100 líneas):
+- `domain/entities/alert.ts` — `AlertClass`/`Responder`/`AlertSeverity`/
+  `AlertOrigin`, labels, `AlertListItem` (camelCase), `AlertLifecycleState`,
+  `AlertSummary`.
+- `domain/services/{alert-catalog,ews-alert-type,alert-rules}.ts` —
+  `classifyAlert` (movido literal, sigue siendo puro), el hash de tipo EWS, y
+  las reglas que antes vivían inline en `openAlert`/`updateAlert`:
+  `deviceAcceptsAlerts` (gate por `monitor_state`/`registration_state`),
+  `buildLifecycleUpdates` (whitelist ack/resolve), `lifecycleAuditAction`,
+  `parseCsvOrThrow`.
+- `domain/errors/alert-error.ts` — `AlertError` con `statusCode` (400/404),
+  mismo criterio que `CustomFieldError`.
+- `domain/repositories/alert-repository.ts` — interfaz + `AlertScope`
+  (estructuralmente idéntico a `api/utils/scope.ts::Scope`, duplicado a
+  propósito para que el dominio no importe de la capa HTTP).
+- `application/ports/{audit-log-writer,notification-enqueuer,alert-unit-of-work}.ts`
+  — el encolado de `alert.created` pasa a ser un puerto (el adapter BullMQ es
+  quien absorbe y loguea el error: "best-effort" es contrato del puerto, no
+  un try/catch del caso de uso); la unidad de trabajo existe SÓLO para la
+  acción en bloque, que era la única mutación transaccional (update + audit
+  en la misma trx).
+- `application/use-cases/{open-alert,resolve-alerts,list-alerts,
+  get-alert-summary,update-alert,bulk-update-alerts}.ts`.
+- `infrastructure/database/{knex-alert-repository,knex-alert-unit-of-work,
+  knex-audit-log-writer,backfill-alert-classification}.ts` +
+  `infrastructure/queue/bullmq-notification-enqueuer.ts`. El writer de audit
+  delega en `services/auditService.writeAudit` (infra transversal, no se
+  migra — decisión de la pasada de `audit`).
+- `presentation/{alert-controller,alert-routes,alert-view}.ts` —
+  `registerAlertRoutes(fastify, db, portalAuth)`, JSON schemas literales
+  conservados, `alert-view.ts` traduce camelCase → snake_case del wire.
+- `index.ts` — fachada con las MISMAS firmas que `services/alertService.ts`
+  (`openAlert(db, params)` etc.) para `jobs/alertWorker.ts`,
+  `jobs/heartbeatMonitor.ts` y `services/agentService/sync-reading-alerts.ts`:
+  esos 3 call-sites sólo cambiaron el path del import. Más
+  `countOpenAlertsByClass(db, scope)` para el desglose del dashboard.
+
+**Detalles preservados a propósito:**
+- Orden de validaciones distinto en single vs bulk (`PUT /alerts/:id`: 404 por
+  no-propiedad ANTES del 400 por body vacío; `POST /alerts/bulk`: ids → body
+  vacío → propiedad). Cambiar el orden hubiera sido un cambio observable.
+- El chequeo de propiedad de las mutaciones NO excluye lápidas de fusión
+  (`merged_into`) mientras que el listado/resumen sí — así lo hacía el
+  controller original (`ownershipQuery` vs `scopedQuery` en el repositorio).
+- Un equipo inexistente no bloquea `openAlert` (el gate sólo corta si la fila
+  existe y está `disabled`/`reports_only` o no `registered`).
+- `alerts.type` se recorta a 50 ANTES de clasificar (`toNewAlert`), igual que
+  antes.
+
+`dashboardController/` queda sólo con el dashboard: `index.ts` y
+`dashboardRoutes.ts` pierden las rutas/handlers de alertas; `dashboard.ts`
+consume `countOpenAlertsByClass` del módulo; `dashboard-queries.ts` pierde
+`queryAlertsByClassRows`. `api/server.ts` — una línea nueva
+(`registerAlertRoutes`), la de `registerDashboardRoutes` sin cambios.
+`incidentClassifier.ts` (tipo `AlertClass`), la migración
+`20260824010000` (`backfillAlertClassification`) y `alertCatalog.test.ts`
+apuntan al módulo. Borrados los 5 archivos originales.
+
+**Nota operativa (entorno efímero):** `knexfile.ts` NO lee `DB_PORT` (sólo
+host/user/password/database) y con `DATABASE_URL` fuerza SSL (que un
+Postgres de contenedor no tiene). Para apuntar la API a un Postgres en otro
+puerto: `PGPORT=<puerto>` (node-postgres lo honra por entorno) + `DB_HOST`,
+sin `DATABASE_URL`. Y `alerts.test.ts` accede directo a la base con
+`ALERTS_TEST_DB_PORT`. Además, el init de `timescale/timescaledb` aborta si
+la máquina está saturada (su reinicio interno excede el timeout) y deja el
+contenedor en recuperación eterna — recrearlo, no esperar.
+
+**Validación:** `npx tsc --noEmit` limpio. Entorno efímero aislado
+(contenedores `stc_f3_pg`/`stc_f3_redis`, API en :3026 — regla nueva: se
+pidió y esperó el OK de las 3 sesiones activas antes de lanzarlo). Suite
+completa de backend (29 archivos, `scripts/ci-test-runner.mjs`):
+**`alerts.test.ts` 32/32, `alertCatalog.test.ts` 31/31, `rbac.test.ts`
+87/87, `e2e.test.ts` 37/37** (tras `knex seed:run` — la primera corrida dio
+22 fallas por base sin semilla, no por el módulo), `monitorState.test.ts`
+11/11 tras actualizar su guard estático (el test que asegura que NADIE
+inserta en `alerts` fuera de la primitiva única — antes apuntaba por nombre
+a `services/alertService.ts`, ahora a
+`modules/alerts/infrastructure/database/knex-alert-repository.ts`; el
+invariante sigue siendo el mismo). Los otros 23 archivos verdes salvo 2
+fallas ajenas y de entorno: `observability.test.ts` (1 falla, un test
+DISTINTO en cada corrida — "dos réplicas" primero, "pub/sub WS" después —
+flakiness bajo carga, no toca alertas) y `twoFactor.test.ts` 6.3 (429 del
+rate-limit de login con el `RATE_LIMIT_MAX` del `.env`, módulo de
+`close-hp-sds-gaps`, avisado). `check-sizes.mjs` limpio tras regenerar
+baseline.
+
 ## 0. Punto de partida (medido 2026-08-24)
 
 `stc-cloud` es un monolito con **varios dominios de negocio** bajo un mismo backend
