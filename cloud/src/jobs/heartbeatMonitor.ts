@@ -2,11 +2,19 @@ import knex from 'knex';
 import { runGuardedTick } from "../modules/observability/guarded-tick";
 import knexConfig from '../db/knexfile';
 import * as alertService from '../modules/alerts';
+import { KnexSystemSettingsRepository } from "../modules/system-settings/infrastructure/database/knex-system-settings-repository";
 import { logger } from '../logger';
 
 const db = knex(knexConfig.development);
+const systemSettings = new KnexSystemSettingsRepository(db);
 
-const OFFLINE_THRESHOLD_MINUTES = 5; // Si no hay heartbeat en 5 min → sin señal
+// Default de arranque / fail-open si `system_settings` no responde por
+// algún motivo — nunca debe tumbar el tick completo por un umbral no
+// disponible. El valor real, configurable por el admin desde
+// `Settings.tsx` (R9 del gap analysis vs HP SDS), se lee de nuevo en
+// CADA tick (ver `runChecks()`) — así un cambio del admin aplica dentro
+// de los 2 minutos del próximo ciclo, sin reiniciar el proceso.
+const DEFAULT_OFFLINE_THRESHOLD_MINUTES = 5;
 /**
  * Bug real (23/08/2026): estaba en 30 min. El agente reduce su propia
  * frecuencia fuera del horario laboral configurado (`agents.business_hours`,
@@ -37,15 +45,16 @@ const DEVICE_OFFLINE_THRESHOLD_MINUTES = 5 * 60;
  */
 
 /**
- * Marca como 'offline' a los agentes activos que no enviaron heartbeat
- * en los últimos OFFLINE_THRESHOLD_MINUTES minutos, y abre una alerta
- * `agent_offline` por cada uno (antes: el enum la declaraba pero ningún código la
- * escribía). Vuelven a 'active' automáticamente cuando retoman los heartbeats, y
- * la alerta se resuelve sola.
+ * Marca como 'offline' a los agentes activos que no enviaron heartbeat en
+ * los últimos `thresholdMinutes` minutos (configurable, ver `runChecks()`),
+ * y abre una alerta `agent_offline` por cada uno (antes: el enum la
+ * declaraba pero ningún código la escribía). Vuelven a 'active'
+ * automáticamente cuando retoman los heartbeats, y la alerta se resuelve
+ * sola.
  */
-async function checkOfflineAgents() {
+async function checkOfflineAgents(thresholdMinutes: number) {
   try {
-    const cutoff = new Date(Date.now() - OFFLINE_THRESHOLD_MINUTES * 60 * 1000);
+    const cutoff = new Date(Date.now() - thresholdMinutes * 60 * 1000);
 
     // Marcar como offline los que estaban activos y dejaron de latir. `.returning`
     // trae los ids afectados — antes sólo se contaban, ahora hace falta abrir una
@@ -61,11 +70,11 @@ async function checkOfflineAgents() {
         agentId: agent.id,
         type: 'agent_offline',
         severity: 'critical',
-        message: `Monitor sin señal (sin heartbeat hace más de ${OFFLINE_THRESHOLD_MINUTES} min)`,
+        message: `Monitor sin señal (sin heartbeat hace más de ${thresholdMinutes} min)`,
       });
     }
     if (markedOffline.length > 0) {
-      logger.info(`[HeartbeatMonitor] ${markedOffline.length} agente(s) marcados OFFLINE (sin señal > ${OFFLINE_THRESHOLD_MINUTES} min)`);
+      logger.info(`[HeartbeatMonitor] ${markedOffline.length} agente(s) marcados OFFLINE (sin señal > ${thresholdMinutes} min)`);
     }
 
     // Reactivar los que volvieron (heartbeat reciente pero quedaron en offline)
@@ -160,7 +169,19 @@ async function runChecks() {
   // Lock multi-réplica + métricas + Sentry (Fase 5.3) — implementa el advisory
   // lock que el docblock de arriba dejó prescripto para multi-réplica.
   await runGuardedTick(db, "heartbeat-monitor", async () => {
-    await checkOfflineAgents();
+    // Leído de nuevo en CADA tick (no cacheado a nivel de módulo) — así un
+    // cambio del admin en Settings.tsx aplica sin reiniciar el proceso.
+    // Fail-open al default si la tabla no responde: un umbral no
+    // disponible nunca debe tumbar el tick completo.
+    let thresholdMinutes = DEFAULT_OFFLINE_THRESHOLD_MINUTES;
+    try {
+      thresholdMinutes = (await systemSettings.get()).agentOfflineThresholdMinutes;
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      logger.error({ err: errMsg }, `[HeartbeatMonitor] No se pudo leer system_settings, usando default (${DEFAULT_OFFLINE_THRESHOLD_MINUTES} min)`);
+    }
+
+    await checkOfflineAgents(thresholdMinutes);
     await checkOfflineDevices();
   });
 }
@@ -170,4 +191,4 @@ runChecks();
 const intervalMs = 2 * 60 * 1000;
 setInterval(runChecks, intervalMs);
 
-logger.info(`[HeartbeatMonitor] Iniciado — umbral agente: ${OFFLINE_THRESHOLD_MINUTES} min, umbral equipo: ${DEVICE_OFFLINE_THRESHOLD_MINUTES} min`);
+logger.info(`[HeartbeatMonitor] Iniciado — umbral agente: configurable desde Settings (default ${DEFAULT_OFFLINE_THRESHOLD_MINUTES} min), umbral equipo: ${DEVICE_OFFLINE_THRESHOLD_MINUTES} min`);

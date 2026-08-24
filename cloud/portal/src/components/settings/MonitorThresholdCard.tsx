@@ -1,7 +1,7 @@
 import { Radio, Shield, Bell } from 'lucide-react';
 import type { Thresholds } from '../../types/settings';
 
-export default function MonitorThresholdCard({ thresholds, onChange }: { thresholds: Thresholds; onChange: (t: Thresholds) => void }) {
+export default function MonitorThresholdCard({ thresholds, onChange, disabled }: { thresholds: Thresholds; onChange: (t: Thresholds) => void; disabled?: boolean }) {
   return (
     <div className="cd-panel p-8">
       <div className="flex items-center gap-4 mb-6">
@@ -23,9 +23,11 @@ export default function MonitorThresholdCard({ thresholds, onChange }: { thresho
           <input
             type="number"
             min={1}
+            max={1440}
             value={thresholds.monitorOfflineMinutes}
             onChange={e => onChange({ monitorOfflineMinutes: Number(e.target.value) })}
-            className="cd-input w-full !pl-12 !bg-white border-transparent focus:!border-brand"
+            disabled={disabled}
+            className="cd-input w-full !pl-12 !bg-white border-transparent focus:!border-brand disabled:opacity-50 disabled:cursor-not-allowed"
             placeholder=""
           />
         </div>

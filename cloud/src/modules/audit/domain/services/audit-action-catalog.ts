@@ -88,6 +88,9 @@ const AUDIT_ACTION_META: Record<string, AuditActionMeta> = {
   REPORT_PERIOD_CLOSED: { label: "Período de facturación cerrado", category: "report" },
   REPORT_PERIOD_REOPENED: { label: "Período de facturación reabierto", category: "report" },
 
+  // Sistema
+  SYSTEM_SETTINGS_UPDATED: { label: "Ajustes del sistema actualizados", category: "other" },
+
   // Otro
   REPORT_BUG: { label: "Reporte de bug enviado", category: "other" },
   SUGGEST_ENHANCEMENT: { label: "Sugerencia enviada", category: "other" },

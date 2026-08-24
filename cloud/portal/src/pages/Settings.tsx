@@ -1,6 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Save, CheckCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
+import { api } from '../lib/api';
 import MonitorThresholdCard from '../components/settings/MonitorThresholdCard';
 import SmtpInfoCard, { type SmtpFields } from '../components/settings/SmtpInfoCard';
 import OperatorsCard from '../components/settings/operators/OperatorsCard';
@@ -9,31 +11,40 @@ import MessageTemplatesCard from '../components/settings/MessageTemplatesCard';
 import TwoFactorCard from '../components/settings/TwoFactorCard';
 import type { Thresholds } from '../types/settings';
 
-const STORAGE_KEY = 'stc_settings';
-
-function loadSettings(): Thresholds {
-  try {
-    const raw = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
-    return { monitorOfflineMinutes: raw.monitorOfflineMinutes ?? raw.agentOfflineMinutes ?? 10 };
-  } catch { return { monitorOfflineMinutes: 10 }; }
-}
-
 const Settings = () => {
   const { role: currentUserRole } = useAuth();
-  const saved = loadSettings();
+  const { showToast } = useToast();
 
-  const [thresholds, setThresholds] = useState<Thresholds>({
-    monitorOfflineMinutes: saved.monitorOfflineMinutes,
-  });
+  // R9 del gap analysis vs HP SDS: este umbral controla de verdad
+  // `jobs/heartbeatMonitor.ts` (antes sólo se guardaba en localStorage, sin
+  // que nada lo leyera) — se lee/escribe contra `GET/PUT
+  // /api/v1/settings/system`, único para toda la instancia.
+  const [thresholds, setThresholds] = useState<Thresholds>({ monitorOfflineMinutes: 5 });
   const [smtp, setSmtp] = useState<SmtpFields>({ host: '', port: '587', user: '', pass: '', from: '' });
   const [savedOk, setSavedOk] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const isAdmin = currentUserRole === 'admin';
 
-  const save = () => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(thresholds));
-    setSavedOk(true);
-    setTimeout(() => setSavedOk(false), 3000);
+  useEffect(() => {
+    api.get<{ agent_offline_threshold_minutes: number }>('/settings/system')
+      .then((s) => setThresholds({ monitorOfflineMinutes: s.agent_offline_threshold_minutes }))
+      .catch((e: unknown) => showToast('No se pudo cargar el umbral de inactividad: ' + (e as Error).message, 'error'));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const save = async () => {
+    if (!isAdmin) return;
+    setSaving(true);
+    try {
+      await api.put('/settings/system', { agent_offline_threshold_minutes: thresholds.monitorOfflineMinutes });
+      setSavedOk(true);
+      setTimeout(() => setSavedOk(false), 3000);
+    } catch (e: unknown) {
+      showToast('Error al guardar: ' + (e as Error).message, 'error');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -43,17 +54,19 @@ const Settings = () => {
         <p className="text-slate-500 mt-1 font-medium">Gestión de umbrales, alertas, parámetros globales y operadores.</p>
       </header>
 
-      <MonitorThresholdCard thresholds={thresholds} onChange={setThresholds} />
+      <MonitorThresholdCard thresholds={thresholds} onChange={setThresholds} disabled={!isAdmin} />
       <SmtpInfoCard smtp={smtp} onChange={(updater) => setSmtp(updater)} />
       <TwoFactorCard />
       <OperatorsCard />
       {isAdmin && <MessageTemplatesCard />}
       {isAdmin && <FeedbackCard />}
 
+      {isAdmin && (
       <div className="flex items-center gap-6 pt-4">
         <button
           onClick={save}
-          className="flex items-center gap-3 bg-brand hover:bg-brand-hover text-white px-10 py-5 rounded-[24px] text-sm font-extrabold shadow-xl shadow-brand/10 transition-all active:scale-95 group"
+          disabled={saving}
+          className="flex items-center gap-3 bg-brand hover:bg-brand-hover text-white px-10 py-5 rounded-[24px] text-sm font-extrabold shadow-xl shadow-brand/10 transition-all active:scale-95 group disabled:opacity-50"
         >
           <Save size={18} className="group-hover:scale-110 transition-transform" />
           Guardar Cambios
@@ -68,6 +81,7 @@ const Settings = () => {
           </span>
         )}
       </div>
+      )}
     </div>
   );
 };

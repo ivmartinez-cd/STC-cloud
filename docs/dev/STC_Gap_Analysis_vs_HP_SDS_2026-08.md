@@ -1800,22 +1800,58 @@ argentino en vez del local).
 ### R8 · Cobertura de marcas — **P1**
 Familias reales sólo HP/Samsung/Lexmark (18 perfiles). Ricoh/Brother/Xerox → `generic.ews` + OIDs parciales (`BROTHER_OIDS.totalPages` vacío; Xerox mono=color). Canon, Kyocera, Konica Minolta, Epson, Sharp, Toshiba, OKI, Pantum ni siquiera son `Brand` → caen a `generic` (Printer‑MIB sirve para total/insumos, pero sin desglose color ni alertas ricas). En un MPS multimarca esto limita la promesa comercial.
 
-### R9 · Portal — **P1**
-Sin paginación (500 equipos = inusable), ~~3 tipos `Alert` distintos~~ (✅ ya
-consolidados en `types/alerts.ts` por una pasada previa de alertas — ver
-docblock ahí), ~~tipo `MonitorData.config` miente (se parsea como
-string)~~ (✅ 24/08/2026, ver abajo — resultó ser código muerto en el
+### R9 · Portal — **P1** — cerrado salvo paginación
+Sin paginación (500 equipos = inusable) — **único punto de R9 que sigue
+abierto**, deliberadamente fuera de esta pasada (es un cambio de forma de
+API + UI en varios listados, no un fix puntual). Todo lo demás: ~~3 tipos
+`Alert` distintos~~ (✅ ya consolidados en `types/alerts.ts` por una pasada
+previa de alertas — ver docblock ahí), ~~tipo `MonitorData.config` miente
+(se parsea como string)~~ (✅ 24/08/2026 — resultó ser código muerto en el
 portal, no un problema del backend), ~~`Terminal.tsx` hardcodea
 `wss://stc-cloud.onrender.com`~~ (✅ ya resuelto — deriva de
 `window.location.host`, quedó así desde el fix del ticket de WS de un solo
 uso, R4 más abajo), ✅ **401 hace `location.replace` y pierde la ruta**
-(24/08/2026, ver abajo), Settings guarda un umbral offline en
-`localStorage` que en realidad **no lo lee nadie** (el umbral real está
-hardcodeado server-side en `heartbeatMonitor.ts` — el control de
-Configuración es decorativo; arreglarlo de verdad requiere tocar ese mismo
-archivo, en el área que otra sesión está migrando ahora — queda pendiente
-hasta que termine `agents`). Sin tests server-side de paginación; el resto
-de R9 sigue abierto (paginación real, umbral offline decorativo).
+(24/08/2026), ✅ **Settings guarda un umbral offline en `localStorage` que
+en realidad no lo lee nadie** (24/08/2026, ver abajo).
+
+✅ **El umbral de inactividad de Settings ahora controla de verdad
+`jobs/heartbeatMonitor.ts`** (24/08/2026). Migración
+`20260824210000_system_settings_offline_threshold.ts`: tabla singleton
+`system_settings` (PK booleana + `CHECK (id)`, una sola fila posible a
+nivel de esquema — no de disciplina de aplicación) con
+`agent_offline_threshold_minutes` (rango 1-1440 vía CHECK). Nuevo módulo
+`modules/system-settings/` (domain/infrastructure/presentation, mismo
+patrón que `two-factor`): `GET/PUT /api/v1/settings/system`, `PUT`
+admin-only (mismo criterio que `updateAgentVersion` en
+`authController/agent-version.ts`), auditado
+(`SYSTEM_SETTINGS_UPDATED`). `heartbeatMonitor.ts` deja de tener
+`OFFLINE_THRESHOLD_MINUTES` como constante de módulo — ahora se lee de la
+tabla en CADA tick (cada 2 min), con **fail-open** al default (5 min) si
+la lectura falla, para que un problema puntual de esa fila nunca tumbe el
+monitor completo (confirmado en vivo: el primer tick corrió ANTES de que
+la migración terminara de aplicarse, cayó al fail-open, logueó el error, y
+seguí funcionando con normalidad). `Settings.tsx`/`MonitorThresholdCard.tsx`
+pasan de `localStorage` a `GET/PUT /settings/system`, con el input
+deshabilitado para roles no-admin (que igual pueden VER el valor vigente).
+
+Deliberadamente NO se tocó en esta pasada: `DEVICE_OFFLINE_THRESHOLD_MINUTES`
+(el umbral del EQUIPO, mismo archivo) ni las copias del portal
+(`lib/constants.ts`, usadas en 9 archivos para badges "sin contacto" del
+lado cliente) — unificar TODAS las copias del mismo concepto es el
+"modelo unificado de umbrales" que este documento ya marcaba como una
+pasada aparte; éste era el único umbral que ya tenía un control de UI
+prometiendo hacer algo que no hacía, así que fue el único que se conectó.
+
+Verificado de punta a punta contra el stack Docker real (no sólo tests):
+`GET`/`PUT` por curl (valor por defecto, actualización, rango inválido →
+400, operator → 200 en GET/403 en PUT, client_viewer → 403 deny-by-default,
+fila de audit con el valor nuevo en metadata); Playwright real —
+`Settings.tsx` carga el valor del servidor, lo guarda, sobrevive un
+reload; CI completo (29 archivos, 0 fallos) tras el cambio a
+`heartbeatMonitor.ts` y `server.ts` (archivo compartido con la migración
+de arquitectura de `agents`, coordinado con la otra sesión para no pisar
+su commit — sus 54 archivos de `modules/agents` y mis 2 líneas de
+`server.ts` quedaron en el mismo commit de esa sesión, ver git log).
 
 ✅ **`MonitorData.config.ip_ranges` NO era un bug del backend — investigado
 a fondo antes de tocar nada** (24/08/2026). Las 3 columnas en cuestión
