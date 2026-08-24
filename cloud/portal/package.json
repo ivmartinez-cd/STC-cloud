@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "check": "node scripts/check-icons.js && tsc --noEmit && eslint .",
+    "check": "node scripts/check-icons.js && tsc --noEmit -p tsconfig.app.json && eslint .",
     "preview": "vite preview"
   },
   "dependencies": {

@@ -29,15 +29,11 @@ const COMMON_TIMEZONES = [
 
 export default function ConfigTabPanel({ monitor, onSave, onSaveSnmpCredentials }: ConfigTabPanelProps) {
   const [form, setForm] = useState<EditFormData>(() => {
-    let ranges = [];
-    if (monitor.config?.ip_ranges) {
-      ranges = typeof monitor.config.ip_ranges === 'string'
-        ? JSON.parse(monitor.config.ip_ranges as unknown as string)
-        : monitor.config.ip_ranges;
-    }
-    if (!Array.isArray(ranges) || ranges.length === 0) {
-      ranges = [{ start: '', end: '' }];
-    }
+    // `MonitorData.config.ip_ranges` es siempre un array ya parseado — la
+    // columna `agents.ip_ranges` es `jsonb`, node-pg la devuelve parseada
+    // siempre, y el backend (`parseAgentIpRanges` en
+    // `portalAgentController/reads.ts`) nunca manda un string crudo.
+    const ranges = monitor.config?.ip_ranges?.length ? monitor.config.ip_ranges : [{ start: '', end: '' }];
 
     return {
       name: monitor.name,

@@ -1803,13 +1803,9 @@ Familias reales sólo HP/Samsung/Lexmark (18 perfiles). Ricoh/Brother/Xerox → 
 ### R9 · Portal — **P1**
 Sin paginación (500 equipos = inusable), ~~3 tipos `Alert` distintos~~ (✅ ya
 consolidados en `types/alerts.ts` por una pasada previa de alertas — ver
-docblock ahí), tipo `MonitorData.config` miente (se parsea como string —
-`ip_ranges` a veces llega como string sin parsear del backend, workaround
-`typeof === 'string' ? JSON.parse` repetido en 4+ lugares tanto en
-`services/agentService/config.ts` como en el portal; requiere tocar
-`agentService/config.ts`, que está en el área que otra sesión está
-migrando a Clean Architecture ahora mismo — queda pendiente hasta que esa
-migración toque `agents`), ~~`Terminal.tsx` hardcodea
+docblock ahí), ~~tipo `MonitorData.config` miente (se parsea como
+string)~~ (✅ 24/08/2026, ver abajo — resultó ser código muerto en el
+portal, no un problema del backend), ~~`Terminal.tsx` hardcodea
 `wss://stc-cloud.onrender.com`~~ (✅ ya resuelto — deriva de
 `window.location.host`, quedó así desde el fix del ticket de WS de un solo
 uso, R4 más abajo), ✅ **401 hace `location.replace` y pierde la ruta**
@@ -1817,8 +1813,64 @@ uso, R4 más abajo), ✅ **401 hace `location.replace` y pierde la ruta**
 `localStorage` que en realidad **no lo lee nadie** (el umbral real está
 hardcodeado server-side en `heartbeatMonitor.ts` — el control de
 Configuración es decorativo; arreglarlo de verdad requiere tocar ese mismo
-archivo, en el área que la otra sesión está migrando ahora — queda
-pendiente). Sin tests.
+archivo, en el área que otra sesión está migrando ahora — queda pendiente
+hasta que termine `agents`). Sin tests server-side de paginación; el resto
+de R9 sigue abierto (paginación real, umbral offline decorativo).
+
+✅ **`MonitorData.config.ip_ranges` NO era un bug del backend — investigado
+a fondo antes de tocar nada** (24/08/2026). Las 3 columnas en cuestión
+(`agents.ip_ranges`, `snmp_credentials`, `business_hours`) son `jsonb` en
+Postgres — `node-pg` las devuelve SIEMPRE ya parseadas, nunca como string;
+confirmado con `\d agents` contra la base real. Los `typeof === 'string'
+? JSON.parse(...) : ...` repetidos por todo `agentService/config.ts` y
+`portalAgentController/reads.ts` (backend) nunca disparan esa rama en
+producción — son defensivos-pero-muertos, no la causa del problema. Esto
+significa que el fix real es **puramente de portal**, sin tocar
+`agentService/config.ts` para nada (así que no hacía falta esperar a la
+migración de `agents` para este ítem en particular). Se limpiaron los 2
+lugares del portal con el mismo workaround muerto:
+`components/monitors/ConfigTabPanel.tsx` (el editor real, usado desde
+`MonitorDetail.tsx`) y `components/monitors/EditMonitorModal.tsx` — este
+último resultó ser **código huérfano sin un solo importer**, y además
+tenía errores de tipo reales contra el `EditFormData` actual (`ipStart`/
+`ipEnd` ya no existen en ese tipo — se armó para una versión vieja del
+formulario de un solo rango, antes del editor multi-rango actual). Se
+borró en vez de arreglarlo.
+
+**Hallazgo más grande en el camino, no buscado**: al intentar verificar el
+fix con `tsc --noEmit` desde `cloud/portal/`, salió limpio — pero
+resultó ser un **falso positivo**. `cloud/portal/tsconfig.json` es
+"solution-style" (`{"files": [], "references": [...]}"`), y un `tsc
+--noEmit` plano (sin `-p` ni `--build`) contra ESE archivo no seguía las
+referencias — tipeaba CERO archivos, silenciosamente, exit 0. Esto es
+exactamente lo mismo que corre `npm run check` (usado por CI, job
+`portal`) y lo mismo que corrí yo mismo más temprano en esta sesión para
+"verificar" los cambios de `postLoginRedirect.ts`/`App.tsx`/`Login.tsx` —
+ninguna de esas verificaciones había tipeado nada en realidad. Re-corrido
+contra `-p tsconfig.app.json` (el project real): confirmó que esos 4
+archivos SÍ están limpios (nada que corregir ahí), pero además reveló los
+errores reales de `EditMonitorModal.tsx` de arriba y 3 más en
+`ErrorBoundary.tsx` (import default de `React` sin uso — quedó del JSX
+transform viejo — y `ErrorInfo`/`ReactNode` necesitando `import type` bajo
+`verbatimModuleSyntax`). Se corrigieron los 3. Se arregló la causa raíz:
+`package.json` → `"check": "... tsc --noEmit -p tsconfig.app.json ..."`
+(antes sin `-p`, CI incluido). De paso, `tsconfig.node.json` apuntaba a un
+`vite.config.ts` que ya no existe (el repo usa `vite.config.mjs`) — se
+borró junto con su referencia en el `tsconfig.json` raíz, no cumplía
+ninguna función.
+
+**Importante para el resto del backlog**: cualquier verificación de `tsc`
+en `cloud/portal/` hecha en pasadas anteriores de este mismo documento
+(antes del 24/08/2026) que haya corrido `tsc --noEmit` sin `-p
+tsconfig.app.json` debe tratarse como no verificada — no como "confirmada
+limpia". No se re-auditó retroactivamente todo el historial por alcance,
+pero el mecanismo del falso positivo queda documentado acá para quien
+retome R9/R10.
+
+Verificado: `npm run check` (icon-check + tsc real + eslint) limpio;
+`npm run build` limpio; Playwright real contra el stack Docker — pestaña
+Configuración de un monitor real renderiza sin errores de consola, con y
+sin `ip_ranges` configurados.
 
 ✅ **401/deep-link sin sesión ya no pierde la ruta** (24/08/2026). Dos
 puntos de entrada perdían a dónde iba el usuario: el interceptor 401 de
