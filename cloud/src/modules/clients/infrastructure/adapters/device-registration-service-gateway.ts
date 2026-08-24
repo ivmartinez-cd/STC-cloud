@@ -1,11 +1,11 @@
 import type { Knex } from "knex";
-import * as deviceRegistrationService from "../../../../services/deviceRegistrationService";
+import * as deviceRegistrationService from "../../../devices";
 import type {
   DeviceRegistrationGateway, ListPendingDevicesQuery, PendingDeviceActionInput,
 } from "../../application/ports/device-registration-gateway";
 
 /**
- * Adapter sobre `services/deviceRegistrationService.ts`. Sus `DeviceRegistrationError`
+ * Adapter sobre la fachada de `modules/devices` (cola de registro). Sus `DeviceRegistrationError`
  * (con `statusCode`) se dejan propagar tal cual — el controller las traduce
  * igual que antes.
  */

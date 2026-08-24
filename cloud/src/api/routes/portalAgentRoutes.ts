@@ -3,7 +3,7 @@ import { Knex } from "knex";
 import Redis from "ioredis";
 import { AgentService } from "../../services/agentService";
 import { createPortalAgentController } from "../controllers/portalAgentController";
-import { createDeviceController } from "../controllers/deviceController";
+import { createDecommissionStaleDevicesHandler } from "../../modules/devices";
 import type { AuthHook } from "../middlewares/authMiddleware";
 
 /**
@@ -94,7 +94,7 @@ export function registerPortalAgentRoutes(
   portalAuth: AuthHook
 ) {
   const ctrl = createPortalAgentController(fastify, db, redis, agentService);
-  const deviceCtrl = createDeviceController(db);
+  const decommissionStaleDevices = createDecommissionStaleDevicesHandler(db);
 
   fastify.get("/api/v1/agents", { preHandler: portalAuth, handler: ctrl.listAgents });
 
@@ -160,7 +160,7 @@ export function registerPortalAgentRoutes(
         },
       },
     },
-    handler: deviceCtrl.decommissionStaleDevices,
+    handler: decommissionStaleDevices,
   });
 
   // Lista de credenciales SNMP (§2.3 gap analysis: SNMPv3 + lista de

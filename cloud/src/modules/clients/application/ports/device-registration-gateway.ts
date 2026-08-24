@@ -1,8 +1,7 @@
 /**
  * Cola de registro de dispositivos (Fase 7 del gap analysis vs HP SDS). La
- * lógica vive en `services/deviceRegistrationService.ts` (dominio
- * `pending-devices`, todavía repartido entre agentService/deviceController —
- * ver Fase 3 del plan); las rutas `/clients/:id/pending-devices*` son
+ * lógica vive en `modules/devices` (fachada `listPending`/`registerDevices`/
+ * `ignoreDevices`); las rutas `/clients/:id/pending-devices*` son
  * presentación del cliente y delegan acá. Cuando exista `modules/pending-devices`,
  * este puerto se implementa con su fachada y estas rutas pueden mudarse.
  * Los resultados se devuelven tal cual (wire shape del servicio).

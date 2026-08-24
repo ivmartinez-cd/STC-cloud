@@ -1212,6 +1212,106 @@ momento muere con "Connection terminated unexpectedly" al reinicio. Esperar
 a `docker logs <pg> | grep -c "init process complete"` = 1 antes de levantar
 la API.
 
+## Fase 3 — `devices` migrado (2026-08-24)
+
+Sexto módulo y el más grande/central: ~2.200 líneas en 17 archivos
+(`api/controllers/deviceController/{index,shared,reads,crud,lifecycle,merge,
+monitor-state,bulk}.ts`, `api/routes/deviceRoutes.ts`,
+`services/deviceLifecycleService/{index,bulk,merge,merge-survivor,merge-types}.ts`,
+`services/deviceIdentity.ts`, `services/deviceMonitorService.ts`,
+`services/deviceRegistrationService.ts`). OK explícito de `close-hp-sds-gaps`,
+que tiene 2 fixes de R9 esperando sobre `agentService/config.ts` y
+`heartbeatMonitor.ts` — por eso `services/agentService/*` y `jobs/*` sólo
+cambian el path del import (fachada con las mismas firmas), nada más.
+
+División (`modules/devices/`, 35 archivos, ~1.900 líneas):
+- `domain/entities/device.ts` — `DeviceRow` (read model snake_case con las
+  columnas que el módulo LEE + index signature; `devices` es la tabla más
+  ancha y otros módulos le agregan columnas — mismo criterio que `ClientRecord`),
+  `PendingDeviceRow`, `BulkResult`/`BulkSkip`, `MergeParams`/`MergeResult`,
+  `ResolvedDevice`/`MatchedBy`.
+- `domain/errors/{device-error,merge-error}.ts` — `DeviceError` con
+  `statusCode` (NotFound 404, Validation 400, Merged 409, Conflict 409 con
+  `extra` para `collisionId`) y los nombres históricos conservados porque los
+  referencian consumidores externos: `MonitorStateError`, `BulkActionError`,
+  `DeviceRegistrationError`, `MergeError` + sus 4 subclases.
+- `domain/services/device-identity.ts` — la parte PURA de la escalera
+  serial → mac → ip: `isIdentifyingSerial` (denylist explícita), `normalizeMac`,
+  `NOISE_MODEL_RE`, `identityLockKey`, `shouldRebindAgent` (re-binding sticky
+  con gracia 2h + cooldown 24h). `domain/services/merge-rules.ts` — guardas
+  de fusión, precedencia de campos del superviviente, metadata de audit.
+  `domain/services/device-rules.ts` — whitelist de `PUT /devices/:id`,
+  estados de monitoreo válidos, corte de inactividad (7..365 días),
+  clasificación PURA de lotes (applied/skipped con motivo) y topes de 500.
+- `domain/repositories/{device,device-merge,device-registration}-repository.ts`
+  — tres interfaces: lecturas + CRUD + operaciones de fila del ciclo de vida;
+  operaciones de fila de la fusión (todas sobre la MISMA trx); cola de registro.
+- `application/ports/{audit-log-writer,device-unit-of-work,custom-field-merger,
+  device-supplies-reader}.ts` — la unidad de trabajo expone los 3
+  repositorios + audit sobre una trx y un `RollbackSignal` para el dry-run
+  real de la fusión (se ejecuta y SIEMPRE se revierte, como antes);
+  `custom_data` lo valida `modules/inventory` por puerto; los consumibles los
+  calcula `services/suppliesService` por puerto.
+- `application/use-cases/` — 10 archivos: lecturas (list/get/readings/
+  supplies/usage-history/duplicates), `update-device`, `delete-device`,
+  `lifecycle-use-cases` (baja con lock+idempotente / reactivación),
+  `move-device`, `decommission-stale-devices`, `merge-devices`
+  (`MergeDevicesUseCase` con `executeIn(tx)` para componer con la trx de la
+  ingesta + `MergeDeviceRequestUseCase` para el endpoint), `monitor-state-use-cases`
+  (primitiva única + single + bulk), `bulk-lifecycle-use-cases`,
+  `registration-use-cases`.
+- `infrastructure/database/` — `knex-device-repository.ts` (+ `device-sql.ts`
+  con el self-join de duplicados), `knex-device-merge-repository.ts`,
+  `knex-device-registration-repository.ts`, `knex-device-identity-resolver.ts`
+  (la resolución contra la base con `pg_advisory_xact_lock`, camino de
+  INGESTA — función sobre `trx`, no caso de uso HTTP), `knex-audit-log-writer.ts`,
+  `knex-device-unit-of-work.ts` (+ `scopeFor(trx)` para componer con una trx
+  ajena). `infrastructure/adapters/` — inventario y consumibles.
+- `presentation/{device-controller,device-bulk-controller,device-routes,
+  device-wiring}.ts` — 18 rutas con sus JSON schemas literales.
+- `index.ts` — fachada: `mergeDevices(db, params, trx?)`,
+  `resolveDeviceIdentity(trx, …)`, `isIdentifyingSerial`/`normalizeMac`/
+  `NOISE_MODEL_RE`, `setMonitorState`, `listPending`/`registerDevices`/
+  `ignoreDevices`/`unignore`, los errores, y
+  `createDecommissionStaleDevicesHandler(db)` para `portalAgentRoutes`.
+
+**Detalles preservados a propósito:** `DELETE /devices/:id` respondía con
+`e.status ?? 404` + mensaje ante CUALQUIER error (se conserva en el
+controller); los errores `Merge*` → 409 (incluido "no existe", ya validado
+contra el scope); baja single idempotente (equipo ya de baja → devuelve la
+fila sin tocar); `setMonitorState`/`unignore` devuelven `null` si el equipo
+no existe; en el bulk de monitor-state un `state` inválido aborta con 400
+antes de mutar nada y "fusionado" (409) es por-dispositivo; la reactivación
+single sigue sin transacción ni lock (como el original).
+
+Consumidores externos: `services/agentService/{sync-reading,device-registration,
+sync-reading-alerts}.ts`, `modules/clients` (gateway de la cola de registro
++ `DeviceRegistrationError`), `api/routes/portalAgentRoutes.ts`
+(`decommissionStaleDevices`) y `api/server.ts` — todos sólo cambian el import.
+Borrados los 17 archivos originales.
+
+**Deuda aceptada en baseline:** 12 funciones >20 líneas dentro del módulo —
+cierres transaccionales con pasos secuenciales + literal de metadata de
+audit (`delete`, `decommission`, `move`, `bulkMove`), el `select` de la ficha
+(`getDetail`), `matchByIp`, y los registros de rutas/handlers. Partirlas más
+fragmentaría flujos atómicos sin ganar claridad; los handlers originales
+tenían 40-80 líneas cada uno.
+
+**Validación:** `npx tsc --noEmit` limpio. Entorno efímero aislado (esta
+vez esperando `init process complete` de TimescaleDB antes de levantar la
+API — ver nota en la pasada de `clients`; OK previo de las sesiones que lo
+piden por corrida). Suite completa: **27 de 29 archivos verdes** — los que
+ejercitan el módulo: `deviceLifecycle.test.ts` 29/29 (baja/reactivación/
+movimiento/fusión con dry-run y solape/bulk), `monitorState.test.ts` 11/11
+(incluido el guard estático de inserts en `alerts`), `pendingDevices.test.ts`
+17/17, `deviceUsageHistory.test.ts` 7/7, `deviceCosts.test.ts` 9/9,
+`inventoryFields.test.ts` 15/15 (`custom_data` vía el puerto), `e2e.test.ts`
+37/37 (ingesta con `resolveDeviceIdentity` y fusión automática vía la
+fachada), `rbac.test.ts` 87/87, `publicApi.test.ts` 24/24; los 2 fallos son
+los mismos ajenos y de entorno (`observability` pub/sub WS flaky, `twoFactor`
+6.3 → 429). `check-sizes.mjs` limpio tras regenerar baseline (deuda
+aceptada documentada arriba).
+
 ## 0. Punto de partida (medido 2026-08-24)
 
 `stc-cloud` es un monolito con **varios dominios de negocio** bajo un mismo backend

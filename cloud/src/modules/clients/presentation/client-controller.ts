@@ -1,7 +1,7 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { getClientIp } from "../../../api/utils/ip";
 import { getPortalUser, getScope } from "../../../api/utils/scope";
-import { DeviceRegistrationError } from "../../../services/deviceRegistrationService";
+import { DeviceRegistrationError } from "../../devices";
 import { ClientError } from "../domain/errors/client-error";
 import type {
   CreateApiKeyUseCase, ListApiKeysUseCase, RevokeApiKeyUseCase,

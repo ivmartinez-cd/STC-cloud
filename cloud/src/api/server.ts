@@ -37,7 +37,7 @@ import { registerAgentRoutes } from "./routes/agentRoutes";
 import { registerPortalAgentRoutes } from "./routes/portalAgentRoutes";
 import { registerClientRoutes } from "../modules/clients/presentation/client-routes";
 import { registerPublicApiRoutes } from "./routes/publicApiRoutes";
-import { registerDeviceRoutes } from "./routes/deviceRoutes";
+import { registerDeviceRoutes } from "../modules/devices/presentation/device-routes";
 import { registerDashboardRoutes } from "./routes/dashboardRoutes";
 import { registerFeedbackRoutes } from "../modules/feedback/presentation/feedback-routes";
 import { registerScheduledReportRoutes } from "../modules/scheduled-reports/presentation/scheduled-report-routes";

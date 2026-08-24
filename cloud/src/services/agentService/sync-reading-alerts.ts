@@ -1,6 +1,6 @@
 import type { Knex } from "knex";
 import * as alertService from "../../modules/alerts";
-import { mergeDevices } from "../deviceLifecycleService";
+import { mergeDevices } from "../../modules/devices";
 import { logger } from "../../logger";
 
 // Alerta de EVENTO, no de estado: dedupe por (device_id,type) — antes era por

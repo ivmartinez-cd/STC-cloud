@@ -1,7 +1,7 @@
 import type { Knex } from "knex";
 import crypto from "crypto";
 import net from "net";
-import { resolveDeviceIdentity } from "../deviceIdentity";
+import { resolveDeviceIdentity } from "../../modules/devices";
 import { resolveSupplyOrigin } from "../supplyOrigin";
 import { parseNaiveLocalTimestamp } from "../businessHours";
 import { logger } from "../../logger";

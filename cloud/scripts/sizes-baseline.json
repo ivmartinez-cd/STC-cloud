@@ -10,14 +10,6 @@
     "src/api/controllers/dashboardController/dashboard-queries.ts": 237,
     "src/api/controllers/dashboardController/dashboard.ts": 128,
     "src/api/controllers/dashboardController/index.ts": 14,
-    "src/api/controllers/deviceController/bulk.ts": 100,
-    "src/api/controllers/deviceController/crud.ts": 116,
-    "src/api/controllers/deviceController/index.ts": 24,
-    "src/api/controllers/deviceController/lifecycle.ts": 241,
-    "src/api/controllers/deviceController/merge.ts": 113,
-    "src/api/controllers/deviceController/monitor-state.ts": 65,
-    "src/api/controllers/deviceController/reads.ts": 211,
-    "src/api/controllers/deviceController/shared.ts": 9,
     "src/api/controllers/incidentController.ts": 186,
     "src/api/controllers/portalAgentController/config.ts": 93,
     "src/api/controllers/portalAgentController/index.ts": 30,
@@ -33,7 +25,6 @@
     "src/api/routes/agentRoutes.ts": 127,
     "src/api/routes/authRoutes.ts": 153,
     "src/api/routes/dashboardRoutes.ts": 21,
-    "src/api/routes/deviceRoutes.ts": 221,
     "src/api/routes/incidentRoutes.ts": 143,
     "src/api/routes/portalAgentRoutes.ts": 247,
     "src/api/routes/publicApiRoutes.ts": 85,
@@ -96,7 +87,7 @@
     "src/modules/clients/application/dtos/client-dtos.ts": 65,
     "src/modules/clients/application/ports/api-key-store.ts": 24,
     "src/modules/clients/application/ports/audit-log-writer.ts": 13,
-    "src/modules/clients/application/ports/device-registration-gateway.ts": 30,
+    "src/modules/clients/application/ports/device-registration-gateway.ts": 29,
     "src/modules/clients/application/ports/webhook-config-store.ts": 26,
     "src/modules/clients/application/use-cases/client-api-key-use-cases.ts": 30,
     "src/modules/clients/application/use-cases/client-pending-device-use-cases.ts": 43,
@@ -117,6 +108,44 @@
     "src/modules/device-costs/index.ts": 10,
     "src/modules/device-costs/infrastructure/database/knex-device-costs-repository.ts": 58,
     "src/modules/device-costs/presentation/device-costs-routes.ts": 96,
+    "src/modules/devices/application/dtos/device-dtos.ts": 133,
+    "src/modules/devices/application/ports/audit-log-writer.ts": 14,
+    "src/modules/devices/application/ports/custom-field-merger.ts": 10,
+    "src/modules/devices/application/ports/device-supplies-reader.ts": 9,
+    "src/modules/devices/application/ports/device-unit-of-work.ts": 21,
+    "src/modules/devices/application/use-cases/bulk-lifecycle-use-cases.ts": 111,
+    "src/modules/devices/application/use-cases/decommission-stale-devices.ts": 35,
+    "src/modules/devices/application/use-cases/delete-device.ts": 38,
+    "src/modules/devices/application/use-cases/device-read-use-cases.ts": 72,
+    "src/modules/devices/application/use-cases/lifecycle-use-cases.ts": 60,
+    "src/modules/devices/application/use-cases/merge-devices.ts": 112,
+    "src/modules/devices/application/use-cases/monitor-state-use-cases.ts": 84,
+    "src/modules/devices/application/use-cases/move-device.ts": 67,
+    "src/modules/devices/application/use-cases/registration-use-cases.ts": 111,
+    "src/modules/devices/application/use-cases/update-device.ts": 38,
+    "src/modules/devices/domain/entities/device.ts": 134,
+    "src/modules/devices/domain/errors/device-error.ts": 60,
+    "src/modules/devices/domain/errors/merge-error.ts": 23,
+    "src/modules/devices/domain/repositories/device-merge-repository.ts": 36,
+    "src/modules/devices/domain/repositories/device-registration-repository.ts": 28,
+    "src/modules/devices/domain/repositories/device-repository.ts": 58,
+    "src/modules/devices/domain/services/device-identity.ts": 81,
+    "src/modules/devices/domain/services/device-rules.ts": 111,
+    "src/modules/devices/domain/services/merge-rules.ts": 118,
+    "src/modules/devices/index.ts": 63,
+    "src/modules/devices/infrastructure/adapters/inventory-custom-field-merger.ts": 13,
+    "src/modules/devices/infrastructure/adapters/supplies-device-supplies-reader.ts": 13,
+    "src/modules/devices/infrastructure/database/device-sql.ts": 34,
+    "src/modules/devices/infrastructure/database/knex-audit-log-writer.ts": 16,
+    "src/modules/devices/infrastructure/database/knex-device-identity-resolver.ts": 88,
+    "src/modules/devices/infrastructure/database/knex-device-merge-repository.ts": 103,
+    "src/modules/devices/infrastructure/database/knex-device-registration-repository.ts": 67,
+    "src/modules/devices/infrastructure/database/knex-device-repository.ts": 184,
+    "src/modules/devices/infrastructure/database/knex-device-unit-of-work.ts": 25,
+    "src/modules/devices/presentation/device-bulk-controller.ts": 51,
+    "src/modules/devices/presentation/device-controller.ts": 94,
+    "src/modules/devices/presentation/device-routes.ts": 131,
+    "src/modules/devices/presentation/device-wiring.ts": 54,
     "src/modules/email-log/domain/entities/email-log-entry.ts": 36,
     "src/modules/email-log/infrastructure/database/knex-email-log-repository.ts": 71,
     "src/modules/email-log/presentation/email-log-routes.ts": 52,
@@ -241,14 +270,6 @@
     "src/services/auditService.ts": 42,
     "src/services/businessHours.ts": 125,
     "src/services/cryptoService.ts": 112,
-    "src/services/deviceIdentity.ts": 222,
-    "src/services/deviceLifecycleService/bulk.ts": 219,
-    "src/services/deviceLifecycleService/index.ts": 18,
-    "src/services/deviceLifecycleService/merge-survivor.ts": 62,
-    "src/services/deviceLifecycleService/merge-types.ts": 66,
-    "src/services/deviceLifecycleService/merge.ts": 282,
-    "src/services/deviceMonitorService.ts": 59,
-    "src/services/deviceRegistrationService.ts": 200,
     "src/services/ewsProxyService.ts": 75,
     "src/services/incidentClassifier.ts": 34,
     "src/services/incidentService.ts": 363,
@@ -497,94 +518,6 @@
         "length": 82
       }
     ],
-    "src/api/controllers/deviceController/bulk.ts": [
-      {
-        "name": "bulkSetMonitorState",
-        "length": 35
-      }
-    ],
-    "src/api/controllers/deviceController/crud.ts": [
-      {
-        "name": "updateDevice",
-        "length": 52
-      },
-      {
-        "name": "deleteDevice",
-        "length": 46
-      },
-      {
-        "name": "anonymous",
-        "length": 35
-      }
-    ],
-    "src/api/controllers/deviceController/lifecycle.ts": [
-      {
-        "name": "decommissionDevice",
-        "length": 57
-      },
-      {
-        "name": "anonymous",
-        "length": 41
-      },
-      {
-        "name": "recommissionDevice",
-        "length": 27
-      },
-      {
-        "name": "moveDevice",
-        "length": 86
-      },
-      {
-        "name": "anonymous",
-        "length": 69
-      },
-      {
-        "name": "decommissionStaleDevices",
-        "length": 45
-      }
-    ],
-    "src/api/controllers/deviceController/merge.ts": [
-      {
-        "name": "mergeDevice",
-        "length": 57
-      },
-      {
-        "name": "listDuplicates",
-        "length": 40
-      }
-    ],
-    "src/api/controllers/deviceController/monitor-state.ts": [
-      {
-        "name": "updateMonitorState",
-        "length": 24
-      },
-      {
-        "name": "unignoreDevice",
-        "length": 23
-      }
-    ],
-    "src/api/controllers/deviceController/reads.ts": [
-      {
-        "name": "listDevices",
-        "length": 28
-      },
-      {
-        "name": "getDevice",
-        "length": 49
-      },
-      {
-        "name": "getDeviceReadings",
-        "length": 38
-      },
-      {
-        "name": "getDeviceSupplies",
-        "length": 26
-      },
-      {
-        "name": "getDeviceUsageHistory",
-        "length": 32
-      }
-    ],
     "src/api/controllers/incidentController.ts": [
       {
         "name": "createIncidentController",
@@ -693,12 +626,6 @@
       {
         "name": "registerAuthRoutes",
         "length": 75
-      }
-    ],
-    "src/api/routes/deviceRoutes.ts": [
-      {
-        "name": "registerDeviceRoutes",
-        "length": 93
       }
     ],
     "src/api/routes/incidentRoutes.ts": [
@@ -851,6 +778,72 @@
       {
         "name": "registerClientRoutes",
         "length": 31
+      }
+    ],
+    "src/modules/devices/application/use-cases/bulk-lifecycle-use-cases.ts": [
+      {
+        "name": "execute",
+        "length": 25
+      },
+      {
+        "name": "anonymous",
+        "length": 21
+      }
+    ],
+    "src/modules/devices/application/use-cases/delete-device.ts": [
+      {
+        "name": "execute",
+        "length": 24
+      },
+      {
+        "name": "anonymous",
+        "length": 21
+      }
+    ],
+    "src/modules/devices/application/use-cases/lifecycle-use-cases.ts": [
+      {
+        "name": "execute",
+        "length": 22
+      }
+    ],
+    "src/modules/devices/application/use-cases/move-device.ts": [
+      {
+        "name": "execute",
+        "length": 32
+      },
+      {
+        "name": "anonymous",
+        "length": 27
+      }
+    ],
+    "src/modules/devices/infrastructure/database/knex-device-identity-resolver.ts": [
+      {
+        "name": "matchByIp",
+        "length": 21
+      }
+    ],
+    "src/modules/devices/infrastructure/database/knex-device-repository.ts": [
+      {
+        "name": "getDetail",
+        "length": 25
+      }
+    ],
+    "src/modules/devices/presentation/device-bulk-controller.ts": [
+      {
+        "name": "createDeviceBulkController",
+        "length": 28
+      }
+    ],
+    "src/modules/devices/presentation/device-controller.ts": [
+      {
+        "name": "mutationHandlers",
+        "length": 26
+      }
+    ],
+    "src/modules/devices/presentation/device-routes.ts": [
+      {
+        "name": "registerDeviceRoutes",
+        "length": 34
       }
     ],
     "src/modules/inventory/application/use-cases/custom-field-def-use-cases.ts": [
@@ -1031,76 +1024,6 @@
       {
         "name": "decryptSecret",
         "length": 22
-      }
-    ],
-    "src/services/deviceIdentity.ts": [
-      {
-        "name": "resolveDeviceIdentity",
-        "length": 95
-      },
-      {
-        "name": "maybeRebindAgent",
-        "length": 25
-      }
-    ],
-    "src/services/deviceLifecycleService/bulk.ts": [
-      {
-        "name": "bulkDecommission",
-        "length": 51
-      },
-      {
-        "name": "anonymous",
-        "length": 43
-      },
-      {
-        "name": "bulkRecommission",
-        "length": 36
-      },
-      {
-        "name": "anonymous",
-        "length": 29
-      },
-      {
-        "name": "bulkMove",
-        "length": 77
-      },
-      {
-        "name": "anonymous",
-        "length": 69
-      }
-    ],
-    "src/services/deviceLifecycleService/merge.ts": [
-      {
-        "name": "resolveReadingOverlap",
-        "length": 22
-      },
-      {
-        "name": "runMerge",
-        "length": 25
-      }
-    ],
-    "src/services/deviceMonitorService.ts": [
-      {
-        "name": "setMonitorState",
-        "length": 36
-      }
-    ],
-    "src/services/deviceRegistrationService.ts": [
-      {
-        "name": "listPending",
-        "length": 41
-      },
-      {
-        "name": "registerDevices",
-        "length": 43
-      },
-      {
-        "name": "ignoreDevices",
-        "length": 45
-      },
-      {
-        "name": "unignore",
-        "length": 26
       }
     ],
     "src/services/incidentService.ts": [

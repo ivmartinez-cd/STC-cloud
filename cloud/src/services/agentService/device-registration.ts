@@ -1,6 +1,6 @@
 import type { Knex } from "knex";
 import crypto from "crypto";
-import { resolveDeviceIdentity } from "../deviceIdentity";
+import { resolveDeviceIdentity } from "../../modules/devices";
 import { logger } from "../../logger";
 import type { IncomingDevice } from "./types";
 
