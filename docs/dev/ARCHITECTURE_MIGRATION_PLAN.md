@@ -1,8 +1,9 @@
 # Plan de Migración a ARCHITECTURE_GUIDE.md
 
 **Estado:** Fase 0, Fase 1 y Fase 2 (backend) completas — incluidas las 2
-pasadas diferidas de alto riesgo (`syncReadings`, `mergeDevices`); Frontend
-sin arrancar — 2026-08-24  
+pasadas diferidas de alto riesgo (`syncReadings`, `mergeDevices`); Fase 2
+(frontend) arrancada — `Settings.tsx` dividido, 6 archivos grandes de
+`portal/src` pendientes — 2026-08-24  
 **Origen:** `docs/dev/ARCHITECTURE_GUIDE.md` (copiado desde `helpdesk-manager`, 2026-08-24)  
 **Reemplaza (parcialmente) a:** `docs/dev/PROJECT_GUIDELINES.md`, que hoy documenta la
 convención opuesta (`api/` para rutas + `services/` para lógica de negocio, sin capas).
@@ -381,6 +382,88 @@ de la sesión hermana):
 Con esto, Fase 2 backend queda 100% completa. Sigue pendiente el frontend
 (ver tabla de archivos grandes de `portal/src` arriba) — no arrancado en
 esta sesión.
+
+## Fase 2 (frontend) — arranca con `Settings.tsx` (2026-08-24)
+
+Ivan pidió continuar ("Continuar") una vez cerrado el backend. Antes de tocar
+nada de `portal/src` se coordinó con las 3 sesiones hermanas activas en la
+misma máquina (mismo working directory, sin worktrees — cualquier archivo
+que otra sesión esté editando puede chocar en disco, no sólo en un branch
+git): `manual-coordinate-correction-ui` (otro repo, `helpdesk-manager`, sin
+superposición), `sdsinsumos-bf` (otro repo, `sdsinsumos`, sin superposición)
+y `close-hp-sds-gaps` (mismo repo — confirmó que `Settings.tsx` está libre y
+pidió reservarle `Layout.tsx`/`Reports.tsx`, que está tocando en vivo para
+su Fase 4.1 de informes programados).
+
+`Settings.tsx` (869 líneas, el archivo de portal más grande) se eligió por
+ser el candidato más grande que estaba genuinamente libre. División:
+- `types/settings.ts` (30L, nuevo) — `Thresholds`, `DBUser`, `DBClient`,
+  `DBFeedback`.
+- `components/settings/MonitorThresholdCard.tsx` (42L, nuevo) — presentacional,
+  recibe `thresholds`/`onChange`.
+- `components/settings/SmtpInfoCard.tsx` (70L, nuevo) — presentacional
+  (los campos SMTP son de sólo lectura/decorativos, `disabled` — nunca se
+  guardan; comportamiento preservado tal cual).
+- `components/settings/FeedbackCard.tsx` (121L, nuevo) — autocontenido (fetch,
+  expand/collapse, cambio de estado), sólo se monta si `isAdmin` (igual que
+  antes).
+- `components/settings/operators/` (nuevo, 5 archivos: `UserTable.tsx` 108L,
+  `CreateUserModal.tsx` 161L, `ResetPasswordModal.tsx` 94L,
+  `RoleChangeModal.tsx` 68L, `OperatorsCard.tsx` 187L orquestador) — cada
+  modal quedó autocontenido (su propio estado de formulario + su propia
+  llamada a `api.*`), siguiendo el mismo patrón que
+  `components/clients/ApiKeysCard.tsx` (`NewKeyModal`/`WebhookSection`
+  inline). `OperatorsCard` conserva `fetchUsers`/`fetchClients`/
+  `toggleUserActive`/`handleRoleChange`/`handleDeleteUser` porque son
+  compartidos entre la tabla y más de un modal.
+- `pages/Settings.tsx` (869L → 71L) — sólo orquesta: estado de threshold/smtp
+  (el único que de verdad usa el botón "Guardar Cambios" — SMTP nunca se
+  guardó, es decorativo) + composición de las 4 cards.
+
+**Confirmado explícitamente lo que dice este plan más arriba:** dividir
+componentes React no es el mismo patrón mecánico que los `services/*.ts`
+del backend. `check-sizes.mjs` sí se cumple a rajatabla en el límite de
+**archivo** (300 líneas, todos los nuevos muy por debajo), pero el límite de
+**función** de 20 líneas es sistemáticamente incumplido por cualquier
+componente con JSX no trivial — ya era así antes de esta sesión
+(`ApiKeysCard.tsx`, no tocado acá, tiene funciones de 57/126/137 líneas
+aceptadas en baseline) y se mantiene igual criterio: los 9 componentes
+nuevos quedan con su función principal >20 líneas, aceptado vía
+`--write-baseline` igual que el resto del frontend. No tiene sentido forzar
+un componente de React a <20 líneas partiendo su JSX en fragmentos
+artificiales — el criterio duro que sí se sostiene es el de archivo.
+
+**Validación:** `cloud/portal` → `npm run check` (icons + tsc + eslint)
+limpio. Vite dev server (puerto 5180, ya corriendo) transforma todos los
+módulos nuevos sin error (`curl` a cada uno → 200, sin overlay de error).
+**Limitación reconocida:** no se pudo hacer una prueba visual real en
+navegador en este entorno (sin herramienta de automatización de browser
+disponible) — la verificación de comportamiento se hizo por lectura
+cuidadosa línea a línea contra el original (mismas clases, mismos handlers,
+mismo flujo de estado) más `tsc`/`eslint` limpios, no por click-through
+manual. Ivan debería confirmar visualmente en `http://localhost:5180` (o
+reconstruyendo el contenedor Docker del portal) antes de dar esto por
+cerrado del todo.
+
+**Nota de baseline compartido:** al regenerar `sizes-baseline.json` en este
+paso, el scan también capturó trabajo en curso (sin commitear) de
+`close-hp-sds-gaps` — su módulo `modules/scheduled-reports/` completo,
+`api/server.ts` y `tests/rbac.test.ts` crecidos, `tests/scheduledReports.test.ts`
+nuevo. Es intencional y no problemático: el baseline es un ratchet
+compartido en disco (no versionado por sesión), sólo fija un piso de "no
+empeorar" — no le quita mérito ni commitea su código por mí, y cuando ellos
+commiteen su propio trabajo `check-sizes.mjs` no va a mostrar nada nuevo
+para esos archivos porque ya quedaron reflejados acá.
+
+**Pendiente de Fase 2 frontend:** `DeviceDetail.tsx` (772), `Monitors.tsx`
+(615), `DeviceLifecycleModals.tsx` (603), `ClientDetail.tsx` (571),
+`MonitorDetail.tsx` (569), `Dashboard.tsx` (507) sin dividir. De estos,
+`DeviceLifecycleModals.tsx`, `ClientDetail.tsx`, `Dashboard.tsx` y
+`DeviceDetail.tsx` tienen cambios sin commitear de la Fase 11 de
+`close-hp-sds-gaps` (confirmados "terminados, no se van a seguir editando"
+pero sin commitear) — si se dividen, hacerlo sobre el working tree actual,
+no sobre HEAD, para no perder ese trabajo. `Layout.tsx` está reservado por
+`close-hp-sds-gaps` hasta nuevo aviso (activo en su Fase 4.1).
 
 ## 0. Punto de partida (medido 2026-08-24)
 

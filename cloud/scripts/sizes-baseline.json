@@ -54,7 +54,7 @@
     "src/api/routes/publicApiRoutes.ts": 85,
     "src/api/routes/reportRoutes.ts": 78,
     "src/api/routes/suppliesRoutes.ts": 17,
-    "src/api/server.ts": 337,
+    "src/api/server.ts": 340,
     "src/api/utils/deviceFilters.ts": 60,
     "src/api/utils/ip.ts": 16,
     "src/api/utils/password.ts": 28,
@@ -70,6 +70,7 @@
     "src/jobs/publicWebhookWorker.ts": 73,
     "src/jobs/reportDeliveryWorker.ts": 114,
     "src/jobs/retentionJob.ts": 80,
+    "src/jobs/scheduledReportsWorker.ts": 49,
     "src/logger.ts": 13,
     "src/modules/feedback/application/dtos/feedback-dtos.ts": 26,
     "src/modules/feedback/application/ports/audit-log-writer.ts": 12,
@@ -86,6 +87,22 @@
     "src/modules/feedback/presentation/feedback-routes.ts": 36,
     "src/modules/feedback/presentation/feedback-schemas.ts": 30,
     "src/modules/feedback/presentation/feedback-view.ts": 27,
+    "src/modules/scheduled-reports/application/dtos/scheduled-report-dtos.ts": 79,
+    "src/modules/scheduled-reports/application/ports/report-mailer.ts": 12,
+    "src/modules/scheduled-reports/application/ports/report-renderer.ts": 28,
+    "src/modules/scheduled-reports/application/use-cases/run-scheduled-report.ts": 68,
+    "src/modules/scheduled-reports/application/use-cases/save-scheduled-report.ts": 71,
+    "src/modules/scheduled-reports/domain/entities/scheduled-report.ts": 96,
+    "src/modules/scheduled-reports/domain/repositories/scheduled-report-repository.ts": 36,
+    "src/modules/scheduled-reports/infrastructure/database/knex-scheduled-report-repository.ts": 111,
+    "src/modules/scheduled-reports/infrastructure/mail/smtp-report-mailer.ts": 32,
+    "src/modules/scheduled-reports/infrastructure/renderers/device-tables.ts": 81,
+    "src/modules/scheduled-reports/infrastructure/renderers/knex-report-renderer.ts": 65,
+    "src/modules/scheduled-reports/infrastructure/renderers/tabular-export.ts": 52,
+    "src/modules/scheduled-reports/infrastructure/renderers/usage-supplies-alerts-tables.ts": 111,
+    "src/modules/scheduled-reports/presentation/scheduled-report-controller.ts": 121,
+    "src/modules/scheduled-reports/presentation/scheduled-report-routes.ts": 34,
+    "src/modules/scheduled-reports/presentation/scheduled-report-schemas.ts": 31,
     "src/services/agentService/agent-service.ts": 146,
     "src/services/agentService/commands.ts": 55,
     "src/services/agentService/config.ts": 263,
@@ -161,8 +178,9 @@
     "src/tests/pendingDevices.test.ts": 267,
     "src/tests/portalAgentEws.test.ts": 177,
     "src/tests/publicApi.test.ts": 298,
-    "src/tests/rbac.test.ts": 687,
+    "src/tests/rbac.test.ts": 700,
     "src/tests/reports.test.ts": 219,
+    "src/tests/scheduledReports.test.ts": 185,
     "src/tests/snmpCredentials.test.ts": 283,
     "src/tests/supplies.test.ts": 211,
     "src/tests/supplyOrigin.test.ts": 164,
@@ -195,6 +213,14 @@
     "portal/src/components/monitors/RemoteToolsPanel.tsx": 72,
     "portal/src/components/monitors/ReportsTabPanel.tsx": 451,
     "portal/src/components/monitors/SnmpCredentialsPanel.tsx": 354,
+    "portal/src/components/settings/FeedbackCard.tsx": 122,
+    "portal/src/components/settings/MonitorThresholdCard.tsx": 43,
+    "portal/src/components/settings/SmtpInfoCard.tsx": 71,
+    "portal/src/components/settings/operators/CreateUserModal.tsx": 162,
+    "portal/src/components/settings/operators/OperatorsCard.tsx": 188,
+    "portal/src/components/settings/operators/ResetPasswordModal.tsx": 95,
+    "portal/src/components/settings/operators/RoleChangeModal.tsx": 69,
+    "portal/src/components/settings/operators/UserTable.tsx": 109,
     "portal/src/components/ui/BrandModal.tsx": 91,
     "portal/src/components/ui/ConfirmationModal.tsx": 105,
     "portal/src/context/AuthContext.tsx": 99,
@@ -226,7 +252,7 @@
     "portal/src/pages/Monitors.tsx": 616,
     "portal/src/pages/PendingDevices.tsx": 270,
     "portal/src/pages/Reports.tsx": 367,
-    "portal/src/pages/Settings.tsx": 870,
+    "portal/src/pages/Settings.tsx": 72,
     "portal/src/pages/Supplies.tsx": 253,
     "portal/src/types/agents.ts": 83,
     "portal/src/types/alerts.ts": 68,
@@ -236,6 +262,7 @@
     "portal/src/types/monitor.ts": 347,
     "portal/src/types/pendingDevices.ts": 24,
     "portal/src/types/reports.ts": 78,
+    "portal/src/types/settings.ts": 31,
     "portal/src/types/supplies.ts": 45
   },
   "functions": {
@@ -614,7 +641,7 @@
     "src/api/server.ts": [
       {
         "name": "start",
-        "length": 232
+        "length": 233
       },
       {
         "name": "healthHandler",
@@ -1508,7 +1535,7 @@
       },
       {
         "name": "describe(RBAC — mutaciones denegadas para client_viewer)",
-        "length": 198
+        "length": 211
       },
       {
         "name": "describe(RBAC — restricciones a nivel de base (defensa en profundidad))",
@@ -1531,6 +1558,16 @@
       {
         "name": "describe(Reportes — cierre inmutable)",
         "length": 55
+      }
+    ],
+    "src/tests/scheduledReports.test.ts": [
+      {
+        "name": "describe(computeNextRunAt (unitario puro, determinista))",
+        "length": 35
+      },
+      {
+        "name": "describe(Informes programados e2e)",
+        "length": 111
       }
     ],
     "src/tests/snmpCredentials.test.ts": [
@@ -1841,6 +1878,62 @@
         "length": 84
       }
     ],
+    "portal/src/components/settings/FeedbackCard.tsx": [
+      {
+        "name": "FeedbackCard",
+        "length": 116
+      },
+      {
+        "name": "anonymous",
+        "length": 61
+      }
+    ],
+    "portal/src/components/settings/MonitorThresholdCard.tsx": [
+      {
+        "name": "MonitorThresholdCard",
+        "length": 39
+      }
+    ],
+    "portal/src/components/settings/SmtpInfoCard.tsx": [
+      {
+        "name": "SmtpInfoCard",
+        "length": 52
+      }
+    ],
+    "portal/src/components/settings/operators/CreateUserModal.tsx": [
+      {
+        "name": "CreateUserModal",
+        "length": 156
+      },
+      {
+        "name": "handleCreateUser",
+        "length": 24
+      }
+    ],
+    "portal/src/components/settings/operators/OperatorsCard.tsx": [
+      {
+        "name": "OperatorsCard",
+        "length": 177
+      }
+    ],
+    "portal/src/components/settings/operators/ResetPasswordModal.tsx": [
+      {
+        "name": "ResetPasswordModal",
+        "length": 89
+      }
+    ],
+    "portal/src/components/settings/operators/RoleChangeModal.tsx": [
+      {
+        "name": "RoleChangeModal",
+        "length": 64
+      }
+    ],
+    "portal/src/components/settings/operators/UserTable.tsx": [
+      {
+        "name": "UserTable",
+        "length": 105
+      }
+    ],
     "portal/src/components/ui/BrandModal.tsx": [
       {
         "name": "BrandModal",
@@ -2064,15 +2157,7 @@
     "portal/src/pages/Settings.tsx": [
       {
         "name": "Settings",
-        "length": 822
-      },
-      {
-        "name": "handleCreateUser",
-        "length": 28
-      },
-      {
-        "name": "anonymous",
-        "length": 63
+        "length": 51
       }
     ],
     "portal/src/pages/Supplies.tsx": [
