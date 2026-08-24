@@ -1,6 +1,6 @@
 # Plan de Migración a ARCHITECTURE_GUIDE.md
 
-**Estado:** Fase 0, Fase 1 (módulo piloto) y arranque de Fase 2 completos (2026-08-24)  
+**Estado:** Fase 0, Fase 1 (módulo piloto) y Fase 2 en curso (4 de N) — 2026-08-24  
 **Origen:** `docs/dev/ARCHITECTURE_GUIDE.md` (copiado desde `helpdesk-manager`, 2026-08-24)  
 **Reemplaza (parcialmente) a:** `docs/dev/PROJECT_GUIDELINES.md`, que hoy documenta la
 convención opuesta (`api/` para rutas + `services/` para lógica de negocio, sin capas).
@@ -180,11 +180,22 @@ completo del objeto que retorna). Cero consumidores tocados (`deviceRoutes.ts`,
 `portalAgentRoutes.ts`, bare imports). Validado: 21/21 archivos en el mismo
 entorno efímero, 0 fallas, tsc y portal check limpios.
 
+### 4 de N — `portalAgentController.ts` (610 líneas, 17 handlers)
+
+Mismo patrón y mismo fix que `deviceController.ts` (3 de N). Dividido en
+`portalAgentController/{shared,reads,logs,lifecycle,config,remote,index}.ts`
+(el más grande 198 líneas). Al mover `deleteAgent` y `ewsProxy` se extrajeron
+dos helpers nuevos (`deleteAgentCascade`, `assertEwsEligibleDevice`) que
+antes eran closures anónimas inline — mismo cuerpo, ahora nombradas; siguen
+por encima de 20 líneas (no se shrinkearon más), pero ya no son anónimas.
+Cero consumidores tocados (`portalAgentRoutes.ts`, bare import). Validado:
+21/21 archivos en el entorno efímero (incluye `portalAgentEws.test.ts`, que
+ejercita `ewsProxy` end-to-end vía WS), 0 fallas, tsc y portal check limpios.
+
 **Pendiente de Fase 2** (orden descendente de tamaño, tabla de Fase 0):
 `services/agentService/telemetry.ts` (decomponer `syncReadings`, pasada
-dedicada) → `portalAgentController.ts` (610) →
-`dashboardController.ts` (593) → `deviceLifecycleService.ts` (516) →
-`authController.ts` (385) → `reportService.ts` (355) → `clientController.ts`
+dedicada) → `dashboardController.ts` (593) → `deviceLifecycleService.ts` (516)
+→ `authController.ts` (385) → `reportService.ts` (355) → `clientController.ts`
 (345) → `suppliesService.ts` (301) — más lo que haya crecido por encima de 300
 desde que se congeló esa tabla. Frontend (`Settings.tsx` 869, `DeviceDetail.tsx`
 772, etc.) sigue sin arrancar.

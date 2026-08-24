@@ -15,7 +15,13 @@
     "src/api/controllers/deviceController/shared.ts": 9,
     "src/api/controllers/incidentController.ts": 186,
     "src/api/controllers/inventoryController.ts": 119,
-    "src/api/controllers/portalAgentController.ts": 611,
+    "src/api/controllers/portalAgentController/config.ts": 93,
+    "src/api/controllers/portalAgentController/index.ts": 30,
+    "src/api/controllers/portalAgentController/lifecycle.ts": 124,
+    "src/api/controllers/portalAgentController/logs.ts": 50,
+    "src/api/controllers/portalAgentController/reads.ts": 199,
+    "src/api/controllers/portalAgentController/remote.ts": 171,
+    "src/api/controllers/portalAgentController/shared.ts": 51,
     "src/api/controllers/publicApiController.ts": 147,
     "src/api/controllers/reportController.ts": 133,
     "src/api/controllers/suppliesController.ts": 59,
@@ -439,47 +445,7 @@
         "length": 27
       }
     ],
-    "src/api/controllers/portalAgentController.ts": [
-      {
-        "name": "createPortalAgentController",
-        "length": 543
-      },
-      {
-        "name": "listAgents",
-        "length": 31
-      },
-      {
-        "name": "getAgent",
-        "length": 80
-      },
-      {
-        "name": "getAgentDevices",
-        "length": 66
-      },
-      {
-        "name": "createAgent",
-        "length": 21
-      },
-      {
-        "name": "deleteAgent",
-        "length": 58
-      },
-      {
-        "name": "anonymous",
-        "length": 36
-      },
-      {
-        "name": "sendCommand",
-        "length": 26
-      },
-      {
-        "name": "ewsProxy",
-        "length": 71
-      },
-      {
-        "name": "exportLogs",
-        "length": 29
-      },
+    "src/api/controllers/portalAgentController/config.ts": [
       {
         "name": "getConfig",
         "length": 23
@@ -487,6 +453,54 @@
       {
         "name": "updateSnmpCredentials",
         "length": 26
+      }
+    ],
+    "src/api/controllers/portalAgentController/lifecycle.ts": [
+      {
+        "name": "createAgent",
+        "length": 21
+      },
+      {
+        "name": "deleteAgentCascade",
+        "length": 34
+      },
+      {
+        "name": "deleteAgent",
+        "length": 21
+      }
+    ],
+    "src/api/controllers/portalAgentController/logs.ts": [
+      {
+        "name": "buildLogsReport",
+        "length": 21
+      }
+    ],
+    "src/api/controllers/portalAgentController/reads.ts": [
+      {
+        "name": "listAgents",
+        "length": 31
+      },
+      {
+        "name": "getAgent",
+        "length": 60
+      },
+      {
+        "name": "getAgentDevices",
+        "length": 66
+      }
+    ],
+    "src/api/controllers/portalAgentController/remote.ts": [
+      {
+        "name": "sendCommand",
+        "length": 26
+      },
+      {
+        "name": "assertEwsEligibleDevice",
+        "length": 33
+      },
+      {
+        "name": "ewsProxy",
+        "length": 47
       }
     ],
     "src/api/controllers/publicApiController.ts": [
