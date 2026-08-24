@@ -203,6 +203,7 @@
     "portal/src/components/clients/IncidentRulesCard.tsx": 133,
     "portal/src/components/devices/DeviceLifecycleModals.tsx": 604,
     "portal/src/components/incidents/CreateIncidentModal.tsx": 130,
+    "portal/src/components/monitors/ConfigTabPanel.tsx": 285,
     "portal/src/components/monitors/CreateMonitorModal.tsx": 258,
     "portal/src/components/monitors/DeviceInventoryTable.tsx": 426,
     "portal/src/components/monitors/DeviceSummaryCard.tsx": 77,
@@ -210,6 +211,7 @@
     "portal/src/components/monitors/IpRangesEditor.tsx": 192,
     "portal/src/components/monitors/LicenseCard.tsx": 82,
     "portal/src/components/monitors/MonitorConfigModal.tsx": 173,
+    "portal/src/components/monitors/MonitorRegenKeyModal.tsx": 49,
     "portal/src/components/monitors/MonitorSpecsCard.tsx": 59,
     "portal/src/components/monitors/MonitorsTable.tsx": 147,
     "portal/src/components/monitors/RegisterMonitorPanel.tsx": 168,
@@ -252,7 +254,7 @@
     "portal/src/pages/IncidentDetail.tsx": 264,
     "portal/src/pages/Incidents.tsx": 211,
     "portal/src/pages/Login.tsx": 146,
-    "portal/src/pages/MonitorDetail.tsx": 570,
+    "portal/src/pages/MonitorDetail.tsx": 253,
     "portal/src/pages/Monitors.tsx": 163,
     "portal/src/pages/PendingDevices.tsx": 270,
     "portal/src/pages/Reports.tsx": 367,
@@ -1795,6 +1797,16 @@
         "length": 21
       }
     ],
+    "portal/src/components/monitors/ConfigTabPanel.tsx": [
+      {
+        "name": "ConfigTabPanel",
+        "length": 255
+      },
+      {
+        "name": "handleSubmit",
+        "length": 37
+      }
+    ],
     "portal/src/components/monitors/CreateMonitorModal.tsx": [
       {
         "name": "CreateMonitorModal",
@@ -1853,6 +1865,12 @@
       {
         "name": "saveConfig",
         "length": 21
+      }
+    ],
+    "portal/src/components/monitors/MonitorRegenKeyModal.tsx": [
+      {
+        "name": "MonitorRegenKeyModal",
+        "length": 45
       }
     ],
     "portal/src/components/monitors/MonitorsTable.tsx": [
@@ -2160,15 +2178,7 @@
     "portal/src/pages/MonitorDetail.tsx": [
       {
         "name": "MonitorDetail",
-        "length": 262
-      },
-      {
-        "name": "ConfigTabPanel",
-        "length": 255
-      },
-      {
-        "name": "handleSubmit",
-        "length": 37
+        "length": 224
       }
     ],
     "portal/src/pages/Monitors.tsx": [

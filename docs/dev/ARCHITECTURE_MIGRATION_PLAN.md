@@ -2,8 +2,9 @@
 
 **Estado:** Fase 0, Fase 1 y Fase 2 (backend) completas — incluidas las 2
 pasadas diferidas de alto riesgo (`syncReadings`, `mergeDevices`); Fase 2
-(frontend) en curso — `Settings.tsx` y `Monitors.tsx` divididos, 5 archivos
-grandes de `portal/src` pendientes — 2026-08-24  
+(frontend) en curso — `Settings.tsx`, `Monitors.tsx` y `MonitorDetail.tsx`
+divididos, 4 archivos grandes de `portal/src` pendientes (todos con Fase 11
+sin commitear de la sesión hermana) — 2026-08-24  
 **Origen:** `docs/dev/ARCHITECTURE_GUIDE.md` (copiado desde `helpdesk-manager`, 2026-08-24)  
 **Reemplaza (parcialmente) a:** `docs/dev/PROJECT_GUIDELINES.md`, que hoy documenta la
 convención opuesta (`api/` para rutas + `services/` para lógica de negocio, sin capas).
@@ -520,6 +521,48 @@ ScheduledReportModal.tsx` nuevo, `pages/ScheduledReports.tsx`).
 **Pendiente de Fase 2 frontend:** `DeviceDetail.tsx` (772), `DeviceLifecycleModals.tsx`
 (603), `ClientDetail.tsx` (571), `MonitorDetail.tsx` (569), `Dashboard.tsx`
 (507).
+
+## Fase 2 (frontend) — `MonitorDetail.tsx` dividido (2026-08-24)
+
+Tercer archivo, elegido por ser el único de la lista pendiente que seguía
+totalmente quieto (`close-hp-sds-gaps` confirmó que `Dashboard.tsx`,
+`ClientDetail.tsx`, `DeviceDetail.tsx` y `DeviceLifecycleModals.tsx` están
+"terminados pero sin commitear" de su Fase 11 — se dejan para una pasada
+que respete ese working tree en vez de HEAD).
+
+Este archivo ya venía parcialmente descompuesto (mucha lógica vive en el
+hook `useMonitorDetail` y en componentes ya existentes como
+`DeviceSummaryCard`/`MonitorSpecsCard`/`LicenseCard`/etc.) — sólo quedaban
+dos bloques grandes dentro del mismo archivo:
+- `components/monitors/ConfigTabPanel.tsx` (284L, nuevo) — el panel de
+  configuración (parámetros de red, umbrales de tóner, horario laboral,
+  credenciales SNMP) ya estaba definido como componente separado dentro
+  del archivo, sin exportar — se movió literal a su propio archivo.
+- `components/monitors/MonitorRegenKeyModal.tsx` (48L, nuevo) — el modal de
+  "nueva llave regenerada". Ya existía `components/agents/RegenKeyModal.tsx`
+  (usado por `pages/Agents.tsx`, mencionado en un comentario de
+  `ApiKeysCard.tsx`) pero con otra forma de props (`{agentName,key,
+  expiresAt}` vs. sólo el string de la key acá) y otro diseño visual — se
+  verificó antes de asumir que era reutilizable y se descartó, nombrando el
+  nuevo distinto para no confundir.
+- `pages/MonitorDetail.tsx` (569L → 252L) — orquestador: tabs, header,
+  composición de paneles por tab, hook `useMonitorDetail`.
+
+Un import (`Key` de lucide-react) quedó sin uso en la página tras mover el
+modal — lo sacó `eslint`/revisión manual antes de dar por cerrado el split
+(quedaba solo en un comentario, no en JSX).
+
+**Validación:** `npm run check` limpio, Vite (:5180) transforma los 3
+archivos sin error. `check-sizes.mjs` limpio tras regenerar baseline (273
+archivos) — esta vez sin arrastrar ningún archivo ajeno nuevo (las otras
+sesiones no tocaron nada en el medio). Misma limitación de siempre: sin
+prueba visual real en navegador en este entorno.
+
+**Pendiente de Fase 2 frontend:** `DeviceDetail.tsx` (772),
+`DeviceLifecycleModals.tsx` (603), `ClientDetail.tsx` (571), `Dashboard.tsx`
+(507) — los 4 restantes tienen cambios sin commitear de la Fase 11 de
+`close-hp-sds-gaps`; dividir sobre el working tree actual si se continúa.
+`Layout.tsx`/`Reports.tsx` siguen reservados hasta nuevo aviso.
 
 ## 0. Punto de partida (medido 2026-08-24)
 
