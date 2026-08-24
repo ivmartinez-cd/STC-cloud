@@ -1,5 +1,10 @@
 import { Knex } from "knex";
-import { NOISE_MODEL_RE, isIdentifyingSerial } from "./deviceIdentity";
+import { NOISE_MODEL_RE, isIdentifyingSerial } from "../deviceIdentity";
+import { writeAudit } from "../auditService";
+import {
+  MergeError, MergeIdentityConflictError, MergeClientMismatchError, MergeTooLargeError, MergeOverlapError,
+  type MergeParams, type MergeResult, type DeviceRow,
+} from "./merge-types";
 
 /**
  * Ciclo de vida de dispositivos: fusión de duplicados. Reemplaza las tres
@@ -16,73 +21,13 @@ import { NOISE_MODEL_RE, isIdentifyingSerial } from "./deviceIdentity";
  * ON DELETE SET NULL (nulificaría líneas de cierres YA EMITIDOS sin error —
  * como los campos están denormalizados, el CSV seguiría viéndose igual y
  * nadie lo notaría nunca).
+ *
+ * NOTA (Fase 2 de docs/dev/ARCHITECTURE_MIGRATION_PLAN.md): `mergeDevices` se
+ * dejó deliberadamente SIN decomponer — misma razón que
+ * `services/agentService/telemetry.ts::syncReadings`, demasiado crítico
+ * (billing/auditoría) para tocar su clausura interna en una pasada
+ * estructural. Sólo se movió de archivo, verbatim.
  */
-
-export class MergeError extends Error {}
-export class MergeIdentityConflictError extends MergeError {}
-export class MergeClientMismatchError extends MergeError {}
-export class MergeTooLargeError extends MergeError {
-  constructor(public count: number, public max: number) {
-    super(`El equipo fuente tiene ${count} lecturas (máximo permitido: ${max}); requiere un merge offline por lotes.`);
-  }
-}
-export class MergeOverlapError extends MergeError {
-  constructor(
-    public from: Date,
-    public to: Date,
-    public sourceCount: number,
-    public targetCount: number
-  ) {
-    super(
-      `Las series de lecturas se solapan entre ${from.toISOString()} y ${to.toISOString()} ` +
-      `(fuente: ${sourceCount}, destino: ${targetCount}) — elegí onOverlap para continuar.`
-    );
-  }
-}
-
-export interface MergeParams {
-  targetId: string;
-  sourceId: string;
-  reason: "ghost_ip" | "ghost_serial_promote" | "dedupe" | "manual";
-  actor: "portal" | "ingest";
-  userId?: string | null;
-  ip?: string | null;
-  requestReason?: string | null;
-  onOverlap?: "abort" | "keep_target" | "keep_source";
-  force?: boolean;
-  maxReadings?: number;
-}
-
-export interface MergeResult {
-  keptId: string;
-  mergedId: string;
-  readingsMoved: number;
-  readingsDeletedOverlap: number;
-  alertsMoved: number;
-  alertsResolvedCollision: number;
-  closureLinesMoved: number;
-}
-
-interface DeviceRow {
-  id: string;
-  client_id: string | null;
-  agent_id: string | null;
-  serial_number: string | null;
-  mac: string | null;
-  ip_address: string | null;
-  hostname: string | null;
-  location_reported: string | null;
-  firmware: string | null;
-  sku: string | null;
-  brand: string | null;
-  model: string | null;
-  total_pages: number | null;
-  mono_pages: number | null;
-  color_pages: number | null;
-  last_seen: Date | null;
-  created_at: Date;
-  merged_into: string | null;
-}
 
 const DEFAULT_MAX_READINGS = 200_000;
 
@@ -260,12 +205,13 @@ export async function mergeDevices(
       active: false,
     });
 
-    await trx("audit_logs").insert({
+    await writeAudit(trx, {
       action: "DEVICE_MERGED",
-      target_id: String(target.id),
-      user_id: params.userId ?? null,
-      ip_address: params.ip ?? null,
-      metadata: JSON.stringify({
+      targetId: String(target.id),
+      clientId: target.client_id,
+      userId: params.userId ?? null,
+      ip: params.ip ?? null,
+      metadata: {
         reason: params.reason,
         actor: params.actor,
         request_reason: params.requestReason ?? null,
@@ -279,7 +225,7 @@ export async function mergeDevices(
         alerts_moved: alertsMoved,
         alerts_resolved_collision: alertsResolvedCollision,
         closure_lines_moved: closureLinesMoved,
-      }),
+      },
     });
 
     return {

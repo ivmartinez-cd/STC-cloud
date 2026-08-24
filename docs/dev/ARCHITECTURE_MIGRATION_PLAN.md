@@ -1,6 +1,6 @@
 # Plan de Migración a ARCHITECTURE_GUIDE.md
 
-**Estado:** Fase 0, Fase 1 (módulo piloto) y Fase 2 en curso (4 de N) — 2026-08-24  
+**Estado:** Fase 0, Fase 1 (módulo piloto) y Fase 2 en curso (6 de N) — 2026-08-24  
 **Origen:** `docs/dev/ARCHITECTURE_GUIDE.md` (copiado desde `helpdesk-manager`, 2026-08-24)  
 **Reemplaza (parcialmente) a:** `docs/dev/PROJECT_GUIDELINES.md`, que hoy documenta la
 convención opuesta (`api/` para rutas + `services/` para lógica de negocio, sin capas).
@@ -207,12 +207,27 @@ se volvió a partir moviendo las 19 queries a `dashboard-queries.ts` aparte.
 Cero consumidores tocados (`dashboardRoutes.ts`, bare import). Validado:
 21/21 archivos en el entorno efímero, 0 fallas, tsc y portal check limpios.
 
+### 6 de N — `deviceLifecycleService.ts` (516 líneas: merge + bulk actions)
+
+Dos dominios de nuevo: fusión de duplicados (`mergeDevices`) y acciones en
+bloque (Fase 9). Dividido en `deviceLifecycleService/{merge-types,merge,bulk,index}.ts`.
+`mergeDevices` (~200 líneas, la más crítica del módulo — reapunta
+readings/alerts/report_closure_lines, toca facturación) se dejó **sin
+decomponer a propósito**, mismo criterio que `syncReadings` en la Fase 2/2
+(agentService): se movió verbatim, sólo se extrajeron las clases de error y
+tipos a `merge-types.ts` para que `merge.ts` entrara bajo 300 líneas. Módulo
+de funciones sueltas (no clase ni factory), mismo truco de carpeta+barrel de
+siempre. Cero consumidores tocados (`deviceController/{merge,bulk}.ts`,
+`agentService/telemetry.ts`). Validado: 21/21 archivos en el entorno efímero,
+0 fallas, tsc y portal check limpios.
+
 **Pendiente de Fase 2** (orden descendente de tamaño, tabla de Fase 0):
-`services/agentService/telemetry.ts` (decomponer `syncReadings`, pasada
-dedicada) → `deviceLifecycleService.ts` (516) → `authController.ts` (385) →
-`reportService.ts` (355) → `clientController.ts` (345) → `suppliesService.ts`
-(301) — más lo que haya crecido por encima de 300 desde que se congeló esa
-tabla. Frontend (`Settings.tsx` 869, `DeviceDetail.tsx` 772, etc.) sigue sin
+`services/agentService/telemetry.ts` (decomponer `syncReadings`) y
+`services/deviceLifecycleService/merge.ts` (decomponer `mergeDevices`) —
+ambas pasadas dedicadas y de alto riesgo, deliberadamente pospuestas — luego
+`authController.ts` (385) → `reportService.ts` (355) → `clientController.ts`
+(345) → `suppliesService.ts` (301) — más lo que haya crecido por encima de 300
+desde que se congeló esa tabla. Frontend (`Settings.tsx` 869, `DeviceDetail.tsx` 772, etc.) sigue sin
 arrancar.
 
 ## 0. Punto de partida (medido 2026-08-24)

@@ -96,7 +96,10 @@
     "src/services/cryptoService.ts": 112,
     "src/services/customFieldService.ts": 180,
     "src/services/deviceIdentity.ts": 222,
-    "src/services/deviceLifecycleService.ts": 517,
+    "src/services/deviceLifecycleService/bulk.ts": 219,
+    "src/services/deviceLifecycleService/index.ts": 18,
+    "src/services/deviceLifecycleService/merge-types.ts": 66,
+    "src/services/deviceLifecycleService/merge.ts": 245,
     "src/services/deviceMonitorService.ts": 59,
     "src/services/deviceRegistrationService.ts": 200,
     "src/services/ewsProxyService.ts": 75,
@@ -810,15 +813,7 @@
         "length": 25
       }
     ],
-    "src/services/deviceLifecycleService.ts": [
-      {
-        "name": "mergeDevices",
-        "length": 206
-      },
-      {
-        "name": "run",
-        "length": 197
-      },
+    "src/services/deviceLifecycleService/bulk.ts": [
       {
         "name": "bulkDecommission",
         "length": 51
@@ -842,6 +837,16 @@
       {
         "name": "anonymous",
         "length": 69
+      }
+    ],
+    "src/services/deviceLifecycleService/merge.ts": [
+      {
+        "name": "mergeDevices",
+        "length": 206
+      },
+      {
+        "name": "run",
+        "length": 197
       }
     ],
     "src/services/deviceMonitorService.ts": [
