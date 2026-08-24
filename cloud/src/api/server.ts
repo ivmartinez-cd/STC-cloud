@@ -18,6 +18,7 @@ import "../jobs/notificationWorker";
 import "../jobs/reportDeliveryWorker";
 import "../jobs/retentionJob";
 import "../jobs/publicWebhookWorker";
+import "../jobs/incidentWorker";
 import { registerWebSocket } from "../ws/index";
 
 import { createAuthMiddleware } from "./middlewares/authMiddleware";
@@ -28,8 +29,12 @@ import { registerClientRoutes } from "./routes/clientRoutes";
 import { registerPublicApiRoutes } from "./routes/publicApiRoutes";
 import { registerDeviceRoutes } from "./routes/deviceRoutes";
 import { registerDashboardRoutes } from "./routes/dashboardRoutes";
-import { registerFeedbackRoutes } from "./routes/feedbackRoutes";
+import { registerFeedbackRoutes } from "../modules/feedback/presentation/feedback-routes";
 import { registerReportRoutes } from "./routes/reportRoutes";
+import { registerAuditRoutes } from "./routes/auditRoutes";
+import { registerInventoryRoutes } from "./routes/inventoryRoutes";
+import { registerSuppliesRoutes } from "./routes/suppliesRoutes";
+import { registerIncidentRoutes } from "./routes/incidentRoutes";
 import { getClientIp } from "./utils/ip";
 import { SERVER_VERSION } from "../version";
 import { CLIENT_VIEWER_ROUTES } from "./policy/rolePolicy";
@@ -296,9 +301,13 @@ const start = async () => {
     registerPortalAgentRoutes(fastify, db, redis, agentService, portalAuth);
     registerClientRoutes(fastify, db, portalAuth);
     registerDeviceRoutes(fastify, db, portalAuth);
-    registerDashboardRoutes(fastify, db, agentService, portalAuth);
+    registerDashboardRoutes(fastify, db, agentService, portalAuth, redis);
     registerFeedbackRoutes(fastify, db, portalAuth);
     registerReportRoutes(fastify, db, portalAuth);
+    registerAuditRoutes(fastify, db, portalAuth);
+    registerInventoryRoutes(fastify, db, portalAuth);
+    registerSuppliesRoutes(fastify, db, portalAuth);
+    registerIncidentRoutes(fastify, db, portalAuth);
     registerPublicApiRoutes(fastify, db, apiKeyAuth);
 
     // Assert de arranque: si una entrada de CLIENT_VIEWER_ROUTES no corresponde a

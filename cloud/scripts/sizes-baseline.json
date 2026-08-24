@@ -4,44 +4,60 @@
     "src/api/controllers/auditController.ts": 144,
     "src/api/controllers/authController.ts": 386,
     "src/api/controllers/clientController.ts": 346,
-    "src/api/controllers/dashboardController.ts": 594,
+    "src/api/controllers/dashboardController.ts": 600,
     "src/api/controllers/deviceController.ts": 778,
-    "src/api/controllers/feedbackController.ts": 130,
+    "src/api/controllers/incidentController.ts": 186,
     "src/api/controllers/inventoryController.ts": 119,
     "src/api/controllers/portalAgentController.ts": 611,
     "src/api/controllers/publicApiController.ts": 147,
     "src/api/controllers/reportController.ts": 133,
     "src/api/controllers/suppliesController.ts": 59,
-    "src/api/middlewares/authMiddleware.ts": 251,
-    "src/api/policy/rolePolicy.ts": 94,
+    "src/api/middlewares/authMiddleware.ts": 258,
+    "src/api/policy/rolePolicy.ts": 102,
     "src/api/routes/agentRoutes.ts": 127,
     "src/api/routes/auditRoutes.ts": 19,
     "src/api/routes/authRoutes.ts": 153,
     "src/api/routes/clientRoutes.ts": 178,
     "src/api/routes/dashboardRoutes.ts": 78,
     "src/api/routes/deviceRoutes.ts": 221,
-    "src/api/routes/feedbackRoutes.ts": 60,
+    "src/api/routes/incidentRoutes.ts": 143,
     "src/api/routes/inventoryRoutes.ts": 92,
     "src/api/routes/portalAgentRoutes.ts": 247,
     "src/api/routes/publicApiRoutes.ts": 85,
     "src/api/routes/reportRoutes.ts": 78,
     "src/api/routes/suppliesRoutes.ts": 17,
-    "src/api/server.ts": 334,
+    "src/api/server.ts": 337,
     "src/api/utils/deviceFilters.ts": 60,
     "src/api/utils/ip.ts": 16,
     "src/api/utils/password.ts": 28,
-    "src/api/utils/scope.ts": 155,
+    "src/api/utils/scope.ts": 176,
     "src/db/knexfile.ts": 56,
     "src/db/manual_seed.ts": 21,
     "src/db/seeds/test_data.ts": 12,
     "src/db/test_db.ts": 24,
     "src/jobs/alertWorker.ts": 156,
     "src/jobs/heartbeatMonitor.ts": 171,
-    "src/jobs/notificationWorker.ts": 123,
+    "src/jobs/incidentWorker.ts": 216,
+    "src/jobs/notificationWorker.ts": 175,
     "src/jobs/publicWebhookWorker.ts": 73,
     "src/jobs/reportDeliveryWorker.ts": 114,
-    "src/jobs/retentionJob.ts": 69,
+    "src/jobs/retentionJob.ts": 80,
     "src/logger.ts": 13,
+    "src/modules/feedback/application/dtos/feedback-dtos.ts": 26,
+    "src/modules/feedback/application/ports/audit-log-writer.ts": 12,
+    "src/modules/feedback/application/ports/identity-resolver.ts": 13,
+    "src/modules/feedback/application/use-cases/list-feedback.ts": 16,
+    "src/modules/feedback/application/use-cases/submit-feedback.ts": 41,
+    "src/modules/feedback/application/use-cases/update-feedback-status.ts": 40,
+    "src/modules/feedback/domain/entities/feedback.ts": 18,
+    "src/modules/feedback/domain/repositories/feedback-repository.ts": 16,
+    "src/modules/feedback/infrastructure/database/knex-audit-log-writer.ts": 18,
+    "src/modules/feedback/infrastructure/database/knex-feedback-repository.ts": 75,
+    "src/modules/feedback/infrastructure/database/knex-identity-resolver.ts": 17,
+    "src/modules/feedback/presentation/feedback-controller.ts": 110,
+    "src/modules/feedback/presentation/feedback-routes.ts": 36,
+    "src/modules/feedback/presentation/feedback-schemas.ts": 30,
+    "src/modules/feedback/presentation/feedback-view.ts": 27,
     "src/services/agentService.ts": 1593,
     "src/services/agentVersionService.ts": 39,
     "src/services/alertCatalog.ts": 255,
@@ -57,8 +73,10 @@
     "src/services/deviceMonitorService.ts": 59,
     "src/services/deviceRegistrationService.ts": 200,
     "src/services/ewsProxyService.ts": 75,
+    "src/services/incidentClassifier.ts": 34,
+    "src/services/incidentService.ts": 363,
     "src/services/ipRangeSpec.ts": 436,
-    "src/services/notificationService.ts": 242,
+    "src/services/notificationService.ts": 279,
     "src/services/publicWebhookService.ts": 80,
     "src/services/reportExportService.ts": 93,
     "src/services/reportService.ts": 356,
@@ -263,7 +281,7 @@
       },
       {
         "name": "createDashboardController",
-        "length": 506
+        "length": 512
       },
       {
         "name": "getDashboard",
@@ -271,7 +289,7 @@
       },
       {
         "name": "getAlerts",
-        "length": 53
+        "length": 59
       },
       {
         "name": "getAlertSummary",
@@ -368,22 +386,14 @@
         "length": 35
       }
     ],
-    "src/api/controllers/feedbackController.ts": [
+    "src/api/controllers/incidentController.ts": [
       {
-        "name": "createFeedbackController",
-        "length": 117
+        "name": "createIncidentController",
+        "length": 173
       },
       {
-        "name": "submit",
-        "length": 45
-      },
-      {
-        "name": "list",
-        "length": 22
-      },
-      {
-        "name": "updateStatus",
-        "length": 44
+        "name": "createIncident",
+        "length": 24
       }
     ],
     "src/api/controllers/inventoryController.ts": [
@@ -471,7 +481,7 @@
     "src/api/middlewares/authMiddleware.ts": [
       {
         "name": "createAuthMiddleware",
-        "length": 188
+        "length": 193
       },
       {
         "name": "agentAuth",
@@ -479,7 +489,7 @@
       },
       {
         "name": "portalAuth",
-        "length": 118
+        "length": 123
       }
     ],
     "src/api/routes/agentRoutes.ts": [
@@ -512,10 +522,10 @@
         "length": 93
       }
     ],
-    "src/api/routes/feedbackRoutes.ts": [
+    "src/api/routes/incidentRoutes.ts": [
       {
-        "name": "registerFeedbackRoutes",
-        "length": 24
+        "name": "registerIncidentRoutes",
+        "length": 25
       }
     ],
     "src/api/routes/portalAgentRoutes.ts": [
@@ -539,7 +549,7 @@
     "src/api/server.ts": [
       {
         "name": "start",
-        "length": 231
+        "length": 232
       },
       {
         "name": "healthHandler",
@@ -568,10 +578,32 @@
         "length": 56
       }
     ],
+    "src/jobs/incidentWorker.ts": [
+      {
+        "name": "eligibleAlertsForRule",
+        "length": 29
+      },
+      {
+        "name": "openOrLinkIncident",
+        "length": 47
+      },
+      {
+        "name": "processRule",
+        "length": 22
+      },
+      {
+        "name": "autoCloseResolved",
+        "length": 21
+      }
+    ],
     "src/jobs/notificationWorker.ts": [
       {
         "name": "processAlertNotification",
         "length": 66
+      },
+      {
+        "name": "processIncidentNotification",
+        "length": 38
       }
     ],
     "src/jobs/publicWebhookWorker.ts": [
@@ -584,6 +616,12 @@
       {
         "name": "processReportDelivery",
         "length": 60
+      }
+    ],
+    "src/jobs/retentionJob.ts": [
+      {
+        "name": "purgeResolvedAlerts",
+        "length": 25
       }
     ],
     "src/services/agentService.ts": [
@@ -766,6 +804,32 @@
       {
         "name": "unignore",
         "length": 26
+      }
+    ],
+    "src/services/incidentService.ts": [
+      {
+        "name": "listIncidents",
+        "length": 46
+      },
+      {
+        "name": "getIncident",
+        "length": 29
+      },
+      {
+        "name": "createIncident",
+        "length": 35
+      },
+      {
+        "name": "anonymous",
+        "length": 30
+      },
+      {
+        "name": "reopenIncident",
+        "length": 25
+      },
+      {
+        "name": "upsertIncidentRule",
+        "length": 23
       }
     ],
     "src/services/ipRangeSpec.ts": [

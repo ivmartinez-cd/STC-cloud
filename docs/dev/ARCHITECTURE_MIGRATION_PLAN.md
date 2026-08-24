@@ -1,6 +1,6 @@
 # Plan de Migración a ARCHITECTURE_GUIDE.md
 
-**Estado:** Fase 0 completa (2026-08-24) — Fase 1 en adelante sin ejecutar  
+**Estado:** Fase 0 y Fase 1 (módulo piloto) completas (2026-08-24) — Fase 2 en adelante sin ejecutar  
 **Origen:** `docs/dev/ARCHITECTURE_GUIDE.md` (copiado desde `helpdesk-manager`, 2026-08-24)  
 **Reemplaza (parcialmente) a:** `docs/dev/PROJECT_GUIDELINES.md`, que hoy documenta la
 convención opuesta (`api/` para rutas + `services/` para lógica de negocio, sin capas).
@@ -27,6 +27,46 @@ convención opuesta (`api/` para rutas + `services/` para lógica de negocio, si
 
 Nada de esto tocó código de negocio existente ni archivos que la sesión hermana
 estuviera editando.
+
+## Fase 1 — módulo piloto: `feedback` (no `supplies`) — hecho
+
+`supplies` (el candidato original de este documento) resultó ser exactamente el
+módulo que la sesión hermana estaba extendiendo en vivo (`supply_origin`,
+`supplyOrigin.test.ts`) al momento de arrancar esta fase. Se eligió `feedback`
+en su lugar por el mismo criterio del plan (chico, acotado) más estar
+completamente quieto en `git status` — controller + routes sin service propio,
+188 líneas, sin tests dedicados (cubierto indirectamente por `rbac.test.ts`).
+
+- ✅ `cloud/src/modules/feedback/{domain,application,infrastructure,presentation}/`
+  reemplaza `api/controllers/feedbackController.ts` + `api/routes/feedbackRoutes.ts`
+  (borrados). `server.ts` actualizado a una sola línea de import.
+- ✅ Capas: `domain/entities/feedback.ts` + `domain/repositories/feedback-repository.ts`
+  (interfaz, sin Knex) → `application/use-cases/{submit,list,update-status}-feedback.ts`
+  (usan `shared/domain/errors` — `UnauthorizedError`/`NotFoundError`, primer
+  consumo real de la Fase 0) → `infrastructure/database/knex-*.ts` (implementaciones
+  concretas) → `presentation/{feedback-controller,feedback-routes,feedback-schemas,feedback-view}.ts`.
+- ✅ **Contrato de API preservado byte a byte**: el dominio interno usa camelCase
+  (`createdAt`, `imageUrl`) pero `presentation/feedback-view.ts` traduce de vuelta a
+  snake_case en el borde — se detectó en pruebas manuales que sin este mapeo se
+  rompía `portal/src/pages/Settings.tsx` (lee `fb.created_at`/`fb.image_url`
+  directo de la respuesta de `GET /feedback`). Los 3 endpoints tienen exactamente
+  los mismos campos que antes (`submit`: id/type/title/status/created_at;
+  `list`: + description/image_url/username; `updateStatus`: solo id/title/status).
+- ✅ Todas las funciones nuevas ≤20 líneas, todos los archivos muy por debajo de
+  300 — cero deuda nueva aceptada en el baseline (a diferencia de baselinear y
+  seguir, se refactorizó hasta cumplir de entrada).
+- ✅ Validado en el mismo entorno efímero aislado que la Fase 0: 20/20 archivos
+  de test en 0 fallas, `tsc --noEmit` limpio, smoke test manual de
+  `PUT /feedback/:id/status` (sin cobertura automática) contra los 3 endpoints
+  incluyendo el caso 404.
+- Nota operativa: a mitad de esta fase la sesión hermana tenía código roto en
+  tránsito (`services/incidentService.ts`, `api/utils/scope.ts`,
+  migraciones `20260824080000_incidents`/`...090000_incident_rules_seed`) que
+  bloqueaba `tsc`/`migrate` del árbol completo. Se resolvió poniendo en
+  cuarentena temporal (solo en `dist/`, nunca en `src/`) los dos `.js`
+  compilados de esas migraciones para poder migrar el resto, y se reintentó
+  más tarde cuando la otra sesión los dejó consistentes — nunca se tocó su
+  código fuente.
 
 ## 0. Punto de partida (medido 2026-08-24)
 
