@@ -269,6 +269,8 @@ export interface DashboardData {
     devices: number;
     /** Fase 6 del gap analysis vs HP SDS — derivado de monitor_state='disabled'. */
     devicesUnmanaged?: number;
+    /** Equipos vivos con lectura en las últimas 24h (franja "Estadísticas"). */
+    devicesReporting?: number;
     agents: { total: number; online: number; reporting?: number };
     clients: number;
     volume: number;
@@ -281,6 +283,8 @@ export interface DashboardData {
   currentAgentVersion?: string;
   alertsByClass?: Array<{ alert_class: string; label: string; count: number }>;
   discovered?: { today: number; yesterday: number; pendingTotal: number };
+  /** Entradas de auditoría: hoy y ayer (`recent`) + histórico (`total`). */
+  movements?: { recent: number; total: number };
   systemHealth: { status: 'healthy' | 'degraded' | 'error'; uptime: number; lastSync: string | null; lastClient?: string | null; readingsCount24h?: number; clientsWithAlertsCount?: number };
 }
 

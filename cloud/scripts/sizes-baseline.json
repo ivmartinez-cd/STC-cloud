@@ -4,9 +4,9 @@
     "src/api/controllers/authController/agent-auth.ts": 65,
     "src/api/controllers/authController/agent-version.ts": 82,
     "src/api/controllers/authController/index.ts": 24,
-    "src/api/controllers/authController/session.ts": 120,
+    "src/api/controllers/authController/session.ts": 127,
     "src/api/controllers/authController/shared.ts": 24,
-    "src/api/controllers/authController/users.ts": 175,
+    "src/api/controllers/authController/users.ts": 178,
     "src/api/controllers/clientController/api-keys.ts": 33,
     "src/api/controllers/clientController/crud.ts": 110,
     "src/api/controllers/clientController/index.ts": 22,
@@ -38,7 +38,7 @@
     "src/api/controllers/publicApiController.ts": 147,
     "src/api/controllers/reportController.ts": 133,
     "src/api/controllers/suppliesController.ts": 59,
-    "src/api/middlewares/authMiddleware.ts": 265,
+    "src/api/middlewares/authMiddleware.ts": 283,
     "src/api/policy/rolePolicy.ts": 112,
     "src/api/routes/agentRoutes.ts": 127,
     "src/api/routes/authRoutes.ts": 153,
@@ -247,7 +247,7 @@
     "src/tests/supplies.test.ts": 211,
     "src/tests/supplyOrigin.test.ts": 164,
     "src/tests/supplyRequests.test.ts": 258,
-    "src/tests/twoFactor.test.ts": 222,
+    "src/tests/twoFactor.test.ts": 258,
     "src/version.ts": 6,
     "src/ws/index.ts": 310,
     "portal/src/App.tsx": 86,
@@ -255,7 +255,7 @@
     "portal/src/components/ConfirmModal.tsx": 80,
     "portal/src/components/ErrorBoundary.tsx": 59,
     "portal/src/components/FeedbackModal.tsx": 335,
-    "portal/src/components/Layout.tsx": 469,
+    "portal/src/components/Layout.tsx": 475,
     "portal/src/components/Terminal.tsx": 244,
     "portal/src/components/agents/AgentTable.tsx": 194,
     "portal/src/components/agents/ClientUsageChart.tsx": 54,
@@ -273,16 +273,16 @@
     "portal/src/components/clients/NotificationEventsCard.tsx": 87,
     "portal/src/components/clients/NotificationSettingsCard.tsx": 108,
     "portal/src/components/clients/SupplyRequestSettingsCard.tsx": 79,
-    "portal/src/components/dashboard/AgentVersionsCard.tsx": 52,
+    "portal/src/components/dashboard/AgentVersionsCard.tsx": 54,
     "portal/src/components/dashboard/AlertsByClassCard.tsx": 60,
-    "portal/src/components/dashboard/BrandDistributionCard.tsx": 45,
+    "portal/src/components/dashboard/BrandDistributionCard.tsx": 43,
     "portal/src/components/dashboard/CounterPanel.tsx": 60,
     "portal/src/components/dashboard/MiniBar.tsx": 21,
     "portal/src/components/dashboard/MonitorPresenceCard.tsx": 48,
     "portal/src/components/dashboard/SdsPanel.tsx": 37,
     "portal/src/components/dashboard/StatsStrip.tsx": 51,
     "portal/src/components/dashboard/SuppliesPanel.tsx": 24,
-    "portal/src/components/dashboard/TopClientsCard.tsx": 35,
+    "portal/src/components/dashboard/TopClientsCard.tsx": 37,
     "portal/src/components/devices/DeviceLifecycleModals/BulkDecommissionModal.tsx": 50,
     "portal/src/components/devices/DeviceLifecycleModals/BulkMonitorStateModal.tsx": 63,
     "portal/src/components/devices/DeviceLifecycleModals/BulkMoveDevicesModal.tsx": 95,
@@ -330,7 +330,7 @@
     "portal/src/components/settings/MonitorThresholdCard.tsx": 43,
     "portal/src/components/settings/SmtpInfoCard.tsx": 71,
     "portal/src/components/settings/TwoFactorCard.tsx": 168,
-    "portal/src/components/settings/operators/CreateUserModal.tsx": 162,
+    "portal/src/components/settings/operators/CreateUserModal.tsx": 169,
     "portal/src/components/settings/operators/OperatorsCard.tsx": 188,
     "portal/src/components/settings/operators/ResetPasswordModal.tsx": 95,
     "portal/src/components/settings/operators/RoleChangeModal.tsx": 69,
@@ -338,7 +338,7 @@
     "portal/src/components/supplies/SupplyRequestDetailModal.tsx": 132,
     "portal/src/components/ui/BrandModal.tsx": 91,
     "portal/src/components/ui/ConfirmationModal.tsx": 105,
-    "portal/src/context/AuthContext.tsx": 102,
+    "portal/src/context/AuthContext.tsx": 105,
     "portal/src/context/ToastContext.tsx": 79,
     "portal/src/hooks/useClientDetail.ts": 71,
     "portal/src/hooks/useDashboard.ts": 62,
@@ -419,17 +419,17 @@
     "src/api/controllers/authController/session.ts": [
       {
         "name": "portalLogin",
-        "length": 77
+        "length": 80
       }
     ],
     "src/api/controllers/authController/users.ts": [
       {
         "name": "createUser",
-        "length": 44
+        "length": 45
       },
       {
         "name": "updateUser",
-        "length": 41
+        "length": 43
       },
       {
         "name": "deleteUser",
@@ -669,7 +669,7 @@
     "src/api/middlewares/authMiddleware.ts": [
       {
         "name": "createAuthMiddleware",
-        "length": 198
+        "length": 216
       },
       {
         "name": "agentAuth",
@@ -677,7 +677,7 @@
       },
       {
         "name": "portalAuth",
-        "length": 128
+        "length": 146
       }
     ],
     "src/api/routes/agentRoutes.ts": [
@@ -1859,7 +1859,11 @@
       },
       {
         "name": "describe(2FA — ciclo completo e2e)",
-        "length": 119
+        "length": 155
+      },
+      {
+        "name": "test(6.3: usuario con totp_required debe enrolar antes de operar)",
+        "length": 35
       }
     ],
     "src/ws/index.ts": [
@@ -1907,7 +1911,7 @@
     "portal/src/components/Layout.tsx": [
       {
         "name": "Layout",
-        "length": 379
+        "length": 385
       }
     ],
     "portal/src/components/Terminal.tsx": [
@@ -2041,7 +2045,7 @@
     "portal/src/components/dashboard/AgentVersionsCard.tsx": [
       {
         "name": "AgentVersionsCard",
-        "length": 46
+        "length": 48
       }
     ],
     "portal/src/components/dashboard/AlertsByClassCard.tsx": [
@@ -2053,7 +2057,7 @@
     "portal/src/components/dashboard/BrandDistributionCard.tsx": [
       {
         "name": "BrandDistributionCard",
-        "length": 35
+        "length": 34
       }
     ],
     "portal/src/components/dashboard/CounterPanel.tsx": [
@@ -2077,7 +2081,7 @@
     "portal/src/components/dashboard/TopClientsCard.tsx": [
       {
         "name": "TopClientsCard",
-        "length": 29
+        "length": 31
       }
     ],
     "portal/src/components/devices/DeviceLifecycleModals/BulkDecommissionModal.tsx": [
@@ -2401,11 +2405,11 @@
     "portal/src/components/settings/operators/CreateUserModal.tsx": [
       {
         "name": "CreateUserModal",
-        "length": 156
+        "length": 163
       },
       {
         "name": "handleCreateUser",
-        "length": 24
+        "length": 25
       }
     ],
     "portal/src/components/settings/operators/OperatorsCard.tsx": [
@@ -2453,7 +2457,7 @@
     "portal/src/context/AuthContext.tsx": [
       {
         "name": "AuthProvider",
-        "length": 77
+        "length": 79
       },
       {
         "name": "useCallback",

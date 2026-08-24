@@ -101,3 +101,12 @@ export function getDeviceStatusInfo(lastSeenStr: string | null | undefined, now 
     };
   }
 }
+
+/** Porcentaje con 1 decimal como máximo (0 si el total es 0). */
+export function pctOf(part: number, total: number): number {
+  return total > 0 ? Math.round((part / total) * 1000) / 10 : 0;
+}
+
+export function fmtPct(part: number, total: number): string {
+  return `${pctOf(part, total).toLocaleString('es-AR', { maximumFractionDigits: 1 })}%`;
+}

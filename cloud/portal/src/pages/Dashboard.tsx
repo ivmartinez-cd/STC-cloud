@@ -1,45 +1,28 @@
-import { useState, useEffect } from 'react';
-import { useNow } from '../hooks/useNow';
+import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import {
-  HardDrive, Activity, Radio, Users, BarChart3,
-  Plus, Cpu, UserCheck, AlertOctagon, PackageSearch
-} from 'lucide-react';
+import { Activity, Plus, Cpu } from 'lucide-react';
 import { useDashboard } from '../hooks/useDashboard';
-import { api } from '../lib/api';
-import StatCard from '../components/dashboard/StatCard';
-import BrandDistributionCard from '../components/dashboard/BrandDistributionCard';
-import TopClientsCard from '../components/dashboard/TopClientsCard';
-import OfflineAgentsCard from '../components/dashboard/OfflineAgentsCard';
+import { useDashboardExtras } from '../hooks/useDashboardExtras';
+import StatsStrip from '../components/dashboard/StatsStrip';
+import CounterPanel from '../components/dashboard/CounterPanel';
+import SuppliesPanel from '../components/dashboard/SuppliesPanel';
 import AlertsByClassCard from '../components/dashboard/AlertsByClassCard';
 import AgentVersionsCard from '../components/dashboard/AgentVersionsCard';
-import SupplyAlertsTable from '../components/dashboard/SupplyAlertsTable';
-import ActionTileChip from '../components/dashboard/ActionTileChip';
+import MonitorPresenceCard from '../components/dashboard/MonitorPresenceCard';
+import BrandDistributionCard from '../components/dashboard/BrandDistributionCard';
+import TopClientsCard from '../components/dashboard/TopClientsCard';
+
+/* Panel de control al estilo HP SDS ("Portal → Panel de control"): paneles de
+ * CONTADORES con fila Total y "Mostrar detalles…" hacia la pantalla que tiene
+ * el listado. Nada scrollea dentro del dashboard — si algo necesita una lista,
+ * esa lista vive en su propia página. Por eso entra en una pantalla sin
+ * scroll: no por forzar alturas, sino porque muestra totales, no filas. */
 
 const Dashboard = () => {
   const { data, loading, fetchDashboardData } = useDashboard();
-  const now = useNow();
+  const { incidents, supplyRequests, supplies } = useDashboardExtras();
 
   useEffect(() => { fetchDashboardData(); }, [fetchDashboardData]);
-
-  // Incidentes abiertos (Fase 11 del gap analysis vs HP SDS) — no viaja en el
-  // payload principal del dashboard (endpoint aparte, /incidents/stats),
-  // mismo criterio que el resumen de alertas: no encarecer el polling de
-  // `useDashboard` con algo que la mayoría de las cargas no necesita mostrar.
-  const [openIncidents, setOpenIncidents] = useState(0);
-  useEffect(() => {
-    api.get<{ openTotal: number }>('/incidents/stats')
-      .then((d) => setOpenIncidents(d.openTotal))
-      .catch(() => setOpenIncidents(0));
-  }, []);
-
-  // Fase 4.2 del gap analysis vs HP SDS — pedidos de consumibles pendientes.
-  const [pendingRequests, setPendingRequests] = useState(0);
-  useEffect(() => {
-    api.get<Record<string, number>>('/supply-requests/stats')
-      .then((d) => setPendingRequests(d.pending ?? 0))
-      .catch(() => setPendingRequests(0));
-  }, []);
 
   if (loading && !data) {
     return (
@@ -50,11 +33,13 @@ const Dashboard = () => {
     );
   }
 
-  const hasActionTiles = !!data?.discovered?.pendingTotal || openIncidents > 0 || pendingRequests > 0;
+  const d = data?.discovered;
+  const inc = incidents?.byStatus ?? {};
+  const sr = supplyRequests ?? {};
 
   return (
-    <div className="flex flex-col gap-3 xl:flex-1 xl:min-h-0 animate-in fade-in slide-in-from-bottom-4 duration-700">
-      <header className="flex flex-col md:flex-row md:items-end justify-between gap-4 shrink-0">
+    <div className="flex flex-col gap-3 animate-in fade-in slide-in-from-bottom-4 duration-700">
+      <header className="flex flex-col md:flex-row md:items-end justify-between gap-3 shrink-0">
         <div>
           <h1 className="text-2xl font-black text-[#1a2333] tracking-tighter">Panel de Control</h1>
           <div className="flex items-center gap-3 mt-1">
@@ -75,64 +60,52 @@ const Dashboard = () => {
         </div>
       </header>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 shrink-0">
-        <StatCard
-          title="Parque Global"
-          value={data?.stats?.devices?.toLocaleString() ?? '0'}
-          subtitle={data?.stats?.devicesUnmanaged ? `${data.stats.devicesUnmanaged} no gestionadas` : 'Impresoras Monitoreadas'}
-          icon={HardDrive} color="charcoal" trend={data?.stats?.deviceTrend || undefined}
+      <StatsStrip stats={data?.stats} />
+
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-12 gap-3 items-start">
+        <CounterPanel
+          title="Dispositivos pendientes de registro" to="/pending" className="xl:col-span-3"
+          cells={[
+            { label: 'Descubiertos hoy', value: d?.today ?? 0, tone: 'amber' },
+            { label: 'Ayer', value: d?.yesterday ?? 0, tone: 'amber' },
+            { label: 'Pendientes', value: d?.pendingTotal ?? 0, tone: 'amber', to: '/pending' },
+          ]}
         />
-        <StatCard
-          title="Monitores"
-          value={`${data?.stats?.agents?.online ?? 0}/${data?.stats?.agents?.total ?? 0}`}
-          subtitle={
-            data?.stats?.agents?.total
-              ? `${Math.round(((data.stats.agents.reporting ?? 0) / data.stats.agents.total) * 100)}% reportando (24h)`
-              : 'Nodos en línea'
-          }
-          icon={Radio} color="emerald"
+        <CounterPanel
+          title="Movimientos y cambios" to="/activity" className="xl:col-span-2"
+          cells={[
+            { label: 'Hoy y ayer', value: data?.movements?.recent ?? 0, to: '/activity' },
+            { label: 'Total', value: data?.movements?.total ?? 0, to: '/activity' },
+          ]}
         />
-        <StatCard title="Clientes" value={data?.stats?.clients?.toLocaleString() ?? '0'} subtitle="Empresas Registradas" icon={Users} color="gray" />
-        <StatCard title="Volumen Mensual" value={data?.stats?.volume?.toLocaleString() ?? '0'} subtitle="Páginas Procesadas" icon={BarChart3} color="orange" />
+        <CounterPanel
+          title="Solicitudes de consumibles" to="/supply-requests" className="xl:col-span-4"
+          cells={[
+            { label: 'Pendientes', value: sr.pending ?? 0, tone: 'rose', to: '/supply-requests' },
+            { label: 'Revisadas', value: sr.reviewed ?? 0, tone: 'amber', to: '/supply-requests' },
+            { label: 'Procesadas', value: sr.processed ?? 0, tone: 'emerald', to: '/supply-requests' },
+            { label: 'Completadas', value: sr.completed ?? 0, to: '/supply-requests' },
+          ]}
+        />
+        <CounterPanel
+          title="Incidencias" to="/incidents" className="xl:col-span-3"
+          cells={[
+            { label: 'Abiertas', value: inc.open ?? 0, tone: 'rose', to: '/incidents?status=open' },
+            { label: 'En curso', value: inc.in_progress ?? 0, tone: 'amber', to: '/incidents?status=in_progress' },
+            { label: 'En espera', value: inc.on_hold ?? 0, to: '/incidents?status=on_hold' },
+            { label: 'Cerradas', value: inc.closed ?? 0, tone: 'emerald', to: '/incidents?status=closed' },
+          ]}
+        />
       </div>
 
-      {/* Alertas operativas accionables — sólo aparecen si hay algo pendiente. */}
-      {hasActionTiles && (
-        <div className="flex flex-wrap gap-2 shrink-0">
-          {!!data?.discovered?.pendingTotal && (
-            <ActionTileChip to="/pending" icon={UserCheck} count={data.discovered.pendingTotal} label="equipo(s) esperando aprobación" color="amber" />
-          )}
-          {openIncidents > 0 && (
-            <ActionTileChip to="/incidents?status=open" icon={AlertOctagon} count={openIncidents} label="incidente(s) abierto(s)" color="rose" />
-          )}
-          {pendingRequests > 0 && (
-            <ActionTileChip to="/supply-requests" icon={PackageSearch} count={pendingRequests} label="pedido(s) de consumibles pendiente(s)" color="amber" />
-          )}
-        </div>
-      )}
+      <AlertsByClassCard alertsByClass={data?.alertsByClass} />
 
-      {/* Área flexible: en xl+ ocupa el resto del viewport sin scroll de página,
-          cada card scrollea internamente. Debajo de xl cae a stack normal
-          (con scroll de página) — fallback declarado a propósito, no silencioso. */}
-      {/* Las pistas del grid van con minmax(0,1fr) explícito: con `auto` cada
-          card crece al tamaño de su contenido (listas largas) y se derrama por
-          encima de la fila siguiente — la altura definida es lo que habilita
-          el scroll interno de cada card. */}
-      <div className="flex flex-col gap-3 xl:flex-1 xl:min-h-0">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 xl:flex-[4] xl:min-h-0 auto-rows-[280px] xl:grid-rows-[minmax(0,1fr)] [&>*]:min-h-0 [&>*]:overflow-hidden">
-          <BrandDistributionCard brands={data?.brands} />
-          <TopClientsCard topClients={data?.topClients} />
-          <OfflineAgentsCard offlineAgents={data?.offlineAgents} now={now} />
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 xl:flex-[3] xl:min-h-0 auto-rows-[260px] xl:grid-rows-[minmax(0,1fr)] [&>*]:min-h-0">
-          <div className="lg:col-span-2 h-full min-h-0"><AlertsByClassCard alertsByClass={data?.alertsByClass} /></div>
-          <div className="h-full min-h-0"><AgentVersionsCard agentVersions={data?.agentVersions} currentAgentVersion={data?.currentAgentVersion} /></div>
-        </div>
-
-        <div className="xl:flex-[4] xl:min-h-0 h-[320px] xl:h-auto">
-          <SupplyAlertsTable />
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3 items-start">
+        <SuppliesPanel summary={supplies} />
+        <MonitorPresenceCard agents={data?.stats?.agents} />
+        <AgentVersionsCard agentVersions={data?.agentVersions} currentAgentVersion={data?.currentAgentVersion} />
+        <BrandDistributionCard brands={data?.brands} />
+        <TopClientsCard topClients={data?.topClients} />
       </div>
     </div>
   );

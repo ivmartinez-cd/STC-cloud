@@ -221,3 +221,28 @@ export function queryPendingDevicesTotalCount(db: Knex, cid: string | null) {
     .count("* as c")
     .first();
 }
+
+// Franja "Estadísticas" del dashboard (rediseño estilo HP SDS): "dispositivos
+// reportando" = equipos vivos con lectura en 24h — misma base (`devices.last_seen`)
+// que `queryAgentsReportingCount`, así los dos porcentajes son comparables.
+export function queryDevicesReportingCount(db: Knex, cid: string | null, twentyFourHoursAgo: Date) {
+  return db("devices")
+    .modify((q) => onlyLiveDevices(q, "devices"))
+    .modify((q) => { if (cid) q.where("client_id", cid); })
+    .where("last_seen", ">=", twentyFourHoursAgo)
+    .count("* as c")
+    .first();
+}
+
+// Panel "Movimientos y cambios" (HP SDS): cantidad de entradas de auditoría de
+// hoy y ayer + total histórico. `audit_logs.client_id` es nullable (acciones
+// globales), por eso el scope por cliente sólo filtra cuando hay cid.
+export function queryMovementsCounts(db: Knex, cid: string | null, startOfYesterday: Date) {
+  return db("audit_logs")
+    .modify((q) => { if (cid) q.where("client_id", cid); })
+    .select(
+      db.raw("COUNT(*)::int as total"),
+      db.raw("COUNT(CASE WHEN created_at >= ? THEN 1 END)::int as recent", [startOfYesterday])
+    )
+    .first();
+}

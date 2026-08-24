@@ -10,6 +10,7 @@ import {
   queryBrandStats, queryOfflineAgents, queryNewDevicesCount, queryReadings24hCount, queryLastReadingInfo,
   queryClientsWithAlertsCount, queryDevicesUnmanagedCount, queryAgentsReportingCount, queryAgentVersionRows,
   queryAlertsByClassRows, queryDiscoveredTodayCount, queryDiscoveredYesterdayCount, queryPendingDevicesTotalCount,
+  queryDevicesReportingCount, queryMovementsCounts,
 } from "./dashboard-queries";
 
 function computeDeviceTrend(devicesCount: { c?: string | number } | undefined, newDevicesCount: { c?: string | number } | undefined) {
@@ -45,7 +46,7 @@ async function getDashboard(db: Knex, redis: Redis, request: FastifyRequest) {
     devicesCount, agentsStats, clientsCount, monthlyVolume, topClients, brandStats, offlineAgents,
     newDevicesCount, readings24hCount, lastReadingInfo, clientsWithAlertsCount, devicesUnmanagedCount,
     agentsReportingCount, agentVersionRows, alertsByClassRows, discoveredTodayCount, discoveredYesterdayCount,
-    pendingDevicesTotalCount, publishedAgentVersion,
+    pendingDevicesTotalCount, publishedAgentVersion, devicesReportingCount, movementsCounts,
   ] = await Promise.all([
     queryDevicesCount(db, cid),
     queryAgentsStats(db, cid, fiveMinsAgo),
@@ -66,6 +67,8 @@ async function getDashboard(db: Knex, redis: Redis, request: FastifyRequest) {
     queryDiscoveredYesterdayCount(db, cid, startOfYesterday, startOfToday),
     queryPendingDevicesTotalCount(db, cid),
     getPublishedAgentVersion(redis),
+    queryDevicesReportingCount(db, cid, twentyFourHoursAgo),
+    queryMovementsCounts(db, cid, startOfYesterday),
   ]);
 
   const { total, deviceTrend } = computeDeviceTrend(devicesCount, newDevicesCount);
@@ -77,6 +80,7 @@ async function getDashboard(db: Knex, redis: Redis, request: FastifyRequest) {
       // Campo aditivo — no se cambia la forma de `devices` para no
       // romper consumidores existentes de este endpoint.
       devicesUnmanaged: Number(devicesUnmanagedCount?.c || 0),
+      devicesReporting: Number(devicesReportingCount?.c || 0),
       agents: {
         total: agentsStats?.total || 0,
         online: agentsStats?.online || 0,
@@ -96,6 +100,10 @@ async function getDashboard(db: Knex, redis: Redis, request: FastifyRequest) {
       today: Number(discoveredTodayCount?.c || 0),
       yesterday: Number(discoveredYesterdayCount?.c || 0),
       pendingTotal: Number(pendingDevicesTotalCount?.c || 0),
+    },
+    movements: {
+      recent: Number(movementsCounts?.recent || 0),
+      total: Number(movementsCounts?.total || 0),
     },
     systemHealth: {
       status: "healthy",
