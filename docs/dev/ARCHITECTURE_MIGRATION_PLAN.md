@@ -1,6 +1,8 @@
 # Plan de Migración a ARCHITECTURE_GUIDE.md
 
-**Estado:** Fase 0, Fase 1 (módulo piloto) y Fase 2 en curso (9 de N) — 2026-08-24  
+**Estado:** Fase 0 y Fase 1 completas; Fase 2 backend completa salvo 2 pasadas
+diferidas de alto riesgo (`syncReadings`, `mergeDevices`); Frontend sin
+arrancar — 2026-08-24  
 **Origen:** `docs/dev/ARCHITECTURE_GUIDE.md` (copiado desde `helpdesk-manager`, 2026-08-24)  
 **Reemplaza (parcialmente) a:** `docs/dev/PROJECT_GUIDELINES.md`, que hoy documenta la
 convención opuesta (`api/` para rutas + `services/` para lógica de negocio, sin capas).
@@ -259,13 +261,52 @@ efímero, 0 fallas. Nota: la primera corrida completa mostró 2 fallas en
 relacionado corriendo ese archivo solo y luego la suite completa de nuevo
 limpia (0 fallas ambas veces). tsc y portal check limpios.
 
-**Pendiente de Fase 2** (orden descendente de tamaño, tabla de Fase 0):
-`services/agentService/telemetry.ts` (decomponer `syncReadings`) y
-`services/deviceLifecycleService/merge.ts` (decomponer `mergeDevices`) —
-ambas pasadas dedicadas y de alto riesgo, deliberadamente pospuestas — luego
-`suppliesService.ts`
-(301) — más lo que haya crecido por encima de 300 desde que se congeló esa
-tabla. Frontend (`Settings.tsx` 869, `DeviceDetail.tsx` 772, etc.) sigue sin
+### 10 de N — `suppliesService.ts` (301 líneas) — cierra la cola original de la tabla de Fase 0
+
+Módulo de funciones sueltas (sin controller, es lógica pura + queries).
+Dividido en `suppliesService/{types,row-builder,queries,index}.ts` —
+`buildSupplyRows` se decompuso en `buildTonerRows`/`buildMaintenanceRows`
+(extracción mecánica, mismo criterio que `reportService`). Cero consumidores
+tocados (`suppliesController.ts`, `deviceController/reads.ts`). Validado:
+21/21 en el entorno efímero (incluye `supplies.test.ts`), 0 fallas, tsc y
+portal check limpios.
+
+## Fase 2 (backend) — completa salvo 2 diferidas (2026-08-24)
+
+Con `suppliesService.ts` se cierra toda la tabla de archivos >300 líneas que
+existía al congelar la Fase 0. Estado del backend medido después de este
+commit (`find src -name "*.ts" | xargs wc -l | sort -rn`): el único archivo
+de negocio (no-test) por encima de 300 líneas que queda es
+`services/agentService/telemetry.ts` (701L, `syncReadings` deliberadamente
+sin decomponer). `services/deviceLifecycleService/merge.ts` (244L,
+`mergeDevices` también sin decomponer) ya entra bajo el límite de archivo,
+pero la función en sí sigue pendiente de la misma pasada dedicada.
+
+**Fuera de este alcance a propósito** (no tocar sin coordinar de nuevo con
+`close-hp-sds-gaps`): `services/incidentService.ts` (362L) y el crecimiento de
+`api/server.ts` (336L) son de su feature de incidentes, todavía en curso.
+
+**Pendiente real de Fase 2:**
+1. `services/agentService/telemetry.ts` — decomponer `syncReadings` (~600L,
+   resolución de identidad de dispositivo, detección de reset de contador,
+   fusión de fantasmas, alertas EWS — todo crítico para facturación/alertas).
+2. `services/deviceLifecycleService/merge.ts` — decomponer `mergeDevices`
+   (~200L, reapunta readings/alerts/report_closure_lines).
+
+Ambas requieren una pasada dedicada y cuidadosa (no apurada entre otras
+extracciones) — la clausura interna de cada una mezcla mucha lógica de
+negocio real que no se puede simplemente "hoistear" sin releer con cuidado
+cada rama.
+
+**Frontend:** sin arrancar. `portal/src` tiene su propia tabla de archivos
+grandes (`Settings.tsx` 869, `DeviceDetail.tsx` 772, `Monitors.tsx` 615,
+`DeviceLifecycleModals.tsx` 603, `ClientDetail.tsx` 571, `MonitorDetail.tsx`
+569, `Dashboard.tsx` 507, `Layout.tsx` 482+, etc. — medida en la Fase 0,
+probablemente cambió con las Fases 8-11 de la sesión hermana sobre el
+portal). Splitting de componentes React es un problema distinto al de
+funciones/controllers de Node (reglas de hooks, límites de componente,
+prop drilling) — no asumir que aplica el mismo patrón mecánico de
+carpeta+barrel sin evaluarlo primero.
 arrancar.
 
 ## 0. Punto de partida (medido 2026-08-24)

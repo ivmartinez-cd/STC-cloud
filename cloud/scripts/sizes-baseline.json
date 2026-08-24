@@ -128,7 +128,10 @@
     "src/services/reportService/index.ts": 11,
     "src/services/reportService/period-usage.ts": 154,
     "src/services/snmpCredentials.ts": 296,
-    "src/services/suppliesService.ts": 302,
+    "src/services/suppliesService/index.ts": 24,
+    "src/services/suppliesService/queries.ts": 134,
+    "src/services/suppliesService/row-builder.ts": 112,
+    "src/services/suppliesService/types.ts": 65,
     "src/services/supplyOrigin.ts": 40,
     "src/services/wsTicketService.ts": 37,
     "src/shared/domain/errors/app-error.ts": 15,
@@ -967,18 +970,24 @@
         "length": 26
       }
     ],
-    "src/services/suppliesService.ts": [
+    "src/services/suppliesService/queries.ts": [
+      {
+        "name": "fetchFleetDevices",
+        "length": 21
+      }
+    ],
+    "src/services/suppliesService/row-builder.ts": [
       {
         "name": "itemRow",
         "length": 23
       },
       {
-        "name": "buildSupplyRows",
-        "length": 49
+        "name": "buildTonerRows",
+        "length": 24
       },
       {
-        "name": "buildFleetRows",
-        "length": 44
+        "name": "buildMaintenanceRows",
+        "length": 21
       }
     ],
     "src/tests/alertCatalog.test.ts": [
