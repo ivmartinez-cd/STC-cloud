@@ -5,7 +5,14 @@
     "src/api/controllers/authController.ts": 386,
     "src/api/controllers/clientController.ts": 346,
     "src/api/controllers/dashboardController.ts": 601,
-    "src/api/controllers/deviceController.ts": 778,
+    "src/api/controllers/deviceController/bulk.ts": 100,
+    "src/api/controllers/deviceController/crud.ts": 116,
+    "src/api/controllers/deviceController/index.ts": 24,
+    "src/api/controllers/deviceController/lifecycle.ts": 241,
+    "src/api/controllers/deviceController/merge.ts": 113,
+    "src/api/controllers/deviceController/monitor-state.ts": 65,
+    "src/api/controllers/deviceController/reads.ts": 211,
+    "src/api/controllers/deviceController/shared.ts": 9,
     "src/api/controllers/incidentController.ts": 186,
     "src/api/controllers/inventoryController.ts": 119,
     "src/api/controllers/portalAgentController.ts": 611,
@@ -324,35 +331,27 @@
         "length": 54
       }
     ],
-    "src/api/controllers/deviceController.ts": [
+    "src/api/controllers/deviceController/bulk.ts": [
       {
-        "name": "createDeviceController",
-        "length": 752
-      },
-      {
-        "name": "listDevices",
-        "length": 28
-      },
-      {
-        "name": "getDevice",
-        "length": 49
-      },
-      {
-        "name": "getDeviceReadings",
-        "length": 38
-      },
-      {
-        "name": "getDeviceSupplies",
-        "length": 26
-      },
-      {
-        "name": "getDeviceUsageHistory",
-        "length": 32
-      },
+        "name": "bulkSetMonitorState",
+        "length": 35
+      }
+    ],
+    "src/api/controllers/deviceController/crud.ts": [
       {
         "name": "updateDevice",
         "length": 52
       },
+      {
+        "name": "deleteDevice",
+        "length": 46
+      },
+      {
+        "name": "anonymous",
+        "length": 35
+      }
+    ],
+    "src/api/controllers/deviceController/lifecycle.ts": [
       {
         "name": "decommissionDevice",
         "length": 57
@@ -374,25 +373,21 @@
         "length": 69
       },
       {
+        "name": "decommissionStaleDevices",
+        "length": 45
+      }
+    ],
+    "src/api/controllers/deviceController/merge.ts": [
+      {
         "name": "mergeDevice",
         "length": 57
       },
       {
         "name": "listDuplicates",
         "length": 40
-      },
-      {
-        "name": "deleteDevice",
-        "length": 46
-      },
-      {
-        "name": "anonymous",
-        "length": 35
-      },
-      {
-        "name": "decommissionStaleDevices",
-        "length": 45
-      },
+      }
+    ],
+    "src/api/controllers/deviceController/monitor-state.ts": [
       {
         "name": "updateMonitorState",
         "length": 24
@@ -400,10 +395,28 @@
       {
         "name": "unignoreDevice",
         "length": 23
+      }
+    ],
+    "src/api/controllers/deviceController/reads.ts": [
+      {
+        "name": "listDevices",
+        "length": 28
       },
       {
-        "name": "bulkSetMonitorState",
-        "length": 35
+        "name": "getDevice",
+        "length": 49
+      },
+      {
+        "name": "getDeviceReadings",
+        "length": 38
+      },
+      {
+        "name": "getDeviceSupplies",
+        "length": 26
+      },
+      {
+        "name": "getDeviceUsageHistory",
+        "length": 32
       }
     ],
     "src/api/controllers/incidentController.ts": [

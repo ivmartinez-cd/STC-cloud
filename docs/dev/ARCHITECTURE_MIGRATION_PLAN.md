@@ -166,9 +166,23 @@ services/agentService/
   mensual", "Ciclo de vida del agente", "Heartbeat") — `tsc` limpio, portal
   check limpio.
 
+### 3 de N — `deviceController.ts` (777 líneas, 19 handlers)
+
+Mismo patrón que `feedback` (Fase 1): factory `createDeviceController(db)`
+devolviendo un objeto de handlers, no una clase. Dividido por responsabilidad
+en `deviceController/{shared,reads,crud,lifecycle,merge,monitor-state,bulk,index}.ts`
+(8 archivos, el más grande 235 líneas). Mismo fix de Fase 1 aplicado a los 6
+factories (`create*Handlers`): cada handler es una función top-level que
+recibe `db` como primer parámetro, y el factory sólo arma un objeto de
+lambdas de una línea que la llaman — si no, el propio wrapper del factory
+queda "grande" por el checker de tamaño aunque no tenga lógica propia (span
+completo del objeto que retorna). Cero consumidores tocados (`deviceRoutes.ts`,
+`portalAgentRoutes.ts`, bare imports). Validado: 21/21 archivos en el mismo
+entorno efímero, 0 fallas, tsc y portal check limpios.
+
 **Pendiente de Fase 2** (orden descendente de tamaño, tabla de Fase 0):
 `services/agentService/telemetry.ts` (decomponer `syncReadings`, pasada
-dedicada) → `deviceController.ts` (777) → `portalAgentController.ts` (610) →
+dedicada) → `portalAgentController.ts` (610) →
 `dashboardController.ts` (593) → `deviceLifecycleService.ts` (516) →
 `authController.ts` (385) → `reportService.ts` (355) → `clientController.ts`
 (345) → `suppliesService.ts` (301) — más lo que haya crecido por encima de 300
