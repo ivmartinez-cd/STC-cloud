@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Activity, AlertTriangle, ShieldCheck } from 'lucide-react';
 import { api } from '../../lib/api';
 import type { Alert } from '../../types/alerts';
+import ScrollFade from './ScrollFade';
 
 const getTonerColorInfo = (type: string) => {
   if (type.includes('black')) {
@@ -84,18 +85,19 @@ export default function SupplyAlertsTable() {
             <p className="text-[9px] font-bold text-slate-400 mt-1">Todos los consumibles por encima de los límites configurados</p>
           </div>
         ) : (
-          <div className="w-full h-full overflow-auto rounded-xl border border-slate-200 bg-white">
+          <div className="relative w-full h-full rounded-xl border border-slate-200 bg-white overflow-hidden">
+          <div className="w-full h-full overflow-auto dash-scrollbar">
             <table className="w-full text-left border-collapse whitespace-nowrap">
               <thead className="bg-slate-50 border-b border-slate-200 sticky top-0 z-10">
                 <tr>
-                  <th className="py-1.5 px-2.5 text-[9px] font-black text-slate-500 uppercase tracking-widest">Cliente</th>
-                  <th className="py-1.5 px-2.5 text-[9px] font-black text-slate-500 uppercase tracking-widest">S/N</th>
-                  <th className="py-1.5 px-2.5 text-[9px] font-black text-slate-500 uppercase tracking-widest">Modelo</th>
-                  <th className="py-1.5 px-2.5 text-[9px] font-black text-slate-500 uppercase tracking-widest">Color</th>
-                  <th className="py-1.5 px-2.5 text-[9px] font-black text-slate-500 uppercase tracking-widest">Descripción</th>
-                  <th className="py-1.5 px-2.5 text-[9px] font-black text-slate-500 uppercase tracking-widest">Motivo</th>
-                  <th className="py-1.5 px-2.5 text-[9px] font-black text-slate-500 uppercase tracking-widest">Fecha</th>
-                  <th className="py-1.5 px-2.5 text-[9px] font-black text-slate-500 uppercase tracking-widest">Nivel Actual</th>
+                  <th className="py-1 px-2 text-[9px] font-black text-slate-500 uppercase tracking-widest">Cliente</th>
+                  <th className="py-1 px-2 text-[9px] font-black text-slate-500 uppercase tracking-widest">S/N</th>
+                  <th className="py-1 px-2 text-[9px] font-black text-slate-500 uppercase tracking-widest">Modelo</th>
+                  <th className="py-1 px-2 text-[9px] font-black text-slate-500 uppercase tracking-widest">Color</th>
+                  <th className="py-1 px-2 text-[9px] font-black text-slate-500 uppercase tracking-widest">Descripción</th>
+                  <th className="py-1 px-2 text-[9px] font-black text-slate-500 uppercase tracking-widest">Motivo</th>
+                  <th className="py-1 px-2 text-[9px] font-black text-slate-500 uppercase tracking-widest">Fecha</th>
+                  <th className="py-1 px-2 text-[9px] font-black text-slate-500 uppercase tracking-widest">Nivel Actual</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -104,16 +106,16 @@ export default function SupplyAlertsTable() {
                   const tonerInfo = isToner ? getTonerColorInfo(alert.type) : null;
                   return (
                     <tr key={alert.id} className="hover:bg-slate-50 transition-colors">
-                      <td className="py-1 px-2.5 text-[9px] text-[#1a2333] font-black uppercase">
+                      <td className="py-0.5 px-2 text-[9px] text-[#1a2333] font-black uppercase">
                         {alert.client_name || '-'}
                       </td>
-                      <td className="py-1 px-2.5 text-[9px] text-slate-500 font-mono">
+                      <td className="py-0.5 px-2 text-[9px] text-slate-500 font-mono">
                         {alert.serial || '-'}
                       </td>
-                      <td className="py-1 px-2.5 text-[9px] text-slate-700 font-bold">
+                      <td className="py-0.5 px-2 text-[9px] text-slate-700 font-bold">
                         {alert.device_name || 'Dispositivo'}
                       </td>
-                      <td className="py-1 px-2.5 text-[9px]">
+                      <td className="py-0.5 px-2 text-[9px]">
                         {isToner && tonerInfo ? (
                            <div className="flex items-center gap-1.5">
                              <div className="w-2 h-2 rounded-sm border border-slate-200" style={{ backgroundColor: tonerInfo.barColor }} />
@@ -123,20 +125,20 @@ export default function SupplyAlertsTable() {
                            <span className="text-slate-400 font-medium">Sin color</span>
                         )}
                       </td>
-                      <td className="py-1 px-2.5 text-[9px] text-slate-600 max-w-[180px] truncate" title={alert.message}>
+                      <td className="py-0.5 px-2 text-[9px] text-slate-600 max-w-[180px] truncate" title={alert.message}>
                         {alert.message.split(' en ')[0]}
                       </td>
-                      <td className="py-1 px-2.5">
+                      <td className="py-0.5 px-2">
                         <span className={`inline-flex px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider ${
                           alert.severity === 'critical' ? 'bg-rose-100 text-rose-700' : 'bg-amber-100 text-amber-700'
                         }`}>
                           {alert.severity === 'critical' ? 'Crítico' : 'Nivel bajo'}
                         </span>
                       </td>
-                      <td className="py-1 px-2.5 text-[9px] text-slate-500 font-medium">
+                      <td className="py-0.5 px-2 text-[9px] text-slate-500 font-medium">
                         {new Date(alert.created_at).toLocaleString('es-ES', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                       </td>
-                      <td className="py-1 px-2.5 w-28">
+                      <td className="py-0.5 px-2 w-28">
                         {isToner ? (
                           <div className="flex items-center gap-1.5">
                             <div className="flex-1 bg-slate-100 h-1.5 rounded-full overflow-hidden border border-slate-200/50">
@@ -153,6 +155,8 @@ export default function SupplyAlertsTable() {
                 })}
               </tbody>
             </table>
+          </div>
+          <ScrollFade />
           </div>
         )}
       </div>

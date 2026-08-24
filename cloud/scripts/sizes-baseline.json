@@ -50,7 +50,7 @@
     "src/api/routes/publicApiRoutes.ts": 85,
     "src/api/routes/reportRoutes.ts": 78,
     "src/api/routes/suppliesRoutes.ts": 17,
-    "src/api/server.ts": 352,
+    "src/api/server.ts": 355,
     "src/api/utils/deviceFilters.ts": 60,
     "src/api/utils/ip.ts": 16,
     "src/api/utils/password.ts": 28,
@@ -264,13 +264,14 @@
     "portal/src/components/clients/NotificationSettingsCard.tsx": 108,
     "portal/src/components/clients/SupplyRequestSettingsCard.tsx": 79,
     "portal/src/components/dashboard/ActionTileChip.tsx": 40,
-    "portal/src/components/dashboard/AgentVersionsCard.tsx": 40,
-    "portal/src/components/dashboard/AlertsByClassCard.tsx": 49,
-    "portal/src/components/dashboard/BrandDistributionCard.tsx": 50,
-    "portal/src/components/dashboard/OfflineAgentsCard.tsx": 46,
+    "portal/src/components/dashboard/AgentVersionsCard.tsx": 44,
+    "portal/src/components/dashboard/AlertsByClassCard.tsx": 52,
+    "portal/src/components/dashboard/BrandDistributionCard.tsx": 54,
+    "portal/src/components/dashboard/OfflineAgentsCard.tsx": 50,
+    "portal/src/components/dashboard/ScrollFade.tsx": 10,
     "portal/src/components/dashboard/StatCard.tsx": 41,
-    "portal/src/components/dashboard/SupplyAlertsTable.tsx": 162,
-    "portal/src/components/dashboard/TopClientsCard.tsx": 36,
+    "portal/src/components/dashboard/SupplyAlertsTable.tsx": 166,
+    "portal/src/components/dashboard/TopClientsCard.tsx": 40,
     "portal/src/components/devices/DeviceLifecycleModals/BulkDecommissionModal.tsx": 50,
     "portal/src/components/devices/DeviceLifecycleModals/BulkMonitorStateModal.tsx": 63,
     "portal/src/components/devices/DeviceLifecycleModals/BulkMoveDevicesModal.tsx": 95,
@@ -723,7 +724,7 @@
     "src/api/server.ts": [
       {
         "name": "start",
-        "length": 238
+        "length": 241
       },
       {
         "name": "healthHandler",
@@ -2003,25 +2004,25 @@
     "portal/src/components/dashboard/AgentVersionsCard.tsx": [
       {
         "name": "AgentVersionsCard",
-        "length": 36
+        "length": 39
       }
     ],
     "portal/src/components/dashboard/AlertsByClassCard.tsx": [
       {
         "name": "AlertsByClassCard",
-        "length": 33
+        "length": 35
       }
     ],
     "portal/src/components/dashboard/BrandDistributionCard.tsx": [
       {
         "name": "BrandDistributionCard",
-        "length": 41
+        "length": 44
       }
     ],
     "portal/src/components/dashboard/OfflineAgentsCard.tsx": [
       {
         "name": "OfflineAgentsCard",
-        "length": 42
+        "length": 45
       }
     ],
     "portal/src/components/dashboard/StatCard.tsx": [
@@ -2033,7 +2034,7 @@
     "portal/src/components/dashboard/SupplyAlertsTable.tsx": [
       {
         "name": "SupplyAlertsTable",
-        "length": 139
+        "length": 142
       },
       {
         "name": "anonymous",
@@ -2043,7 +2044,7 @@
     "portal/src/components/dashboard/TopClientsCard.tsx": [
       {
         "name": "TopClientsCard",
-        "length": 31
+        "length": 34
       }
     ],
     "portal/src/components/devices/DeviceLifecycleModals/BulkDecommissionModal.tsx": [

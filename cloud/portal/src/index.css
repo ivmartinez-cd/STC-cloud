@@ -193,3 +193,18 @@ body {
   background: rgba(0, 0, 0, 0.05);
   border-radius: 10px;
 }
+
+/* Scroll interno de las cards del Dashboard (Fase de UX 2026-08-24): a
+   diferencia de .custom-scrollbar (casi invisible a propósito en otros
+   lugares), acá el scroll tiene que LEERSE como "hay más, scrolleá" y no
+   como contenido cortado/roto — thumb visible + fade en el borde inferior. */
+.dash-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+.dash-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.35);
+  border-radius: 10px;
+}
+.dash-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.6);
+}

@@ -125,12 +125,12 @@ const Dashboard = () => {
           <OfflineAgentsCard offlineAgents={data?.offlineAgents} now={now} />
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 xl:flex-[2] xl:min-h-0 auto-rows-[220px] xl:grid-rows-[minmax(0,1fr)] [&>*]:min-h-0">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 xl:flex-[3] xl:min-h-0 auto-rows-[260px] xl:grid-rows-[minmax(0,1fr)] [&>*]:min-h-0">
           <div className="lg:col-span-2 h-full min-h-0"><AlertsByClassCard alertsByClass={data?.alertsByClass} /></div>
           <div className="h-full min-h-0"><AgentVersionsCard agentVersions={data?.agentVersions} currentAgentVersion={data?.currentAgentVersion} /></div>
         </div>
 
-        <div className="xl:flex-[3] xl:min-h-0 h-[320px] xl:h-auto">
+        <div className="xl:flex-[4] xl:min-h-0 h-[320px] xl:h-auto">
           <SupplyAlertsTable />
         </div>
       </div>
