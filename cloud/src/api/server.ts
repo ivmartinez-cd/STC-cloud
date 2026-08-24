@@ -47,7 +47,7 @@ import { registerEmailLogRoutes } from "../modules/email-log/presentation/email-
 import { registerDeviceCostsRoutes } from "../modules/device-costs";
 import { registerRemoteActionRoutes } from "../modules/remote-actions/presentation/remote-action-routes";
 import { registerTwoFactorRoutes } from "../modules/two-factor/presentation/two-factor-routes";
-import { registerReportRoutes } from "./routes/reportRoutes";
+import { registerReportRoutes } from "../modules/reports/presentation/report-routes";
 import { registerAuditRoutes } from "../modules/audit/presentation/audit-routes";
 import { registerAlertRoutes } from "../modules/alerts/presentation/alert-routes";
 import { registerInventoryRoutes } from "../modules/inventory/presentation/inventory-routes";

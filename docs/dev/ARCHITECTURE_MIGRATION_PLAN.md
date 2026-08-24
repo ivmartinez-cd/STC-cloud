@@ -1063,6 +1063,79 @@ rate-limit de login con el `RATE_LIMIT_MAX` del `.env`, módulo de
 `close-hp-sds-gaps`, avisado). `check-sizes.mjs` limpio tras regenerar
 baseline.
 
+## Fase 3 — `reports` migrado (2026-08-24)
+
+Cuarto módulo. OK explícito de `close-hp-sds-gaps` antes de tocar (estaban en
+`agent/` y `portal/`, nada de `cloud/src`). `reports` era el cierre mensual
+de facturación: `services/reportService/{period-usage,closure,index}.ts`
+(consulta LAG-based + cierre/reapertura con trx + encolado de entrega),
+`services/reportExportService.ts` (CSV/XLSX), `api/controllers/reportController.ts`
+y `api/routes/reportRoutes.ts` — ~660 líneas en 6 archivos.
+
+División (`modules/reports/`, 25 archivos, ~1.000 líneas):
+- `domain/entities/{report-closure,period-usage-line}.ts` — `ReportClosure`/
+  `ReportClosureLine` en camelCase. **`PeriodUsageLine` se queda en snake_case
+  a propósito**: no es un agregado, es el read model de la consulta de
+  volumen, y es a la vez la forma de wire del preview y lo que consume el
+  renderer de `modules/scheduled-reports` (módulo del hermano — no se lo tocó
+  más allá del path del import).
+- `domain/services/period.ts` (`parsePeriod` ahora lanza `InvalidPeriodError`
+  400 tipado en vez de `Error` pelado — mismo mensaje; `formatPeriod`;
+  `sumUsageTotals`) y `domain/services/closure-csv.ts` (el CSV es puro:
+  columnas, filas, encabezado de dos líneas, BOM UTF-8 + `;` + CRLF).
+- `domain/errors/report-error.ts` — `ReportError` con `statusCode`:
+  `InvalidPeriodError` 400, `ClosurePeriodConflictError` 409,
+  `ClosureNotFoundError` 404, `ClosureNotReopenableError` 400.
+- `domain/repositories/{report-closure-repository,period-usage-query}.ts`.
+- `application/ports/{audit-log-writer,report-delivery-enqueuer,report-unit-of-work}.ts`
+  — la unidad de trabajo expone `closures` + `usage` + `audit` sobre la MISMA
+  transacción (el cierre calcula el volumen adentro de la trx y persiste
+  exactamente eso); el encolado de `report.closed` es un puerto best-effort
+  que se invoca DESPUÉS del commit (si se encolara adentro, el worker podría
+  leer `report_closures` antes de que el commit sea visible).
+- `application/use-cases/{preview-period,close-period,reopen-period,
+  list-closures,get-closure,export-closure}.ts`. `ExportClosureUseCase`
+  devuelve `{filename, contentType, body}` — el controller sólo setea headers.
+- `infrastructure/database/{knex-report-closure-repository,knex-period-usage-query,
+  knex-audit-log-writer,knex-report-unit-of-work}.ts` (la consulta SQL cruda
+  de 80 líneas movida literal a una constante), `infrastructure/export/
+  closure-xlsx-renderer.ts` (exceljs) y `infrastructure/queue/
+  bullmq-report-delivery-enqueuer.ts`.
+- `presentation/{report-controller,report-routes,report-view}.ts`.
+- `index.ts` — fachada con las firmas viejas para `jobs/reportDeliveryWorker.ts`
+  (`buildClosureCsv`/`buildClosureXlsx`/`formatPeriod`, con filas crudas de la
+  base — por eso `ExportLine`/`ExportClosure` siguen en snake_case) y para el
+  renderer de `scheduled-reports` (`computePeriodUsage`/`parsePeriod`/
+  `formatPeriod`).
+
+**Detalles preservados a propósito:**
+- `preview` y `close` respondían 400 con el mensaje ante CUALQUIER error (no
+  sólo de dominio) — se conserva (`replying400` en el controller); `reopen`/
+  `get`/`export` sólo traducen `ReportError`, el resto sigue siendo 500.
+- Orden de chequeos de `reopen`: 404 por no-propiedad, luego 400 si no está
+  `closed`. La única diferencia estructural: el chequeo de propiedad pasó a
+  correr DENTRO de la misma transacción que el update + audit (antes era una
+  lectura previa sin trx) — estrictamente más seguro, mismo resultado.
+- `listClosures` devuelve exactamente las 13 columnas del select original;
+  `getClosure` devuelve el cierre + `lines` con TODAS las columnas de
+  `report_closure_lines` (el `select *` original) — `toClosureLineView` las
+  enumera una por una, por eso supera las 20 líneas (deuda aceptada en
+  baseline: es un literal de mapeo, no lógica).
+
+`api/server.ts` — una línea (import de `registerReportRoutes`). Borrados los 6
+archivos originales (confirmado sin otros consumidores).
+
+**Validación:** `npx tsc --noEmit` limpio. Entorno efímero aislado (misma
+receta que `alerts`, OK previo de las 3 sesiones activas), semilla antes de
+la suite. Suite completa de backend (29 archivos): **`reports.test.ts`
+15/15** (preview, cierre, conflicto 409, reapertura + `superseded_by`,
+export), **`scheduledReports.test.ts` 17/17** (el renderer del módulo del
+hermano consumiendo `computePeriodUsage` vía la fachada), `e2e.test.ts`
+37/37, `rbac.test.ts` 87/87, `publicApi.test.ts` 24/24; los únicos 2 fallos
+son los mismos ajenos y de entorno ya documentados en la pasada de `alerts`
+(`observability` pub/sub WS flaky, `twoFactor` 6.3 → 429). `check-sizes.mjs`
+limpio tras regenerar baseline.
+
 ## 0. Punto de partida (medido 2026-08-24)
 
 `stc-cloud` es un monolito con **varios dominios de negocio** bajo un mismo backend

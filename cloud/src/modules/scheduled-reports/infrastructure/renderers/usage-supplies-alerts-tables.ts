@@ -1,6 +1,6 @@
 import type { Knex } from "knex";
 import type { RenderedTable } from "../../application/ports/report-renderer";
-import { computePeriodUsage, formatPeriod, parsePeriod } from "../../../../services/reportService";
+import { computePeriodUsage, formatPeriod, parsePeriod } from "../../../reports";
 import { fleetSupplies, type FleetSupplyRow } from "../../../../services/suppliesService";
 import { KnexDeviceCostsRepository, periodCost, type DeviceCosts } from "../../../device-costs";
 

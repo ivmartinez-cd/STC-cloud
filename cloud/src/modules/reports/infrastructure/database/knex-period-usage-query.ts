@@ -1,49 +1,10 @@
-import { Knex } from "knex";
-
-export interface PeriodUsageLine {
-  device_id: string;
-  serial_number: string | null;
-  model: string | null;
-  brand: string | null;
-  agent_id: string | null;
-  agent_name: string | null;
-  source: string | null;
-  first_reading_at: Date | null;
-  first_total: number | null;
-  first_mono: number | null;
-  first_color: number | null;
-  last_reading_at: Date | null;
-  last_total: number | null;
-  last_mono: number | null;
-  last_color: number | null;
-  delta_total: number;
-  delta_mono: number;
-  delta_color: number;
-  had_counter_reset: boolean;
-}
-
-/** Parsea "YYYY-MM" a los límites [inicio, fin) del mes calendario, en UTC. */
-export function parsePeriod(period: string): { periodStart: Date; periodEnd: Date } {
-  const match = /^(\d{4})-(\d{2})$/.exec(period);
-  if (!match) throw new Error("Período inválido, se espera YYYY-MM");
-  const year = Number(match[1]);
-  const month = Number(match[2]); // 1-12
-  if (month < 1 || month > 12) throw new Error("Período inválido, se espera YYYY-MM");
-  const periodStart = new Date(Date.UTC(year, month - 1, 1));
-  const periodEnd = new Date(Date.UTC(year, month, 1));
-  return { periodStart, periodEnd };
-}
-
-/** "YYYY-MM" a partir de un `period` (columna `date`, primer día del mes). */
-export function formatPeriod(periodDate: Date): string {
-  const d = new Date(periodDate);
-  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
-}
+import type { Knex } from "knex";
+import type { PeriodUsageLine } from "../../domain/entities/period-usage-line";
+import type { PeriodUsageQuery } from "../../domain/repositories/period-usage-query";
+import { parsePeriod } from "../../domain/services/period";
 
 /**
- * Volumen del período por dispositivo, para un cliente. No escribe nada — la usan
- * tanto el preview como `closePeriod` (que persiste exactamente lo que esto
- * devuelve). Incluye dispositivos vía `devices.client_id` directo (identidad de
+ * Incluye dispositivos vía `devices.client_id` directo (identidad de
  * dispositivo por cliente, §2.4) — un equipo reasignado a otro cliente después
  * del período no se reatribuye retroactivamente, sigue el `client_id` ACTUAL.
  *
@@ -56,15 +17,7 @@ export function formatPeriod(periodDate: Date): string {
  * (`merged_into`) se excluyen siempre: su historial ya vive en la fila
  * superviviente.
  */
-export async function computePeriodUsage(
-  db: Knex,
-  params: { clientId: string; period: string }
-): Promise<PeriodUsageLine[]> {
-  const { clientId, period } = params;
-  const { periodStart, periodEnd } = parsePeriod(period);
-
-  const result = await db.raw(
-    `
+const PERIOD_USAGE_SQL = `
     WITH scoped_devices AS (
       SELECT d.id AS device_id, d.serial_number, d.model, d.brand, d.agent_id,
              a.name AS agent_name, d.poll_method
@@ -145,9 +98,16 @@ export async function computePeriodUsage(
     LEFT JOIN deltas_sum    ds ON ds.device_id = sd.device_id
     LEFT JOIN resets       res ON res.device_id = sd.device_id
     ORDER BY sd.serial_number NULLS LAST
-    `,
-    [clientId, periodStart, periodStart, periodEnd, periodStart, periodEnd, periodStart, periodEnd]
-  );
+`;
 
-  return result.rows as PeriodUsageLine[];
+export class KnexPeriodUsageQuery implements PeriodUsageQuery {
+  constructor(private readonly db: Knex | Knex.Transaction) {}
+
+  async compute(clientId: string, period: string): Promise<PeriodUsageLine[]> {
+    const { periodStart, periodEnd } = parsePeriod(period);
+    const result = await this.db.raw(PERIOD_USAGE_SQL, [
+      clientId, periodStart, periodStart, periodEnd, periodStart, periodEnd, periodStart, periodEnd,
+    ]);
+    return result.rows as PeriodUsageLine[];
+  }
 }

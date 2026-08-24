@@ -4,10 +4,9 @@ import knex from 'knex';
 import knexConfig from '../db/knexfile';
 import { sendReportEmail, sendReportWebhook } from '../services/notificationService';
 import { sendPublicApiWebhook } from '../services/publicWebhookService';
-import { buildClosureCsv, buildClosureXlsx } from '../services/reportExportService';
 import { renderFor } from '../modules/message-templates/application/resolve-template';
 import { eventEnabledFor } from '../modules/message-templates/domain/entities/message-template';
-import { formatPeriod } from '../services/reportService';
+import { buildClosureCsv, buildClosureXlsx, formatPeriod } from '../modules/reports';
 import { logger } from '../logger';
 
 /**

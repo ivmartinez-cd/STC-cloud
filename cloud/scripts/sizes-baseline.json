@@ -33,7 +33,6 @@
     "src/api/controllers/portalAgentController/remote.ts": 171,
     "src/api/controllers/portalAgentController/shared.ts": 51,
     "src/api/controllers/publicApiController.ts": 147,
-    "src/api/controllers/reportController.ts": 133,
     "src/api/controllers/suppliesController.ts": 59,
     "src/api/middlewares/authMiddleware.ts": 283,
     "src/api/policy/rolePolicy.ts": 112,
@@ -45,7 +44,6 @@
     "src/api/routes/incidentRoutes.ts": 143,
     "src/api/routes/portalAgentRoutes.ts": 247,
     "src/api/routes/publicApiRoutes.ts": 85,
-    "src/api/routes/reportRoutes.ts": 78,
     "src/api/routes/suppliesRoutes.ts": 17,
     "src/api/server.ts": 394,
     "src/api/utils/deviceFilters.ts": 60,
@@ -62,7 +60,7 @@
     "src/jobs/notificationWorker.ts": 243,
     "src/jobs/publicWebhookWorker.ts": 73,
     "src/jobs/remoteActionWorker.ts": 46,
-    "src/jobs/reportDeliveryWorker.ts": 121,
+    "src/jobs/reportDeliveryWorker.ts": 120,
     "src/jobs/retentionJob.ts": 100,
     "src/jobs/scheduledReportsWorker.ts": 51,
     "src/jobs/supplyRequestWorker.ts": 64,
@@ -151,6 +149,33 @@
     "src/modules/remote-actions/domain/entities/remote-action-batch.ts": 56,
     "src/modules/remote-actions/infrastructure/database/knex-remote-action-repository.ts": 111,
     "src/modules/remote-actions/presentation/remote-action-routes.ts": 155,
+    "src/modules/reports/application/dtos/report-dtos.ts": 51,
+    "src/modules/reports/application/ports/audit-log-writer.ts": 13,
+    "src/modules/reports/application/ports/report-delivery-enqueuer.ts": 12,
+    "src/modules/reports/application/ports/report-unit-of-work.ts": 19,
+    "src/modules/reports/application/use-cases/close-period.ts": 62,
+    "src/modules/reports/application/use-cases/export-closure.ts": 48,
+    "src/modules/reports/application/use-cases/get-closure.ts": 16,
+    "src/modules/reports/application/use-cases/list-closures.ts": 12,
+    "src/modules/reports/application/use-cases/preview-period.ts": 13,
+    "src/modules/reports/application/use-cases/reopen-period.ts": 35,
+    "src/modules/reports/domain/entities/period-usage-line.ts": 29,
+    "src/modules/reports/domain/entities/report-closure.ts": 55,
+    "src/modules/reports/domain/errors/report-error.ts": 37,
+    "src/modules/reports/domain/repositories/period-usage-query.ts": 13,
+    "src/modules/reports/domain/repositories/report-closure-repository.ts": 32,
+    "src/modules/reports/domain/services/closure-csv.ts": 74,
+    "src/modules/reports/domain/services/period.ts": 34,
+    "src/modules/reports/index.ts": 25,
+    "src/modules/reports/infrastructure/database/knex-audit-log-writer.ts": 19,
+    "src/modules/reports/infrastructure/database/knex-period-usage-query.ts": 114,
+    "src/modules/reports/infrastructure/database/knex-report-closure-repository.ts": 99,
+    "src/modules/reports/infrastructure/database/knex-report-unit-of-work.ts": 21,
+    "src/modules/reports/infrastructure/export/closure-xlsx-renderer.ts": 40,
+    "src/modules/reports/infrastructure/queue/bullmq-report-delivery-enqueuer.ts": 35,
+    "src/modules/reports/presentation/report-controller.ts": 114,
+    "src/modules/reports/presentation/report-routes.ts": 76,
+    "src/modules/reports/presentation/report-view.ts": 55,
     "src/modules/scheduled-reports/application/dtos/scheduled-report-dtos.ts": 79,
     "src/modules/scheduled-reports/application/ports/report-mailer.ts": 12,
     "src/modules/scheduled-reports/application/ports/report-renderer.ts": 28,
@@ -222,10 +247,6 @@
     "src/services/ipRangeSpec/warnings.ts": 88,
     "src/services/notificationService.ts": 373,
     "src/services/publicWebhookService.ts": 80,
-    "src/services/reportExportService.ts": 93,
-    "src/services/reportService/closure.ts": 209,
-    "src/services/reportService/index.ts": 11,
-    "src/services/reportService/period-usage.ts": 154,
     "src/services/snmpCredentials.ts": 296,
     "src/services/suppliesService/index.ts": 24,
     "src/services/suppliesService/queries.ts": 134,
@@ -270,7 +291,7 @@
     "src/tests/twoFactor.test.ts": 278,
     "src/version.ts": 6,
     "src/ws/index.ts": 310,
-    "portal/src/App.tsx": 90,
+    "portal/src/App.tsx": 96,
     "portal/src/components/BulkActionBar.tsx": 29,
     "portal/src/components/ConfirmModal.tsx": 80,
     "portal/src/components/ErrorBoundary.tsx": 59,
@@ -371,7 +392,7 @@
     "portal/src/lib/constants.ts": 54,
     "portal/src/lib/deviceImage.ts": 56,
     "portal/src/lib/formatters.ts": 113,
-    "portal/src/lib/postLoginRedirect.ts": 21,
+    "portal/src/lib/postLoginRedirect.ts": 29,
     "portal/src/lib/supplies.ts": 172,
     "portal/src/main.tsx": 14,
     "portal/src/pages/Activity.tsx": 248,
@@ -649,12 +670,6 @@
         "length": 30
       }
     ],
-    "src/api/controllers/reportController.ts": [
-      {
-        "name": "createReportController",
-        "length": 111
-      }
-    ],
     "src/api/controllers/suppliesController.ts": [
       {
         "name": "createSuppliesController",
@@ -715,12 +730,6 @@
       {
         "name": "registerPublicApiRoutes",
         "length": 53
-      }
-    ],
-    "src/api/routes/reportRoutes.ts": [
-      {
-        "name": "registerReportRoutes",
-        "length": 41
       }
     ],
     "src/api/server.ts": [
@@ -879,6 +888,12 @@
       {
         "name": "runGuardedTick",
         "length": 24
+      }
+    ],
+    "src/modules/reports/presentation/report-view.ts": [
+      {
+        "name": "toClosureLineView",
+        "length": 25
       }
     ],
     "src/modules/scheduled-reports/infrastructure/mail/smtp-report-mailer.ts": [
@@ -1135,40 +1150,6 @@
       {
         "name": "upsertWebhookConfig",
         "length": 21
-      }
-    ],
-    "src/services/reportExportService.ts": [
-      {
-        "name": "buildClosureXlsx",
-        "length": 28
-      }
-    ],
-    "src/services/reportService/closure.ts": [
-      {
-        "name": "buildClosureLineRows",
-        "length": 24
-      },
-      {
-        "name": "runClosePeriod",
-        "length": 66
-      },
-      {
-        "name": "closePeriod",
-        "length": 21
-      },
-      {
-        "name": "reopenPeriod",
-        "length": 31
-      },
-      {
-        "name": "anonymous",
-        "length": 24
-      }
-    ],
-    "src/services/reportService/period-usage.ts": [
-      {
-        "name": "computePeriodUsage",
-        "length": 95
       }
     ],
     "src/services/snmpCredentials.ts": [
