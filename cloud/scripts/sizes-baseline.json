@@ -2,7 +2,12 @@
   "files": {
     "src/api/controllers/agentController.ts": 99,
     "src/api/controllers/auditController.ts": 144,
-    "src/api/controllers/authController.ts": 386,
+    "src/api/controllers/authController/agent-auth.ts": 65,
+    "src/api/controllers/authController/agent-version.ts": 82,
+    "src/api/controllers/authController/index.ts": 24,
+    "src/api/controllers/authController/session.ts": 93,
+    "src/api/controllers/authController/shared.ts": 24,
+    "src/api/controllers/authController/users.ts": 175,
     "src/api/controllers/clientController.ts": 346,
     "src/api/controllers/dashboardController/alerts-mutations.ts": 144,
     "src/api/controllers/dashboardController/alerts-reads.ts": 118,
@@ -247,31 +252,13 @@
         "length": 21
       }
     ],
-    "src/api/controllers/authController.ts": [
-      {
-        "name": "createAuthController",
-        "length": 348
-      },
-      {
-        "name": "portalLogin",
-        "length": 55
-      },
-      {
-        "name": "createUser",
-        "length": 46
-      },
-      {
-        "name": "updateUser",
-        "length": 55
-      },
-      {
-        "name": "deleteUser",
-        "length": 27
-      },
+    "src/api/controllers/authController/agent-auth.ts": [
       {
         "name": "agentActivate",
         "length": 35
-      },
+      }
+    ],
+    "src/api/controllers/authController/agent-version.ts": [
       {
         "name": "agentVersion",
         "length": 32
@@ -279,6 +266,26 @@
       {
         "name": "updateAgentVersion",
         "length": 34
+      }
+    ],
+    "src/api/controllers/authController/session.ts": [
+      {
+        "name": "portalLogin",
+        "length": 55
+      }
+    ],
+    "src/api/controllers/authController/users.ts": [
+      {
+        "name": "createUser",
+        "length": 44
+      },
+      {
+        "name": "updateUser",
+        "length": 41
+      },
+      {
+        "name": "deleteUser",
+        "length": 25
       }
     ],
     "src/api/controllers/clientController.ts": [
