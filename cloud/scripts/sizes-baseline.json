@@ -1,0 +1,1876 @@
+{
+  "files": {
+    "src/api/controllers/agentController.ts": 99,
+    "src/api/controllers/auditController.ts": 144,
+    "src/api/controllers/authController.ts": 386,
+    "src/api/controllers/clientController.ts": 346,
+    "src/api/controllers/dashboardController.ts": 594,
+    "src/api/controllers/deviceController.ts": 778,
+    "src/api/controllers/feedbackController.ts": 130,
+    "src/api/controllers/inventoryController.ts": 119,
+    "src/api/controllers/portalAgentController.ts": 611,
+    "src/api/controllers/publicApiController.ts": 147,
+    "src/api/controllers/reportController.ts": 133,
+    "src/api/controllers/suppliesController.ts": 59,
+    "src/api/middlewares/authMiddleware.ts": 251,
+    "src/api/policy/rolePolicy.ts": 94,
+    "src/api/routes/agentRoutes.ts": 127,
+    "src/api/routes/auditRoutes.ts": 19,
+    "src/api/routes/authRoutes.ts": 153,
+    "src/api/routes/clientRoutes.ts": 178,
+    "src/api/routes/dashboardRoutes.ts": 78,
+    "src/api/routes/deviceRoutes.ts": 221,
+    "src/api/routes/feedbackRoutes.ts": 60,
+    "src/api/routes/inventoryRoutes.ts": 92,
+    "src/api/routes/portalAgentRoutes.ts": 247,
+    "src/api/routes/publicApiRoutes.ts": 85,
+    "src/api/routes/reportRoutes.ts": 78,
+    "src/api/routes/suppliesRoutes.ts": 17,
+    "src/api/server.ts": 334,
+    "src/api/utils/deviceFilters.ts": 60,
+    "src/api/utils/ip.ts": 16,
+    "src/api/utils/password.ts": 28,
+    "src/api/utils/scope.ts": 155,
+    "src/db/knexfile.ts": 56,
+    "src/db/manual_seed.ts": 21,
+    "src/db/seeds/test_data.ts": 12,
+    "src/db/test_db.ts": 24,
+    "src/jobs/alertWorker.ts": 156,
+    "src/jobs/heartbeatMonitor.ts": 171,
+    "src/jobs/notificationWorker.ts": 123,
+    "src/jobs/publicWebhookWorker.ts": 73,
+    "src/jobs/reportDeliveryWorker.ts": 114,
+    "src/jobs/retentionJob.ts": 69,
+    "src/logger.ts": 13,
+    "src/services/agentService.ts": 1593,
+    "src/services/agentVersionService.ts": 39,
+    "src/services/alertCatalog.ts": 255,
+    "src/services/alertService.ts": 213,
+    "src/services/apiKeyService.ts": 84,
+    "src/services/auditCatalog.ts": 99,
+    "src/services/auditService.ts": 42,
+    "src/services/businessHours.ts": 125,
+    "src/services/cryptoService.ts": 112,
+    "src/services/customFieldService.ts": 180,
+    "src/services/deviceIdentity.ts": 222,
+    "src/services/deviceLifecycleService.ts": 517,
+    "src/services/deviceMonitorService.ts": 59,
+    "src/services/deviceRegistrationService.ts": 200,
+    "src/services/ewsProxyService.ts": 75,
+    "src/services/ipRangeSpec.ts": 436,
+    "src/services/notificationService.ts": 242,
+    "src/services/publicWebhookService.ts": 80,
+    "src/services/reportExportService.ts": 93,
+    "src/services/reportService.ts": 356,
+    "src/services/snmpCredentials.ts": 296,
+    "src/services/suppliesService.ts": 302,
+    "src/services/supplyOrigin.ts": 40,
+    "src/services/wsTicketService.ts": 37,
+    "src/shared/domain/errors/app-error.ts": 15,
+    "src/shared/domain/errors/application-error.ts": 10,
+    "src/shared/domain/errors/domain-error.ts": 10,
+    "src/shared/domain/errors/index.ts": 5,
+    "src/shared/domain/errors/infrastructure-error.ts": 11,
+    "src/tests/alertCatalog.test.ts": 159,
+    "src/tests/alerts.test.ts": 499,
+    "src/tests/auditFeed.test.ts": 188,
+    "src/tests/businessHours.test.ts": 128,
+    "src/tests/deviceLifecycle.test.ts": 465,
+    "src/tests/deviceUsageHistory.test.ts": 149,
+    "src/tests/e2e.test.ts": 521,
+    "src/tests/ewsProxyService.test.ts": 85,
+    "src/tests/inventoryFields.test.ts": 260,
+    "src/tests/ipRangeSpec.test.ts": 361,
+    "src/tests/ipRangesCredentials.test.ts": 169,
+    "src/tests/loadTest.ts": 260,
+    "src/tests/monitorState.test.ts": 249,
+    "src/tests/pendingDevices.test.ts": 267,
+    "src/tests/portalAgentEws.test.ts": 177,
+    "src/tests/publicApi.test.ts": 298,
+    "src/tests/rbac.test.ts": 649,
+    "src/tests/reports.test.ts": 219,
+    "src/tests/snmpCredentials.test.ts": 283,
+    "src/tests/supplies.test.ts": 211,
+    "src/tests/supplyOrigin.test.ts": 164,
+    "src/version.ts": 6,
+    "src/ws/index.ts": 268,
+    "portal/src/App.tsx": 74,
+    "portal/src/components/BulkActionBar.tsx": 29,
+    "portal/src/components/ConfirmModal.tsx": 80,
+    "portal/src/components/ErrorBoundary.tsx": 59,
+    "portal/src/components/FeedbackModal.tsx": 335,
+    "portal/src/components/Layout.tsx": 483,
+    "portal/src/components/Terminal.tsx": 244,
+    "portal/src/components/agents/AgentTable.tsx": 194,
+    "portal/src/components/agents/ClientUsageChart.tsx": 54,
+    "portal/src/components/agents/ConfigAgentModal.tsx": 216,
+    "portal/src/components/agents/CreateAgentModal.tsx": 285,
+    "portal/src/components/agents/RegenKeyModal.tsx": 81,
+    "portal/src/components/clients/ApiKeysCard.tsx": 343,
+    "portal/src/components/clients/CustomFieldsCard.tsx": 147,
+    "portal/src/components/devices/DeviceLifecycleModals.tsx": 604,
+    "portal/src/components/monitors/CreateMonitorModal.tsx": 258,
+    "portal/src/components/monitors/DeviceInventoryTable.tsx": 426,
+    "portal/src/components/monitors/DeviceSummaryCard.tsx": 77,
+    "portal/src/components/monitors/EditMonitorModal.tsx": 116,
+    "portal/src/components/monitors/IpRangesEditor.tsx": 192,
+    "portal/src/components/monitors/LicenseCard.tsx": 82,
+    "portal/src/components/monitors/MonitorSpecsCard.tsx": 59,
+    "portal/src/components/monitors/RemoteToolsPanel.tsx": 72,
+    "portal/src/components/monitors/ReportsTabPanel.tsx": 451,
+    "portal/src/components/monitors/SnmpCredentialsPanel.tsx": 354,
+    "portal/src/components/ui/BrandModal.tsx": 91,
+    "portal/src/components/ui/ConfirmationModal.tsx": 105,
+    "portal/src/context/AuthContext.tsx": 99,
+    "portal/src/context/ToastContext.tsx": 79,
+    "portal/src/hooks/useClientDetail.ts": 71,
+    "portal/src/hooks/useDashboard.ts": 62,
+    "portal/src/hooks/useMonitorDetail.ts": 148,
+    "portal/src/hooks/useNow.ts": 17,
+    "portal/src/hooks/useRowSelection.ts": 33,
+    "portal/src/hooks/useTime.ts": 12,
+    "portal/src/lib/api.ts": 84,
+    "portal/src/lib/constants.ts": 39,
+    "portal/src/lib/deviceImage.ts": 56,
+    "portal/src/lib/formatters.ts": 104,
+    "portal/src/lib/supplies.ts": 172,
+    "portal/src/main.tsx": 14,
+    "portal/src/pages/Activity.tsx": 248,
+    "portal/src/pages/Agents.tsx": 120,
+    "portal/src/pages/Alerts.tsx": 418,
+    "portal/src/pages/ClientDetail.tsx": 572,
+    "portal/src/pages/Clients.tsx": 334,
+    "portal/src/pages/Dashboard.tsx": 508,
+    "portal/src/pages/DeviceDetail.tsx": 782,
+    "portal/src/pages/Devices.tsx": 261,
+    "portal/src/pages/Login.tsx": 146,
+    "portal/src/pages/MonitorDetail.tsx": 570,
+    "portal/src/pages/Monitors.tsx": 616,
+    "portal/src/pages/PendingDevices.tsx": 270,
+    "portal/src/pages/Reports.tsx": 367,
+    "portal/src/pages/Settings.tsx": 870,
+    "portal/src/pages/Supplies.tsx": 253,
+    "portal/src/types/agents.ts": 83,
+    "portal/src/types/alerts.ts": 64,
+    "portal/src/types/audit.ts": 29,
+    "portal/src/types/inventory.ts": 24,
+    "portal/src/types/monitor.ts": 347,
+    "portal/src/types/pendingDevices.ts": 24,
+    "portal/src/types/reports.ts": 78,
+    "portal/src/types/supplies.ts": 45
+  },
+  "functions": {
+    "src/api/controllers/agentController.ts": [
+      {
+        "name": "createAgentController",
+        "length": 67
+      },
+      {
+        "name": "heartbeat",
+        "length": 34
+      }
+    ],
+    "src/api/controllers/auditController.ts": [
+      {
+        "name": "createAuditController",
+        "length": 116
+      },
+      {
+        "name": "getAuditLogs",
+        "length": 90
+      },
+      {
+        "name": "buildBase",
+        "length": 38
+      },
+      {
+        "name": "getAuditActions",
+        "length": 21
+      }
+    ],
+    "src/api/controllers/authController.ts": [
+      {
+        "name": "createAuthController",
+        "length": 348
+      },
+      {
+        "name": "portalLogin",
+        "length": 55
+      },
+      {
+        "name": "createUser",
+        "length": 46
+      },
+      {
+        "name": "updateUser",
+        "length": 55
+      },
+      {
+        "name": "deleteUser",
+        "length": 27
+      },
+      {
+        "name": "agentActivate",
+        "length": 35
+      },
+      {
+        "name": "agentVersion",
+        "length": 32
+      },
+      {
+        "name": "updateAgentVersion",
+        "length": 34
+      }
+    ],
+    "src/api/controllers/clientController.ts": [
+      {
+        "name": "createClientController",
+        "length": 331
+      },
+      {
+        "name": "createClient",
+        "length": 36
+      },
+      {
+        "name": "updateClient",
+        "length": 51
+      },
+      {
+        "name": "listClients",
+        "length": 30
+      },
+      {
+        "name": "getClient",
+        "length": 24
+      },
+      {
+        "name": "getClientMonitors",
+        "length": 24
+      },
+      {
+        "name": "getClientUsage",
+        "length": 35
+      },
+      {
+        "name": "getClientDevices",
+        "length": 21
+      }
+    ],
+    "src/api/controllers/dashboardController.ts": [
+      {
+        "name": "buildScopedAlertQuery",
+        "length": 37
+      },
+      {
+        "name": "createDashboardController",
+        "length": 506
+      },
+      {
+        "name": "getDashboard",
+        "length": 277
+      },
+      {
+        "name": "getAlerts",
+        "length": 53
+      },
+      {
+        "name": "getAlertSummary",
+        "length": 34
+      },
+      {
+        "name": "updateAlert",
+        "length": 59
+      },
+      {
+        "name": "bulkUpdateAlerts",
+        "length": 54
+      }
+    ],
+    "src/api/controllers/deviceController.ts": [
+      {
+        "name": "createDeviceController",
+        "length": 752
+      },
+      {
+        "name": "listDevices",
+        "length": 28
+      },
+      {
+        "name": "getDevice",
+        "length": 49
+      },
+      {
+        "name": "getDeviceReadings",
+        "length": 38
+      },
+      {
+        "name": "getDeviceSupplies",
+        "length": 26
+      },
+      {
+        "name": "getDeviceUsageHistory",
+        "length": 32
+      },
+      {
+        "name": "updateDevice",
+        "length": 52
+      },
+      {
+        "name": "decommissionDevice",
+        "length": 57
+      },
+      {
+        "name": "anonymous",
+        "length": 41
+      },
+      {
+        "name": "recommissionDevice",
+        "length": 27
+      },
+      {
+        "name": "moveDevice",
+        "length": 86
+      },
+      {
+        "name": "anonymous",
+        "length": 69
+      },
+      {
+        "name": "mergeDevice",
+        "length": 57
+      },
+      {
+        "name": "listDuplicates",
+        "length": 40
+      },
+      {
+        "name": "deleteDevice",
+        "length": 46
+      },
+      {
+        "name": "anonymous",
+        "length": 35
+      },
+      {
+        "name": "decommissionStaleDevices",
+        "length": 45
+      },
+      {
+        "name": "updateMonitorState",
+        "length": 24
+      },
+      {
+        "name": "unignoreDevice",
+        "length": 23
+      },
+      {
+        "name": "bulkSetMonitorState",
+        "length": 35
+      }
+    ],
+    "src/api/controllers/feedbackController.ts": [
+      {
+        "name": "createFeedbackController",
+        "length": 117
+      },
+      {
+        "name": "submit",
+        "length": 45
+      },
+      {
+        "name": "list",
+        "length": 22
+      },
+      {
+        "name": "updateStatus",
+        "length": 44
+      }
+    ],
+    "src/api/controllers/inventoryController.ts": [
+      {
+        "name": "createInventoryController",
+        "length": 101
+      },
+      {
+        "name": "createDeviceModel",
+        "length": 27
+      }
+    ],
+    "src/api/controllers/portalAgentController.ts": [
+      {
+        "name": "createPortalAgentController",
+        "length": 543
+      },
+      {
+        "name": "listAgents",
+        "length": 31
+      },
+      {
+        "name": "getAgent",
+        "length": 80
+      },
+      {
+        "name": "getAgentDevices",
+        "length": 66
+      },
+      {
+        "name": "createAgent",
+        "length": 21
+      },
+      {
+        "name": "deleteAgent",
+        "length": 58
+      },
+      {
+        "name": "anonymous",
+        "length": 36
+      },
+      {
+        "name": "sendCommand",
+        "length": 26
+      },
+      {
+        "name": "ewsProxy",
+        "length": 71
+      },
+      {
+        "name": "exportLogs",
+        "length": 29
+      },
+      {
+        "name": "getConfig",
+        "length": 23
+      },
+      {
+        "name": "updateSnmpCredentials",
+        "length": 26
+      }
+    ],
+    "src/api/controllers/publicApiController.ts": [
+      {
+        "name": "createPublicApiController",
+        "length": 118
+      },
+      {
+        "name": "listAlerts",
+        "length": 30
+      }
+    ],
+    "src/api/controllers/reportController.ts": [
+      {
+        "name": "createReportController",
+        "length": 111
+      }
+    ],
+    "src/api/controllers/suppliesController.ts": [
+      {
+        "name": "createSuppliesController",
+        "length": 30
+      }
+    ],
+    "src/api/middlewares/authMiddleware.ts": [
+      {
+        "name": "createAuthMiddleware",
+        "length": 188
+      },
+      {
+        "name": "agentAuth",
+        "length": 35
+      },
+      {
+        "name": "portalAuth",
+        "length": 118
+      }
+    ],
+    "src/api/routes/agentRoutes.ts": [
+      {
+        "name": "registerAgentRoutes",
+        "length": 34
+      }
+    ],
+    "src/api/routes/authRoutes.ts": [
+      {
+        "name": "registerAuthRoutes",
+        "length": 75
+      }
+    ],
+    "src/api/routes/clientRoutes.ts": [
+      {
+        "name": "registerClientRoutes",
+        "length": 91
+      }
+    ],
+    "src/api/routes/dashboardRoutes.ts": [
+      {
+        "name": "registerDashboardRoutes",
+        "length": 40
+      }
+    ],
+    "src/api/routes/deviceRoutes.ts": [
+      {
+        "name": "registerDeviceRoutes",
+        "length": 93
+      }
+    ],
+    "src/api/routes/feedbackRoutes.ts": [
+      {
+        "name": "registerFeedbackRoutes",
+        "length": 24
+      }
+    ],
+    "src/api/routes/portalAgentRoutes.ts": [
+      {
+        "name": "registerPortalAgentRoutes",
+        "length": 158
+      }
+    ],
+    "src/api/routes/publicApiRoutes.ts": [
+      {
+        "name": "registerPublicApiRoutes",
+        "length": 53
+      }
+    ],
+    "src/api/routes/reportRoutes.ts": [
+      {
+        "name": "registerReportRoutes",
+        "length": 41
+      }
+    ],
+    "src/api/server.ts": [
+      {
+        "name": "start",
+        "length": 231
+      },
+      {
+        "name": "healthHandler",
+        "length": 24
+      }
+    ],
+    "src/api/utils/scope.ts": [
+      {
+        "name": "deviceIdParamMatchesScope",
+        "length": 21
+      }
+    ],
+    "src/jobs/alertWorker.ts": [
+      {
+        "name": "evaluateReading",
+        "length": 92
+      }
+    ],
+    "src/jobs/heartbeatMonitor.ts": [
+      {
+        "name": "checkOfflineAgents",
+        "length": 43
+      },
+      {
+        "name": "checkOfflineDevices",
+        "length": 56
+      }
+    ],
+    "src/jobs/notificationWorker.ts": [
+      {
+        "name": "processAlertNotification",
+        "length": 66
+      }
+    ],
+    "src/jobs/publicWebhookWorker.ts": [
+      {
+        "name": "processPublicReadingsNotification",
+        "length": 26
+      }
+    ],
+    "src/jobs/reportDeliveryWorker.ts": [
+      {
+        "name": "processReportDelivery",
+        "length": 60
+      }
+    ],
+    "src/services/agentService.ts": [
+      {
+        "name": "createActivationKey",
+        "length": 39
+      },
+      {
+        "name": "activateAgent",
+        "length": 37
+      },
+      {
+        "name": "refreshAgentToken",
+        "length": 28
+      },
+      {
+        "name": "updateConfig",
+        "length": 49
+      },
+      {
+        "name": "regenerateActivationKey",
+        "length": 25
+      },
+      {
+        "name": "registerDevices",
+        "length": 102
+      },
+      {
+        "name": "attemptUpsert",
+        "length": 53
+      },
+      {
+        "name": "anonymous",
+        "length": 51
+      },
+      {
+        "name": "registerDeviceLegacyByAgent",
+        "length": 33
+      },
+      {
+        "name": "ingestLogs",
+        "length": 23
+      },
+      {
+        "name": "syncReadings",
+        "length": 594
+      },
+      {
+        "name": "processReading",
+        "length": 434
+      },
+      {
+        "name": "heartbeat",
+        "length": 22
+      },
+      {
+        "name": "getConfig",
+        "length": 103
+      },
+      {
+        "name": "replaceSnmpCredentials",
+        "length": 55
+      },
+      {
+        "name": "globalSearch",
+        "length": 39
+      }
+    ],
+    "src/services/agentVersionService.ts": [
+      {
+        "name": "getPublishedAgentVersion",
+        "length": 23
+      }
+    ],
+    "src/services/alertCatalog.ts": [
+      {
+        "name": "classifyAlert",
+        "length": 36
+      },
+      {
+        "name": "backfillAlertClassification",
+        "length": 28
+      }
+    ],
+    "src/services/alertService.ts": [
+      {
+        "name": "openAlert",
+        "length": 83
+      }
+    ],
+    "src/services/businessHours.ts": [
+      {
+        "name": "validateBusinessHours",
+        "length": 36
+      }
+    ],
+    "src/services/cryptoService.ts": [
+      {
+        "name": "decryptSecret",
+        "length": 22
+      }
+    ],
+    "src/services/customFieldService.ts": [
+      {
+        "name": "createDef",
+        "length": 51
+      },
+      {
+        "name": "updateDef",
+        "length": 29
+      },
+      {
+        "name": "validateAndMerge",
+        "length": 49
+      }
+    ],
+    "src/services/deviceIdentity.ts": [
+      {
+        "name": "resolveDeviceIdentity",
+        "length": 95
+      },
+      {
+        "name": "maybeRebindAgent",
+        "length": 25
+      }
+    ],
+    "src/services/deviceLifecycleService.ts": [
+      {
+        "name": "mergeDevices",
+        "length": 206
+      },
+      {
+        "name": "run",
+        "length": 197
+      },
+      {
+        "name": "bulkDecommission",
+        "length": 51
+      },
+      {
+        "name": "anonymous",
+        "length": 43
+      },
+      {
+        "name": "bulkRecommission",
+        "length": 36
+      },
+      {
+        "name": "anonymous",
+        "length": 29
+      },
+      {
+        "name": "bulkMove",
+        "length": 77
+      },
+      {
+        "name": "anonymous",
+        "length": 69
+      }
+    ],
+    "src/services/deviceMonitorService.ts": [
+      {
+        "name": "setMonitorState",
+        "length": 36
+      }
+    ],
+    "src/services/deviceRegistrationService.ts": [
+      {
+        "name": "listPending",
+        "length": 41
+      },
+      {
+        "name": "registerDevices",
+        "length": 43
+      },
+      {
+        "name": "ignoreDevices",
+        "length": 45
+      },
+      {
+        "name": "unignore",
+        "length": 26
+      }
+    ],
+    "src/services/ipRangeSpec.ts": [
+      {
+        "name": "validateIpRangeSpecs",
+        "length": 101
+      },
+      {
+        "name": "anonymous",
+        "length": 92
+      },
+      {
+        "name": "compileOne",
+        "length": 43
+      },
+      {
+        "name": "publicIpWarnings",
+        "length": 24
+      },
+      {
+        "name": "overlappingCredentialWarnings",
+        "length": 39
+      }
+    ],
+    "src/services/notificationService.ts": [
+      {
+        "name": "assertSafeWebhookUrl",
+        "length": 29
+      }
+    ],
+    "src/services/publicWebhookService.ts": [
+      {
+        "name": "upsertWebhookConfig",
+        "length": 21
+      }
+    ],
+    "src/services/reportExportService.ts": [
+      {
+        "name": "buildClosureXlsx",
+        "length": 28
+      }
+    ],
+    "src/services/reportService.ts": [
+      {
+        "name": "computePeriodUsage",
+        "length": 95
+      },
+      {
+        "name": "closePeriod",
+        "length": 109
+      },
+      {
+        "name": "anonymous",
+        "length": 86
+      },
+      {
+        "name": "reopenPeriod",
+        "length": 31
+      },
+      {
+        "name": "anonymous",
+        "length": 24
+      }
+    ],
+    "src/services/snmpCredentials.ts": [
+      {
+        "name": "validateCredentials",
+        "length": 81
+      },
+      {
+        "name": "anonymous",
+        "length": 74
+      },
+      {
+        "name": "buildStored",
+        "length": 34
+      },
+      {
+        "name": "anonymous",
+        "length": 26
+      },
+      {
+        "name": "toWire",
+        "length": 26
+      }
+    ],
+    "src/services/suppliesService.ts": [
+      {
+        "name": "itemRow",
+        "length": 23
+      },
+      {
+        "name": "buildSupplyRows",
+        "length": 49
+      },
+      {
+        "name": "buildFleetRows",
+        "length": 44
+      }
+    ],
+    "src/tests/alertCatalog.test.ts": [
+      {
+        "name": "describe(alertCatalog — invariantes)",
+        "length": 39
+      },
+      {
+        "name": "describe(alertCatalog — prtAlertCode (RFC 3805, Printer-MIB))",
+        "length": 28
+      },
+      {
+        "name": "describe(alertCatalog — códigos de vendor (Samsung EWS))",
+        "length": 22
+      }
+    ],
+    "src/tests/alerts.test.ts": [
+      {
+        "name": "describe(Alertas — fixtures)",
+        "length": 38
+      },
+      {
+        "name": "test(Setup: crear cliente + agente + activar + registrar dispositivo)",
+        "length": 24
+      },
+      {
+        "name": "describe(Alertas — dedupe de tóner (arregla la carrera de alertWorker))",
+        "length": 25
+      },
+      {
+        "name": "test(dos syncs concurrentes con el mismo tóner bajo producen UNA sola alerta toner_black_low)",
+        "length": 23
+      },
+      {
+        "name": "describe(Alertas — ciclo de vida (ack/resolve))",
+        "length": 26
+      },
+      {
+        "name": "describe(Alertas — acción en bloque (Fase 9 del gap analysis vs HP SDS))",
+        "length": 56
+      },
+      {
+        "name": "test(setup: 2 alertas de tóner bajo en 2 equipos nuevos)",
+        "length": 24
+      },
+      {
+        "name": "describe(Alertas — counter_reset dedupea por tipo, no por mensaje)",
+        "length": 47
+      },
+      {
+        "name": "test(un segundo reset mientras el primero sigue abierto no crea una segunda fila)",
+        "length": 45
+      },
+      {
+        "name": "describe(Alertas EWS — auto-resolución cuando el equipo deja de reportarlas)",
+        "length": 46
+      },
+      {
+        "name": "test(una alerta EWS se abre con código de vendor y se resuelve sola cuando el sync ya no la incluye)",
+        "length": 36
+      },
+      {
+        "name": "describe(Alertas — filtro server-side por alert_class y /alerts/summary)",
+        "length": 36
+      },
+      {
+        "name": "describe(Alertas — bug de auto-resolución indebida (device_still_reporting no debe cerrarse por un sync EWS de otro tipo))",
+        "length": 67
+      },
+      {
+        "name": "test(un sync posterior con una lista EWS DISTINTA no cierra device_still_reporting (bug real, pre-fix), pero sí resuelve la alerta EWS vieja)",
+        "length": 22
+      },
+      {
+        "name": "describe(Alertas agent-scoped — LEFT JOIN de getAlerts)",
+        "length": 26
+      },
+      {
+        "name": "test(una alerta con agent_id (sin device_id) resuelve client_name/agent_name y respeta el filtro resolved)",
+        "length": 24
+      },
+      {
+        "name": "describe(Notificaciones — guard SSRF del webhook (sin red: sólo los casos que no requieren DNS))",
+        "length": 26
+      }
+    ],
+    "src/tests/auditFeed.test.ts": [
+      {
+        "name": "describe(Audit feed — fixtures)",
+        "length": 37
+      },
+      {
+        "name": "test(Setup: login admin + 2 clientes + agentes + registrar dispositivo)",
+        "length": 35
+      },
+      {
+        "name": "describe(Audit feed — DEVICE_MOVED aparece con client_id/target_label/user_username resueltos)",
+        "length": 21
+      },
+      {
+        "name": "describe(Audit feed — filtros)",
+        "length": 46
+      },
+      {
+        "name": "describe(Audit feed — RBAC (sólo admin/operator))",
+        "length": 26
+      }
+    ],
+    "src/tests/businessHours.test.ts": [
+      {
+        "name": "describe(businessHours — validateBusinessHours)",
+        "length": 51
+      },
+      {
+        "name": "describe(businessHours — parseNaiveLocalTimestamp)",
+        "length": 33
+      }
+    ],
+    "src/tests/deviceLifecycle.test.ts": [
+      {
+        "name": "describe(Identidad de dispositivo por cliente — fixtures)",
+        "length": 23
+      },
+      {
+        "name": "test(Setup: login admin + 2 clientes + 3 agentes (2 del mismo cliente A, 1 de B))",
+        "length": 21
+      },
+      {
+        "name": "describe(Identidad — escalera serial → mac → ip)",
+        "length": 59
+      },
+      {
+        "name": "test(Dos agentes del mismo cliente reportando el MISMO serial convergen a UNA sola fila)",
+        "length": 22
+      },
+      {
+        "name": "describe(Ciclo de vida — editar (columna generada, la ingesta no la pisa))",
+        "length": 27
+      },
+      {
+        "name": "test(PUT /devices/:id {name} persiste tras un sync posterior con otro nombre)",
+        "length": 25
+      },
+      {
+        "name": "describe(Ciclo de vida — dar de baja / reactivar)",
+        "length": 38
+      },
+      {
+        "name": "test(decommission excluye del listado y del dashboard, pero la ficha e historial siguen)",
+        "length": 31
+      },
+      {
+        "name": "describe(Ciclo de vida — mover entre monitores/clientes)",
+        "length": 38
+      },
+      {
+        "name": "describe(Ciclo de vida — fusión manual de duplicados)",
+        "length": 58
+      },
+      {
+        "name": "test(fusionar dos equipos con series disjuntas de lecturas: éxito, historial sumado, source queda lápida)",
+        "length": 45
+      },
+      {
+        "name": "describe(Acciones en bloque (Fase 9 del gap analysis vs HP SDS) — dar de baja / reactivar)",
+        "length": 83
+      },
+      {
+        "name": "describe(Acciones en bloque — mover en bloque)",
+        "length": 56
+      },
+      {
+        "name": "describe(Acciones en bloque — estado de monitoreo)",
+        "length": 27
+      }
+    ],
+    "src/tests/deviceUsageHistory.test.ts": [
+      {
+        "name": "describe(Historial de uso — fixtures)",
+        "length": 33
+      },
+      {
+        "name": "test(Setup: login admin, crear cliente + agente + activar)",
+        "length": 31
+      },
+      {
+        "name": "describe(GET /devices/:id/usage-history)",
+        "length": 57
+      }
+    ],
+    "src/tests/e2e.test.ts": [
+      {
+        "name": "describe(Portal Auth)",
+        "length": 48
+      },
+      {
+        "name": "describe(Ciclo de vida del agente)",
+        "length": 52
+      },
+      {
+        "name": "describe(Heartbeat)",
+        "length": 23
+      },
+      {
+        "name": "describe(Registro y sincronización de dispositivos)",
+        "length": 90
+      },
+      {
+        "name": "test(Sincronizar lectura → 200)",
+        "length": 21
+      },
+      {
+        "name": "test(Sync con reading_id repetido no duplica la lectura (idempotencia))",
+        "length": 30
+      },
+      {
+        "name": "describe(Concurrencia del sync (batching, auditoría de capacidad 200+ clientes))",
+        "length": 64
+      },
+      {
+        "name": "test(Lote con 12 dispositivos distintos en un solo sync → los 12 se registran e insertan)",
+        "length": 23
+      },
+      {
+        "name": "test(Una lectura con supplies_details corrupto no tumba el resto del lote (aislamiento por lectura preservado))",
+        "length": 22
+      },
+      {
+        "name": "describe(Detección de reset de contador y volumen mensual)",
+        "length": 55
+      },
+      {
+        "name": "describe(Seguridad mínima)",
+        "length": 49
+      },
+      {
+        "name": "test(Login setea cookies de sesión y CSRF; mutación sin header CSRF → 403, con header → 200)",
+        "length": 30
+      },
+      {
+        "name": "describe(Rotación de refresh token)",
+        "length": 36
+      },
+      {
+        "name": "describe(Revocación de agente)",
+        "length": 36
+      }
+    ],
+    "src/tests/inventoryFields.test.ts": [
+      {
+        "name": "describe(Inventario — fixtures)",
+        "length": 29
+      },
+      {
+        "name": "test(Setup: login admin, crear cliente + agente + activar + registrar dispositivo)",
+        "length": 27
+      },
+      {
+        "name": "describe(Inventario — asset_number: override vs reported vs limpiar)",
+        "length": 28
+      },
+      {
+        "name": "describe(Inventario — campos personalizados)",
+        "length": 44
+      },
+      {
+        "name": "describe(Inventario — uso de 30 días (readings_daily_agg))",
+        "length": 26
+      },
+      {
+        "name": "test(3 lecturas en 3 días distintos → pages_30d = suma de deltas positivos)",
+        "length": 24
+      },
+      {
+        "name": "describe(Inventario — duty_cycle_effective cae al catálogo sin override)",
+        "length": 33
+      },
+      {
+        "name": "describe(Inventario — RBAC (client_viewer sólo lectura de catálogos))",
+        "length": 24
+      }
+    ],
+    "src/tests/ipRangeSpec.test.ts": [
+      {
+        "name": "describe(ipRangeSpec — validateIpRangeSpecs)",
+        "length": 138
+      },
+      {
+        "name": "describe(ipRangeSpec — compileIpRangeSpecs)",
+        "length": 120
+      },
+      {
+        "name": "describe(ipRangeSpec — publicIpWarnings)",
+        "length": 22
+      },
+      {
+        "name": "describe(ipRangeSpec — overlappingCredentialWarnings)",
+        "length": 48
+      }
+    ],
+    "src/tests/ipRangesCredentials.test.ts": [
+      {
+        "name": "describe(ip_ranges + snmp_credentials — fixtures)",
+        "length": 31
+      },
+      {
+        "name": "describe(hostname (point lookup))",
+        "length": 37
+      },
+      {
+        "name": "describe(credenciales SNMP por rango)",
+        "length": 60
+      }
+    ],
+    "src/tests/loadTest.ts": [
+      {
+        "name": "setupAgent",
+        "length": 25
+      },
+      {
+        "name": "runAgentLoop",
+        "length": 25
+      },
+      {
+        "name": "main",
+        "length": 89
+      }
+    ],
+    "src/tests/monitorState.test.ts": [
+      {
+        "name": "describe(Estado de monitoreo — fixtures)",
+        "length": 29
+      },
+      {
+        "name": "test(Setup: login admin, crear cliente + agente + activar + registrar dispositivo)",
+        "length": 27
+      },
+      {
+        "name": "describe(Estado de monitoreo — disabled: no crecen las lecturas)",
+        "length": 25
+      },
+      {
+        "name": "test(sync con disabled=true no inserta fila en readings, sólo actualiza last_seen)",
+        "length": 23
+      },
+      {
+        "name": "describe(Estado de monitoreo — reports_only: no genera alertas)",
+        "length": 24
+      },
+      {
+        "name": "test(tóner crítico con reports_only → NO se abre toner_black_critical)",
+        "length": 22
+      },
+      {
+        "name": "describe(Estado de monitoreo — supplies_only: no factura)",
+        "length": 30
+      },
+      {
+        "name": "describe(Estado de monitoreo — full: sin regresión)",
+        "length": 31
+      },
+      {
+        "name": "test(volver a full restaura el comportamiento normal (lecturas + alertas))",
+        "length": 29
+      },
+      {
+        "name": "describe(Estado de monitoreo — invariante de escritura única de alertas)",
+        "length": 24
+      },
+      {
+        "name": "test(ningún archivo fuera de alertService.ts inserta directo en la tabla alerts)",
+        "length": 22
+      }
+    ],
+    "src/tests/pendingDevices.test.ts": [
+      {
+        "name": "describe(Con flag: cola de pendientes)",
+        "length": 126
+      },
+      {
+        "name": "test(ignorar en bloque corta lecturas futuras)",
+        "length": 23
+      },
+      {
+        "name": "describe(Cola de registro — validaciones)",
+        "length": 25
+      },
+      {
+        "name": "describe(Cola de registro — RBAC)",
+        "length": 22
+      }
+    ],
+    "src/tests/portalAgentEws.test.ts": [
+      {
+        "name": "describe(Remote EWS proxy — fixtures)",
+        "length": 33
+      },
+      {
+        "name": "test(Setup: login admin, crear cliente + agente + activar + sync)",
+        "length": 31
+      },
+      {
+        "name": "describe(POST /agents/:id/ews-proxy — round-trip completo vía WS)",
+        "length": 35
+      }
+    ],
+    "src/tests/publicApi.test.ts": [
+      {
+        "name": "describe(API pública — fixtures)",
+        "length": 24
+      },
+      {
+        "name": "test(Setup: login admin, crear 2 clientes + 1 agente + activar)",
+        "length": 22
+      },
+      {
+        "name": "describe(API keys — crear/listar/revocar)",
+        "length": 56
+      },
+      {
+        "name": "describe(Webhook desde el portal — /clients/:id/webhook)",
+        "length": 43
+      },
+      {
+        "name": "describe(API pública — scoping y datos)",
+        "length": 44
+      },
+      {
+        "name": "describe(API pública — webhook de integración ERP)",
+        "length": 56
+      }
+    ],
+    "src/tests/rbac.test.ts": [
+      {
+        "name": "describe(RBAC — fixtures)",
+        "length": 101
+      },
+      {
+        "name": "test(Setup: registrar + sincronizar dispositivo B (con reset de contador, para probar fuga de alertas))",
+        "length": 22
+      },
+      {
+        "name": "describe(RBAC — /portal/me y /clients)",
+        "length": 32
+      },
+      {
+        "name": "describe(RBAC — /agents)",
+        "length": 36
+      },
+      {
+        "name": "describe(RBAC — /devices)",
+        "length": 40
+      },
+      {
+        "name": "describe(RBAC — /dashboard, /alerts, /search)",
+        "length": 55
+      },
+      {
+        "name": "describe(RBAC — lecturas denegadas para client_viewer)",
+        "length": 28
+      },
+      {
+        "name": "describe(RBAC — mutaciones denegadas para client_viewer)",
+        "length": 160
+      },
+      {
+        "name": "describe(RBAC — restricciones a nivel de base (defensa en profundidad))",
+        "length": 36
+      }
+    ],
+    "src/tests/reports.test.ts": [
+      {
+        "name": "describe(Reportes — fixtures)",
+        "length": 50
+      },
+      {
+        "name": "test(Setup: crear cliente + agente + activar + registrar dispositivo)",
+        "length": 27
+      },
+      {
+        "name": "describe(Reportes — preview (no persiste nada))",
+        "length": 25
+      },
+      {
+        "name": "describe(Reportes — cierre inmutable)",
+        "length": 55
+      }
+    ],
+    "src/tests/snmpCredentials.test.ts": [
+      {
+        "name": "describe(cryptoService — cifrado at-rest)",
+        "length": 54
+      },
+      {
+        "name": "describe(snmpCredentials — validateCredentials)",
+        "length": 67
+      },
+      {
+        "name": "describe(snmpCredentials — buildStored / maskCredentials / toWire)",
+        "length": 130
+      }
+    ],
+    "src/tests/supplies.test.ts": [
+      {
+        "name": "describe(Consumibles — fixtures)",
+        "length": 50
+      },
+      {
+        "name": "test(Setup: login admin, crear cliente + agente + activar, 3 lecturas en 3 días + cartucho negro al 50%)",
+        "length": 48
+      },
+      {
+        "name": "describe(GET /devices/:id/supplies)",
+        "length": 25
+      },
+      {
+        "name": "describe(GET /supplies — vista de flota)",
+        "length": 31
+      }
+    ],
+    "src/tests/supplyOrigin.test.ts": [
+      {
+        "name": "describe(supply_origin explícito del agente (1.1.0+))",
+        "length": 46
+      },
+      {
+        "name": "describe(asset_number_reported se llena desde supplies_details.device.assetNumber)",
+        "length": 30
+      }
+    ],
+    "src/ws/index.ts": [
+      {
+        "name": "registerWebSocket",
+        "length": 179
+      },
+      {
+        "name": "anonymous",
+        "length": 171
+      },
+      {
+        "name": "anonymous",
+        "length": 39
+      }
+    ],
+    "portal/src/App.tsx": [
+      {
+        "name": "App",
+        "length": 32
+      }
+    ],
+    "portal/src/components/ConfirmModal.tsx": [
+      {
+        "name": "ConfirmModal",
+        "length": 62
+      }
+    ],
+    "portal/src/components/ErrorBoundary.tsx": [
+      {
+        "name": "render",
+        "length": 30
+      }
+    ],
+    "portal/src/components/FeedbackModal.tsx": [
+      {
+        "name": "FeedbackModal",
+        "length": 323
+      },
+      {
+        "name": "handleSubmit",
+        "length": 21
+      }
+    ],
+    "portal/src/components/Layout.tsx": [
+      {
+        "name": "Layout",
+        "length": 435
+      },
+      {
+        "name": "anonymous",
+        "length": 58
+      }
+    ],
+    "portal/src/components/Terminal.tsx": [
+      {
+        "name": "Terminal",
+        "length": 226
+      },
+      {
+        "name": "useEffect",
+        "length": 59
+      },
+      {
+        "name": "connect",
+        "length": 46
+      },
+      {
+        "name": "handleExecute",
+        "length": 26
+      }
+    ],
+    "portal/src/components/agents/AgentTable.tsx": [
+      {
+        "name": "AgentTable",
+        "length": 173
+      }
+    ],
+    "portal/src/components/agents/ConfigAgentModal.tsx": [
+      {
+        "name": "ConfigAgentModal",
+        "length": 201
+      },
+      {
+        "name": "saveConfig",
+        "length": 28
+      }
+    ],
+    "portal/src/components/agents/CreateAgentModal.tsx": [
+      {
+        "name": "CreateAgentModal",
+        "length": 267
+      },
+      {
+        "name": "generateKey",
+        "length": 26
+      }
+    ],
+    "portal/src/components/agents/RegenKeyModal.tsx": [
+      {
+        "name": "RegenKeyModal",
+        "length": 71
+      }
+    ],
+    "portal/src/components/clients/ApiKeysCard.tsx": [
+      {
+        "name": "NewKeyModal",
+        "length": 57
+      },
+      {
+        "name": "WebhookSection",
+        "length": 137
+      },
+      {
+        "name": "ApiKeysCard",
+        "length": 126
+      }
+    ],
+    "portal/src/components/clients/CustomFieldsCard.tsx": [
+      {
+        "name": "CustomFieldsCard",
+        "length": 129
+      }
+    ],
+    "portal/src/components/devices/DeviceLifecycleModals.tsx": [
+      {
+        "name": "EditDeviceModal",
+        "length": 117
+      },
+      {
+        "name": "save",
+        "length": 23
+      },
+      {
+        "name": "DecommissionDeviceModal",
+        "length": 37
+      },
+      {
+        "name": "MoveDeviceModal",
+        "length": 79
+      },
+      {
+        "name": "BulkDecommissionModal",
+        "length": 37
+      },
+      {
+        "name": "BulkRecommissionModal",
+        "length": 25
+      },
+      {
+        "name": "BulkMoveDevicesModal",
+        "length": 80
+      },
+      {
+        "name": "BulkMonitorStateModal",
+        "length": 43
+      },
+      {
+        "name": "MergeDeviceModal",
+        "length": 62
+      }
+    ],
+    "portal/src/components/monitors/CreateMonitorModal.tsx": [
+      {
+        "name": "CreateMonitorModal",
+        "length": 240
+      }
+    ],
+    "portal/src/components/monitors/DeviceInventoryTable.tsx": [
+      {
+        "name": "exportCountersCSV",
+        "length": 31
+      },
+      {
+        "name": "DeviceInventoryTable",
+        "length": 367
+      },
+      {
+        "name": "handleDeleteOffline",
+        "length": 21
+      },
+      {
+        "name": "anonymous",
+        "length": 163
+      }
+    ],
+    "portal/src/components/monitors/DeviceSummaryCard.tsx": [
+      {
+        "name": "DeviceSummaryCard",
+        "length": 64
+      }
+    ],
+    "portal/src/components/monitors/EditMonitorModal.tsx": [
+      {
+        "name": "EditMonitorModal",
+        "length": 88
+      }
+    ],
+    "portal/src/components/monitors/IpRangesEditor.tsx": [
+      {
+        "name": "IpRangesEditor",
+        "length": 113
+      },
+      {
+        "name": "anonymous",
+        "length": 79
+      },
+      {
+        "name": "ExcludeList",
+        "length": 44
+      }
+    ],
+    "portal/src/components/monitors/ReportsTabPanel.tsx": [
+      {
+        "name": "exportReportCSV",
+        "length": 35
+      },
+      {
+        "name": "ChartTooltip",
+        "length": 35
+      },
+      {
+        "name": "ReportsTabPanel",
+        "length": 310
+      },
+      {
+        "name": "anonymous",
+        "length": 25
+      },
+      {
+        "name": "anonymous",
+        "length": 33
+      }
+    ],
+    "portal/src/components/monitors/SnmpCredentialsPanel.tsx": [
+      {
+        "name": "SnmpCredentialsPanel",
+        "length": 168
+      },
+      {
+        "name": "buildPayload",
+        "length": 26
+      },
+      {
+        "name": "CredentialChip",
+        "length": 24
+      },
+      {
+        "name": "DraftForm",
+        "length": 84
+      }
+    ],
+    "portal/src/components/ui/BrandModal.tsx": [
+      {
+        "name": "BrandModal",
+        "length": 70
+      }
+    ],
+    "portal/src/components/ui/ConfirmationModal.tsx": [
+      {
+        "name": "ConfirmationModal",
+        "length": 57
+      }
+    ],
+    "portal/src/context/AuthContext.tsx": [
+      {
+        "name": "AuthProvider",
+        "length": 74
+      },
+      {
+        "name": "useCallback",
+        "length": 30
+      }
+    ],
+    "portal/src/context/ToastContext.tsx": [
+      {
+        "name": "ToastProvider",
+        "length": 27
+      },
+      {
+        "name": "ToastItem",
+        "length": 25
+      }
+    ],
+    "portal/src/hooks/useClientDetail.ts": [
+      {
+        "name": "useClientDetail",
+        "length": 66
+      }
+    ],
+    "portal/src/hooks/useDashboard.ts": [
+      {
+        "name": "useDashboard",
+        "length": 55
+      }
+    ],
+    "portal/src/hooks/useMonitorDetail.ts": [
+      {
+        "name": "useMonitorDetail",
+        "length": 139
+      }
+    ],
+    "portal/src/hooks/useRowSelection.ts": [
+      {
+        "name": "useRowSelection",
+        "length": 24
+      }
+    ],
+    "portal/src/lib/api.ts": [
+      {
+        "name": "request",
+        "length": 53
+      }
+    ],
+    "portal/src/lib/formatters.ts": [
+      {
+        "name": "getDeviceStatusInfo",
+        "length": 69
+      }
+    ],
+    "portal/src/lib/supplies.ts": [
+      {
+        "name": "buildSupplyRows",
+        "length": 43
+      }
+    ],
+    "portal/src/pages/Activity.tsx": [
+      {
+        "name": "Activity",
+        "length": 202
+      },
+      {
+        "name": "useCallback",
+        "length": 21
+      },
+      {
+        "name": "anonymous",
+        "length": 38
+      }
+    ],
+    "portal/src/pages/Agents.tsx": [
+      {
+        "name": "Agents",
+        "length": 106
+      }
+    ],
+    "portal/src/pages/Alerts.tsx": [
+      {
+        "name": "Alerts",
+        "length": 372
+      }
+    ],
+    "portal/src/pages/ClientDetail.tsx": [
+      {
+        "name": "MonitorStatusBadge",
+        "length": 25
+      },
+      {
+        "name": "NotificationSettingsCard",
+        "length": 97
+      },
+      {
+        "name": "DeviceApprovalCard",
+        "length": 53
+      },
+      {
+        "name": "DuplicateDevicesCard",
+        "length": 53
+      },
+      {
+        "name": "ClientDetail",
+        "length": 279
+      }
+    ],
+    "portal/src/pages/Clients.tsx": [
+      {
+        "name": "StatusBadge",
+        "length": 24
+      },
+      {
+        "name": "Clients",
+        "length": 285
+      }
+    ],
+    "portal/src/pages/Dashboard.tsx": [
+      {
+        "name": "StatCard",
+        "length": 28
+      },
+      {
+        "name": "Dashboard",
+        "length": 420
+      },
+      {
+        "name": "anonymous",
+        "length": 52
+      }
+    ],
+    "portal/src/pages/DeviceDetail.tsx": [
+      {
+        "name": "DeviceDetail",
+        "length": 679
+      }
+    ],
+    "portal/src/pages/Devices.tsx": [
+      {
+        "name": "Devices",
+        "length": 232
+      },
+      {
+        "name": "anonymous",
+        "length": 103
+      }
+    ],
+    "portal/src/pages/Login.tsx": [
+      {
+        "name": "Login",
+        "length": 137
+      }
+    ],
+    "portal/src/pages/MonitorDetail.tsx": [
+      {
+        "name": "MonitorDetail",
+        "length": 262
+      },
+      {
+        "name": "ConfigTabPanel",
+        "length": 255
+      },
+      {
+        "name": "handleSubmit",
+        "length": 37
+      }
+    ],
+    "portal/src/pages/Monitors.tsx": [
+      {
+        "name": "Monitors",
+        "length": 566
+      },
+      {
+        "name": "generateKey",
+        "length": 27
+      },
+      {
+        "name": "saveConfig",
+        "length": 22
+      }
+    ],
+    "portal/src/pages/PendingDevices.tsx": [
+      {
+        "name": "PendingDevices",
+        "length": 251
+      }
+    ],
+    "portal/src/pages/Reports.tsx": [
+      {
+        "name": "Reports",
+        "length": 341
+      }
+    ],
+    "portal/src/pages/Settings.tsx": [
+      {
+        "name": "Settings",
+        "length": 822
+      },
+      {
+        "name": "handleCreateUser",
+        "length": 28
+      },
+      {
+        "name": "anonymous",
+        "length": 63
+      }
+    ],
+    "portal/src/pages/Supplies.tsx": [
+      {
+        "name": "Supplies",
+        "length": 212
+      }
+    ]
+  }
+}

@@ -1,0 +1,214 @@
+# Plan de Migración a ARCHITECTURE_GUIDE.md
+
+**Estado:** Fase 0 completa (2026-08-24) — Fase 1 en adelante sin ejecutar  
+**Origen:** `docs/dev/ARCHITECTURE_GUIDE.md` (copiado desde `helpdesk-manager`, 2026-08-24)  
+**Reemplaza (parcialmente) a:** `docs/dev/PROJECT_GUIDELINES.md`, que hoy documenta la
+convención opuesta (`api/` para rutas + `services/` para lógica de negocio, sin capas).
+
+## Fase 0 — hecho
+
+- ✅ `docs/adr/001-adoptar-architecture-guide.md`
+- ✅ `cloud/scripts/sizes-baseline.json` + `cloud/scripts/check-sizes.mjs`
+  (`npm run check:sizes` / `check:sizes:baseline` en `cloud/package.json`),
+  probado en caso OK y en los dos casos de falla (archivo nuevo >300 líneas,
+  archivo baseline-ado que crece; función nueva >20 líneas).
+- ✅ `cloud/src/shared/domain/errors/` (`AppError`, `DomainError`,
+  `ValidationError`, `BusinessRuleViolationError`, `ApplicationError`,
+  `NotFoundError`, `UnauthorizedError`, `InfrastructureError`, `DatabaseError`,
+  `ExternalServiceError`) — puramente aditivo, ningún archivo existente lo
+  importa todavía.
+- ✅ `docs/dev/PROJECT_GUIDELINES.md` actualizado, apunta a esta guía + este plan.
+- ✅ Validado en un entorno **efímero y aislado** (Postgres/Redis/API propios en
+  contenedores throwaway, igual que hace `.github/workflows/ci.yml`) para no
+  pisar el trabajo en curso de la sesión hermana sobre la DB/API compartida:
+  `tsc --noEmit` limpio, suite completa de backend (20 archivos, `node
+  scripts/ci-test-runner.mjs`) en 0 fallas, `cloud/portal` `npm run check`
+  (icons + tsc + eslint) limpio.
+
+Nada de esto tocó código de negocio existente ni archivos que la sesión hermana
+estuviera editando.
+
+## 0. Punto de partida (medido 2026-08-24)
+
+`stc-cloud` es un monolito con **varios dominios de negocio** bajo un mismo backend
+desplegable (clientes, dispositivos/agentes, alertas, reportes, auditoría, inventario,
+insumos, cola de alta de equipos). Por la sección 2 de la guía ("Backend — variante
+monolito modular"), el target correcto **no** es capa→módulo (`domain/<módulo>/`) sino
+**módulo→capa**:
+
+```
+src/
+├── shared/                  # config, errores base, conexión DB, middlewares, health check
+│   ├── domain/
+│   ├── infrastructure/
+│   └── presentation/
+└── modules/
+    ├── auth/
+    ├── clients/
+    ├── devices/              # incluye lifecycle, monitor state, snmp credentials
+    ├── agents/                # telemetría, WS, heartbeat
+    ├── alerts/
+    ├── reports/
+    ├── audit/
+    ├── inventory/
+    ├── supplies/
+    ├── pending-devices/       # cola de alta / decommission
+    └── dashboard/             # agregación read-only cross-módulo (ver §4)
+```
+
+Regla de la guía que aplica igual acá: **ningún módulo importa `domain`/`application` de
+otro módulo**, solo `shared/`.
+
+### Archivos que ya violan el límite de 300 líneas (backend)
+
+| Archivo | Líneas | Módulo destino |
+|---|---:|---|
+| `services/agentService.ts` | 1529 | `agents` |
+| `api/controllers/deviceController.ts` | 777 | `devices` |
+| `api/controllers/portalAgentController.ts` | 610 | `agents` |
+| `api/controllers/dashboardController.ts` | 593 | `dashboard` |
+| `services/deviceLifecycleService.ts` | 516 | `devices` |
+| `services/ipRangeSpec.ts` | 435 | `devices` (o `shared` si se reusa) |
+| `api/controllers/authController.ts` | 385 | `auth` |
+| `services/reportService.ts` | 355 | `reports` |
+| `api/controllers/clientController.ts` | 345 | `clients` |
+| `api/server.ts` | 333 | `shared/presentation` |
+| `services/suppliesService.ts` | 301 | `supplies` |
+
+### Archivos que violan el límite (portal, frontend)
+
+| Archivo | Líneas |
+|---|---:|
+| `pages/Settings.tsx` | 869 |
+| `pages/DeviceDetail.tsx` | 772 |
+| `pages/Monitors.tsx` | 615 |
+| `components/devices/DeviceLifecycleModals.tsx` | 603 |
+| `pages/ClientDetail.tsx` | 571 |
+| `pages/MonitorDetail.tsx` | 569 |
+| `pages/Dashboard.tsx` | 507 |
+| `components/Layout.tsx` | 482 |
+| `components/monitors/ReportsTabPanel.tsx` | 450 |
+| `components/monitors/DeviceInventoryTable.tsx` | 420 |
+| `pages/Alerts.tsx` | 417 |
+| `pages/Reports.tsx` | 366 |
+| `components/monitors/SnmpCredentialsPanel.tsx` | 353 |
+| `components/clients/ApiKeysCard.tsx` | 342 |
+| `components/FeedbackModal.tsx` | 334 |
+| `pages/Clients.tsx` | 333 |
+
+## Riesgo actual a tener en cuenta
+
+Al momento de escribir este plan hay una sesión hermana (`close-hp-sds-gaps`) editando
+en vivo varios de estos mismos archivos (bulk actions sobre `DeviceInventoryTable.tsx`,
+módulos de auditoría/inventario/supplies nuevos aún sin commitear). **Ninguna fase de
+código debe arrancar sin coordinar con esa sesión primero** — de lo contrario un módulo
+recién creado por esta migración puede pisar o quedar inconsistente con trabajo en curso.
+
+---
+
+## Fases
+
+### Fase 0 — Fundaciones (sin tocar código de negocio)
+
+No mueve ni reescribe nada; solo arma el andamiaje para que las fases siguientes sean
+mecánicas y verificables.
+
+1. `docs/adr/` — crear el directorio y el primer ADR: `001-adoptar-architecture-guide.md`
+   (contexto: por qué se adopta, decisión: variante monolito modular, consecuencias:
+   costo de migración vs. mantenibilidad a largo plazo).
+2. `scripts/sizes-baseline.json` — congelar los tamaños actuales (tabla de arriba +
+   el resto del árbol) como deuda aceptada, igual que hace `helpdesk-manager`. Ningún
+   archivo nuevo puede superponerse a este baseline; los ya listados se migran fuera
+   de él a medida que se dividen.
+3. `scripts/check_sizes.py` (o equivalente Node/ts-node) — falla en CI si aparece un
+   archivo nuevo >300 líneas o una función nueva >20 líneas que no esté en el baseline.
+4. Jerarquía de errores base en `shared/domain/errors/` (`AppError`, `DomainError`,
+   `ValidationError`, `ApplicationError`, `NotFoundError`, `UnauthorizedError`,
+   `InfrastructureError`, `DatabaseError`, `ExternalServiceError`) — hoy no existe
+   ninguna, los controllers devuelven errores ad-hoc.
+5. Actualizar `docs/dev/PROJECT_GUIDELINES.md` para que deje de documentar la
+   convención vieja (`api/` + `services/` plano) y apunte a `ARCHITECTURE_GUIDE.md` +
+   este plan, marcando el estado como "en migración".
+
+**Criterio de salida:** ADR aprobado, baseline commiteado, `check_sizes` corriendo en
+CI en modo no bloqueante (solo reporta) durante la Fase 0.
+
+### Fase 1 — Módulo piloto
+
+Elegir **un módulo chico y ya bien acotado** para validar el patrón módulo→capa antes
+de tocar los grandes. Candidato: `supplies` (301 líneas de servicio, rutas y
+controller ya separados, sin dependencias circulares con otros dominios evidentes).
+
+1. `modules/supplies/domain/` — entidades y reglas puras extraídas de
+   `suppliesService.ts` (sin Knex, sin Fastify).
+2. `modules/supplies/application/use-cases/` — un caso de uso por operación
+   (`ListSupplies`, `RecordSupplyEvent`, etc.), 1 archivo cada uno.
+3. `modules/supplies/infrastructure/database/` — repositorio concreto sobre Knex,
+   implementando la interfaz de dominio.
+4. `modules/supplies/presentation/` — mover `suppliesController.ts` +
+   `suppliesRoutes.ts` acá, adelgazados a solo validar input / serializar output.
+5. Tests: unit sobre `domain`/`application` (sin DB), integración sobre
+   `infrastructure`, conservando `supplies.test.ts` como e2e.
+
+**Criterio de salida:** módulo piloto compila, tests pasan, PR revisado por el equipo
+antes de replicar el patrón — este PR es el que fija la convención real del repo
+(ejemplos concretos > la guía en abstracto).
+
+### Fase 2 — Dividir los archivos grandes por dominio (sin capas todavía)
+
+Antes de migrar cada módulo completo a capas, cortar los archivos que superan el
+límite dentro de su ubicación actual, dominio por dominio, empezando por los de mayor
+riesgo/tamaño:
+
+1. `services/agentService.ts` (1529 líneas) → separar por responsabilidad (ingesta de
+   telemetría, gestión de conexión WS, ciclo de vida del agente, credenciales) antes
+   de moverlo a `modules/agents/`.
+2. `api/controllers/deviceController.ts` (777) y `portalAgentController.ts` (610).
+3. `api/controllers/dashboardController.ts` (593) — candidato a quedar como capa de
+   presentación fina que solo agrega datos de otros módulos vía sus casos de uso
+   (no lógica propia).
+4. Resto de la tabla de la Fase 0, en orden descendente de tamaño.
+
+Frontend en paralelo, mismo criterio (extraer hooks/sub-componentes de
+`Settings.tsx`, `DeviceDetail.tsx`, `Monitors.tsx`, etc.), migrando a feature-slices
+(`features/<feature>/{components,hooks,store,api,types}`) recién cuando el archivo ya
+esté dividido.
+
+### Fase 3 — Migrar cada módulo restante a capas
+
+Repetir el patrón validado en la Fase 1 para `clients`, `devices`, `agents`, `alerts`,
+`reports`, `audit`, `inventory`, `pending-devices`, en ese orden (por acoplamiento
+ascendente — `devices`/`agents` son los más centrales y se dejan para cuando el
+patrón ya esté probado en 3-4 módulos más chicos).
+
+### Fase 4 — Frontend a feature-slices
+
+Reestructurar `portal/src` de `pages/`+`components/` planos a `features/<feature>/`
+por dominio, con `shared/` para lo transversal. Se hace después del backend porque los
+tipos (`types/monitor.ts`, etc.) deberían derivar de los DTOs que expongan los nuevos
+`application/dtos/` del backend.
+
+### Fase 5 — Enforcement completo + cobertura
+
+1. `check_sizes.py` pasa a bloquear en CI (ya no solo reporta).
+2. `check_guards.py`-equivalente: prohibir `console.log`, SQL por concatenación,
+   `except`/`catch` que silencian, endpoints sin paginación.
+3. Subir cobertura a los mínimos de la guía (Domain 90% / Application 85% /
+   Infrastructure 70% / Presentation 60%), módulo por módulo a medida que se migra —
+   no de golpe.
+4. Checklist de seguridad por módulo (catálogo de permisos, `require_permission` en
+   cada endpoint) — hoy `rolePolicy.ts` existe pero no está confirmado que cada
+   endpoint nuevo lo declare; auditar como parte de esta fase.
+
+---
+
+## Cómo retomar este plan
+
+Cada fase es independiente y puede ejecutarse como una tarea separada. Antes de
+arrancar cualquier fase de código (1 en adelante):
+
+1. Confirmar con la sesión hermana que esté trabajando en el repo que no hay choque
+   de archivos con el módulo/carpeta que se va a tocar.
+2. Correr `npx tsc --noEmit` y la suite de tests como línea base antes de mover nada.
+3. Un PR por módulo/archivo dividido, nunca "migración completa" en un commit — la
+   guía misma lo exige (§9, máx. 400 líneas por PR).
