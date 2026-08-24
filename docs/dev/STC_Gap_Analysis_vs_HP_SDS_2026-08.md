@@ -1382,6 +1382,45 @@ replicas` + LB — es decisión de infraestructura aparte), dashboards de
 Grafana/alerting sobre las métricas (solo el endpoint), y el relay
 request/reply para afinidad de socket del proxy EWS.
 
+### Fase 6 — Seguridad (24/08/2026) — arrancada: 1 de 1 ítems del primer corte
+
+✅ **6.1 — 2FA TOTP opt-in para el portal** (anotado en los parciales de la
+Fase 4 — el SDS lo ofrece en Preferencias — y ligado al riesgo R5).
+Implementado como séptimo dominio bajo la architecture guide
+(`modules/two-factor/`): TOTP RFC 6238 **puro sobre node:crypto, sin
+dependencia externa** (~40 líneas auditables: HMAC-SHA1, paso 30s, 6
+dígitos — los defaults que asumen Google Authenticator/Authy/1Password —,
+base32 propio y comparación en tiempo constante), verificado contra los
+**vectores oficiales del Apéndice B del RFC**. Migración
+`20260824160000_users_totp.ts`: `users.totp_secret` **cifrado con
+`cryptoService.encryptSecret`** (mismo mecanismo que las credenciales
+SNMP, nunca en claro) + `totp_enabled`; un secreto con enabled=false es un
+enrolamiento pendiente.
+
+Flujo: `POST /portal/2fa/setup` (secreto + URI otpauth; con 2FA activo →
+409), `enable`/`disable` **exigen un código vigente** (una sesión robada
+no puede bajar el 2FA sin el teléfono), ambos auditados
+(USER_2FA_ENABLED/DISABLED en el catálogo). Login: con el flag activo, la
+contraseña sola devuelve 401 con `totp_required: true` (el portal muestra
+el segundo paso) — y una contraseña INCORRECTA no revela `totp_required`
+(sin oráculo de qué cuentas tienen 2FA). Las 4 rutas van en
+`CLIENT_VIEWER_ROUTES`: proteger la propia cuenta es de todos los roles.
+UI: card self-service en Configuración (clave manual copiable + URI
+otpauth — sin QR visual a propósito, evita una dependencia nueva del
+portal; toda app TOTP acepta clave manual) y segundo paso en el login.
+
+Verificado: 13/13 tests (`twoFactor.test.ts` — vectores RFC, ventana ±1
+paso, y el ciclo e2e completo: setup→enable con código real→login sin
+código 401/con inválido 401/con válido 200→sin oráculo→setup con activo
+409→disable→login vuelve a contraseña sola→auditado); verificación visual
+Playwright del ciclo entero por la UI real (activación desde la card y
+login con segundo paso, con el TOTP calculado en el script de prueba).
+
+**Pendientes del corte de seguridad** (para próximos ítems): códigos de
+recuperación (hoy, perder el teléfono requiere que un admin borre el flag
+por base), enforcement de 2FA por rol (obligatorio para admin), y el resto
+de los pendientes R5 del doc.
+
 ### Otros puntos de §3 (riesgos) que siguen abiertos y no forman parte de ningún ítem de arriba
 - ✅ **R4 (parcial, 23/08/2026)**: el WS del portal ya NO acepta el JWT de
   sesión por query string. Investigado antes de tocarlo: no era vestigial —

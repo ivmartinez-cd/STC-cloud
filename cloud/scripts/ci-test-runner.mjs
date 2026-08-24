@@ -28,6 +28,7 @@ const TEST_FILES = [
   "src/tests/deviceCosts.test.ts",
   "src/tests/remoteActions.test.ts",
   "src/tests/observability.test.ts",
+  "src/tests/twoFactor.test.ts",
   "src/tests/snmpCredentials.test.ts",
   "src/tests/ipRangeSpec.test.ts",
   "src/tests/businessHours.test.ts",

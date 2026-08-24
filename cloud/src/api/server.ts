@@ -46,6 +46,7 @@ import { registerMessageTemplateRoutes } from "../modules/message-templates/pres
 import { registerEmailLogRoutes } from "../modules/email-log/presentation/email-log-routes";
 import { registerDeviceCostsRoutes } from "../modules/device-costs";
 import { registerRemoteActionRoutes } from "../modules/remote-actions/presentation/remote-action-routes";
+import { registerTwoFactorRoutes } from "../modules/two-factor/presentation/two-factor-routes";
 import { registerReportRoutes } from "./routes/reportRoutes";
 import { registerAuditRoutes } from "../modules/audit/presentation/audit-routes";
 import { registerInventoryRoutes } from "../modules/inventory/presentation/inventory-routes";
@@ -356,6 +357,7 @@ const start = async () => {
     registerEmailLogRoutes(fastify, db, portalAuth);
     registerDeviceCostsRoutes(fastify, db, portalAuth);
     registerRemoteActionRoutes(fastify, db, portalAuth);
+    registerTwoFactorRoutes(fastify, db, portalAuth);
     registerReportRoutes(fastify, db, portalAuth);
     registerAuditRoutes(fastify, db, portalAuth);
     registerInventoryRoutes(fastify, db, portalAuth);

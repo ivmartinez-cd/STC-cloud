@@ -11,15 +11,24 @@ const Login = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  const [totpCode, setTotpCode] = useState('');
+  const [totpStep, setTotpStep] = useState(false);
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
     try {
-      await login(username, password);
+      await login(username, password, totpCode || undefined);
       navigate('/', { replace: true });
     } catch (err: unknown) {
-      setError((err as Error).message);
+      const failure = err as Error & { totpRequired?: boolean };
+      if (failure.totpRequired && !totpStep) {
+        // Primer 401 con 2FA activo: mostrar el paso del código sin tratarlo como error.
+        setTotpStep(true);
+      } else {
+        setError(failure.message);
+      }
     } finally {
       setLoading(false);
     }
@@ -101,6 +110,26 @@ const Login = () => {
                 />
               </div>
             </div>
+
+            {totpStep && (
+              <div className="space-y-1.5 animate-in fade-in slide-in-from-top-2 duration-300">
+                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                  Código de verificación (2FA)
+                </label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  autoFocus
+                  maxLength={6}
+                  value={totpCode}
+                  onChange={e => setTotpCode(e.target.value.replace(/\D/g, ''))}
+                  className="w-full h-14 px-6 bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 text-lg tracking-[0.5em] text-center transition-all duration-300 focus:bg-white focus:border-brand/50 outline-none font-bold"
+                  placeholder="000000"
+                  required
+                />
+                <p className="text-[10px] text-slate-400 font-medium">Ingresá el código de 6 dígitos de tu app de autenticación.</p>
+              </div>
+            )}
 
             <button
               type="submit"

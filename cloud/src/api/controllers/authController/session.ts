@@ -1,4 +1,6 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
+import { verifyTotp } from "../../../modules/two-factor/domain/totp";
+import { decryptSecret } from "../../../services/cryptoService";
 import crypto from "crypto";
 import type Redis from "ioredis";
 import type { Knex } from "knex";
@@ -33,6 +35,20 @@ async function portalLogin(fastify: FastifyInstance, db: Knex, request: FastifyR
   const isValid = verifyPassword(password, user.password_hash);
   if (!isValid) {
     return reply.status(401).send({ error: "Credenciales inválidas" });
+  }
+
+  // 2FA TOTP opt-in (modules/two-factor): con el flag activo, la contraseña
+  // sola no alcanza. `totp_required: true` le dice al portal que muestre el
+  // segundo paso SIN revelar si la contraseña era correcta a un atacante
+  // sin código (el mensaje de error es el mismo genérico).
+  if (user.totp_enabled) {
+    const { totp_code } = request.body as LoginBody & { totp_code?: string };
+    if (!totp_code) {
+      return reply.status(401).send({ error: "Código de verificación requerido", totp_required: true });
+    }
+    if (!verifyTotp(decryptSecret(user.totp_secret), totp_code, Date.now())) {
+      return reply.status(401).send({ error: "Credenciales inválidas", totp_required: true });
+    }
   }
 
   const token = fastify.jwt.sign(

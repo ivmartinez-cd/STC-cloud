@@ -4,7 +4,7 @@
     "src/api/controllers/authController/agent-auth.ts": 65,
     "src/api/controllers/authController/agent-version.ts": 82,
     "src/api/controllers/authController/index.ts": 24,
-    "src/api/controllers/authController/session.ts": 93,
+    "src/api/controllers/authController/session.ts": 109,
     "src/api/controllers/authController/shared.ts": 24,
     "src/api/controllers/authController/users.ts": 175,
     "src/api/controllers/clientController/api-keys.ts": 33,
@@ -39,7 +39,7 @@
     "src/api/controllers/reportController.ts": 133,
     "src/api/controllers/suppliesController.ts": 59,
     "src/api/middlewares/authMiddleware.ts": 265,
-    "src/api/policy/rolePolicy.ts": 106,
+    "src/api/policy/rolePolicy.ts": 111,
     "src/api/routes/agentRoutes.ts": 127,
     "src/api/routes/authRoutes.ts": 153,
     "src/api/routes/clientRoutes.ts": 185,
@@ -50,7 +50,7 @@
     "src/api/routes/publicApiRoutes.ts": 85,
     "src/api/routes/reportRoutes.ts": 78,
     "src/api/routes/suppliesRoutes.ts": 17,
-    "src/api/server.ts": 390,
+    "src/api/server.ts": 392,
     "src/api/utils/deviceFilters.ts": 60,
     "src/api/utils/ip.ts": 16,
     "src/api/utils/password.ts": 28,
@@ -75,7 +75,7 @@
     "src/modules/audit/application/use-cases/list-audit-logs.ts": 76,
     "src/modules/audit/domain/entities/audit-log.ts": 28,
     "src/modules/audit/domain/repositories/audit-log-repository.ts": 51,
-    "src/modules/audit/domain/services/audit-action-catalog.ts": 99,
+    "src/modules/audit/domain/services/audit-action-catalog.ts": 101,
     "src/modules/audit/infrastructure/database/knex-audit-log-repository.ts": 95,
     "src/modules/audit/presentation/audit-controller.ts": 48,
     "src/modules/audit/presentation/audit-routes.ts": 30,
@@ -158,6 +158,8 @@
     "src/modules/supply-requests/presentation/supply-request-controller.ts": 173,
     "src/modules/supply-requests/presentation/supply-request-routes.ts": 54,
     "src/modules/supply-requests/presentation/supply-request-schemas.ts": 85,
+    "src/modules/two-factor/domain/totp.ts": 83,
+    "src/modules/two-factor/presentation/two-factor-routes.ts": 92,
     "src/services/agentService/agent-service.ts": 146,
     "src/services/agentService/commands.ts": 55,
     "src/services/agentService/config.ts": 263,
@@ -231,6 +233,7 @@
     "src/tests/loadTest.ts": 260,
     "src/tests/messageTemplates.test.ts": 159,
     "src/tests/monitorState.test.ts": 249,
+    "src/tests/observability.test.ts": 156,
     "src/tests/pendingDevices.test.ts": 267,
     "src/tests/portalAgentEws.test.ts": 177,
     "src/tests/publicApi.test.ts": 298,
@@ -242,6 +245,7 @@
     "src/tests/supplies.test.ts": 211,
     "src/tests/supplyOrigin.test.ts": 164,
     "src/tests/supplyRequests.test.ts": 258,
+    "src/tests/twoFactor.test.ts": 158,
     "src/version.ts": 6,
     "src/ws/index.ts": 310,
     "portal/src/App.tsx": 86,
@@ -410,7 +414,7 @@
     "src/api/controllers/authController/session.ts": [
       {
         "name": "portalLogin",
-        "length": 55
+        "length": 69
       }
     ],
     "src/api/controllers/authController/users.ts": [
@@ -728,7 +732,7 @@
     "src/api/server.ts": [
       {
         "name": "start",
-        "length": 269
+        "length": 270
       },
       {
         "name": "healthHandler",
@@ -1627,6 +1631,20 @@
         "length": 22
       }
     ],
+    "src/tests/observability.test.ts": [
+      {
+        "name": "describe(guarded-tick — lock multi-réplica real)",
+        "length": 42
+      },
+      {
+        "name": "describe(pub/sub WS — e2e (broadcast cruza Redis hasta el socket del portal))",
+        "length": 27
+      },
+      {
+        "name": "test(un publish al canal llega a un cliente WS de portal autenticado)",
+        "length": 25
+      }
+    ],
     "src/tests/pendingDevices.test.ts": [
       {
         "name": "describe(Con flag: cola de pendientes)",
@@ -1827,6 +1845,16 @@
       {
         "name": "describe(RBAC — client_viewer)",
         "length": 39
+      }
+    ],
+    "src/tests/twoFactor.test.ts": [
+      {
+        "name": "describe(TOTP — dominio puro (vectores RFC 6238, SHA-1))",
+        "length": 34
+      },
+      {
+        "name": "describe(2FA — ciclo completo e2e)",
+        "length": 83
       }
     ],
     "src/ws/index.ts": [

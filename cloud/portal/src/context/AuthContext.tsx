@@ -9,7 +9,7 @@ interface AuthContextType {
   /** Cliente al que está atado un usuario `client_viewer`; `null` para admin/operator. */
   clientId: string | null;
   checking: boolean;
-  login: (username: string, password: string) => Promise<void>;
+  login: (username: string, password: string, totpCode?: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -42,16 +42,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .finally(() => setChecking(false));
   }, []);
 
-  const login = useCallback(async (username: string, password: string) => {
+  const login = useCallback(async (username: string, password: string, totpCode?: string) => {
     const res = await fetch('/api/v1/portal/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
-      body: JSON.stringify({ username, password }),
+      body: JSON.stringify({ username, password, ...(totpCode ? { totp_code: totpCode } : {}) }),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      throw new Error(data.error || 'Credenciales inválidas');
+      // 2FA: el backend marca totp_required para que el form muestre el 2do paso.
+      const error = new Error(data.error || 'Credenciales inválidas') as Error & { totpRequired?: boolean };
+      error.totpRequired = data.totp_required === true;
+      throw error;
     }
 
     // Volver a consultar /me para obtener el rol y el ID real del usuario recién autenticado

@@ -71,6 +71,11 @@ export const CLIENT_VIEWER_ROUTES: ReadonlySet<string> = new Set([
   // auto-creación quedan deny-by-default (gestión de servicio, no de un
   // client_viewer).
   "GET /api/v1/incidents",
+  // 2FA self-service: proteger la propia cuenta es de todos los roles.
+  "GET /api/v1/portal/2fa/status",
+  "POST /api/v1/portal/2fa/setup",
+  "POST /api/v1/portal/2fa/enable",
+  "POST /api/v1/portal/2fa/disable",
   "GET /api/v1/supply-requests",
   "GET /api/v1/supply-requests/stats",
   "GET /api/v1/supply-requests/:id",
