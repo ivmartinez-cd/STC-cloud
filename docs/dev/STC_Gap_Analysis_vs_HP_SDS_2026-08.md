@@ -1431,9 +1431,30 @@ card lo muestra. Verificado: 18/18 tests (dominio puro + e2e: login con
 recovery → 200, reuso → 401, regeneración invalida viejos, disable → 0
 restantes).
 
-**Pendientes del corte de seguridad** (para próximos ítems): enforcement
-de 2FA por rol (obligatorio para admin) y el resto de los pendientes R5
-del doc.
+✅ **6.3 — 2FA obligatorio por usuario** (24/08/2026). `users.totp_required`
+gestionado por el admin (checkbox "Exigir 2FA" al crear/editar
+operadores) en vez de un flag global por rol — más flexible y ya
+suficiente para forzarlo en las cuentas admin si se decide esa política.
+**Enforcement server-side en `authMiddleware`**: con el flag activo y sin
+enrolar, la sesión pasa el login (necesita estar autenticada para poder
+enrolar) pero cualquier ruta que no sea `/portal/2fa/*`, `/me` o `/logout`
+devuelve 403 con `totp_enrollment_required: true` — no es un aviso de UI
+salteable. `login` y `/me` exponen el mismo flag para que el portal
+redirija. UI: banner ámbar global en el Layout con link a Configuración
+mientras el flag esté pendiente.
+
+Verificado: caso e2e nuevo (crear usuario forzado → login 200 pero
+operación 403 → `/me` y `/2fa/*` accesibles → enrola → desbloqueado →
+admin relaja el flag por PUT), 20/20 en el archivo completo. **Nota de
+test-infra**: el archivo por sí solo hace >10 llamadas a `POST
+/portal/login`, que tiene su propio rate-limit de 10/min
+(`authRoutes.ts`) — no es un bug de producto, es el límite haciendo su
+trabajo; se agregó un drenado explícito de esa key entre bloques del
+archivo de test (documentado inline).
+
+Con esto se cierra el corte de seguridad planificado del bloque 6.
+**Pendiente para más adelante**: el resto de los ítems R5 del doc que no
+son 2FA.
 
 ### Otros puntos de §3 (riesgos) que siguen abiertos y no forman parte de ningún ítem de arriba
 - ✅ **R4 (parcial, 23/08/2026)**: el WS del portal ya NO acepta el JWT de

@@ -28,6 +28,22 @@ if (!PASS) {
   process.exit(1);
 }
 
+/**
+ * `POST /portal/login` tiene rate-limit propio (10/min, authRoutes.ts) — este
+ * archivo por sí solo hace más de 10 logins en <2s. No es un bug de producto
+ * (el límite es correcto contra fuerza bruta real); se drena la key entre
+ * bloques del archivo, mismo mecanismo manual que ya se usa para depurar esto
+ * (`docker exec stc_redis redis-cli DEL ...`), sólo que automatizado acá.
+ */
+async function drainLoginRateLimit(): Promise<void> {
+  const { execSync } = await import('node:child_process');
+  try {
+    execSync('docker exec stc_redis redis-cli DEL "fastify-rate-limit-POST/api/v1/portal/login-172.22.0.1"', { stdio: 'ignore' });
+  } catch {
+    // best-effort: si no hay docker (CI distinta), el test puede tardar más por el 429 natural
+  }
+}
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 async function req(method: string, path: string, body?: unknown, token?: string) {
   const headers: Record<string, string> = {};
@@ -211,6 +227,46 @@ describe('2FA — ciclo completo e2e', () => {
     assert.equal(plain.status, 200);
     const status = await req('GET', '/portal/2fa/status', undefined, ctx.userToken);
     assert.equal(status.data.recovery_remaining, 0, 'disable limpia los códigos');
+  });
+
+  test('drenar rate-limit de login antes del bloque 6.3', async () => {
+    await drainLoginRateLimit();
+  });
+
+  test('6.3: usuario con totp_required debe enrolar antes de operar', async () => {
+    const username = `twofa_forced_${ts}`;
+    const created = await req('POST', '/portal/users', {
+      username, password: 'Forced1234!', role: 'operator', totp_required: true,
+    }, ctx.adminToken);
+    assert.equal(created.status, 200);
+    assert.equal(created.data.totp_required, true);
+
+    const login = await req('POST', '/portal/login', { username, password: 'Forced1234!' });
+    assert.equal(login.status, 200, 'el login en sí está permitido');
+    assert.equal(login.data.totp_enrollment_required, true);
+    const forcedToken = login.data.token;
+
+    const blocked = await req('GET', '/clients', undefined, forcedToken);
+    assert.equal(blocked.status, 403, 'sin enrolar no opera');
+    assert.equal(blocked.data.totp_enrollment_required, true);
+
+    const me = await req('GET', '/portal/me', undefined, forcedToken);
+    assert.equal(me.status, 200, '/me queda accesible para el portal');
+    const status2fa = await req('GET', '/portal/2fa/status', undefined, forcedToken);
+    assert.equal(status2fa.status, 200, 'las rutas de enrolamiento quedan accesibles');
+
+    // Enrola y el bloqueo desaparece
+    const setup = await req('POST', '/portal/2fa/setup', {}, forcedToken);
+    assert.equal(setup.status, 200);
+    const enable = await req('POST', '/portal/2fa/enable', { code: totpAt(setup.data.secret, Date.now()) }, forcedToken);
+    assert.equal(enable.status, 200);
+    const unblocked = await req('GET', '/clients', undefined, forcedToken);
+    assert.equal(unblocked.status, 200, 'enrolado, opera normal');
+
+    // El admin puede levantar la exigencia por PUT
+    const relax = await req('PUT', `/portal/users/${created.data.id}`, { totp_required: false }, ctx.adminToken);
+    assert.equal(relax.status, 200);
+    assert.equal(relax.data.totp_required, false);
   });
 
   test('queda auditado el alta y la baja de 2FA', async () => {

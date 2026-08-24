@@ -37,7 +37,7 @@ async function listUsers(db: Knex, request: FastifyRequest, reply: FastifyReply)
 async function createUser(db: Knex, request: FastifyRequest, reply: FastifyReply) {
   if (!requireAdmin(request, reply)) return;
   const user = currentUser(request);
-  const { username, password, role, client_id } = request.body as CreateUserBody;
+  const { username, password, role, client_id, totp_required } = request.body as CreateUserBody & { totp_required?: boolean };
 
   if (!username || !password) {
     return reply.status(400).send({ error: "Usuario y contraseña son requeridos" });
@@ -65,8 +65,9 @@ async function createUser(db: Knex, request: FastifyRequest, reply: FastifyReply
       role: finalRole,
       client_id: finalRole === "client_viewer" ? client_id : null,
       active: true,
+      totp_required: totp_required === true,
     })
-    .returning(["id", "username", "role", "active", "client_id", "created_at"]);
+    .returning(["id", "username", "role", "active", "client_id", "totp_required", "created_at"]);
 
   await db("audit_logs").insert({
     action: "USER_CREATED",
@@ -100,7 +101,7 @@ async function updateUser(db: Knex, request: FastifyRequest, reply: FastifyReply
   if (!requireAdmin(request, reply)) return;
   const user = currentUser(request);
   const { id } = request.params as IdParams;
-  const { password, role, active, client_id } = request.body as UpdateUserBody;
+  const { password, role, active, client_id, totp_required } = request.body as UpdateUserBody & { totp_required?: boolean };
 
   const target = await db("users").where({ id }).first();
   if (!target) {
@@ -121,11 +122,13 @@ async function updateUser(db: Knex, request: FastifyRequest, reply: FastifyReply
   }
 
   const updates = resolveUserUpdates(role, client_id, active, password, finalRole, finalClientId);
+  // Fase 6.3: el admin puede exigir 2FA por usuario (enforcement en authMiddleware).
+  if (totp_required !== undefined) updates.totp_required = totp_required === true;
 
   const [updatedUser] = await db("users")
     .where({ id })
     .update(updates)
-    .returning(["id", "username", "role", "active", "client_id", "updated_at"]);
+    .returning(["id", "username", "role", "active", "client_id", "totp_required", "updated_at"]);
 
   await db("audit_logs").insert({
     action: "USER_UPDATED",

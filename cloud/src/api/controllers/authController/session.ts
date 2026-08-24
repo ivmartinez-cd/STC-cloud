@@ -88,7 +88,10 @@ async function portalLogin(fastify: FastifyInstance, db: Knex, request: FastifyR
   // anulaba la protección de `httpOnly` exponiendo el mismo secreto de
   // sesión a JS de la página. El portal pide un ticket de un solo uso y
   // corta duración en su lugar (`POST /portal/ws-ticket`, `wsTicketService.ts`).
-  return { ok: true, token };
+  // Fase 6.3: si el admin exige 2FA y el usuario aún no enroló, el portal
+  // debe llevarlo directo al enrolamiento (el middleware ya bloquea el resto).
+  const totpEnrollmentRequired = user.totp_required === true && user.totp_enabled !== true;
+  return { ok: true, token, totp_enrollment_required: totpEnrollmentRequired };
 }
 
 async function portalLogout(_request: FastifyRequest, reply: FastifyReply) {
@@ -97,10 +100,14 @@ async function portalLogout(_request: FastifyRequest, reply: FastifyReply) {
   return { ok: true };
 }
 
-async function portalMe(request: FastifyRequest) {
+async function portalMe(db: Knex, request: FastifyRequest) {
   const user = (request as FastifyRequest & { user: PortalUser }).user;
   const token = request.cookies.stc_session;
-  return { userId: user.userId, username: user.username, role: user.role, clientId: user.clientId, token };
+  // Fase 6.3: releer el flag real (PortalUser no lo carga; una consulta barata
+  // en un endpoint de baja frecuencia).
+  const row = await db("users").where({ id: user.userId }).select("totp_required", "totp_enabled").first();
+  const totpEnrollmentRequired = !!row && row.totp_required === true && row.totp_enabled !== true;
+  return { userId: user.userId, username: user.username, role: user.role, clientId: user.clientId, token, totp_enrollment_required: totpEnrollmentRequired };
 }
 
 async function portalWsTicket(redis: Redis, request: FastifyRequest) {
@@ -113,7 +120,7 @@ export function createAuthSessionHandlers(fastify: FastifyInstance, db: Knex, re
   return {
     portalLogin: (request: FastifyRequest, reply: FastifyReply) => portalLogin(fastify, db, request, reply),
     portalLogout: (request: FastifyRequest, reply: FastifyReply) => portalLogout(request, reply),
-    portalMe: (request: FastifyRequest) => portalMe(request),
+    portalMe: (request: FastifyRequest) => portalMe(db, request),
     portalWsTicket: (request: FastifyRequest) => portalWsTicket(redis, request),
   };
 }

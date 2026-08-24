@@ -164,6 +164,24 @@ export function createAuthMiddleware(
         active: user.active,
         clientId: user.client_id ?? null,
       };
+
+      // Fase 6.3: 2FA obligatorio por usuario. Con el flag y sin enrolar, la
+      // sesión solo puede tocar las rutas de enrolamiento — enforcement
+      // server-side, no un aviso de UI. `/me` y `/logout` quedan permitidos
+      // para que el portal pueda mostrar quién sos y salir.
+      if (user.totp_required && !user.totp_enabled) {
+        const routeUrl = request.routeOptions.url ?? "";
+        const enrollmentAllowed =
+          routeUrl.startsWith("/api/v1/portal/2fa") ||
+          routeUrl === "/api/v1/portal/me" ||
+          routeUrl === "/api/v1/portal/logout";
+        if (!enrollmentAllowed) {
+          return reply.status(403).send({
+            error: "Tu cuenta exige autenticación de dos factores — configurala para continuar",
+            totp_enrollment_required: true,
+          });
+        }
+      }
     } catch {
       return reply.status(401).send({ error: "Token inválido o expirado" });
     }

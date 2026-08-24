@@ -9,6 +9,7 @@ interface AuthContextType {
   /** Cliente al que está atado un usuario `client_viewer`; `null` para admin/operator. */
   clientId: string | null;
   checking: boolean;
+  totpEnrollmentRequired: boolean;
   login: (username: string, password: string, totpCode?: string) => Promise<void>;
   logout: () => Promise<void>;
 }
@@ -22,6 +23,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [role, setRole] = useState<string>('operator');
   const [clientId, setClientId] = useState<string | null>(null);
   const [checking, setChecking] = useState<boolean>(true);
+  const [totpEnrollmentRequired, setTotpEnrollmentRequired] = useState(false);
 
   useEffect(() => {
     // Raw fetch — bypasses the api.ts 401 auto-redirect that would cause
@@ -29,7 +31,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     fetch('/api/v1/portal/me', { credentials: 'include' })
       .then(res => {
         if (!res.ok) throw new Error('not authenticated');
-        return res.json() as Promise<{ userId: string; username?: string; role: string; clientId?: string | null }>;
+        return res.json() as Promise<{ userId: string; username?: string; role: string; clientId?: string | null; totp_enrollment_required?: boolean }>;
       })
       .then(data => {
         setIsAuthenticated(true);
@@ -37,6 +39,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUserId(data.userId);
         setRole(data.role);
         setClientId(data.clientId ?? null);
+        setTotpEnrollmentRequired(data.totp_enrollment_required === true);
       })
       .catch(() => setIsAuthenticated(false))
       .finally(() => setChecking(false));
@@ -87,7 +90,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, userEmail, userId, role, clientId, checking, login, logout }}>
+    <AuthContext.Provider value={{ isAuthenticated, userEmail, userId, role, clientId, checking, totpEnrollmentRequired, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

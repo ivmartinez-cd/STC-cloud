@@ -9,6 +9,7 @@ export default function CreateUserModal({ clients, onClose, onCreated }: { clien
   const [newRole, setNewRole] = useState('operator');
   const [newClientId, setNewClientId] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [newTotpRequired, setNewTotpRequired] = useState(false);
   const [createLoading, setCreateLoading] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
 
@@ -26,6 +27,7 @@ export default function CreateUserModal({ clients, onClose, onCreated }: { clien
         username: newUsername.trim(),
         password: newPassword,
         role: newRole,
+        totp_required: newTotpRequired,
         ...(newRole === 'client_viewer' ? { client_id: newClientId } : {}),
       });
       onCreated();
@@ -92,6 +94,11 @@ export default function CreateUserModal({ clients, onClose, onCreated }: { clien
                 {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>
+
+          <label className="flex items-center gap-2 text-xs font-bold text-slate-600 cursor-pointer ml-1">
+            <input type="checkbox" checked={newTotpRequired} onChange={(e) => setNewTotpRequired(e.target.checked)} />
+            Exigir autenticación de dos factores (deberá enrolarse en el primer ingreso)
+          </label>
           </div>
 
           <div className="space-y-2">

@@ -85,7 +85,7 @@ const useDebounce = (value: string, delay: number) => {
 };
 
 const Layout = () => {
-  const { userEmail: email, role, logout } = useAuth();
+  const { totpEnrollmentRequired, userEmail: email, role, logout } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
 
@@ -425,7 +425,13 @@ const Layout = () => {
                 </div>
               </div>
             }>
-              <Outlet />
+              {totpEnrollmentRequired && (
+              <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-2xl text-sm font-bold text-amber-700">
+                Tu cuenta exige autenticación de dos factores — configurala en{' '}
+                <Link to="/settings" className="underline">Configuración</Link> para poder seguir operando.
+              </div>
+            )}
+            <Outlet />
             </Suspense>
           </div>
         </main>
