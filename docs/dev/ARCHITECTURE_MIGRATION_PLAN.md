@@ -3,8 +3,8 @@
 **Estado:** Fase 0, Fase 1 y Fase 2 (backend) completas — incluidas las 2
 pasadas diferidas de alto riesgo (`syncReadings`, `mergeDevices`); Fase 2
 (frontend) en curso — `Settings.tsx`, `Monitors.tsx`, `MonitorDetail.tsx`,
-`DeviceDetail.tsx` y `ClientDetail.tsx` divididos, 2 archivos grandes de
-`portal/src` pendientes — 2026-08-24  
+`DeviceDetail.tsx`, `ClientDetail.tsx` y `DeviceLifecycleModals.tsx`
+divididos, sólo `Dashboard.tsx` pendiente — 2026-08-24  
 **Origen:** `docs/dev/ARCHITECTURE_GUIDE.md` (copiado desde `helpdesk-manager`, 2026-08-24)  
 **Reemplaza (parcialmente) a:** `docs/dev/PROJECT_GUIDELINES.md`, que hoy documenta la
 convención opuesta (`api/` para rutas + `services/` para lógica de negocio, sin capas).
@@ -671,6 +671,40 @@ real en navegador en este entorno.
 **Pendiente de Fase 2 frontend:** `DeviceLifecycleModals.tsx` (603),
 `Dashboard.tsx` (507) — avisar a `close-hp-sds-gaps` antes de arrancar
 `Dashboard.tsx` (le va a agregar un tile ahí en su Fase 4.2).
+
+## Fase 2 (frontend) — `DeviceLifecycleModals.tsx` dividido (2026-08-24)
+
+Sexto archivo (603L), sin coordinación pendiente (nadie lo reclamó). A
+diferencia de las páginas anteriores, este archivo no es una página sino un
+módulo de 8 modales exportados con nombre (`EditDeviceModal`,
+`DecommissionDeviceModal`, `MoveDeviceModal`, `BulkDecommissionModal`,
+`BulkRecommissionModal`, `BulkMoveDevicesModal`, `BulkMonitorStateModal`,
+`MergeDeviceModal`), cada uno ya autocontenido — el mismo patrón
+"directorio + `index.ts` barrel" de la Fase 2 backend aplicó
+mecánicamente sin cambios:
+
+- `components/devices/DeviceLifecycleModals/` (nuevo directorio,
+  reemplaza el `.tsx` suelto) con un archivo por modal +
+  `types.ts` (`ClientOption`/`AgentOption`/`BulkActionResult`,
+  compartidos entre 3 de los 8) + `index.ts` (barrel, re-exporta los 8
+  + los 3 tipos).
+- Los 3 consumidores (`pages/DeviceDetail.tsx`,
+  `components/monitors/DeviceInventoryTable.tsx`,
+  `components/clients/DuplicateDevicesCard.tsx`) usaban imports con
+  specifier "pelado" (`from '.../DeviceLifecycleModals'`, sin `/index` ni
+  `.tsx`) — resolvieron al directorio nuevo con **cero ediciones**,
+  confirmado con `tsc --noEmit` limpio y los 3 archivos transformando en
+  Vite sin tocarlos.
+
+**Validación:** `npm run check` limpio sin warnings. `check-sizes.mjs`
+limpio tras regenerar baseline (316 archivos) — capturó de nuevo
+crecimiento en curso de `close-hp-sds-gaps` (`rbac.test.ts` y el
+`tests/supplyRequests.test.ts` nuevo, ambos de su Fase 4.2). Sin prueba
+visual real en navegador en este entorno.
+
+**Pendiente de Fase 2 frontend:** sólo `Dashboard.tsx` (507) — avisar a
+`close-hp-sds-gaps` antes de arrancar (le va a agregar un tile ahí en su
+Fase 4.2).
 
 ## 0. Punto de partida (medido 2026-08-24)
 

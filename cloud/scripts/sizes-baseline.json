@@ -192,12 +192,13 @@
     "src/tests/pendingDevices.test.ts": 267,
     "src/tests/portalAgentEws.test.ts": 177,
     "src/tests/publicApi.test.ts": 298,
-    "src/tests/rbac.test.ts": 700,
+    "src/tests/rbac.test.ts": 713,
     "src/tests/reports.test.ts": 219,
     "src/tests/scheduledReports.test.ts": 185,
     "src/tests/snmpCredentials.test.ts": 283,
     "src/tests/supplies.test.ts": 211,
     "src/tests/supplyOrigin.test.ts": 164,
+    "src/tests/supplyRequests.test.ts": 258,
     "src/version.ts": 6,
     "src/ws/index.ts": 268,
     "portal/src/App.tsx": 80,
@@ -221,7 +222,16 @@
     "portal/src/components/clients/DuplicateDevicesCard.tsx": 72,
     "portal/src/components/clients/IncidentRulesCard.tsx": 133,
     "portal/src/components/clients/NotificationSettingsCard.tsx": 108,
-    "portal/src/components/devices/DeviceLifecycleModals.tsx": 604,
+    "portal/src/components/devices/DeviceLifecycleModals/BulkDecommissionModal.tsx": 50,
+    "portal/src/components/devices/DeviceLifecycleModals/BulkMonitorStateModal.tsx": 63,
+    "portal/src/components/devices/DeviceLifecycleModals/BulkMoveDevicesModal.tsx": 95,
+    "portal/src/components/devices/DeviceLifecycleModals/BulkRecommissionModal.tsx": 38,
+    "portal/src/components/devices/DeviceLifecycleModals/DecommissionDeviceModal.tsx": 49,
+    "portal/src/components/devices/DeviceLifecycleModals/EditDeviceModal.tsx": 141,
+    "portal/src/components/devices/DeviceLifecycleModals/MergeDeviceModal.tsx": 81,
+    "portal/src/components/devices/DeviceLifecycleModals/MoveDeviceModal.tsx": 94,
+    "portal/src/components/devices/DeviceLifecycleModals/index.ts": 16,
+    "portal/src/components/devices/DeviceLifecycleModals/types.ts": 12,
     "portal/src/components/devices/detail/AlertsTab.tsx": 28,
     "portal/src/components/devices/detail/CountersCard.tsx": 42,
     "portal/src/components/devices/detail/CountersTab.tsx": 53,
@@ -1597,7 +1607,7 @@
       },
       {
         "name": "describe(RBAC — mutaciones denegadas para client_viewer)",
-        "length": 211
+        "length": 224
       },
       {
         "name": "describe(RBAC — restricciones a nivel de base (defensa en profundidad))",
@@ -1672,6 +1682,32 @@
       {
         "name": "describe(asset_number_reported se llena desde supplies_details.device.assetNumber)",
         "length": 30
+      }
+    ],
+    "src/tests/supplyRequests.test.ts": [
+      {
+        "name": "describe(Dominio puro — transiciones y detección de reemplazo)",
+        "length": 22
+      },
+      {
+        "name": "describe(Pedidos — fixtures)",
+        "length": 21
+      },
+      {
+        "name": "describe(Configuración por cliente (opt-in))",
+        "length": 21
+      },
+      {
+        "name": "describe(Pedidos manuales — CRUD y transiciones)",
+        "length": 44
+      },
+      {
+        "name": "describe(Auto-creación y auto-completado (ticks reales del worker, 2 min))",
+        "length": 42
+      },
+      {
+        "name": "describe(RBAC — client_viewer)",
+        "length": 39
       }
     ],
     "src/ws/index.ts": [
@@ -1842,7 +1878,37 @@
         "length": 97
       }
     ],
-    "portal/src/components/devices/DeviceLifecycleModals.tsx": [
+    "portal/src/components/devices/DeviceLifecycleModals/BulkDecommissionModal.tsx": [
+      {
+        "name": "BulkDecommissionModal",
+        "length": 37
+      }
+    ],
+    "portal/src/components/devices/DeviceLifecycleModals/BulkMonitorStateModal.tsx": [
+      {
+        "name": "BulkMonitorStateModal",
+        "length": 43
+      }
+    ],
+    "portal/src/components/devices/DeviceLifecycleModals/BulkMoveDevicesModal.tsx": [
+      {
+        "name": "BulkMoveDevicesModal",
+        "length": 80
+      }
+    ],
+    "portal/src/components/devices/DeviceLifecycleModals/BulkRecommissionModal.tsx": [
+      {
+        "name": "BulkRecommissionModal",
+        "length": 25
+      }
+    ],
+    "portal/src/components/devices/DeviceLifecycleModals/DecommissionDeviceModal.tsx": [
+      {
+        "name": "DecommissionDeviceModal",
+        "length": 37
+      }
+    ],
+    "portal/src/components/devices/DeviceLifecycleModals/EditDeviceModal.tsx": [
       {
         "name": "EditDeviceModal",
         "length": 117
@@ -1850,34 +1916,18 @@
       {
         "name": "save",
         "length": 23
-      },
-      {
-        "name": "DecommissionDeviceModal",
-        "length": 37
-      },
-      {
-        "name": "MoveDeviceModal",
-        "length": 79
-      },
-      {
-        "name": "BulkDecommissionModal",
-        "length": 37
-      },
-      {
-        "name": "BulkRecommissionModal",
-        "length": 25
-      },
-      {
-        "name": "BulkMoveDevicesModal",
-        "length": 80
-      },
-      {
-        "name": "BulkMonitorStateModal",
-        "length": 43
-      },
+      }
+    ],
+    "portal/src/components/devices/DeviceLifecycleModals/MergeDeviceModal.tsx": [
       {
         "name": "MergeDeviceModal",
         "length": 62
+      }
+    ],
+    "portal/src/components/devices/DeviceLifecycleModals/MoveDeviceModal.tsx": [
+      {
+        "name": "MoveDeviceModal",
+        "length": 79
       }
     ],
     "portal/src/components/devices/detail/AlertsTab.tsx": [
