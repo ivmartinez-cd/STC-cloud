@@ -4,8 +4,17 @@
  * ejecuta (`agent/src/core/CommandHandler.ts`).
  */
 
-export const REMOTE_ACTIONS = ["RESCAN", "FORCE_SCAN", "RESTART", "FORCE_UPDATE"] as const;
+export const REMOTE_ACTIONS = ["RESCAN", "FORCE_SCAN", "RESTART", "FORCE_UPDATE", "RESTART_PRINTER"] as const;
 export type RemoteAction = (typeof REMOTE_ACTIONS)[number];
+
+/**
+ * RESTART_PRINTER apunta a un EQUIPO dentro de la flota del agente (agente
+ * v1.2.0 — SNMP SET real, requiere `device_id`); las demás apuntan al
+ * agente en sí. `targetKind` es lo que decide qué pide la UI de creación.
+ */
+export function targetKindOf(action: RemoteAction): "agent" | "device" {
+  return action === "RESTART_PRINTER" ? "device" : "agent";
+}
 
 export const BATCH_STATUSES = [
   "scheduled", "sent", "completed", "completed_with_errors", "cancelled",
@@ -27,6 +36,9 @@ export interface RemoteActionBatch {
 export interface BatchItemState {
   agentId: string;
   agentName: string | null;
+  deviceId: string | null;
+  deviceIp: string | null;
+  deviceLabel: string | null;
   commandId: string | null;
   /** Estado del comando subyacente: pending/sent/success/error, o null si aún no se despachó. */
   commandStatus: string | null;

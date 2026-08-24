@@ -17,17 +17,27 @@ interface Batch {
 }
 
 interface BatchDetail extends Batch {
-  items: { agent_id: string; agent_name: string | null; command_status: string | null }[];
+  items: {
+    agent_id: string; agent_name: string | null;
+    device_id: string | null; device_ip: string | null; device_label: string | null;
+    command_status: string | null;
+  }[];
 }
 
 interface AgentOption { id: string; name: string; status: string; }
+interface ClientOption { id: string; name: string; }
+interface DeviceOption { id: string; serial_number: string | null; model: string | null; name: string | null; }
 
 const ACTION_LABELS: Record<string, string> = {
   RESCAN: 'Re-escanear red',
   FORCE_SCAN: 'Forzar lectura ahora',
   RESTART: 'Reiniciar agente',
   FORCE_UPDATE: 'Forzar actualización',
+  RESTART_PRINTER: 'Reiniciar impresora (SNMP)',
 };
+
+/** Único que targetea EQUIPOS en vez de agentes — agente v1.2.0, SNMP SET real. */
+const DEVICE_TARGETED_ACTIONS = new Set(['RESTART_PRINTER']);
 
 const STATUS_LABELS: Record<string, string> = {
   scheduled: 'Programado',
@@ -50,15 +60,20 @@ function fmtDate(v: string | null): string {
   return new Date(v).toLocaleString('es-AR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
 }
 
+function deviceLabelOf(d: DeviceOption): string {
+  return d.name || d.serial_number || d.model || d.id;
+}
+
 /**
  * Acciones remotas en bloque (Fase 4.6 del gap analysis vs HP SDS —
- * "Acciones de HP SDS en bloque"). Lotes de comandos que el agente ya
- * soporta, con programación y estado agregado.
+ * "Acciones de HP SDS en bloque"; RESTART_PRINTER sumada en el agente
+ * v1.2.0). Lotes con programación y estado agregado.
  */
 export default function RemoteActions() {
   const { showToast } = useToast();
   const [items, setItems] = useState<Batch[]>([]);
   const [agents, setAgents] = useState<AgentOption[]>([]);
+  const [clients, setClients] = useState<ClientOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [detail, setDetail] = useState<BatchDetail | null>(null);
@@ -66,9 +81,14 @@ export default function RemoteActions() {
   const [action, setAction] = useState('RESCAN');
   const [name, setName] = useState('');
   const [selectedAgents, setSelectedAgents] = useState<string[]>([]);
+  const [targetClientId, setTargetClientId] = useState('');
+  const [devices, setDevices] = useState<DeviceOption[]>([]);
+  const [selectedDevices, setSelectedDevices] = useState<string[]>([]);
   const [when, setWhen] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const isDeviceTargeted = DEVICE_TARGETED_ACTIONS.has(action);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -81,10 +101,19 @@ export default function RemoteActions() {
   useEffect(() => { load(); }, [load]);
   useEffect(() => {
     api.get<AgentOption[]>('/agents').then((a) => setAgents(a.filter((x) => x.status !== 'revoked'))).catch(() => setAgents([]));
+    api.get<ClientOption[]>('/clients').then(setClients).catch(() => setClients([]));
   }, []);
+
+  useEffect(() => {
+    if (!targetClientId) { setDevices([]); return; }
+    api.get<DeviceOption[]>(`/clients/${targetClientId}/devices`).then(setDevices).catch(() => setDevices([]));
+  }, [targetClientId]);
 
   const toggleAgent = (id: string) => {
     setSelectedAgents((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
+  };
+  const toggleDevice = (id: string) => {
+    setSelectedDevices((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
   };
 
   const create = async () => {
@@ -92,12 +121,13 @@ export default function RemoteActions() {
     setError(null);
     try {
       await api.post('/remote-actions', {
-        action, name: name.trim() || null, agent_ids: selectedAgents,
+        action, name: name.trim() || null,
+        ...(isDeviceTargeted ? { device_ids: selectedDevices } : { agent_ids: selectedAgents }),
         scheduled_at: when ? new Date(when).toISOString() : null,
       });
       showToast('Lote creado', 'success');
       setModalOpen(false);
-      setSelectedAgents([]); setName(''); setWhen('');
+      setSelectedAgents([]); setSelectedDevices([]); setTargetClientId(''); setName(''); setWhen('');
       load();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al crear');
@@ -203,22 +233,54 @@ export default function RemoteActions() {
             <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ej: Relectura fin de mes"
               className="w-full bg-slate-50 text-slate-700 text-sm font-medium px-3 py-2 rounded-xl border border-slate-100 outline-none focus:border-brand" />
           </div>
-          <div>
-            <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">
-              Monitores ({selectedAgents.length} seleccionados)
-            </label>
-            <div className="max-h-48 overflow-y-auto space-y-1 border border-slate-100 rounded-xl p-3">
-              {agents.map((a) => (
-                <label key={a.id} className="flex items-center gap-2 text-xs font-bold text-slate-600 cursor-pointer">
-                  <input type="checkbox" checked={selectedAgents.includes(a.id)} onChange={() => toggleAgent(a.id)} />
-                  {a.name}
+
+          {isDeviceTargeted ? (
+            <>
+              <p className="text-[10px] text-amber-600 font-bold -mt-1">
+                Requiere que la credencial SNMP configurada tenga permiso de escritura en el equipo — si no lo tiene, el lote queda "Completado con errores" con el motivo.
+              </p>
+              <div>
+                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Cliente</label>
+                <select value={targetClientId} onChange={(e) => { setTargetClientId(e.target.value); setSelectedDevices([]); }}
+                  className="w-full bg-slate-50 text-slate-700 text-sm font-medium px-3 py-2 rounded-xl border border-slate-100 outline-none focus:border-brand">
+                  <option value="">Elegir cliente…</option>
+                  {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">
+                  Equipos ({selectedDevices.length} seleccionados)
                 </label>
-              ))}
+                <div className="max-h-48 overflow-y-auto space-y-1 border border-slate-100 rounded-xl p-3">
+                  {devices.length === 0 && <p className="text-xs text-slate-400 font-medium">Elegí un cliente para ver sus equipos.</p>}
+                  {devices.map((d) => (
+                    <label key={d.id} className="flex items-center gap-2 text-xs font-bold text-slate-600 cursor-pointer">
+                      <input type="checkbox" checked={selectedDevices.includes(d.id)} onChange={() => toggleDevice(d.id)} />
+                      {deviceLabelOf(d)}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </>
+          ) : (
+            <div>
+              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">
+                Monitores ({selectedAgents.length} seleccionados)
+              </label>
+              <div className="max-h-48 overflow-y-auto space-y-1 border border-slate-100 rounded-xl p-3">
+                {agents.map((a) => (
+                  <label key={a.id} className="flex items-center gap-2 text-xs font-bold text-slate-600 cursor-pointer">
+                    <input type="checkbox" checked={selectedAgents.includes(a.id)} onChange={() => toggleAgent(a.id)} />
+                    {a.name}
+                  </label>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
+
           <div className="flex justify-end gap-2">
             <button onClick={() => setModalOpen(false)} className="px-4 py-2 text-xs font-bold text-slate-500 hover:text-slate-700">Cancelar</button>
-            <button onClick={create} disabled={saving || selectedAgents.length === 0}
+            <button onClick={create} disabled={saving || (isDeviceTargeted ? selectedDevices.length === 0 : selectedAgents.length === 0)}
               className="px-5 py-2 bg-brand hover:bg-brand-hover text-white rounded-xl text-xs font-black uppercase tracking-wider disabled:opacity-50">
               {saving ? 'Creando…' : 'Crear lote'}
             </button>
@@ -233,8 +295,8 @@ export default function RemoteActions() {
               {ACTION_LABELS[detail.action]} · {STATUS_LABELS[detail.status]} · programado {fmtDate(detail.scheduled_at)}
             </p>
             {detail.items.map((i) => (
-              <div key={i.agent_id} className="flex items-center justify-between text-xs font-bold text-slate-600 border-b border-slate-50 py-2">
-                {i.agent_name ?? i.agent_id}
+              <div key={i.device_id ?? i.agent_id} className="flex items-center justify-between text-xs font-bold text-slate-600 border-b border-slate-50 py-2">
+                {i.device_label ?? i.device_ip ?? i.agent_name ?? i.agent_id}
                 <span className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase ${
                   i.command_status === 'success' ? 'bg-emerald-50 text-emerald-600'
                   : i.command_status === 'error' ? 'bg-rose-50 text-rose-600'

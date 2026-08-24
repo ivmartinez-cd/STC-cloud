@@ -125,10 +125,10 @@
     "src/modules/metrics/registry.ts": 95,
     "src/modules/observability/guarded-tick.ts": 66,
     "src/modules/observability/sentry.ts": 33,
-    "src/modules/remote-actions/application/use-cases/process-batches.ts": 48,
-    "src/modules/remote-actions/domain/entities/remote-action-batch.ts": 44,
-    "src/modules/remote-actions/infrastructure/database/knex-remote-action-repository.ts": 93,
-    "src/modules/remote-actions/presentation/remote-action-routes.ts": 117,
+    "src/modules/remote-actions/application/use-cases/process-batches.ts": 51,
+    "src/modules/remote-actions/domain/entities/remote-action-batch.ts": 56,
+    "src/modules/remote-actions/infrastructure/database/knex-remote-action-repository.ts": 111,
+    "src/modules/remote-actions/presentation/remote-action-routes.ts": 155,
     "src/modules/scheduled-reports/application/dtos/scheduled-report-dtos.ts": 79,
     "src/modules/scheduled-reports/application/ports/report-mailer.ts": 12,
     "src/modules/scheduled-reports/application/ports/report-renderer.ts": 28,
@@ -240,14 +240,14 @@
     "src/tests/portalAgentEws.test.ts": 177,
     "src/tests/publicApi.test.ts": 298,
     "src/tests/rbac.test.ts": 747,
-    "src/tests/remoteActions.test.ts": 137,
+    "src/tests/remoteActions.test.ts": 230,
     "src/tests/reports.test.ts": 219,
     "src/tests/scheduledReports.test.ts": 185,
     "src/tests/snmpCredentials.test.ts": 283,
     "src/tests/supplies.test.ts": 211,
     "src/tests/supplyOrigin.test.ts": 164,
     "src/tests/supplyRequests.test.ts": 258,
-    "src/tests/twoFactor.test.ts": 258,
+    "src/tests/twoFactor.test.ts": 278,
     "src/version.ts": 6,
     "src/ws/index.ts": 310,
     "portal/src/App.tsx": 86,
@@ -1754,6 +1754,10 @@
       {
         "name": "test(el \"agente\" recibe el comando por heartbeat y devuelve éxito → lote completed)",
         "length": 21
+      },
+      {
+        "name": "describe(RESTART_PRINTER — destino por equipo (agente v1.2.0))",
+        "length": 82
       }
     ],
     "src/tests/reports.test.ts": [
@@ -1859,7 +1863,7 @@
       },
       {
         "name": "describe(2FA — ciclo completo e2e)",
-        "length": 155
+        "length": 159
       },
       {
         "name": "test(6.3: usuario con totp_required debe enrolar antes de operar)",

@@ -2,6 +2,8 @@ import { log } from './Logger';
 import { ConsoleConnector } from './ConsoleConnector';
 import type { SocketManager } from './SocketManager';
 import { proxyEwsRequest } from '../capture/transport/http';
+import { SnmpClient, type SnmpCredential } from '../capture/transport/snmp';
+import { restartPrinter } from '../snmp/printerReset';
 
 /** Tope de tamaño de una respuesta de EWS proxyeada — un WS sin `maxPayload` explícito no debe recibir un frame arbitrariamente grande. */
 const EWS_PROXY_MAX_BYTES = 2 * 1024 * 1024;
@@ -28,6 +30,10 @@ export class CommandHandler {
   // necesita), EWS_PROXY rechaza siempre en vez de asumir que cualquier IP
   // es válida.
   private isKnownDeviceIp: (ip: string) => boolean = () => false;
+  // Fail-closed: sin proveedor configurado, RESTART_PRINTER no tiene con qué
+  // negociar SNMP y rechaza — mismo criterio que `isKnownDeviceIp`.
+  private snmpCredentialsFor: (ip: string) => { credentials: SnmpCredential[]; preferredCredentialId: string | null } =
+    () => ({ credentials: [], preferredCredentialId: null });
 
   setSocket(socket: SocketManager | null): void {
     this.socket = socket;
@@ -48,6 +54,14 @@ export class CommandHandler {
   /** Defensa en profundidad: el cloud ya resuelve la IP desde `devices` (nunca confía en una IP tipeada a mano), pero el agente re-valida contra su propio `known_devices` local antes de tunelear. */
   setKnownDeviceCheck(fn: (ip: string) => boolean): void {
     this.isKnownDeviceIp = fn;
+  }
+
+  /** Fuente de credenciales SNMP para RESTART_PRINTER — la MISMA pool que ya
+   *  usa el escaneo de lectura (`ScanService.credentialsForRange`), nunca
+   *  una "credencial de escritura" separada: si el device permite SET con
+   *  esa community/usuario, funciona; si no, `setInt` lo reporta explícito. */
+  setSnmpCredentialsProvider(fn: (ip: string) => { credentials: SnmpCredential[]; preferredCredentialId: string | null }): void {
+    this.snmpCredentialsFor = fn;
   }
 
   isProcessed(id: string): boolean {
@@ -124,6 +138,31 @@ export class CommandHandler {
             throw new Error('No se pudo contactar la EWS del dispositivo (timeout o conexión rechazada)');
           }
           result = { status: proxied.status, headers: proxied.headers, bodyBase64: proxied.bodyBase64, truncated: proxied.truncated };
+          break;
+        }
+        case 'RESTART_PRINTER': {
+          const p = payload as { ip?: string };
+          if (!p.ip || !this.isKnownDeviceIp(p.ip)) {
+            // Mismo criterio que EWS_PROXY: nunca confiar ciegamente en una
+            // IP que llega por WS, aunque el cloud ya la resolvió desde `devices`.
+            throw new Error(`IP ${p.ip ?? '(vacía)'} no está en known_devices de este agente`);
+          }
+          const { credentials, preferredCredentialId } = this.snmpCredentialsFor(p.ip);
+          if (credentials.length === 0) {
+            throw new Error('Sin credenciales SNMP configuradas para este equipo');
+          }
+          const snmp = new SnmpClient(p.ip, credentials, preferredCredentialId);
+          const outcome = await restartPrinter(snmp);
+          snmp.close();
+          if (!outcome.ok) {
+            const reasonText = outcome.reason === 'no-write-permission'
+              ? 'la credencial SNMP configurada no tiene permiso de escritura en este equipo'
+              : outcome.reason === 'no-response'
+                ? 'el equipo no respondió al pedido de reinicio'
+                : `el equipo rechazó el reinicio (${outcome.detail ?? 'error de protocolo'})`;
+            throw new Error(reasonText);
+          }
+          result = { message: 'Reinicio enviado al equipo' };
           break;
         }
         default:

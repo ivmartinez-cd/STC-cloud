@@ -23,11 +23,27 @@ declare module 'net-snmp' {
   export type FeedCallback = (varbinds: Varbind[]) => boolean | void;
   export type DoneCallback = (error: Error | null) => void;
 
+  /** Tags ASN.1 fijos por el estándar (RFC 1902) — sólo se declara lo que este agente usa. */
+  export enum ObjectType {
+    Integer = 2,
+    OctetString = 4,
+  }
+
+  export interface SetVarbind {
+    oid: string;
+    /** Tag ASN.1 de `ObjectType` (net-snmp/index.js) — Integer=2, es el único que usa este agente hoy. */
+    type: number;
+    value: number | string;
+  }
+
   export interface Session {
     get(oids: string[], callback: (error: Error | null, varbinds: Varbind[]) => void): void;
     /** GETBULK iterativo sobre un subárbol (v2c). `feedCallback` recibe lotes de varbinds. */
     subtree(oid: string, maxRepetitions: number, feedCallback: FeedCallback, doneCallback: DoneCallback): void;
     walk(oid: string, maxRepetitions: number, feedCallback: FeedCallback, doneCallback: DoneCallback): void;
+    /** SET — falla con `RequestFailedError` (`.status` = código de `ErrorStatus`) si el
+     *  device respondió pero rechazó el valor/permiso, o `RequestTimedOutError` si no hubo respuesta. */
+    set(varbinds: SetVarbind[], callback: (error: Error | null, varbinds: Varbind[]) => void): void;
     close(): void;
   }
 
@@ -103,6 +119,15 @@ declare module 'net-snmp' {
   }
 
   export class RequestTimedOutError extends Error {}
+
+  /** El device respondió pero rechazó la operación (SET sin permiso, valor
+   *  fuera de rango, etc.). `.status` es el código numérico de `ErrorStatus`
+   *  (net-snmp/index.js) — 4=ReadOnly, 6=NoAccess, 16=AuthorizationError,
+   *  17=NotWritable son las variantes de "no tenés permiso de escritura". */
+  export class RequestFailedError extends Error {
+    status: number;
+    constructor(message: string, status: number);
+  }
 
   // ─── Agent / Mib (sólo para el simulador de diagnóstico manual,
   // `tests/snmpSimulator.ts` — nunca se usa en el código productivo del

@@ -9,6 +9,12 @@ import type {
 const BATCHES = "remote_action_batches";
 const ITEMS = "remote_action_items";
 
+export interface BatchTarget {
+  agentId: string;
+  deviceId?: string | null;
+  deviceIp?: string | null;
+}
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 function toEntity(row: any): RemoteActionBatch {
   return {
@@ -28,7 +34,7 @@ export class KnexRemoteActionRepository {
   constructor(private readonly db: Knex) {}
 
   async create(
-    params: { action: RemoteAction; name: string | null; scheduledAt: Date; agentIds: string[] },
+    params: { action: RemoteAction; name: string | null; scheduledAt: Date; targets: BatchTarget[] },
     createdBy: string | null
   ): Promise<RemoteActionBatch> {
     return this.db.transaction(async (trx) => {
@@ -36,7 +42,10 @@ export class KnexRemoteActionRepository {
         action: params.action, name: params.name,
         scheduled_at: params.scheduledAt, created_by: createdBy,
       }).returning("*");
-      await trx(ITEMS).insert(params.agentIds.map((agentId) => ({ batch_id: row.id, agent_id: agentId })));
+      await trx(ITEMS).insert(params.targets.map((t) => ({
+        batch_id: row.id, agent_id: t.agentId,
+        device_id: t.deviceId ?? null, device_ip: t.deviceIp ?? null,
+      })));
       return toEntity(row);
     });
   }
@@ -54,14 +63,20 @@ export class KnexRemoteActionRepository {
     return row ? toEntity(row) : null;
   }
 
-  async itemsOf(batchId: string): Promise<BatchItemState[]> {
+  async itemsOf(batchId: string): Promise<(BatchItemState & { id: string })[]> {
     const rows = await this.db(ITEMS)
       .leftJoin("agents", "agents.id", `${ITEMS}.agent_id`)
       .leftJoin("agent_commands", "agent_commands.id", `${ITEMS}.command_id`)
+      .leftJoin("devices", "devices.id", `${ITEMS}.device_id`)
       .where(`${ITEMS}.batch_id`, batchId)
-      .select(`${ITEMS}.agent_id`, "agents.name as agent_name", `${ITEMS}.command_id`, "agent_commands.status as command_status");
+      .select(
+        `${ITEMS}.id`, `${ITEMS}.agent_id`, "agents.name as agent_name",
+        `${ITEMS}.device_id`, `${ITEMS}.device_ip`, "devices.name_reported as device_label",
+        `${ITEMS}.command_id`, "agent_commands.status as command_status"
+      );
     return rows.map((r: any) => ({
-      agentId: r.agent_id, agentName: r.agent_name,
+      id: r.id, agentId: r.agent_id, agentName: r.agent_name,
+      deviceId: r.device_id, deviceIp: r.device_ip, deviceLabel: r.device_label,
       commandId: r.command_id, commandStatus: r.command_status,
     }));
   }
@@ -76,8 +91,11 @@ export class KnexRemoteActionRepository {
     return rows.map(toEntity);
   }
 
-  async setItemCommand(batchId: string, agentId: string, commandId: string): Promise<void> {
-    await this.db(ITEMS).where({ batch_id: batchId, agent_id: agentId }).update({ command_id: commandId });
+  /** `itemId` es el `id` surrogate del item (no agentId: un agente puede
+   *  tener más de un item en el mismo lote desde que RESTART_PRINTER
+   *  targetea equipos). */
+  async setItemCommand(itemId: string, commandId: string): Promise<void> {
+    await this.db(ITEMS).where({ id: itemId }).update({ command_id: commandId });
   }
 
   async setStatus(id: string, status: BatchStatus, completedAt: Date | null): Promise<void> {

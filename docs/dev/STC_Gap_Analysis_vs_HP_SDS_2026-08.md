@@ -1291,13 +1291,10 @@ programado vs 409 del despachado, 400 por agente revocado/inexistente) +
 2 casos 403 en `rbac.test.ts`; dry-run + migración; checks limpios;
 visual Playwright (lote completado y cancelado reales, modal de detalle).
 
-**Lo que NO se hizo** (documentado a propósito): **reinicio remoto de la
-IMPRESORA** (no del agente) — requiere capacidad nueva del agente (SNMP
-`prtGeneralReset`/PJL) y por lo tanto un ciclo completo de release firmado
-del agente (v1.2.0); el módulo ya está preparado para sumarlo como una
-acción más (`REMOTE_ACTIONS` + un case en `CommandHandler.ts` del agente)
-cuando se decida ese release. Ídem "comprobar/actualizar credenciales" por
-equipo puntual (hoy las credenciales SNMP se gestionan por rango, Fase 2).
+**Lo que quedó fuera de esta fase** (cerrado después, ver Fase 7 — Agente
+v1.2.0): el reinicio remoto de la IMPRESORA. "Comprobar/actualizar
+credenciales" por equipo puntual sigue sin ítem propio (hoy las
+credenciales SNMP se gestionan por rango, Fase 2).
 
 **Parciales/menores anotados, sin ítem propio**: 2FA opt-in y zona horaria/
 idioma por usuario (R7 ya abierto), catálogo de consumibles en la base de
@@ -1455,6 +1452,71 @@ archivo de test (documentado inline).
 Con esto se cierra el corte de seguridad planificado del bloque 6.
 **Pendiente para más adelante**: el resto de los ítems R5 del doc que no
 son 2FA.
+
+### Fase 7 — Agente v1.2.0 (24/08/2026) — completa: reinicio remoto de impresora
+
+Origen: el único pendiente explícito que dejó la Fase 4.6 (acciones
+remotas en bloque) — reiniciar la IMPRESORA (no el agente), la pieza de
+"Acciones de HP SDS en bloque" del SDS que sí requería tocar el agente.
+
+✅ **SNMP SET real, agente-side**. `SnmpClient.setInt()` nuevo en
+`agent/src/capture/transport/snmp.ts` — mismo motor de negociación que ya
+usa la lectura (misma pool de credenciales, sin "credencial de escritura"
+separada: si la community/usuario que ya sirve para leer tiene permiso de
+escritura en el device, el SET funciona; si no, se reporta explícito).
+Clasifica el resultado en tres baldes según el `RequestFailedError`/
+`RequestTimedOutError` real de `net-snmp` (nunca asume éxito ni falla en
+silencio): `no-response` (timeout), `no-write-permission` (ReadOnly/
+NoAccess/AuthorizationError/NotWritable — los 4 códigos ASN.1 que
+significan "sin permiso"), `device-error` (cualquier otro rechazo de
+protocolo, ej. valor fuera de rango). `agent/src/snmp/printerReset.ts`
+dispara `prtGeneralReset` (OID **estándar** de Printer-MIB, RFC 3805,
+`powerCycleReset`) — a diferencia del resto de los drivers de captura, no
+hay fixture real posible para una escritura (no hay forma segura de
+"simular" un SET contra hardware en este entorno); la seguridad la da la
+clasificación de error de arriba, no un fixture.
+
+`CommandHandler.ts` gana el caso `RESTART_PRINTER` con el mismo criterio
+fail-closed que `EWS_PROXY` (IP fuera de `known_devices` → rechaza sin
+tocar la red); `main.ts` inyecta el proveedor de credenciales
+(`config.snmpCredentials` + `known_devices.snmp_cred_id` preferido, igual
+que `ScanService`).
+
+✅ **Cloud: destino por EQUIPO en los lotes**. Migración
+`20260824190000_remote_action_items_device_scope.ts` — las 4 acciones
+originales de la Fase 4.6 apuntan al agente; `RESTART_PRINTER` apunta a un
+equipo puntual de su flota (`targetKindOf()` en el dominio decide qué pide
+la creación). `remote_action_items` pasa de PK compuesta `(batch_id,
+agent_id)` a `id` surrogate + índice único que tolera varios equipos del
+mismo agente en un lote (`COALESCE` contra un UUID nil, mismo patrón que
+`message_templates_scope_event_uniq`), con snapshot de `device_ip` al
+crear (no la IP actual si cambió después). El worker arma el payload
+`{ip: device_ip}` que el agente usa para el SET. UI: el modal de "Nueva
+acción" cambia a selector cliente→equipos cuando la acción lo requiere,
+con aviso explícito sobre el requisito de permiso de escritura; el detalle
+del lote muestra el equipo en vez del agente para estos ítems.
+
+Verificado: **200/200 tests del agente** (sin regresiones; nuevos:
+`snmpSet.test.ts` — los 4 códigos de "sin permiso" clasificados correcto
+con sesiones falsas inyectadas por el mismo seam que `snmpNegotiate.test.ts`,
+más timeout y device-error distinguidos —, `printerReset.test.ts` — puerto
+inyectado, confirma OID+valor —, `commandHandlerRestartPrinter.test.ts` —
+mismo alcance que el precedente de `EWS_PROXY`: sólo la validación
+agent-side, el SET real ya cubierto abajo). Del lado cloud, extendido
+`remoteActions.test.ts` con el ciclo device-scoped completo (crear por
+`device_ids` → item con `agent_id`+`device_ip` resueltos → el worker
+despacha con el payload `{ip}` correcto → heartbeat lo entrega → se
+simula un fallo real de permiso → lote `completed_with_errors`) + RBAC;
+dry-run de la migración; `tsc`/`check:sizes`/portal check limpios.
+
+**Release**: `agent/src/core/version.ts` → 1.2.0, sincronizado en
+`agent/package.json`, `installer/STC-Monitor.iss` y
+`monitor-ui/STC.Monitor.UI.csproj`. **Sin firmar**: la firma del bundle
+(`sign-bundle.js`) y la corrida real del instalador Inno Setup requieren
+Windows y las claves de firma — no verificables en este entorno Linux.
+Código y tests quedan completos y verdes; falta el paso operativo de
+firmar+empaquetar+publicar el release real, a cargo de quien tenga acceso
+a esas claves.
 
 ### Otros puntos de §3 (riesgos) que siguen abiertos y no forman parte de ningún ítem de arriba
 - ✅ **R4 (parcial, 23/08/2026)**: el WS del portal ya NO acepta el JWT de

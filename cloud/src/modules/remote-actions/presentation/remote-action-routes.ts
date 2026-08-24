@@ -1,18 +1,19 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type { Knex } from "knex";
 import type { AuthHook } from "../../../api/middlewares/authMiddleware";
-import { REMOTE_ACTIONS, type RemoteActionBatch } from "../domain/entities/remote-action-batch";
-import { KnexRemoteActionRepository } from "../infrastructure/database/knex-remote-action-repository";
+import { REMOTE_ACTIONS, targetKindOf, type RemoteActionBatch } from "../domain/entities/remote-action-batch";
+import { KnexRemoteActionRepository, type BatchTarget } from "../infrastructure/database/knex-remote-action-repository";
 
 const createSchema = {
   body: {
     type: "object",
-    required: ["action", "agent_ids"],
+    required: ["action"],
     additionalProperties: false,
     properties: {
       action: { type: "string", enum: [...REMOTE_ACTIONS] },
       name: { type: ["string", "null"], maxLength: 120 },
-      agent_ids: { type: "array", minItems: 1, maxItems: 100, items: { type: "string", format: "uuid" } },
+      agent_ids: { type: "array", maxItems: 100, items: { type: "string", format: "uuid" } },
+      device_ids: { type: "array", maxItems: 100, items: { type: "string", format: "uuid" } },
       scheduled_at: { type: ["string", "null"], format: "date-time" },
     },
   },
@@ -53,17 +54,53 @@ function userIdOf(request: FastifyRequest): string | null {
   return user?.userId ?? null;
 }
 
+async function resolveAgentTargets(db: Knex, agentIds: string[]): Promise<BatchTarget[] | null> {
+  const agents = await db("agents").whereIn("id", agentIds).whereNot("status", "revoked").select("id");
+  if (agents.length !== agentIds.length) return null;
+  return agentIds.map((agentId) => ({ agentId }));
+}
+
+/** RESTART_PRINTER: cada `device_id` se resuelve a su agente + IP actual (snapshot al crear el lote). */
+async function resolveDeviceTargets(db: Knex, deviceIds: string[]): Promise<BatchTarget[] | null> {
+  const rows = await db("devices")
+    .whereIn("devices.id", deviceIds)
+    .join("agents", "agents.id", "devices.agent_id")
+    .whereNot("agents.status", "revoked")
+    .select("devices.id as device_id", "devices.agent_id", "devices.ip_address");
+  if (rows.length !== deviceIds.length) return null;
+  if (rows.some((r) => !r.ip_address)) return null;
+  return rows.map((r) => ({ agentId: r.agent_id, deviceId: r.device_id, deviceIp: r.ip_address }));
+}
+
+type TargetResolution = { targets: BatchTarget[] } | { error: string };
+
+async function resolveTargets(db: Knex, kind: "agent" | "device", b: Record<string, any>): Promise<TargetResolution> {
+  if (kind === "device") {
+    if (!Array.isArray(b.device_ids) || b.device_ids.length === 0) {
+      return { error: "Esta acción requiere device_ids (equipos, no agentes)" };
+    }
+    const targets = await resolveDeviceTargets(db, b.device_ids);
+    if (!targets) return { error: "Algún equipo no existe, su agente está revocado, o no tiene IP conocida" };
+    return { targets };
+  }
+  if (!Array.isArray(b.agent_ids) || b.agent_ids.length === 0) {
+    return { error: "Esta acción requiere agent_ids" };
+  }
+  const targets = await resolveAgentTargets(db, b.agent_ids);
+  if (!targets) return { error: "Algún agente no existe o está revocado" };
+  return { targets };
+}
+
 function buildCreate(db: Knex, repo: KnexRemoteActionRepository) {
   return async (request: FastifyRequest, reply: FastifyReply) => {
     const b = request.body as Record<string, any>;
-    const agents = await db("agents").whereIn("id", b.agent_ids).whereNot("status", "revoked").select("id");
-    if (agents.length !== b.agent_ids.length) {
-      return reply.status(400).send({ error: "Algún agente no existe o está revocado" });
-    }
+    const resolution = await resolveTargets(db, targetKindOf(b.action), b);
+    if ("error" in resolution) return reply.status(400).send({ error: resolution.error });
+
     const created = await repo.create({
       action: b.action, name: b.name ?? null,
       scheduledAt: b.scheduled_at ? new Date(b.scheduled_at) : new Date(),
-      agentIds: b.agent_ids,
+      targets: resolution.targets,
     }, userIdOf(request));
     return reply.status(201).send(toView(created));
   };
@@ -87,6 +124,7 @@ function buildDetail(repo: KnexRemoteActionRepository) {
       ...toView(batch),
       items: items.map((i) => ({
         agent_id: i.agentId, agent_name: i.agentName,
+        device_id: i.deviceId, device_ip: i.deviceIp, device_label: i.deviceLabel,
         command_id: i.commandId, command_status: i.commandStatus,
       })),
     });

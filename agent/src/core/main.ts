@@ -2,7 +2,7 @@
 import { log, setupProcessErrorHandlers } from './Logger';
 import { waitForConnectivity } from './NetworkUtils';
 import { ConfigManager, DATA_DIR } from './config';
-import { openQueue, closeQueue, isRegistered } from '../sync/database';
+import { openQueue, closeQueue, isRegistered, getKnownDevices } from '../sync/database';
 import { printStatus, setProxy, activate } from './CliCommands';
 import { CommandHandler } from './CommandHandler';
 import { HeartbeatService } from './HeartbeatService';
@@ -107,6 +107,15 @@ async function main(): Promise<void> {
     commandHandler.setScanTrigger(() => { scanService.scan(); });
     commandHandler.setForceUpdateFn(() => updateService.checkForUpdate(true));
     commandHandler.setKnownDeviceCheck((ip) => isRegistered(ip));
+    // RESTART_PRINTER (v1.2.0): misma pool de credenciales que el escaneo de
+    // lectura, con la credencial que ya negoció mejor con ESTE equipo primero.
+    commandHandler.setSnmpCredentialsProvider((ip) => {
+      const known = getKnownDevices().find((d) => d.ip === ip);
+      return {
+        credentials: currentConfig.snmpCredentials ?? [],
+        preferredCredentialId: known?.snmp_cred_id ?? null,
+      };
+    });
 
     // === Conexion WebSocket ===
     const socket = new SocketManager(

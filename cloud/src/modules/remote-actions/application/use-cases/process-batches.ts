@@ -14,10 +14,13 @@ async function dispatchBatch(
 ): Promise<void> {
   for (const item of await repo.itemsOf(batch.id)) {
     if (item.commandId) continue; // re-entrada tras un fallo parcial: no duplicar
-    const command = await commands.addCommand(
-      item.agentId, batch.action, { batch_id: batch.id }, batch.createdBy ?? undefined
-    );
-    await repo.setItemCommand(batch.id, item.agentId, command.id);
+    // RESTART_PRINTER necesita la IP del equipo puntual dentro de la flota
+    // del agente (CommandHandler.ts, caso RESTART_PRINTER); las acciones de
+    // agente no llevan payload propio.
+    const payload: Record<string, unknown> = { batch_id: batch.id };
+    if (item.deviceIp) payload.ip = item.deviceIp;
+    const command = await commands.addCommand(item.agentId, batch.action, payload, batch.createdBy ?? undefined);
+    await repo.setItemCommand(item.id, command.id);
   }
   await repo.setStatus(batch.id, "sent", null);
 }

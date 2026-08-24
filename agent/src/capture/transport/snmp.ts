@@ -19,6 +19,11 @@ const PROBE_OID = '1.3.6.1.2.1.1.2.0'; // sysObjectID
 
 export type SnmpScalar = number | string | null;
 
+/** Resultado de `SnmpClient.setInt` — ver el docblock del método. */
+export type SetOutcome =
+  | { ok: true }
+  | { ok: false; reason: 'no-response' | 'no-write-permission' | 'device-error'; detail?: string };
+
 export type SecurityLevelName = 'noAuthNoPriv' | 'authNoPriv' | 'authPriv';
 export type AuthProtocolName = 'md5' | 'sha' | 'sha224' | 'sha256' | 'sha384' | 'sha512';
 export type PrivProtocolName = 'des' | 'aes' | 'aes256b' | 'aes256r';
@@ -301,6 +306,49 @@ export class SnmpClient {
       if (v) return v;
     }
     return null;
+  }
+
+  /**
+   * SET de un entero — hoy sólo lo usa `snmp/printerReset.ts` (Fase agente
+   * v1.2.0). Deliberadamente sin cache ni reintentos silenciosos: una
+   * escritura no es idempotente como un GET, así que el llamador necesita
+   * saber exactamente qué pasó, no un `null` ambiguo.
+   *
+   * - `{ ok: true }` — el device aceptó el valor.
+   * - `{ ok: false, reason: 'no-response' }` — timeout, sin respuesta.
+   * - `{ ok: false, reason: 'no-write-permission', detail }` — el device
+   *   respondió pero rechazó la escritura (community/usuario de sólo
+   *   lectura, o sin permiso para ese OID puntual).
+   * - `{ ok: false, reason: 'device-error', detail }` — el device respondió
+   *   con otro error de protocolo (valor fuera de rango, OID inexistente).
+   */
+  async setInt(oid: string, value: number): Promise<SetOutcome> {
+    if (this.unreachable) return { ok: false, reason: 'no-response' };
+    const session = await this.ensureSession();
+    if (!session) return { ok: false, reason: 'no-response' };
+    return new Promise((resolve) => {
+      try {
+        session.set([{ oid, type: snmp.ObjectType.Integer, value }], (err) => {
+          if (!err) { resolve({ ok: true }); return; }
+          if (err instanceof snmp.RequestTimedOutError) {
+            resolve({ ok: false, reason: 'no-response' });
+            return;
+          }
+          if (err instanceof snmp.RequestFailedError) {
+            const NO_PERMISSION_CODES = new Set([4, 6, 16, 17]); // ReadOnly, NoAccess, AuthorizationError, NotWritable
+            resolve({
+              ok: false,
+              reason: NO_PERMISSION_CODES.has(err.status) ? 'no-write-permission' : 'device-error',
+              detail: err.message,
+            });
+            return;
+          }
+          resolve({ ok: false, reason: 'no-response', detail: err.message });
+        });
+      } catch (err) {
+        resolve({ ok: false, reason: 'no-response', detail: err instanceof Error ? err.message : String(err) });
+      }
+    });
   }
 
   /**
