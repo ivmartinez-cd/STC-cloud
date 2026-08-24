@@ -75,7 +75,12 @@
     "src/services/ewsProxyService.ts": 75,
     "src/services/incidentClassifier.ts": 34,
     "src/services/incidentService.ts": 363,
-    "src/services/ipRangeSpec.ts": 436,
+    "src/services/ipRangeSpec/compile.ts": 106,
+    "src/services/ipRangeSpec/index.ts": 39,
+    "src/services/ipRangeSpec/ip-arithmetic.ts": 57,
+    "src/services/ipRangeSpec/types.ts": 28,
+    "src/services/ipRangeSpec/validate.ts": 161,
+    "src/services/ipRangeSpec/warnings.ts": 88,
     "src/services/notificationService.ts": 279,
     "src/services/publicWebhookService.ts": 80,
     "src/services/reportExportService.ts": 93,
@@ -97,6 +102,7 @@
     "src/tests/deviceUsageHistory.test.ts": 149,
     "src/tests/e2e.test.ts": 521,
     "src/tests/ewsProxyService.test.ts": 85,
+    "src/tests/incidents.test.ts": 324,
     "src/tests/inventoryFields.test.ts": 260,
     "src/tests/ipRangeSpec.test.ts": 361,
     "src/tests/ipRangesCredentials.test.ts": 169,
@@ -105,7 +111,7 @@
     "src/tests/pendingDevices.test.ts": 267,
     "src/tests/portalAgentEws.test.ts": 177,
     "src/tests/publicApi.test.ts": 298,
-    "src/tests/rbac.test.ts": 649,
+    "src/tests/rbac.test.ts": 687,
     "src/tests/reports.test.ts": 219,
     "src/tests/snmpCredentials.test.ts": 283,
     "src/tests/supplies.test.ts": 211,
@@ -832,28 +838,6 @@
         "length": 23
       }
     ],
-    "src/services/ipRangeSpec.ts": [
-      {
-        "name": "validateIpRangeSpecs",
-        "length": 101
-      },
-      {
-        "name": "anonymous",
-        "length": 92
-      },
-      {
-        "name": "compileOne",
-        "length": 43
-      },
-      {
-        "name": "publicIpWarnings",
-        "length": 24
-      },
-      {
-        "name": "overlappingCredentialWarnings",
-        "length": 39
-      }
-    ],
     "src/services/notificationService.ts": [
       {
         "name": "assertSafeWebhookUrl",
@@ -1176,6 +1160,28 @@
         "length": 36
       }
     ],
+    "src/tests/incidents.test.ts": [
+      {
+        "name": "describe(Incidentes manuales — CRUD, vínculo con alertas, cierre/reapertura)",
+        "length": 114
+      },
+      {
+        "name": "describe(Reglas de auto-creación — habilitadas por cliente)",
+        "length": 70
+      },
+      {
+        "name": "test(habilitar la regla consumable_out para este cliente (delay_minutes:0) → el worker agrupa las alertas críticas de tóner en UN incidente automático)",
+        "length": 40
+      },
+      {
+        "name": "describe(Incidentes — RBAC)",
+        "length": 23
+      },
+      {
+        "name": "test(client_viewer puede leer (list/stats/detail) pero no crear ni mutar)",
+        "length": 21
+      }
+    ],
     "src/tests/inventoryFields.test.ts": [
       {
         "name": "describe(Inventario — fixtures)",
@@ -1391,7 +1397,7 @@
       },
       {
         "name": "describe(RBAC — mutaciones denegadas para client_viewer)",
-        "length": 160
+        "length": 198
       },
       {
         "name": "describe(RBAC — restricciones a nivel de base (defensa en profundidad))",

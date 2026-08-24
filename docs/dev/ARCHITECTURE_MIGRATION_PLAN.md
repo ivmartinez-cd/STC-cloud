@@ -1,6 +1,6 @@
 # Plan de Migración a ARCHITECTURE_GUIDE.md
 
-**Estado:** Fase 0 y Fase 1 (módulo piloto) completas (2026-08-24) — Fase 2 en adelante sin ejecutar  
+**Estado:** Fase 0, Fase 1 (módulo piloto) y arranque de Fase 2 completos (2026-08-24)  
 **Origen:** `docs/dev/ARCHITECTURE_GUIDE.md` (copiado desde `helpdesk-manager`, 2026-08-24)  
 **Reemplaza (parcialmente) a:** `docs/dev/PROJECT_GUIDELINES.md`, que hoy documenta la
 convención opuesta (`api/` para rutas + `services/` para lógica de negocio, sin capas).
@@ -67,6 +67,44 @@ completamente quieto en `git status` — controller + routes sin service propio,
   compilados de esas migraciones para poder migrar el resto, y se reintentó
   más tarde cuando la otra sesión los dejó consistentes — nunca se tocó su
   código fuente.
+
+## Fase 2 — dividir archivos grandes: `ipRangeSpec.ts` (no `agentService.ts`) — 1 de N
+
+`agentService.ts` (el primer candidato de este plan) tenía ~200 líneas sin
+commitear de la sesión hermana al arrancar esta fase — partirlo ahora habría
+significado reestructurar su trabajo en curso, no sólo convivir al lado. Se
+aplicó el mismo criterio de la Fase 1 (sustituir por el archivo grande más
+grande que esté quieto): de la tabla de la Fase 0, `services/ipRangeSpec.ts`
+(436 líneas) estaba limpio. `agentService.ts` sigue primero en la cola para
+cuando se estabilice.
+
+- ✅ `services/ipRangeSpec.ts` (436 líneas, una función de validación de
+  ~100 líneas) → carpeta `services/ipRangeSpec/{types,ip-arithmetic,validate,compile,warnings,index}.ts`,
+  todas por debajo de 100 líneas y ninguna función por encima de 20.
+- ✅ **Cero archivos consumidores tocados**: los 4 imports externos
+  (`agentService.ts`, `portalAgentController.ts`, `portalAgentRoutes.ts`,
+  `ipRangeSpec.test.ts`) usan specifiers "bare" (`"./ipRangeSpec"`,
+  `"../services/ipRangeSpec"`) que resuelven igual a un directorio con
+  `index.ts` — ni siquiera hubo que abrir esos archivos. Éste es el patrón a
+  repetir para los próximos: convertir a carpeta con barrel antes que salir a
+  actualizar imports por todo el árbol.
+- ✅ Sin capas todavía (a propósito, así lo pide esta fase) — es sólo
+  reorganización por responsabilidad dentro de `services/`; la migración a
+  `modules/<m>/` de este código queda para cuando le toque su fase de capas.
+- ✅ Validado: 58/58 tests unitarios de `ipRangeSpec.test.ts` (lógica pura,
+  sin servidor) uno a uno idénticos a antes de la partición, más la misma
+  batería de Fase 0/1 en entorno efímero aislado (21/21 archivos — sumó
+  `incidents.test.ts` de la sesión hermana en el medio — 0 fallas, `tsc`
+  limpio, `cloud/portal` `npm run check` limpio).
+
+**Pendiente de Fase 2** (orden descendente de tamaño, tabla de Fase 0):
+`agentService.ts` (1529, esperando que se estabilice) → `deviceController.ts`
+(777) → `portalAgentController.ts` (610, también tocado ahora) →
+`dashboardController.ts` (593) → `deviceLifecycleService.ts` (516) →
+`authController.ts` (385, quieto) → `reportService.ts` (355) →
+`clientController.ts` (345) → `suppliesService.ts` (301) — más lo que haya
+crecido por encima de 300 desde que se congeló esa tabla. Frontend
+(`Settings.tsx` 869, `DeviceDetail.tsx` 772, etc.) sigue sin arrancar.
 
 ## 0. Punto de partida (medido 2026-08-24)
 
