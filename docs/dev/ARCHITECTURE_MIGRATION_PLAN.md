@@ -4,8 +4,9 @@
 incluidas las 2 pasadas diferidas de alto riesgo del backend
 (`syncReadings`, `mergeDevices`) y los 7 archivos grandes del frontend
 (`Settings.tsx`, `Monitors.tsx`, `MonitorDetail.tsx`, `DeviceDetail.tsx`,
-`ClientDetail.tsx`, `DeviceLifecycleModals.tsx`, `Dashboard.tsx`). No
-queda ningún ítem abierto de este plan — 2026-08-24  
+`ClientDetail.tsx`, `DeviceLifecycleModals.tsx`, `Dashboard.tsx`). Fase 3
+(migrar módulos existentes a capas completas) arrancada: `audit` migrado a
+`modules/audit/` — 2026-08-24  
 **Origen:** `docs/dev/ARCHITECTURE_GUIDE.md` (copiado desde `helpdesk-manager`, 2026-08-24)  
 **Reemplaza (parcialmente) a:** `docs/dev/PROJECT_GUIDELINES.md`, que hoy documenta la
 convención opuesta (`api/` para rutas + `services/` para lógica de negocio, sin capas).
@@ -760,6 +761,103 @@ sección de `Settings.tsx` arriba). Con Fase 0, Fase 1 y Fase 2
 las fases 3+ (mover módulos ya divididos a la estructura completa
 domain/application/infrastructure/presentation de `ARCHITECTURE_GUIDE.md`)
 no fueron pedidas todavía y no deberían asumirse como pre-aprobadas.
+
+## Fase 3 — arranca con `audit` (2026-08-24)
+
+Ivan pidió explícitamente seguir después del cierre de Fase 2 y confirmó
+arrancar la Fase 3 (migrar módulos existentes a la estructura completa
+`domain/application/infrastructure/presentation`, no sólo dividir
+archivos), dejando el orden a criterio de esta sesión y pidiendo además
+avisarle a `close-hp-sds-gaps` que todo código NUEVO se escriba
+directamente con esa estructura de acá en más.
+
+El plan (sección "Fases" más abajo) sugiere empezar por `clients` — pero
+`clients`/`devices` son justo los dominios donde `close-hp-sds-gaps` está
+desarrollando activamente (Fase 4.2/4.3: `SupplyRequestSettingsCard`,
+`notification_events`, plantillas de mensajes). Mismo criterio que ya se
+usó para elegir módulo piloto en Fase 1 y archivo por archivo en Fase 2:
+**se arranca por el dominio más chico y quieto, no por el que dice el
+plan literal.** `audit` (el feed de "Movimientos y cambios") resultó ser
+eso: ~300 líneas repartidas en 4 archivos (`auditController.ts`,
+`auditRoutes.ts`, `auditService.ts`, `auditCatalog.ts`), sin ninguna
+modificación pendiente de nadie. Confirmado con `close-hp-sds-gaps` antes
+de tocar nada.
+
+**Aviso a `close-hp-sds-gaps` (cumplido):** ya venían escribiendo
+`modules/scheduled-reports/`, `modules/supply-requests/` y
+`modules/message-templates/` con la estructura completa de capas por su
+cuenta — el pedido de Ivan fue más confirmación que instrucción nueva.
+
+**Decisión importante: `services/auditService.ts` (la función
+`writeAudit`) NO se migró ni se tocó.** Tiene ~9 call-sites en otros
+módulos (`deviceController`, `deviceLifecycleService`, etc.) que escriben
+a `audit_logs` — es infraestructura compartida transversal, no parte del
+dominio `audit` en sí (que es sólo el LADO DE LECTURA: el feed y el
+catálogo de acciones). Migrarlo hubiera significado tocar ~9 archivos
+ajenos sin necesidad. Mismo criterio ya usado por `close-hp-sds-gaps` en
+`modules/feedback/`: cuando un módulo necesita escribir a `audit_logs`,
+define su propio puerto (`AuditLogWriter`) + adapter Knex propio, en vez
+de depender de un "dueño" central de la tabla — no hay una razón para que
+`audit` sea distinto.
+
+División (`modules/audit/`, 10 archivos, ~505 líneas):
+- `domain/entities/audit-log.ts` — `AuditLogEntry`, `AuditActionSummary`,
+  `AuditTargetKind`.
+- `domain/services/audit-action-catalog.ts` — `auditCatalog.ts` movido
+  literal (puro, sin Knex/Fastify, ya lo era).
+- `domain/repositories/audit-log-repository.ts` — interfaz
+  `AuditLogRepository` (`findPage`, `countActionsSince`) + tipos de
+  filtro/fila cruda.
+- `application/dtos/audit-dtos.ts`, `application/use-cases/{list-audit-logs,
+  list-audit-actions}.ts` — la resolución de filtros (rango de fechas,
+  CSV de `action`, CSV de `category` vía catálogo) que antes vivía en el
+  controller pasa a los casos de uso. **Detalle preservado a propósito:**
+  el filtro por `action` y el filtro por `category` se aplican como DOS
+  `whereIn` independientes sobre la misma columna (AND implícito), no como
+  una intersección precalculada en JS — mismo comportamiento SQL exacto
+  que el controller original, documentado en el tipo `AuditLogFilter`. El
+  cache de 60s de `GET /audit-logs/actions` pasa de variable de módulo a
+  campo de instancia de `ListAuditActionsUseCase` — equivalente porque el
+  caso de uso se instancia una sola vez por proceso (en
+  `registerAuditRoutes`, al arrancar el server), no por request.
+- `infrastructure/database/knex-audit-log-repository.ts` — la query con
+  joins condicionales por regex de uuid (`UUID_RX`) movida literal.
+- `presentation/{audit-controller,audit-routes,audit-view}.ts` —
+  `audit-view.ts` traduce domain (camelCase) → wire (snake_case) igual
+  que `feedback-view.ts`; `audit-routes.ts` conserva la firma exacta
+  `registerAuditRoutes(fastify, db, portalAuth)`.
+
+`api/server.ts` — una sola línea tocada (el import de
+`registerAuditRoutes`, ahora apunta a `modules/audit/presentation/
+audit-routes`), misma línea de registro sin cambios. Borrados:
+`api/controllers/auditController.ts`, `api/routes/auditRoutes.ts`,
+`services/auditCatalog.ts` (confirmado sin otros consumidores antes de
+borrar).
+
+**Validación:** `npx tsc --noEmit` limpio. Entorno efímero aislado
+(Postgres/Redis/API propios, puerto 3024): suite completa de backend (24
+archivos ahora, la cola de tests creció bastante desde la última corrida)
+— **0 fallas en `auditFeed.test.ts` (13/13)**, incluyendo los filtros que
+ejercitan el detalle de los dos `whereIn` independientes, RBAC
+deny-by-default, y el ciclo escritura→lectura vía el `writeAudit` sin
+tocar. Una falla ajena detectada en `messageTemplates.test.ts` (`PUT
+/clients/:id` con `notification_events` → 400 en vez de 200) — no
+relacionada con este cambio (no toca `clientController`/`clientRoutes`
+para nada), es trabajo en curso de `close-hp-sds-gaps` en su Fase
+4.3, no se intentó arreglar. `cloud/portal` → `npm run check` limpio
+(cambio puramente backend). `check-sizes.mjs` limpio tras regenerar
+baseline (341 archivos) — capturó de nuevo crecimiento en curso de
+`close-hp-sds-gaps` (`rbac.test.ts`, `ClientDetail.tsx`, `Settings.tsx`,
+`messageTemplates.test.ts`, `NotificationEventsCard.tsx`,
+`MessageTemplatesCard.tsx`, todo de su Fase 4.3).
+
+**Siguiente candidato para Fase 3:** a evaluar con el mismo criterio
+(chico, quieto) contra el estado de `git status`/`close-hp-sds-gaps` en
+el momento — no asumir que el orden `clients, devices, agents, alerts,
+reports, audit, inventory, pending-devices` sugerido más abajo en este
+documento sigue vigente tal cual (además tiene una inconsistencia interna:
+pone `devices`/`agents` en 2º/3º lugar pese a decir que deberían dejarse
+para el final).
 
 ## 0. Punto de partida (medido 2026-08-24)
 

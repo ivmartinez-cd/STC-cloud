@@ -1,7 +1,6 @@
 {
   "files": {
     "src/api/controllers/agentController.ts": 99,
-    "src/api/controllers/auditController.ts": 144,
     "src/api/controllers/authController/agent-auth.ts": 65,
     "src/api/controllers/authController/agent-version.ts": 82,
     "src/api/controllers/authController/index.ts": 24,
@@ -9,7 +8,7 @@
     "src/api/controllers/authController/shared.ts": 24,
     "src/api/controllers/authController/users.ts": 175,
     "src/api/controllers/clientController/api-keys.ts": 33,
-    "src/api/controllers/clientController/crud.ts": 107,
+    "src/api/controllers/clientController/crud.ts": 110,
     "src/api/controllers/clientController/index.ts": 22,
     "src/api/controllers/clientController/pending-devices.ts": 63,
     "src/api/controllers/clientController/reads.ts": 131,
@@ -43,9 +42,8 @@
     "src/api/middlewares/authMiddleware.ts": 265,
     "src/api/policy/rolePolicy.ts": 106,
     "src/api/routes/agentRoutes.ts": 127,
-    "src/api/routes/auditRoutes.ts": 19,
     "src/api/routes/authRoutes.ts": 153,
-    "src/api/routes/clientRoutes.ts": 178,
+    "src/api/routes/clientRoutes.ts": 185,
     "src/api/routes/dashboardRoutes.ts": 78,
     "src/api/routes/deviceRoutes.ts": 221,
     "src/api/routes/incidentRoutes.ts": 143,
@@ -54,7 +52,7 @@
     "src/api/routes/publicApiRoutes.ts": 85,
     "src/api/routes/reportRoutes.ts": 78,
     "src/api/routes/suppliesRoutes.ts": 17,
-    "src/api/server.ts": 343,
+    "src/api/server.ts": 345,
     "src/api/utils/deviceFilters.ts": 60,
     "src/api/utils/ip.ts": 16,
     "src/api/utils/password.ts": 28,
@@ -66,13 +64,23 @@
     "src/jobs/alertWorker.ts": 156,
     "src/jobs/heartbeatMonitor.ts": 171,
     "src/jobs/incidentWorker.ts": 216,
-    "src/jobs/notificationWorker.ts": 217,
+    "src/jobs/notificationWorker.ts": 243,
     "src/jobs/publicWebhookWorker.ts": 73,
-    "src/jobs/reportDeliveryWorker.ts": 114,
+    "src/jobs/reportDeliveryWorker.ts": 121,
     "src/jobs/retentionJob.ts": 80,
     "src/jobs/scheduledReportsWorker.ts": 49,
     "src/jobs/supplyRequestWorker.ts": 62,
     "src/logger.ts": 13,
+    "src/modules/audit/application/dtos/audit-dtos.ts": 12,
+    "src/modules/audit/application/use-cases/list-audit-actions.ts": 40,
+    "src/modules/audit/application/use-cases/list-audit-logs.ts": 76,
+    "src/modules/audit/domain/entities/audit-log.ts": 28,
+    "src/modules/audit/domain/repositories/audit-log-repository.ts": 51,
+    "src/modules/audit/domain/services/audit-action-catalog.ts": 99,
+    "src/modules/audit/infrastructure/database/knex-audit-log-repository.ts": 95,
+    "src/modules/audit/presentation/audit-controller.ts": 48,
+    "src/modules/audit/presentation/audit-routes.ts": 30,
+    "src/modules/audit/presentation/audit-view.ts": 36,
     "src/modules/feedback/application/dtos/feedback-dtos.ts": 26,
     "src/modules/feedback/application/ports/audit-log-writer.ts": 12,
     "src/modules/feedback/application/ports/identity-resolver.ts": 13,
@@ -88,6 +96,10 @@
     "src/modules/feedback/presentation/feedback-routes.ts": 36,
     "src/modules/feedback/presentation/feedback-schemas.ts": 30,
     "src/modules/feedback/presentation/feedback-view.ts": 27,
+    "src/modules/message-templates/application/resolve-template.ts": 43,
+    "src/modules/message-templates/domain/entities/message-template.ts": 89,
+    "src/modules/message-templates/infrastructure/database/knex-template-repository.ts": 67,
+    "src/modules/message-templates/presentation/template-routes.ts": 109,
     "src/modules/scheduled-reports/application/dtos/scheduled-report-dtos.ts": 79,
     "src/modules/scheduled-reports/application/ports/report-mailer.ts": 12,
     "src/modules/scheduled-reports/application/ports/report-renderer.ts": 28,
@@ -135,7 +147,6 @@
     "src/services/alertCatalog.ts": 255,
     "src/services/alertService.ts": 213,
     "src/services/apiKeyService.ts": 84,
-    "src/services/auditCatalog.ts": 99,
     "src/services/auditService.ts": 42,
     "src/services/businessHours.ts": 125,
     "src/services/cryptoService.ts": 112,
@@ -157,7 +168,7 @@
     "src/services/ipRangeSpec/types.ts": 28,
     "src/services/ipRangeSpec/validate.ts": 161,
     "src/services/ipRangeSpec/warnings.ts": 88,
-    "src/services/notificationService.ts": 310,
+    "src/services/notificationService.ts": 321,
     "src/services/publicWebhookService.ts": 80,
     "src/services/reportExportService.ts": 93,
     "src/services/reportService/closure.ts": 209,
@@ -188,11 +199,12 @@
     "src/tests/ipRangeSpec.test.ts": 361,
     "src/tests/ipRangesCredentials.test.ts": 169,
     "src/tests/loadTest.ts": 260,
+    "src/tests/messageTemplates.test.ts": 159,
     "src/tests/monitorState.test.ts": 249,
     "src/tests/pendingDevices.test.ts": 267,
     "src/tests/portalAgentEws.test.ts": 177,
     "src/tests/publicApi.test.ts": 298,
-    "src/tests/rbac.test.ts": 713,
+    "src/tests/rbac.test.ts": 719,
     "src/tests/reports.test.ts": 219,
     "src/tests/scheduledReports.test.ts": 185,
     "src/tests/snmpCredentials.test.ts": 283,
@@ -221,6 +233,7 @@
     "portal/src/components/clients/DeviceApprovalCard.tsx": 67,
     "portal/src/components/clients/DuplicateDevicesCard.tsx": 72,
     "portal/src/components/clients/IncidentRulesCard.tsx": 133,
+    "portal/src/components/clients/NotificationEventsCard.tsx": 87,
     "portal/src/components/clients/NotificationSettingsCard.tsx": 108,
     "portal/src/components/clients/SupplyRequestSettingsCard.tsx": 79,
     "portal/src/components/dashboard/AgentVersionsCard.tsx": 42,
@@ -270,6 +283,7 @@
     "portal/src/components/monitors/SnmpCredentialsPanel.tsx": 354,
     "portal/src/components/reports/ScheduledReportModal.tsx": 169,
     "portal/src/components/settings/FeedbackCard.tsx": 122,
+    "portal/src/components/settings/MessageTemplatesCard.tsx": 129,
     "portal/src/components/settings/MonitorThresholdCard.tsx": 43,
     "portal/src/components/settings/SmtpInfoCard.tsx": 71,
     "portal/src/components/settings/operators/CreateUserModal.tsx": 162,
@@ -297,9 +311,9 @@
     "portal/src/pages/Activity.tsx": 248,
     "portal/src/pages/Agents.tsx": 120,
     "portal/src/pages/Alerts.tsx": 447,
-    "portal/src/pages/ClientDetail.tsx": 160,
+    "portal/src/pages/ClientDetail.tsx": 162,
     "portal/src/pages/Clients.tsx": 334,
-    "portal/src/pages/Dashboard.tsx": 172,
+    "portal/src/pages/Dashboard.tsx": 195,
     "portal/src/pages/DeviceDetail.tsx": 283,
     "portal/src/pages/Devices.tsx": 261,
     "portal/src/pages/IncidentDetail.tsx": 264,
@@ -310,7 +324,7 @@
     "portal/src/pages/PendingDevices.tsx": 270,
     "portal/src/pages/Reports.tsx": 367,
     "portal/src/pages/ScheduledReports.tsx": 160,
-    "portal/src/pages/Settings.tsx": 72,
+    "portal/src/pages/Settings.tsx": 74,
     "portal/src/pages/Supplies.tsx": 253,
     "portal/src/pages/SupplyRequests.tsx": 135,
     "portal/src/types/agents.ts": 83,
@@ -337,24 +351,6 @@
       {
         "name": "heartbeat",
         "length": 34
-      }
-    ],
-    "src/api/controllers/auditController.ts": [
-      {
-        "name": "createAuditController",
-        "length": 116
-      },
-      {
-        "name": "getAuditLogs",
-        "length": 90
-      },
-      {
-        "name": "buildBase",
-        "length": 38
-      },
-      {
-        "name": "getAuditActions",
-        "length": 21
       }
     ],
     "src/api/controllers/authController/agent-auth.ts": [
@@ -704,7 +700,7 @@
     "src/api/server.ts": [
       {
         "name": "start",
-        "length": 234
+        "length": 235
       },
       {
         "name": "healthHandler",
@@ -754,15 +750,15 @@
     "src/jobs/notificationWorker.ts": [
       {
         "name": "processAlertNotification",
-        "length": 66
+        "length": 74
       },
       {
         "name": "processIncidentNotification",
-        "length": 38
+        "length": 45
       },
       {
         "name": "processSupplyRequestNotification",
-        "length": 36
+        "length": 44
       }
     ],
     "src/jobs/publicWebhookWorker.ts": [
@@ -774,13 +770,35 @@
     "src/jobs/reportDeliveryWorker.ts": [
       {
         "name": "processReportDelivery",
-        "length": 60
+        "length": 64
       }
     ],
     "src/jobs/retentionJob.ts": [
       {
         "name": "purgeResolvedAlerts",
         "length": 25
+      }
+    ],
+    "src/modules/audit/application/use-cases/list-audit-logs.ts": [
+      {
+        "name": "execute",
+        "length": 26
+      }
+    ],
+    "src/modules/audit/infrastructure/database/knex-audit-log-repository.ts": [
+      {
+        "name": "buildBaseQuery",
+        "length": 25
+      },
+      {
+        "name": "findPage",
+        "length": 41
+      }
+    ],
+    "src/modules/audit/presentation/audit-view.ts": [
+      {
+        "name": "toAuditLogsView",
+        "length": 23
       }
     ],
     "src/modules/supply-requests/presentation/supply-request-controller.ts": [
@@ -1483,6 +1501,20 @@
         "length": 89
       }
     ],
+    "src/tests/messageTemplates.test.ts": [
+      {
+        "name": "describe(Dominio puro — render y opt-out)",
+        "length": 25
+      },
+      {
+        "name": "describe(Plantillas — e2e)",
+        "length": 70
+      },
+      {
+        "name": "describe(Opt-out de eventos por cliente — e2e)",
+        "length": 23
+      }
+    ],
     "src/tests/monitorState.test.ts": [
       {
         "name": "describe(Estado de monitoreo — fixtures)",
@@ -1618,7 +1650,7 @@
       },
       {
         "name": "describe(RBAC — mutaciones denegadas para client_viewer)",
-        "length": 224
+        "length": 230
       },
       {
         "name": "describe(RBAC — restricciones a nivel de base (defensa en profundidad))",
@@ -1881,6 +1913,12 @@
       {
         "name": "IncidentRulesCard",
         "length": 117
+      }
+    ],
+    "portal/src/components/clients/NotificationEventsCard.tsx": [
+      {
+        "name": "NotificationEventsCard",
+        "length": 63
       }
     ],
     "portal/src/components/clients/NotificationSettingsCard.tsx": [
@@ -2215,6 +2253,12 @@
         "length": 61
       }
     ],
+    "portal/src/components/settings/MessageTemplatesCard.tsx": [
+      {
+        "name": "MessageTemplatesCard",
+        "length": 96
+      }
+    ],
     "portal/src/components/settings/MonitorThresholdCard.tsx": [
       {
         "name": "MonitorThresholdCard",
@@ -2370,7 +2414,7 @@
     "portal/src/pages/ClientDetail.tsx": [
       {
         "name": "ClientDetail",
-        "length": 135
+        "length": 136
       }
     ],
     "portal/src/pages/Clients.tsx": [
@@ -2386,7 +2430,7 @@
     "portal/src/pages/Dashboard.tsx": [
       {
         "name": "Dashboard",
-        "length": 152
+        "length": 175
       }
     ],
     "portal/src/pages/DeviceDetail.tsx": [
@@ -2456,7 +2500,7 @@
     "portal/src/pages/Settings.tsx": [
       {
         "name": "Settings",
-        "length": 51
+        "length": 52
       }
     ],
     "portal/src/pages/Supplies.tsx": [
