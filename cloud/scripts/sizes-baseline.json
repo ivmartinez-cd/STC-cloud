@@ -40,8 +40,8 @@
     "src/api/controllers/publicApiController.ts": 147,
     "src/api/controllers/reportController.ts": 133,
     "src/api/controllers/suppliesController.ts": 59,
-    "src/api/middlewares/authMiddleware.ts": 258,
-    "src/api/policy/rolePolicy.ts": 102,
+    "src/api/middlewares/authMiddleware.ts": 265,
+    "src/api/policy/rolePolicy.ts": 106,
     "src/api/routes/agentRoutes.ts": 127,
     "src/api/routes/auditRoutes.ts": 19,
     "src/api/routes/authRoutes.ts": 153,
@@ -58,7 +58,7 @@
     "src/api/utils/deviceFilters.ts": 60,
     "src/api/utils/ip.ts": 16,
     "src/api/utils/password.ts": 28,
-    "src/api/utils/scope.ts": 176,
+    "src/api/utils/scope.ts": 192,
     "src/db/knexfile.ts": 56,
     "src/db/manual_seed.ts": 21,
     "src/db/seeds/test_data.ts": 12,
@@ -103,6 +103,19 @@
     "src/modules/scheduled-reports/presentation/scheduled-report-controller.ts": 121,
     "src/modules/scheduled-reports/presentation/scheduled-report-routes.ts": 34,
     "src/modules/scheduled-reports/presentation/scheduled-report-schemas.ts": 31,
+    "src/modules/supply-requests/application/dtos/supply-request-dtos.ts": 77,
+    "src/modules/supply-requests/application/ports/request-notifier.ts": 8,
+    "src/modules/supply-requests/application/ports/supply-snapshot.ts": 30,
+    "src/modules/supply-requests/application/use-cases/detect-supply-requests.ts": 75,
+    "src/modules/supply-requests/application/use-cases/manage-supply-request.ts": 69,
+    "src/modules/supply-requests/domain/entities/supply-request.ts": 74,
+    "src/modules/supply-requests/domain/repositories/supply-request-repository.ts": 58,
+    "src/modules/supply-requests/infrastructure/database/knex-supply-request-repository.ts": 153,
+    "src/modules/supply-requests/infrastructure/database/knex-supply-snapshot.ts": 60,
+    "src/modules/supply-requests/infrastructure/queue/bull-request-notifier.ts": 22,
+    "src/modules/supply-requests/presentation/supply-request-controller.ts": 173,
+    "src/modules/supply-requests/presentation/supply-request-routes.ts": 54,
+    "src/modules/supply-requests/presentation/supply-request-schemas.ts": 85,
     "src/services/agentService/agent-service.ts": 146,
     "src/services/agentService/commands.ts": 55,
     "src/services/agentService/config.ts": 263,
@@ -202,6 +215,18 @@
     "portal/src/components/clients/CustomFieldsCard.tsx": 147,
     "portal/src/components/clients/IncidentRulesCard.tsx": 133,
     "portal/src/components/devices/DeviceLifecycleModals.tsx": 604,
+    "portal/src/components/devices/detail/AlertsTab.tsx": 28,
+    "portal/src/components/devices/detail/CountersCard.tsx": 42,
+    "portal/src/components/devices/detail/CountersTab.tsx": 53,
+    "portal/src/components/devices/detail/DeviceDetailHeader.tsx": 92,
+    "portal/src/components/devices/detail/DeviceStatusBanners.tsx": 37,
+    "portal/src/components/devices/detail/GeneralTab.tsx": 198,
+    "portal/src/components/devices/detail/HistoryTab.tsx": 35,
+    "portal/src/components/devices/detail/IncidentsTab.tsx": 46,
+    "portal/src/components/devices/detail/MediaTab.tsx": 49,
+    "portal/src/components/devices/detail/SuppliesTable.tsx": 92,
+    "portal/src/components/devices/detail/format.ts": 5,
+    "portal/src/components/devices/detail/primitives.tsx": 51,
     "portal/src/components/incidents/CreateIncidentModal.tsx": 130,
     "portal/src/components/monitors/ConfigTabPanel.tsx": 285,
     "portal/src/components/monitors/CreateMonitorModal.tsx": 258,
@@ -249,7 +274,7 @@
     "portal/src/pages/ClientDetail.tsx": 574,
     "portal/src/pages/Clients.tsx": 334,
     "portal/src/pages/Dashboard.tsx": 539,
-    "portal/src/pages/DeviceDetail.tsx": 833,
+    "portal/src/pages/DeviceDetail.tsx": 283,
     "portal/src/pages/Devices.tsx": 261,
     "portal/src/pages/IncidentDetail.tsx": 264,
     "portal/src/pages/Incidents.tsx": 211,
@@ -264,6 +289,7 @@
     "portal/src/types/agents.ts": 83,
     "portal/src/types/alerts.ts": 68,
     "portal/src/types/audit.ts": 29,
+    "portal/src/types/deviceDetailPage.ts": 35,
     "portal/src/types/incidents.ts": 75,
     "portal/src/types/inventory.ts": 24,
     "portal/src/types/monitor.ts": 347,
@@ -582,7 +608,7 @@
     "src/api/middlewares/authMiddleware.ts": [
       {
         "name": "createAuthMiddleware",
-        "length": 193
+        "length": 198
       },
       {
         "name": "agentAuth",
@@ -590,7 +616,7 @@
       },
       {
         "name": "portalAuth",
-        "length": 123
+        "length": 128
       }
     ],
     "src/api/routes/agentRoutes.ts": [
@@ -723,6 +749,22 @@
       {
         "name": "purgeResolvedAlerts",
         "length": 25
+      }
+    ],
+    "src/modules/supply-requests/presentation/supply-request-controller.ts": [
+      {
+        "name": "buildCreate",
+        "length": 25
+      },
+      {
+        "name": "anonymous",
+        "length": 23
+      }
+    ],
+    "src/modules/supply-requests/presentation/supply-request-routes.ts": [
+      {
+        "name": "registerSupplyRequestRoutes",
+        "length": 29
       }
     ],
     "src/services/agentService/config.ts": [
@@ -1787,6 +1829,66 @@
         "length": 62
       }
     ],
+    "portal/src/components/devices/detail/AlertsTab.tsx": [
+      {
+        "name": "AlertsTab",
+        "length": 22
+      }
+    ],
+    "portal/src/components/devices/detail/CountersCard.tsx": [
+      {
+        "name": "CountersCard",
+        "length": 34
+      }
+    ],
+    "portal/src/components/devices/detail/CountersTab.tsx": [
+      {
+        "name": "CountersTab",
+        "length": 45
+      }
+    ],
+    "portal/src/components/devices/detail/DeviceDetailHeader.tsx": [
+      {
+        "name": "DeviceDetailHeader",
+        "length": 86
+      }
+    ],
+    "portal/src/components/devices/detail/DeviceStatusBanners.tsx": [
+      {
+        "name": "DeviceStatusBanners",
+        "length": 30
+      }
+    ],
+    "portal/src/components/devices/detail/GeneralTab.tsx": [
+      {
+        "name": "GeneralTab",
+        "length": 168
+      }
+    ],
+    "portal/src/components/devices/detail/HistoryTab.tsx": [
+      {
+        "name": "HistoryTab",
+        "length": 29
+      }
+    ],
+    "portal/src/components/devices/detail/IncidentsTab.tsx": [
+      {
+        "name": "IncidentsTab",
+        "length": 38
+      }
+    ],
+    "portal/src/components/devices/detail/MediaTab.tsx": [
+      {
+        "name": "MediaTab",
+        "length": 43
+      }
+    ],
+    "portal/src/components/devices/detail/SuppliesTable.tsx": [
+      {
+        "name": "SuppliesTable",
+        "length": 85
+      }
+    ],
     "portal/src/components/incidents/CreateIncidentModal.tsx": [
       {
         "name": "CreateIncidentModal",
@@ -2144,7 +2246,7 @@
     "portal/src/pages/DeviceDetail.tsx": [
       {
         "name": "DeviceDetail",
-        "length": 728
+        "length": 255
       }
     ],
     "portal/src/pages/Devices.tsx": [

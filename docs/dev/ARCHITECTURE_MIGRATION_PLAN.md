@@ -2,9 +2,9 @@
 
 **Estado:** Fase 0, Fase 1 y Fase 2 (backend) completas — incluidas las 2
 pasadas diferidas de alto riesgo (`syncReadings`, `mergeDevices`); Fase 2
-(frontend) en curso — `Settings.tsx`, `Monitors.tsx` y `MonitorDetail.tsx`
-divididos, 4 archivos grandes de `portal/src` pendientes (todos con Fase 11
-sin commitear de la sesión hermana) — 2026-08-24  
+(frontend) en curso — `Settings.tsx`, `Monitors.tsx`, `MonitorDetail.tsx` y
+`DeviceDetail.tsx` divididos, 3 archivos grandes de `portal/src` pendientes
+— 2026-08-24  
 **Origen:** `docs/dev/ARCHITECTURE_GUIDE.md` (copiado desde `helpdesk-manager`, 2026-08-24)  
 **Reemplaza (parcialmente) a:** `docs/dev/PROJECT_GUIDELINES.md`, que hoy documenta la
 convención opuesta (`api/` para rutas + `services/` para lógica de negocio, sin capas).
@@ -563,6 +563,71 @@ prueba visual real en navegador en este entorno.
 (507) — los 4 restantes tienen cambios sin commitear de la Fase 11 de
 `close-hp-sds-gaps`; dividir sobre el working tree actual si se continúa.
 `Layout.tsx`/`Reports.tsx` siguen reservados hasta nuevo aviso.
+
+## Fase 2 (frontend) — `DeviceDetail.tsx` dividido (2026-08-24)
+
+Cuarto archivo, el más grande y denso hasta ahora (832 líneas al momento de
+dividirlo — había crecido de 772 por la pestaña de Incidentes de la Fase 11
+de `close-hp-sds-gaps`, ya integrada). `close-hp-sds-gaps` arrancó su Fase
+4.2 (ciclo de pedidos de consumibles) en paralelo y pidió coordinar el
+orden: dividir `DeviceDetail.tsx` primero (sin cruce), después
+`ClientDetail.tsx` cuanto antes porque le va a agregar una card nueva ahí
+(`SupplyRequestSettingsCard`) y prefiere hacerlo sobre la estructura ya
+dividida en vez de sobre el archivo monolítico. `Dashboard.tsx` también lo
+va a tocar (tile de pedidos pendientes) pero es aditivo y chico — sólo pidió
+aviso de cuándo se agarra.
+
+El archivo ya tenía primitivas de presentación puras (`Row`, `CardTitle`,
+`Card`, `DeviceImage`, `TripleRows`, `fmtDateTime`, `POLL_LABEL`) y dos
+"cards" reutilizables definidas como clausuras internas (`SuppliesTable`,
+`CountersCard`, capturando `device`/`supplyRows`/`rate`/`counters` del
+scope del componente) además de 7 pestañas completas. División (14
+archivos):
+- `types/deviceDetailPage.ts` (34L) — `Reading`, `DeviceDetailData`,
+  `DeviceDetailTab`, `ActiveAlertItem`.
+- `components/devices/detail/primitives.tsx` (50L) — `Row`/`CardTitle`/
+  `Card`/`DeviceImage`/`TripleRows`, sin estado de página.
+- `components/devices/detail/format.ts` (4L) — `fmtDateTime`/`POLL_LABEL`
+  en su propio archivo (no `.tsx`) a propósito: mezclarlos en
+  `primitives.tsx` disparaba el warning de eslint
+  `react-refresh/only-export-components` (un archivo de componentes que
+  también exporta funciones/constantes rompe Fast Refresh) — se separó en
+  vez de aceptar el warning.
+- `components/devices/detail/{SuppliesTable,CountersCard}.tsx` — las dos
+  clausuras "levantadas" a componentes propios con props explícitas
+  (`device`, `supplyRows`, `rate`, `latest`, `totalPages`, etc.) en vez de
+  cerrar sobre el scope del padre — mismo criterio que las Fases 2
+  anteriores.
+- `components/devices/detail/{GeneralTab,CountersTab,MediaTab,AlertsTab,
+  IncidentsTab,HistoryTab}.tsx` — una por pestaña (la de "Consumibles" no
+  necesitó archivo propio, es literalmente `<SuppliesTable/>` inline).
+  `IncidentsTab` usa `useNavigate()` directo en vez de recibir `navigate`
+  como prop (hook válido en cualquier componente de función, evita un prop
+  más).
+- `components/devices/detail/{DeviceDetailHeader,DeviceStatusBanners}.tsx`
+  (nuevos, no estaban en el plan inicial) — el breadcrumb+acciones y los 3
+  banners de estado se extrajeron recién en una segunda pasada porque el
+  primer corte de `pages/DeviceDetail.tsx` quedó en 356 líneas (por encima
+  del límite); con estos dos afuera bajó a 282.
+- `pages/DeviceDetail.tsx` (832L → 282L) — orquestador: estado, efectos,
+  handlers, valores derivados (incluye `activeAlerts`, la deduplicación de
+  alertas servidor+equipo) y composición de las piezas de arriba.
+
+**Validación:** `npm run check` (icons+tsc+eslint) limpio **sin warnings**
+(el de Fast Refresh de arriba se resolvió antes de dar por cerrado, no se
+dejó pasar). Vite (:5180) transforma los 14 archivos sin error. Misma
+limitación de siempre: sin prueba visual real en navegador en este
+entorno — este es el split de mayor riesgo de la Fase 2 frontend hasta
+ahora por tamaño/densidad, vale la pena que alguien lo revise visualmente
+con más atención que los anteriores. `check-sizes.mjs` limpio tras
+regenerar baseline (299 archivos) — el regen capturó de nuevo crecimiento
+en curso de `close-hp-sds-gaps` (`authMiddleware.ts`, `rolePolicy.ts`,
+`scope.ts`, el módulo `modules/supply-requests/` completo de su Fase 4.2).
+
+**Pendiente de Fase 2 frontend:** `ClientDetail.tsx` (571) — siguiente,
+pedido por `close-hp-sds-gaps` para poder agregar su card ahí sin pisar.
+`DeviceLifecycleModals.tsx` (603), `Dashboard.tsx` (507) — avisar antes de
+arrancar `Dashboard.tsx` (van a agregar un tile ahí en su Fase 4.2).
 
 ## 0. Punto de partida (medido 2026-08-24)
 
