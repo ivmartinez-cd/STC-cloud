@@ -3,6 +3,7 @@ import Redis from 'ioredis';
 import knex from 'knex';
 import knexConfig from '../db/knexfile';
 import { logger } from '../logger';
+import { runGuardedTick } from "../modules/observability/guarded-tick";
 
 const db = knex(knexConfig.development);
 const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379', {
@@ -198,15 +199,14 @@ async function autoCloseResolved(rule: Rule): Promise<void> {
 }
 
 async function tick(): Promise<void> {
-  try {
+  // Lock multi-réplica + métricas + Sentry — Fase 5.3 (el catch vive en el wrapper).
+  await runGuardedTick(db, "incidents", async () => {
     const rules = await db('incident_rules').where('enabled', true).select('*') as Rule[];
     for (const rule of rules) {
       await processRule(rule);
       await autoCloseResolved(rule);
     }
-  } catch (err: unknown) {
-    logger.error({ err }, '[IncidentWorker] Error en el tick');
-  }
+  });
 }
 
 tick();

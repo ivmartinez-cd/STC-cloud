@@ -50,7 +50,7 @@
     "src/api/routes/publicApiRoutes.ts": 85,
     "src/api/routes/reportRoutes.ts": 78,
     "src/api/routes/suppliesRoutes.ts": 17,
-    "src/api/server.ts": 355,
+    "src/api/server.ts": 390,
     "src/api/utils/deviceFilters.ts": 60,
     "src/api/utils/ip.ts": 16,
     "src/api/utils/password.ts": 28,
@@ -60,15 +60,15 @@
     "src/db/seeds/test_data.ts": 12,
     "src/db/test_db.ts": 24,
     "src/jobs/alertWorker.ts": 156,
-    "src/jobs/heartbeatMonitor.ts": 171,
+    "src/jobs/heartbeatMonitor.ts": 174,
     "src/jobs/incidentWorker.ts": 216,
     "src/jobs/notificationWorker.ts": 243,
     "src/jobs/publicWebhookWorker.ts": 73,
-    "src/jobs/remoteActionWorker.ts": 44,
+    "src/jobs/remoteActionWorker.ts": 46,
     "src/jobs/reportDeliveryWorker.ts": 121,
-    "src/jobs/retentionJob.ts": 96,
-    "src/jobs/scheduledReportsWorker.ts": 49,
-    "src/jobs/supplyRequestWorker.ts": 62,
+    "src/jobs/retentionJob.ts": 100,
+    "src/jobs/scheduledReportsWorker.ts": 51,
+    "src/jobs/supplyRequestWorker.ts": 64,
     "src/logger.ts": 13,
     "src/modules/audit/application/dtos/audit-dtos.ts": 12,
     "src/modules/audit/application/use-cases/list-audit-actions.ts": 40,
@@ -121,6 +121,10 @@
     "src/modules/message-templates/domain/entities/message-template.ts": 89,
     "src/modules/message-templates/infrastructure/database/knex-template-repository.ts": 67,
     "src/modules/message-templates/presentation/template-routes.ts": 109,
+    "src/modules/metrics/http-metrics.ts": 41,
+    "src/modules/metrics/registry.ts": 95,
+    "src/modules/observability/guarded-tick.ts": 66,
+    "src/modules/observability/sentry.ts": 33,
     "src/modules/remote-actions/application/use-cases/process-batches.ts": 48,
     "src/modules/remote-actions/domain/entities/remote-action-batch.ts": 44,
     "src/modules/remote-actions/infrastructure/database/knex-remote-action-repository.ts": 93,
@@ -239,7 +243,7 @@
     "src/tests/supplyOrigin.test.ts": 164,
     "src/tests/supplyRequests.test.ts": 258,
     "src/version.ts": 6,
-    "src/ws/index.ts": 268,
+    "src/ws/index.ts": 310,
     "portal/src/App.tsx": 86,
     "portal/src/components/BulkActionBar.tsx": 29,
     "portal/src/components/ConfirmModal.tsx": 80,
@@ -724,7 +728,7 @@
     "src/api/server.ts": [
       {
         "name": "start",
-        "length": 241
+        "length": 269
       },
       {
         "name": "healthHandler",
@@ -847,6 +851,12 @@
       {
         "name": "create",
         "length": 21
+      }
+    ],
+    "src/modules/observability/guarded-tick.ts": [
+      {
+        "name": "runGuardedTick",
+        "length": 24
       }
     ],
     "src/modules/scheduled-reports/infrastructure/mail/smtp-report-mailer.ts": [

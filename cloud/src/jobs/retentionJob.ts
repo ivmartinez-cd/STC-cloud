@@ -1,4 +1,5 @@
 import knex from 'knex';
+import { runGuardedTick } from "../modules/observability/guarded-tick";
 import knexConfig from '../db/knexfile';
 import { logger } from '../logger';
 
@@ -83,9 +84,12 @@ async function purgeResolvedAlerts() {
 }
 
 export async function runRetentionChecks() {
-  await purgeOldAgentLogs();
-  await purgeResolvedAlerts();
-  await purgeEmailLog();
+  // Lock multi-réplica + métricas + Sentry — Fase 5.3.
+  await runGuardedTick(db, "retention", async () => {
+    await purgeOldAgentLogs();
+    await purgeResolvedAlerts();
+    await purgeEmailLog();
+  });
 }
 
 // Ejecutar al arrancar y luego cada INTERVAL_HOURS horas

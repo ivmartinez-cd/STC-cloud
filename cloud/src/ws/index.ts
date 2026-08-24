@@ -4,6 +4,7 @@ import Redis from 'ioredis';
 import { AgentService } from '../services/agentService';
 import { consumeWsTicket } from '../services/wsTicketService';
 import { resolveEwsProxy, rejectEwsProxy, rejectAllPendingForAgent } from '../services/ewsProxyService';
+import { setWsCountsProvider } from '../modules/metrics/registry';
 
 // ─── Tipos Internos del Módulo WebSocket ──────────────────────────────────────
 
@@ -35,6 +36,49 @@ interface PortalConn {
 const portalClients = new Set<PortalConn>();
 const agentClients = new Map<string, WebSocketClient>();
 
+// ─── Pub/sub Redis para broadcasts (Fase 5.4 de producción-readiness) ────────
+//
+// Con más de una réplica de la API, los sockets de portal quedan repartidos
+// entre procesos: un broadcast local solo llegaría a los sockets de ESTA
+// réplica. Todo `broadcastToPortal` se publica a un canal Redis y CADA
+// réplica (incluida la que publicó) lo entrega a sus sockets locales al
+// recibirlo por la suscripción — un solo camino de entrega, sin duplicados.
+// Si el publish falla (Redis caído), se entrega localmente como fallback:
+// mejor que los operadores de esta réplica lo vean a que no lo vea nadie.
+//
+// Lo que NO cubre esto: los canales con afinidad de socket (comandos push a
+// un agente puntual, proxy EWS). Ahí el fallback replica-agnóstico ya existe
+// — la entrega de comandos por polling de heartbeat — y el proxy EWS
+// requiere la réplica dueña del socket del agente (documentado en el doc de
+// gap analysis como límite conocido de multi-réplica).
+const WS_BROADCAST_CHANNEL = "stc:ws:portal";
+
+const wsRedisPub = new Redis(process.env.REDIS_URL || "redis://localhost:6379", {
+  maxRetriesPerRequest: null,
+  retryStrategy() { return 10000; },
+});
+const wsRedisSub = wsRedisPub.duplicate();
+
+function deliverToLocalPortals(message: string): void {
+  for (const conn of portalClients) {
+    if (conn.clientId !== null) continue;
+    if (conn.socket.readyState === 1) { // OPEN
+      conn.socket.send(message);
+    }
+  }
+}
+
+wsRedisSub.subscribe(WS_BROADCAST_CHANNEL).catch(() => {});
+wsRedisSub.on("message", (channel, message) => {
+  if (channel === WS_BROADCAST_CHANNEL) deliverToLocalPortals(message);
+});
+
+/** Conteo de conexiones vivas para la métrica `stc_ws_connections`. */
+export function wsConnectionCounts(): { agents: number; portals: number } {
+  return { agents: agentClients.size, portals: portalClients.size };
+}
+setWsCountsProvider(wsConnectionCounts);
+
 /**
  * Realiza un broadcast (difusión) de telemetría o eventos en tiempo real a los
  * clientes de portal web conectados de forma activa vía WebSocket.
@@ -51,12 +95,10 @@ const agentClients = new Map<string, WebSocketClient>();
  */
 export function broadcastToPortal(event: string, data: unknown) {
   const message = JSON.stringify({ event, data, timestamp: new Date().toISOString() });
-  for (const conn of portalClients) {
-    if (conn.clientId !== null) continue;
-    if (conn.socket.readyState === 1) { // OPEN
-      conn.socket.send(message);
-    }
-  }
+  // Publicar; la entrega local la hace la suscripción (ver bloque pub/sub).
+  wsRedisPub.publish(WS_BROADCAST_CHANNEL, message).catch(() => {
+    deliverToLocalPortals(message);
+  });
 }
 
 /**

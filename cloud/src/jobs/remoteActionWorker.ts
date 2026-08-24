@@ -1,6 +1,7 @@
 import knex from "knex";
 import knexConfig from "../db/knexfile";
 import { logger } from "../logger";
+import { runGuardedTick } from "../modules/observability/guarded-tick";
 import { AgentCommandService } from "../services/agentService/commands";
 import { KnexRemoteActionRepository } from "../modules/remote-actions/infrastructure/database/knex-remote-action-repository";
 import {
@@ -27,13 +28,14 @@ export async function tick(): Promise<void> {
   if (running) return;
   running = true;
   try {
-    const dispatched = await dispatchDueBatches(repo, commands, new Date());
-    const closed = await reconcileSentBatches(repo);
-    if (dispatched || closed) {
-      logger.info({ dispatched, closed }, "[RemoteActions] tick con novedades");
-    }
-  } catch (err) {
-    logger.error({ err }, "[RemoteActions] fallo del tick");
+    // Lock multi-réplica + métricas + Sentry — Fase 5.3 (el catch vive en el wrapper).
+    await runGuardedTick(db, "remote-actions", async () => {
+      const dispatched = await dispatchDueBatches(repo, commands, new Date());
+      const closed = await reconcileSentBatches(repo);
+      if (dispatched || closed) {
+        logger.info({ dispatched, closed }, "[RemoteActions] tick con novedades");
+      }
+    });
   } finally {
     running = false;
   }

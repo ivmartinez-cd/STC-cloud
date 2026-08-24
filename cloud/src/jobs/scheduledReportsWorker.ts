@@ -1,6 +1,7 @@
 import knex from "knex";
 import knexConfig from "../db/knexfile";
 import { logger } from "../logger";
+import { runGuardedTick } from "../modules/observability/guarded-tick";
 import { KnexScheduledReportRepository } from "../modules/scheduled-reports/infrastructure/database/knex-scheduled-report-repository";
 import { KnexReportRenderer } from "../modules/scheduled-reports/infrastructure/renderers/knex-report-renderer";
 import { SmtpReportMailer } from "../modules/scheduled-reports/infrastructure/mail/smtp-report-mailer";
@@ -28,17 +29,18 @@ export async function tick(): Promise<void> {
   if (running) return; // un tick largo (SMTP lento) no debe apilarse con el siguiente
   running = true;
   try {
-    const due = await repo.listDue(new Date());
-    for (const report of due) {
-      const result = await executeScheduledReport(deps, report);
-      if (result.status === "error") {
-        logger.error({ reportId: report.id, error: result.error }, "[ScheduledReports] fallo al ejecutar informe");
-      } else {
-        logger.info({ reportId: report.id, name: report.name }, "[ScheduledReports] informe enviado");
+    // Lock multi-réplica + métricas + Sentry — Fase 5.3 (el catch vive en el wrapper).
+    await runGuardedTick(db, "scheduled-reports", async () => {
+      const due = await repo.listDue(new Date());
+      for (const report of due) {
+        const result = await executeScheduledReport(deps, report);
+        if (result.status === "error") {
+          logger.error({ reportId: report.id, error: result.error }, "[ScheduledReports] fallo al ejecutar informe");
+        } else {
+          logger.info({ reportId: report.id, name: report.name }, "[ScheduledReports] informe enviado");
+        }
       }
-    }
-  } catch (err) {
-    logger.error({ err }, "[ScheduledReports] fallo del tick");
+    });
   } finally {
     running = false;
   }

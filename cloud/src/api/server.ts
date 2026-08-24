@@ -8,6 +8,7 @@ import dotenv from "dotenv";
 import path from "path";
 import fs from "fs";
 import Redis from "ioredis";
+import { Queue } from "bullmq";
 import knex from "knex";
 
 import knexConfig from "../db/knexfile";
@@ -22,6 +23,12 @@ import "../jobs/incidentWorker";
 import "../jobs/scheduledReportsWorker";
 import "../jobs/supplyRequestWorker";
 import "../jobs/remoteActionWorker";
+import { initSentry, captureError } from "../modules/observability/sentry";
+import { registerMetricsRoutes } from "../modules/metrics/http-metrics";
+import { setQueueDepthProvider } from "../modules/metrics/registry";
+
+// Sentry lo más temprano posible (no-op sin SENTRY_DSN) — Fase 5.2.
+initSentry();
 import { registerWebSocket } from "../ws/index";
 
 import { createAuthMiddleware } from "./middlewares/authMiddleware";
@@ -213,6 +220,34 @@ const start = async () => {
     });
 
     await fastify.register(jwt, { secret: process.env.JWT_SECRET! });
+
+    // Fase 5.1: /metrics + histogramas HTTP. Registrado ANTES del rate limit
+    // para que el scraper de Prometheus no compita por el presupuesto por IP.
+    registerMetricsRoutes(fastify);
+    // Las colas reales del sistema. Conexión propia con los requisitos de
+    // BullMQ (maxRetriesPerRequest: null) — no se reusa rateLimitRedis, que
+    // tiene enableOfflineQueue:false a propósito para otro fin.
+    const metricsRedis = new Redis(process.env.REDIS_URL || "redis://localhost:6379", {
+      maxRetriesPerRequest: null,
+      retryStrategy() { return 10000; },
+    });
+    const QUEUE_NAMES = ["readings-queue", "notifications-queue", "report-delivery-queue", "public-api-readings-queue"];
+    /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+    const metricQueues = QUEUE_NAMES.map((name) => new Queue(name, { connection: metricsRedis as any }));
+    setQueueDepthProvider(async () => {
+      const depths: Record<string, number> = {};
+      for (const q of metricQueues) {
+        const counts = await q.getJobCounts("waiting");
+        depths[q.name] = counts.waiting ?? 0;
+      }
+      return depths;
+    });
+    // Fase 5.2: los errores no manejados de handlers van a Sentry (además del
+    // comportamiento default de Fastify, que se preserva re-lanzando).
+    fastify.setErrorHandler((err, request, reply) => {
+      captureError(err, { route: request.url, method: request.method });
+      throw err;
+    });
 
     await fastify.register(rateLimit, {
       // Configurable por env: la suite de tests e2e (27 archivos, algunos con

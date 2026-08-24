@@ -1,4 +1,5 @@
 import knex from 'knex';
+import { runGuardedTick } from "../modules/observability/guarded-tick";
 import knexConfig from '../db/knexfile';
 import * as alertService from '../services/alertService';
 import { logger } from '../logger';
@@ -30,11 +31,9 @@ const DEVICE_OFFLINE_THRESHOLD_MINUTES = 5 * 60;
  * de un repeatable job) ya NO aplica — producción dejó de correr en Render, y el
  * Redis self-hosted actual (`docker-compose.prod.yml`) no fija ningún
  * `maxmemory-policy` explícito (default de Redis, sin eviction). La razón que sigue
- * vigente es más simple: hoy corre un solo `api` service sin réplicas en ambos
- * `docker-compose*.yml`, así que el riesgo de doble-disparo que justificaría
- * convertir a cola no es real en este entorno. Si en el futuro se pasa a
- * multi-réplica, la forma barata de evitar el doble-disparo es un advisory lock de
- * Postgres (`pg_try_advisory_lock`) al principio de cada check, no una cola.
+ * vigente es más simple: `setInterval` + advisory lock de Postgres al principio
+ * de cada tick (implementado el 24/08/2026 en la Fase 5 de producción-readiness
+ * vía `modules/observability/guarded-tick.ts`) — replica-safe sin cola.
  */
 
 /**
@@ -158,8 +157,12 @@ async function checkOfflineDevices() {
 }
 
 async function runChecks() {
-  await checkOfflineAgents();
-  await checkOfflineDevices();
+  // Lock multi-réplica + métricas + Sentry (Fase 5.3) — implementa el advisory
+  // lock que el docblock de arriba dejó prescripto para multi-réplica.
+  await runGuardedTick(db, "heartbeat-monitor", async () => {
+    await checkOfflineAgents();
+    await checkOfflineDevices();
+  });
 }
 
 // Ejecutar al arrancar y luego cada 2 minutos

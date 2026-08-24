@@ -1315,6 +1315,73 @@ son propios del vendor y no aplican.
 > plantilla: `modules/feedback/`; archivos ≤300 líneas, funciones ≤20,
 > `npm run check:sizes` como guard).
 
+### Fase 5 — Producción-readiness (24/08/2026) — completa: 4 de 4 ítems cerrados
+
+Origen: con el gap vs SDS cerrado (Fases 3 y 4), el bloque de más valor que
+quedaba eran los pendientes de la Fase 2 del roadmap ligados al riesgo R4
+("diseño mono-instancia y operación"): métricas, error tracking y el camino
+a multi-réplica.
+
+✅ **5.1 — Métricas Prometheus** (`modules/metrics/`): endpoint `/metrics`
+(registrado ANTES del rate limit para que el scraper no compita por el
+presupuesto por IP; con `METRICS_TOKEN` definido exige Bearer — sin definir
+queda abierto, aceptable porque el compose de producción no publica el
+puerto de la API fuera de la red interna). Métricas propias:
+`stc_http_request_duration_seconds` (por ruta DECLARADA con :params, nunca
+la URL cruda — cardinalidad acotada), `stc_job_ticks_total` (ok/error/
+skipped), `stc_job_tick_duration_seconds`,
+`stc_job_last_success_timestamp_seconds` (para alertar jobs muertos),
+`stc_ws_connections` (provider inyectado desde `ws/index.ts` para no crear
+import circular) y `stc_queue_waiting_jobs` (profundidad de las 4 colas
+BullMQ reales, con conexión propia que cumple los requisitos de BullMQ),
+más las default de proceso.
+
+✅ **5.2 — Sentry opt-in** (`modules/observability/sentry.ts`): activo solo
+con `SENTRY_DSN` (sin DSN todo es no-op — desarrollo no cambia en nada).
+Sin tracing de performance (Prometheus ya cubre latencias). Captura desde
+el `setErrorHandler` de Fastify (preservando el comportamiento default al
+re-lanzar) y desde el catch común de los jobs.
+
+✅ **5.3 — Jobs replica-safe** (`modules/observability/guarded-tick.ts`):
+los 6 jobs `setInterval` (heartbeatMonitor, retentionJob, incidentWorker,
+supplyRequestWorker, scheduledReportsWorker, remoteActionWorker) pasan por
+`runGuardedTick`: **advisory lock de Postgres** (`pg_try_advisory_lock`
+con classid "STC" + FNV-1a del nombre) — si otra réplica corre el mismo
+tick, este se saltea — más métricas y Sentry en un solo lugar. Es la
+estrategia que el propio docblock de `heartbeatMonitor.ts` dejó prescripta
+el 23/08 (lock barato por check, NO conversión a cola BullMQ) — se
+implementó lo prescripto y se actualizó ese docblock. Los workers que ya
+eran BullMQ (alertas, notificaciones, delivery de reportes, webhooks
+públicos) ya eran replica-safe por naturaleza de cola.
+
+✅ **5.4 — Pub/sub Redis para broadcasts WS** (`ws/index.ts`): todo
+`broadcastToPortal` se publica al canal `stc:ws:portal` y CADA réplica
+(incluida la que publicó) lo entrega a sus sockets locales al recibirlo
+por la suscripción — un solo camino de entrega, sin duplicados; con Redis
+caído, fallback a entrega local. **Límite documentado**: los canales con
+afinidad de socket (push inmediato de comandos a un agente puntual, proxy
+EWS) requieren la réplica dueña del socket del agente — el fallback
+replica-agnóstico para comandos ya existe (entrega por polling de
+heartbeat), y el proxy EWS en multi-réplica necesitaría sticky sessions o
+un relay request/reply por Redis (fuera de alcance de esta fase).
+
+Verificado: 8/8 tests nuevos (`observability.test.ts` — exclusión REAL del
+advisory lock con dos conexiones Postgres separadas [una corre, la otra
+se saltea, el lock se libera tras un error], auth de /metrics, e2e de
+/metrics con todas las métricas propias y ticks ok de los jobs del boot, y
+e2e de pub/sub: un publish al canal Redis llega hasta un cliente WS de
+portal real autenticado por ticket); `tsc`/`check:sizes` limpios; deps
+nuevas `prom-client` y `@sentry/node` (con el lockfile standalone de
+`cloud/` regenerado — el repo raíz es workspace y `npm install` a secas no
+lo toca, gotcha documentado acá). Suite CI completa de regresión corrida
+tras el despliegue.
+
+**Lo que NO se hizo**: habilitar multi-réplica real en los compose (los
+locks y el pub/sub dejan el backend listo; el paso operativo — `deploy:
+replicas` + LB — es decisión de infraestructura aparte), dashboards de
+Grafana/alerting sobre las métricas (solo el endpoint), y el relay
+request/reply para afinidad de socket del proxy EWS.
+
 ### Otros puntos de §3 (riesgos) que siguen abiertos y no forman parte de ningún ítem de arriba
 - ✅ **R4 (parcial, 23/08/2026)**: el WS del portal ya NO acepta el JWT de
   sesión por query string. Investigado antes de tocarlo: no era vestigial —

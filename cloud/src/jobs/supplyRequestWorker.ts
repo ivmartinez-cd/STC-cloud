@@ -3,6 +3,7 @@ import Redis from "ioredis";
 import knex from "knex";
 import knexConfig from "../db/knexfile";
 import { logger } from "../logger";
+import { runGuardedTick } from "../modules/observability/guarded-tick";
 import { KnexSupplyRequestRepository } from "../modules/supply-requests/infrastructure/database/knex-supply-request-repository";
 import {
   KnexEnabledClients,
@@ -44,13 +45,14 @@ export async function tick(): Promise<void> {
   if (running) return;
   running = true;
   try {
-    const completed = await autoCompleteReplaced(deps);
-    const opened = await openDueRequests(deps);
-    if (opened || completed) {
-      logger.info({ opened, completed }, "[SupplyRequests] tick con novedades");
-    }
-  } catch (err) {
-    logger.error({ err }, "[SupplyRequests] fallo del tick");
+    // Lock multi-réplica + métricas + Sentry — Fase 5.3 (el catch vive en el wrapper).
+    await runGuardedTick(db, "supply-requests", async () => {
+      const completed = await autoCompleteReplaced(deps);
+      const opened = await openDueRequests(deps);
+      if (opened || completed) {
+        logger.info({ opened, completed }, "[SupplyRequests] tick con novedades");
+      }
+    });
   } finally {
     running = false;
   }
