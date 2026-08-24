@@ -1776,8 +1776,26 @@ Deploy limpio con `migrate:latest` crea `readings` con `id uuid PK`, sin hyperta
   activación/historial al reinstalar/desinstalar) — cerrado en la Fase 2
   ("mantener datos al desinstalar").
 
-### R7 · Zona horaria y multi‑país — **P1**
-TZ fija en agente (`BusinessHours.ts`, `Logger.ts`), servidor (`-03:00`, `portalAgentController.ts:25`) y portal (`es-AR`). Primer cliente en Chile/México/España rompe horario laboral y cierres mensuales.
+### R7 · Zona horaria y multi‑país — **P1** — cerrado (funcional; queda cosmético)
+✅ Ya no hay TZ fija en ninguno de los 3 puntos citados por el hallazgo
+original — verificado contra el código, no sólo el doc (desactualizado
+acá también): `BusinessHours.ts` toma un `timezone` IANA por config (con
+`DEFAULT_BUSINESS_HOURS.timezone = 'America/Argentina/Buenos_Aires'` sólo
+como fallback sin romper agentes sin configurar), `Logger.ts` usa
+`TimeZoneUtils.getConfiguredTimezone()` (seteado al boot y actualizado en
+cada heartbeat que trae una TZ nueva — `HeartbeatService.handleRemoteConfig`),
+y `portalAgentController.ts` ya no existe como archivo único con un
+`-03:00` hardcodeado (se dividió en `portalAgentController/` como parte de
+una modularización previa; no hay ningún `-03:00` literal en ese
+directorio). Esto ya se había cerrado en la Fase 1 ("Horario laboral y TZ
+configurables por agente") — el hallazgo de R7 en esta sección nunca se
+había marcado como resuelto ahí, quedó como el único punto realmente
+pendiente: **cosmética de locale** (`es-AR` fijo en `Logger.ts` — formato
+de fecha, no la TZ real — y en el portal), que ya estaba explícitamente
+diferida en esa misma Fase 1 para una pasada de polish aparte (no es un
+bug funcional: un cliente en Chile/México ya tiene horario laboral y
+cierres mensuales correctos con su propia TZ, sólo ve fechas con formato
+argentino en vez del local).
 
 ### R8 · Cobertura de marcas — **P1**
 Familias reales sólo HP/Samsung/Lexmark (18 perfiles). Ricoh/Brother/Xerox → `generic.ews` + OIDs parciales (`BROTHER_OIDS.totalPages` vacío; Xerox mono=color). Canon, Kyocera, Konica Minolta, Epson, Sharp, Toshiba, OKI, Pantum ni siquiera son `Brand` → caen a `generic` (Printer‑MIB sirve para total/insumos, pero sin desglose color ni alertas ricas). En un MPS multimarca esto limita la promesa comercial.
