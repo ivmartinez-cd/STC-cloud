@@ -54,7 +54,7 @@
     "src/api/routes/publicApiRoutes.ts": 85,
     "src/api/routes/reportRoutes.ts": 78,
     "src/api/routes/suppliesRoutes.ts": 17,
-    "src/api/server.ts": 340,
+    "src/api/server.ts": 343,
     "src/api/utils/deviceFilters.ts": 60,
     "src/api/utils/ip.ts": 16,
     "src/api/utils/password.ts": 28,
@@ -66,11 +66,12 @@
     "src/jobs/alertWorker.ts": 156,
     "src/jobs/heartbeatMonitor.ts": 171,
     "src/jobs/incidentWorker.ts": 216,
-    "src/jobs/notificationWorker.ts": 175,
+    "src/jobs/notificationWorker.ts": 217,
     "src/jobs/publicWebhookWorker.ts": 73,
     "src/jobs/reportDeliveryWorker.ts": 114,
     "src/jobs/retentionJob.ts": 80,
     "src/jobs/scheduledReportsWorker.ts": 49,
+    "src/jobs/supplyRequestWorker.ts": 62,
     "src/logger.ts": 13,
     "src/modules/feedback/application/dtos/feedback-dtos.ts": 26,
     "src/modules/feedback/application/ports/audit-log-writer.ts": 12,
@@ -156,7 +157,7 @@
     "src/services/ipRangeSpec/types.ts": 28,
     "src/services/ipRangeSpec/validate.ts": 161,
     "src/services/ipRangeSpec/warnings.ts": 88,
-    "src/services/notificationService.ts": 279,
+    "src/services/notificationService.ts": 310,
     "src/services/publicWebhookService.ts": 80,
     "src/services/reportExportService.ts": 93,
     "src/services/reportService/closure.ts": 209,
@@ -212,8 +213,14 @@
     "portal/src/components/agents/CreateAgentModal.tsx": 285,
     "portal/src/components/agents/RegenKeyModal.tsx": 81,
     "portal/src/components/clients/ApiKeysCard.tsx": 343,
+    "portal/src/components/clients/ClientMetricsCards.tsx": 42,
+    "portal/src/components/clients/ClientMonitorsSection.tsx": 140,
+    "portal/src/components/clients/ClientProfileCard.tsx": 57,
     "portal/src/components/clients/CustomFieldsCard.tsx": 147,
+    "portal/src/components/clients/DeviceApprovalCard.tsx": 67,
+    "portal/src/components/clients/DuplicateDevicesCard.tsx": 72,
     "portal/src/components/clients/IncidentRulesCard.tsx": 133,
+    "portal/src/components/clients/NotificationSettingsCard.tsx": 108,
     "portal/src/components/devices/DeviceLifecycleModals.tsx": 604,
     "portal/src/components/devices/detail/AlertsTab.tsx": 28,
     "portal/src/components/devices/detail/CountersCard.tsx": 42,
@@ -271,7 +278,7 @@
     "portal/src/pages/Activity.tsx": 248,
     "portal/src/pages/Agents.tsx": 120,
     "portal/src/pages/Alerts.tsx": 447,
-    "portal/src/pages/ClientDetail.tsx": 574,
+    "portal/src/pages/ClientDetail.tsx": 158,
     "portal/src/pages/Clients.tsx": 334,
     "portal/src/pages/Dashboard.tsx": 539,
     "portal/src/pages/DeviceDetail.tsx": 283,
@@ -676,7 +683,7 @@
     "src/api/server.ts": [
       {
         "name": "start",
-        "length": 233
+        "length": 234
       },
       {
         "name": "healthHandler",
@@ -731,6 +738,10 @@
       {
         "name": "processIncidentNotification",
         "length": 38
+      },
+      {
+        "name": "processSupplyRequestNotification",
+        "length": 36
       }
     ],
     "src/jobs/publicWebhookWorker.ts": [
@@ -1779,16 +1790,56 @@
         "length": 126
       }
     ],
+    "portal/src/components/clients/ClientMetricsCards.tsx": [
+      {
+        "name": "ClientMetricsCards",
+        "length": 39
+      }
+    ],
+    "portal/src/components/clients/ClientMonitorsSection.tsx": [
+      {
+        "name": "MonitorStatusBadge",
+        "length": 25
+      },
+      {
+        "name": "ClientMonitorsSection",
+        "length": 98
+      }
+    ],
+    "portal/src/components/clients/ClientProfileCard.tsx": [
+      {
+        "name": "ClientProfileCard",
+        "length": 53
+      }
+    ],
     "portal/src/components/clients/CustomFieldsCard.tsx": [
       {
         "name": "CustomFieldsCard",
         "length": 129
       }
     ],
+    "portal/src/components/clients/DeviceApprovalCard.tsx": [
+      {
+        "name": "DeviceApprovalCard",
+        "length": 53
+      }
+    ],
+    "portal/src/components/clients/DuplicateDevicesCard.tsx": [
+      {
+        "name": "DuplicateDevicesCard",
+        "length": 53
+      }
+    ],
     "portal/src/components/clients/IncidentRulesCard.tsx": [
       {
         "name": "IncidentRulesCard",
         "length": 117
+      }
+    ],
+    "portal/src/components/clients/NotificationSettingsCard.tsx": [
+      {
+        "name": "NotificationSettingsCard",
+        "length": 97
       }
     ],
     "portal/src/components/devices/DeviceLifecycleModals.tsx": [
@@ -2199,24 +2250,8 @@
     ],
     "portal/src/pages/ClientDetail.tsx": [
       {
-        "name": "MonitorStatusBadge",
-        "length": 25
-      },
-      {
-        "name": "NotificationSettingsCard",
-        "length": 97
-      },
-      {
-        "name": "DeviceApprovalCard",
-        "length": 53
-      },
-      {
-        "name": "DuplicateDevicesCard",
-        "length": 53
-      },
-      {
         "name": "ClientDetail",
-        "length": 280
+        "length": 134
       }
     ],
     "portal/src/pages/Clients.tsx": [

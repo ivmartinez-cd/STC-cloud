@@ -2,9 +2,9 @@
 
 **Estado:** Fase 0, Fase 1 y Fase 2 (backend) completas — incluidas las 2
 pasadas diferidas de alto riesgo (`syncReadings`, `mergeDevices`); Fase 2
-(frontend) en curso — `Settings.tsx`, `Monitors.tsx`, `MonitorDetail.tsx` y
-`DeviceDetail.tsx` divididos, 3 archivos grandes de `portal/src` pendientes
-— 2026-08-24  
+(frontend) en curso — `Settings.tsx`, `Monitors.tsx`, `MonitorDetail.tsx`,
+`DeviceDetail.tsx` y `ClientDetail.tsx` divididos, 2 archivos grandes de
+`portal/src` pendientes — 2026-08-24  
 **Origen:** `docs/dev/ARCHITECTURE_GUIDE.md` (copiado desde `helpdesk-manager`, 2026-08-24)  
 **Reemplaza (parcialmente) a:** `docs/dev/PROJECT_GUIDELINES.md`, que hoy documenta la
 convención opuesta (`api/` para rutas + `services/` para lógica de negocio, sin capas).
@@ -628,6 +628,49 @@ en curso de `close-hp-sds-gaps` (`authMiddleware.ts`, `rolePolicy.ts`,
 pedido por `close-hp-sds-gaps` para poder agregar su card ahí sin pisar.
 `DeviceLifecycleModals.tsx` (603), `Dashboard.tsx` (507) — avisar antes de
 arrancar `Dashboard.tsx` (van a agregar un tile ahí en su Fase 4.2).
+
+## Fase 2 (frontend) — `ClientDetail.tsx` dividido (2026-08-24)
+
+Quinto archivo (571L), priorizado a pedido de `close-hp-sds-gaps`: le va a
+agregar una card nueva (`SupplyRequestSettingsCard`, Fase 4.2) y prefería
+hacerlo sobre la estructura ya dividida en vez de sobre el monolito.
+
+Era el archivo con MÁS cards ya extraídas de los 5 divididos hasta ahora
+(`ApiKeysCard`/`CustomFieldsCard`/`IncidentRulesCard` ya vivían en
+`components/clients/`) — quedaban 3 "cards" autocontenidas definidas
+inline (`NotificationSettingsCard`, `DeviceApprovalCard`,
+`DuplicateDevicesCard`) más dos secciones grandes del render principal
+(metrics + perfil + la tabla de monitores con sus helpers `MonitorStatusBadge`/
+`timeAgo`) sin extraer.
+
+División (6 archivos nuevos, todos en `components/clients/` — mismo
+directorio que las 3 cards que ya vivían ahí, para que la card nueva de
+`close-hp-sds-gaps` encaje en el mismo lugar):
+- `NotificationSettingsCard.tsx` (107L), `DeviceApprovalCard.tsx` (66L),
+  `DuplicateDevicesCard.tsx` (71L) — las 3 clausuras inline movidas
+  literales (ya eran autocontenidas, sin cambios de props).
+- `ClientMetricsCards.tsx` (41L), `ClientProfileCard.tsx` (56L) — la
+  columna de métricas y el panel de perfil del "Header Dashboard",
+  presentacionales.
+- `ClientMonitorsSection.tsx` (139L) — la sección completa de
+  "Infraestructura de Monitoreo" (header + botón "Registrar Nuevo Monitor"
+  + tabla), incluye `MonitorStatusBadge`/`timeAgo` (sólo se usaban ahí).
+  Se preservó tal cual una inconsistencia preexistente del original: la
+  columna de header "Intervalo" no tiene `<td>` correspondiente en el
+  `tbody` — no es un bug de esta pasada, no se tocó.
+- `pages/ClientDetail.tsx` (571L → 157L) — orquestador: estado/handlers +
+  composición de las 9 cards del grid + la sección de monitores + 2 modales.
+
+**Validación:** `npm run check` limpio sin warnings. Vite (:5180)
+transforma los 7 archivos sin error. `check-sizes.mjs` limpio tras
+regenerar baseline (306 archivos) — capturó de nuevo crecimiento en curso
+de `close-hp-sds-gaps` (`server.ts`, `jobs/notificationWorker.ts`,
+`services/notificationService.ts`, todo de su Fase 4.2). Sin prueba visual
+real en navegador en este entorno.
+
+**Pendiente de Fase 2 frontend:** `DeviceLifecycleModals.tsx` (603),
+`Dashboard.tsx` (507) — avisar a `close-hp-sds-gaps` antes de arrancar
+`Dashboard.tsx` (le va a agregar un tile ahí en su Fase 4.2).
 
 ## 0. Punto de partida (medido 2026-08-24)
 
