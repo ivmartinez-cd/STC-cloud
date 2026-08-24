@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
-import { Activity, Layers, AlertTriangle, Inbox, TrendingUp, History, AlertOctagon } from 'lucide-react';
+import { Activity, Layers, AlertTriangle, Inbox, TrendingUp, History, AlertOctagon, Coins } from 'lucide-react';
 import { OFFLINE_THRESHOLD_MS } from '../lib/constants';
 import type { SuppliesDetails } from '../types/monitor';
 import type { Alert } from '../types/alerts';
@@ -20,6 +20,7 @@ import MediaTab from '../components/devices/detail/MediaTab';
 import AlertsTab from '../components/devices/detail/AlertsTab';
 import IncidentsTab from '../components/devices/detail/IncidentsTab';
 import HistoryTab from '../components/devices/detail/HistoryTab';
+import CostsTab from '../components/devices/detail/CostsTab';
 import { useAuth } from '../context/AuthContext';
 import type { ActiveAlertItem, DeviceDetailData, DeviceDetailTab, Reading } from '../types/deviceDetailPage';
 
@@ -209,6 +210,7 @@ const DeviceDetail = () => {
         {tabBtn('media', <Inbox size={15} />, 'Medios (Bandejas)')}
         {tabBtn('alerts', <AlertTriangle size={15} />, `Alertas${activeAlerts.length ? ` (${activeAlerts.length})` : ''}`)}
         {tabBtn('incidents', <AlertOctagon size={15} />, 'Incidentes')}
+        {canSeeHistory && tabBtn('costs', <Coins size={15} />, 'Costes')}
         {canSeeHistory && tabBtn('history', <History size={15} />, 'Historial')}
       </div>
 
@@ -234,6 +236,8 @@ const DeviceDetail = () => {
       {!error && device && activeTab === 'alerts' && <AlertsTab activeAlerts={activeAlerts} />}
 
       {!error && device && activeTab === 'incidents' && <IncidentsTab incidents={incidents} incidentsLoading={incidentsLoading} />}
+
+      {!error && device && activeTab === 'costs' && canSeeHistory && id && <CostsTab deviceId={id} />}
 
       {!error && device && activeTab === 'history' && canSeeHistory && <HistoryTab history={history} historyLoading={historyLoading} />}
 

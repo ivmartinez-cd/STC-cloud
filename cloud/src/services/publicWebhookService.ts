@@ -9,7 +9,7 @@ import { postWebhook } from "./notificationService";
  * (`api_webhooks`, no por API key) para que rotar una key no rompa la
  * suscripción ya configurada.
  */
-export type PublicApiEvent = "reading.created" | "alert.created" | "report.closed";
+export type PublicApiEvent = "reading.created" | "alert.created" | "report.closed" | "incident.created" | "incident.closed" | "supply_request.created" | "supply_request.completed";
 
 export interface WebhookConfig {
   url: string;

@@ -3,7 +3,7 @@ import { log, logTailer } from './Logger';
 import { getLocalIp, getHostOS } from './NetworkUtils';
 import { tryRefresh } from '../sync/uploader';
 import { getDeviceCount, pendingCount } from '../sync/database';
-import type { AgentConfig, IpRange, IpHost } from './config';
+import type { AgentConfig, IpRange, IpHost, DevicePolicy } from './config';
 import { ConfigManager } from './config';
 import type { CommandHandler, CommandResult } from './CommandHandler';
 import { VERSION } from './version';
@@ -29,6 +29,10 @@ export interface RemoteConfigPayload {
    *  cloud nunca manda `null` crudo, ver `agentService.getConfig()` — pero
    *  el tipo lo admite por si un futuro cambio lo necesita). */
   business_hours?: BusinessHoursConfig | null;
+  /** Fase 10 del gap analysis vs HP SDS — mismo patrón que los campos de
+   *  arriba: AUSENTE = "sin novedad", lista (incluso vacía) = reemplazo
+   *  completo. */
+  device_policies?: DevicePolicy[];
 }
 
 interface HeartbeatDeps {
@@ -175,6 +179,14 @@ export class HeartbeatService {
         // formato del payload).
         log('INFO', `Lista de credenciales SNMP actualizada: ${prevCount} -> ${remote.snmp_credentials.length}.`);
         config.snmpCredentials = remote.snmp_credentials;
+        changed = true;
+      }
+    }
+
+    if (remote.device_policies !== undefined) {
+      if (JSON.stringify(remote.device_policies) !== JSON.stringify(config.devicePolicies)) {
+        log('INFO', `Políticas de monitoreo por equipo actualizadas: ${config.devicePolicies?.length ?? 0} -> ${remote.device_policies.length}.`);
+        config.devicePolicies = remote.device_policies;
         changed = true;
       }
     }

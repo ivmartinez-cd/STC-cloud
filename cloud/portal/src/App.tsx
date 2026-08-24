@@ -14,6 +14,15 @@ const Settings     = lazy(() => import('./pages/Settings'));
 const Agents       = lazy(() => import('./pages/Agents'));
 const Alerts       = lazy(() => import('./pages/Alerts'));
 const Reports      = lazy(() => import('./pages/Reports'));
+const ScheduledReports = lazy(() => import('./pages/ScheduledReports'));
+const SupplyRequests = lazy(() => import('./pages/SupplyRequests'));
+const EmailLog = lazy(() => import('./pages/EmailLog'));
+const RemoteActions = lazy(() => import('./pages/RemoteActions'));
+const Activity     = lazy(() => import('./pages/Activity'));
+const PendingDevices = lazy(() => import('./pages/PendingDevices'));
+const Supplies = lazy(() => import('./pages/Supplies'));
+const Incidents = lazy(() => import('./pages/Incidents'));
+const IncidentDetail = lazy(() => import('./pages/IncidentDetail'));
 
 function RequireAuth() {
   const { isAuthenticated, checking } = useAuth();
@@ -46,11 +55,20 @@ function App() {
                 <Route path="/"              element={<Dashboard />} />
                 <Route path="/alerts"        element={<Alerts />} />
                 <Route path="/reports"       element={<Reports />} />
+                <Route path="/supplies"      element={<Supplies />} />
+                <Route path="/supply-requests" element={<SupplyRequests />} />
+                <Route path="/incidents"     element={<Incidents />} />
+                <Route path="/incidents/:id" element={<IncidentDetail />} />
                 <Route path="/clients"       element={<Clients />} />
                 <Route path="/clients/:id"   element={<ClientDetail />} />
                 <Route path="/monitors/:id"  element={<MonitorDetail />} />
                 <Route element={<RequireRole allowed={['admin', 'operator']} />}>
                   <Route path="/agents"      element={<Agents />} />
+                  <Route path="/scheduled-reports" element={<ScheduledReports />} />
+                  <Route path="/email-log" element={<EmailLog />} />
+                  <Route path="/remote-actions" element={<RemoteActions />} />
+                  <Route path="/activity"    element={<Activity />} />
+                  <Route path="/pending"     element={<PendingDevices />} />
                 </Route>
                 <Route path="/devices/:id"   element={<DeviceDetail />} />
                 <Route path="/settings"      element={<Settings />} />

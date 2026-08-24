@@ -239,6 +239,11 @@ const DeviceInventoryTable = ({ devices, monitorName, onRefresh, agentId, isRead
                       </span>
                     </td>
                     <td className="!px-4 !py-3">
+                      {device.supply_origin === 'non_genuine' && (
+                        <span className="inline-flex items-center gap-1 mb-1 px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 text-[9px] font-black uppercase tracking-wider" title="Al menos un cartucho detectado como no original">
+                          No original
+                        </span>
+                      )}
                       {device.toner_black !== undefined && device.toner_black !== null ? (
                         <div className="w-24 space-y-1.5">
                           {device.toner_cyan === null || device.toner_cyan === undefined ? (

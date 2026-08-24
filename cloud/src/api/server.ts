@@ -21,6 +21,7 @@ import "../jobs/publicWebhookWorker";
 import "../jobs/incidentWorker";
 import "../jobs/scheduledReportsWorker";
 import "../jobs/supplyRequestWorker";
+import "../jobs/remoteActionWorker";
 import { registerWebSocket } from "../ws/index";
 
 import { createAuthMiddleware } from "./middlewares/authMiddleware";
@@ -36,6 +37,8 @@ import { registerScheduledReportRoutes } from "../modules/scheduled-reports/pres
 import { registerSupplyRequestRoutes } from "../modules/supply-requests/presentation/supply-request-routes";
 import { registerMessageTemplateRoutes } from "../modules/message-templates/presentation/template-routes";
 import { registerEmailLogRoutes } from "../modules/email-log/presentation/email-log-routes";
+import { registerDeviceCostsRoutes } from "../modules/device-costs";
+import { registerRemoteActionRoutes } from "../modules/remote-actions/presentation/remote-action-routes";
 import { registerReportRoutes } from "./routes/reportRoutes";
 import { registerAuditRoutes } from "../modules/audit/presentation/audit-routes";
 import { registerInventoryRoutes } from "../modules/inventory/presentation/inventory-routes";
@@ -212,7 +215,10 @@ const start = async () => {
     await fastify.register(jwt, { secret: process.env.JWT_SECRET! });
 
     await fastify.register(rateLimit, {
-      max: 100,
+      // Configurable por env: la suite de tests e2e (27 archivos, algunos con
+      // >100 requests/min por sí solos, ej. rbac.test.ts) pisaba el techo fijo
+      // y producía 429 falsos. En producción el default sigue siendo 100.
+      max: Number(process.env.RATE_LIMIT_MAX) || 100,
       timeWindow: "1 minute",
       redis: rateLimitRedis,
       // Si Redis no responde, no bloquear todas las requests con 500 — el
@@ -313,6 +319,8 @@ const start = async () => {
     registerSupplyRequestRoutes(fastify, db, portalAuth);
     registerMessageTemplateRoutes(fastify, db, portalAuth);
     registerEmailLogRoutes(fastify, db, portalAuth);
+    registerDeviceCostsRoutes(fastify, db, portalAuth);
+    registerRemoteActionRoutes(fastify, db, portalAuth);
     registerReportRoutes(fastify, db, portalAuth);
     registerAuditRoutes(fastify, db, portalAuth);
     registerInventoryRoutes(fastify, db, portalAuth);

@@ -1,0 +1,73 @@
+/**
+ * Entidad del dominio "pedido de consumible" (Fase 4.2 del gap analysis vs
+ * HP SDS). Puro: sin Knex/Fastify. Los estados calcan el pipeline del SDS
+ * ("eliminada" → `cancelled`, acá no se borran filas).
+ */
+
+export const REQUEST_STATUSES = [
+  "pending", "reviewed", "processed", "completed", "ignored", "cancelled",
+] as const;
+export type RequestStatus = (typeof REQUEST_STATUSES)[number];
+
+export const OPEN_STATUSES: readonly RequestStatus[] = ["pending", "reviewed", "processed"];
+
+export type RequestOrigin = "auto" | "manual";
+
+export interface SupplyRequest {
+  id: string;
+  clientId: string;
+  deviceId: string | null;
+  deviceSerial: string | null;
+  deviceLabel: string | null;
+  supplyKey: string;
+  supplyKind: string;
+  supplyColor: string | null;
+  description: string | null;
+  sku: string | null;
+  levelPct: number | null;
+  remainingDays: number | null;
+  status: RequestStatus;
+  origin: RequestOrigin;
+  openedAt: Date;
+  closedAt: Date | null;
+  notes: string | null;
+  createdBy: string | null;
+  updatedAt: Date;
+}
+
+/**
+ * Transiciones válidas: el flujo feliz avanza pendiente→consultada→procesada
+ * →completada; ignorar/cancelar se permite desde cualquier estado abierto.
+ * Un pedido cerrado no transiciona más (si el consumible sigue bajo umbral,
+ * el worker abre un pedido nuevo — decisión documentada en la migración).
+ */
+const TRANSITIONS: Record<RequestStatus, readonly RequestStatus[]> = {
+  pending: ["reviewed", "processed", "completed", "ignored", "cancelled"],
+  reviewed: ["processed", "completed", "ignored", "cancelled"],
+  processed: ["completed", "ignored", "cancelled"],
+  completed: [],
+  ignored: [],
+  cancelled: [],
+};
+
+export function canTransition(from: RequestStatus, to: RequestStatus): boolean {
+  return TRANSITIONS[from].includes(to);
+}
+
+export function isOpen(status: RequestStatus): boolean {
+  return OPEN_STATUSES.includes(status);
+}
+
+/**
+ * Señal de reemplazo de cartucho: el nivel actual subió al menos
+ * AUTO_COMPLETE_RISE_PCT puntos sobre el nivel con el que se abrió el
+ * pedido (mismo criterio que usa `sdsinsumos` contra el SDS: nivel que
+ * sube = cartucho cambiado; un rebote de lectura de ±10 puntos no alcanza).
+ */
+export const AUTO_COMPLETE_RISE_PCT = 30;
+
+export function replacementDetected(openedLevelPct: number | null, currentPct: number | null): boolean {
+  if (currentPct == null) return false;
+  const base = openedLevelPct ?? 0;
+  return currentPct >= base + AUTO_COMPLETE_RISE_PCT;
+}

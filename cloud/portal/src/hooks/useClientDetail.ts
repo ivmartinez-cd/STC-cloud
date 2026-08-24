@@ -61,5 +61,10 @@ export function useClientDetail(id: string) {
     setClient(updated);
   }, [id]);
 
-  return { client, monitors, usage, loading, error, refetch: fetchData, createMonitor, deleteMonitor, updateNotifications };
+  const updateDeviceApprovalRequired = useCallback(async (value: boolean) => {
+    const updated = await api.put<Client>(`/clients/${id}`, { device_approval_required: value });
+    setClient(updated);
+  }, [id]);
+
+  return { client, monitors, usage, loading, error, refetch: fetchData, createMonitor, deleteMonitor, updateNotifications, updateDeviceApprovalRequired };
 }

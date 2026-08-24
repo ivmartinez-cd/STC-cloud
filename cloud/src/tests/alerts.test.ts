@@ -165,6 +165,63 @@ describe('Alertas — ciclo de vida (ack/resolve)', () => {
   });
 });
 
+describe('Alertas — acción en bloque (Fase 9 del gap analysis vs HP SDS)', () => {
+  const bulkCtx = { alertIdA: 0, alertIdB: 0 };
+
+  test('setup: 2 alertas de tóner bajo en 2 equipos nuevos', async () => {
+    const serials = [`SN-ALERTS-BULK-A-${ts}`, `SN-ALERTS-BULK-B-${ts}`];
+    for (const serial of serials) {
+      await req('POST', '/devices/sync', {
+        readings: [{ reading_id: crypto.randomUUID(), device_id: serial, ip: `10.40.1.${serials.indexOf(serial) + 1}`, brand: 'hp',
+          time: new Date().toISOString(), total_pages: 10, toner_black: 15, offline: false }],
+      }, ctx.agentToken);
+    }
+    const devices = await req('GET', `/clients/${ctx.clientId}/devices`, undefined, ctx.adminToken);
+    const deviceIdA = devices.data.find((d: any) => d.serial_number === serials[0]).id;
+    const deviceIdB = devices.data.find((d: any) => d.serial_number === serials[1]).id;
+
+    const alertsA = await pollUntil(
+      () => req('GET', `/alerts?device_id=${deviceIdA}&resolved=false`, undefined, ctx.adminToken),
+      (r) => r.data.some((a: any) => a.type === 'toner_black_low'),
+    );
+    bulkCtx.alertIdA = alertsA.data.find((a: any) => a.type === 'toner_black_low').id;
+
+    const alertsB = await pollUntil(
+      () => req('GET', `/alerts?device_id=${deviceIdB}&resolved=false`, undefined, ctx.adminToken),
+      (r) => r.data.some((a: any) => a.type === 'toner_black_low'),
+    );
+    bulkCtx.alertIdB = alertsB.data.find((a: any) => a.type === 'toner_black_low').id;
+  });
+
+  test('POST /alerts/bulk {acknowledged:true} reconoce ambas de una, un id inexistente queda skipped', async () => {
+    const res = await req('POST', '/alerts/bulk', { ids: [bulkCtx.alertIdA, bulkCtx.alertIdB, 999999999], acknowledged: true }, ctx.adminToken);
+    assert.equal(res.status, 200);
+    assert.equal(res.data.count, 2);
+    assert.deepEqual(res.data.applied.sort(), [bulkCtx.alertIdA, bulkCtx.alertIdB].sort());
+    assert.equal(res.data.skipped[0].reason, 'not_found');
+
+    const a = await req('GET', `/alerts?resolved=false`, undefined, ctx.adminToken);
+    const alertA = a.data.find((x: any) => x.id === bulkCtx.alertIdA);
+    assert.equal(alertA.acknowledged, true);
+  });
+
+  test('POST /alerts/bulk {resolved:true} resuelve ambas', async () => {
+    const res = await req('POST', '/alerts/bulk', { ids: [bulkCtx.alertIdA, bulkCtx.alertIdB], resolved: true }, ctx.adminToken);
+    assert.equal(res.status, 200);
+    assert.equal(res.data.count, 2);
+  });
+
+  test('sin ids → 400 (schema)', async () => {
+    const { status } = await req('POST', '/alerts/bulk', { resolved: true }, ctx.adminToken);
+    assert.equal(status, 400);
+  });
+
+  test('sin acknowledged ni resolved → 400', async () => {
+    const { status } = await req('POST', '/alerts/bulk', { ids: [bulkCtx.alertIdA] }, ctx.adminToken);
+    assert.equal(status, 400);
+  });
+});
+
 describe('Alertas — counter_reset dedupea por tipo, no por mensaje', () => {
   test('un segundo reset mientras el primero sigue abierto no crea una segunda fila', async () => {
     const base = Date.now();
@@ -249,6 +306,119 @@ describe('Alertas EWS — auto-resolución cuando el equipo deja de reportarlas'
       (r) => r.data[0]?.resolved === true,
     );
     assert.equal(resolved.data[0].resolved, true, 'La alerta EWS debe auto-resolverse cuando el equipo deja de reportarla');
+  });
+
+  test('la alerta EWS quedó clasificada: alert_class/alert_reason/origin=device', async () => {
+    const { status, data } = await req('GET', `/alerts?device_id=${ctx.deviceId}&type=C2-1411`, undefined, ctx.adminToken);
+    assert.equal(status, 200);
+    assert.equal(data[0].origin, 'device');
+    assert.equal(data[0].alert_class, 'subunit_out');
+    assert.ok(data[0].alert_reason && data[0].alert_reason.length > 0);
+  });
+});
+
+describe('Alertas — filtro server-side por alert_class y /alerts/summary', () => {
+  test('GET /alerts?alert_class=subunit_out devuelve la alerta C2-1411 (server-side, no post-paginación)', async () => {
+    const { status, data } = await req('GET', `/alerts?device_id=${ctx.deviceId}&alert_class=subunit_out`, undefined, ctx.adminToken);
+    assert.equal(status, 200);
+    assert.ok(data.length >= 1);
+    assert.ok(data.every((a: any) => a.alert_class === 'subunit_out'));
+  });
+
+  test('alert_class inválido → 400', async () => {
+    const { status } = await req('GET', '/alerts?alert_class=no-existe', undefined, ctx.adminToken);
+    assert.equal(status, 400);
+  });
+
+  test('responder inválido → 400', async () => {
+    const { status } = await req('GET', '/alerts?responder=no-existe', undefined, ctx.adminToken);
+    assert.equal(status, 400);
+  });
+
+  test('GET /alerts/classes devuelve el catálogo completo (14 clases, 5 responders)', async () => {
+    const { status, data } = await req('GET', '/alerts/classes', undefined, ctx.adminToken);
+    assert.equal(status, 200);
+    assert.equal(data.classes.length, 14);
+    assert.equal(data.responders.length, 5);
+  });
+
+  test('GET /alerts/summary cuadra con el conteo real de alertas activas del cliente', async () => {
+    const [summary, list] = await Promise.all([
+      req('GET', `/alerts/summary?client_id=${ctx.clientId}&resolved=false`, undefined, ctx.adminToken),
+      req('GET', `/alerts?client_id=${ctx.clientId}&resolved=false&limit=200`, undefined, ctx.adminToken),
+    ]);
+    assert.equal(summary.status, 200);
+    assert.equal(summary.data.total, list.data.length);
+    const sumByClass = summary.data.byClass.reduce((acc: number, r: any) => acc + r.count, 0);
+    assert.equal(sumByClass, list.data.length);
+  });
+});
+
+describe('Alertas — bug de auto-resolución indebida (device_still_reporting no debe cerrarse por un sync EWS de otro tipo)', () => {
+  const regressionSerial = `SN-ALERTS-REGRESSION-${ts}`;
+  const regressionCtx = { deviceId: '' };
+
+  test('crear un segundo equipo y darlo de baja', async () => {
+    const sync = await req('POST', '/devices/sync', {
+      readings: [{
+        reading_id: crypto.randomUUID(), device_id: regressionSerial, ip: '192.168.210.20', brand: 'hp',
+        time: new Date().toISOString(), total_pages: 5, offline: false,
+      }],
+    }, ctx.agentToken);
+    assert.equal(sync.status, 200);
+
+    const found = await pollUntil(
+      () => req('GET', `/clients/${ctx.clientId}/devices`, undefined, ctx.adminToken),
+      (r) => r.data.some((d: any) => d.serial_number === regressionSerial),
+    );
+    regressionCtx.deviceId = found.data.find((d: any) => d.serial_number === regressionSerial).id;
+
+    const decomm = await req('POST', `/devices/${regressionCtx.deviceId}/decommission`, { reason: 'Prueba de regresión' }, ctx.adminToken);
+    assert.equal(decomm.status, 200);
+  });
+
+  test('un sync tras la baja abre device_still_reporting con origin=cloud, y una alerta EWS aparte con origin=device', async () => {
+    const sync = await req('POST', '/devices/sync', {
+      readings: [{
+        reading_id: crypto.randomUUID(), device_id: regressionSerial, ip: '192.168.210.20', brand: 'hp',
+        time: new Date(Date.now() + 1000).toISOString(), total_pages: 6, offline: false,
+        supplies_details: { alerts: [{ code: 'HR-0', description: 'Low paper', severity: 'WARNING' }] },
+      }],
+    }, ctx.agentToken);
+    assert.equal(sync.status, 200);
+
+    const stillReporting = await pollUntil(
+      () => req('GET', `/alerts?device_id=${regressionCtx.deviceId}&type=device_still_reporting`, undefined, ctx.adminToken),
+      (r) => r.data.length > 0,
+    );
+    assert.equal(stillReporting.data[0].resolved, false);
+    assert.equal(stillReporting.data[0].origin, 'cloud');
+
+    const ewsAlert = await req('GET', `/alerts?device_id=${regressionCtx.deviceId}&type=HR-0`, undefined, ctx.adminToken);
+    assert.equal(ewsAlert.data[0].origin, 'device');
+  });
+
+  test('un sync posterior con una lista EWS DISTINTA no cierra device_still_reporting (bug real, pre-fix), pero sí resuelve la alerta EWS vieja', async () => {
+    const sync = await req('POST', '/devices/sync', {
+      readings: [{
+        reading_id: crypto.randomUUID(), device_id: regressionSerial, ip: '192.168.210.20', brand: 'hp',
+        time: new Date(Date.now() + 2000).toISOString(), total_pages: 7, offline: false,
+        supplies_details: { alerts: [{ code: 'HR-1', description: 'No paper', severity: 'WARNING' }] },
+      }],
+    }, ctx.agentToken);
+    assert.equal(sync.status, 200);
+
+    const oldEwsResolved = await pollUntil(
+      () => req('GET', `/alerts?device_id=${regressionCtx.deviceId}&type=HR-0`, undefined, ctx.adminToken),
+      (r) => r.data[0]?.resolved === true,
+    );
+    assert.equal(oldEwsResolved.data[0].resolved, true, 'la alerta EWS vieja (HR-0, origin=device) sí debe auto-resolverse');
+
+    const stillReporting = await req('GET', `/alerts?device_id=${regressionCtx.deviceId}&type=device_still_reporting`, undefined, ctx.adminToken);
+    assert.equal(
+      stillReporting.data[0].resolved, false,
+      'device_still_reporting (origin=cloud) NO debe auto-resolverse por un sync EWS de otro tipo — este era el bug real'
+    );
   });
 });
 

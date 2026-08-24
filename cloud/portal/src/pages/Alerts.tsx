@@ -1,40 +1,41 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Link } from 'react-router-dom';
-import { AlertTriangle, Bell, Check, CheckCircle2, ChevronLeft, ChevronRight, Loader2, ShieldCheck } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { Bell, Check, CheckCircle2, ChevronLeft, ChevronRight, Loader2, ShieldCheck, CheckSquare, Square, AlertOctagon } from 'lucide-react';
 import { api } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import type { Alert } from '../types/alerts';
+import { useRowSelection } from '../hooks/useRowSelection';
+import BulkActionBar from '../components/BulkActionBar';
+import CreateIncidentModal from '../components/incidents/CreateIncidentModal';
+import type { Alert, AlertClass, AlertClassOption, ResponderOption, AlertSummary } from '../types/alerts';
 
 interface ClientOption { id: string; name: string; }
 
 const PAGE_SIZE = 50;
 
-type TypeCategory = 'all' | 'toner' | 'counter_reset' | 'agent_offline' | 'device_offline' | 'other';
+const SEVERITY_LABELS: Record<string, string> = { critical: 'Crítico', warning: 'Advertencia' };
 
 /**
- * `type` es texto libre (códigos de vendor para EWS, `toner_<color>_low/critical`,
- * etc.) — categorizar del lado del cliente en vez de pedirle al usuario un valor
- * exacto, mismo criterio que ya usa `Dashboard.tsx` (`type.startsWith('toner_')`).
+ * Color por familia de clase — mismo criterio visual que HP SDS: rojo = ya
+ * pasó algo (agotado/fallo/atasco), ámbar = se está por agotar/requiere
+ * atención, slate = informativo, azul = disponibilidad/infraestructura.
  */
-function categoryOf(type: string): TypeCategory {
-  if (type.startsWith('toner_')) return 'toner';
-  if (type === 'counter_reset') return 'counter_reset';
-  if (type === 'agent_offline') return 'agent_offline';
-  if (type === 'device_offline') return 'device_offline';
-  return 'other';
-}
-
-const CATEGORY_LABELS: Record<TypeCategory, string> = {
-  all: 'Todos los tipos',
-  toner: 'Tóner',
-  counter_reset: 'Reset de contador',
-  agent_offline: 'Monitor sin señal',
-  device_offline: 'Equipo sin señal',
-  other: 'Otro (EWS)',
+const CLASS_COLOR: Record<AlertClass, string> = {
+  consumable_out: 'bg-rose-100 text-rose-700',
+  system_failure: 'bg-rose-100 text-rose-700',
+  jam: 'bg-rose-100 text-rose-700',
+  subunit_out: 'bg-rose-100 text-rose-700',
+  media_out: 'bg-rose-100 text-rose-700',
+  consumable_low: 'bg-amber-100 text-amber-700',
+  system_warning: 'bg-amber-100 text-amber-700',
+  user_action: 'bg-amber-100 text-amber-700',
+  subunit_low: 'bg-amber-100 text-amber-700',
+  media_low: 'bg-amber-100 text-amber-700',
+  information: 'bg-slate-100 text-slate-600',
+  system_change: 'bg-slate-100 text-slate-600',
+  other: 'bg-slate-100 text-slate-600',
+  availability: 'bg-blue-100 text-blue-700',
 };
-
-const SEVERITY_LABELS: Record<string, string> = { critical: 'Crítico', warning: 'Advertencia' };
 
 function fmtDate(v: string | null): string {
   if (!v) return '—';
@@ -51,18 +52,42 @@ const Alerts = () => {
   const isReadOnlyViewer = role === 'client_viewer';
   const canFilterByClient = role === 'admin' || role === 'operator';
 
+  // Deep-link (`/alerts?class=jam&resolved=false`) — es lo que hacen clicables
+  // los contadores de "Resumen de alertas por clase" del dashboard. `class` en
+  // la URL (corto, legible) mapea a `alert_class` como query param de la API.
+  const [searchParams, setSearchParams] = useSearchParams();
+
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [clients, setClients] = useState<ClientOption[]>([]);
+  const [classOptions, setClassOptions] = useState<AlertClassOption[]>([]);
+  const [responderOptions, setResponderOptions] = useState<ResponderOption[]>([]);
+  const [summary, setSummary] = useState<AlertSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [pendingId, setPendingId] = useState<number | null>(null);
+  // Fase 11 del gap analysis vs HP SDS — crear un incidente a partir de una alerta puntual.
+  const [incidentModalAlert, setIncidentModalAlert] = useState<Alert | null>(null);
 
   const [severity, setSeverity] = useState('');
-  const [category, setCategory] = useState<TypeCategory>('all');
-  const [resolved, setResolved] = useState<'false' | 'true' | ''>('false');
+  const [alertClass, setAlertClass] = useState(() => searchParams.get('class') ?? '');
+  const [resolved, setResolved] = useState<'false' | 'true' | ''>(() => {
+    const fromUrl = searchParams.get('resolved');
+    return fromUrl === 'true' || fromUrl === 'false' ? fromUrl : 'false';
+  });
   const [acknowledged, setAcknowledged] = useState<'' | 'true' | 'false'>('');
   const [clientId, setClientId] = useState('');
   const [page, setPage] = useState(0);
+
+  // Reflejar el filtro de clase en la URL — permite compartir/recargar el link
+  // y es la mitad que falta del deep-link (la otra mitad es leerlo al montar,
+  // arriba en el useState inicial).
+  useEffect(() => {
+    const next = new URLSearchParams(searchParams);
+    if (alertClass) next.set('class', alertClass); else next.delete('class');
+    if (resolved) next.set('resolved', resolved); else next.delete('resolved');
+    setSearchParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [alertClass, resolved]);
 
   const fetchClients = useCallback(async () => {
     if (!canFilterByClient) return;
@@ -74,11 +99,22 @@ const Alerts = () => {
     }
   }, [canFilterByClient]);
 
+  const fetchClasses = useCallback(async () => {
+    try {
+      const data = await api.get<{ classes: AlertClassOption[]; responders: ResponderOption[] }>('/alerts/classes');
+      setClassOptions(data.classes);
+      setResponderOptions(data.responders);
+    } catch {
+      // El filtro de clase es una comodidad — si falla, se sigue pudiendo ver alertas sin filtrar por clase.
+    }
+  }, []);
+
   const fetchAlerts = useCallback(async () => {
     setLoading(true);
     setError('');
     const params = new URLSearchParams();
     if (severity) params.set('severity', severity);
+    if (alertClass) params.set('alert_class', alertClass);
     if (resolved) params.set('resolved', resolved);
     if (acknowledged) params.set('acknowledged', acknowledged);
     if (clientId) params.set('client_id', clientId);
@@ -92,19 +128,28 @@ const Alerts = () => {
     } finally {
       setLoading(false);
     }
-  }, [severity, resolved, acknowledged, clientId, page]);
+  }, [severity, alertClass, resolved, acknowledged, clientId, page]);
+
+  const fetchSummary = useCallback(async () => {
+    const params = new URLSearchParams();
+    if (resolved) params.set('resolved', resolved);
+    if (clientId) params.set('client_id', clientId);
+    try {
+      const data = await api.get<AlertSummary>(`/alerts/summary?${params.toString()}`);
+      setSummary(data);
+    } catch {
+      // El contador de cabecera es informativo — si falla, la tabla igual funciona.
+    }
+  }, [resolved, clientId]);
 
   useEffect(() => { void fetchClients(); }, [fetchClients]);
+  useEffect(() => { void fetchClasses(); }, [fetchClasses]);
   useEffect(() => { void fetchAlerts(); }, [fetchAlerts]);
+  useEffect(() => { void fetchSummary(); }, [fetchSummary]);
 
   // Reiniciar a la primera página cuando cambia cualquier filtro (evita quedar en
   // una página vacía si el filtro nuevo devuelve menos resultados).
-  useEffect(() => { setPage(0); }, [severity, resolved, acknowledged, clientId]);
-
-  const filtered = useMemo(
-    () => (category === 'all' ? alerts : alerts.filter((a) => categoryOf(a.type) === category)),
-    [alerts, category]
-  );
+  useEffect(() => { setPage(0); }, [severity, alertClass, resolved, acknowledged, clientId]);
 
   const updateAlert = async (id: number, patch: { acknowledged?: boolean; resolved?: boolean }) => {
     setPendingId(id);
@@ -112,10 +157,37 @@ const Alerts = () => {
       const updated = await api.put<Partial<Alert>>(`/alerts/${id}`, patch);
       setAlerts((prev) => prev.map((a) => (a.id === id ? { ...a, ...updated } : a)));
       showToast(patch.resolved !== undefined ? 'Alerta resuelta' : 'Alerta reconocida', 'success');
+      void fetchSummary();
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Error al actualizar la alerta', 'error');
     } finally {
       setPendingId(null);
+    }
+  };
+
+  // Selección múltiple (Fase 9 del gap analysis vs HP SDS) — deliberadamente
+  // sólo sobre `alerts` (la página VISIBLE), nunca "todo lo que matchea el
+  // filtro": un usuario nunca debe poder reconocer/resolver algo que no llegó
+  // a ver. Se limpia al cambiar de página o de filtro.
+  const rowSelection = useRowSelection(alerts.map((a) => a.id));
+  const [bulkBusy, setBulkBusy] = useState(false);
+  useEffect(() => { rowSelection.clear(); }, [alerts]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const bulkUpdate = async (patch: { acknowledged?: boolean; resolved?: boolean }) => {
+    setBulkBusy(true);
+    try {
+      const ids = Array.from(rowSelection.selected);
+      const result = await api.post<{ count: number; applied: number[]; skipped: Array<{ id: number; reason: string }> }>(
+        '/alerts/bulk', { ids, ...patch }
+      );
+      showToast(`${result.count} alerta(s) actualizadas`, result.count > 0 ? 'success' : 'error');
+      rowSelection.clear();
+      void fetchAlerts();
+      void fetchSummary();
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Error al actualizar en bloque', 'error');
+    } finally {
+      setBulkBusy(false);
     }
   };
 
@@ -130,6 +202,14 @@ const Alerts = () => {
             Tóner, resets de contador, monitores y equipos sin señal.
           </p>
         </div>
+        {summary && (
+          <div className="text-right">
+            <p className="text-2xl font-extrabold text-[#1a2333]">{summary.total}</p>
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+              {summary.bySeverity.critical} críticas · {summary.bySeverity.warning} advertencias
+            </p>
+          </div>
+        )}
       </header>
 
       <div className="cd-panel bg-white border border-slate-100 rounded-3xl p-5 flex flex-wrap items-center gap-3">
@@ -140,10 +220,11 @@ const Alerts = () => {
           <option value="warning">Advertencia</option>
         </select>
 
-        <select value={category} onChange={(e) => setCategory(e.target.value as TypeCategory)}
+        <select value={alertClass} onChange={(e) => setAlertClass(e.target.value)}
           className="bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-bold px-3 py-2 rounded-xl border border-slate-100 outline-none focus:border-brand cursor-pointer">
-          {(Object.keys(CATEGORY_LABELS) as TypeCategory[]).map((c) => (
-            <option key={c} value={c}>{CATEGORY_LABELS[c]}</option>
+          <option value="">Toda clase</option>
+          {classOptions.map((c) => (
+            <option key={c.id} value={c.id}>{c.label}</option>
           ))}
         </select>
 
@@ -179,21 +260,44 @@ const Alerts = () => {
           <Loader2 size={32} className="text-brand animate-spin mb-3" />
           <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Cargando alertas...</p>
         </div>
-      ) : filtered.length === 0 ? (
+      ) : alerts.length === 0 ? (
         <div className="h-64 flex flex-col items-center justify-center text-emerald-500 bg-emerald-50/30 rounded-3xl border border-emerald-100 border-dashed">
           <ShieldCheck size={48} className="mb-3 text-emerald-500" />
           <h4 className="text-xs font-black uppercase tracking-widest text-emerald-600">Sin alertas</h4>
           <p className="text-[10px] font-bold text-slate-400 mt-1">Ningún resultado con los filtros actuales</p>
         </div>
       ) : (
+        <>
+          {!isReadOnlyViewer && (
+            <BulkActionBar count={rowSelection.count} onClear={rowSelection.clear}>
+              <button disabled={bulkBusy} onClick={() => bulkUpdate({ acknowledged: true })}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-brand hover:bg-brand-hover text-white rounded-xl text-[11px] font-black uppercase tracking-wider transition-all disabled:opacity-50">
+                <Check size={13} /> Reconocer
+              </button>
+              <button disabled={bulkBusy} onClick={() => bulkUpdate({ resolved: true })}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-[11px] font-black uppercase tracking-wider transition-all disabled:opacity-50">
+                <CheckCircle2 size={13} /> Resolver
+              </button>
+            </BulkActionBar>
+          )}
         <div className="w-full overflow-x-auto rounded-3xl border border-slate-100 bg-white">
           <table className="w-full text-left border-collapse whitespace-nowrap">
             <thead className="bg-slate-50 border-b border-slate-100">
               <tr>
+                {!isReadOnlyViewer && (
+                  <th className="py-3 px-4 w-8">
+                    <button onClick={rowSelection.toggleAll} className="text-slate-400 hover:text-brand" title="Seleccionar todos">
+                      {rowSelection.allSelected ? <CheckSquare size={16} /> : <Square size={16} />}
+                    </button>
+                  </th>
+                )}
                 <th className="py-3 px-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Severidad</th>
                 <th className="py-3 px-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Cliente</th>
                 <th className="py-3 px-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Monitor / Equipo</th>
-                <th className="py-3 px-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Mensaje</th>
+                <th className="py-3 px-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Código</th>
+                <th className="py-3 px-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Motivo</th>
+                <th className="py-3 px-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Clase</th>
+                <th className="py-3 px-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Acción</th>
                 <th className="py-3 px-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Fecha</th>
                 <th className="py-3 px-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Estado</th>
                 {!isReadOnlyViewer && (
@@ -202,8 +306,15 @@ const Alerts = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-              {filtered.map((a) => (
+              {alerts.map((a) => (
                 <tr key={a.id} className="hover:bg-slate-50/50 transition-colors">
+                  {!isReadOnlyViewer && (
+                    <td className="py-2.5 px-4">
+                      <button onClick={() => rowSelection.toggle(a.id)} className="text-slate-300 hover:text-brand">
+                        {rowSelection.selected.has(a.id) ? <CheckSquare size={16} className="text-brand" /> : <Square size={16} />}
+                      </button>
+                    </td>
+                  )}
                   <td className="py-2.5 px-4">
                     <span className={`inline-flex px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider ${
                       a.severity === 'critical' ? 'bg-rose-100 text-rose-700' : 'bg-amber-100 text-amber-700'
@@ -223,8 +334,19 @@ const Alerts = () => {
                       </Link>
                     ) : '—'}
                   </td>
-                  <td className="py-2.5 px-4 text-[11px] text-slate-600 max-w-[320px] truncate" title={a.message}>
-                    {a.message}
+                  <td className="py-2.5 px-4 text-[10px] font-mono text-slate-500" title={a.type}>{a.type}</td>
+                  <td className="py-2.5 px-4 text-[11px] text-slate-600 max-w-[280px] truncate" title={a.message}>
+                    {a.alert_reason || a.message}
+                  </td>
+                  <td className="py-2.5 px-4">
+                    {a.alert_class ? (
+                      <span className={`inline-flex px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider ${CLASS_COLOR[a.alert_class]}`}>
+                        {classOptions.find((c) => c.id === a.alert_class)?.label ?? a.alert_class}
+                      </span>
+                    ) : '—'}
+                  </td>
+                  <td className="py-2.5 px-4 text-[10px] font-bold text-slate-500">
+                    {a.responder ? (responderOptions.find((r) => r.id === a.responder)?.label ?? a.responder) : '—'}
                   </td>
                   <td className="py-2.5 px-4 text-[10px] text-slate-500 font-medium">{fmtDate(a.created_at)}</td>
                   <td className="py-2.5 px-4">
@@ -260,8 +382,23 @@ const Alerts = () => {
                             <CheckCircle2 size={14} />
                           </button>
                         )}
-                        {a.acknowledged && a.resolved && (
-                          <AlertTriangle size={14} className="text-slate-200" />
+                        {a.incident_id ? (
+                          <Link
+                            to={`/incidents/${a.incident_id}`}
+                            onClick={(ev) => ev.stopPropagation()}
+                            title={`Incidente #${a.incident_number}`}
+                            className="p-2 bg-brand/10 text-brand rounded-xl hover:bg-brand/20 transition-all"
+                          >
+                            <AlertOctagon size={14} />
+                          </Link>
+                        ) : (
+                          <button
+                            onClick={() => setIncidentModalAlert(a)}
+                            title="Crear incidente"
+                            className="p-2 bg-slate-100 text-slate-500 rounded-xl hover:bg-slate-200 transition-all"
+                          >
+                            <AlertOctagon size={14} />
+                          </button>
                         )}
                       </div>
                     </td>
@@ -271,6 +408,7 @@ const Alerts = () => {
             </tbody>
           </table>
         </div>
+        </>
       )}
 
       <div className="flex items-center justify-end gap-3">
@@ -290,6 +428,17 @@ const Alerts = () => {
           <ChevronRight size={16} />
         </button>
       </div>
+
+      <CreateIncidentModal
+        isOpen={!!incidentModalAlert}
+        onClose={() => setIncidentModalAlert(null)}
+        onCreated={() => { void fetchAlerts(); }}
+        clients={clients}
+        initialClientId={incidentModalAlert?.client_id ?? undefined}
+        initialDeviceId={incidentModalAlert?.device_id ?? undefined}
+        initialClass={incidentModalAlert?.alert_class ?? undefined}
+        initialAlertIds={incidentModalAlert ? [incidentModalAlert.id] : undefined}
+      />
     </div>
   );
 };

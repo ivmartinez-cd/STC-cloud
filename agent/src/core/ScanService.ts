@@ -5,6 +5,7 @@ import { captureDevice, type CaptureScope, type CaptureHint } from '../capture';
 import type { DeviceReading } from '../capture/reading';
 import { enqueueReading, pendingCount, isBackpressureActive, upsertKnownDevice, isRegistered, getKnownDevices, getKnownDeviceInfo, shouldEnqueueReading, recordLastReadingSnapshot, type KnownDevice } from '../sync/database';
 import type { AgentConfig, IpHost } from './config';
+import { policyFor, type DevicePolicyState } from './devicePolicy';
 import type { SnmpCredential } from '../capture/transport/snmp';
 
 interface ScanServiceDeps {
@@ -170,6 +171,12 @@ export class ScanService {
    *  error (para que el caller lleve el conteo de `errors`), nunca lanza. */
   private async captureAndRecord(ip: string, config: AgentConfig, creds: SnmpCredential[]): Promise<boolean> {
     try {
+      // Fase 10 del gap analysis vs HP SDS — un equipo `disabled`/`ignored`
+      // no se vuelve a capturar en cada ciclo de discovery (el cloud lo
+      // descarta igual si algo se cuela, pero esto ahorra el tráfico SNMP).
+      const policy = policyFor(config, ip);
+      if (policy === 'disabled' || policy === 'ignored') return false;
+
       const known = getKnownDeviceInfo(ip);
       const out = await captureDevice({ ip, ...snmpArgsFor(creds, known), scopes: DISCOVERY_SCOPES, hint: hintFrom(known) });
       if (!out) return false;
@@ -194,14 +201,16 @@ export class ScanService {
   }
 
   async runMeterTask(): Promise<void> {
-    await this.runKnownDevicesTask('MeterTask', METER_SCOPES, (r) => `total=${r.total_pages ?? '-'} mono=${r.mono_pages ?? '-'} color=${r.color_pages ?? '-'}`);
+    // 'supplies_only': ese equipo sólo debe reportar insumos, no contadores.
+    await this.runKnownDevicesTask('MeterTask', METER_SCOPES, (r) => `total=${r.total_pages ?? '-'} mono=${r.mono_pages ?? '-'} color=${r.color_pages ?? '-'}`, ['supplies_only', 'disabled', 'ignored']);
   }
 
   async runSuppliesTask(): Promise<void> {
-    await this.runKnownDevicesTask('SupplyTask', SUPPLIES_SCOPES, (r) => `K=${r.toner_black ?? '-'} C=${r.toner_cyan ?? '-'} M=${r.toner_magenta ?? '-'} Y=${r.toner_yellow ?? '-'} alerts=${r.supplies_details?.alerts?.length ?? 0}`);
+    // 'reports_only': ese equipo sólo debe reportar contadores, no insumos.
+    await this.runKnownDevicesTask('SupplyTask', SUPPLIES_SCOPES, (r) => `K=${r.toner_black ?? '-'} C=${r.toner_cyan ?? '-'} M=${r.toner_magenta ?? '-'} Y=${r.toner_yellow ?? '-'} alerts=${r.supplies_details?.alerts?.length ?? 0}`, ['reports_only', 'disabled', 'ignored']);
   }
 
-  private async runKnownDevicesTask(label: string, scopes: readonly CaptureScope[], summarize: (r: DeviceReading) => string): Promise<void> {
+  private async runKnownDevicesTask(label: string, scopes: readonly CaptureScope[], summarize: (r: DeviceReading) => string, skipStates: readonly DevicePolicyState[]): Promise<void> {
     try {
       if (isBackpressureActive()) {
         log('WARN', `Backpressure activo (>10k lecturas pendientes). [${label}] omitido.`);
@@ -218,6 +227,7 @@ export class ScanService {
         while (queue.length > 0) {
           const d = queue.shift();
           if (!d) break;
+          if (skipStates.includes(policyFor(config, d.ip))) continue;
           try {
             // Sin restricción por rango acá a propósito: `known_devices` no
             // tiene vínculo a qué rango descubrió cada IP, y un dispositivo

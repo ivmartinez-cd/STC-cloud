@@ -346,6 +346,975 @@ sin acceso a equipos reales). ✅ (23/08/2026) Documentación: comparativa v2.0,
 inventario de datos y auditoría IT ya reescritos — falta sólo el DPA
 (documento legal, no técnico, deliberadamente no redactado).
 
+### Fase 3 — Paridad con HP SDS Manager LATAM (gap analysis 23/08/2026) — completa: 11 de 11 ítems cerrados
+Origen: comparación en vivo del portal contra HP SDS Manager LATAM (dashboard,
+listado de dispositivos, consumibles, alertas, incidentes) — 8 gaps concretos,
+desglosados en 11 fases de implementación. Plan completo en
+`/home/ivan/.claude/plans/silly-napping-planet.md`.
+
+✅ **Diccionario de alertas → motivo + clase** (23/08/2026): `alerts.type` recibía
+códigos de vendor crudos sin traducir (`prtAlertCode` RFC 3805 como entero-string,
+bits `HR-<n>` de `hrPrinterDetectedErrorState`, códigos Samsung EWS tipo
+`C2-1411`/`S2-3313`/`M1-5612`) — nunca se resolvían a texto legible ni a una
+categoría. Nuevo `cloud/src/services/alertCatalog.ts` (puro, sin Knex/Fastify):
+`classifyAlert(type, message)` clasifica en cascada (tipos internos exactos →
+`prtAlertCode` → bits `HR-*` → familia/código de vendor → fallback saneando el
+mensaje crudo) a una de 14 clases estilo SDS (`alert_class`) + motivo en español
+(`alert_reason`, ≤120 chars) + quién debe actuar (`responder`, 5 niveles). Migración
+`20260824010000_alerts_classification_and_origin.ts` agrega esas 3 columnas más
+`origin` (`'cloud'`|`'device'`) a `alerts` — **metadata derivada, `alerts.type`
+queda intacto** como clave de dedupe de los índices únicos parciales existentes —
+y corre el backfill sobre las filas ya existentes (`origin`, `alert_class`,
+`alert_reason`, `responder` calculados; 0 filas quedan con `alert_class IS NULL`
+tras correrla en el stack de desarrollo).
+
+De paso, dos bugs reales encontrados y corregidos: (1) **auto-resolución
+indebida** — `resolveStaleEwsAlerts` (ahora `resolveStaleDeviceAlerts`) usaba una
+blocklist (`NON_EWS_RESERVED_TYPES`) que no protegía `device_error` ni
+`device_still_reporting`, así que cualquier sync con alertas EWS los cerraba sin
+querer; reemplazada por un allowlist positivo (`origin='device'`), que cierra la
+clase de bug entera en vez de la instancia — verificado con test de regresión
+end-to-end (`alerts.test.ts`, decommission de un equipo + dos syncs EWS
+consecutivos, confirma que `device_still_reporting` sigue abierta mientras la
+alerta EWS vieja sí se auto-resuelve). (2) **dos escritores para el mismo
+concepto** — `alertWorker.ts` abría `device_error`/`critical` por lectura,
+`heartbeatMonitor.ts` abría `device_offline`/`warning` por staleness, posturas
+contradictorias sobre el mismo hecho (una notificaba por mail, la otra no);
+unificado a `device_offline`/`warning` en los dos escritores (la migración
+renombra las filas históricas — irreversible a propósito, documentado en el
+`down()`).
+
+Endpoints nuevos: `GET /alerts/classes` (catálogo estático) y
+`GET /alerts/summary` (desglose por clase + severidad, scopeado), ambos en
+`CLIENT_VIEWER_ROUTES`; `GET /alerts` gana filtro server-side `alert_class`
+(CSV, 400 si algún valor no matchea el catálogo) y `responder`, reemplazando el
+filtro client-side de `Alerts.tsx` que filtraba la página ya paginada (bug
+estructural: con >50 alertas activas, filtrar por clase devolvía casi vacío).
+El LEFT JOIN triple + scoping de `getAlerts` se extrajo a
+`buildScopedAlertQuery()` en `dashboardController.ts`, reusado por el summary.
+58/58 tests de `alertCatalog.test.ts` (nuevo, unitario puro) + `alerts.test.ts`
+verdes; 65/65 de `rbac.test.ts` verdes (incluye 2 casos nuevos: `client_viewer`
+puede leer `/alerts/classes` y `/alerts/summary`, scopeado a su propio cliente).
+Verificado migrando y corriendo contra el stack Docker real (no sólo tests).
+
+✅ **UI de alertas** (23/08/2026): `Alerts.tsx` reescrito — se borró
+`categoryOf()`/`CATEGORY_LABELS`/el `useMemo` que filtraba la página ya
+paginada (el bug estructural de arriba) y se reemplazó por el filtro
+server-side (`alert_class` como query param, opciones cargadas de
+`GET /alerts/classes`). Columnas nuevas: **Código** (`type` en monospace),
+**Motivo** (`alert_reason`, con el mensaje crudo del vendor en el tooltip),
+**Clase** (badge coloreado por familia — rojo: agotado/fallo/atasco, ámbar:
+bajo/advertencia/acción de usuario, slate: informativo, azul: disponibilidad)
+y **Acción** (`responder`). Contador de cabecera desde `GET /alerts/summary`
+("632 · 439 críticas · 193 advertencias"). Deep-link vía `useSearchParams`
+(`/alerts?class=jam&resolved=false`) — leído al montar y sincronizado de
+vuelta a la URL, listo para que el panel del dashboard (siguiente ítem) linkee
+directo a una clase filtrada. `types/alerts.ts` extendido con los campos
+nuevos como opcionales (compatibilidad con filas de un deploy rodante).
+Verificado con Playwright real contra el stack Docker (login, filtro por
+"Soporte bajo" con datos reales de un HP LaserJet — HR-0/807 traducidos a
+"Papel bajo"/"Papel bajo en la bandeja", clase "SOPORTE BAJO", acción "Sin
+formación"): el filtro server-side devuelve las 5 filas correctas donde antes
+(post-paginación, client-side) podía devolver una página casi vacía.
+`npm run check` (íconos + tsc + eslint) y `npm run build` verdes.
+
+**Lo que NO se hizo de este ítem**: el panel "alertas por clase" y el resto de
+paneles nuevos de `Dashboard.tsx` — es la Fase 6 del plan (depende también de
+Fase 5, `monitor_state`), deliberadamente separada.
+
+✅ **Feed de "Movimientos y cambios"** (23/08/2026): `audit_logs` era write-only
+por decisión de retención (23/08) — esa decisión era sobre RETENCIÓN, no
+visibilidad; se preservó intacta (`retentionJob.ts` sigue sin tocar esta tabla,
+cero UPDATE/DELETE nuevos) y se agregó lectura por primera vez. Migración
+`20260824020000_audit_logs_client_scope_and_indexes.ts` agrega `client_id` +
+3 índices, con backfill guardado por regex de UUID contra `metadata->>'client_id'`
+y contra `devices`/`agents`/`clients` por `target_id` (2039 de 2407 filas
+existentes resueltas; el resto queda sin cliente pero sigue siendo visible por
+acción/fecha/target). Nuevo `cloud/src/services/auditService.ts`
+(`writeAudit()`, punto único de escritura) y `auditCatalog.ts` (labels en
+español + categoría para las ~30 acciones existentes, puro). Migrados a
+`writeAudit()` los 7 inserts `DEVICE_*` de `deviceController.ts` y el
+`DEVICE_MERGED` de `deviceLifecycleService.ts` — el resto (~19 call-sites en
+`agentService.ts`, `authController.ts`, etc.) sigue insertando directo sin
+`client_id`, documentado como pendiente de una pasada de limpieza aparte.
+
+Endpoints nuevos `GET /audit-logs` (paginado con `total`, filtros
+from/to/action/category/client_id/target_id/user_id) y `GET /audit-logs/actions`
+(agregado, cache 60s), ninguno en `CLIENT_VIEWER_ROUTES` (admin/operator
+solamente — mismo criterio que excluye `/agents/:id/logs`). UI: nueva página
+`/activity` (nav "Movimientos", admin/operator) con fila expandible mostrando
+el `metadata` crudo, y pestaña "Historial" en `DeviceDetail.tsx`
+(`GET /audit-logs?target_id=`). Es la primera pantalla del portal con
+paginación server-side real (`total` + offset/limit).
+
+**Dos bugs reales encontrados y corregidos durante la implementación** (no
+en el plan original, aparecieron al migrar contra el stack real): (1)
+`knex.raw()` trata el operador jsonb `?` (`metadata ? 'client_id'`) como SU
+PROPIO placeholder de binding — rompía el arranque del contenedor con
+"syntax error at or near $1"; reemplazado por `jsonb_exists(metadata,'client_id')`.
+(2) el backfill de `metadata->>'client_id'` confiaba ciegamente en el valor sin
+validar que el cliente todavía existiera — filas de test/histórico con un
+`client_id` huérfano (cliente ya borrado) violaban la FK nueva y tumbaban el
+arranque; corregido con un `UPDATE ... FROM clients` que sólo asigna cuando el
+cliente es real. Ambos verificados corriendo la migración completa contra una
+copia real de la base de desarrollo (dry-run en una transacción con
+`ROLLBACK`) antes de aplicarla en serio. 13/13 tests nuevos de
+`auditFeed.test.ts` verdes (incluye el caso `client_viewer` → 403 en ambas
+rutas), suite completa de 15 archivos sin regresiones. Verificado con
+Playwright real: `/activity` con 2354 filas reales, filtro por cliente/acción/
+categoría, fila expandible con metadata, y la pestaña "Historial" de un equipo
+mostrando exactamente el movimiento que se le hizo.
+
+**Bug no relacionado, corregido de paso a pedido del usuario**: el umbral de
+"equipo sin señal" estaba hardcodeado en 3 lugares independientes (backend
+`heartbeatMonitor.ts`, portal `constants.ts`, y un tercero — no documentado —
+en `formatters.ts:getDeviceStatusInfo`, que es el que realmente pinta
+"SIN CONTACTO" en `DeviceInventoryTable.tsx`) a 30 minutos, mientras el agente
+reduce su propia frecuencia a **4 horas** fuera del horario laboral
+configurado (`INTERVALS.meter.off`/`supplies.off`, `agent/src/core/BusinessHours.ts`).
+Cualquier flota real aparecía "sin contacto" la mayor parte de cada franja
+fuera de horario. Los tres umbrales se subieron a 5 horas (4h + 1h de margen)
+y el de `formatters.ts` ahora importa la misma constante que `constants.ts` en
+vez de tener la suya propia. Confirmado en el stack real: al reiniciar el
+backend se auto-resolvieron 132 alertas `device_offline` indebidamente
+abiertas; en el portal, un monitor de prueba pasó de mostrar 16/16 equipos
+"sin contacto" a sólo los 4 que de verdad llevaban ~2 días sin reportar. Sigue
+pendiente el "modelo unificado de umbrales cliente→agente→dispositivo" más
+amplio ya señalado en Fase 1 de este roadmap — este fix sólo corrige el valor,
+no unifica los tres lugares en uno solo.
+
+✅ **Campos de inventario manuales y derivados** (23/08/2026): migración
+`20260824030000_devices_inventory_fields.ts` — `asset_number` sigue el mismo
+patrón `*_reported`/`*_override`/columna GENERADA que `name`/`location`
+(nadie lo reporta todavía, eso es Fase 10); `asset_tag` es columna plana
+(ninguna fuente automática lo reporta); `duty_cycle_monthly_override` por
+equipo + tabla `device_models` (spec del MODELO, matcheada por
+`lower(brand)`/`model_key` normalizado) para el catálogo; `custom_data` jsonb
++ tabla `custom_field_defs` (scope global o por cliente, tipos
+text/number/date/select/boolean, tope de 25 campos vivos por cliente). Vista
+`device_usage_30d` sobre `readings_daily_agg` (ventana móvil de 30 días,
+mismo criterio anti-reset `SUM(GREATEST(delta,0))` que el volumen mensual del
+dashboard) — cierra el pendiente declarado en Fase 2 ("el portal todavía no
+consume los agregados continuos").
+
+Nuevo `cloud/src/services/customFieldService.ts` (CRUD + `validateAndMerge`,
+merge parcial por clave — nunca reemplaza `custom_data` entero) y endpoints
+`clients/:id/custom-fields` + `device-models`, los `GET` en
+`CLIENT_VIEWER_ROUTES`. `PUT /devices/:id` extendido con `asset_number`,
+`asset_tag`, `duty_cycle_monthly`, `custom_data`. Los joins a
+`device_usage_30d`/`device_models` se agregaron a `getDevice`
+(`deviceController.ts`) y — hallazgo real durante la implementación — a
+`getAgentDevices` (`portalAgentController.ts`), que es el endpoint que
+efectivamente alimenta `DeviceInventoryTable.tsx`; `getClientDevices`
+(`clientController.ts`, el que el plan original asumía) resultó no tener
+consumidor en el portal, confirmado por la exploración previa.
+
+UI: card "Inventario" nueva en `DeviceDetail.tsx` (Nº activo con badge
+manual/reportado, Nº etiqueta, ciclos de trabajo con fuente, uso 30 días con
+badge de % de utilización del ciclo), `EditDeviceModal` extendido con los 3
+campos fijos + inputs dinámicos por tipo para cada campo personalizado,
+columnas "Inventario"/"Uso 30d" nuevas en `DeviceInventoryTable.tsx` + CSV
+extendido, y `CustomFieldsCard.tsx` nueva en `ClientDetail.tsx` (mismo patrón
+que `ApiKeysCard.tsx`). 15/15 tests nuevos de `inventoryFields.test.ts`
+verdes (incluye el caso real: 3 lecturas en 3 días → `pages_30d` = suma de
+deltas positivos, verificado con el valor exacto 120). Verificado con
+Playwright real: crear un campo personalizado "Costo por página color (USD)"
+desde `ClientDetail`, confirmarlo en la lista, abrir "Editar equipo" y verlo
+renderizado como input de texto listo para completar.
+
+**Lo que NO se hizo de este ítem**: el estado de monitoreo granular (4
+niveles estilo SDS) es la Fase 5 del plan, deliberadamente separada — hoy
+`devices` no tiene ningún campo que exprese "sólo consumibles"/"sólo
+informes"/"deshabilitado".
+
+✅ **Estado de monitoreo granular** (23/08/2026): punto #7 exacto de la
+comparativa (SDS: Totalmente habilitado / Solo consumibles / Solo informes /
+Deshabilitado). Migración `20260824050000_devices_monitor_state.ts` —
+`devices.monitor_state` (`full`/`supplies_only`/`reports_only`/`disabled`,
+default `full`), **reemplaza el `devices.managed` boolean planteado
+originalmente** (mismo concepto con menos granularidad; "gestionado" en el
+dashboard se derivará como `monitor_state <> 'disabled'` cuando llegue la
+Fase 6). No se reutiliza `active` — la ingesta lo pisa en cada sync, un valor
+de operador se perdería en el próximo ciclo (mismo argumento que
+`decommissioned_at`).
+
+El guard real vive en un solo lugar: `alertService.openAlert` (única
+primitiva de escritura de alertas) corta antes de insertar si el
+`monitor_state` del equipo no es `full`/`supplies_only` — cubre
+`alertWorker.ts`, `agentService.ts` y `heartbeatMonitor.ts` de una sola vez
+sin tocarlos uno por uno. `alertWorker.ts` además corta temprano por
+eficiencia (evita las queries de umbral de tóner). `reportService.ts`
+excluye `supplies_only`/`disabled` del cierre mensual (con la limitación
+documentada: sin historial de cuándo cambió el estado dentro del período, se
+usa el estado ACTUAL). `agentService.syncReadings`: `disabled` no inserta en
+`readings` ni actualiza contadores/tóner (sólo `last_seen`/`ip_address`/
+`active`, para no perder la señal de "sigue vivo"); `supplies_only`/
+`reports_only` procesan la lectura entera (lossless, criterio R1) — la
+diferencia la hacen los guards de arriba sobre el estado ya persistido.
+
+Nuevo `cloud/src/services/deviceMonitorService.ts` (`setMonitorState`, punto
+único reusable por la Fase 9 cuando llegue la acción en bloque) y endpoint
+dedicado `PUT /devices/:id/monitor-state` (no un campo más de
+`PUT /devices/:id`, para audit `action` propio — `DEVICE_MONITOR_STATE_CHANGED`
+nueva en `auditCatalog.ts`). Wire hacia el agente preparado: `agentService.getConfig()`
+suma `device_policies: [{ip,state}]` (campo aditivo, mismo criterio que
+`ip_hosts`) para cuando el agente lo consuma en la Fase 10 — el cloud sigue
+siendo la única autoridad real mientras tanto.
+
+UI: selector de estado en la cabecera de `DeviceDetail.tsx` (oculto para
+`client_viewer`) + aviso contextual por estado, badge + columna "Monitoreo"
+en `DeviceInventoryTable.tsx`. 11/11 tests nuevos de `monitorState.test.ts`
+verdes, incluido un test estático de regresión (recorre `cloud/src` buscando
+cualquier `db("alerts").insert(...)` fuera de `alertService.ts` — si alguien
+agrega un segundo escritor en el futuro, este test lo detecta antes de que
+se salte el guard en silencio). Verificado con Playwright real: cambiar el
+selector a "Deshabilitado" muestra el aviso azul de inmediato y el contador
+de páginas queda congelado en el último valor.
+
+**Lo que NO se hizo de este ítem**: la acción en bloque
+`POST /devices/bulk/monitor-state` es la Fase 9, deliberadamente separada —
+`deviceMonitorService.setMonitorState` ya quedó listo para que esa fase la
+reuse sin duplicar lógica.
+
+✅ **Métricas de dashboard estilo SDS** (23/08/2026): en el mismo `Promise.all`
+de `getDashboard` — (1) fix real: `agentsStats` no filtraba
+`status='revoked'` (`offlineAgents` sí lo hacía), de ahí el "1/426" absurdo
+comparado contra HP SDS; (2) `stats.agents.reporting` — agentes con al menos
+un equipo con lectura en las últimas 24h, sobre `devices.last_seen` (no
+`readings` crudo, para no encarecer el polling del dashboard); (3)
+`stats.devicesUnmanaged` **derivado de `monitor_state='disabled'`** (Fase 5),
+campo aditivo, sin cambiar la forma de `stats.devices`; (4) `agentVersions` +
+`currentAgentVersion` — nuevo `cloud/src/services/agentVersionService.ts`
+(`getPublishedAgentVersion`, lookup Redis→`local_settings.json`→env,
+extraído del endpoint `GET /agents/version` de `authController.ts` para
+reusarlo sin duplicar: **hallazgo real** — `cloud/src/version.ts` es la
+versión del *servidor cloud*, no la del agente, el plan original apuntaba al
+archivo equivocado); (5) `alertsByClass` reusando `buildScopedAlertQuery` de
+la Fase 1; (6) `discovered.today/yesterday` reales (`devices.created_at` ya
+es la fecha de descubrimiento) con `pendingTotal` en placeholder `0` hasta la
+Fase 7.
+
+UI: `StatCard` de Monitores ahora muestra "% reportando (24h)", Parque Global
+suma "N no gestionadas" cuando aplica; dos paneles nuevos — "Resumen de
+Alertas por Clase" (filas clicables a `/alerts?class=X&resolved=false`,
+mismo mapa de colores por familia que `Alerts.tsx`) y "Versiones de Agente"
+(badge "desactualizado" en las que no coinciden con `currentAgentVersion`).
+`registerDashboardRoutes`/`createDashboardController` ganaron un parámetro
+`redis` (antes no lo necesitaban) para el lookup de versión. 39 tests
+(2 nuevos + regresión) verdes en `e2e.test.ts`, incluido uno que envuelve el
+revoke de un agente dedicado con una lectura del dashboard antes/después
+para probar el fix del bug de conteo. Verificado con Playwright real contra
+datos reales: "1 no gestionadas", "68% reportando (24h)", panel de clases
+con 8 categorías y sus conteos, panel de versiones con "1.0.0" (sin badge,
+es la actual) vs "desconocida" (384 agentes, badge ámbar) — y el click en
+una clase navega correctamente a `/alerts?class=availability&resolved=false`.
+
+**Lo que NO se hizo de este ítem**: el tile de "Descubiertos hoy/ayer/N
+pendientes" en la UI del dashboard es la Fase 7, deliberadamente separada —
+el backend ya devuelve `discovered` con forma final, sólo falta mostrarlo y
+llenar `pendingTotal` con datos reales.
+
+✅ **Cola de registro de dispositivos** (23/08/2026): punto #7 del plan,
+depende de la Fase 5 (reusa `monitor_state`/`onlyLiveDevices`). Decisión
+central — **flag `registration_state` en `devices`** (no una tabla aparte):
+duplicar la escalera de identidad (`deviceIdentity.ts`) en otro lado arriesga
+crear un duplicado al "promover" un equipo. Migración
+`20260824060000_device_registration_queue.ts` agrega
+`clients.device_approval_required` (opt-in por cliente, default `false` —
+ningún cliente existente cambia de comportamiento) y a `devices`:
+`registration_state` (`'pending'|'registered'|'ignored'`, default
+`'registered'`) + `registered_at/by`, `ignored_at/by`, `ignore_reason`, con
+un `CHECK` de coherencia (`ignored` ⟺ `ignored_at IS NOT NULL`) y un índice
+parcial `devices_pending_idx`. Dry-run en transacción contra la base real
+antes de aplicarla (812 equipos existentes quedaron `registered`, cero
+regresión), migró limpio en el stack Docker real.
+
+`onlyLiveDevices()` (`deviceFilters.ts`) ahora exige también
+`registration_state = 'registered'` — es la definición de "está en la
+flota", cubre sus 20+ call-sites de una sola vez. `alertService.openAlert()`
+extiende su guard de Fase 5 para que `pending`/`ignored` tampoco alerten.
+`agentService.syncReadings()`/`registerDevices()` — nueva fila entra
+`pending` si el cliente tiene el flag prendido; `ignored` corta la ingesta
+igual que `disabled` (mismo camino, sólo actualiza `last_seen`/`ip`);
+`pending` **no corta nada** — la lectura se procesa entera (lossless, mismo
+criterio R1 que ya regía para `supplies_only`/`reports_only`), sólo queda
+afuera de inventario/alertas/facturación. **Bug real encontrado y
+corregido**: `reportService.computePeriodUsage` arma todo con `db.raw()` y
+reescribe a mano el criterio de `billableDevices` (no puede llamar al
+predicado del query builder) — el filtro de Fase 5 (`monitor_state`) estaba
+ahí pero nadie lo actualizó con `registration_state`, así que un equipo
+`pending` facturaba antes de ser aprobado. Fix: una condición más en el
+`WHERE` del CTE `scoped_devices`. (De paso, mismo bug de sintaxis ya visto en
+Fase 5: un comentario con backticks dentro del template literal SQL rompe
+`tsc` — TS1005 — corregido sacando los backticks del comentario.)
+
+Nuevo `cloud/src/services/deviceRegistrationService.ts` (`listPending`,
+`registerDevices`, `ignoreDevices`, `unignore` — bulk hasta 500 ids,
+`skipped` con motivo por id que no matchea, nunca un 500). Endpoints (ninguno
+en `CLIENT_VIEWER_ROUTES`, deny-by-default): `GET/POST .../pending-devices`,
+`.../pending-devices/register`, `.../pending-devices/ignore` en
+`clientRoutes.ts`; `POST /devices/:id/unignore` en `deviceRoutes.ts`; `PUT
+/clients/:id` extendido con `device_approval_required`. `GET /dashboard`
+completa el placeholder de la Fase 6: `discovered.pendingTotal` ahora es un
+`COUNT(*)` real (scopeado por cliente cuando aplica).
+
+UI: nueva `pages/PendingDevices.tsx` (ruta `/pending`, admin/operator),
+selector de cliente + búsqueda, tabla con selección múltiple y acciones
+"Registrar"/"Ignorar" (esta última pide motivo en un modal, nunca en
+blanco). Ítem de nav "Pendientes" con badge de contador (poll cada 60s sobre
+`GET /dashboard`). Tile en `Dashboard.tsx` (sólo visible si
+`pendingTotal > 0` — es una alerta accionable, no un panel más). Switch
+"Registro de Dispositivos" en `ClientDetail.tsx` con link directo a la cola
+del cliente.
+
+17/17 tests nuevos (`pendingDevices.test.ts`) verdes: sin regresión con el
+flag apagado; con el flag prendido, un equipo nuevo queda `pending` (afuera
+del inventario, visible en la cola, lectura persistida); segundo sync no
+duplica; cierre mensual lo excluye; registrar/ignorar en bloque; ignorar
+corta lecturas futuras y `unignore` las reanuda; validaciones (sin
+`deviceIds`, >500 ids, id inexistente → `skipped` no error); RBAC 403 para
+`client_viewer` en las 4 rutas nuevas. Suite completa de CI (18 archivos)
+verde sin regresiones. Verificado con Playwright real contra el stack
+Docker: badge "4" en el nav, tile del dashboard, cola con datos reales,
+modal de "Ignorar" con motivo requerido, switch en `ClientDetail.tsx`.
+
+**Lo que NO se hizo de este ítem**: el seam para "zona" del equipo
+(`zoneId` en el register) quedó como no-op documentado — la tabla `zones` no
+existe todavía en este repo; el endpoint acepta el parámetro pero no lo usa,
+no bloquea el resto de la fase.
+
+✅ **Superficie de consumibles** (24/08/2026): el detalle de insumos ya era
+más rico que HP SDS (`devices.supplies_details` jsonb con SKU, serial de
+cartucho, páginas restantes) — el gap era de SUPERFICIE (vivía sólo en
+`DeviceDetail.tsx`, cálculo client-side), no de captura. **Corrección real al
+plan**: la migración `20260824040000_devices_cartridge_printed_and_estimated.ts`
+que el plan pedía **no hizo falta** — investigado antes de escribirla, las 12
+columnas (`cartridge_capacity_*`/`cartridge_printed_*`/`cartridge_estimated_*`)
+ya existían desde `20260521100000_add_toner_pages_stats.ts`/
+`20260520120000_add_cartridge_data_to_devices.ts`, una sesión anterior a este
+gap analysis. Lo que sí era real: el **bug de persistencia** que el plan
+señalaba — el payload del agente ya mandaba esas 12 columnas (pasa el schema
+Ajv de `agentRoutes.ts`) pero `agentService.syncReadings` nunca las escribía
+ni en el UPDATE ni en el INSERT de `devices`, quedaban `NULL` para siempre.
+Fix de una línea por columna en los dos bloques.
+
+Puerto 1:1 de la lógica de `lib/supplies.ts` (client-side) a
+`cloud/src/services/suppliesService.ts` — misma forma de filas
+(`buildSupplyRows`), para que exista una sola implementación del cálculo.
+`usageRatesFor(db, deviceIds)` reusa la vista `device_usage_30d` de la Fase 4
+(`SUM(GREATEST(delta,0))` sobre `readings_daily_agg`, mismo criterio
+anti-reset que el volumen mensual) en vez de reimplementar el cálculo de
+deltas — una sola query para N dispositivos, nunca N+1; el ritmo diario se
+deriva como `pages_30d/30` (ritmo de 30 días, no el ritmo instantáneo entre
+las 2 lecturas más separadas que usa `DeviceDetail.tsx`). `fleetSupplies`/
+`suppliesSummary` filtran por `alertableDevices` (vivo + `monitor_state` en
+`full`/`supplies_only`, Fase 5) — un equipo `disabled`/`reports_only` no debe
+aparecer en la vista de flota, mismo criterio que ya aplica
+`alertService.openAlert` para las alertas de tóner del mismo equipo.
+
+Endpoints nuevos, ambos en `CLIENT_VIEWER_ROUTES` (sólo lectura, scopeados):
+`GET /devices/:id/supplies` (`{rate, rows}`, agregado a `deviceController.ts`
+junto a `getDeviceReadings`) y `GET /supplies` + `GET /supplies/summary`
+(`suppliesController.ts`/`suppliesRoutes.ts` nuevos, `client_viewer` siempre
+forzado a su propio cliente). `fleetSupplies` arma las filas en memoria sobre
+un techo de seguridad de 3000 dispositivos vivos (mismo criterio que
+`listClients`/`listAgents`/`listDevices`) — no hay forma barata de filtrar
+por `kind`/`percentage`/`remainingDays` en SQL cuando la fuente es jsonb, así
+que se filtra/ordena/pagina en JS después de una sola query de dispositivos +
+una sola query de ritmos. `/supplies/summary` cachea 60s por scope (mismo
+patrón que `auditController.ts`).
+
+UI: nueva `pages/Supplies.tsx` (ruta `/supplies`, todos los roles), filtros
+por cliente (admin/operator)/tipo/urgencia, export CSV. Ítem de nav
+"Consumibles". El widget "Consumibles en Alerta" del dashboard **se
+mantiene tal cual** (deliberado, no es lo que decía el plan original): está
+alimentado por `alertService` (abre/cierra con los umbrales reales por
+agente, `warning`/`critical`), más preciso que un top-5 derivado de
+`supplies_details` — reemplazarlo por `/supplies/summary` habría sido una
+regresión de precisión. En su lugar se agregó un link "Ver todos los
+consumibles" que lleva a la página nueva. `DeviceDetail.tsx` **tampoco migró**
+al nuevo endpoint (otra corrección al plan): ya tiene las lecturas cargadas
+para el gráfico de esa misma pestaña (sin costo extra), y su ritmo
+calculado sobre la primera/última lectura visible es más preciso para UN
+equipo que el promedio de 30 días que usa la vista de flota — dos fuentes
+del MISMO cálculo base (`buildSupplyRows`, portado 1:1), pero cada una con
+el `UsageRate` que le conviene a su escala (uno, muchos).
+
+10/10 tests nuevos (`supplies.test.ts`) verdes: rate.totalPerDay/remainingDays
+coherentes tras 3 lecturas en 3 días distintas + refresh manual del
+continuous aggregate; filtro `max_days`; filtro `kind`; equipo
+`monitor_state=disabled` no aparece en la flota; regresión del fix de
+`cartridge_capacity/printed/estimated` (ya no quedan NULL); scoping por
+cliente (`client_viewer` y device de otro cliente → 404); summary no cuenta
+un ítem por encima de los umbrales. Suite completa de CI (19 archivos)
+verde sin regresiones. Verificado con Playwright real contra el stack
+Docker: 407 ítems reales de flota con SKUs/niveles/páginas restantes,
+filtro por "Tóner", link desde el dashboard.
+
+**Lo que NO se hizo de este ítem**: los dos puntos anteriores (dashboard y
+`DeviceDetail.tsx` sin migrar al endpoint nuevo) son decisiones deliberadas,
+no pendientes — documentadas arriba con su motivo.
+
+✅ **Acciones en bloque** (24/08/2026): patrón ya existente en
+`decommissionStaleDevices` (dryRun, una sola fila de audit con la lista de
+ids) generalizado a selección explícita. **Corrección real al plan**: el
+prerrequisito de "extraer `decommissionDevice`/`recommissionDevice`/
+`moveDevice` a `deviceLifecycleService.ts` para que single y bulk compartan
+función" no se hizo tal cual — los tres single-device ya hacen `forUpdate()`
++ validaciones puntuales sobre UN equipo (forma fila-a-fila), mientras que
+bulk necesita "clasificar N ids en applied/skipped con una query, un UPDATE
+en lote" (forma por lote) — son dos formas de acceso a datos genuinamente
+distintas; forzar una firma común hubiera degradado una de las dos a peor
+rendimiento sin ganar claridad real. En su lugar, `deviceLifecycleService.ts`
+gana 3 funciones ADITIVAS (`bulkDecommission`, `bulkRecommission`,
+`bulkMove`) con su propia clasificación por lote, documentando la decisión
+en el propio archivo. `bulkSetMonitorState` sí reusa `deviceMonitorService.
+setMonitorState` (loop de a uno, cada llamada ya valida y audita) — ahí el
+prerrequisito del plan aplicaba tal cual porque esa función ya era unitaria
+y barata de loopear.
+
+Semántica de bulk, uniforme en las 4 acciones de dispositivos: nunca 404/400
+para todo el lote por un solo id problemático — cada id se clasifica en
+`applied` o `skipped` (con motivo: `not_found`, `merged`,
+`already_decommissioned`, `not_decommissioned`, `same_agent`, `collision`,
+`confirm_required`) y la respuesta siempre es `{count, applied, skipped}`.
+`bulkMove` detecta colisión de serial contra el cliente destino con una sola
+query para todos los elegibles (no una por dispositivo); un cambio de
+cliente sin `confirmClientChange` no aborta el lote — sólo ese dispositivo
+queda `skipped` (a diferencia del endpoint single, que sí devuelve 400 para
+toda la request — divergencia deliberada: bulk favorece "aplicar lo que se
+pueda" sobre "todo o nada"). `POST /alerts/bulk` (nuevo, junto a `updateAlert`
+en `dashboardController.ts` — no en `alertService.ts`, que es la primitiva de
+escritura del lado dispositivo/sistema, un concepto distinto de "un operador
+reconoce/resuelve desde el portal") acepta sólo ids explícitos, nunca "todo
+lo que matchea el filtro actual" — un usuario nunca reconoce/resuelve algo
+que no llegó a ver.
+
+Ninguna de las 5 rutas nuevas (`POST /devices/bulk/decommission|recommission|
+move|monitor-state`, `POST /alerts/bulk`) entra a `CLIENT_VIEWER_ROUTES`,
+deny-by-default. UI: nuevo hook `useRowSelection.ts` (selección genérica,
+no se auto-limpia al paginar/filtrar — el caller decide cuándo) + componente
+`BulkActionBar.tsx` (barra sticky, oculta si la selección está vacía),
+reusados por las tres tablas seleccionables. `DeviceInventoryTable.tsx` gana
+checkboxes + 4 acciones (Dar de baja/Reactivar/Mover/Estado de monitoreo,
+con 4 modales nuevos en `DeviceLifecycleModals.tsx` que reusan el chrome
+`BrandModal`/`ConfirmationModal` ya existente) — el botón "Dar de Baja
+Desconectados" existente se mantiene aparte, es una acción por filtro de
+inactividad, no por selección. `Alerts.tsx` gana checkboxes + Reconocer/
+Resolver, sólo sobre la página visible. `Supplies.tsx` gana checkboxes +
+"Exportar selección" (sin mutación — no tiene sentido "dar de baja" un
+consumible).
+
+29/29 tests nuevos en `deviceLifecycle.test.ts` (dryRun no muta; confirmación
+da de baja N con una sola fila de audit verificada vía `/audit-logs`;
+reintentar sobre los mismos ids → `already_decommissioned`; reactivar un
+equipo no dado de baja → `not_decommissioned`; mover con colisión de serial
+→ uno aplica, el otro `skipped`; cambio de cliente sin confirmar → `skipped`,
+no aborta el lote; `state` inválido → 400 antes de escribir nada) + 5 tests
+en `alerts.test.ts` (`POST /alerts/bulk` ack/resolve, id inexistente →
+skipped, validaciones) + 5 en `rbac.test.ts` (403 para `client_viewer` en
+las 5 rutas nuevas), todos verdes. Suite completa de CI (19 archivos) verde
+sin regresiones — confirmado corriéndola completa después de que ejecuciones
+sueltas repetidas del mismo archivo tropezaran con el rate-limit global de
+100 req/min por IP del propio stack (no una regresión real, artefacto de
+research manual). `npm run check`/build limpios en cloud y portal. Verificado
+con Playwright real contra el stack Docker: barra de 4 acciones + modal de
+estado de monitoreo en `DeviceInventoryTable.tsx`, barra Reconocer/Resolver
+en `Alerts.tsx`, barra Exportar selección en `Supplies.tsx`.
+
+✅ **Agente v1.1.0** (24/08/2026): única release que concentra los tres
+puntos del plan, versión bump `1.0.0` → `1.1.0` (`agent/src/core/version.ts`,
+`package.json`, `installer/STC-Monitor.iss`, `monitor-ui/STC.Monitor.UI.csproj`
+— `build-installer.bat` ya traía su propio mecanismo de sincronización
+interactivo de estos mismos tres archivos, no hizo falta tocarlo).
+
+**10.1 — Honrar `monitor_state`/`registration_state` del lado agente**:
+nuevo `AgentConfig.devicePolicies?: Array<{ip, state}>` (aditivo, mismo
+patrón `!== undefined` que `ip_hosts`/`snmp_credentials`/`business_hours` ya
+usan en `HeartbeatService.handleRemoteConfig`). Nuevo `core/devicePolicy.ts`
+— `policyFor(config, ip)`, fail-open a `'full'` ante estado ausente o
+desconocido (un bug de matching nunca deja de monitorear un equipo). En
+`ScanService`: `captureAndRecord` (discovery) corta en `disabled`/`ignored`
+sin loguear (mismo silencio que el resto de los early-return de esa función);
+`runMeterTask` salta `supplies_only`/`disabled`/`ignored`; `runSuppliesTask`
+salta `reports_only`/`disabled`/`ignored`. El cloud sigue siendo la única
+autoridad real (ya filtraba en Fases 5/7); esto sólo ahorra tráfico SNMP y
+CPU del agente contra equipos que el cloud va a descartar igual.
+
+**10.2 — Detección de consumible no original**: nuevo `capture/supplyOrigin.ts`
+— `classifySupplyOrigin(text)`, clasificador brand-agnostic (no hardcodea
+"HP": el `generic-printer-mib.ts` que lo consume primero es multimarca por
+SNMP) por regex multilingüe (en/es/pt) sobre frases tipo "Non-HP"/
+"non-genuine"/"remanufactured"/"compatible"/"clon" vs "genuine"/"original";
+`null` — nunca `'genuine'` — cuando no hay señal clara. Conectado en
+`prtMarkerSuppliesDescription` (RFC 3805, universal — la fuente con más
+cobertura real de la flota), `hp-futuresmart.ts` (`SupplyState` del EWS) y
+`samsung.ts` (`status` de SyncThru, best-effort declarado — sin fixture real
+de un cartucho no-Samsung para validar el texto exacto). **Bug real
+encontrado durante la implementación**: `bridge.ts` (`fromEwsData`/
+`mergeResults`) copia campo-a-campo el `SuppliesItem` en vez de spread —
+agregar `origin` a la interfaz no alcanzaba, había que sumarlo explícito en
+los dos lugares o se perdía en el camino EWS→`CaptureResult` (atrapado por
+el test nuevo de `normalize.toDeviceReading`, no por inspección). Roll-up
+peor-caso de los 4 tóners en `normalize.ts` → `reading.supply_origin`
+(nuevas columnas en `readings_queue`/upload payload, mismo patrón que los 12
+campos de cartucho de la Fase 8).
+
+Cloud: migración `20260824070000_devices_supply_origin.ts`
+(`devices.supply_origin`/`supply_origin_at`, `CHECK` de valores válidos),
+dry-run + aplicada contra el stack real. `agentRoutes.ts` (`syncSchema`)
+acepta `supply_origin` opcional. Nuevo `services/supplyOrigin.ts` —
+`resolveSupplyOrigin(explicit, suppliesDetailsRaw)`: usa el campo explícito
+si vino (agente 1.1.0+), si no deriva del jsonb (agente viejo que sólo manda
+`supplies_details`) — la flota puede estar parcialmente actualizada sin
+perder la señal. `agentService.syncReadings` persiste el campo (nunca lo
+resetea a `null` si un sync no trae señal) y abre/resuelve
+`alerts.type='supply_non_genuine'` (severidad `warning`, catálogo ya
+clasificado en `alertCatalog.ts` desde la Fase 1) en la transición, tanto
+para un equipo existente como para la primera lectura de uno nuevo.
+
+**10.3 — `AssetNumber` por EWS (HP FutureSmart)**: `parseFsDeviceInformation`
+agrega `assetNumber` a `DeviceExtraInfo` (fixture real,
+`DeviceInformation.html:99`, campo case vacío como en la mayoría de los
+equipos reales). Fluye a `supplies_details.device.assetNumber` sin tocar
+`bridge.ts` (`device` ya se mergeaba genérico). `agentService.syncReadings`
+llena `asset_number_reported` desde ahí — nunca `asset_number_override`, un
+operador que ya seteó el override manual del portal no lo pierde porque el
+equipo empezó a reportar algo (verificado con test: override sobrevive a un
+sync posterior).
+
+UI: badge "No original" en `DeviceDetail.tsx` (tab Consumibles) y
+`DeviceInventoryTable.tsx` (columna Tóner), visible sólo cuando
+`device.supply_origin === 'non_genuine'`.
+
+31/31 tests nuevos: 28 en `supplyOrigin.test.ts` (tabla de casos, incluidos
+falsos amigos — "Black Cartridge HP CE390A" sin palabra de estado → `null`,
+una frase adversarial con "genuine" y "Non-HP" a la vez → gana el negativo)
++ 3 nuevos en `capture.test.ts` (SNMP genérico) + 2 en `normalize.
+toDeviceReading` (roll-up, y el bug real de `bridge.ts` que earlier fix
+corrigió) + 6 en `devicePolicy.test.ts` (fail-open, matching por ip) — suite
+completa del agente 185/185 verde. Del lado cloud, 7/7 en
+`supplyOrigin.test.ts` nuevo (explícito del agente, derivado server-side,
+transición resuelve la alerta, sync sin señal no pisa lo ya sabido,
+asset_number_reported vs override) + suite completa de CI (20 archivos)
+verde sin regresiones. `npm run build`/`tsc --noEmit` limpios en agente y
+cloud, `npm run check` limpio en portal. Verificado con Playwright real
+contra el stack Docker: badge "NO ORIGINAL" en la ficha del equipo y en la
+tabla de inventario del monitor, `asset_number_reported`/override
+coexistiendo correctamente en la columna Inventario.
+
+**Lo que NO se hizo de este ítem** (documentado, no pendiente sin más):
+- **ConsumableConfigDyn.xml (HP legado) y `parseHpSupplies`/
+  `parseHpLegacyHtmlSupplies`** no ganaron clasificación de origen: usan un
+  `EwsData` plano (sin `SuppliesItem` anidado) y no hay fixture real de
+  ninguno de los dos para validar qué texto de estado exponen — inventar
+  regex contra un formato no verificado era el mismo riesgo que el plan
+  quería evitar con "nunca inventar OIDs". La cobertura real (SNMP genérico
+  multimarca + FutureSmart EWS) ya cierra el caso que el plan señalaba como
+  "la ventaja real".
+- **Test de integración de `ScanService.scan()`/`captureAndRecord` con un
+  spy de que `disabled` no llama a captura** no se agregó: ninguna otra
+  función de `ScanService` (`scan`, `runMeterTask`, `runSuppliesTask`) tiene
+  test de integración hoy — sólo `credentialsForRange`, pura y exportada, la
+  tiene. `policyFor` (la función nueva) se testeó al mismo nivel que ese
+  precedente (`devicePolicy.test.ts`, puro). Cablear un mock completo de
+  `sync/database` (better-sqlite3) + `capture/index` + `NetworkUtils` sólo
+  para esto habría sido una excepción de andamiaje sin precedente en el
+  archivo, no una regresión real: la lógica de skip en sí (3 líneas por
+  callsite) es trivial y ya está cubierta transitivamente por
+  `policyFor`.
+- **"heartbeat con `device_policies` no rompe un agente 1.0.0"** se verificó
+  por construcción (campo JSON aditivo que un cliente viejo simplemente no
+  desestructura, mismo patrón exacto que `ip_hosts`/`snmp_credentials` en su
+  momento), no ejecutando el binario 1.0.0 real contra el heartbeat nuevo
+  (no hay forma de correr ese binario en este entorno).
+
+✅ **Módulo de incidentes** (24/08/2026): último de los 8 gaps. Frontera dura
+entre **alerta** (estado técnico crudo, la abre/cierra la máquina — única
+escritura `alertService.ts`, se auto-resuelve sola) e **incidente** (unidad
+de trabajo de servicio, la abre/cierra una persona o una regla opt-in, con
+Nº legible/SLA/aging, y sobrevive a que la alerta subyacente se auto-resuelva).
+Cerrar un incidente nunca resuelve alertas y viceversa; se vinculan por tabla
+puente `incident_alerts`. El ack/resolve existente sobre `alerts` no se tocó.
+
+Migración `20260824080000_incidents.ts`: secuencia `incidents_number_seq`
+(arranca en 100000, números legibles tipo ticket), tabla `incidents`
+(snapshot denormalizado de serie/etiqueta del equipo al abrir, mismo criterio
+que `report_closure_lines`), `incident_alerts` (puente) e `incident_events`
+(timeline: comentario/cambio de estado/asignación/vínculo/reapertura).
+Anti-duplicado de incidentes **automáticos** vía índice único parcial
+`incidents_open_device_class_uniq ON incidents (device_id, class) WHERE
+status<>'closed' AND origin='auto'` — mismo patrón que
+`alerts_device_type_open_uniq`. Migración `20260824090000_incident_rules_seed.ts`:
+tabla `incident_rules` (opt-in por clase de alerta, `client_id` nullable con
+override de cliente sobre la fila global), sembrada con 8 clases globales,
+**todas `enabled=false`** — cero incidentes automáticos al desplegar sobre
+una base existente.
+
+Backend: `incidentService.ts` (CRUD completo, `closeIncident` idempotente,
+`reopenIncident` devuelve 409 con el id en conflicto si ya existe un
+automático abierto para el mismo equipo+clase), `incidentClassifier.ts`
+(único acoplamiento con la Fase 1 — usa `alert.alert_class` si está, si no
+cae a un mapa de fallback sobre `alert.type`), y `incidentWorker.ts` (nuevo,
+`setInterval` cada 2 min, mismo criterio no-BullMQ que `heartbeatMonitor`/
+`retentionJob`): por tick, agrupa alertas abiertas que cumplen una regla
+`enabled` en un solo incidente por `(device, class)` — 5 apariciones del
+mismo atasco terminan en un ticket, no en 5 — respetando el override de
+cliente sobre la regla global, `delay_minutes` (anti-flapping) y
+`auto_close_on_alerts_resolved`. Reusa la cola existente `notifications-queue`
+(job `incident.created`, sin transporte nuevo) y suma `incident.created`/
+`incident.closed` a `api_webhooks`. `retentionJob.ts` excluye de la purga de
+12 meses las alertas ligadas a un incidente no cerrado.
+
+**Bug real encontrado y corregido de paso**: `notificationWorker.ts` procesaba
+todos los jobs de `notifications-queue` como si fueran de alerta
+(`job.data.alertId`) sin mirar `job.name` — al reusar la cola para
+`incident.created` habría intentado resolver un alertId inexistente en
+silencio. Corregido con dispatch explícito por `job.name` antes de que el
+bug se manifestara en producción.
+
+Endpoints: `GET/POST /incidents`, `GET /incidents/stats`, `GET/PATCH
+/incidents/:id`, `POST /incidents/:id/{status,close,reopen,comments,assign}`,
+`POST/DELETE /incidents/:id/alerts[/:alertId]`, `GET/PUT
+/clients/:id/incident-rules`. Aging (`EXTRACT(EPOCH FROM COALESCE(closed_at,
+now())-opened_at)`) calculado siempre al leer, nunca almacenado — mismo
+criterio que `utilization_pct` de la Fase 4. `scope.ts` gana
+`incidentIdParamMatchesScope` (mismo patrón 404-no-403 que
+`deviceIdParamMatchesScope`); sólo los 3 `GET` de listado/detalle/stats en
+`CLIENT_VIEWER_ROUTES`. `GET /alerts` gana `incident_id`/`incident_number`
+por alerta (subquery, no LEFT JOIN, para no duplicar filas si una alerta
+llega a vincularse a más de un incidente).
+
+UI: `pages/Incidents.tsx` (listado paginado server-side con filtros
+cliente/estado/clase), `pages/IncidentDetail.tsx` (timeline, alertas
+vinculadas, cerrar/reabrir/asignar/comentar), `components/incidents/
+CreateIncidentModal.tsx` (prellenado desde una alerta puntual),
+`components/clients/IncidentRulesCard.tsx` en `ClientDetail.tsx`. `Alerts.tsx`
+gana botón "Crear incidente" por fila (o badge enlazando al incidente ya
+vinculado); `DeviceDetail.tsx` gana tab "Incidentes"; `Dashboard.tsx` gana
+tile "N incidente(s) abierto(s)".
+
+19/19 tests nuevos de `incidents.test.ts` (incluye una espera real de hasta
+180s a un tick del worker — no mockeada ni acortada — para el caso de
+agrupación automática de dos alertas de la misma clase en un solo incidente,
+y el caso de reapertura con colisión → 409), extendido `rbac.test.ts` con 7
+casos 403 nuevos. Suite completa de CI (21 archivos) verde sin regresiones.
+Verificado con Playwright real contra el stack Docker: listado con 9
+incidentes reales, detalle con timeline completo, badge "Incidente #100013"
+vs botón "Crear incidente" distinguidos por el `title` del elemento (mismo
+ícono, dos estados), tab Incidentes de un equipo, tile del dashboard, y
+`IncidentRulesCard` reflejando la regla habilitada durante los tests.
+
+Con este ítem se cierran los 11 de 11 ítems de la Fase 3 — los 8 gaps del
+gap analysis del 23/08/2026 quedan todos atendidos (ver "Lo que NO se hizo"
+de cada ítem para lo que deliberadamente quedó fuera de alcance).
+
+### Fase 4 — Re-comparación exhaustiva contra el SDS real (24/08/2026) — completa: 6 de 6 ítems cerrados
+
+Origen: segunda navegación en vivo del portal HP SDS Manager LATAM
+(read-only, 36 pantallas: portal completo, gestión de clientes/activos/
+consumibles/incidentes, los 9 informes enlatados + personalizados +
+configurados, base de datos de productos, y las 5 pantallas de
+administración; más búsquedas ejecutadas con datos reales y el detalle de
+un equipo con sus 9 pestañas), hecha después de cerrar la Fase 3 para
+verificar si quedaba algún gap suelto.
+
+**Veredicto sobre lo ya cerrado**: las 11 fases aguantan la re-comparación
+columna por columna — dashboard, diccionario de alertas (clase/gravedad/
+formación/código/motivo), cola de registro, movimientos y cambios, modelos,
+campos personalizados, monitor_state (los 4 estados exactos), consumibles
+de flota, acciones en bloque de portal, eliminados, incidentes (clases,
+estados, ID externo, tiempo activo) y búsqueda global. Sin regresiones de
+paridad detectadas.
+
+**Gaps nuevos detectados** (ordenados por peso de negocio; los dos primeros
+son los únicos grandes):
+
+✅ **4.1 — Informes guardados y programados con entrega por email**
+(24/08/2026). El SDS tiene ~61 informes personalizados por categoría y una
+pantalla de "informes configurados" con **55 filas reales en uso**
+(contadores mensuales por cliente, equipos sin conexión semanales, niveles
+de consumibles) con frecuencia diaria/semanal/mensual/días hábiles y envío
+por mail; stc-cloud no tenía nada programable.
+
+Implementado como el primer dominio de negocio nuevo bajo la architecture
+guide: `cloud/src/modules/scheduled-reports/{domain,application,
+infrastructure,presentation}/` (plantilla `modules/feedback/`), migración
+`20260824100000_scheduled_reports.ts` (tabla con CHECKs de tipo/formato/
+frecuencia, `next_run_at` precomputado por `computeNextRunAt` — dominio
+puro, testeado determinista — e índice parcial `scheduled_reports_due_idx`
+para la query del worker), worker `jobs/scheduledReportsWorker.ts`
+(`setInterval` 60s, mismo criterio que `incidentWorker`; guard de
+reentrada para SMTP lento; un fallo por fila queda en `last_run_status`/
+`last_run_error` sin frenar el resto del tick).
+
+5 tipos de informe que cubren lo que el equipo real más usa en el SDS:
+`usage` (contadores del período, reusa `computePeriodUsage`),
+`non_contactable`, `consumable_levels` (reusa `fleetSupplies`, tope 200
+filas declarado en `truncated`), `asset_list` y `alert_history` — cada uno
+como builder chico en `infrastructure/renderers/`, codificados por un
+`tabular-export.ts` genérico (CSV con BOM UTF-8 / XLSX vía exceljs, mismo
+estilo que `reportExportService`). El envío reusa el transporte SMTP
+existente (`notificationService.sendMail`, que ya no-opea sin `SMTP_HOST`).
+Endpoints CRUD + `POST /:id/run` (ejecutar y enviar ya) + `GET /:id/download`
+(generar y descargar sin enviar); ninguno en `CLIENT_VIEWER_ROUTES`
+(deny-by-default, mismo criterio que `/audit-logs`). UI: página nueva
+`/scheduled-reports` ("Informes", nav admin/operator) con alta/edición/
+ejecutar/descargar/eliminar y aviso de próxima/última corrida.
+
+Verificado: 17/17 tests nuevos (`scheduledReports.test.ts`: unitarios
+deterministas de `computeNextRunAt` — daily/weekdays salta finde/weekly/
+monthly — más e2e de CRUD, validaciones 400, descarga CSV con cabecera y
+XLSX con firma ZIP real, run-now registra `last_run` y recalcula
+`next_run_at`) + 2 casos 403 nuevos en `rbac.test.ts`; suite CI completa
+(22 archivos) verde; `tsc`/`check:sizes`/`npm run check`/build del portal
+limpios; verificación visual Playwright contra el stack Docker real
+(modal de alta y fila creada con próxima corrida bien calculada al lunes
+siguiente a las 08:00).
+
+**Lo que NO se hizo de este ítem**: constructor de columnas configurable
+por informe (el SDS deja elegir columnas; acá cada tipo tiene su set fijo),
+zona horaria por usuario (R7, la hora programada es hora local del
+servidor — documentado en la migración), y periodicidad por minuto/hora
+(la granularidad es la hora, como el caso de uso real).
+
+✅ **4.2 — Ciclo de pedidos de consumibles** (24/08/2026). Todo el módulo
+"Gestión de consumibles" del SDS es un pipeline de *solicitudes* con 6
+estados; stc-cloud mostraba niveles pero no tenía concepto de "pedido". Es
+el dominio que hoy resuelve `sdsinsumos` contra el SDS.
+
+Implementado como segundo dominio bajo la architecture guide
+(`cloud/src/modules/supply-requests/`): migración
+`20260824110000_supply_requests.ts` (tabla `supply_requests` con estados
+pendiente/consultada/procesada/completada/ignorada/cancelada — "eliminada"
+del SDS mapeada a `cancelled`, acá no se borran filas —, snapshot
+denormalizado del equipo, `supply_request_events` como timeline, opt-in
+por cliente `clients.supply_requests_enabled` default false + umbral
+configurable 1–99%, y **anti-duplicado de pedidos automáticos** por
+(equipo, consumible) vía índice único parcial, mismo patrón que
+`incidents_open_device_class_uniq`). Dry-run en transacción con ROLLBACK
+antes de aplicar.
+
+Worker `jobs/supplyRequestWorker.ts` (`setInterval` 2 min, mismo criterio
+que `incidentWorker`): por tick abre pedidos para consumibles bajo el
+umbral del cliente (reusa `suppliesService.fleetSupplies` — un solo cálculo
+de niveles/días en todo el sistema) con dedup por el índice, y
+**auto-completa** pedidos abiertos cuando el nivel sube ≥30 puntos sobre el
+nivel de apertura (señal de cartucho reemplazado — el mismo criterio que
+usa `sdsinsumos`; el margen evita falsos positivos por rebote de lectura).
+Un pedido cerrado no se reabre: si sigue bajo umbral, el próximo tick abre
+uno nuevo. Notificaciones por la `notifications-queue` compartida (jobs
+`supply_request.created`/`.completed` despachados por `job.name` en
+`notificationWorker.ts` — el dispatch por nombre ya existía desde el fix de
+la Fase 11), email al `notification_email` del cliente y eventos nuevos
+`supply_request.created`/`.completed` en el union de `api_webhooks`.
+
+Endpoints: `GET/POST /supply-requests`, `GET /supply-requests/stats`,
+`GET /supply-requests/:id` (con timeline), `POST /:id/status` (transiciones
+validadas en dominio puro — flujo feliz pendiente→consultada→procesada→
+completada, ignorar/cancelar desde cualquier abierto, cerrado no
+transiciona → 409), `POST /:id/comments`, `GET/PUT
+/clients/:id/supply-request-settings`. Los 3 GET en `CLIENT_VIEWER_ROUTES`
+con ownership central (`supplyRequestIdParamMatchesScope`, patrón
+404-no-403); mutaciones y config deny-by-default. UI: página "Pedidos"
+(estados como pestañas con contadores, modal de detalle con timeline/
+transiciones/comentarios), card "Pedidos Automáticos de Consumibles" en
+`ClientDetail.tsx` (sobre la estructura recién dividida por la migración de
+arquitectura) y tile en el dashboard.
+
+Verificado: 20/20 tests nuevos (`supplyRequests.test.ts`: dominio puro de
+transiciones y `replacementDetected`; e2e de settings/CRUD manual/
+transiciones/409/timeline/stats; y **auto-creación + auto-completado con
+dos ticks REALES del worker de 2 min** — 227s de espera real, sin mockear;
+garantía de compatibilidad: el cliente sin opt-in no genera pedidos) + 2
+casos 403 en `rbac.test.ts`; suite CI completa verde; `tsc`/`check:sizes`/
+portal check/build limpios; verificación visual Playwright (tile del
+dashboard, pestañas con datos reales, modal con timeline completo del
+pedido del test, card de configuración).
+
+**Lo que NO se hizo de este ítem** (documentado a propósito): lotes de
+solicitudes y "Consumable Order Suggestions" del SDS (agrupamiento para
+compra — tiene sentido recién con el catálogo de consumibles de 4.x/base
+de productos), botón de alta manual en la UI (existe por API; el SDS
+tampoco tiene alta manual real de solicitudes), y "solicitud de anulación
+del umbral" por equipo (el umbral es por cliente en v1).
+
+✅ **4.3 — Plantillas de mensajes editables + notificaciones por evento con
+opt-out por cliente** (24/08/2026). El SDS configura notificaciones por
+tipo de evento con activo/inactivo y alcance, y cada evento tiene
+plantilla editable; stc-cloud tenía email/webhook por cliente con cuerpos
+hardcodeados.
+
+Implementado como tercer dominio bajo la architecture guide
+(`cloud/src/modules/message-templates/`): migración
+`20260824120000_message_templates_and_notification_events.ts` — tabla
+`message_templates` (subject/body con placeholders `{{var}}` por evento;
+`client_id` NULL = global, fila de cliente overridea la global — misma
+precedencia que `incident_rules`; upsert con SELECT-then-INSERT/UPDATE
+explícito por el índice de expresión, criterio ya documentado en
+`upsertIncidentRule`) y `clients.notification_events` jsonb (opt-out por
+evento, default TODOS los eventos = comportamiento histórico intacto).
+Dry-run con rollback antes de aplicar.
+
+Dominio puro (`renderTemplate` — placeholder sin valor → "—", nunca queda
+`{{...}}` en el mail; `eventEnabledFor` — valor no-array → habilitado,
+comportamiento histórico) con los 5 eventos: alert.created,
+incident.created, supply_request.created/.completed, report.closed. Los
+DEFAULTS calcan los textos hardcodeados que había en
+`notificationService.ts` — sin fila en la base el mail sale byte a byte
+igual que antes. `resolveTemplate` es best-effort: una plantilla rota o un
+error de lectura caen al default, jamás frenan un envío.
+
+Integración: los 4 senders de `notificationService.ts` ganan un param
+opcional `content` (sin él, texto histórico); `notificationWorker.ts` y
+`reportDeliveryWorker.ts` resuelven plantilla + chequean el opt-out del
+cliente antes de mandar email/webhook propio (los webhooks de la API
+pública no se tocan: ya tienen su propio filtro `events`). Endpoints
+`GET/PUT/DELETE /message-templates` (vista efectiva por evento con
+`source: default|global|client` y placeholders; DELETE del override
+vuelve al nivel anterior), y `PUT /clients/:id` acepta
+`notification_events` (validado por enum en el schema). Nada en
+`CLIENT_VIEWER_ROUTES`. UI: card "Plantillas de Mensajes" en Configuración
+(editor expandible por evento, chips de placeholders, restaurar default)
+y card "Eventos Notificados" en la ficha del cliente.
+
+Verificado: 13/13 tests nuevos (`messageTemplates.test.ts`: dominio puro
+de render/opt-out + e2e de precedencia default→global→override→delete,
+evento inválido 400, PUT/GET de `notification_events`, cliente nuevo
+arranca con los 5 eventos) + 1 caso 403 en `rbac.test.ts` (82/82); suite
+CI completa verde; dry-run de migración; `tsc`/`check:sizes` (baseline
+regenerado por el crecimiento legítimo de los 3 archivos de integración,
+procedimiento documentado del ratchet)/portal check/build limpios;
+verificación visual Playwright de las dos cards contra el stack real.
+
+**Lo que NO se hizo de este ítem**: umbral configurable de "monitor sin
+conexión x N horas" como activador propio (el umbral de offline ya se
+corrigió globalmente en la Fase 3 — 5h alineado al agente; hacerlo por
+cliente entra en el "modelo unificado de umbrales" pendiente de Fase 1
+del roadmap), alcance por distribuidor (no hay capa distribuidor, §2.6),
+y editor de plantillas por cliente en la UI (el backend lo soporta vía
+`client_id` en el PUT; la UI v1 edita solo las globales).
+
+✅ **4.4 — Auditoría de correo** (24/08/2026). El SDS registra cada mail
+enviado (log global filtrable + pestaña "Email Log" por equipo); stc-cloud
+enviaba best-effort sin rastro consultable.
+
+Implementado como cuarto dominio bajo la architecture guide
+(`cloud/src/modules/email-log/`): migración `20260824130000_email_log.ts`
+(tabla `email_log` con estados `sent`/`error`/`skipped_no_transport`/
+`skipped_no_recipient` — **"no se mandó nada" también se audita**, que es
+justo lo que un operador necesita cuando un cliente dice "no me llegó").
+El registro vive en el único choke point de envío
+(`notificationService.sendMail` + contexto `audit` opcional): los 5 flujos
+lo adjuntan — alertas, incidentes, pedidos de consumibles, cierres
+mensuales e informes programados (evento `scheduled_report` vía el
+constructor del `SmtpReportMailer`). Escritura best-effort (un fallo del
+log jamás frena una notificación) y purga a 12 meses en `retentionJob.ts`,
+mismo horizonte que las alertas resueltas. Endpoint `GET /email-log`
+(filtros cliente/evento/estado + búsqueda por destinatario/asunto), nada
+en `CLIENT_VIEWER_ROUTES` (mismo criterio que /audit-logs). UI: página
+"Correo" (nav admin/operator) con filtros y el error de envío en tooltip.
+
+Verificado: 5/5 tests nuevos (`emailLog.test.ts` — e2e real: alerta
+crítica por sync → fila `skipped_no_transport` con destinatario y
+`alert_id` en metadata, filtros, 400 por estado inválido) + 1 caso 403 en
+`rbac.test.ts` (83/83); dry-run+migración aplicada; `tsc`/`check:sizes`/
+portal check/build limpios; verificación visual Playwright de la página
+con filas reales (incluidos intentos "sin destinatario" de clientes sin
+email configurado — la señal operativa clave).
+
+**Lo que NO se hizo**: pestaña "Email Log" por equipo en la ficha (el log
+global filtra por cliente y busca por asunto, que cubre el caso de uso; la
+fila guarda ids en metadata para agregarla después sin migración) y
+retención configurable (fija a 12 meses).
+
+✅ **4.5 — Costes por equipo** (24/08/2026). La pestaña "Costes" del SDS
+(coste de capital, alquiler trimestral, coste por página mono/color,
+contrato de servicio) alimenta los "Extended Billing Figures" que el
+equipo real usa masivamente.
+
+Implementado como quinto dominio bajo la architecture guide
+(`cloud/src/modules/device-costs/`, con facade `index.ts` al estilo
+`modules/inventory`): migración `20260824140000_device_costs.ts` (tabla
+1:1 `device_costs` — `devices` ya es ancha y esto es data administrativa
+opcional; importes por página en numeric(10,4): un coste real es del orden
+de $0,0227, dos decimales no alcanzan; CHECKs de no-negatividad).
+`GET/PUT /devices/:id/costs` (PUT upsert de set completo), deny-by-default
+(datos comerciales). Dominio puro `periodCost()` con la decisión de que
+"sin dato" es null, no $0. **Integración con 4.1**: el informe de uso
+programado agrega automáticamente las columnas Coste mono/color/total
+cuando el cliente tiene al menos un equipo con costes cargados — los
+billing figures del SDS salen del mismo informe que ya se programa y llega
+por mail. UI: pestaña "Costes" en la ficha del equipo (sobre la estructura
+de `components/devices/detail/` de la migración de arquitectura),
+admin/operator.
+
+Verificado: 9/9 tests (`deviceCosts.test.ts` — dominio puro con redondeo,
+CRUD/upsert/validaciones/404, y el CSV del informe de uso incluyendo las
+columnas de coste) + 2 casos 403 en `rbac.test.ts`; dry-run + migración
+aplicada; checks limpios; visual Playwright de la pestaña con valores
+reales.
+
+**Lo que NO se hizo**: informe dedicado de amortización/TCO (capital +
+alquiler + contrato se guardan y muestran, pero el único cálculo derivado
+v1 es el coste por páginas del período) y multi-moneda real (campo
+`currency` informativo, sin conversión).
+
+✅ **4.6 — Acciones remotas en bloque** (24/08/2026). "Acciones de HP SDS
+en bloque" del SDS: comandos remotos programables con historial de lotes
+(nº, fecha programada, elementos, acción, estado incluido "Completado con
+errores").
+
+Implementado como sexto dominio bajo la architecture guide
+(`cloud/src/modules/remote-actions/`) **sobre la infraestructura de
+comandos que ya existía** (`agent_commands` + entrega por heartbeat + ack
+success/error — cero cambios de agente): un lote agrupa N comandos de los
+tipos que el agente 1.1.0 YA ejecuta (`RESCAN`, `FORCE_SCAN`, `RESTART`
+del agente, `FORCE_UPDATE`) y les da programación + seguimiento agregado.
+Migración `20260824150000_remote_action_batches.ts` (lotes con nº legible
+por IDENTITY desde 1000, como el SDS; items 1-por-agente vinculados al
+`agent_command`). Worker `jobs/remoteActionWorker.ts` (60s): despacha
+lotes vencidos creando los comandos (re-entrante: no duplica en fallo
+parcial) y reconcilia — dominio puro `aggregateStatus`: mientras quede un
+comando pendiente el lote sigue "sent"; al terminar todos, `completed` o
+`completed_with_errors`. Endpoints GET/POST `/remote-actions`, detalle con
+estado por agente, y cancelación solo de lotes aún programados (409 si ya
+se despachó — el despacho no se deshace). UI: página "Acciones" con lotes,
+modal de creación (acción + selección de monitores + programación
+opcional) y detalle por agente.
+
+Verificado: 8/8 tests (`remoteActions.test.ts` — **ciclo completo real**:
+crear lote → tick real del worker lo despacha (≤120s) → un "agente"
+simulado por el endpoint real de heartbeat recibe el comando y devuelve el
+resultado → el worker cierra el lote como `completed`; más cancelación de
+programado vs 409 del despachado, 400 por agente revocado/inexistente) +
+2 casos 403 en `rbac.test.ts`; dry-run + migración; checks limpios;
+visual Playwright (lote completado y cancelado reales, modal de detalle).
+
+**Lo que NO se hizo** (documentado a propósito): **reinicio remoto de la
+IMPRESORA** (no del agente) — requiere capacidad nueva del agente (SNMP
+`prtGeneralReset`/PJL) y por lo tanto un ciclo completo de release firmado
+del agente (v1.2.0); el módulo ya está preparado para sumarlo como una
+acción más (`REMOTE_ACTIONS` + un case en `CommandHandler.ts` del agente)
+cuando se decida ese release. Ídem "comprobar/actualizar credenciales" por
+equipo puntual (hoy las credenciales SNMP se gestionan por rango, Fase 2).
+
+**Parciales/menores anotados, sin ítem propio**: 2FA opt-in y zona horaria/
+idioma por usuario (R7 ya abierto), catálogo de consumibles en la base de
+productos (5.783 SKUs en el SDS; cobra sentido junto con 4.2), preferencias
+de columnas por lista, foto del modelo en la ficha, contacto en el alta de
+incidente, contador de páginas en la fila de alerta. La capa distribuidor
+multi-reseller sigue documentada en §2.6 como decisión estratégica.
+
+Los módulos "Soporte técnico de HP SDS" e "Informar de un problema a HP"
+son propios del vendor y no aplican.
+
+> Nota de implementación: a partir de esta fase el backend nuevo sigue
+> `docs/dev/ARCHITECTURE_GUIDE.md` (dominios nuevos como
+> `cloud/src/modules/<dominio>/{domain,application,infrastructure,presentation}`,
+> plantilla: `modules/feedback/`; archivos ≤300 líneas, funciones ≤20,
+> `npm run check:sizes` como guard).
+
 ### Otros puntos de §3 (riesgos) que siguen abiertos y no forman parte de ningún ítem de arriba
 - ✅ **R4 (parcial, 23/08/2026)**: el WS del portal ya NO acepta el JWT de
   sesión por query string. Investigado antes de tocarlo: no era vestigial —

@@ -128,6 +128,8 @@ export function openQueue(): void {
     // de "igual manda cada N horas" (ver shouldEnqueueReading/METER_TASK abajo).
     "ALTER TABLE known_devices  ADD COLUMN last_reading_snapshot       TEXT DEFAULT NULL",
     "ALTER TABLE known_devices  ADD COLUMN last_reading_sent_at        TEXT DEFAULT NULL",
+    // Fase 10 del gap analysis vs HP SDS — detección de consumible no original.
+    "ALTER TABLE readings_queue ADD COLUMN supply_origin               TEXT DEFAULT NULL",
   ]) {
     try { db.exec(stmt); } catch { /* columna ya existe */ }
   }
@@ -189,8 +191,8 @@ export function enqueueReading(r: DeviceReading): void {
        cartridge_capacity_black, cartridge_capacity_cyan, cartridge_capacity_magenta, cartridge_capacity_yellow,
        cartridge_printed_black, cartridge_printed_cyan, cartridge_printed_magenta, cartridge_printed_yellow,
        cartridge_estimated_black, cartridge_estimated_cyan, cartridge_estimated_magenta, cartridge_estimated_yellow,
-       supplies_details, poll_method, firmware, mac, hostname, location, reading_id)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       supplies_details, poll_method, firmware, mac, hostname, location, reading_id, supply_origin)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     r.serial ?? r.ip, r.ip, r.brand, r.model, r.time,
     r.total_pages, r.mono_pages, r.color_pages,
@@ -204,6 +206,7 @@ export function enqueueReading(r: DeviceReading): void {
     r.poll_method ?? 'snmp',
     r.firmware ?? null, r.mac ?? null, r.hostname ?? null, r.location ?? null,
     readingId,
+    r.supply_origin ?? null,
   );
 }
 
@@ -241,6 +244,7 @@ export interface QueueReading {
   cartridge_estimated_cyan?:   number | null;
   cartridge_estimated_magenta?: number | null;
   cartridge_estimated_yellow?:  number | null;
+  supply_origin?:               string | null;
   supplies_details?:           string | null;
   firmware?:                   string | null;
   mac?:                        string | null;

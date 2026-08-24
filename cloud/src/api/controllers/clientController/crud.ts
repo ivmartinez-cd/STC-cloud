@@ -45,6 +45,7 @@ async function createClient(db: Knex, request: FastifyRequest, reply: FastifyRep
 interface UpdateClientBody extends Partial<ClientBody> {
   notification_email?: string | null;
   notification_webhook_url?: string | null;
+  notification_events?: string[];
   device_approval_required?: boolean;
 }
 
@@ -60,6 +61,8 @@ function resolveClientUpdates(body: UpdateClientBody): Record<string, unknown> {
   // el canal — nunca se infiere solo de otro campo.
   if (body.notification_email !== undefined) updates.notification_email = body.notification_email?.trim() || null;
   if (body.notification_webhook_url !== undefined) updates.notification_webhook_url = body.notification_webhook_url?.trim() || null;
+  // Fase 4.3 del gap analysis vs HP SDS: opt-out de notificaciones por evento.
+  if (body.notification_events !== undefined) updates.notification_events = JSON.stringify(body.notification_events);
   // Fase 7 del gap analysis vs HP SDS — opt-in, sólo afecta a equipos
   // descubiertos DESPUÉS de prenderlo (ver agentService.syncReadings/registerDevices).
   if (body.device_approval_required !== undefined) updates.device_approval_required = body.device_approval_required;

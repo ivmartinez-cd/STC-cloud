@@ -340,6 +340,23 @@ describe('RBAC — /dashboard, /alerts, /search', () => {
     assert.deepEqual(data, []);
   });
 
+  test('/alerts/classes: client_viewer puede leer el catálogo (necesario para renderizar su propio filtro)', async () => {
+    const { status, data } = await req('GET', '/alerts/classes', undefined, rbac.viewerToken);
+    assert.equal(status, 200);
+    assert.equal(data.classes.length, 14);
+  });
+
+  test('/alerts/summary: client_viewer sólo ve el conteo de SU cliente, nunca el del otro', async () => {
+    const { status, data } = await req('GET', '/alerts/summary', undefined, rbac.viewerToken);
+    assert.equal(status, 200);
+    const sumByClass = data.byClass.reduce((acc: number, r: any) => acc + r.count, 0);
+    assert.equal(sumByClass, data.total, 'el desglose por clase debe cuadrar con el total scopeado');
+
+    const asViewer = await req('GET', '/alerts/summary', undefined, rbac.viewerToken);
+    const asAdmin = await req('GET', `/alerts/summary?client_id=${rbac.clientAId}`, undefined, rbac.adminToken);
+    assert.equal(asViewer.data.total, asAdmin.data.total, 'el total del viewer debe coincidir con el del admin filtrado al mismo cliente');
+  });
+
   test('/search por el serial del dispositivo B (otro cliente) → vacío para el viewer, no vacío para admin', async () => {
     const asViewer = await req('GET', `/search?q=${rbac.deviceBSerial}`, undefined, rbac.viewerToken);
     assert.equal(asViewer.status, 200);
@@ -483,6 +500,131 @@ describe('RBAC — mutaciones denegadas para client_viewer', () => {
 
   test('POST /devices/:id/merge → 403', async () => {
     const { status } = await req('POST', `/devices/${rbac.deviceAId}/merge`, { sourceDeviceId: rbac.deviceBId }, rbac.viewerToken);
+    assert.equal(status, 403);
+  });
+
+  // Fase 9 del gap analysis vs HP SDS — acciones en bloque, mismo criterio
+  // deny-by-default que sus equivalentes single de arriba.
+  test('POST /devices/bulk/decommission → 403', async () => {
+    const { status } = await req('POST', '/devices/bulk/decommission', { ids: [rbac.deviceAId], reason: 'test' }, rbac.viewerToken);
+    assert.equal(status, 403);
+  });
+
+  test('POST /devices/bulk/recommission → 403', async () => {
+    const { status } = await req('POST', '/devices/bulk/recommission', { ids: [rbac.deviceAId] }, rbac.viewerToken);
+    assert.equal(status, 403);
+  });
+
+  test('POST /devices/bulk/move → 403', async () => {
+    const { status } = await req('POST', '/devices/bulk/move', { ids: [rbac.deviceAId], agentId: rbac.agentBId, reason: 'test' }, rbac.viewerToken);
+    assert.equal(status, 403);
+  });
+
+  test('POST /devices/bulk/monitor-state → 403', async () => {
+    const { status } = await req('POST', '/devices/bulk/monitor-state', { ids: [rbac.deviceAId], state: 'disabled' }, rbac.viewerToken);
+    assert.equal(status, 403);
+  });
+
+  test('POST /alerts/bulk → 403', async () => {
+    const { status } = await req('POST', '/alerts/bulk', { ids: [1], acknowledged: true }, rbac.viewerToken);
+    assert.equal(status, 403);
+  });
+
+  // Fase 4.1 del gap analysis vs HP SDS — informes programados: ninguna
+  // ruta en CLIENT_VIEWER_ROUTES, todo deny-by-default (mismo criterio que
+  // /audit-logs: definiciones globales de operación, no datos del cliente).
+  test('GET /scheduled-reports → 403', async () => {
+    const { status } = await req('GET', '/scheduled-reports', undefined, rbac.viewerToken);
+    assert.equal(status, 403);
+  });
+
+  test('POST /scheduled-reports → 403', async () => {
+    const { status } = await req('POST', '/scheduled-reports', { name: 'x y z', report_type: 'asset_list' }, rbac.viewerToken);
+    assert.equal(status, 403);
+  });
+
+  // Fase 4.6 del gap analysis vs HP SDS — acciones remotas: operación pura.
+  test('GET /remote-actions → 403', async () => {
+    const { status } = await req('GET', '/remote-actions', undefined, rbac.viewerToken);
+    assert.equal(status, 403);
+  });
+
+  test('POST /remote-actions → 403', async () => {
+    const { status } = await req('POST', '/remote-actions', { action: 'RESCAN', agent_ids: [rbac.agentAId] }, rbac.viewerToken);
+    assert.equal(status, 403);
+  });
+
+  // Fase 4.5 del gap analysis vs HP SDS — costes por equipo: datos comerciales.
+  test('GET /devices/:id/costs → 403', async () => {
+    const { status } = await req('GET', `/devices/${rbac.deviceAId}/costs`, undefined, rbac.viewerToken);
+    assert.equal(status, 403);
+  });
+
+  test('PUT /devices/:id/costs → 403', async () => {
+    const { status } = await req('PUT', `/devices/${rbac.deviceAId}/costs`, { mono_page_cost: 0.01 }, rbac.viewerToken);
+    assert.equal(status, 403);
+  });
+
+  // Fase 4.4 del gap analysis vs HP SDS — auditoría de correo: admin puro.
+  test('GET /email-log → 403', async () => {
+    const { status } = await req('GET', '/email-log', undefined, rbac.viewerToken);
+    assert.equal(status, 403);
+  });
+
+  // Fase 4.3 del gap analysis vs HP SDS — plantillas de mensajes: admin puro.
+  test('GET /message-templates → 403', async () => {
+    const { status } = await req('GET', '/message-templates', undefined, rbac.viewerToken);
+    assert.equal(status, 403);
+  });
+
+  // Fase 4.2 del gap analysis vs HP SDS — pedidos de consumibles: los GET
+  // están en CLIENT_VIEWER_ROUTES (probado en supplyRequests.test.ts), las
+  // mutaciones y la config quedan deny-by-default.
+  test('POST /supply-requests → 403', async () => {
+    const { status } = await req('POST', '/supply-requests', { client_id: rbac.clientAId, supply_kind: 'toner' }, rbac.viewerToken);
+    assert.equal(status, 403);
+  });
+
+  test('PUT /clients/:id/supply-request-settings → 403', async () => {
+    const { status } = await req('PUT', `/clients/${rbac.clientAId}/supply-request-settings`, { enabled: true, threshold_pct: 10 }, rbac.viewerToken);
+    assert.equal(status, 403);
+  });
+
+  // Fase 11 del gap analysis vs HP SDS — módulo de incidentes. Los 3 GET
+  // (list/stats/detail) SÍ están en CLIENT_VIEWER_ROUTES (probado aparte en
+  // incidents.test.ts); el resto es gestión de servicio, deny-by-default.
+  test('POST /incidents → 403', async () => {
+    const { status } = await req('POST', '/incidents', { client_id: rbac.clientAId, class: 'jam' }, rbac.viewerToken);
+    assert.equal(status, 403);
+  });
+
+  test('PATCH /incidents/:id → 403', async () => {
+    const { status } = await req('PATCH', '/incidents/00000000-0000-0000-0000-000000000000', { title: 'x' }, rbac.viewerToken);
+    assert.equal(status, 403);
+  });
+
+  test('POST /incidents/:id/close → 403', async () => {
+    const { status } = await req('POST', '/incidents/00000000-0000-0000-0000-000000000000/close', {}, rbac.viewerToken);
+    assert.equal(status, 403);
+  });
+
+  test('POST /incidents/:id/reopen → 403', async () => {
+    const { status } = await req('POST', '/incidents/00000000-0000-0000-0000-000000000000/reopen', {}, rbac.viewerToken);
+    assert.equal(status, 403);
+  });
+
+  test('POST /incidents/:id/comments → 403', async () => {
+    const { status } = await req('POST', '/incidents/00000000-0000-0000-0000-000000000000/comments', { body: 'x' }, rbac.viewerToken);
+    assert.equal(status, 403);
+  });
+
+  test('POST /incidents/:id/alerts → 403', async () => {
+    const { status } = await req('POST', '/incidents/00000000-0000-0000-0000-000000000000/alerts', { alert_id: 1 }, rbac.viewerToken);
+    assert.equal(status, 403);
+  });
+
+  test('PUT /clients/:id/incident-rules → 403', async () => {
+    const { status } = await req('PUT', `/clients/${rbac.clientAId}/incident-rules`, { rules: [{ class: 'jam', enabled: true }] }, rbac.viewerToken);
     assert.equal(status, 403);
   });
 

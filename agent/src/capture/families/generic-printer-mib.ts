@@ -17,6 +17,7 @@ import { OID_MAPS, GENERIC_OIDS, SYS_OIDS, HR_DEVICE_PRINTER, detectBrandFromOid
 import type { CaptureFamily, CaptureContext, CaptureResult, CaptureScope, DeviceIdentity, PortMap, SuppliesReading, SuppliesItem, TonerColor, AlertItem, InputTrayInfo } from '../types';
 import { toNum, toStr, formatMac, type SnmpClient } from '../transport/snmp';
 import { clampPct } from '../transport/http';
+import { classifySupplyOrigin } from '../supplyOrigin';
 
 // ─── OIDs ────────────────────────────────────────────────────────────────────
 const OID = {
@@ -239,7 +240,10 @@ async function snmpSupplies(ctx: CaptureContext): Promise<SuppliesReading | unde
     const hrDev = r.idx.split('.')[0];
     const colorName = r.colorant !== null && r.colorant > 0 ? (colorants.get(`${hrDev}.${r.colorant}`) ?? null) : null;
     const color = colorFromText(colorName) ?? colorFromText(r.descr);
-    const item: SuppliesItem = { percentage: pct, status: pct === null ? null : pct <= 0 ? 'Empty' : pct <= 10 ? 'Low' : 'Ready' };
+    const item: SuppliesItem = {
+      percentage: pct, status: pct === null ? null : pct <= 0 ? 'Empty' : pct <= 10 ? 'Low' : 'Ready',
+      origin: classifySupplyOrigin(r.descr),
+    };
     const d = (r.descr ?? '').toLowerCase();
 
     const isToner = r.type === SUPPLY_TYPE.toner || r.type === SUPPLY_TYPE.ink || r.type === SUPPLY_TYPE.inkCartridge

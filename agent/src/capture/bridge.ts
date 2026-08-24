@@ -55,6 +55,9 @@ export function fromEwsData(d: Partial<EwsData>, method: PollMethod): CaptureRes
       orderNumber:    fromDetails?.orderNumber ?? null,
       firstInstallDate: fromDetails?.firstInstallDate ?? null,
       lastUseDate:    fromDetails?.lastUseDate ?? null,
+      // Fase 10 del gap analysis vs HP SDS — sin equivalente plano `d.origin*`
+      // (a diferencia de percentage/code/serial): sólo llega vía `suppliesDetails`.
+      origin:         fromDetails?.origin ?? null,
     };
     if (item.percentage != null || item.code || item.serial || item.capacity != null) {
       toners[c] = item;
@@ -116,6 +119,8 @@ export function mergeResults(primary: CaptureResult | null, secondary: CaptureRe
         remainingDays:  p?.remainingDays  ?? s?.remainingDays  ?? null,
         firstInstallDate: p?.firstInstallDate ?? s?.firstInstallDate ?? null,
         lastUseDate:    p?.lastUseDate    ?? s?.lastUseDate    ?? null,
+        // Fase 10 del gap analysis vs HP SDS.
+        origin:         p?.origin         ?? s?.origin         ?? null,
       };
     }
     out.supplies = {

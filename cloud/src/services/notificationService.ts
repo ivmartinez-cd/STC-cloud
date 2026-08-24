@@ -1,6 +1,16 @@
 import dns from "dns";
 import net from "net";
 import nodemailer from "nodemailer";
+import type { Knex } from "knex";
+import { KnexEmailLogRepository } from "../modules/email-log/infrastructure/database/knex-email-log-repository";
+
+/** Contexto de auditoría que los workers adjuntan al enviar (Fase 4.4). */
+export interface EmailAuditContext {
+  db: Knex;
+  clientId: string | null;
+  event: string;
+  metadata?: Record<string, unknown>;
+}
 
 /**
  * Envío real de notificaciones (email + webhook) para alertas críticas. Antes de
@@ -48,6 +58,13 @@ export interface AlertNotificationPayload {
   clientName: string;
 }
 
+/** Subject+body ya resueltos por el módulo de plantillas (Fase 4.3). Si un
+ * sender no lo recibe, arma el texto hardcodeado histórico. */
+export interface ResolvedContent {
+  subject: string;
+  body: string;
+}
+
 export interface MailAttachment {
   filename: string;
   content: Buffer | string;
@@ -60,26 +77,60 @@ export interface SendMailOptions {
   subject: string;
   text: string;
   attachments?: MailAttachment[];
+  /** Contexto de auditoría de correo (Fase 4.4): si viene, cada intento —
+   * incluso los no enviados — deja una fila en `email_log` (best-effort). */
+  audit?: EmailAuditContext;
+}
+
+async function auditAttempt(
+  opts: SendMailOptions,
+  status: "sent" | "error" | "skipped_no_transport" | "skipped_no_recipient",
+  error?: string
+): Promise<void> {
+  if (!opts.audit) return;
+  const repo = new KnexEmailLogRepository(opts.audit.db);
+  await repo.record({
+    clientId: opts.audit.clientId,
+    event: opts.audit.event,
+    recipient: opts.to ?? null,
+    subject: opts.subject,
+    status,
+    error: error ?? null,
+    metadata: opts.audit.metadata ?? null,
+  });
 }
 
 /**
  * Envío de mail genérico — reusado por `sendAlertEmail` (alertas) y
  * `sendReportEmail` (cierres, con adjuntos). No-opea silenciosamente si no hay
  * transporte SMTP configurado ni destinatarios: mejor "no se mandó nada" que
- * reventar el worker que lo llama.
+ * reventar el worker que lo llama. Con `opts.audit`, cada intento (enviado,
+ * fallado o salteado) queda registrado en `email_log` (Fase 4.4).
  */
 export async function sendMail(opts: SendMailOptions): Promise<void> {
-  if (!opts.to && !opts.bcc) return;
+  if (!opts.to && !opts.bcc) {
+    await auditAttempt(opts, "skipped_no_recipient");
+    return;
+  }
   const mailer = getTransporter();
-  if (!mailer) return;
-  await mailer.sendMail({
-    from: process.env.SMTP_FROM || "STC Cloud <notificaciones@stc-cloud.local>",
-    to: opts.to || opts.bcc, // nodemailer requiere al menos un destinatario en "to"
-    bcc: opts.to ? opts.bcc : undefined,
-    subject: opts.subject,
-    text: opts.text,
-    attachments: opts.attachments,
-  });
+  if (!mailer) {
+    await auditAttempt(opts, "skipped_no_transport");
+    return;
+  }
+  try {
+    await mailer.sendMail({
+      from: process.env.SMTP_FROM || "STC Cloud <notificaciones@stc-cloud.local>",
+      to: opts.to || opts.bcc, // nodemailer requiere al menos un destinatario en "to"
+      bcc: opts.to ? opts.bcc : undefined,
+      subject: opts.subject,
+      text: opts.text,
+      attachments: opts.attachments,
+    });
+    await auditAttempt(opts, "sent");
+  } catch (err) {
+    await auditAttempt(opts, "error", err instanceof Error ? err.message : String(err));
+    throw err;
+  }
 }
 
 /**
@@ -90,18 +141,21 @@ export async function sendMail(opts: SendMailOptions): Promise<void> {
  */
 export async function sendAlertEmail(
   payload: AlertNotificationPayload,
-  recipientEmail: string | null
+  recipientEmail: string | null,
+  content?: ResolvedContent,
+  audit?: EmailAuditContext
 ): Promise<void> {
   const target = payload.deviceName || payload.agentName || "—";
   await sendMail({
+    audit,
     to: recipientEmail ?? undefined,
     bcc: process.env.ALERT_EMAIL_TO || undefined,
-    subject: `[STC Cloud] Alerta crítica — ${payload.clientName}`,
-    text:
+    subject: content?.subject ?? `[STC Cloud] Alerta crítica — ${payload.clientName}`,
+    text: content?.body ?? (
       `Cliente: ${payload.clientName}\n` +
       `Origen: ${target}\n` +
       `Tipo: ${payload.type}\n` +
-      `Mensaje: ${payload.message}\n`,
+      `Mensaje: ${payload.message}\n`),
   });
 }
 
@@ -217,13 +271,16 @@ export interface ReportNotificationPayload {
 export async function sendReportEmail(
   payload: ReportNotificationPayload,
   recipientEmail: string | null,
-  attachments: MailAttachment[]
+  attachments: MailAttachment[],
+  content?: ResolvedContent,
+  audit?: EmailAuditContext
 ): Promise<void> {
   await sendMail({
+    audit,
     to: recipientEmail ?? undefined,
     bcc: process.env.ALERT_EMAIL_TO || undefined,
-    subject: `[STC Cloud] Cierre mensual ${payload.period} — ${payload.clientName}`,
-    text:
+    subject: content?.subject ?? `[STC Cloud] Cierre mensual ${payload.period} — ${payload.clientName}`,
+    text: content?.body ??
       `Cliente: ${payload.clientName}\n` +
       `Período: ${payload.period}\n` +
       `Total de páginas: ${payload.totalPages}\n\n` +
@@ -237,5 +294,79 @@ export async function sendReportWebhook(payload: ReportNotificationPayload, webh
     event: "report.closed",
     report: { closure_id: payload.closureId, period: payload.period, total_pages: payload.totalPages },
     client: { id: payload.clientId, name: payload.clientName },
+  });
+}
+
+// Fase 11 del gap analysis vs HP SDS — módulo de incidentes.
+export interface IncidentNotificationPayload {
+  incidentId: string;
+  number: number;
+  klass: string;
+  title: string;
+  severity: string;
+  clientId: string;
+  clientName: string;
+  deviceLabel: string | null;
+}
+
+export async function sendIncidentEmail(
+  payload: IncidentNotificationPayload,
+  recipientEmail: string | null,
+  content?: ResolvedContent,
+  audit?: EmailAuditContext
+): Promise<void> {
+  await sendMail({
+    audit,
+    to: recipientEmail ?? undefined,
+    bcc: process.env.ALERT_EMAIL_TO || undefined,
+    subject: content?.subject ?? `[STC Cloud] Incidente #${payload.number} — ${payload.clientName}`,
+    text: content?.body ??
+      `Cliente: ${payload.clientName}\n` +
+      `Equipo: ${payload.deviceLabel ?? "—"}\n` +
+      `Clase: ${payload.klass}\n` +
+      `Severidad: ${payload.severity}\n` +
+      `Título: ${payload.title}\n`,
+  });
+}
+
+export async function sendIncidentWebhook(payload: IncidentNotificationPayload, webhookUrl: string): Promise<void> {
+  await postWebhook(webhookUrl, {
+    event: "incident.created",
+    incident: { id: payload.incidentId, number: payload.number, class: payload.klass, title: payload.title, severity: payload.severity },
+    client: { id: payload.clientId, name: payload.clientName },
+  });
+}
+
+// ─── Pedidos de consumibles (Fase 4.2 del gap analysis vs HP SDS) ───────────
+
+export interface SupplyRequestNotificationPayload {
+  requestId: string;
+  clientName: string;
+  deviceSerial: string | null;
+  supplyKind: string;
+  supplyColor: string | null;
+  description: string | null;
+  levelPct: number | null;
+  completed: boolean;
+}
+
+export async function sendSupplyRequestEmail(
+  payload: SupplyRequestNotificationPayload,
+  recipientEmail: string | null,
+  content?: ResolvedContent,
+  audit?: EmailAuditContext
+): Promise<void> {
+  const verb = payload.completed ? "completado (consumible reemplazado)" : "generado";
+  await sendMail({
+    audit,
+    to: recipientEmail ?? undefined,
+    bcc: process.env.ALERT_EMAIL_TO || undefined,
+    subject: content?.subject ?? `[STC Cloud] Pedido de consumible ${payload.completed ? "completado" : "nuevo"} — ${payload.clientName}`,
+    text: content?.body ??
+      `Se ha ${verb} un pedido de consumible.\n\n` +
+      `Cliente: ${payload.clientName}\n` +
+      `Equipo: ${payload.deviceSerial ?? "—"}\n` +
+      `Consumible: ${payload.description ?? `${payload.supplyKind} ${payload.supplyColor ?? ""}`}\n` +
+      `Nivel al abrir: ${payload.levelPct != null ? `${payload.levelPct}%` : "—"}\n`,
   });
 }

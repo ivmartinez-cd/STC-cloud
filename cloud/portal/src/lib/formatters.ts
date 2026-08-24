@@ -1,3 +1,5 @@
+import { DEVICE_OFFLINE_THRESHOLD_MS } from './constants';
+
 export function formatRelativeTime(ts: string | null, now = Date.now()): string {
   if (!ts) return 'Nunca';
   const min = Math.floor((now - new Date(ts).getTime()) / 60_000);
@@ -46,7 +48,14 @@ export function getDeviceStatusInfo(lastSeenStr: string | null | undefined, now 
   const lastSeen = new Date(lastSeenStr);
   const diffMs = Math.abs(now - lastSeen.getTime());
 
-  if (diffMs <= 30 * 60 * 1000) {
+  // Bug real (23/08/2026): tenía su PROPIO umbral hardcodeado de 30 min,
+  // independiente de `DEVICE_OFFLINE_THRESHOLD_MS` (constants.ts) — un
+  // tercer umbral de "offline" además del de `constants.ts` y el de
+  // `cloud/src/jobs/heartbeatMonitor.ts`, exactamente el problema que
+  // documenta el gap analysis ("modelo unificado de umbrales"). Es el que
+  // realmente pinta "SIN CONTACTO" en `DeviceInventoryTable.tsx` — unificado acá
+  // al mismo valor que los otros dos (ver comentario en `constants.ts`).
+  if (diffMs <= DEVICE_OFFLINE_THRESHOLD_MS) {
     return {
       status: 'online',
       label: 'En Línea',

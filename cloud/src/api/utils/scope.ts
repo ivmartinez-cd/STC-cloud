@@ -1,7 +1,7 @@
 import { FastifyRequest } from "fastify";
 import { Knex } from "knex";
 import type { PortalUser } from "../middlewares/authMiddleware";
-import { AGENT_ID_URL_PREFIX, CLIENT_ID_URL_PREFIX, DEVICE_ID_URL_PREFIX } from "../policy/rolePolicy";
+import { AGENT_ID_URL_PREFIX, CLIENT_ID_URL_PREFIX, DEVICE_ID_URL_PREFIX, INCIDENT_ID_URL_PREFIX, SUPPLY_REQUEST_ID_URL_PREFIX } from "../policy/rolePolicy";
 
 /**
  * Alcance de datos resuelto para la request actual. Unión discriminada a propósito —
@@ -142,6 +142,24 @@ export async function deviceIdParamMatchesScope(
   return !!device && device.client_id === scope.id;
 }
 
+/**
+ * Ownership central para rutas `/incidents/:id*` (Fase 11 del gap analysis vs
+ * HP SDS) — mismo criterio que `deviceIdParamMatchesScope`: 404, no 403, para
+ * no dar un oráculo de existencia sobre UUIDs ajenos. A diferencia de
+ * dispositivos, acá el `:id` siempre es un UUID (sin alias por serial/IP).
+ */
+export async function incidentIdParamMatchesScope(
+  db: Knex,
+  request: FastifyRequest,
+  scope: Scope
+): Promise<boolean> {
+  if (scope.kind !== "client") return true;
+  const { id } = request.params as { id?: string };
+  if (!id) return false;
+  const incident = await db("incidents").where({ id }).select("client_id").first();
+  return !!incident && incident.client_id === scope.id;
+}
+
 /** `true` si la URL declarada de la ruta es una subruta de `/clients/:id`, `/agents/:id` o `/devices/:id`. */
 export function isClientIdParamRoute(routeUrl: string): boolean {
   return routeUrl.startsWith(CLIENT_ID_URL_PREFIX);
@@ -151,4 +169,23 @@ export function isAgentIdParamRoute(routeUrl: string): boolean {
 }
 export function isDeviceIdParamRoute(routeUrl: string): boolean {
   return routeUrl.startsWith(DEVICE_ID_URL_PREFIX);
+}
+export function isIncidentIdParamRoute(routeUrl: string): boolean {
+  return routeUrl.startsWith(INCIDENT_ID_URL_PREFIX);
+}
+export function isSupplyRequestIdParamRoute(routeUrl: string): boolean {
+  return routeUrl.startsWith(SUPPLY_REQUEST_ID_URL_PREFIX);
+}
+
+/** Mismo patrón 404-no-403 que `incidentIdParamMatchesScope` (el `:id` es siempre UUID). */
+export async function supplyRequestIdParamMatchesScope(
+  db: Knex,
+  request: FastifyRequest,
+  scope: Scope
+): Promise<boolean> {
+  if (scope.kind !== "client") return true;
+  const { id } = request.params as { id?: string };
+  if (!id) return false;
+  const row = await db("supply_requests").where({ id }).select("client_id").first();
+  return !!row && row.client_id === scope.id;
 }

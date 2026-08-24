@@ -6,7 +6,22 @@ import { logger } from '../logger';
 const db = knex(knexConfig.development);
 
 const OFFLINE_THRESHOLD_MINUTES = 5; // Si no hay heartbeat en 5 min → sin señal
-const DEVICE_OFFLINE_THRESHOLD_MINUTES = 30; // mismo criterio que deleteOfflineDevices (deviceController.ts)
+/**
+ * Bug real (23/08/2026): estaba en 30 min. El agente reduce su propia
+ * frecuencia fuera del horario laboral configurado (`agents.business_hours`,
+ * default Mon-Fri 08-18) — los loops de meter/supplies pasan de 20/60 min a
+ * **4 horas** fuera de esa ventana (`INTERVALS.meter.off`/`supplies.off` en
+ * `agent/src/core/BusinessHours.ts`). Con 30 min, cualquier equipo de un
+ * agente real (no sólo de prueba) abría `device_offline` la mayor parte de
+ * cada franja fuera de horario aunque estuviera reportando con normalidad —
+ * confirmado en el stack de desarrollo con un agente con lecturas reales cada
+ * ~40 min. Subido a 5 horas (4h del peor caso + 1h de margen) — debe
+ * coincidir con `DEVICE_OFFLINE_THRESHOLD_MS` de
+ * `cloud/portal/src/lib/constants.ts` (mismo criterio, no unificado en un
+ * solo lugar todavía — "modelo unificado de umbrales" sigue pendiente en el
+ * gap analysis).
+ */
+const DEVICE_OFFLINE_THRESHOLD_MINUTES = 5 * 60;
 
 /**
  * Se queda como `setInterval` a propósito — NO se convierte a un BullMQ repeatable

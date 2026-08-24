@@ -260,6 +260,23 @@ describe('familia generic.printer-mib (SNMP)', () => {
     const res = await genericPrinterMib.collect(ctxWith(id('generic', null), {}, {}, NO_PORTS), ['meters']);
     assert.equal(res, null);
   });
+  test('Fase 10: prtMarkerSuppliesDescription con "Non-HP" clasifica origin=non_genuine (universal, cualquier marca vía SNMP genérico)', async () => {
+    const snmpNonGenuine = { ...snmp, [`${S}.6.1.1`]: 'Black Cartridge (Non-HP, remanufactured)' };
+    const identity = id('hp', 'HP LaserJet 600 M602');
+    const res = await genericPrinterMib.collect(ctxWith(identity, {}, snmpNonGenuine, NO_PORTS), ['supplies']);
+    assert.equal(res?.supplies?.toners.black?.origin, 'non_genuine');
+  });
+  test('Fase 10: descripción "Genuine HP" clasifica origin=genuine', async () => {
+    const snmpGenuine = { ...snmp, [`${S}.6.1.1`]: 'Black Cartridge HP CE390A - Genuine HP' };
+    const identity = id('hp', 'HP LaserJet 600 M602');
+    const res = await genericPrinterMib.collect(ctxWith(identity, {}, snmpGenuine, NO_PORTS), ['supplies']);
+    assert.equal(res?.supplies?.toners.black?.origin, 'genuine');
+  });
+  test('Fase 10: sin señal de origen en la descripción → origin null (nunca se inventa)', async () => {
+    const identity = id('hp', 'HP LaserJet 600 M602');
+    const res = await genericPrinterMib.collect(ctxWith(identity, {}, snmp, NO_PORTS), ['supplies']);
+    assert.equal(res?.supplies?.toners.black?.origin, null);
+  });
   test('cleanModel', () => {
     assert.equal(cleanModel('Lexmark X656de version NR.APS.N644 kernel 2.6.28.10.1 All-N-1'), 'Lexmark X656de');
     assert.equal(cleanModel('Samsung SL-M4072FD; V4.00.02.18 JUN-20-2019;Engine 1.00.07'), 'Samsung SL-M4072FD');
@@ -299,6 +316,27 @@ describe('normalize.toDeviceReading', () => {
     assert.equal(reading.supplies_details?.toners?.black?.percentage, 63);
     assert.equal(reading.supplies_details?.alerts?.length, 1);
     assert.equal(reading.toner_cyan, null);
+  });
+  test('Fase 10: supply_origin es el roll-up peor-caso de los 4 tóners (uno non_genuine alcanza)', () => {
+    const identity = id('hp', 'HP LaserJet 600 M602', { serial: 'S2' });
+    const res = fromEwsData({
+      brand: 'hp',
+      suppliesDetails: {
+        toners: {
+          black:   { percentage: 50, origin: 'genuine' },
+          cyan:    { percentage: 40, origin: 'non_genuine' },
+          magenta: { percentage: 60, origin: 'genuine' },
+        },
+      },
+    }, 'ews');
+    const reading = toDeviceReading(identity, res);
+    assert.equal(reading.supply_origin, 'non_genuine');
+  });
+  test('Fase 10: sin ningún tóner con señal de origen → supply_origin ausente (nunca "genuine" por defecto)', () => {
+    const identity = id('hp', 'HP LaserJet 600 M602', { serial: 'S3' });
+    const res = fromEwsData({ brand: 'hp', tonerBlack: 50 }, 'ews');
+    const reading = toDeviceReading(identity, res);
+    assert.equal(reading.supply_origin, undefined);
   });
   test('sin resultado: lectura vacía con identidad y poll_method de la identidad', () => {
     const reading = toDeviceReading(id('hp', 'HP LaserJet E40040', { source: 'ews' }), null);

@@ -41,11 +41,37 @@ async function purgeOldAgentLogs() {
   }
 }
 
+// Fase 4.4 del gap analysis vs HP SDS: la auditoría de correo se purga al
+// mismo horizonte que las alertas resueltas (12 meses).
+async function purgeEmailLog() {
+  try {
+    const deleted = await db('email_log')
+      .where('created_at', '<', db.raw(`now() - interval '${RESOLVED_ALERTS_RETENTION_MONTHS} months'`))
+      .delete();
+    if (deleted > 0) {
+      logger.info(`[RetentionJob] ${deleted} fila(s) de email_log purgadas (> ${RESOLVED_ALERTS_RETENTION_MONTHS} meses)`);
+    }
+  } catch (err) {
+    logger.error({ err }, '[RetentionJob] fallo purgando email_log');
+  }
+}
+
 async function purgeResolvedAlerts() {
   try {
     const deleted = await db('alerts')
       .where('resolved', true)
       .where('resolved_at', '<', db.raw(`now() - interval '${RESOLVED_ALERTS_RETENTION_MONTHS} months'`))
+      // Fase 11 del gap analysis vs HP SDS — una alerta vinculada a un
+      // incidente NO cerrado sobrevive a la purga aunque ya haya resuelto
+      // hace más de 12 meses: `incident_events` guarda un snapshot al
+      // vincular, pero el timeline del incidente sigue apuntando a la fila
+      // viva de `alerts` mientras el caso de servicio siga abierto.
+      .whereNotExists(
+        db('incident_alerts')
+          .join('incidents', 'incidents.id', 'incident_alerts.incident_id')
+          .whereRaw('incident_alerts.alert_id = alerts.id')
+          .whereNot('incidents.status', 'closed')
+      )
       .del();
     if (deleted > 0) {
       logger.info(`[RetentionJob] ${deleted} alerta(s) resuelta(s) purgadas (> ${RESOLVED_ALERTS_RETENTION_MONTHS} meses)`);
@@ -59,6 +85,7 @@ async function purgeResolvedAlerts() {
 export async function runRetentionChecks() {
   await purgeOldAgentLogs();
   await purgeResolvedAlerts();
+  await purgeEmailLog();
 }
 
 // Ejecutar al arrancar y luego cada INTERVAL_HOURS horas

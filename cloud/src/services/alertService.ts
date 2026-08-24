@@ -3,6 +3,7 @@ import crypto from "crypto";
 import { Queue } from "bullmq";
 import Redis from "ioredis";
 import { logger } from "../logger";
+import { classifyAlert } from "./alertCatalog";
 
 /**
  * Fuente única para abrir/resolver alertas. Antes de esto había 3 escritores
@@ -29,6 +30,14 @@ export interface OpenAlertParams {
   severity: AlertSeverity;
   message: string;
   value?: number | null;
+  /**
+   * `'cloud'` (default): la abrimos nosotros mismos (toner_*, counter_reset,
+   * device_offline, agent_offline, device_still_reporting). `'device'`: viene
+   * tal cual del equipo (EWS/SNMP crudo). Reemplaza la vieja blocklist
+   * `NON_EWS_RESERVED_TYPES` de `resolveStaleDeviceAlerts` — ver migración
+   * `20260824010000_alerts_classification_and_origin.ts`.
+   */
+  origin?: "cloud" | "device";
 }
 
 export interface OpenAlertResult {
@@ -61,24 +70,56 @@ function getNotificationsQueue(): Queue {
  * que pasa un `Raw` tal cual al SQL sin intentar interpretarlo como lista de columnas).
  */
 export async function openAlert(db: Knex, params: OpenAlertParams): Promise<OpenAlertResult> {
-  const { deviceId, agentId, type, severity, message, value } = params;
+  const { deviceId, agentId, type, severity, message, value, origin = "cloud" } = params;
   if (!deviceId && !agentId) {
     throw new Error("openAlert requiere deviceId o agentId");
+  }
+
+  // Fase 5 del gap analysis vs HP SDS — estado de monitoreo granular. Un
+  // equipo `disabled`/`reports_only` no debe generar alertas nuevas (`full`/
+  // `supplies_only` sí). Chequeo previo por PK (`devices.id`, barato) en vez
+  // de un INSERT...SELECT...WHERE EXISTS: `openAlert` es la única primitiva
+  // de escritura, así que este único punto cubre `alertWorker`,
+  // `agentService` y `heartbeatMonitor` de una sola vez. Ventana de carrera
+  // benigna: si el estado cambia entre este SELECT y el INSERT de abajo, es
+  // una toggle de operador en el medio de una sync — no una condición que
+  // haya que resolver con un lock.
+  //
+  // Fase 7: mismo chequeo (misma query, columna extra) para
+  // `registration_state` — un equipo `pending`/`ignored` tampoco debe
+  // alertar. `pending` es la definición de "todavía no es parte de la
+  // flota" (un cliente con `device_approval_required` no quiere que un
+  // hallazgo de discovery le mande un mail antes de aprobarlo); `ignored`
+  // es una decisión humana explícita de "esto no es un activo mío".
+  if (deviceId) {
+    const device = await db("devices").where({ id: deviceId }).select("monitor_state", "registration_state").first();
+    const monitorOk = device && (device.monitor_state === "full" || device.monitor_state === "supplies_only");
+    const registrationOk = device && device.registration_state === "registered";
+    if (device && (!monitorOk || !registrationOk)) {
+      return { created: false };
+    }
   }
 
   const conflictTarget = deviceId
     ? db.raw("(device_id, type) WHERE resolved = false AND device_id IS NOT NULL")
     : db.raw("(agent_id, type) WHERE resolved = false AND agent_id IS NOT NULL");
 
+  const truncatedType = type.slice(0, 50);
+  const { reason, klass, responder } = classifyAlert(truncatedType, message);
+
   const rows = await db("alerts")
     .insert({
       device_id: deviceId ?? null,
       agent_id: agentId ?? null,
-      type: type.slice(0, 50),
+      type: truncatedType,
       severity,
       message,
       value: value ?? null,
       resolved: false,
+      alert_class: klass,
+      alert_reason: reason,
+      responder,
+      origin,
     })
     .onConflict(conflictTarget)
     .ignore()
@@ -131,28 +172,28 @@ export async function resolveAlert(
 }
 
 /**
- * Tipos que NO son de origen EWS — reservados para que `resolveStaleEwsAlerts` no
- * los toque (esa función asume que cualquier tipo que no matchee esto es EWS).
+ * Resuelve las alertas de ORIGEN DISPOSITIVO (`origin='device'`) de un equipo que
+ * estaban abiertas pero cuyo `type` ya no aparece en `currentTypes` de la
+ * sincronización actual — el equipo dejó de reportarlas. Antes esto usaba una
+ * blocklist (`NON_EWS_RESERVED_TYPES`) que asumía "todo lo que no sea un puñado de
+ * tipos internos es EWS" — una negación abierta que cada tipo interno nuevo volvía
+ * a romper (bug real: `device_error` y `device_still_reporting` no estaban
+ * protegidos, así que cualquier sync con alertas EWS los auto-resolvía sin querer).
+ * Filtrar por `origin='device'` (positivo, no negativo) cierra la CLASE de bug
+ * entera, no sólo la instancia — ver migración
+ * `20260824010000_alerts_classification_and_origin.ts`.
+ *
+ * `currentTypes` vacío resuelve todas las de origen dispositivo abiertas de ese
+ * equipo (el caso correcto cuando el sync trae `alerts: []` explícito).
  */
-const NON_EWS_RESERVED_TYPES = ["counter_reset", "device_offline", "agent_offline"];
-
-/**
- * Resuelve las alertas EWS de un dispositivo que estaban abiertas pero cuyo `type`
- * ya no aparece en la lista `currentTypes` de la sincronización actual — es decir,
- * el equipo dejó de reportarlas. Antes las alertas EWS no tenían NINGÚN camino de
- * auto-resolución (quedaban abiertas para siempre, incluso después de que el equipo
- * las limpiara). `currentTypes` vacío resuelve todas las EWS abiertas de ese equipo
- * (el caso correcto cuando el sync trae `alerts: []` explícito).
- */
-export async function resolveStaleEwsAlerts(
+export async function resolveStaleDeviceAlerts(
   db: Knex,
   params: { deviceId: string; currentTypes: string[] }
 ): Promise<number> {
   const { deviceId, currentTypes } = params;
   return db("alerts")
-    .where({ device_id: deviceId, resolved: false })
-    .whereNotIn("type", [...NON_EWS_RESERVED_TYPES, ...currentTypes])
-    .whereRaw("type !~ '^toner_'")
+    .where({ device_id: deviceId, resolved: false, origin: "device" })
+    .whereNotIn("type", currentTypes)
     .update({ resolved: true, resolved_at: new Date() });
 }
 

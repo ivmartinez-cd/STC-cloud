@@ -8,6 +8,7 @@
  * Validado contra un HP Color LaserJet MFP E47528 (FutureSmart 5, firmware 2509515_000481).
  */
 import type { EwsData, SuppliesItem, DetailedCounters, CounterTriple, DeviceExtraInfo, InputTrayInfo } from './types';
+import { classifySupplyOrigin } from '../../capture/supplyOrigin';
 
 /** Texto inmediato del elemento con ese id (`<strong id="X">valor</strong>`, `<td id="X">valor`, etc.). */
 export function idText(html: string, id: string): string | null {
@@ -50,10 +51,12 @@ export function parseFsDeviceInformation(html: string): Partial<EwsData> {
   const serial = idText(html, 'DeviceSerialNumber');
   const loc    = idText(html, 'DeviceLocation');
   const alias  = html.match(/Alias:?\s*<\/[^>]+>\s*(?:<[^>]+>\s*)*([^<]{1,60})/i)?.[1]?.trim() ?? idText(html, 'HomeDeviceName');
+  const assetNumber = idText(html, 'AssetNumber');
   if (!model && !serial && !sku) return {};
   const device: DeviceExtraInfo = { manufacturer: 'HP' };
   if (sku)   device.sku = sku;
   if (alias) device.alias = alias;
+  if (assetNumber) device.assetNumber = assetNumber;
   return {
     brand: 'hp',
     model: model ?? undefined,
@@ -192,6 +195,9 @@ function cartridgeBlock(html: string, color: string): SuppliesItem | null {
     remainingPages:   fsNum(idText(html, `${p}-EstimatedPagesRemaining`)),
     firstInstallDate: idText(html, `${p}-FirstInstallDate`),
     lastUseDate:      idText(html, `${p}-LastUseDate`),
+    // Fase 10 del gap analysis vs HP SDS — `SupplyState` es donde el EWS de
+    // HP suele mostrar "Genuine HP"/"Non-HP supply in use"/"Used or refilled".
+    origin:           classifySupplyOrigin(state),
   };
 }
 

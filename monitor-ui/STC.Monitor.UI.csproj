@@ -17,8 +17,8 @@
     <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
     <!-- No console window under any circumstance -->
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <Version>1.0.0</Version>
-    <FileVersion>1.0.0.0</FileVersion>
+    <Version>1.1.0</Version>
+    <FileVersion>1.1.0.0</FileVersion>
     <Company>STC Cloud</Company>
     <Product>STC Cloud Monitor</Product>
     <Description>Monitor de Impresoras SNMP - Consola de Gestión</Description>

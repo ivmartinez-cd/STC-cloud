@@ -71,6 +71,10 @@ const syncSchema = {
             cartridge_estimated_cyan:   { type: ["integer", "number", "string", "null"] },
             cartridge_estimated_magenta:{ type: ["integer", "number", "string", "null"] },
             cartridge_estimated_yellow: { type: ["integer", "number", "string", "null"] },
+            // Fase 10 del gap analysis vs HP SDS — ausente en agentes <1.1.0
+            // (el cloud deriva un fallback desde `supplies_details`, ver
+            // `services/supplyOrigin.ts`).
+            supply_origin: { type: ["string", "null"], enum: ["genuine", "non_genuine", null] },
             serial:       { type: ["string", "null"] },
             firmware:     { type: ["string", "null"] },
             mac:          { type: ["string", "null"] },

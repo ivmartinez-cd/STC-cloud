@@ -33,6 +33,38 @@ const updateClientSchema = {
       country: { type: "string", maxLength: 100 },
       notification_email: emailOrEmpty,
       notification_webhook_url: { type: "string", maxLength: 500 },
+      notification_events: {
+        type: "array", maxItems: 10,
+        items: { type: "string", enum: [
+          "alert.created", "incident.created",
+          "supply_request.created", "supply_request.completed", "report.closed",
+        ] },
+      },
+      device_approval_required: { type: "boolean" },
+    },
+  },
+};
+
+const pendingDevicesRegisterSchema = {
+  body: {
+    type: "object",
+    required: ["deviceIds"],
+    additionalProperties: false,
+    properties: {
+      deviceIds: { type: "array", minItems: 1, maxItems: 500, items: { type: "string", format: "uuid" } },
+      zoneId: { type: "string" },
+    },
+  },
+};
+
+const pendingDevicesIgnoreSchema = {
+  body: {
+    type: "object",
+    required: ["deviceIds", "reason"],
+    additionalProperties: false,
+    properties: {
+      deviceIds: { type: "array", minItems: 1, maxItems: 500, items: { type: "string", format: "uuid" } },
+      reason: { type: "string", minLength: 1, maxLength: 500 },
     },
   },
 };
@@ -97,6 +129,25 @@ export function registerClientRoutes(
   fastify.get("/api/v1/clients/:id/devices", {
     preHandler: portalAuth,
     handler: ctrl.getClientDevices,
+  });
+
+  // Cola de registro de dispositivos (Fase 7 del gap analysis vs HP SDS) —
+  // deliberadamente NO se agregan a CLIENT_VIEWER_ROUTES, deny-by-default.
+  fastify.get("/api/v1/clients/:id/pending-devices", {
+    preHandler: portalAuth,
+    handler: ctrl.listPendingDevices,
+  });
+
+  fastify.post("/api/v1/clients/:id/pending-devices/register", {
+    preHandler: portalAuth,
+    schema: pendingDevicesRegisterSchema,
+    handler: ctrl.registerPendingDevices,
+  });
+
+  fastify.post("/api/v1/clients/:id/pending-devices/ignore", {
+    preHandler: portalAuth,
+    schema: pendingDevicesIgnoreSchema,
+    handler: ctrl.ignorePendingDevices,
   });
 
   // Gestión de API keys de la API pública (integración ERP) — deliberadamente

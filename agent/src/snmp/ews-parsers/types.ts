@@ -16,6 +16,10 @@ export interface SuppliesItem {
   /** Fechas en formato YYYYMMDD o ISO según la fuente. */
   firstInstallDate?: string | null;
   lastUseDate?: string | null;
+  /** Fase 10 del gap analysis vs HP SDS — `null`/ausente = sin señal clara
+   *  de la fuente, nunca se infiere `'genuine'` por defecto. Ver
+   *  `capture/supplyOrigin.ts`. */
+  origin?: 'genuine' | 'non_genuine' | null;
 }
 
 export interface InputTrayInfo {
@@ -89,6 +93,12 @@ export interface DeviceExtraInfo {
   formatterNumber?:  string | null;
   ramMb?:            number | null;
   manufacturer?:     string | null;
+  /** Fase 10 del gap analysis vs HP SDS — nº de activo cargado a mano en el
+   *  panel/EWS del equipo (HP FutureSmart `DeviceInformation/View#AssetNumber`).
+   *  Vacío en la mayoría de los equipos (nadie lo carga por default) — cloud
+   *  lo usa sólo como fallback de `asset_number_reported`, nunca pisa un
+   *  override manual del portal. */
+  assetNumber?:      string | null;
 }
 
 export interface SuppliesDetails {

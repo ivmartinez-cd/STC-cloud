@@ -163,6 +163,26 @@ export interface Device {
   merged_into?:           string | null;
   merged_into_serial?:    string | null;
   merged_at?:             string | null;
+  // Inventario manual/derivado (Fase 4 del gap analysis vs HP SDS).
+  asset_number?:                  string | null;
+  asset_number_reported?:         string | null;
+  asset_number_override?:         string | null;
+  asset_tag?:                     string | null;
+  duty_cycle_monthly_override?:   number | null;
+  duty_cycle_effective?:          number | null;
+  utilization_pct?:               number | null;
+  pages_30d?:                     number | null;
+  mono_30d?:                      number | null;
+  color_30d?:                     number | null;
+  custom_data?:                   Record<string, unknown> | string | null;
+  // Estado de monitoreo granular (Fase 5 del gap analysis vs HP SDS).
+  monitor_state?:                 'full' | 'supplies_only' | 'reports_only' | 'disabled';
+  monitor_state_changed_at?:      string | null;
+  monitor_state_changed_by?:      string | null;
+  monitor_state_reason?:          string | null;
+  // Detección de consumible no original (Fase 10 del gap analysis vs HP SDS).
+  supply_origin?:                 'genuine' | 'non_genuine' | null;
+  supply_origin_at?:              string | null;
 }
 
 /**
@@ -247,7 +267,9 @@ export interface EditFormData {
 export interface DashboardData {
   stats: {
     devices: number;
-    agents: { total: number; online: number };
+    /** Fase 6 del gap analysis vs HP SDS — derivado de monitor_state='disabled'. */
+    devicesUnmanaged?: number;
+    agents: { total: number; online: number; reporting?: number };
     clients: number;
     volume: number;
     deviceTrend?: string | null;
@@ -255,6 +277,10 @@ export interface DashboardData {
   topClients: Array<{ id: string; name: string; device_count: number }>;
   brands: Array<{ brand: string; count: number }>;
   offlineAgents: Array<{ id: string; name: string; client_name: string; last_seen: string }>;
+  agentVersions?: Array<{ version: string; count: number }>;
+  currentAgentVersion?: string;
+  alertsByClass?: Array<{ alert_class: string; label: string; count: number }>;
+  discovered?: { today: number; yesterday: number; pendingTotal: number };
   systemHealth: { status: 'healthy' | 'degraded' | 'error'; uptime: number; lastSync: string | null; lastClient?: string | null; readingsCount24h?: number; clientsWithAlertsCount?: number };
 }
 
@@ -270,6 +296,8 @@ export interface Client {
   notification_webhook_url: string | null;
   monitor_count: number;
   device_count: number;
+  /** Fase 7 del gap analysis vs HP SDS — cola de registro de dispositivos. */
+  device_approval_required: boolean;
 }
 
 /** `GET /clients/:id/api-keys` — nunca trae el valor en claro (sólo al crearla). */

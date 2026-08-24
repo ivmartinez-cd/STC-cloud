@@ -9,11 +9,15 @@ import {
   agentIdParamMatchesScope,
   clientIdParamMatchesScope,
   deviceIdParamMatchesScope,
+  incidentIdParamMatchesScope,
   getRouteKey,
   getScope,
   isAgentIdParamRoute,
   isClientIdParamRoute,
   isDeviceIdParamRoute,
+  isIncidentIdParamRoute,
+  isSupplyRequestIdParamRoute,
+  supplyRequestIdParamMatchesScope,
 } from "../utils/scope";
 
 // ─── Tipos de Autenticación Exportados ───────────────────────────────────────
@@ -213,6 +217,16 @@ export function createAuthMiddleware(
         // presente y futura sin depender de que cada handler se acuerde.
         if (isDeviceIdParamRoute(routeUrl) && !(await deviceIdParamMatchesScope(db, request, scope))) {
           return reply.status(404).send({ error: "Dispositivo no encontrado" });
+        }
+
+        // Fase 11 del gap analysis vs HP SDS.
+        if (isIncidentIdParamRoute(routeUrl) && !(await incidentIdParamMatchesScope(db, request, scope))) {
+          return reply.status(404).send({ error: "Incidente no encontrado" });
+        }
+
+        // Fase 4.2 del gap analysis vs HP SDS (pedidos de consumibles).
+        if (isSupplyRequestIdParamRoute(routeUrl) && !(await supplyRequestIdParamMatchesScope(db, request, scope))) {
+          return reply.status(404).send({ error: "Pedido no encontrado" });
         }
       }
     } catch (err) {

@@ -26,6 +26,17 @@ export interface IpHost {
   credential_ids?: string[];
 }
 
+/** Fase 10 del gap analysis vs HP SDS — honrar `monitor_state`/
+ *  `registration_state` del lado agente (el cloud ya filtra en Fase 5/7 con
+ *  o sin esto; acá sólo se ahorra tráfico/CPU del agente). `state` viaja
+ *  como el string crudo del cloud (`agentService.getConfig()`): 'full' |
+ *  'supplies_only' | 'reports_only' | 'disabled' | 'ignored'. Sólo cubre
+ *  equipos NO 'full' — el cloud manda la lista acotada, ver el mismo método. */
+export interface DevicePolicy {
+  ip: string;
+  state: string;
+}
+
 export interface AgentConfig {
   serverUrl: string;
   agentId: string;
@@ -45,6 +56,11 @@ export interface AgentConfig {
    *  `DEFAULT_BUSINESS_HOURS` (Argentina, L-V, 8-18) — mismo comportamiento
    *  hardcodeado de siempre, `isBusinessHours()` ya resuelve el fallback. */
   businessHours?: BusinessHoursConfig | null;
+  /** Fase 10 del gap analysis vs HP SDS — sólo entradas de equipos con
+   *  `monitor_state <> 'full'` o `registration_state = 'ignored'`. Ausente =
+   *  ninguno (comportamiento de siempre, todo 'full'). Ver `ScanService.
+   *  policyFor()`, que es quien realmente lo consume. */
+  devicePolicies?: DevicePolicy[];
   proxyUrl?: string; // http://user:pass@proxy:8080 - opcional, para redes con proxy corporativo
 }
 

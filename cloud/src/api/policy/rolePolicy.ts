@@ -41,12 +41,16 @@ export const CLIENT_VIEWER_ROUTES: ReadonlySet<string> = new Set([
   "GET /api/v1/portal/me",
   "GET /api/v1/dashboard",
   "GET /api/v1/alerts",
+  "GET /api/v1/alerts/classes",
+  "GET /api/v1/alerts/summary",
   "GET /api/v1/search",
   "GET /api/v1/clients",
   "GET /api/v1/clients/:id",
   "GET /api/v1/clients/:id/monitors",
   "GET /api/v1/clients/:id/usage",
   "GET /api/v1/clients/:id/devices",
+  "GET /api/v1/clients/:id/custom-fields",
+  "GET /api/v1/device-models",
   "GET /api/v1/clients/:id/reports/preview",
   "GET /api/v1/clients/:id/reports",
   "GET /api/v1/clients/:id/reports/:closureId",
@@ -59,6 +63,19 @@ export const CLIENT_VIEWER_ROUTES: ReadonlySet<string> = new Set([
   "GET /api/v1/devices/:id",
   "GET /api/v1/devices/:id/readings",
   "GET /api/v1/devices/:id/usage-history",
+  "GET /api/v1/devices/:id/supplies",
+  "GET /api/v1/supplies",
+  "GET /api/v1/supplies/summary",
+  // Fase 11 del gap analysis vs HP SDS — sólo lectura, scopeada. Crear/editar/
+  // cerrar/reabrir/comentar/asignar/vincular alertas y las reglas de
+  // auto-creación quedan deny-by-default (gestión de servicio, no de un
+  // client_viewer).
+  "GET /api/v1/incidents",
+  "GET /api/v1/supply-requests",
+  "GET /api/v1/supply-requests/stats",
+  "GET /api/v1/supply-requests/:id",
+  "GET /api/v1/incidents/stats",
+  "GET /api/v1/incidents/:id",
   "POST /api/v1/feedback",
 ]);
 
@@ -84,3 +101,5 @@ export function policyFor(role: string): RolePolicy | null {
 export const CLIENT_ID_URL_PREFIX = "/api/v1/clients/:id";
 export const AGENT_ID_URL_PREFIX = "/api/v1/agents/:id";
 export const DEVICE_ID_URL_PREFIX = "/api/v1/devices/:id";
+export const INCIDENT_ID_URL_PREFIX = "/api/v1/incidents/:id";
+export const SUPPLY_REQUEST_ID_URL_PREFIX = "/api/v1/supply-requests/:id";

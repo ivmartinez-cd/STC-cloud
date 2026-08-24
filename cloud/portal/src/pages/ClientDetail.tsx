@@ -12,6 +12,8 @@ import CreateMonitorModal from '../components/monitors/CreateMonitorModal';
 import ApiKeysCard from '../components/clients/ApiKeysCard';
 import CustomFieldsCard from '../components/clients/CustomFieldsCard';
 import IncidentRulesCard from '../components/clients/IncidentRulesCard';
+import SupplyRequestSettingsCard from '../components/clients/SupplyRequestSettingsCard';
+import NotificationEventsCard from '../components/clients/NotificationEventsCard';
 import NotificationSettingsCard from '../components/clients/NotificationSettingsCard';
 import DeviceApprovalCard from '../components/clients/DeviceApprovalCard';
 import DuplicateDevicesCard from '../components/clients/DuplicateDevicesCard';
@@ -122,6 +124,8 @@ const ClientDetail = () => {
             {!isReadOnlyViewer && id && <ApiKeysCard clientId={id} canEdit={!isReadOnlyViewer} />}
             {!isReadOnlyViewer && id && <CustomFieldsCard clientId={id} canEdit={!isReadOnlyViewer} />}
             {!isReadOnlyViewer && id && <IncidentRulesCard clientId={id} canEdit={!isReadOnlyViewer} />}
+            {!isReadOnlyViewer && id && <SupplyRequestSettingsCard clientId={id} canEdit={!isReadOnlyViewer} />}
+            {!isReadOnlyViewer && id && <NotificationEventsCard clientId={id} canEdit={!isReadOnlyViewer} />}
           </div>
 
           <ClientMonitorsSection

@@ -5,6 +5,8 @@ import knexConfig from '../db/knexfile';
 import { sendReportEmail, sendReportWebhook } from '../services/notificationService';
 import { sendPublicApiWebhook } from '../services/publicWebhookService';
 import { buildClosureCsv, buildClosureXlsx } from '../services/reportExportService';
+import { renderFor } from '../modules/message-templates/application/resolve-template';
+import { eventEnabledFor } from '../modules/message-templates/domain/entities/message-template';
 import { formatPeriod } from '../services/reportService';
 import { logger } from '../logger';
 
@@ -33,6 +35,7 @@ interface ClosureRow {
   closed_at: Date;
   total_pages: number;
   notification_email: string | null;
+  notification_events?: unknown;
   notification_webhook_url: string | null;
 }
 
@@ -47,7 +50,7 @@ async function processReportDelivery(closureId: string): Promise<void> {
       'report_closures.id', 'report_closures.client_id', 'report_closures.period',
       'report_closures.status', 'report_closures.closed_at', 'report_closures.total_pages',
       'clients.name as client_name',
-      'clients.notification_email', 'clients.notification_webhook_url'
+      'clients.notification_email', 'clients.notification_webhook_url', 'clients.notification_events'
     )
     .first() as ClosureRow | undefined;
 
@@ -76,16 +79,20 @@ async function processReportDelivery(closureId: string): Promise<void> {
   // Email y webhook son independientes — que uno falle no debe impedir el otro.
   const results = await Promise.allSettled([
     (async () => {
-      if (!closure.notification_email) return;
+      // Fase 4.3: opt-out por evento + plantilla editable (default = texto histórico).
+      if (!closure.notification_email || !eventEnabledFor(closure.notification_events, 'report.closed')) return;
       const lines = await db('report_closure_lines').where({ closure_id: closure.id }).orderBy('device_serial').select('*');
       const csv = buildClosureCsv(closure, lines);
       const xlsx = await buildClosureXlsx(closure, lines);
+      const content = await renderFor(db, closure.client_id, 'report.closed', {
+        client_name: payload.clientName, period, total_pages: Number(closure.total_pages),
+      });
       await sendReportEmail(payload, closure.notification_email, [
         { filename: `cierre_${period}.csv`, content: csv, contentType: 'text/csv' },
         { filename: `cierre_${period}.xlsx`, content: xlsx, contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' },
-      ]);
+      ], content, { db, clientId: closure.client_id, event: 'report.closed', metadata: { closure_id: closure.id, period } });
     })(),
-    closure.notification_webhook_url ? sendReportWebhook(payload, closure.notification_webhook_url) : Promise.resolve(),
+    eventEnabledFor(closure.notification_events, 'report.closed') && closure.notification_webhook_url ? sendReportWebhook(payload, closure.notification_webhook_url) : Promise.resolve(),
     sendPublicApiWebhook(db, closure.client_id, 'report.closed', {
       closure_id: closure.id, period, total_pages: Number(closure.total_pages),
     }),

@@ -42,6 +42,10 @@ export interface DeviceReading {
   cartridge_estimated_cyan?:     number | null;
   cartridge_estimated_magenta?:  number | null;
   cartridge_estimated_yellow?:   number | null;
+  /** Fase 10 del gap analysis vs HP SDS — roll-up de `supplies_details.
+   *  toners.*.origin` (peor caso de los 4 tóners). `null`/ausente = sin
+   *  señal clara, nunca 'genuine' por defecto. Ver `capture/supplyOrigin.ts`. */
+  supply_origin?:               'genuine' | 'non_genuine' | null;
   supplies_details?:           SuppliesDetails | null;
   firmware?:                   string | null;
   mac?:                        string | null;

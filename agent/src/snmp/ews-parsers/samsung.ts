@@ -1,4 +1,5 @@
 import { type EwsData } from './types';
+import { classifySupplyOrigin } from '../../capture/supplyOrigin';
 
 // home.json — model name, serial, mac, hostname, trays, toners (SyncThru V5/V6)
 export function parseSamsungHome(body: string): Partial<EwsData> {
@@ -478,10 +479,15 @@ export function parseSamsungSyncThruSupplies(body: string): Partial<EwsData> {
 
   const suppliesDetails = {
     toners: {
-      black:   bk.remaining !== null || black !== null ? { percentage: bk.remaining ?? black, status: bk.status, code: bk.id, serial: bk.serial, capacity: bk.capa } : undefined,
-      cyan:    cy.remaining !== null || cyan !== null ? { percentage: cy.remaining ?? cyan, status: cy.status, code: cy.id, serial: cy.serial, capacity: cy.capa } : undefined,
-      magenta: mg.remaining !== null || magenta !== null ? { percentage: mg.remaining ?? magenta, status: mg.status, code: mg.id, serial: mg.serial, capacity: mg.capa } : undefined,
-      yellow:  ye.remaining !== null || yellow !== null ? { percentage: ye.remaining ?? yellow, status: ye.status, code: ye.id, serial: ye.serial, capacity: ye.capa } : undefined,
+      // `origin`: best-effort (Fase 10 del gap analysis vs HP SDS) — este
+      // `status` es el texto crudo de SyncThru, no un campo dedicado de
+      // autenticidad; sin fixture real de un cartucho no-Samsung para
+      // validar el texto exacto, se reusa el mismo clasificador genérico
+      // que ya cubre el caso literal "non-HP" y variantes sin marca.
+      black:   bk.remaining !== null || black !== null ? { percentage: bk.remaining ?? black, status: bk.status, code: bk.id, serial: bk.serial, capacity: bk.capa, origin: classifySupplyOrigin(bk.status) } : undefined,
+      cyan:    cy.remaining !== null || cyan !== null ? { percentage: cy.remaining ?? cyan, status: cy.status, code: cy.id, serial: cy.serial, capacity: cy.capa, origin: classifySupplyOrigin(cy.status) } : undefined,
+      magenta: mg.remaining !== null || magenta !== null ? { percentage: mg.remaining ?? magenta, status: mg.status, code: mg.id, serial: mg.serial, capacity: mg.capa, origin: classifySupplyOrigin(mg.status) } : undefined,
+      yellow:  ye.remaining !== null || yellow !== null ? { percentage: ye.remaining ?? yellow, status: ye.status, code: ye.id, serial: ye.serial, capacity: ye.capa, origin: classifySupplyOrigin(ye.status) } : undefined,
     },
     drums: (drumBkPct !== null || drumCyPct !== null || drumMgPct !== null || drumYePct !== null) ? {
       black:   drumBkPct !== null ? { percentage: drumBkPct, status: drumBk.status || 'Ready', serial: drumBk.serial } : undefined,

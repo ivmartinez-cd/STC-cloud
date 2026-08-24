@@ -5,6 +5,7 @@ import MonitorThresholdCard from '../components/settings/MonitorThresholdCard';
 import SmtpInfoCard, { type SmtpFields } from '../components/settings/SmtpInfoCard';
 import OperatorsCard from '../components/settings/operators/OperatorsCard';
 import FeedbackCard from '../components/settings/FeedbackCard';
+import MessageTemplatesCard from '../components/settings/MessageTemplatesCard';
 import type { Thresholds } from '../types/settings';
 
 const STORAGE_KEY = 'stc_settings';
@@ -44,6 +45,7 @@ const Settings = () => {
       <MonitorThresholdCard thresholds={thresholds} onChange={setThresholds} />
       <SmtpInfoCard smtp={smtp} onChange={(updater) => setSmtp(updater)} />
       <OperatorsCard />
+      {isAdmin && <MessageTemplatesCard />}
       {isAdmin && <FeedbackCard />}
 
       <div className="flex items-center gap-6 pt-4">

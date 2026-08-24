@@ -82,6 +82,21 @@ describe('Portal Auth', () => {
     assert.ok('devices' in data.stats && 'agents' in data.stats, 'Stats incompletas');
   });
 
+  // Fase 6 del gap analysis vs HP SDS — shape de los campos nuevos del dashboard.
+  test('Dashboard: agentVersions y alertsByClass tienen la forma esperada', async () => {
+    const { status, data } = await req('GET', '/dashboard', undefined, ctx.portalToken);
+    assert.equal(status, 200);
+    assert.ok(Array.isArray(data.agentVersions), 'agentVersions debe ser un array');
+    assert.ok(typeof data.currentAgentVersion === 'string', 'currentAgentVersion debe venir como string');
+    assert.ok(Array.isArray(data.alertsByClass), 'alertsByClass debe ser un array');
+    for (const row of data.alertsByClass) {
+      assert.ok(typeof row.alert_class === 'string' && typeof row.label === 'string' && typeof row.count === 'number');
+    }
+    assert.equal(typeof data.stats.agents.reporting, 'number', 'stats.agents.reporting debe existir');
+    assert.equal(typeof data.stats.devicesUnmanaged, 'number', 'stats.devicesUnmanaged debe existir');
+    assert.ok(data.discovered && typeof data.discovered.today === 'number' && typeof data.discovered.pendingTotal === 'number');
+  });
+
   test('Lista de clientes → 200', async () => {
     const { status, data } = await req('GET', '/clients', undefined, ctx.portalToken);
     assert.equal(status, 200);
@@ -487,8 +502,19 @@ describe('Revocación de agente', () => {
     assert.equal(revoked?.status, 'revoked');
   });
 
-  test('Cleanup: revocar agente de refresh test', async () => {
+  // Fase 6 del gap analysis vs HP SDS — bug real: `agentsStats` no filtraba
+  // status='revoked' (offlineAgents sí lo hacía), así que un agente revocado
+  // inflaba `stats.agents.total` para siempre. Envuelve el revoke de
+  // `freshAgentId` (agente dedicado de la suite de refresh token, no se
+  // reusa después) con una lectura del dashboard antes/después.
+  test('Cleanup: revocar agente de refresh test — no debe inflar stats.agents.total', async () => {
+    const before = await req('GET', '/dashboard', undefined, ctx.portalToken);
+    const totalBefore = before.data.stats.agents.total;
+
     const { status } = await req('POST', `/agents/${ctx.freshAgentId}/revoke`, {}, ctx.portalToken);
     assert.equal(status, 200);
+
+    const after = await req('GET', '/dashboard', undefined, ctx.portalToken);
+    assert.equal(after.data.stats.agents.total, totalBefore - 1, 'un agente revocado no debe contar en stats.agents.total');
   });
 });

@@ -4,6 +4,7 @@
  */
 import type { CaptureResult, DeviceIdentity, TonerColor, SuppliesDetails, ModelProfile } from './types';
 import type { DeviceReading } from './reading';
+import { worstSupplyOrigin } from './supplyOrigin';
 
 const COLORS: readonly TonerColor[] = ['black', 'cyan', 'magenta', 'yellow'];
 
@@ -56,6 +57,9 @@ export function toDeviceReading(identity: DeviceIdentity, result: CaptureResult 
     if (Object.keys(toners).length) sd.toners = toners;
     if (s.drums)       sd.drums = s.drums;
     if (s.maintenance) sd.maintenance = s.maintenance;
+    // Fase 10 del gap analysis vs HP SDS — roll-up peor-caso de los 4 tóners.
+    const origin = worstSupplyOrigin(COLORS.map((c) => s.toners[c]?.origin));
+    if (origin) reading.supply_origin = origin;
   }
   if (result?.meters?.detail) sd.counters = result.meters.detail;
   if (result?.device || id.sku) sd.device = { ...(result?.device ?? {}), ...(id.sku ? { sku: id.sku } : {}) };

@@ -47,17 +47,33 @@ async function resolveAlerts(deviceId: string, type: string) {
 
 async function evaluateReading(r: MappedReading) {
   // 0. Un equipo dado de baja pero todavía enchufado no debe seguir generando
-  // alertas críticas (counter_reset, toner_*_critical, device_error) que
-  // encolarían un mail al cliente por un equipo que ya retiró (ver
-  // alertService.openAlert: sólo severity "critical" encola notificationWorker).
-  const decomm = await db('devices').where('id', r.device_id).select('decommissioned_at').first();
+  // alertas críticas (counter_reset, toner_*_critical) que encolarían un mail al
+  // cliente por un equipo que ya retiró (ver alertService.openAlert: sólo
+  // severity "critical" encola notificationWorker).
+  // `monitor_state` (Fase 5 del gap analysis vs HP SDS): el guard real vive
+  // en `alertService.openAlert` (única primitiva de escritura), pero cortar
+  // ACÁ además evita las 2 queries de umbrales de tóner de más abajo para
+  // cada lectura de un equipo `reports_only`/`disabled` — pura eficiencia,
+  // no una segunda fuente de verdad.
+  const decomm = await db('devices').where('id', r.device_id).select('decommissioned_at', 'monitor_state', 'registration_state').first();
   if (decomm?.decommissioned_at) return;
+  if (decomm && decomm.monitor_state !== 'full' && decomm.monitor_state !== 'supplies_only') return;
+  // Fase 7 del gap analysis vs HP SDS: mismo corte por eficiencia para
+  // `pending`/`ignored` — el guard real también vive en `alertService.openAlert`.
+  if (decomm && decomm.registration_state !== 'registered') return;
 
-  // 1. Manejo del estado offline del dispositivo
+  // 1. Manejo del estado offline del dispositivo — usa el MISMO type/severidad
+  // que heartbeatMonitor.ts ('device_offline'/'warning', nunca 'critical': un
+  // equipo puntual sin señal no es una caída de infraestructura, y así tampoco
+  // dispara notificación). Antes este detector rápido (por lectura) escribía
+  // 'device_error'/'critical', una postura distinta a la de heartbeatMonitor (la
+  // red de seguridad, por staleness) para el mismo hecho — unificado en
+  // migración 20260824010000_alerts_classification_and_origin.ts; con el mismo
+  // type, el índice único los deduplica entre sí.
   if (r.offline) {
-    await openAlert(r.device_id, 'device_error', 'critical', 'Dispositivo fuera de línea (sin respuesta)', 0);
+    await openAlert(r.device_id, 'device_offline', 'warning', 'Dispositivo fuera de línea (sin respuesta)', 0);
   } else {
-    await resolveAlerts(r.device_id, 'device_error');
+    await resolveAlerts(r.device_id, 'device_offline');
   }
 
   // 2. Obtener umbrales dinámicos de la base de datos de acuerdo al agente asociado al dispositivo
