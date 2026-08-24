@@ -1,10 +1,11 @@
 # Plan de Migración a ARCHITECTURE_GUIDE.md
 
-**Estado:** Fase 0, Fase 1 y Fase 2 (backend) completas — incluidas las 2
-pasadas diferidas de alto riesgo (`syncReadings`, `mergeDevices`); Fase 2
-(frontend) en curso — `Settings.tsx`, `Monitors.tsx`, `MonitorDetail.tsx`,
-`DeviceDetail.tsx`, `ClientDetail.tsx` y `DeviceLifecycleModals.tsx`
-divididos, sólo `Dashboard.tsx` pendiente — 2026-08-24  
+**Estado:** Fase 0, Fase 1 y Fase 2 (backend + frontend) COMPLETAS —
+incluidas las 2 pasadas diferidas de alto riesgo del backend
+(`syncReadings`, `mergeDevices`) y los 7 archivos grandes del frontend
+(`Settings.tsx`, `Monitors.tsx`, `MonitorDetail.tsx`, `DeviceDetail.tsx`,
+`ClientDetail.tsx`, `DeviceLifecycleModals.tsx`, `Dashboard.tsx`). No
+queda ningún ítem abierto de este plan — 2026-08-24  
 **Origen:** `docs/dev/ARCHITECTURE_GUIDE.md` (copiado desde `helpdesk-manager`, 2026-08-24)  
 **Reemplaza (parcialmente) a:** `docs/dev/PROJECT_GUIDELINES.md`, que hoy documenta la
 convención opuesta (`api/` para rutas + `services/` para lógica de negocio, sin capas).
@@ -705,6 +706,60 @@ visual real en navegador en este entorno.
 **Pendiente de Fase 2 frontend:** sólo `Dashboard.tsx` (507) — avisar a
 `close-hp-sds-gaps` antes de arrancar (le va a agregar un tile ahí en su
 Fase 4.2).
+
+## Fase 2 (frontend) — `Dashboard.tsx` dividido, Fase 2 COMPLETA (2026-08-24)
+
+Séptimo y último archivo de la cola original de Fase 2 frontend.
+`close-hp-sds-gaps` confirmó que seguía libre (todavía no había agregado su
+tile de pedidos pendientes) y pidió el mismo esquema que `ClientDetail.tsx`:
+dividir primero, agregar su tile después sobre la estructura nueva.
+
+División (7 archivos nuevos en `components/dashboard/`, directorio nuevo):
+- `StatCard.tsx` (40L) — presentacional, incluye `STAT_COLOR_VARIANTS`
+  (sólo se usaba ahí).
+- `BrandDistributionCard.tsx` (51L), `TopClientsCard.tsx` (35L),
+  `OfflineAgentsCard.tsx` (45L) — las 3 cards de la fila "Header Dashboard"
+  original.
+- `AlertsByClassCard.tsx` (50L, incluye `CLASS_COLOR`),
+  `AgentVersionsCard.tsx` (41L) — la fila de resumen de alertas +
+  versiones de agente.
+- `SupplyAlertsTable.tsx` (161L) — la tabla grande de "Consumibles en
+  Alerta", autocontenida (tenía su propio fetch/polling de 30s ya en el
+  original — `alerts`/`alertsLoading`/`fetchAlerts` — se llevó tal cual,
+  incluye `getTonerColorInfo`).
+- `pages/Dashboard.tsx` (538L → 171L) — orquestador: `useDashboard()` +
+  `openIncidents` (el único estado que queda en la página, porque sólo lo
+  usa un tile inline) + composición.
+
+**Decisión deliberada de NO extraer** los 2 tiles condicionales
+("equipos pendientes de aprobación" / "incidentes abiertos", cada uno
+`{condición && <Link>...</Link>}`) en un componente propio: quedan
+inline en `pages/Dashboard.tsx` a propósito, porque es exactamente donde
+`close-hp-sds-gaps` va a pegar un tercer bloque idéntico (tile de pedidos
+pendientes) — extraerlos habría obligado a rediseñar el punto de
+extensión en vez de dejarlo copy-pasteable como ya lo usan los otros dos.
+
+**Validación:** `npm run check` limpio sin warnings. Vite (:5180)
+transforma los 8 archivos sin error. `check-sizes.mjs` limpio tras
+regenerar baseline (327 archivos) — capturó de nuevo crecimiento en curso
+de `close-hp-sds-gaps` (`App.tsx`/`Layout.tsx` nav, `ClientDetail.tsx` +2
+líneas por su `SupplyRequestSettingsCard` ya agregada ahí en paralelo,
+`components/supplies/SupplyRequestDetailModal.tsx` y
+`pages/SupplyRequests.tsx` nuevos — su Fase 4.2 aterrizando en el
+frontend). Sin prueba visual real en navegador en este entorno.
+
+**Con esto, la Fase 2 (frontend) queda 100% completa** — los 7 archivos
+que estaban por encima de 300 líneas en `portal/src` al congelar la Fase 0
+(`Settings.tsx`, `DeviceDetail.tsx`, `Monitors.tsx`,
+`DeviceLifecycleModals.tsx`, `ClientDetail.tsx`, `MonitorDetail.tsx`,
+`Dashboard.tsx`) están todos divididos, todos bajo el límite de archivo,
+sin deuda nueva de archivo (el límite de función sigue aceptado vía
+baseline para componentes React con JSX no trivial, documentado en la
+sección de `Settings.tsx` arriba). Con Fase 0, Fase 1 y Fase 2
+(backend+frontend) cerradas, no queda ningún ítem abierto de este plan —
+las fases 3+ (mover módulos ya divididos a la estructura completa
+domain/application/infrastructure/presentation de `ARCHITECTURE_GUIDE.md`)
+no fueron pedidas todavía y no deberían asumirse como pre-aprobadas.
 
 ## 0. Punto de partida (medido 2026-08-24)
 
