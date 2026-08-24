@@ -1,11 +1,13 @@
 import { useState, Suspense, useEffect, useRef } from 'react';
-import { Link, useLocation, Outlet } from 'react-router-dom';
+import { Link, Outlet } from 'react-router-dom';
 import { api } from '../lib/api';
 import {
-  LayoutDashboard, Users, LogOut, Search, Settings, Menu, X, ChevronRight, Shield, MessageSquarePlus, Bell, FileText
+  LayoutDashboard, Users, LogOut, Search, Settings, Menu, X, Shield, MessageSquarePlus, Bell, FileText, History, UserCheck, Droplets, AlertOctagon, CalendarClock, PackageSearch, MailCheck
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import FeedbackModal from './FeedbackModal';
+import SidebarNav from './layout/SidebarNav';
+import { filterNavTreeByRole, type NavEntry } from './layout/navTree';
 
 type SearchClient = { id: string; name: string };
 type SearchDevice = { id: string; serial_number: string; brand: string; model: string };
@@ -15,13 +17,50 @@ type SearchResults = { clients: SearchClient[]; devices: SearchDevice[] };
 // inventario/config de monitores de TODOS los clientes vistos por ese rol — no
 // tiene sentido para un client_viewer (que además el backend le deniega esas
 // rutas con 403).
-const navItems = [
-  { name: 'Dashboard',     path: '/',          icon: LayoutDashboard, roles: undefined as string[] | undefined },
-  { name: 'Alertas',       path: '/alerts',    icon: Bell,            roles: undefined as string[] | undefined },
-  { name: 'Reportes',      path: '/reports',   icon: FileText,        roles: undefined as string[] | undefined },
-  { name: 'Clientes',      path: '/clients',   icon: Users,           roles: undefined as string[] | undefined },
-  { name: 'Agentes',       path: '/agents',    icon: Shield,          roles: ['admin', 'operator'] },
-  { name: 'Configuración', path: '/settings',  icon: Settings,        roles: undefined as string[] | undefined },
+//
+// Agrupado en sub-niveles (Fase de UX 2026-08-24, mismo criterio que HP SDS)
+// — para agregar un ítem nuevo: si encaja en un grupo existente, sumalo a su
+// `children`; si es un destino de primer nivel nuevo (poco frecuente), agregá
+// un `NavLeaf` suelto al array.
+const navTree: NavEntry[] = [
+  { name: 'Dashboard', path: '/', icon: LayoutDashboard },
+  {
+    name: 'Gestión de Clientes', icon: Users,
+    children: [
+      { name: 'Clientes', path: '/clients', icon: Users },
+      { name: 'Pendientes', path: '/pending', icon: UserCheck, roles: ['admin', 'operator'], badgeKey: 'pending' },
+    ],
+  },
+  { name: 'Agentes', path: '/agents', icon: Shield, roles: ['admin', 'operator'] },
+  {
+    name: 'Gestión de Consumibles', icon: Droplets,
+    children: [
+      { name: 'Consumibles', path: '/supplies', icon: Droplets },
+      { name: 'Pedidos', path: '/supply-requests', icon: PackageSearch },
+    ],
+  },
+  {
+    name: 'Gestión de Incidencias', icon: AlertOctagon,
+    children: [
+      { name: 'Incidentes', path: '/incidents', icon: AlertOctagon },
+      { name: 'Alertas', path: '/alerts', icon: Bell },
+    ],
+  },
+  {
+    name: 'Informes', icon: FileText,
+    children: [
+      { name: 'Reportes', path: '/reports', icon: FileText },
+      { name: 'Informes Programados', path: '/scheduled-reports', icon: CalendarClock, roles: ['admin', 'operator'] },
+    ],
+  },
+  {
+    name: 'Administración', icon: History, roles: ['admin', 'operator'],
+    children: [
+      { name: 'Movimientos', path: '/activity', icon: History, roles: ['admin', 'operator'] },
+      { name: 'Correo', path: '/email-log', icon: MailCheck, roles: ['admin', 'operator'] },
+    ],
+  },
+  { name: 'Configuración', path: '/settings', icon: Settings },
 ];
 
 const ROLE_LABELS: Record<string, string> = {
@@ -40,7 +79,6 @@ const useDebounce = (value: string, delay: number) => {
 };
 
 const Layout = () => {
-  const location = useLocation();
   const { userEmail: email, role, logout } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
@@ -54,6 +92,27 @@ const Layout = () => {
   const [showResults, setShowResults] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
   const debouncedSearch = useDebounce(searchQuery, 300);
+
+  // Badge de "Pendientes" (Fase 7 del gap analysis vs HP SDS) — reusa
+  // GET /dashboard (ya scopeado por rol/cliente en el backend), sondeado cada
+  // 60s. Sólo admin/operator ven el ítem de nav, así que no tiene sentido
+  // pedirlo para un client_viewer.
+  const [pendingCount, setPendingCount] = useState(0);
+  useEffect(() => {
+    if (role !== 'admin' && role !== 'operator') return;
+    let cancelled = false;
+    const fetchPending = async () => {
+      try {
+        const data = await api.get<{ discovered?: { pendingTotal?: number } }>('/dashboard');
+        if (!cancelled) setPendingCount(data?.discovered?.pendingTotal ?? 0);
+      } catch {
+        // Comodidad — si falla, el badge simplemente no aparece.
+      }
+    };
+    void fetchPending();
+    const interval = setInterval(fetchPending, 60_000);
+    return () => { cancelled = true; clearInterval(interval); };
+  }, [role]);
 
   useEffect(() => {
     const init = async () => {
@@ -96,13 +155,10 @@ const Layout = () => {
     };
   }, []);
 
-  const isActive = (path: string) =>
-    path === '/' ? location.pathname === '/' : location.pathname.startsWith(path);
-
   const toggleMobileMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] text-[#1a2333] font-sans flex">
+    <div className="h-screen overflow-hidden bg-[#f8fafc] text-[#1a2333] font-sans flex">
       {/* Mobile Backdrop */}
       {isMobileMenuOpen && (
         <div 
@@ -184,55 +240,12 @@ const Layout = () => {
             Navegación
           </div>
           
-          {navItems.filter((item) => !item.roles || item.roles.includes(role)).map(({ name, path, icon: Icon }) => {
-            const active = isActive(path);
-            return (
-              <Link
-                key={path}
-                to={path}
-                onClick={() => setIsMobileMenuOpen(false)}
-                className={`
-                  flex items-center group relative h-12 rounded-2xl transition-all duration-300
-                  ${active ? 'text-white' : 'text-slate-400 hover:text-white hover:bg-white/[0.03]'}
-                `}
-              >
-                {active && isHovered && (
-                  <div className="absolute inset-0 bg-brand/10 rounded-2xl border border-brand/10 shadow-[0_4px_12px_rgba(0,0,0,0.1)]" />
-                )}
-                
-                <div className="flex items-center gap-4 relative z-10 w-full justify-center md:justify-start">
-                  <div className={`
-                    flex items-center justify-center shrink-0 transition-all duration-300
-                    ${isHovered ? 'w-5 ml-2' : 'w-20'}
-                  `}>
-                    <Icon
-                      size={isHovered ? 19 : 24}
-                      strokeWidth={active ? 2.5 : 2}
-                      className={active ? 'text-brand drop-shadow-[0_0_8px_rgba(247,148,29,0.4)]' : 'text-slate-500 group-hover:text-slate-300 transition-colors duration-300'}
-                    />
-                  </div>
-                  
-                  <span className={`
-                    text-[13px] font-bold whitespace-nowrap transition-all duration-500
-                    ${isHovered ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4 pointer-events-none w-0'}
-                    ${active ? 'text-white' : 'text-slate-400'}
-                  `}>
-                    {name}
-                  </span>
-                  
-                  {active && isHovered && <ChevronRight size={14} className="ml-auto mr-4 text-brand/50" />}
-                </div>
-
-                {/* Active Indicator - Canal Directo Style */}
-                {active && (
-                  <div className={`
-                    absolute left-0 bg-brand rounded-r-full transition-all duration-500 shadow-[0_0_15px_rgba(247,148,29,0.4)]
-                    ${isHovered ? 'w-1.5 top-3 bottom-3' : 'w-2 top-4 bottom-4'}
-                  `} />
-                )}
-              </Link>
-            );
-          })}
+          <SidebarNav
+            entries={filterNavTreeByRole(navTree, role)}
+            isHovered={isHovered}
+            pendingCount={pendingCount}
+            onNavigate={() => setIsMobileMenuOpen(false)}
+          />
         </nav>
 
         {/* User Profile */}
@@ -293,7 +306,7 @@ const Layout = () => {
 
       {/* Main Content Area */}
       <div className={`
-        flex flex-col flex-1 min-h-screen transition-all duration-500 ease-in-out
+        flex flex-col flex-1 h-screen min-h-0 transition-all duration-500 ease-in-out
         md:pl-20 ${isHovered ? 'md:pl-72' : ''}
       `}>
         {/* Top Header */}
@@ -394,8 +407,8 @@ const Layout = () => {
         </header>
 
         {/* Content */}
-        <main className="p-4 md:p-10 flex-1 animate-fade-in bg-[#f8fafc]">
-          <div className="max-w-[1400px] mx-auto">
+        <main className="flex-1 min-h-0 overflow-y-auto animate-fade-in bg-[#f8fafc]">
+          <div className="max-w-[1400px] mx-auto p-4 md:p-10 xl:h-full xl:flex xl:flex-col">
             <Suspense fallback={
               <div className="flex items-center justify-center min-h-[400px]">
                 <div className="flex flex-col items-center gap-4">

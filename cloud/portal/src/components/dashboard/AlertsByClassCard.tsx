@@ -15,32 +15,30 @@ const CLASS_COLOR: Record<string, string> = {
 
 export default function AlertsByClassCard({ alertsByClass }: { alertsByClass: DashboardData['alertsByClass'] | undefined }) {
   return (
-    <div className="cd-panel p-8 lg:col-span-2">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h3 className="text-lg font-black text-[#1a2333] tracking-tight flex items-center gap-3">
-            <LayoutList size={20} className="text-brand" /> Resumen de Alertas por Clase
-          </h3>
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Alertas activas, agrupadas por categoría</p>
-        </div>
+    <div className="cd-panel p-4 h-full flex flex-col">
+      <div className="shrink-0 mb-2">
+        <h3 className="text-xs font-black text-[#1a2333] tracking-tight flex items-center gap-2">
+          <LayoutList size={14} className="text-brand" /> Resumen de Alertas por Clase
+        </h3>
+        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-0.5">Alertas activas, agrupadas por categoría</p>
       </div>
       {!alertsByClass || alertsByClass.length === 0 ? (
-        <div className="h-40 flex flex-col items-center justify-center text-emerald-500 bg-emerald-50/30 rounded-3xl border border-emerald-100 border-dashed">
-          <ShieldCheck size={32} className="mb-2 text-emerald-500" />
-          <p className="text-[10px] font-black uppercase tracking-widest text-emerald-600">Sin alertas activas</p>
+        <div className="flex-1 min-h-0 flex flex-col items-center justify-center text-emerald-500 bg-emerald-50/30 rounded-2xl border border-emerald-100 border-dashed">
+          <ShieldCheck size={24} className="mb-1.5 text-emerald-500" />
+          <p className="text-[9px] font-black uppercase tracking-widest text-emerald-600">Sin alertas activas</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <div className="flex-1 min-h-0 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 gap-1.5 content-start pr-1">
           {alertsByClass.map((c) => (
             <Link
               key={c.alert_class}
               to={`/alerts?class=${c.alert_class}&resolved=false`}
-              className="flex items-center justify-between px-4 py-2.5 rounded-2xl border border-slate-100 hover:border-brand/40 hover:bg-slate-50/50 transition-all group"
+              className="flex items-center justify-between px-3 py-1.5 rounded-xl border border-slate-100 hover:border-brand/40 hover:bg-slate-50/50 transition-all group"
             >
-              <span className={`inline-flex px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider ${CLASS_COLOR[c.alert_class] ?? 'bg-slate-100 text-slate-500'}`}>
+              <span className={`inline-flex px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider ${CLASS_COLOR[c.alert_class] ?? 'bg-slate-100 text-slate-500'}`}>
                 {c.label}
               </span>
-              <span className="text-sm font-black text-[#1a2333] group-hover:text-brand transition-colors">{c.count}</span>
+              <span className="text-xs font-black text-[#1a2333] group-hover:text-brand transition-colors">{c.count}</span>
             </Link>
           ))}
         </div>

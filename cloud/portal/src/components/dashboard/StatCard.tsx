@@ -18,22 +18,22 @@ export default function StatCard({
 }) {
   const variant = STAT_COLOR_VARIANTS[color];
   return (
-    <div className="cd-panel p-6 relative overflow-hidden group hover:shadow-2xl hover:shadow-brand/5 transition-all duration-500">
-      <div className={`absolute top-0 right-0 w-24 h-24 -mr-8 -mt-8 rounded-full blur-2xl transition-colors duration-500 ${variant.glow}`} />
+    <div className="cd-panel p-4 relative overflow-hidden group hover:shadow-xl hover:shadow-brand/5 transition-all duration-500">
+      <div className={`absolute top-0 right-0 w-20 h-20 -mr-6 -mt-6 rounded-full blur-2xl transition-colors duration-500 ${variant.glow}`} />
       <div className="flex justify-between items-start relative z-10">
-        <div className={`p-3 rounded-2xl ${variant.iconBg}`}>
-          <Icon size={24} />
+        <div className={`p-2 rounded-xl ${variant.iconBg}`}>
+          <Icon size={18} />
         </div>
         {trend && (
-          <span className="flex items-center gap-1 text-[10px] font-black text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full uppercase tracking-tighter">
-            <ArrowUpRight size={10} /> {trend}
+          <span className="flex items-center gap-1 text-[9px] font-black text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full uppercase tracking-tighter">
+            <ArrowUpRight size={9} /> {trend}
           </span>
         )}
       </div>
-      <div className="mt-6 relative z-10">
-        <div className="text-3xl font-black text-[#1a2333] tracking-tighter leading-none">{value}</div>
-        <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2">{title}</div>
-        {subtitle && <div className="text-[10px] font-bold text-slate-500 mt-1">{subtitle}</div>}
+      <div className="mt-3 relative z-10">
+        <div className="text-2xl font-black text-[#1a2333] tracking-tighter leading-none">{value}</div>
+        <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1.5">{title}</div>
+        {subtitle && <div className="text-[9px] font-bold text-slate-500 mt-0.5 truncate">{subtitle}</div>}
       </div>
     </div>
   );

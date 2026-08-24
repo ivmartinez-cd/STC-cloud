@@ -50,7 +50,7 @@
     "src/api/routes/publicApiRoutes.ts": 85,
     "src/api/routes/reportRoutes.ts": 78,
     "src/api/routes/suppliesRoutes.ts": 17,
-    "src/api/server.ts": 347,
+    "src/api/server.ts": 349,
     "src/api/utils/deviceFilters.ts": 60,
     "src/api/utils/ip.ts": 16,
     "src/api/utils/password.ts": 28,
@@ -79,6 +79,10 @@
     "src/modules/audit/presentation/audit-controller.ts": 48,
     "src/modules/audit/presentation/audit-routes.ts": 30,
     "src/modules/audit/presentation/audit-view.ts": 36,
+    "src/modules/device-costs/domain/entities/device-costs.ts": 35,
+    "src/modules/device-costs/index.ts": 10,
+    "src/modules/device-costs/infrastructure/database/knex-device-costs-repository.ts": 58,
+    "src/modules/device-costs/presentation/device-costs-routes.ts": 96,
     "src/modules/email-log/domain/entities/email-log-entry.ts": 36,
     "src/modules/email-log/infrastructure/database/knex-email-log-repository.ts": 71,
     "src/modules/email-log/presentation/email-log-routes.ts": 52,
@@ -128,7 +132,7 @@
     "src/modules/scheduled-reports/infrastructure/renderers/device-tables.ts": 81,
     "src/modules/scheduled-reports/infrastructure/renderers/knex-report-renderer.ts": 65,
     "src/modules/scheduled-reports/infrastructure/renderers/tabular-export.ts": 52,
-    "src/modules/scheduled-reports/infrastructure/renderers/usage-supplies-alerts-tables.ts": 111,
+    "src/modules/scheduled-reports/infrastructure/renderers/usage-supplies-alerts-tables.ts": 131,
     "src/modules/scheduled-reports/presentation/scheduled-report-controller.ts": 121,
     "src/modules/scheduled-reports/presentation/scheduled-report-routes.ts": 34,
     "src/modules/scheduled-reports/presentation/scheduled-report-schemas.ts": 31,
@@ -205,6 +209,7 @@
     "src/tests/alerts.test.ts": 499,
     "src/tests/auditFeed.test.ts": 188,
     "src/tests/businessHours.test.ts": 128,
+    "src/tests/deviceCosts.test.ts": 134,
     "src/tests/deviceLifecycle.test.ts": 465,
     "src/tests/deviceUsageHistory.test.ts": 149,
     "src/tests/e2e.test.ts": 521,
@@ -220,7 +225,7 @@
     "src/tests/pendingDevices.test.ts": 267,
     "src/tests/portalAgentEws.test.ts": 177,
     "src/tests/publicApi.test.ts": 298,
-    "src/tests/rbac.test.ts": 725,
+    "src/tests/rbac.test.ts": 736,
     "src/tests/reports.test.ts": 219,
     "src/tests/scheduledReports.test.ts": 185,
     "src/tests/snmpCredentials.test.ts": 283,
@@ -234,7 +239,7 @@
     "portal/src/components/ConfirmModal.tsx": 80,
     "portal/src/components/ErrorBoundary.tsx": 59,
     "portal/src/components/FeedbackModal.tsx": 335,
-    "portal/src/components/Layout.tsx": 487,
+    "portal/src/components/Layout.tsx": 463,
     "portal/src/components/Terminal.tsx": 244,
     "portal/src/components/agents/AgentTable.tsx": 194,
     "portal/src/components/agents/ClientUsageChart.tsx": 54,
@@ -252,9 +257,10 @@
     "portal/src/components/clients/NotificationEventsCard.tsx": 87,
     "portal/src/components/clients/NotificationSettingsCard.tsx": 108,
     "portal/src/components/clients/SupplyRequestSettingsCard.tsx": 79,
-    "portal/src/components/dashboard/AgentVersionsCard.tsx": 42,
-    "portal/src/components/dashboard/AlertsByClassCard.tsx": 51,
-    "portal/src/components/dashboard/BrandDistributionCard.tsx": 52,
+    "portal/src/components/dashboard/ActionTileChip.tsx": 40,
+    "portal/src/components/dashboard/AgentVersionsCard.tsx": 40,
+    "portal/src/components/dashboard/AlertsByClassCard.tsx": 49,
+    "portal/src/components/dashboard/BrandDistributionCard.tsx": 50,
     "portal/src/components/dashboard/OfflineAgentsCard.tsx": 46,
     "portal/src/components/dashboard/StatCard.tsx": 41,
     "portal/src/components/dashboard/SupplyAlertsTable.tsx": 162,
@@ -270,6 +276,7 @@
     "portal/src/components/devices/DeviceLifecycleModals/index.ts": 16,
     "portal/src/components/devices/DeviceLifecycleModals/types.ts": 12,
     "portal/src/components/devices/detail/AlertsTab.tsx": 28,
+    "portal/src/components/devices/detail/CostsTab.tsx": 105,
     "portal/src/components/devices/detail/CountersCard.tsx": 42,
     "portal/src/components/devices/detail/CountersTab.tsx": 53,
     "portal/src/components/devices/detail/DeviceDetailHeader.tsx": 92,
@@ -282,6 +289,8 @@
     "portal/src/components/devices/detail/format.ts": 5,
     "portal/src/components/devices/detail/primitives.tsx": 51,
     "portal/src/components/incidents/CreateIncidentModal.tsx": 130,
+    "portal/src/components/layout/SidebarNav.tsx": 165,
+    "portal/src/components/layout/navTree.ts": 44,
     "portal/src/components/monitors/ConfigTabPanel.tsx": 285,
     "portal/src/components/monitors/CreateMonitorModal.tsx": 258,
     "portal/src/components/monitors/DeviceInventoryTable.tsx": 426,
@@ -329,8 +338,8 @@
     "portal/src/pages/Alerts.tsx": 447,
     "portal/src/pages/ClientDetail.tsx": 162,
     "portal/src/pages/Clients.tsx": 334,
-    "portal/src/pages/Dashboard.tsx": 195,
-    "portal/src/pages/DeviceDetail.tsx": 283,
+    "portal/src/pages/Dashboard.tsx": 138,
+    "portal/src/pages/DeviceDetail.tsx": 287,
     "portal/src/pages/Devices.tsx": 261,
     "portal/src/pages/EmailLog.tsx": 145,
     "portal/src/pages/IncidentDetail.tsx": 264,
@@ -707,7 +716,7 @@
     "src/api/server.ts": [
       {
         "name": "start",
-        "length": 236
+        "length": 237
       },
       {
         "name": "healthHandler",
@@ -1296,6 +1305,12 @@
         "length": 33
       }
     ],
+    "src/tests/deviceCosts.test.ts": [
+      {
+        "name": "describe(Costes por equipo — e2e)",
+        "length": 69
+      }
+    ],
     "src/tests/deviceLifecycle.test.ts": [
       {
         "name": "describe(Identidad de dispositivo por cliente — fixtures)",
@@ -1683,7 +1698,7 @@
       },
       {
         "name": "describe(RBAC — mutaciones denegadas para client_viewer)",
-        "length": 236
+        "length": 247
       },
       {
         "name": "describe(RBAC — restricciones a nivel de base (defensa en profundidad))",
@@ -1831,11 +1846,7 @@
     "portal/src/components/Layout.tsx": [
       {
         "name": "Layout",
-        "length": 435
-      },
-      {
-        "name": "anonymous",
-        "length": 58
+        "length": 379
       }
     ],
     "portal/src/components/Terminal.tsx": [
@@ -1966,22 +1977,28 @@
         "length": 66
       }
     ],
+    "portal/src/components/dashboard/ActionTileChip.tsx": [
+      {
+        "name": "ActionTileChip",
+        "length": 26
+      }
+    ],
     "portal/src/components/dashboard/AgentVersionsCard.tsx": [
       {
         "name": "AgentVersionsCard",
-        "length": 38
+        "length": 36
       }
     ],
     "portal/src/components/dashboard/AlertsByClassCard.tsx": [
       {
         "name": "AlertsByClassCard",
-        "length": 35
+        "length": 33
       }
     ],
     "portal/src/components/dashboard/BrandDistributionCard.tsx": [
       {
         "name": "BrandDistributionCard",
-        "length": 43
+        "length": 41
       }
     ],
     "portal/src/components/dashboard/OfflineAgentsCard.tsx": [
@@ -2070,6 +2087,12 @@
         "length": 22
       }
     ],
+    "portal/src/components/devices/detail/CostsTab.tsx": [
+      {
+        "name": "CostsTab",
+        "length": 73
+      }
+    ],
     "portal/src/components/devices/detail/CountersCard.tsx": [
       {
         "name": "CountersCard",
@@ -2132,6 +2155,20 @@
       {
         "name": "create",
         "length": 21
+      }
+    ],
+    "portal/src/components/layout/SidebarNav.tsx": [
+      {
+        "name": "LeafRow",
+        "length": 62
+      },
+      {
+        "name": "SidebarNav",
+        "length": 92
+      },
+      {
+        "name": "anonymous",
+        "length": 68
       }
     ],
     "portal/src/components/monitors/ConfigTabPanel.tsx": [
@@ -2463,13 +2500,13 @@
     "portal/src/pages/Dashboard.tsx": [
       {
         "name": "Dashboard",
-        "length": 175
+        "length": 117
       }
     ],
     "portal/src/pages/DeviceDetail.tsx": [
       {
         "name": "DeviceDetail",
-        "length": 255
+        "length": 258
       }
     ],
     "portal/src/pages/Devices.tsx": [
