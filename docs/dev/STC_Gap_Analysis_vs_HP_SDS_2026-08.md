@@ -1379,7 +1379,7 @@ replicas` + LB — es decisión de infraestructura aparte), dashboards de
 Grafana/alerting sobre las métricas (solo el endpoint), y el relay
 request/reply para afinidad de socket del proxy EWS.
 
-### Fase 6 — Seguridad (24/08/2026) — arrancada: 2 ítems cerrados
+### Fase 6 — Seguridad (24/08/2026) — completa: 4 de 4 ítems cerrados
 
 ✅ **6.1 — 2FA TOTP opt-in para el portal** (anotado en los parciales de la
 Fase 4 — el SDS lo ofrece en Preferencias — y ligado al riesgo R5).
@@ -1449,9 +1449,45 @@ test-infra**: el archivo por sí solo hace >10 llamadas a `POST
 trabajo; se agregó un drenado explícito de esa key entre bloques del
 archivo de test (documentado inline).
 
+✅ **6.4 — Auditoría de logins** (24/08/2026). R5 señalaba "Audit logs
+ausentes para: ... logins" — confirmado en el código: `portalLogin`
+(`authController/session.ts`) no escribía ninguna fila de `audit_logs`,
+a diferencia de casi todo el resto del portal. Se agregó `writeAudit` en
+cada rama de salida: `USER_LOGIN_SUCCESS` al final (con el propio usuario
+como `target_id`/`user_id`) y `USER_LOGIN_FAILED` en las 5 formas de
+fallar (`unknown_user`, `disabled`, `bad_password`, `bad_totp`,
+`bad_recovery_code`), con el motivo en `metadata.reason` — nunca la
+contraseña ni el código, y con el username intentado en `metadata` aun
+cuando el usuario no existe (permite investigar fuerza bruta por cuenta
+sin que la fila tenga un `user_id`/`target_id` real). Catalogadas en
+`audit-action-catalog.ts` bajo la categoría `security` (existía en el
+tipo `AuditCategory` pero no se usaba todavía).
+
+De paso, verificado contra el código (no sólo el doc, que estaba
+desactualizado en varios puntos) que el resto de R5 ya estaba cerrado por
+pasadas previas y no quedó fuera de foco: mass-assignment de `createClient`
+y schema de `PUT /agents/:id/config` (Fase 0), IDOR (`scope.ts` con 13
+call-sites de `*IdParamMatchesScope`, Fase 1), login por env en texto
+plano (Fase 0), `x-forwarded-for`/`trustProxy` (Fase 0), firma del
+updater con placeholder (cerrado 23/08, ver más abajo "R5" en Otros
+puntos), comandos remotos individuales (`AGENT_COMMAND` ya auditado en
+`portalAgentController/remote.ts`). Único hallazgo menor sin cerrar:
+`triggerScan` (RESCAN disparado desde el detalle de agente, no desde
+lotes) no audita — bajo riesgo (acción de sólo lectura) y no forma parte
+de "logins", queda anotado para una pasada de limpieza aparte junto con
+el cambio de versión de agente (`AgentTelemetryService.heartbeat` pisa
+`agents.version` en cada latido sin registrar el cambio — habría que
+comparar contra el valor previo para no auditar cada heartbeat).
+
+Verificado: 3 tests nuevos en `auditFeed.test.ts` (login exitoso audita
+con IP; contraseña incorrecta audita `bad_password` sin exponerla en
+metadata; usuario inexistente audita `unknown_user` con `target_id` null)
++ regresión completa de la suite de audit feed (16/16) y del CI completo.
+
 Con esto se cierra el corte de seguridad planificado del bloque 6.
-**Pendiente para más adelante**: el resto de los ítems R5 del doc que no
-son 2FA.
+**Pendiente para más adelante**: `triggerScan` sin auditar, auditoría de
+cambio de versión de agente, y R6-R9 del doc (versionado disperso, TZ
+fija, cobertura de marcas, portal sin paginación).
 
 ### Fase 7 — Agente v1.2.0 (24/08/2026) — completa: reinicio remoto de impresora
 

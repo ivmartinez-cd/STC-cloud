@@ -9,9 +9,27 @@ import type Redis from "ioredis";
 import type { Knex } from "knex";
 import { mintWsTicket } from "../../../services/wsTicketService";
 import { verifyPassword } from "../../utils/password";
+import { getClientIp } from "../../utils/ip";
 import type { PortalUser } from "../../middlewares/authMiddleware";
 import type { LoginBody } from "./shared";
 import { JWT_PORTAL_TTL } from "./shared";
+
+/**
+ * R5 del gap analysis vs HP SDS ("Audit logs ausentes para: ... logins"):
+ * único punto de auditoría de intentos de login, éxito y falla, con el
+ * MOTIVO de la falla en `metadata` (nunca la contraseña). `targetId`/`userId`
+ * quedan null cuando el usuario no existe — igual se registra el username
+ * intentado en `metadata` para poder investigar fuerza bruta por cuenta.
+ */
+async function auditLoginFailure(db: Knex, request: FastifyRequest, username: string, reason: string, user?: { id: string }) {
+  await writeAudit(db, {
+    action: "USER_LOGIN_FAILED",
+    targetId: user?.id ?? null,
+    userId: user?.id ?? null,
+    ip: getClientIp(request),
+    metadata: { username, reason },
+  });
+}
 
 async function portalLogin(fastify: FastifyInstance, db: Knex, request: FastifyRequest, reply: FastifyReply) {
   const { username, password } = request.body as LoginBody;
@@ -28,15 +46,18 @@ async function portalLogin(fastify: FastifyInstance, db: Knex, request: FastifyR
   const user = await db("users").where({ username: cleanUsername }).first();
 
   if (!user) {
+    await auditLoginFailure(db, request, cleanUsername, "unknown_user");
     return reply.status(401).send({ error: "Credenciales inválidas" });
   }
 
   if (!user.active) {
+    await auditLoginFailure(db, request, cleanUsername, "disabled", user);
     return reply.status(401).send({ error: "El usuario está desactivado" });
   }
 
   const isValid = verifyPassword(password, user.password_hash);
   if (!isValid) {
+    await auditLoginFailure(db, request, cleanUsername, "bad_password", user);
     return reply.status(401).send({ error: "Credenciales inválidas" });
   }
 
@@ -54,13 +75,22 @@ async function portalLogin(fastify: FastifyInstance, db: Knex, request: FastifyR
       // factor (consumo atómico + auditoría — el usuario perdió el teléfono).
       const consumed = await new KnexRecoveryCodeRepository(db).consume(user.id, totp_code);
       if (!consumed) {
+        await auditLoginFailure(db, request, cleanUsername, "bad_recovery_code", user);
         return reply.status(401).send({ error: "Credenciales inválidas", totp_required: true });
       }
       await writeAudit(db, { action: "USER_2FA_RECOVERY_USED", targetId: user.id, userId: user.id });
     } else if (!verifyTotp(decryptSecret(user.totp_secret), totp_code, Date.now())) {
+      await auditLoginFailure(db, request, cleanUsername, "bad_totp", user);
       return reply.status(401).send({ error: "Credenciales inválidas", totp_required: true });
     }
   }
+
+  await writeAudit(db, {
+    action: "USER_LOGIN_SUCCESS",
+    targetId: user.id,
+    userId: user.id,
+    ip: getClientIp(request),
+  });
 
   const token = fastify.jwt.sign(
     { role: "portal", userId: user.id },

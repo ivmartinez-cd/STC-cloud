@@ -69,6 +69,8 @@ const AUDIT_ACTION_META: Record<string, AuditActionMeta> = {
   CLIENT_UPDATED: { label: "Cliente editado", category: "client" },
 
   // Usuarios / seguridad
+  USER_LOGIN_SUCCESS: { label: "Inicio de sesión", category: "security" },
+  USER_LOGIN_FAILED: { label: "Intento de inicio de sesión fallido", category: "security" },
   USER_CREATED: { label: "Usuario creado", category: "user" },
   USER_UPDATED: { label: "Usuario editado", category: "user" },
   USER_DELETED: { label: "Usuario eliminado", category: "user" },

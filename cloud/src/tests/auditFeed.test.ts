@@ -159,6 +159,52 @@ describe('Audit feed — filtros', () => {
   });
 });
 
+async function drainLoginRateLimit(): Promise<void> {
+  const { execSync } = await import('node:child_process');
+  try {
+    execSync('docker exec stc_redis redis-cli DEL "fastify-rate-limit-POST/api/v1/portal/login-172.22.0.1"', { stdio: 'ignore' });
+  } catch {
+    // best-effort: si no hay docker (CI distinta), el test puede tardar más por el 429 natural
+  }
+}
+
+describe('Audit feed — login (R5 del gap analysis: "audit logs ausentes para... logins")', () => {
+  test('login exitoso → USER_LOGIN_SUCCESS auditado con el propio usuario como target', async () => {
+    await drainLoginRateLimit();
+    const login = await req('POST', '/portal/login', { username: USER, password: PASS });
+    assert.equal(login.status, 200);
+
+    const { data } = await req('GET', '/audit-logs?action=USER_LOGIN_SUCCESS&limit=1', undefined, ctx.adminToken);
+    assert.equal(data.items[0].action, 'USER_LOGIN_SUCCESS');
+    assert.equal(data.items[0].user_username, USER);
+    assert.ok(data.items[0].ip_address);
+  });
+
+  test('contraseña incorrecta → USER_LOGIN_FAILED con reason=bad_password (nunca la contraseña en metadata)', async () => {
+    await drainLoginRateLimit();
+    const login = await req('POST', '/portal/login', { username: USER, password: 'esto-esta-mal' });
+    assert.equal(login.status, 401);
+
+    const { data } = await req('GET', '/audit-logs?action=USER_LOGIN_FAILED&limit=1', undefined, ctx.adminToken);
+    assert.equal(data.items[0].action, 'USER_LOGIN_FAILED');
+    assert.equal(data.items[0].metadata.reason, 'bad_password');
+    assert.equal(data.items[0].metadata.username, USER);
+    assert.equal(JSON.stringify(data.items[0].metadata).includes('esto-esta-mal'), false);
+  });
+
+  test('usuario inexistente → USER_LOGIN_FAILED con reason=unknown_user, sin target_id/user_id (no hay cuenta real)', async () => {
+    await drainLoginRateLimit();
+    const bogus = `no_existe_${ts}`;
+    const login = await req('POST', '/portal/login', { username: bogus, password: 'lo-que-sea' });
+    assert.equal(login.status, 401);
+
+    const { data } = await req('GET', '/audit-logs?action=USER_LOGIN_FAILED&limit=1', undefined, ctx.adminToken);
+    assert.equal(data.items[0].metadata.reason, 'unknown_user');
+    assert.equal(data.items[0].metadata.username, bogus);
+    assert.equal(data.items[0].target_id, null);
+  });
+});
+
 describe('Audit feed — RBAC (sólo admin/operator)', () => {
   test('Setup: crear client_viewer atado al cliente A', async () => {
     const created = await req('POST', '/portal/users', {
