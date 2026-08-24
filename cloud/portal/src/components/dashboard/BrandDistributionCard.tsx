@@ -10,7 +10,7 @@ const BRAND_COLORS = ['#f7941d', '#58595b', '#1abc9c', '#f1c40f', '#232323', '#e
 export default function BrandDistributionCard({ brands }: { brands: DashboardData['brands'] | undefined }) {
   return (
     <div className="cd-panel p-4 h-full min-h-0 flex flex-col overflow-hidden">
-      <div className="shrink-0 mb-3">
+      <div className="shrink-0 mb-2">
         <h3 className="text-xs font-black text-[#1a2333] tracking-tight flex items-center gap-2">
           <PieChartIcon size={14} className="text-brand" /> Distribución de Marcas
         </h3>
@@ -19,11 +19,11 @@ export default function BrandDistributionCard({ brands }: { brands: DashboardDat
       {brands?.length === 0 ? (
         <div className="flex-1 flex items-center justify-center opacity-20"><Activity size={32} /></div>
       ) : (
-        <div className="flex-1 min-h-0 flex flex-row items-center gap-4">
-          <div className="w-24 h-24 shrink-0">
+        <div className="flex-1 min-h-0 flex flex-row items-stretch gap-3">
+          <div className="w-16 h-16 shrink-0 self-center">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
-                <Pie data={brands} cx="50%" cy="50%" innerRadius={28} outerRadius={44} paddingAngle={4} dataKey="count" nameKey="brand">
+                <Pie data={brands} cx="50%" cy="50%" innerRadius={18} outerRadius={30} paddingAngle={4} dataKey="count" nameKey="brand">
                   {brands?.map((_, index) => (
                     <Cell key={`cell-${index}`} fill={BRAND_COLORS[index % BRAND_COLORS.length]} />
                   ))}

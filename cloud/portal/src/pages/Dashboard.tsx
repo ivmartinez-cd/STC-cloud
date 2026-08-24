@@ -119,7 +119,7 @@ const Dashboard = () => {
           encima de la fila siguiente — la altura definida es lo que habilita
           el scroll interno de cada card. */}
       <div className="flex flex-col gap-3 xl:flex-1 xl:min-h-0">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 xl:flex-[3] xl:min-h-0 auto-rows-[280px] xl:grid-rows-[minmax(0,1fr)] [&>*]:min-h-0 [&>*]:overflow-hidden">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 xl:flex-[4] xl:min-h-0 auto-rows-[280px] xl:grid-rows-[minmax(0,1fr)] [&>*]:min-h-0 [&>*]:overflow-hidden">
           <BrandDistributionCard brands={data?.brands} />
           <TopClientsCard topClients={data?.topClients} />
           <OfflineAgentsCard offlineAgents={data?.offlineAgents} now={now} />
