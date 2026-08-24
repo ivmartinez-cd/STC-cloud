@@ -94,7 +94,11 @@
     "src/services/agentService/lifecycle.ts": 179,
     "src/services/agentService/reading-helpers.ts": 94,
     "src/services/agentService/search.ts": 51,
-    "src/services/agentService/telemetry.ts": 702,
+    "src/services/agentService/sync-log.ts": 29,
+    "src/services/agentService/sync-reading-alerts.ts": 107,
+    "src/services/agentService/sync-reading-fields.ts": 207,
+    "src/services/agentService/sync-reading.ts": 228,
+    "src/services/agentService/telemetry.ts": 243,
     "src/services/agentService/types.ts": 125,
     "src/services/agentVersionService.ts": 39,
     "src/services/alertCatalog.ts": 255,
@@ -108,8 +112,9 @@
     "src/services/deviceIdentity.ts": 222,
     "src/services/deviceLifecycleService/bulk.ts": 219,
     "src/services/deviceLifecycleService/index.ts": 18,
+    "src/services/deviceLifecycleService/merge-survivor.ts": 62,
     "src/services/deviceLifecycleService/merge-types.ts": 66,
-    "src/services/deviceLifecycleService/merge.ts": 245,
+    "src/services/deviceLifecycleService/merge.ts": 282,
     "src/services/deviceMonitorService.ts": 59,
     "src/services/deviceRegistrationService.ts": 200,
     "src/services/ewsProxyService.ts": 75,
@@ -740,22 +745,52 @@
         "length": 39
       }
     ],
-    "src/services/agentService/telemetry.ts": [
+    "src/services/agentService/sync-reading-alerts.ts": [
       {
-        "name": "ingestLogs",
+        "name": "mergeGhostDevicesByIp",
+        "length": 21
+      }
+    ],
+    "src/services/agentService/sync-reading-fields.ts": [
+      {
+        "name": "resolveExistingDeviceFields",
+        "length": 28
+      },
+      {
+        "name": "buildExistingDeviceUpdate",
+        "length": 64
+      },
+      {
+        "name": "buildNewDeviceInsert",
+        "length": 58
+      }
+    ],
+    "src/services/agentService/sync-reading.ts": [
+      {
+        "name": "resolveExistingDevice",
         "length": 23
       },
       {
-        "name": "heartbeat",
+        "name": "computeDisplayFields",
         "length": 22
       },
       {
-        "name": "syncReadings",
-        "length": 594
+        "name": "upsertExistingDevice",
+        "length": 50
       },
       {
         "name": "processReading",
-        "length": 434
+        "length": 34
+      }
+    ],
+    "src/services/agentService/telemetry.ts": [
+      {
+        "name": "insertMappedReadings",
+        "length": 28
+      },
+      {
+        "name": "syncReadings",
+        "length": 23
       }
     ],
     "src/services/agentVersionService.ts": [
@@ -844,12 +879,12 @@
     ],
     "src/services/deviceLifecycleService/merge.ts": [
       {
-        "name": "mergeDevices",
-        "length": 206
+        "name": "resolveReadingOverlap",
+        "length": 22
       },
       {
-        "name": "run",
-        "length": 197
+        "name": "runMerge",
+        "length": 25
       }
     ],
     "src/services/deviceMonitorService.ts": [

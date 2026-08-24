@@ -1,8 +1,8 @@
 # Plan de Migración a ARCHITECTURE_GUIDE.md
 
-**Estado:** Fase 0 y Fase 1 completas; Fase 2 backend completa salvo 2 pasadas
-diferidas de alto riesgo (`syncReadings`, `mergeDevices`); Frontend sin
-arrancar — 2026-08-24  
+**Estado:** Fase 0, Fase 1 y Fase 2 (backend) completas — incluidas las 2
+pasadas diferidas de alto riesgo (`syncReadings`, `mergeDevices`); Frontend
+sin arrancar — 2026-08-24  
 **Origen:** `docs/dev/ARCHITECTURE_GUIDE.md` (copiado desde `helpdesk-manager`, 2026-08-24)  
 **Reemplaza (parcialmente) a:** `docs/dev/PROJECT_GUIDELINES.md`, que hoy documenta la
 convención opuesta (`api/` para rutas + `services/` para lógica de negocio, sin capas).
@@ -307,7 +307,80 @@ portal). Splitting de componentes React es un problema distinto al de
 funciones/controllers de Node (reglas de hooks, límites de componente,
 prop drilling) — no asumir que aplica el mismo patrón mecánico de
 carpeta+barrel sin evaluarlo primero.
-arrancar.
+
+## Fase 2 — 2 pasadas diferidas completas (2026-08-24)
+
+Las dos decomposiciones de alto riesgo que se habían movido verbatim (sin
+tocar su lógica interna) durante la Fase 2 quedaron pendientes a propósito
+hasta poder dedicarles una pasada cuidadosa y aislada. Se hicieron en esta
+sesión, cada una revisando rama por rama antes de extraer, sin cambiar
+ningún comportamiento observable.
+
+**1. `services/deviceLifecycleService/merge.ts`** (`mergeDevices`) — de 244L
+en un solo archivo a:
+- `merge.ts` (281L) — `mergeDevices` conserva firma exacta
+  (`mergeDevices(db, params, existingTrx?)`). Se descompuso en ~19 funciones
+  con nombres explícitos: `lockDevicePair`, `buildIdempotentResult`,
+  `resolveIdentifyingSerials`, `assertNoIdentityConflict`,
+  `assertMergeGuards`, `assertReadingCountWithinLimit`, `throwOverlapError`,
+  `resolveReadingOverlap`, `moveReadings`/`moveReadingsPhase`,
+  `resolveAlertCollisions`, `moveAlerts`/`moveAlertsPhase`,
+  `moveClosureLines`, `moveLegacyMonthlyCounters`, `compressMergeChain`,
+  `buildMergeAuditMetadata`, `writeMergeAudit`, `runMerge`.
+- `merge-survivor.ts` (61L, nuevo) — precedencia de campos entre
+  target/source al fusionar (`pickNewer`, `isNoiseModel`,
+  `resolveModelAndBrand`, `buildSurvivorUpdate`, `markAsTombstone`),
+  expuesto como `applySurvivorAndTombstone(...)`.
+
+**2. `services/agentService/telemetry.ts`** (`syncReadings`) — de 701L en un
+solo archivo a:
+- `telemetry.ts` (242L) — `AgentTelemetryService` conserva `ingestLogs`,
+  `getLogs`, `heartbeat`, `syncReadings` con firma exacta (incluye el
+  parámetro `redis` que ya estaba muerto — el cuerpo usa `this.redis` — se
+  preservó tal cual, no es un bug de esta pasada). Orquestación de alto
+  nivel: `resolveAgentClientContext`, `groupReadingsByIdentity`,
+  `READING_CONCURRENCY = 5`, `processReadingGroups`, `insertMappedReadings`,
+  `enqueueAlertEvaluation`, `enqueueReadingWebhook`.
+- `sync-reading.ts` (227L, nuevo) — resolución de identidad + upsert/insert
+  de un dispositivo por lectura: exporta `processReading(...)` (antes
+  inline dentro de `syncReadings`) y el tipo `DisplayFields`.
+- `sync-reading-fields.ts` (206L, nuevo) — parseo de contadores/tóner y
+  detección de reset (`parseCount`, `parseToner`, `detectCounterResets`,
+  `resolveExistingDeviceFields`, `buildExistingDeviceUpdate`,
+  `buildNewDeviceInsert`).
+- `sync-reading-alerts.ts` (106L, nuevo) — alertas derivadas de una lectura
+  (`openCounterResetAlert`, `handleSupplyOriginAlertsForExisting`,
+  `openSupplyNonGenuineAlert`, `warnIfDecommissionedStillReporting`,
+  `syncEwsAlerts`, `mergeGhostDevicesByIp` — esta última es la que fusiona
+  fantasmas duplicados vía `mergeDevices`).
+- `sync-log.ts` (28L, nuevo) — logging de fallas de sync
+  (`buildAgentLogRows`, `recordSyncFailureLog`).
+
+Único cambio no puramente mecánico: se eliminó el import muerto
+`NOISE_MODEL_RE` sin uso en el archivo original (confirmado al 100% sin
+referencias) — documentado explícitamente, no silencioso.
+
+**Validación** (mismo entorno efímero aislado que las fases anteriores,
+Postgres/Redis/API propios en contenedores throwaway, puerto y DB separados
+de la sesión hermana):
+- `npm run build` limpio, `npx tsc --noEmit` limpio en ambos splits al
+  primer intento.
+- Suite completa de backend: 21 archivos, `node scripts/ci-test-runner.mjs`
+  → **0 fallas**. Revisión dirigida de las suites de mayor riesgo:
+  concurrencia del sync (batching, orden de lecturas del mismo dispositivo
+  en un lote, aislamiento de lecturas corruptas), reset de contador +
+  `monthly_pages`, y — el más directamente ligado a `mergeDevices` —
+  `deviceLifecycle.test.ts` completo (identidad serial→mac→ip, fusión
+  manual de duplicados con éxito/409/self-merge, acciones en bloque de
+  mover/dar de baja) — 29/29 verdes.
+- `cloud/portal` → `npm run check` (icons + tsc + eslint) limpio.
+- `check-sizes.mjs` limpio tras regenerar baseline (237 archivos
+  escaneados, sin deuda nueva aceptada — ambos splits cumplen los límites
+  de entrada, no vía baseline).
+
+Con esto, Fase 2 backend queda 100% completa. Sigue pendiente el frontend
+(ver tabla de archivos grandes de `portal/src` arriba) — no arrancado en
+esta sesión.
 
 ## 0. Punto de partida (medido 2026-08-24)
 
