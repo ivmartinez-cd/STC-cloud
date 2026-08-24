@@ -1743,7 +1743,41 @@ TZ fija en agente (`BusinessHours.ts`, `Logger.ts`), servidor (`-03:00`, `portal
 Familias reales sólo HP/Samsung/Lexmark (18 perfiles). Ricoh/Brother/Xerox → `generic.ews` + OIDs parciales (`BROTHER_OIDS.totalPages` vacío; Xerox mono=color). Canon, Kyocera, Konica Minolta, Epson, Sharp, Toshiba, OKI, Pantum ni siquiera son `Brand` → caen a `generic` (Printer‑MIB sirve para total/insumos, pero sin desglose color ni alertas ricas). En un MPS multimarca esto limita la promesa comercial.
 
 ### R9 · Portal — **P1**
-Sin paginación (500 equipos = inusable), 3 tipos `Alert` distintos, tipo `MonitorData.config` miente (se parsea como string), `Terminal.tsx` hardcodea `wss://stc-cloud.onrender.com`, 401 hace `location.replace` y pierde la ruta, Settings guarda umbral offline en `localStorage`. Sin tests.
+Sin paginación (500 equipos = inusable), ~~3 tipos `Alert` distintos~~ (✅ ya
+consolidados en `types/alerts.ts` por una pasada previa de alertas — ver
+docblock ahí), tipo `MonitorData.config` miente (se parsea como string —
+`ip_ranges` a veces llega como string sin parsear del backend, workaround
+`typeof === 'string' ? JSON.parse` repetido en 4+ lugares tanto en
+`services/agentService/config.ts` como en el portal; requiere tocar
+`agentService/config.ts`, que está en el área que otra sesión está
+migrando a Clean Architecture ahora mismo — queda pendiente hasta que esa
+migración toque `agents`), ~~`Terminal.tsx` hardcodea
+`wss://stc-cloud.onrender.com`~~ (✅ ya resuelto — deriva de
+`window.location.host`, quedó así desde el fix del ticket de WS de un solo
+uso, R4 más abajo), ✅ **401 hace `location.replace` y pierde la ruta**
+(24/08/2026, ver abajo), Settings guarda un umbral offline en
+`localStorage` que en realidad **no lo lee nadie** (el umbral real está
+hardcodeado server-side en `heartbeatMonitor.ts` — el control de
+Configuración es decorativo; arreglarlo de verdad requiere tocar ese mismo
+archivo, en el área que la otra sesión está migrando ahora — queda
+pendiente). Sin tests.
+
+✅ **401/deep-link sin sesión ya no pierde la ruta** (24/08/2026). Dos
+puntos de entrada perdían a dónde iba el usuario: el interceptor 401 de
+`lib/api.ts` (sesión expirada a mitad de uso) y el guard `RequireAuth` de
+`App.tsx` (deep-link directo sin sesión) mandaban siempre a `/login` y,
+tras el login, `Login.tsx` navegaba siempre a `/`. Se agregó
+`lib/postLoginRedirect.ts` (`stashCurrentPath`/`consumePostLoginRedirect`,
+sobre `sessionStorage`) y se conectó en los 3 puntos. Bug real encontrado
+en el camino: el primer intento en `RequireAuth` leía `window.location`
+DENTRO de un `useEffect`, pero el `<Navigate>` hermano (hijo en el árbol)
+corre su propio efecto ANTES que el del padre — para cuando el efecto de
+`RequireAuth` se ejecutaba, `window.location` ya apuntaba a `/login`, y el
+guard de "nunca guardar /login" descartaba todo. Se arregló capturando la
+ruta con `useLocation()` en el render (no releída después). Verificado con
+Playwright real contra el stack Docker: deep-link sin sesión → login →
+vuelve al deep-link (no a `/`); cookie de sesión corrompida a mitad de uso
+→ 401 → login → vuelve a la página en la que estaba.
 
 ### R10 · Documentación divergente — **P2**
 Ver §1. Especialmente `data_collection_inventory.md` (privacidad) y los HTML de auditoría IT que describen la cascada vieja, PBKDF2 100k y "SNMP sólo identificación".

@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Lock, User, AlertCircle, Loader2, ShieldCheck } from 'lucide-react';
+import { consumePostLoginRedirect } from '../lib/postLoginRedirect';
 
 const Login = () => {
   const { login } = useAuth();
@@ -20,7 +21,7 @@ const Login = () => {
     setLoading(true);
     try {
       await login(username, password, totpCode || undefined);
-      navigate('/', { replace: true });
+      navigate(consumePostLoginRedirect(), { replace: true });
     } catch (err: unknown) {
       const failure = err as Error & { totpRequired?: boolean };
       if (failure.totpRequired && !totpStep) {

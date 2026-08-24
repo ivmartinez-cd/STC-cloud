@@ -1,3 +1,5 @@
+import { stashCurrentPath } from './postLoginRedirect';
+
 const BASE = '/api/v1';
 
 /**
@@ -52,6 +54,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   }
 
   if (res.status === 401) {
+    stashCurrentPath();
     window.location.replace('/login');
     throw new Error('Sesión expirada');
   }

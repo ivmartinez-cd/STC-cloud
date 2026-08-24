@@ -1,9 +1,10 @@
-import { lazy } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import { lazy, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ToastProvider } from './context/ToastContext';
 import Layout from './components/Layout';
 import Login from './pages/Login';
+import { stashCurrentPath } from './lib/postLoginRedirect';
 
 const Dashboard    = lazy(() => import('./pages/Dashboard'));
 const Clients      = lazy(() => import('./pages/Clients'));
@@ -26,6 +27,15 @@ const IncidentDetail = lazy(() => import('./pages/IncidentDetail'));
 
 function RequireAuth() {
   const { isAuthenticated, checking } = useAuth();
+  // Capturada en el render, NO releída dentro del efecto — ver el docblock
+  // de `stashCurrentPath`: para cuando el efecto corre, el `<Navigate>`
+  // hermano puede haber cambiado ya `window.location` a `/login`.
+  const location = useLocation();
+  const currentPath = location.pathname + location.search;
+  useEffect(() => {
+    if (!checking && !isAuthenticated) stashCurrentPath(currentPath);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [checking, isAuthenticated]);
   if (checking) return null;
   return isAuthenticated ? <Outlet /> : <Navigate to="/login" replace />;
 }
