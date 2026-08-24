@@ -27,18 +27,7 @@
     "@types/node": "^20.11.20",
     "@types/ws": "^8.18.1",
     "esbuild": "^0.27.7",
-    "pkg": "^5.8.1",
-    "postject": "^1.0.0-alpha.6",
     "tsx": "^4.7.1",
     "typescript": "^5.3.3"
-  },
-  "pkg": {
-    "assets": [
-      "node_modules/better-sqlite3/build/Release/*.node"
-    ],
-    "targets": [
-      "node18-win-x64"
-    ],
-    "outputPath": "dist"
   }
 }

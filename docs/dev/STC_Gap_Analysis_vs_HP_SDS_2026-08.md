@@ -1730,11 +1730,51 @@ Deploy limpio con `migrate:latest` crea `readings` con `id uuid PK`, sin hyperta
 - Repo: `.env`, `config.enc`, `local_db.json`, `fresh_dump_20260819.sql`, `pgdata_backup.tar.gz`, `Instalador-STC-Monitor.exe` (68 MB) commiteados.
 - Audit logs ausentes para: borrar dispositivo/bulk, comandos remotos (RESTART/FORCE_UPDATE/STC_CONSOLE), cambio de versión de agente, logins.
 
-### R6 · Release, versionado y build — **P1**
-- `VERSION` hardcodeada en `main.ts`, `HeartbeatService.ts`, `UpdateService.ts`, `CliCommands.ts` (1.0.0) y `ConsoleEngine.ts` (**1.2.0**); `package.json`, `.iss`, `.csproj` aparte.
-- Tres builds: `build-sea.js` (esbuild `node24` + copia `process.execPath`, sin `postject`), `build:agent` raíz (pkg `node18-win-x64`), `@types/node ^20`. CI construye el de pkg; el instalador empaqueta el de esbuild → **CI no produce lo que se instala**; `capture.test.ts` no corre en CI; e2e del backend nunca corre en CI.
-- Instalador y Monitor UI con `http://localhost:3000` por defecto; hostnames del backend: `stc-cloud.onrender.com` (vercel.json, Terminal.tsx), `stc-cloud-api.onrender.com` (build‑installer, docs) — uno está mal.
-- Desinstalar borra la cola local sin opción.
+### R6 · Release, versionado y build — **P1** — cerrado (24/08/2026)
+- ✅ `VERSION` ya no está hardcodeada en ningún lado: `HeartbeatService.ts`,
+  `UpdateService.ts`, `CliCommands.ts` y `ConsoleEngine.ts` importan todos
+  de `core/version.ts` (verificado grepeando los 4 archivos — cero
+  literales `1.0.0`/`1.2.0` sueltos). `package.json`/`.iss`/`.csproj`
+  siguen siendo ecosistemas de versión separados (no hay un script que los
+  sincronice automáticamente), pero se mantienen alineados a mano en cada
+  release (así quedaron los 3 en 1.2.0 en la Fase 7).
+- ✅ **CI ya no construye algo distinto de lo que se instala** (24/08/2026).
+  Confirmado el bug real: el job `agent` de `.github/workflows/ci.yml`
+  corría `npm run build:agent` → `npx pkg agent/dist/core/main.js --target
+  node18-win-x64 --output dist/STCCloudMonitor.exe` y subía ese `.exe` como
+  artifact — pero **ningún instalador real usa ese pipeline**:
+  `installer/build-installer.bat` arma el release real con
+  `agent/build-sea.js` (bundle esbuild + copia del runtime de Node) +
+  firma + Inno Setup. El `.exe` de `pkg` era: (a) huérfano — `pkg`/
+  `postject` no se usaban en ningún script real, sólo devDependencies
+  vestigiales de un diseño de SEA descartado —, y (b) potencialmente
+  engañoso — alguien podía asumir que ese CI verde certificaba el
+  instalador real, cuando no probaba ni el bundling de esbuild ni nada
+  del pipeline que se firma y distribuye. Se reemplazó el paso de CI por
+  `node build-sea.js` (el bundling REAL, JS puro — se valida igual en
+  `ubuntu-latest` aunque el `stc-node.exe` resultante ahí no sea un binario
+  Windows válido, eso no es lo que importa validar) y se sube
+  `agent/dist/bundle.js` como artifact en vez del `.exe` huérfano. Se
+  eliminaron `pkg`/`postject` de `agent/package.json` (devDependencies +
+  bloque de config `"pkg"`) y el `build:agent` de la raíz ahora apunta al
+  pipeline real (`build -w agent && node agent/build-sea.js`).
+  `capture.test.ts`/e2e del backend en CI: ya estaban corriendo (ver Fase 0
+  ítem 7 arriba) — esa parte del hallazgo original ya no aplica, sólo
+  quedaba desactualizada en el doc.
+  Verificado: `npm test -w agent` 200/200 tras el cambio de
+  devDependencies; `node build-sea.js` corrido localmente produce
+  `bundle.js` (737.7kb) igual que antes; YAML del workflow validado.
+- ✅ Hostnames: no queda ningún `onrender.com` hardcodeado —
+  `Terminal.tsx` ya deriva `wss://`/`ws://` de `window.location.host` (fix
+  previo del ticket de WS de un solo uso) y `vercel.json` **ya no existe**
+  en el repo (el proyecto es self-hosted vía `docker-compose`, no
+  Vercel/Render). Ambos puntos del hallazgo original quedaron obsoletos
+  por decisiones de infraestructura tomadas en pasadas previas, no por un
+  fix de esta pasada.
+- ✅ Desinstalar con opción de conservar datos: ya implementado
+  (`installer/STC-Monitor.iss` pregunta explícitamente si mantener
+  activación/historial al reinstalar/desinstalar) — cerrado en la Fase 2
+  ("mantener datos al desinstalar").
 
 ### R7 · Zona horaria y multi‑país — **P1**
 TZ fija en agente (`BusinessHours.ts`, `Logger.ts`), servidor (`-03:00`, `portalAgentController.ts:25`) y portal (`es-AR`). Primer cliente en Chile/México/España rompe horario laboral y cierres mensuales.

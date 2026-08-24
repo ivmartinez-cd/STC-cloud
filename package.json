@@ -13,7 +13,7 @@
     "dev:portal": "cd cloud/portal && npm run dev",
     "build:cloud": "npm run build -w cloud",
     "build:portal": "cd cloud/portal && npm install && npm run build",
-    "build:agent": "npx pkg agent/dist/core/main.js --target node18-win-x64 --output dist/STCCloudMonitor.exe",
+    "build:agent": "npm run build -w agent && node agent/build-sea.js",
     "docker:up": "docker-compose up -d",
     "docker:down": "docker-compose down"
   },
