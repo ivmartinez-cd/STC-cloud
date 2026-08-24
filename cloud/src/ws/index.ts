@@ -1,7 +1,7 @@
 import { FastifyInstance, FastifyRequest } from 'fastify';
 import { Knex } from 'knex';
 import Redis from 'ioredis';
-import { AgentService } from '../services/agentService';
+import { AgentService } from '../modules/agents';
 import { consumeWsTicket } from '../services/wsTicketService';
 import { resolveEwsProxy, rejectEwsProxy, rejectAllPendingForAgent } from '../services/ewsProxyService';
 import { setWsCountsProvider } from '../modules/metrics/registry';

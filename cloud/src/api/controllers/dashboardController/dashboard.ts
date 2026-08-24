@@ -1,7 +1,7 @@
 import type { FastifyRequest } from "fastify";
 import type { Knex } from "knex";
 import type Redis from "ioredis";
-import type { AgentService } from "../../../services/agentService";
+import type { AgentService } from "../../../modules/agents";
 import { getScope } from "../../utils/scope";
 import { ALERT_CLASS_LABELS, countOpenAlertsByClass, type AlertClass } from "../../../modules/alerts";
 import { getPublishedAgentVersion } from "../../../services/agentVersionService";

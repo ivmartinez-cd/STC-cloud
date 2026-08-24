@@ -2,7 +2,7 @@ import knex from "knex";
 import knexConfig from "../db/knexfile";
 import { logger } from "../logger";
 import { runGuardedTick } from "../modules/observability/guarded-tick";
-import { AgentCommandService } from "../services/agentService/commands";
+import { AgentCommandService } from "../modules/agents";
 import { KnexRemoteActionRepository } from "../modules/remote-actions/infrastructure/database/knex-remote-action-repository";
 import {
   dispatchDueBatches,

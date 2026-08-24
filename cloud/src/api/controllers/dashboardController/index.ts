@@ -1,6 +1,6 @@
 import type { Knex } from "knex";
 import type Redis from "ioredis";
-import type { AgentService } from "../../../services/agentService";
+import type { AgentService } from "../../../modules/agents";
 import { createDashboardHandlers } from "./dashboard";
 
 /**

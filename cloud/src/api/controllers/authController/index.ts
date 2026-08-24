@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import type { Knex } from "knex";
 import type Redis from "ioredis";
-import type { AgentService } from "../../../services/agentService";
+import type { AgentService } from "../../../modules/agents";
 import { createAuthSessionHandlers } from "./session";
 import { createAuthUserHandlers } from "./users";
 import { createAuthAgentHandlers } from "./agent-auth";

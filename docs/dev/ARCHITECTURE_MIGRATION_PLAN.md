@@ -1312,6 +1312,137 @@ los mismos ajenos y de entorno (`observability` pub/sub WS flaky, `twoFactor`
 6.3 → 429). `check-sizes.mjs` limpio tras regenerar baseline (deuda
 aceptada documentada arriba).
 
+## Fase 3 — `agents` migrado, Fase 3 COMPLETA (2026-08-24)
+
+Séptimo y último módulo — el más acoplado: ~3.500 líneas en 28 archivos
+(`services/agentService/*` (14), `api/controllers/agentController.ts`,
+`api/controllers/portalAgentController/*` (7), `api/routes/{agentRoutes,
+portalAgentRoutes}.ts`) y 19 consumidores externos: la clase `AgentService`
+se construye una vez en `server.ts` y se inyecta en `authMiddleware`,
+`authController`, `ws/`, el dashboard y las rutas. Se esperó a que
+`close-hp-sds-gaps` terminara sus fixes de R9 (que al final no tocaron
+`agentService/config.ts` — el bug era del portal) antes de leer el código
+final.
+
+**Decisión de alcance:** se migra todo lo que es dominio de agentes
+(lifecycle, config, registro desde el agente, ingesta de lecturas,
+comandos, búsqueda global, presentación de portal y de agente). Se QUEDAN
+en `services/` las utilidades puras/compartidas que ya cumplían el
+criterio de dominio puro y tienen consumidores propios: `snmpCredentials`,
+`ipRangeSpec`, `businessHours`, `cryptoService`, `ewsProxyService`,
+`wsTicketService`, `agentVersionService`.
+
+**La fachada ES la clase.** `modules/agents/index.ts` exporta `AgentService`
+con el MISMO constructor `(db, redis?)` y los MISMOS métodos/firmas que la
+versión anterior (incluida la firma rara pre-existente `syncReadings(redis,
+…)` con el parámetro muerto) — cada método delega en su caso de uso, y
+expone `useCases` para la presentación del propio módulo. Los 19
+consumidores sólo cambian el path del import. `AgentCommandService`
+(la usa `jobs/remoteActionWorker.ts`, módulo `remote-actions` del hermano)
+se conserva como clase mínima sobre el mismo caso de uso.
+
+División (`modules/agents/`, 54 archivos, ~2.900 líneas):
+- `domain/entities/agent.ts` — los payloads de wire del agente
+  (`IncomingReading`/`IncomingDevice`/`IncomingLogEntry`/`SystemInfoPayload`/
+  `MappedReading`) tal cual, + `AgentRow` (read model), `AgentConfigUpdate`.
+- `domain/services/` — TODO lo puro que antes vivía mezclado con Knex:
+  `reading-parsing.ts` (parseCount/parseToner, detección de reset de
+  contador, identidad cruda, normalización de marca, campos de display,
+  fecha), `device-row-builders.ts` (precedencia de campos del equipo
+  existente y las dos filas de UPDATE/INSERT — con las 12 columnas de
+  cartucho de la Fase 8 factorizadas en tablas), `supplies-details.ts`
+  (fusión por secciones, sku/assetNumber, parseo de jsonb),
+  `agent-logs.ts` (filas de log + reporte de exportación), `tokens.ts`
+  (hash SHA-256, llave de activación 24h, refresh token), `concurrency.ts`
+  (pool de N workers + agrupación por identidad cruda),
+  `agent-config-view.ts` (traducción de `AgentConfigUpdate` a columnas con
+  warnings, compilación de rangos/hosts con fail-open de `credential_ids`,
+  `device_policies`, `snmp_community` legacy).
+- `domain/repositories/` — 5 interfaces: `agent` (lifecycle/config/
+  heartbeat), `agent-command`, `agent-log`, `ingest-device` (las filas de
+  `devices`/`readings` del camino caliente del agente — deliberadamente
+  separado de `modules/devices`, otro contexto), `agent-portal` (lecturas y
+  borrado del portal).
+- `application/ports/` — `audit-log-writer`, `token-blacklist` (Redis),
+  `ingest-queues` (BullMQ: alertas por lectura + webhook `reading.created`),
+  `agent-link` (WSS: push de comandos + broadcast al portal),
+  `ews-proxy-gateway`, `device-identity` (resolutor + fusión de fantasmas
+  vía `modules/devices`), `alert-notifier` (vía `modules/alerts`),
+  `ingest-unit-of-work` (resolver identidad + escribir en UNA trx: el
+  advisory lock se sostiene hasta el commit, igual que el original).
+- `application/use-cases/` — 12 archivos: lifecycle (5 casos), config (5),
+  commands, search, logs, `register-devices` (con el reintento por 23505),
+  `process-reading` (el `processReading` original, MISMO orden: identidad →
+  upsert/insert → alertas derivadas → EWS → fantasmas → mapped),
+  `sync-readings` (touch → contexto → grupos con concurrencia 5 → insert
+  idempotente → colas → heartbeat; SIN estado de instancia, es singleton y
+  los syncs corren en paralelo), `heartbeat`, portal (list/get/devices/
+  delete en cascada) y remoto (comando, scan, toggle EWS, proxy EWS con
+  allowlist en dos capas y ventana de staleness).
+- `infrastructure/` — 6 repositorios Knex (+ `AGENT_SAFE_COLUMNS`, la
+  subconsulta de volumen mensual por agente), writer de audit, 2 unidades
+  de trabajo, blacklist Redis, colas BullMQ, adapters WS/EWS/devices/alerts.
+- `presentation/` — `agent-wiring.ts` (composición única de todos los casos
+  de uso), `agent-controller.ts` (endpoints del AGENTE), `portal-agent-controller.ts`
+  (endpoints del PORTAL, un solo traductor de errores: validación de
+  config → 400 con `field`, clave de cifrado ausente → 503, dominio → su
+  status), `agent-routes.ts` + `portal-agent-routes.ts` (schemas literales,
+  rate-limit por agente con `hook: preHandler`).
+
+**Detalles preservados a propósito:** `regenerate-key` responde 404 ante
+CUALQUIER error (como antes); `deleteAgent` valida uuid → 400, conflicto
+de facturación → 409, otro error → 500 con `details`; `getConfig` del
+portal pisa `snmp_credentials` con la vista enmascarada (o lo borra) e
+`ip_ranges` con el spec crudo; `getAgent` sólo agrega el bloque `config`
+para scope `all`; el `catch` de BullMQ sigue siendo best-effort; el
+fallback legacy por agente (agente sin client_id) se conserva en registro
+e ingesta.
+
+`api/server.ts` — 3 líneas (import de `AgentService` y de las dos
+funciones de rutas). Borrados los 28 archivos originales.
+
+**Validación:** `npx tsc --noEmit` limpio. Entorno efímero aislado (misma
+receta; OK previo de las sesiones que lo piden por corrida). Suite
+completa: **27 de 29 archivos verdes** — `e2e.test.ts` 37/37 (activación,
+heartbeat, sync con 12 equipos en lote, lecturas del mismo equipo en orden,
+`supplies_details` corrupto aislado por lectura, reset de contador, refresh
+de token, revocación — todo el camino del AGENTE por el módulo nuevo),
+`snmpCredentials.test.ts` 29/29, `ipRangesCredentials.test.ts` 12/12,
+`portalAgentEws.test.ts` 11/11, `ewsProxyService.test.ts` 8/8,
+`remoteActions.test.ts` 16/16 (`AgentCommandService` vía la fachada),
+`rbac.test.ts` 87/87, `alerts.test.ts` 32/32 (dedupe de tóner con syncs
+concurrentes), `deviceLifecycle.test.ts` 29/29; los 2 fallos son los
+mismos ajenos y de entorno (`observability` pub/sub WS flaky, `twoFactor`
+6.3 → 429). `check-sizes.mjs` limpio tras regenerar baseline.
+
+**Deuda aceptada en baseline:** 14 funciones >20 líneas en el módulo —
+los constructores de fila de la ingesta (`buildExistingDeviceUpdate`/
+`buildNewDeviceInsert`/`resolveExistingDeviceFields`, movidos literal y que
+YA excedían antes), la composición única de casos de uso
+(`buildAgentUseCases`), los registros de rutas/handlers y los `execute`
+con pasos secuenciales del camino de ingesta/EWS. Mismo criterio que
+`devices`: partirlos más fragmentaría flujos sin ganar claridad.
+
+**Con esto la Fase 3 queda COMPLETA:** `modules/{audit,inventory,alerts,
+reports,clients,devices,agents}` migrados con capas, más los módulos que
+`close-hp-sds-gaps` escribió directamente con la estructura
+(`feedback`, `scheduled-reports`, `supply-requests`, `message-templates`,
+`email-log`, `device-costs`, `remote-actions`, `two-factor`,
+`system-settings`, `metrics`, `observability`). `pending-devices` no
+necesitó módulo propio: su lógica vive en `modules/devices` (registro) y
+`modules/clients` la consume por puerto. Quedan en `services/` sólo
+utilidades puras/compartidas (`auditService.writeAudit`, `apiKeyService`,
+`publicWebhookService`, `suppliesService`, `snmpCredentials`, `ipRangeSpec`,
+`businessHours`, `cryptoService`, `ewsProxyService`, `wsTicketService`,
+`agentVersionService`, `notificationService`, `incidentService`/
+`incidentClassifier`, `reportExportService` ya migrado) y en
+`api/controllers` sólo `authController`, `dashboardController`,
+`incidentController`, `publicApiController`, `suppliesController` —
+candidatos naturales si se quisiera extender la Fase 3, pero fuera del
+alcance acordado (`clients, devices, agents, alerts, reports, audit,
+inventory, pending-devices`). Siguientes fases: 4 (frontend a
+feature-slices) y 5 (enforcement + cobertura).
+
 ## 0. Punto de partida (medido 2026-08-24)
 
 `stc-cloud` es un monolito con **varios dominios de negocio** bajo un mismo backend

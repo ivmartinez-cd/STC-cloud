@@ -1,7 +1,7 @@
 import { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { Knex } from "knex";
 import Redis from "ioredis";
-import { AgentService } from "../../services/agentService";
+import { AgentService } from "../../modules/agents";
 import { resolveApiKey } from "../../services/apiKeyService";
 import { DEFAULT_BUSINESS_HOURS, type BusinessHoursConfig } from "../../services/businessHours";
 import { policyFor } from "../policy/rolePolicy";

@@ -1,7 +1,7 @@
 import { FastifyInstance } from "fastify";
 import { Knex } from "knex";
 import Redis from "ioredis";
-import { AgentService } from "../../services/agentService";
+import { AgentService } from "../../modules/agents";
 import { createDashboardController } from "../controllers/dashboardController";
 import type { AuthHook } from "../middlewares/authMiddleware";
 

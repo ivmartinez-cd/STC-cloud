@@ -1,6 +1,5 @@
 {
   "files": {
-    "src/api/controllers/agentController.ts": 99,
     "src/api/controllers/authController/agent-auth.ts": 65,
     "src/api/controllers/authController/agent-version.ts": 82,
     "src/api/controllers/authController/index.ts": 24,
@@ -11,25 +10,16 @@
     "src/api/controllers/dashboardController/dashboard.ts": 128,
     "src/api/controllers/dashboardController/index.ts": 14,
     "src/api/controllers/incidentController.ts": 186,
-    "src/api/controllers/portalAgentController/config.ts": 93,
-    "src/api/controllers/portalAgentController/index.ts": 30,
-    "src/api/controllers/portalAgentController/lifecycle.ts": 124,
-    "src/api/controllers/portalAgentController/logs.ts": 50,
-    "src/api/controllers/portalAgentController/reads.ts": 199,
-    "src/api/controllers/portalAgentController/remote.ts": 171,
-    "src/api/controllers/portalAgentController/shared.ts": 51,
     "src/api/controllers/publicApiController.ts": 147,
     "src/api/controllers/suppliesController.ts": 59,
     "src/api/middlewares/authMiddleware.ts": 283,
     "src/api/policy/rolePolicy.ts": 112,
-    "src/api/routes/agentRoutes.ts": 127,
     "src/api/routes/authRoutes.ts": 153,
     "src/api/routes/dashboardRoutes.ts": 21,
     "src/api/routes/incidentRoutes.ts": 143,
-    "src/api/routes/portalAgentRoutes.ts": 247,
     "src/api/routes/publicApiRoutes.ts": 85,
     "src/api/routes/suppliesRoutes.ts": 17,
-    "src/api/server.ts": 394,
+    "src/api/server.ts": 396,
     "src/api/utils/deviceFilters.ts": 60,
     "src/api/utils/ip.ts": 16,
     "src/api/utils/password.ts": 28,
@@ -39,7 +29,7 @@
     "src/db/seeds/test_data.ts": 12,
     "src/db/test_db.ts": 24,
     "src/jobs/alertWorker.ts": 156,
-    "src/jobs/heartbeatMonitor.ts": 174,
+    "src/jobs/heartbeatMonitor.ts": 195,
     "src/jobs/incidentWorker.ts": 216,
     "src/jobs/notificationWorker.ts": 243,
     "src/jobs/publicWebhookWorker.ts": 73,
@@ -49,6 +39,59 @@
     "src/jobs/scheduledReportsWorker.ts": 51,
     "src/jobs/supplyRequestWorker.ts": 64,
     "src/logger.ts": 13,
+    "src/modules/agents/application/dtos/agent-dtos.ts": 67,
+    "src/modules/agents/application/ports/agent-link.ts": 11,
+    "src/modules/agents/application/ports/alert-notifier.ts": 13,
+    "src/modules/agents/application/ports/audit-log-writer.ts": 13,
+    "src/modules/agents/application/ports/device-identity.ts": 27,
+    "src/modules/agents/application/ports/ews-proxy-gateway.ts": 12,
+    "src/modules/agents/application/ports/ingest-queues.ts": 13,
+    "src/modules/agents/application/ports/ingest-unit-of-work.ts": 18,
+    "src/modules/agents/application/ports/token-blacklist.ts": 6,
+    "src/modules/agents/application/use-cases/command-use-cases.ts": 22,
+    "src/modules/agents/application/use-cases/config-use-cases.ts": 124,
+    "src/modules/agents/application/use-cases/heartbeat.ts": 13,
+    "src/modules/agents/application/use-cases/lifecycle-use-cases.ts": 95,
+    "src/modules/agents/application/use-cases/log-use-cases.ts": 32,
+    "src/modules/agents/application/use-cases/portal-agent-use-cases.ts": 100,
+    "src/modules/agents/application/use-cases/process-reading.ts": 162,
+    "src/modules/agents/application/use-cases/register-devices.ts": 99,
+    "src/modules/agents/application/use-cases/remote-use-cases.ts": 107,
+    "src/modules/agents/application/use-cases/search-use-case.ts": 13,
+    "src/modules/agents/application/use-cases/sync-readings.ts": 84,
+    "src/modules/agents/domain/entities/agent.ts": 152,
+    "src/modules/agents/domain/repositories/agent-command-repository.ts": 10,
+    "src/modules/agents/domain/repositories/agent-log-repository.ts": 8,
+    "src/modules/agents/domain/repositories/agent-portal-repository.ts": 26,
+    "src/modules/agents/domain/repositories/agent-repository.ts": 47,
+    "src/modules/agents/domain/repositories/ingest-device-repository.ts": 21,
+    "src/modules/agents/domain/services/agent-config-view.ts": 92,
+    "src/modules/agents/domain/services/agent-logs.ts": 53,
+    "src/modules/agents/domain/services/concurrency.ts": 36,
+    "src/modules/agents/domain/services/device-row-builders.ts": 140,
+    "src/modules/agents/domain/services/reading-parsing.ts": 120,
+    "src/modules/agents/domain/services/supplies-details.ts": 59,
+    "src/modules/agents/domain/services/tokens.ts": 25,
+    "src/modules/agents/index.ts": 82,
+    "src/modules/agents/infrastructure/adapters/alerts-module-notifier.ts": 25,
+    "src/modules/agents/infrastructure/adapters/devices-module-adapters.ts": 23,
+    "src/modules/agents/infrastructure/adapters/ews-proxy-service-gateway.ts": 10,
+    "src/modules/agents/infrastructure/adapters/ws-agent-link.ts": 14,
+    "src/modules/agents/infrastructure/database/knex-agent-command-repository.ts": 29,
+    "src/modules/agents/infrastructure/database/knex-agent-log-repository.ts": 16,
+    "src/modules/agents/infrastructure/database/knex-agent-portal-repository.ts": 137,
+    "src/modules/agents/infrastructure/database/knex-agent-repository.ts": 102,
+    "src/modules/agents/infrastructure/database/knex-audit-log-writer.ts": 15,
+    "src/modules/agents/infrastructure/database/knex-global-search-repository.ts": 26,
+    "src/modules/agents/infrastructure/database/knex-ingest-device-repository.ts": 44,
+    "src/modules/agents/infrastructure/database/knex-units-of-work.ts": 31,
+    "src/modules/agents/infrastructure/queue/bullmq-ingest-queues.ts": 33,
+    "src/modules/agents/infrastructure/redis/redis-token-blacklist.ts": 16,
+    "src/modules/agents/presentation/agent-controller.ts": 52,
+    "src/modules/agents/presentation/agent-routes.ts": 69,
+    "src/modules/agents/presentation/agent-wiring.ts": 79,
+    "src/modules/agents/presentation/portal-agent-controller.ts": 147,
+    "src/modules/agents/presentation/portal-agent-routes.ts": 142,
     "src/modules/alerts/application/dtos/alert-dtos.ts": 79,
     "src/modules/alerts/application/ports/alert-unit-of-work.ts": 17,
     "src/modules/alerts/application/ports/audit-log-writer.ts": 17,
@@ -79,7 +122,7 @@
     "src/modules/audit/application/use-cases/list-audit-logs.ts": 76,
     "src/modules/audit/domain/entities/audit-log.ts": 28,
     "src/modules/audit/domain/repositories/audit-log-repository.ts": 51,
-    "src/modules/audit/domain/services/audit-action-catalog.ts": 105,
+    "src/modules/audit/domain/services/audit-action-catalog.ts": 108,
     "src/modules/audit/infrastructure/database/knex-audit-log-repository.ts": 95,
     "src/modules/audit/presentation/audit-controller.ts": 48,
     "src/modules/audit/presentation/audit-routes.ts": 30,
@@ -247,24 +290,13 @@
     "src/modules/supply-requests/presentation/supply-request-controller.ts": 173,
     "src/modules/supply-requests/presentation/supply-request-routes.ts": 54,
     "src/modules/supply-requests/presentation/supply-request-schemas.ts": 85,
+    "src/modules/system-settings/domain/system-settings.ts": 29,
+    "src/modules/system-settings/infrastructure/database/knex-system-settings-repository.ts": 21,
+    "src/modules/system-settings/presentation/system-settings-routes.ts": 71,
     "src/modules/two-factor/domain/recovery-codes.ts": 37,
     "src/modules/two-factor/domain/totp.ts": 83,
     "src/modules/two-factor/infrastructure/database/knex-recovery-code-repository.ts": 45,
     "src/modules/two-factor/presentation/two-factor-routes.ts": 119,
-    "src/services/agentService/agent-service.ts": 146,
-    "src/services/agentService/commands.ts": 55,
-    "src/services/agentService/config.ts": 263,
-    "src/services/agentService/device-registration.ts": 161,
-    "src/services/agentService/index.ts": 11,
-    "src/services/agentService/lifecycle.ts": 179,
-    "src/services/agentService/reading-helpers.ts": 94,
-    "src/services/agentService/search.ts": 51,
-    "src/services/agentService/sync-log.ts": 29,
-    "src/services/agentService/sync-reading-alerts.ts": 107,
-    "src/services/agentService/sync-reading-fields.ts": 207,
-    "src/services/agentService/sync-reading.ts": 228,
-    "src/services/agentService/telemetry.ts": 243,
-    "src/services/agentService/types.ts": 125,
     "src/services/agentVersionService.ts": 39,
     "src/services/apiKeyService.ts": 84,
     "src/services/auditService.ts": 42,
@@ -384,11 +416,10 @@
     "portal/src/components/incidents/CreateIncidentModal.tsx": 130,
     "portal/src/components/layout/SidebarNav.tsx": 165,
     "portal/src/components/layout/navTree.ts": 44,
-    "portal/src/components/monitors/ConfigTabPanel.tsx": 285,
+    "portal/src/components/monitors/ConfigTabPanel.tsx": 281,
     "portal/src/components/monitors/CreateMonitorModal.tsx": 258,
     "portal/src/components/monitors/DeviceInventoryTable.tsx": 426,
     "portal/src/components/monitors/DeviceSummaryCard.tsx": 77,
-    "portal/src/components/monitors/EditMonitorModal.tsx": 116,
     "portal/src/components/monitors/IpRangesEditor.tsx": 192,
     "portal/src/components/monitors/LicenseCard.tsx": 82,
     "portal/src/components/monitors/MonitorConfigModal.tsx": 173,
@@ -402,7 +433,7 @@
     "portal/src/components/reports/ScheduledReportModal.tsx": 169,
     "portal/src/components/settings/FeedbackCard.tsx": 122,
     "portal/src/components/settings/MessageTemplatesCard.tsx": 129,
-    "portal/src/components/settings/MonitorThresholdCard.tsx": 43,
+    "portal/src/components/settings/MonitorThresholdCard.tsx": 45,
     "portal/src/components/settings/SmtpInfoCard.tsx": 71,
     "portal/src/components/settings/TwoFactorCard.tsx": 168,
     "portal/src/components/settings/operators/CreateUserModal.tsx": 169,
@@ -447,7 +478,7 @@
     "portal/src/pages/RemoteActions.tsx": 313,
     "portal/src/pages/Reports.tsx": 367,
     "portal/src/pages/ScheduledReports.tsx": 160,
-    "portal/src/pages/Settings.tsx": 76,
+    "portal/src/pages/Settings.tsx": 90,
     "portal/src/pages/Supplies.tsx": 253,
     "portal/src/pages/SupplyRequests.tsx": 135,
     "portal/src/types/agents.ts": 83,
@@ -466,16 +497,6 @@
     "portal/src/types/supplyRequests.ts": 62
   },
   "functions": {
-    "src/api/controllers/agentController.ts": [
-      {
-        "name": "createAgentController",
-        "length": 67
-      },
-      {
-        "name": "heartbeat",
-        "length": 34
-      }
-    ],
     "src/api/controllers/authController/agent-auth.ts": [
       {
         "name": "agentActivate",
@@ -528,64 +549,6 @@
         "length": 24
       }
     ],
-    "src/api/controllers/portalAgentController/config.ts": [
-      {
-        "name": "getConfig",
-        "length": 23
-      },
-      {
-        "name": "updateSnmpCredentials",
-        "length": 26
-      }
-    ],
-    "src/api/controllers/portalAgentController/lifecycle.ts": [
-      {
-        "name": "createAgent",
-        "length": 21
-      },
-      {
-        "name": "deleteAgentCascade",
-        "length": 34
-      },
-      {
-        "name": "deleteAgent",
-        "length": 21
-      }
-    ],
-    "src/api/controllers/portalAgentController/logs.ts": [
-      {
-        "name": "buildLogsReport",
-        "length": 21
-      }
-    ],
-    "src/api/controllers/portalAgentController/reads.ts": [
-      {
-        "name": "listAgents",
-        "length": 31
-      },
-      {
-        "name": "getAgent",
-        "length": 60
-      },
-      {
-        "name": "getAgentDevices",
-        "length": 66
-      }
-    ],
-    "src/api/controllers/portalAgentController/remote.ts": [
-      {
-        "name": "sendCommand",
-        "length": 26
-      },
-      {
-        "name": "assertEwsEligibleDevice",
-        "length": 33
-      },
-      {
-        "name": "ewsProxy",
-        "length": 47
-      }
-    ],
     "src/api/controllers/publicApiController.ts": [
       {
         "name": "createPublicApiController",
@@ -616,12 +579,6 @@
         "length": 146
       }
     ],
-    "src/api/routes/agentRoutes.ts": [
-      {
-        "name": "registerAgentRoutes",
-        "length": 34
-      }
-    ],
     "src/api/routes/authRoutes.ts": [
       {
         "name": "registerAuthRoutes",
@@ -634,12 +591,6 @@
         "length": 25
       }
     ],
-    "src/api/routes/portalAgentRoutes.ts": [
-      {
-        "name": "registerPortalAgentRoutes",
-        "length": 158
-      }
-    ],
     "src/api/routes/publicApiRoutes.ts": [
       {
         "name": "registerPublicApiRoutes",
@@ -649,7 +600,7 @@
     "src/api/server.ts": [
       {
         "name": "start",
-        "length": 271
+        "length": 272
       },
       {
         "name": "healthHandler",
@@ -726,6 +677,84 @@
       {
         "name": "purgeResolvedAlerts",
         "length": 25
+      }
+    ],
+    "src/modules/agents/application/use-cases/config-use-cases.ts": [
+      {
+        "name": "execute",
+        "length": 26
+      }
+    ],
+    "src/modules/agents/application/use-cases/lifecycle-use-cases.ts": [
+      {
+        "name": "execute",
+        "length": 22
+      }
+    ],
+    "src/modules/agents/application/use-cases/process-reading.ts": [
+      {
+        "name": "execute",
+        "length": 28
+      }
+    ],
+    "src/modules/agents/application/use-cases/register-devices.ts": [
+      {
+        "name": "upsertInTransaction",
+        "length": 29
+      }
+    ],
+    "src/modules/agents/application/use-cases/remote-use-cases.ts": [
+      {
+        "name": "execute",
+        "length": 24
+      }
+    ],
+    "src/modules/agents/domain/services/device-row-builders.ts": [
+      {
+        "name": "resolveExistingDeviceFields",
+        "length": 24
+      },
+      {
+        "name": "buildExistingDeviceUpdate",
+        "length": 35
+      },
+      {
+        "name": "buildNewDeviceInsert",
+        "length": 35
+      }
+    ],
+    "src/modules/agents/infrastructure/database/knex-agent-portal-repository.ts": [
+      {
+        "name": "listDevices",
+        "length": 22
+      }
+    ],
+    "src/modules/agents/presentation/agent-controller.ts": [
+      {
+        "name": "createAgentController",
+        "length": 38
+      }
+    ],
+    "src/modules/agents/presentation/agent-wiring.ts": [
+      {
+        "name": "buildAgentUseCases",
+        "length": 43
+      }
+    ],
+    "src/modules/agents/presentation/portal-agent-controller.ts": [
+      {
+        "name": "lifecycleHandlers",
+        "length": 38
+      },
+      {
+        "name": "configHandlers",
+        "length": 30
+      }
+    ],
+    "src/modules/agents/presentation/portal-agent-routes.ts": [
+      {
+        "name": "registerPortalAgentRoutes",
+        "length": 28
       }
     ],
     "src/modules/alerts/domain/services/alert-catalog.ts": [
@@ -904,107 +933,13 @@
         "length": 29
       }
     ],
-    "src/services/agentService/config.ts": [
+    "src/modules/system-settings/presentation/system-settings-routes.ts": [
       {
-        "name": "updateConfig",
-        "length": 49
-      },
-      {
-        "name": "getConfig",
-        "length": 103
-      },
-      {
-        "name": "replaceSnmpCredentials",
-        "length": 55
-      }
-    ],
-    "src/services/agentService/device-registration.ts": [
-      {
-        "name": "registerDevices",
-        "length": 102
-      },
-      {
-        "name": "attemptUpsert",
-        "length": 53
+        "name": "buildUpdate",
+        "length": 25
       },
       {
         "name": "anonymous",
-        "length": 51
-      },
-      {
-        "name": "registerDeviceLegacyByAgent",
-        "length": 33
-      }
-    ],
-    "src/services/agentService/lifecycle.ts": [
-      {
-        "name": "createActivationKey",
-        "length": 39
-      },
-      {
-        "name": "activateAgent",
-        "length": 37
-      },
-      {
-        "name": "refreshAgentToken",
-        "length": 28
-      },
-      {
-        "name": "regenerateActivationKey",
-        "length": 25
-      }
-    ],
-    "src/services/agentService/search.ts": [
-      {
-        "name": "globalSearch",
-        "length": 39
-      }
-    ],
-    "src/services/agentService/sync-reading-alerts.ts": [
-      {
-        "name": "mergeGhostDevicesByIp",
-        "length": 21
-      }
-    ],
-    "src/services/agentService/sync-reading-fields.ts": [
-      {
-        "name": "resolveExistingDeviceFields",
-        "length": 28
-      },
-      {
-        "name": "buildExistingDeviceUpdate",
-        "length": 64
-      },
-      {
-        "name": "buildNewDeviceInsert",
-        "length": 58
-      }
-    ],
-    "src/services/agentService/sync-reading.ts": [
-      {
-        "name": "resolveExistingDevice",
-        "length": 23
-      },
-      {
-        "name": "computeDisplayFields",
-        "length": 22
-      },
-      {
-        "name": "upsertExistingDevice",
-        "length": 50
-      },
-      {
-        "name": "processReading",
-        "length": 34
-      }
-    ],
-    "src/services/agentService/telemetry.ts": [
-      {
-        "name": "insertMappedReadings",
-        "length": 28
-      },
-      {
-        "name": "syncReadings",
         "length": 23
       }
     ],
@@ -2131,7 +2066,7 @@
     "portal/src/components/monitors/ConfigTabPanel.tsx": [
       {
         "name": "ConfigTabPanel",
-        "length": 255
+        "length": 251
       },
       {
         "name": "handleSubmit",
@@ -2166,12 +2101,6 @@
       {
         "name": "DeviceSummaryCard",
         "length": 64
-      }
-    ],
-    "portal/src/components/monitors/EditMonitorModal.tsx": [
-      {
-        "name": "EditMonitorModal",
-        "length": 88
       }
     ],
     "portal/src/components/monitors/IpRangesEditor.tsx": [
@@ -2289,7 +2218,7 @@
     "portal/src/components/settings/MonitorThresholdCard.tsx": [
       {
         "name": "MonitorThresholdCard",
-        "length": 39
+        "length": 41
       }
     ],
     "portal/src/components/settings/SmtpInfoCard.tsx": [
@@ -2545,7 +2474,7 @@
     "portal/src/pages/Settings.tsx": [
       {
         "name": "Settings",
-        "length": 53
+        "length": 74
       }
     ],
     "portal/src/pages/Supplies.tsx": [

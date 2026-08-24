@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import crypto from "crypto";
-import type { AgentService } from "../../../services/agentService";
+import type { AgentService } from "../../../modules/agents";
 import { logger } from "../../../logger";
 import type { ActivateBody, RefreshBody } from "./shared";
 import { JWT_AGENT_TTL } from "./shared";

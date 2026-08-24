@@ -12,7 +12,7 @@ import { Queue } from "bullmq";
 import knex from "knex";
 
 import knexConfig from "../db/knexfile";
-import { AgentService } from "../services/agentService";
+import { AgentService } from "../modules/agents";
 import "../jobs/heartbeatMonitor";
 import "../jobs/alertWorker";
 import "../jobs/notificationWorker";
@@ -33,8 +33,8 @@ import { registerWebSocket } from "../ws/index";
 
 import { createAuthMiddleware } from "./middlewares/authMiddleware";
 import { registerAuthRoutes } from "./routes/authRoutes";
-import { registerAgentRoutes } from "./routes/agentRoutes";
-import { registerPortalAgentRoutes } from "./routes/portalAgentRoutes";
+import { registerAgentRoutes } from "../modules/agents/presentation/agent-routes";
+import { registerPortalAgentRoutes } from "../modules/agents/presentation/portal-agent-routes";
 import { registerClientRoutes } from "../modules/clients/presentation/client-routes";
 import { registerPublicApiRoutes } from "./routes/publicApiRoutes";
 import { registerDeviceRoutes } from "../modules/devices/presentation/device-routes";
@@ -46,6 +46,7 @@ import { registerMessageTemplateRoutes } from "../modules/message-templates/pres
 import { registerEmailLogRoutes } from "../modules/email-log/presentation/email-log-routes";
 import { registerDeviceCostsRoutes } from "../modules/device-costs";
 import { registerRemoteActionRoutes } from "../modules/remote-actions/presentation/remote-action-routes";
+import { registerSystemSettingsRoutes } from "../modules/system-settings/presentation/system-settings-routes";
 import { registerTwoFactorRoutes } from "../modules/two-factor/presentation/two-factor-routes";
 import { registerReportRoutes } from "../modules/reports/presentation/report-routes";
 import { registerAuditRoutes } from "../modules/audit/presentation/audit-routes";
@@ -366,6 +367,7 @@ const start = async () => {
     registerSuppliesRoutes(fastify, db, portalAuth);
     registerIncidentRoutes(fastify, db, portalAuth);
     registerPublicApiRoutes(fastify, db, apiKeyAuth);
+    registerSystemSettingsRoutes(fastify, db, portalAuth);
 
     // Assert de arranque: si una entrada de CLIENT_VIEWER_ROUTES no corresponde a
     // ninguna ruta real (typo, ruta renombrada), esto sería una denegación SILENCIOSA
