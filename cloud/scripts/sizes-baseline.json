@@ -8,7 +8,12 @@
     "src/api/controllers/authController/session.ts": 93,
     "src/api/controllers/authController/shared.ts": 24,
     "src/api/controllers/authController/users.ts": 175,
-    "src/api/controllers/clientController.ts": 346,
+    "src/api/controllers/clientController/api-keys.ts": 33,
+    "src/api/controllers/clientController/crud.ts": 107,
+    "src/api/controllers/clientController/index.ts": 22,
+    "src/api/controllers/clientController/pending-devices.ts": 63,
+    "src/api/controllers/clientController/reads.ts": 131,
+    "src/api/controllers/clientController/webhook.ts": 40,
     "src/api/controllers/dashboardController/alerts-mutations.ts": 144,
     "src/api/controllers/dashboardController/alerts-reads.ts": 118,
     "src/api/controllers/dashboardController/dashboard-queries.ts": 224,
@@ -290,38 +295,24 @@
         "length": 25
       }
     ],
-    "src/api/controllers/clientController.ts": [
-      {
-        "name": "createClientController",
-        "length": 331
-      },
+    "src/api/controllers/clientController/crud.ts": [
       {
         "name": "createClient",
-        "length": 36
+        "length": 29
       },
       {
         "name": "updateClient",
-        "length": 51
-      },
-      {
-        "name": "listClients",
-        "length": 30
-      },
-      {
-        "name": "getClient",
-        "length": 24
-      },
+        "length": 27
+      }
+    ],
+    "src/api/controllers/clientController/reads.ts": [
       {
         "name": "getClientMonitors",
-        "length": 24
+        "length": 22
       },
       {
         "name": "getClientUsage",
-        "length": 35
-      },
-      {
-        "name": "getClientDevices",
-        "length": 21
+        "length": 29
       }
     ],
     "src/api/controllers/dashboardController/alerts-mutations.ts": [

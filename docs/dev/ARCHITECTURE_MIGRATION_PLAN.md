@@ -1,6 +1,6 @@
 # Plan de Migración a ARCHITECTURE_GUIDE.md
 
-**Estado:** Fase 0, Fase 1 (módulo piloto) y Fase 2 en curso (8 de N) — 2026-08-24  
+**Estado:** Fase 0, Fase 1 (módulo piloto) y Fase 2 en curso (9 de N) — 2026-08-24  
 **Origen:** `docs/dev/ARCHITECTURE_GUIDE.md` (copiado desde `helpdesk-manager`, 2026-08-24)  
 **Reemplaza (parcialmente) a:** `docs/dev/PROJECT_GUIDELINES.md`, que hoy documenta la
 convención opuesta (`api/` para rutas + `services/` para lógica de negocio, sin capas).
@@ -247,11 +247,23 @@ Cero consumidores tocados (`reportController.ts`, `reportDeliveryWorker.ts`,
 entorno efímero (incluye `reports.test.ts`), 0 fallas, tsc y portal check
 limpios.
 
+### 9 de N — `clientController.ts` (345 líneas)
+
+Cinco dominios: CRUD de cliente, lecturas (listado/detalle/monitors/usage/
+devices), cola de pendientes (Fase 7), API keys, webhook público. Dividido
+en `clientController/{crud,reads,pending-devices,api-keys,webhook,index}.ts`.
+Cero consumidores tocados (`clientRoutes.ts`). Validado: 21/21 en el entorno
+efímero, 0 fallas. Nota: la primera corrida completa mostró 2 fallas en
+`incidents.test.ts` (espera de hasta 3 min por un tick real del
+`incidentWorker` de la sesión hermana) — confirmado flake de timing no
+relacionado corriendo ese archivo solo y luego la suite completa de nuevo
+limpia (0 fallas ambas veces). tsc y portal check limpios.
+
 **Pendiente de Fase 2** (orden descendente de tamaño, tabla de Fase 0):
 `services/agentService/telemetry.ts` (decomponer `syncReadings`) y
 `services/deviceLifecycleService/merge.ts` (decomponer `mergeDevices`) —
 ambas pasadas dedicadas y de alto riesgo, deliberadamente pospuestas — luego
-`clientController.ts` (345) → `suppliesService.ts`
+`suppliesService.ts`
 (301) — más lo que haya crecido por encima de 300 desde que se congeló esa
 tabla. Frontend (`Settings.tsx` 869, `DeviceDetail.tsx` 772, etc.) sigue sin
 arrancar.
