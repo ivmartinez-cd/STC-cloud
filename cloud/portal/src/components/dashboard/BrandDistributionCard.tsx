@@ -18,7 +18,7 @@ export default function BrandDistributionCard({ brands }: { brands: DashboardDat
       {brands?.length === 0 ? (
         <div className="flex-1 flex items-center justify-center opacity-20"><Activity size={32} /></div>
       ) : (
-        <div className="flex-1 min-h-0 flex flex-col items-center gap-3">
+        <div className="flex-1 min-h-0 flex flex-row items-center gap-4">
           <div className="w-24 h-24 shrink-0">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
@@ -31,7 +31,7 @@ export default function BrandDistributionCard({ brands }: { brands: DashboardDat
               </PieChart>
             </ResponsiveContainer>
           </div>
-          <div className="flex-1 min-h-0 w-full overflow-y-auto space-y-1.5 pr-1">
+          <div className="flex-1 min-h-0 h-full overflow-y-auto space-y-1.5 pr-1">
             {brands?.map((b, i) => (
               <div key={b.brand} className="flex items-center justify-between gap-2 group">
                 <div className="flex items-center gap-2 min-w-0">

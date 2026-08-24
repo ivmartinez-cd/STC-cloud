@@ -49,7 +49,7 @@ export default function SupplyAlertsTable() {
   }, [fetchAlerts]);
 
   return (
-    <div className="cd-panel p-4 h-full flex flex-col hover:shadow-xl hover:shadow-brand/5 transition-all duration-500">
+    <div className="cd-panel p-4 h-full min-h-0 flex flex-col overflow-hidden hover:shadow-xl hover:shadow-brand/5 transition-all duration-500">
       <div className="flex items-center justify-between gap-3 shrink-0 mb-2">
         <div className="min-w-0">
           <h3 className="text-xs font-black text-[#1a2333] tracking-tight flex items-center gap-2">

@@ -2,7 +2,7 @@ import { useState, Suspense, useEffect, useRef } from 'react';
 import { Link, Outlet } from 'react-router-dom';
 import { api } from '../lib/api';
 import {
-  LayoutDashboard, Users, LogOut, Search, Settings, Menu, X, Shield, MessageSquarePlus, Bell, FileText, History, UserCheck, Droplets, AlertOctagon, CalendarClock, PackageSearch, MailCheck
+  LayoutDashboard, Users, LogOut, Search, Settings, Menu, X, Shield, MessageSquarePlus, Bell, FileText, History, UserCheck, Droplets, AlertOctagon, CalendarClock, PackageSearch, MailCheck, Radio
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import FeedbackModal from './FeedbackModal';
@@ -31,7 +31,13 @@ const navTree: NavEntry[] = [
       { name: 'Pendientes', path: '/pending', icon: UserCheck, roles: ['admin', 'operator'], badgeKey: 'pending' },
     ],
   },
-  { name: 'Agentes', path: '/agents', icon: Shield, roles: ['admin', 'operator'] },
+  {
+    name: 'Gestión de Agentes', icon: Shield, roles: ['admin', 'operator'],
+    children: [
+      { name: 'Agentes', path: '/agents', icon: Shield, roles: ['admin', 'operator'] },
+      { name: 'Acciones', path: '/remote-actions', icon: Radio, roles: ['admin', 'operator'] },
+    ],
+  },
   {
     name: 'Gestión de Consumibles', icon: Droplets,
     children: [

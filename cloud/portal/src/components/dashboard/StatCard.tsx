@@ -30,9 +30,9 @@ export default function StatCard({
           </span>
         )}
       </div>
-      <div className="mt-3 relative z-10">
-        <div className="text-2xl font-black text-[#1a2333] tracking-tighter leading-none">{value}</div>
-        <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1.5">{title}</div>
+      <div className="mt-2 relative z-10">
+        <div className="text-xl font-black text-[#1a2333] tracking-tighter leading-none">{value}</div>
+        <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1">{title}</div>
         {subtitle && <div className="text-[9px] font-bold text-slate-500 mt-0.5 truncate">{subtitle}</div>}
       </div>
     </div>

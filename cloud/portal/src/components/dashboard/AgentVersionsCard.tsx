@@ -9,7 +9,7 @@ export default function AgentVersionsCard({
   currentAgentVersion: DashboardData['currentAgentVersion'] | undefined;
 }) {
   return (
-    <div className="cd-panel p-4 h-full flex flex-col">
+    <div className="cd-panel p-4 h-full min-h-0 flex flex-col overflow-hidden">
       <div className="shrink-0 mb-2">
         <h3 className="text-xs font-black text-[#1a2333] tracking-tight flex items-center gap-2">
           <GitBranch size={14} className="text-brand-gray" /> Versiones de Agente

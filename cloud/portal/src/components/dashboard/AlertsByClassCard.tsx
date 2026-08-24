@@ -15,7 +15,7 @@ const CLASS_COLOR: Record<string, string> = {
 
 export default function AlertsByClassCard({ alertsByClass }: { alertsByClass: DashboardData['alertsByClass'] | undefined }) {
   return (
-    <div className="cd-panel p-4 h-full flex flex-col">
+    <div className="cd-panel p-4 h-full min-h-0 flex flex-col overflow-hidden">
       <div className="shrink-0 mb-2">
         <h3 className="text-xs font-black text-[#1a2333] tracking-tight flex items-center gap-2">
           <LayoutList size={14} className="text-brand" /> Resumen de Alertas por Clase
@@ -28,12 +28,12 @@ export default function AlertsByClassCard({ alertsByClass }: { alertsByClass: Da
           <p className="text-[9px] font-black uppercase tracking-widest text-emerald-600">Sin alertas activas</p>
         </div>
       ) : (
-        <div className="flex-1 min-h-0 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 gap-1.5 content-start pr-1">
+        <div className="flex-1 min-h-0 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1.5 content-start pr-1">
           {alertsByClass.map((c) => (
             <Link
               key={c.alert_class}
               to={`/alerts?class=${c.alert_class}&resolved=false`}
-              className="flex items-center justify-between px-3 py-1.5 rounded-xl border border-slate-100 hover:border-brand/40 hover:bg-slate-50/50 transition-all group"
+              className="flex items-center justify-between px-2.5 py-1 rounded-lg border border-slate-100 hover:border-brand/40 hover:bg-slate-50/50 transition-all group"
             >
               <span className={`inline-flex px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider ${CLASS_COLOR[c.alert_class] ?? 'bg-slate-100 text-slate-500'}`}>
                 {c.label}

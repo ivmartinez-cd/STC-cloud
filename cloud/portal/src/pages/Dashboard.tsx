@@ -114,16 +114,20 @@ const Dashboard = () => {
       {/* Área flexible: en xl+ ocupa el resto del viewport sin scroll de página,
           cada card scrollea internamente. Debajo de xl cae a stack normal
           (con scroll de página) — fallback declarado a propósito, no silencioso. */}
+      {/* Las pistas del grid van con minmax(0,1fr) explícito: con `auto` cada
+          card crece al tamaño de su contenido (listas largas) y se derrama por
+          encima de la fila siguiente — la altura definida es lo que habilita
+          el scroll interno de cada card. */}
       <div className="flex flex-col gap-3 xl:flex-1 xl:min-h-0">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 xl:flex-[3] xl:min-h-0 auto-rows-[280px] xl:auto-rows-auto">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 xl:flex-[3] xl:min-h-0 auto-rows-[280px] xl:grid-rows-[minmax(0,1fr)] [&>*]:min-h-0 [&>*]:overflow-hidden">
           <BrandDistributionCard brands={data?.brands} />
           <TopClientsCard topClients={data?.topClients} />
           <OfflineAgentsCard offlineAgents={data?.offlineAgents} now={now} />
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 xl:flex-[2] xl:min-h-0 auto-rows-[220px] xl:auto-rows-auto">
-          <div className="lg:col-span-2 h-full"><AlertsByClassCard alertsByClass={data?.alertsByClass} /></div>
-          <div className="h-full"><AgentVersionsCard agentVersions={data?.agentVersions} currentAgentVersion={data?.currentAgentVersion} /></div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 xl:flex-[2] xl:min-h-0 auto-rows-[220px] xl:grid-rows-[minmax(0,1fr)] [&>*]:min-h-0">
+          <div className="lg:col-span-2 h-full min-h-0"><AlertsByClassCard alertsByClass={data?.alertsByClass} /></div>
+          <div className="h-full min-h-0"><AgentVersionsCard agentVersions={data?.agentVersions} currentAgentVersion={data?.currentAgentVersion} /></div>
         </div>
 
         <div className="xl:flex-[3] xl:min-h-0 h-[320px] xl:h-auto">

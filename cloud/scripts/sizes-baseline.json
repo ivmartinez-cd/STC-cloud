@@ -50,7 +50,7 @@
     "src/api/routes/publicApiRoutes.ts": 85,
     "src/api/routes/reportRoutes.ts": 78,
     "src/api/routes/suppliesRoutes.ts": 17,
-    "src/api/server.ts": 349,
+    "src/api/server.ts": 352,
     "src/api/utils/deviceFilters.ts": 60,
     "src/api/utils/ip.ts": 16,
     "src/api/utils/password.ts": 28,
@@ -64,6 +64,7 @@
     "src/jobs/incidentWorker.ts": 216,
     "src/jobs/notificationWorker.ts": 243,
     "src/jobs/publicWebhookWorker.ts": 73,
+    "src/jobs/remoteActionWorker.ts": 44,
     "src/jobs/reportDeliveryWorker.ts": 121,
     "src/jobs/retentionJob.ts": 96,
     "src/jobs/scheduledReportsWorker.ts": 49,
@@ -120,6 +121,10 @@
     "src/modules/message-templates/domain/entities/message-template.ts": 89,
     "src/modules/message-templates/infrastructure/database/knex-template-repository.ts": 67,
     "src/modules/message-templates/presentation/template-routes.ts": 109,
+    "src/modules/remote-actions/application/use-cases/process-batches.ts": 48,
+    "src/modules/remote-actions/domain/entities/remote-action-batch.ts": 44,
+    "src/modules/remote-actions/infrastructure/database/knex-remote-action-repository.ts": 93,
+    "src/modules/remote-actions/presentation/remote-action-routes.ts": 117,
     "src/modules/scheduled-reports/application/dtos/scheduled-report-dtos.ts": 79,
     "src/modules/scheduled-reports/application/ports/report-mailer.ts": 12,
     "src/modules/scheduled-reports/application/ports/report-renderer.ts": 28,
@@ -225,7 +230,8 @@
     "src/tests/pendingDevices.test.ts": 267,
     "src/tests/portalAgentEws.test.ts": 177,
     "src/tests/publicApi.test.ts": 298,
-    "src/tests/rbac.test.ts": 736,
+    "src/tests/rbac.test.ts": 747,
+    "src/tests/remoteActions.test.ts": 137,
     "src/tests/reports.test.ts": 219,
     "src/tests/scheduledReports.test.ts": 185,
     "src/tests/snmpCredentials.test.ts": 283,
@@ -234,12 +240,12 @@
     "src/tests/supplyRequests.test.ts": 258,
     "src/version.ts": 6,
     "src/ws/index.ts": 268,
-    "portal/src/App.tsx": 84,
+    "portal/src/App.tsx": 86,
     "portal/src/components/BulkActionBar.tsx": 29,
     "portal/src/components/ConfirmModal.tsx": 80,
     "portal/src/components/ErrorBoundary.tsx": 59,
     "portal/src/components/FeedbackModal.tsx": 335,
-    "portal/src/components/Layout.tsx": 463,
+    "portal/src/components/Layout.tsx": 469,
     "portal/src/components/Terminal.tsx": 244,
     "portal/src/components/agents/AgentTable.tsx": 194,
     "portal/src/components/agents/ClientUsageChart.tsx": 54,
@@ -338,7 +344,7 @@
     "portal/src/pages/Alerts.tsx": 447,
     "portal/src/pages/ClientDetail.tsx": 162,
     "portal/src/pages/Clients.tsx": 334,
-    "portal/src/pages/Dashboard.tsx": 138,
+    "portal/src/pages/Dashboard.tsx": 142,
     "portal/src/pages/DeviceDetail.tsx": 287,
     "portal/src/pages/Devices.tsx": 261,
     "portal/src/pages/EmailLog.tsx": 145,
@@ -348,6 +354,7 @@
     "portal/src/pages/MonitorDetail.tsx": 253,
     "portal/src/pages/Monitors.tsx": 163,
     "portal/src/pages/PendingDevices.tsx": 270,
+    "portal/src/pages/RemoteActions.tsx": 251,
     "portal/src/pages/Reports.tsx": 367,
     "portal/src/pages/ScheduledReports.tsx": 160,
     "portal/src/pages/Settings.tsx": 74,
@@ -716,7 +723,7 @@
     "src/api/server.ts": [
       {
         "name": "start",
-        "length": 237
+        "length": 238
       },
       {
         "name": "healthHandler",
@@ -1698,11 +1705,21 @@
       },
       {
         "name": "describe(RBAC — mutaciones denegadas para client_viewer)",
-        "length": 247
+        "length": 258
       },
       {
         "name": "describe(RBAC — restricciones a nivel de base (defensa en profundidad))",
         "length": 36
+      }
+    ],
+    "src/tests/remoteActions.test.ts": [
+      {
+        "name": "describe(Acciones remotas — e2e con ciclo real de heartbeat)",
+        "length": 81
+      },
+      {
+        "name": "test(el \"agente\" recibe el comando por heartbeat y devuelve éxito → lote completed)",
+        "length": 21
       }
     ],
     "src/tests/reports.test.ts": [
@@ -1818,7 +1835,7 @@
     "portal/src/App.tsx": [
       {
         "name": "App",
-        "length": 37
+        "length": 38
       }
     ],
     "portal/src/components/ConfirmModal.tsx": [
@@ -2500,7 +2517,7 @@
     "portal/src/pages/Dashboard.tsx": [
       {
         "name": "Dashboard",
-        "length": 117
+        "length": 121
       }
     ],
     "portal/src/pages/DeviceDetail.tsx": [
@@ -2559,6 +2576,12 @@
       {
         "name": "PendingDevices",
         "length": 251
+      }
+    ],
+    "portal/src/pages/RemoteActions.tsx": [
+      {
+        "name": "RemoteActions",
+        "length": 193
       }
     ],
     "portal/src/pages/Reports.tsx": [

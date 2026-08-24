@@ -22,7 +22,7 @@ function LeafRow({ leaf, active, isHovered, badge, indented, onClick }: {
       onClick={onClick}
       className={`
         flex items-center group relative h-11 rounded-2xl transition-all duration-300
-        ${active ? 'text-white' : 'text-slate-400 hover:text-white hover:bg-white/[0.03]'}
+        ${active ? 'text-brand' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100/60'}
       `}
     >
       {active && isHovered && (
@@ -49,7 +49,7 @@ function LeafRow({ leaf, active, isHovered, badge, indented, onClick }: {
         <span className={`
           text-[13px] font-bold whitespace-nowrap transition-all duration-500
           ${isHovered ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4 pointer-events-none w-0'}
-          ${active ? 'text-white' : 'text-slate-400'}
+          ${active ? 'text-brand' : 'text-slate-500'}
         `}>
           {leaf.name}
         </span>
@@ -117,7 +117,7 @@ export default function SidebarNav({
               onClick={() => setExpandedOverride((prev) => ({ ...prev, [entry.name]: !expanded }))}
               className={`
                 flex items-center w-full h-11 rounded-2xl transition-all duration-300
-                ${groupActive ? 'text-white' : 'text-slate-400 hover:text-white hover:bg-white/[0.03]'}
+                ${groupActive ? 'text-brand' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100/60'}
               `}
             >
               <div className="flex items-center gap-4 relative z-10 w-full justify-center md:justify-start">
@@ -131,7 +131,7 @@ export default function SidebarNav({
                 <span className={`
                   flex-1 text-left text-[13px] font-bold whitespace-nowrap transition-all duration-500
                   ${isHovered ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4 pointer-events-none w-0'}
-                  ${groupActive ? 'text-white' : 'text-slate-400'}
+                  ${groupActive ? 'text-brand' : 'text-slate-500'}
                 `}>
                   {entry.name}
                 </span>
