@@ -1136,6 +1136,82 @@ son los mismos ajenos y de entorno ya documentados en la pasada de `alerts`
 (`observability` pub/sub WS flaky, `twoFactor` 6.3 → 429). `check-sizes.mjs`
 limpio tras regenerar baseline.
 
+## Fase 3 — `clients` migrado (2026-08-24)
+
+Quinto módulo. OK explícito de `close-hp-sds-gaps` (confirmaron por `git log`
+que no tocaron `clientController/*`, `clientRoutes.ts`, `apiKeyService.ts` ni
+`publicWebhookService.ts` en esta ronda). Origen: `api/controllers/clientController/
+{crud,reads,api-keys,webhook,pending-devices,index}.ts` + `api/routes/clientRoutes.ts`
+(~580 líneas).
+
+**Decisión de alcance — tres servicios se quedan en `services/` a propósito:**
+`apiKeyService.ts` (lo consume `authMiddleware` para resolver `X-Api-Key`),
+`publicWebhookService.ts` (lo consumen `/api/v1/public/webhook` y 3 workers que
+disparan webhooks) y `deviceRegistrationService.ts` (dominio `pending-devices`,
+todavía repartido entre `agentService`/`deviceController`). Son infraestructura
+compartida o dominio de OTRO módulo — migrarlos acá hubiera tocado 6 archivos
+ajenos y cruzado dominios. El módulo `clients` los usa a través de puertos
+(`ApiKeyStore`, `WebhookConfigStore`, `DeviceRegistrationGateway`) con adapters
+finos en `infrastructure/adapters/` — mismo criterio que `writeAudit`. Las
+rutas `/clients/:id/pending-devices*` quedan como presentación de `clients`
+delegando en el gateway; cuando exista `modules/pending-devices`, el puerto se
+implementa con su fachada y las rutas pueden mudarse sin tocar el resto.
+
+**Read models en snake_case a propósito (`ClientRecord`, `ClientDeviceRow`,
+`ClientMonitorRow`):** `clients.*` y `devices.*` son tablas ANCHAS que otros
+módulos extienden con columnas propias (`notification_events`,
+`supply_requests_enabled`, `supply_request_threshold_pct`, `custom_data`...) y
+el portal consume las filas tal cual — enumerar columnas en camelCase haría que
+cada columna nueva de otro módulo desapareciera del wire en silencio. Mismo
+criterio que `PeriodUsageLine` en `reports`. Las REGLAS sí son dominio puro:
+`buildClientCreateData`/`buildClientUpdates` (whitelist anti mass-assignment,
+`?.trim() || null`, sin fallback de `notification_email` a `contact_email`) y
+`assertPortalWebhookEvents`.
+
+División (`modules/clients/`, 18 archivos, ~700 líneas):
+- `domain/entities/client.ts`, `domain/services/client-rules.ts`,
+  `domain/errors/client-error.ts` (`ClientValidationError` 400,
+  `ClientNotFoundError` 404), `domain/repositories/client-repository.ts`.
+- `application/ports/{audit-log-writer,api-key-store,webhook-config-store,
+  device-registration-gateway}.ts`, `application/dtos/client-dtos.ts`,
+  `application/use-cases/{client,client-api-key,client-webhook,
+  client-pending-device}-use-cases.ts` (15 casos de uso chicos agrupados por
+  agregado, como en `inventory`).
+- `infrastructure/database/{knex-client-repository,knex-audit-log-writer}.ts`
+  (la consulta de volumen mensual LAG-based movida literal a una constante),
+  `infrastructure/adapters/{api-key-service-store,public-webhook-config-store,
+  device-registration-service-gateway}.ts`.
+- `presentation/{client-controller,client-routes}.ts` — sin `client-view.ts`:
+  el wire ya son las filas crudas (ver read models arriba). JSON schemas
+  literales conservados.
+
+**Detalles preservados a propósito:** `GET /clients/:id` devuelve `null` (no
+404) si no existe; orden de chequeos de `PUT /clients/:id`: 404 → nombre vacío
+400 → "Nada para actualizar" 400; `POST /clients/:id/api-keys` responde 201
+con la key en claro UNA sola vez; `DELETE api-keys/:keyId` 404 si no existe o
+ya estaba revocada; `ip_ranges` de los monitores sólo para scope `all`.
+
+`api/server.ts` — una línea (import de `registerClientRoutes`). Borrados
+`api/controllers/clientController/` (6 archivos) y `api/routes/clientRoutes.ts`.
+
+**Validación:** `npx tsc --noEmit` limpio. Entorno efímero aislado (misma
+receta; OK previo de las 3 sesiones — `cd-test-83` pidió de acá en más un
+aviso por BLOQUE de corridas, no por corrida). Suite completa: **27 de 29
+archivos verdes** — `e2e` 37/37, `rbac` 87/87, `pendingDevices` 17/17,
+`publicApi` 24/24, `messageTemplates` 13/13, `supplyRequests` 20/20 (los que
+pegan a `/clients/*`); los 2 fallos son los mismos ajenos y de entorno
+(`observability` pub/sub WS flaky, `twoFactor` 6.3 → 429). `check-sizes.mjs`
+limpio tras regenerar baseline (única función >20 líneas nueva:
+`registerClientRoutes`, 15 rutas con sus comentarios de RBAC — mismo caso
+que `registerAlertRoutes`).
+
+**Nota operativa nueva:** el entrypoint de `timescale/timescaledb` levanta un
+servidor TEMPORAL para correr los init scripts y después reinicia; un loop
+de `psql select 1` da "listo" contra el temporal y la API que conecta en ese
+momento muere con "Connection terminated unexpectedly" al reinicio. Esperar
+a `docker logs <pg> | grep -c "init process complete"` = 1 antes de levantar
+la API.
+
 ## 0. Punto de partida (medido 2026-08-24)
 
 `stc-cloud` es un monolito con **varios dominios de negocio** bajo un mismo backend

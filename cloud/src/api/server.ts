@@ -35,7 +35,7 @@ import { createAuthMiddleware } from "./middlewares/authMiddleware";
 import { registerAuthRoutes } from "./routes/authRoutes";
 import { registerAgentRoutes } from "./routes/agentRoutes";
 import { registerPortalAgentRoutes } from "./routes/portalAgentRoutes";
-import { registerClientRoutes } from "./routes/clientRoutes";
+import { registerClientRoutes } from "../modules/clients/presentation/client-routes";
 import { registerPublicApiRoutes } from "./routes/publicApiRoutes";
 import { registerDeviceRoutes } from "./routes/deviceRoutes";
 import { registerDashboardRoutes } from "./routes/dashboardRoutes";

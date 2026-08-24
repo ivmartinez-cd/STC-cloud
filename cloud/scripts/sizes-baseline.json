@@ -7,12 +7,6 @@
     "src/api/controllers/authController/session.ts": 157,
     "src/api/controllers/authController/shared.ts": 24,
     "src/api/controllers/authController/users.ts": 178,
-    "src/api/controllers/clientController/api-keys.ts": 33,
-    "src/api/controllers/clientController/crud.ts": 110,
-    "src/api/controllers/clientController/index.ts": 22,
-    "src/api/controllers/clientController/pending-devices.ts": 63,
-    "src/api/controllers/clientController/reads.ts": 131,
-    "src/api/controllers/clientController/webhook.ts": 40,
     "src/api/controllers/dashboardController/dashboard-queries.ts": 237,
     "src/api/controllers/dashboardController/dashboard.ts": 128,
     "src/api/controllers/dashboardController/index.ts": 14,
@@ -38,7 +32,6 @@
     "src/api/policy/rolePolicy.ts": 112,
     "src/api/routes/agentRoutes.ts": 127,
     "src/api/routes/authRoutes.ts": 153,
-    "src/api/routes/clientRoutes.ts": 185,
     "src/api/routes/dashboardRoutes.ts": 21,
     "src/api/routes/deviceRoutes.ts": 221,
     "src/api/routes/incidentRoutes.ts": 143,
@@ -100,6 +93,26 @@
     "src/modules/audit/presentation/audit-controller.ts": 48,
     "src/modules/audit/presentation/audit-routes.ts": 30,
     "src/modules/audit/presentation/audit-view.ts": 36,
+    "src/modules/clients/application/dtos/client-dtos.ts": 65,
+    "src/modules/clients/application/ports/api-key-store.ts": 24,
+    "src/modules/clients/application/ports/audit-log-writer.ts": 13,
+    "src/modules/clients/application/ports/device-registration-gateway.ts": 30,
+    "src/modules/clients/application/ports/webhook-config-store.ts": 26,
+    "src/modules/clients/application/use-cases/client-api-key-use-cases.ts": 30,
+    "src/modules/clients/application/use-cases/client-pending-device-use-cases.ts": 43,
+    "src/modules/clients/application/use-cases/client-use-cases.ts": 78,
+    "src/modules/clients/application/use-cases/client-webhook-use-cases.ts": 30,
+    "src/modules/clients/domain/entities/client.ts": 76,
+    "src/modules/clients/domain/errors/client-error.ts": 22,
+    "src/modules/clients/domain/repositories/client-repository.ts": 20,
+    "src/modules/clients/domain/services/client-rules.ts": 52,
+    "src/modules/clients/infrastructure/adapters/api-key-service-store.ts": 21,
+    "src/modules/clients/infrastructure/adapters/device-registration-service-gateway.ts": 27,
+    "src/modules/clients/infrastructure/adapters/public-webhook-config-store.ts": 22,
+    "src/modules/clients/infrastructure/database/knex-audit-log-writer.ts": 15,
+    "src/modules/clients/infrastructure/database/knex-client-repository.ts": 114,
+    "src/modules/clients/presentation/client-controller.ts": 99,
+    "src/modules/clients/presentation/client-routes.ts": 150,
     "src/modules/device-costs/domain/entities/device-costs.ts": 35,
     "src/modules/device-costs/index.ts": 10,
     "src/modules/device-costs/infrastructure/database/knex-device-costs-repository.ts": 58,
@@ -478,26 +491,6 @@
         "length": 25
       }
     ],
-    "src/api/controllers/clientController/crud.ts": [
-      {
-        "name": "createClient",
-        "length": 29
-      },
-      {
-        "name": "updateClient",
-        "length": 27
-      }
-    ],
-    "src/api/controllers/clientController/reads.ts": [
-      {
-        "name": "getClientMonitors",
-        "length": 22
-      },
-      {
-        "name": "getClientUsage",
-        "length": 29
-      }
-    ],
     "src/api/controllers/dashboardController/dashboard.ts": [
       {
         "name": "getDashboard",
@@ -702,12 +695,6 @@
         "length": 75
       }
     ],
-    "src/api/routes/clientRoutes.ts": [
-      {
-        "name": "registerClientRoutes",
-        "length": 91
-      }
-    ],
     "src/api/routes/deviceRoutes.ts": [
       {
         "name": "registerDeviceRoutes",
@@ -858,6 +845,12 @@
       {
         "name": "toAuditLogsView",
         "length": 23
+      }
+    ],
+    "src/modules/clients/presentation/client-routes.ts": [
+      {
+        "name": "registerClientRoutes",
+        "length": 31
       }
     ],
     "src/modules/inventory/application/use-cases/custom-field-def-use-cases.ts": [
