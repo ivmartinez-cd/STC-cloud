@@ -192,13 +192,28 @@ Cero consumidores tocados (`portalAgentRoutes.ts`, bare import). Validado:
 21/21 archivos en el entorno efímero (incluye `portalAgentEws.test.ts`, que
 ejercita `ewsProxy` end-to-end vía WS), 0 fallas, tsc y portal check limpios.
 
+### 5 de N — `dashboardController.ts` (600 líneas: dashboard + alertas)
+
+Dos dominios en un archivo: stats del dashboard (`getDashboard`, un
+`Promise.all` de 19 queries independientes) y CRUD de alertas. Dividido en
+`dashboardController/{shared,dashboard-queries,dashboard,alerts-reads,alerts-mutations,index}.ts`.
+`getDashboard` en sí bajó de ~276 a ~35 líneas: cada una de las 19 queries del
+`Promise.all` se hoisteó a su propia función top-level en `dashboard-queries.ts`
+(mismo patrón mecánico que los `create*Handlers`, pero aplicado a un
+`Promise.all` en vez de un objeto de handlers — cero cambio de comportamiento,
+siguen corriendo en paralelo). `dashboard.ts` quedó en 338 líneas tras esa
+extracción (por encima del límite igual, sólo por la cantidad de funciones);
+se volvió a partir moviendo las 19 queries a `dashboard-queries.ts` aparte.
+Cero consumidores tocados (`dashboardRoutes.ts`, bare import). Validado:
+21/21 archivos en el entorno efímero, 0 fallas, tsc y portal check limpios.
+
 **Pendiente de Fase 2** (orden descendente de tamaño, tabla de Fase 0):
 `services/agentService/telemetry.ts` (decomponer `syncReadings`, pasada
-dedicada) → `dashboardController.ts` (593) → `deviceLifecycleService.ts` (516)
-→ `authController.ts` (385) → `reportService.ts` (355) → `clientController.ts`
-(345) → `suppliesService.ts` (301) — más lo que haya crecido por encima de 300
-desde que se congeló esa tabla. Frontend (`Settings.tsx` 869, `DeviceDetail.tsx`
-772, etc.) sigue sin arrancar.
+dedicada) → `deviceLifecycleService.ts` (516) → `authController.ts` (385) →
+`reportService.ts` (355) → `clientController.ts` (345) → `suppliesService.ts`
+(301) — más lo que haya crecido por encima de 300 desde que se congeló esa
+tabla. Frontend (`Settings.tsx` 869, `DeviceDetail.tsx` 772, etc.) sigue sin
+arrancar.
 
 ## 0. Punto de partida (medido 2026-08-24)
 

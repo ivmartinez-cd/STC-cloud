@@ -4,7 +4,12 @@
     "src/api/controllers/auditController.ts": 144,
     "src/api/controllers/authController.ts": 386,
     "src/api/controllers/clientController.ts": 346,
-    "src/api/controllers/dashboardController.ts": 601,
+    "src/api/controllers/dashboardController/alerts-mutations.ts": 144,
+    "src/api/controllers/dashboardController/alerts-reads.ts": 118,
+    "src/api/controllers/dashboardController/dashboard-queries.ts": 224,
+    "src/api/controllers/dashboardController/dashboard.ts": 124,
+    "src/api/controllers/dashboardController/index.ts": 20,
+    "src/api/controllers/dashboardController/shared.ts": 79,
     "src/api/controllers/deviceController/bulk.ts": 100,
     "src/api/controllers/deviceController/crud.ts": 116,
     "src/api/controllers/deviceController/index.ts": 24,
@@ -307,19 +312,17 @@
         "length": 21
       }
     ],
-    "src/api/controllers/dashboardController.ts": [
+    "src/api/controllers/dashboardController/alerts-mutations.ts": [
       {
-        "name": "buildScopedAlertQuery",
-        "length": 37
+        "name": "updateAlert",
+        "length": 59
       },
       {
-        "name": "createDashboardController",
-        "length": 513
-      },
-      {
-        "name": "getDashboard",
-        "length": 277
-      },
+        "name": "bulkUpdateAlerts",
+        "length": 31
+      }
+    ],
+    "src/api/controllers/dashboardController/alerts-reads.ts": [
       {
         "name": "getAlerts",
         "length": 60
@@ -327,14 +330,18 @@
       {
         "name": "getAlertSummary",
         "length": 34
-      },
+      }
+    ],
+    "src/api/controllers/dashboardController/dashboard.ts": [
       {
-        "name": "updateAlert",
-        "length": 59
-      },
+        "name": "getDashboard",
+        "length": 75
+      }
+    ],
+    "src/api/controllers/dashboardController/shared.ts": [
       {
-        "name": "bulkUpdateAlerts",
-        "length": 54
+        "name": "buildScopedAlertQuery",
+        "length": 37
       }
     ],
     "src/api/controllers/deviceController/bulk.ts": [
