@@ -4,7 +4,7 @@
     "src/api/controllers/auditController.ts": 144,
     "src/api/controllers/authController.ts": 386,
     "src/api/controllers/clientController.ts": 346,
-    "src/api/controllers/dashboardController.ts": 600,
+    "src/api/controllers/dashboardController.ts": 601,
     "src/api/controllers/deviceController.ts": 778,
     "src/api/controllers/incidentController.ts": 186,
     "src/api/controllers/inventoryController.ts": 119,
@@ -58,7 +58,16 @@
     "src/modules/feedback/presentation/feedback-routes.ts": 36,
     "src/modules/feedback/presentation/feedback-schemas.ts": 30,
     "src/modules/feedback/presentation/feedback-view.ts": 27,
-    "src/services/agentService.ts": 1593,
+    "src/services/agentService/agent-service.ts": 146,
+    "src/services/agentService/commands.ts": 55,
+    "src/services/agentService/config.ts": 263,
+    "src/services/agentService/device-registration.ts": 161,
+    "src/services/agentService/index.ts": 11,
+    "src/services/agentService/lifecycle.ts": 179,
+    "src/services/agentService/reading-helpers.ts": 94,
+    "src/services/agentService/search.ts": 51,
+    "src/services/agentService/telemetry.ts": 702,
+    "src/services/agentService/types.ts": 125,
     "src/services/agentVersionService.ts": 39,
     "src/services/alertCatalog.ts": 255,
     "src/services/alertService.ts": 213,
@@ -118,12 +127,12 @@
     "src/tests/supplyOrigin.test.ts": 164,
     "src/version.ts": 6,
     "src/ws/index.ts": 268,
-    "portal/src/App.tsx": 74,
+    "portal/src/App.tsx": 78,
     "portal/src/components/BulkActionBar.tsx": 29,
     "portal/src/components/ConfirmModal.tsx": 80,
     "portal/src/components/ErrorBoundary.tsx": 59,
     "portal/src/components/FeedbackModal.tsx": 335,
-    "portal/src/components/Layout.tsx": 483,
+    "portal/src/components/Layout.tsx": 484,
     "portal/src/components/Terminal.tsx": 244,
     "portal/src/components/agents/AgentTable.tsx": 194,
     "portal/src/components/agents/ClientUsageChart.tsx": 54,
@@ -132,7 +141,9 @@
     "portal/src/components/agents/RegenKeyModal.tsx": 81,
     "portal/src/components/clients/ApiKeysCard.tsx": 343,
     "portal/src/components/clients/CustomFieldsCard.tsx": 147,
+    "portal/src/components/clients/IncidentRulesCard.tsx": 133,
     "portal/src/components/devices/DeviceLifecycleModals.tsx": 604,
+    "portal/src/components/incidents/CreateIncidentModal.tsx": 130,
     "portal/src/components/monitors/CreateMonitorModal.tsx": 258,
     "portal/src/components/monitors/DeviceInventoryTable.tsx": 426,
     "portal/src/components/monitors/DeviceSummaryCard.tsx": 77,
@@ -154,19 +165,21 @@
     "portal/src/hooks/useRowSelection.ts": 33,
     "portal/src/hooks/useTime.ts": 12,
     "portal/src/lib/api.ts": 84,
-    "portal/src/lib/constants.ts": 39,
+    "portal/src/lib/constants.ts": 54,
     "portal/src/lib/deviceImage.ts": 56,
     "portal/src/lib/formatters.ts": 104,
     "portal/src/lib/supplies.ts": 172,
     "portal/src/main.tsx": 14,
     "portal/src/pages/Activity.tsx": 248,
     "portal/src/pages/Agents.tsx": 120,
-    "portal/src/pages/Alerts.tsx": 418,
-    "portal/src/pages/ClientDetail.tsx": 572,
+    "portal/src/pages/Alerts.tsx": 447,
+    "portal/src/pages/ClientDetail.tsx": 574,
     "portal/src/pages/Clients.tsx": 334,
-    "portal/src/pages/Dashboard.tsx": 508,
-    "portal/src/pages/DeviceDetail.tsx": 782,
+    "portal/src/pages/Dashboard.tsx": 539,
+    "portal/src/pages/DeviceDetail.tsx": 833,
     "portal/src/pages/Devices.tsx": 261,
+    "portal/src/pages/IncidentDetail.tsx": 264,
+    "portal/src/pages/Incidents.tsx": 211,
     "portal/src/pages/Login.tsx": 146,
     "portal/src/pages/MonitorDetail.tsx": 570,
     "portal/src/pages/Monitors.tsx": 616,
@@ -175,8 +188,9 @@
     "portal/src/pages/Settings.tsx": 870,
     "portal/src/pages/Supplies.tsx": 253,
     "portal/src/types/agents.ts": 83,
-    "portal/src/types/alerts.ts": 64,
+    "portal/src/types/alerts.ts": 68,
     "portal/src/types/audit.ts": 29,
+    "portal/src/types/incidents.ts": 75,
     "portal/src/types/inventory.ts": 24,
     "portal/src/types/monitor.ts": 347,
     "portal/src/types/pendingDevices.ts": 24,
@@ -287,7 +301,7 @@
       },
       {
         "name": "createDashboardController",
-        "length": 512
+        "length": 513
       },
       {
         "name": "getDashboard",
@@ -295,7 +309,7 @@
       },
       {
         "name": "getAlerts",
-        "length": 59
+        "length": 60
       },
       {
         "name": "getAlertSummary",
@@ -630,27 +644,21 @@
         "length": 25
       }
     ],
-    "src/services/agentService.ts": [
-      {
-        "name": "createActivationKey",
-        "length": 39
-      },
-      {
-        "name": "activateAgent",
-        "length": 37
-      },
-      {
-        "name": "refreshAgentToken",
-        "length": 28
-      },
+    "src/services/agentService/config.ts": [
       {
         "name": "updateConfig",
         "length": 49
       },
       {
-        "name": "regenerateActivationKey",
-        "length": 25
+        "name": "getConfig",
+        "length": 103
       },
+      {
+        "name": "replaceSnmpCredentials",
+        "length": 55
+      }
+    ],
+    "src/services/agentService/device-registration.ts": [
       {
         "name": "registerDevices",
         "length": 102
@@ -666,10 +674,40 @@
       {
         "name": "registerDeviceLegacyByAgent",
         "length": 33
+      }
+    ],
+    "src/services/agentService/lifecycle.ts": [
+      {
+        "name": "createActivationKey",
+        "length": 39
       },
+      {
+        "name": "activateAgent",
+        "length": 37
+      },
+      {
+        "name": "refreshAgentToken",
+        "length": 28
+      },
+      {
+        "name": "regenerateActivationKey",
+        "length": 25
+      }
+    ],
+    "src/services/agentService/search.ts": [
+      {
+        "name": "globalSearch",
+        "length": 39
+      }
+    ],
+    "src/services/agentService/telemetry.ts": [
       {
         "name": "ingestLogs",
         "length": 23
+      },
+      {
+        "name": "heartbeat",
+        "length": 22
       },
       {
         "name": "syncReadings",
@@ -678,22 +716,6 @@
       {
         "name": "processReading",
         "length": 434
-      },
-      {
-        "name": "heartbeat",
-        "length": 22
-      },
-      {
-        "name": "getConfig",
-        "length": 103
-      },
-      {
-        "name": "replaceSnmpCredentials",
-        "length": 55
-      },
-      {
-        "name": "globalSearch",
-        "length": 39
       }
     ],
     "src/services/agentVersionService.ts": [
@@ -1481,7 +1503,7 @@
     "portal/src/App.tsx": [
       {
         "name": "App",
-        "length": 32
+        "length": 34
       }
     ],
     "portal/src/components/ConfirmModal.tsx": [
@@ -1586,6 +1608,12 @@
         "length": 129
       }
     ],
+    "portal/src/components/clients/IncidentRulesCard.tsx": [
+      {
+        "name": "IncidentRulesCard",
+        "length": 117
+      }
+    ],
     "portal/src/components/devices/DeviceLifecycleModals.tsx": [
       {
         "name": "EditDeviceModal",
@@ -1622,6 +1650,16 @@
       {
         "name": "MergeDeviceModal",
         "length": 62
+      }
+    ],
+    "portal/src/components/incidents/CreateIncidentModal.tsx": [
+      {
+        "name": "CreateIncidentModal",
+        "length": 105
+      },
+      {
+        "name": "create",
+        "length": 21
       }
     ],
     "portal/src/components/monitors/CreateMonitorModal.tsx": [
@@ -1811,7 +1849,7 @@
     "portal/src/pages/Alerts.tsx": [
       {
         "name": "Alerts",
-        "length": 372
+        "length": 400
       }
     ],
     "portal/src/pages/ClientDetail.tsx": [
@@ -1833,7 +1871,7 @@
       },
       {
         "name": "ClientDetail",
-        "length": 279
+        "length": 280
       }
     ],
     "portal/src/pages/Clients.tsx": [
@@ -1853,7 +1891,7 @@
       },
       {
         "name": "Dashboard",
-        "length": 420
+        "length": 451
       },
       {
         "name": "anonymous",
@@ -1863,7 +1901,7 @@
     "portal/src/pages/DeviceDetail.tsx": [
       {
         "name": "DeviceDetail",
-        "length": 679
+        "length": 728
       }
     ],
     "portal/src/pages/Devices.tsx": [
@@ -1874,6 +1912,18 @@
       {
         "name": "anonymous",
         "length": 103
+      }
+    ],
+    "portal/src/pages/IncidentDetail.tsx": [
+      {
+        "name": "IncidentDetail",
+        "length": 238
+      }
+    ],
+    "portal/src/pages/Incidents.tsx": [
+      {
+        "name": "Incidents",
+        "length": 178
       }
     ],
     "portal/src/pages/Login.tsx": [

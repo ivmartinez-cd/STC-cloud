@@ -68,7 +68,23 @@ completamente quieto en `git status` — controller + routes sin service propio,
   más tarde cuando la otra sesión los dejó consistentes — nunca se tocó su
   código fuente.
 
-## Fase 2 — dividir archivos grandes: `ipRangeSpec.ts` (no `agentService.ts`) — 1 de N
+## Fase 2 — dividir archivos grandes
+
+### Coordinación entre sesiones (2026-08-24)
+
+A partir de acá las sesiones concurrentes sobre este repo se coordinan por
+mensaje directo (`SendMessage`/`ListAgents`), no sólo por inferencia de
+`git status`. La sesión hermana (`close-hp-sds-gaps`, gap analysis vs HP SDS)
+confirmó que `agentService.ts`, `deviceController.ts`, `dashboardController.ts`,
+`deviceLifecycleService.ts` y `portalAgentController.ts` quedaron **estables**
+tras sus Fases 8-11 (aunque sin commitear todavía) y que de ahí en más sólo
+toca `cloud/portal/src/` (UI de incidentes) — liberando toda la cola pendiente
+de esta fase. A cambio, esta migración evita `incidentService.ts`,
+`incidentClassifier.ts`, `supplyOrigin.ts`, `deviceRegistrationService.ts`,
+`deviceMonitorService.ts`, `customFieldService.ts`, `incidentController.ts`,
+`incidentRoutes.ts`, `scope.ts`, `rolePolicy.ts` y `authMiddleware.ts`.
+
+### 1 de N — `ipRangeSpec.ts` (no `agentService.ts`)
 
 `agentService.ts` (el primer candidato de este plan) tenía ~200 líneas sin
 commitear de la sesión hermana al arrancar esta fase — partirlo ahora habría
@@ -97,14 +113,67 @@ cuando se estabilice.
   `incidents.test.ts` de la sesión hermana en el medio — 0 fallas, `tsc`
   limpio, `cloud/portal` `npm run check` limpio).
 
+### 2 de N — `agentService.ts` (1592 líneas — el archivo más grande y central del backend)
+
+Con la sesión hermana confirmando el archivo estable (ver arriba), se partió el
+God Object más grande del repo (20 métodos públicos, 6 responsabilidades
+mezcladas) en una **fachada delgada + 6 sub-servicios**, no una simple carpeta
+de funciones sueltas — es una clase con estado (`db`/`redis` inyectados) usada
+desde un único punto de instanciación (`server.ts:83`), así que había que
+preservar la API pública método por método:
+
+```
+services/agentService/
+├── types.ts                — interfaces + AgentServiceDeps
+├── reading-helpers.ts       — hashToken, mergeSuppliesDetails, skuFrom,
+│                              assetNumberFrom, isValidUuid, mapWithConcurrency
+├── lifecycle.ts             — AgentLifecycleService (activación, tokens, revocación)
+├── config.ts                — AgentConfigService (ip_ranges, credenciales SNMP, business hours)
+├── device-registration.ts   — AgentDeviceRegistrationService (alta/upsert de equipos)
+├── telemetry.ts             — AgentTelemetryService (syncReadings, logs, heartbeat) — 702L, ver abajo
+├── commands.ts               — AgentCommandService (cola de comandos remotos)
+├── search.ts                 — AgentSearchService (globalSearch)
+├── agent-service.ts          — AgentService: compone los 6 de arriba, delega 1:1
+└── index.ts                  — barrel
+```
+
+- ✅ **Cero archivos consumidores tocados** (mismo patrón bare-import + barrel
+  que Fase 2/1): los 11 imports externos (incluidos `ws/index.ts`,
+  `authMiddleware.ts`, 5 controllers, 4 routes) resuelven igual.
+- ✅ **Movimiento verbatim, no reescritura**: cada método se movió tal cual —
+  incluyendo una firma pre-existente rara (`syncReadings(redis, ...)` recibe
+  `redis` como parámetro pero usa `this.redis` adentro, el parámetro está
+  muerto) que se preservó a propósito, no se "arregló" en un refactor
+  estructural. Único drop intencional: el import `NOISE_MODEL_RE` de
+  `deviceIdentity.ts`, muerto en el archivo original (nunca se usaba).
+- ⚠️ **`telemetry.ts` queda en 702 líneas — no se terminó de dividir.**
+  `syncReadings` (~600 líneas: resolución de identidad de dispositivo,
+  detección de reset de contador, fusión de fantasmas, alertas EWS, todo
+  crítico para facturación/alertas) es demasiado riesgoso para decomponer su
+  clausura interna en la misma pasada que reorganiza el resto — se dejó
+  intacto a propósito. Queda como el próximo ítem de esta lista, con su
+  propia pasada dedicada (no apurada entre otras 5 extracciones).
+- ✅ Deuda pre-existente (no nueva) baseline-ada bajo los nuevos paths:
+  `createActivationKey`/`activateAgent`/`refreshAgentToken`/`regenerateActivationKey`
+  (lifecycle.ts), `updateConfig`/`getConfig`/`replaceSnmpCredentials` (config.ts),
+  `registerDevices`/`attemptUpsert`/`registerDeviceLegacyByAgent`
+  (device-registration.ts), `globalSearch` (search.ts),
+  `ingestLogs`/`heartbeat`/`syncReadings`/`processReading` (telemetry.ts) — todas
+  ya excedían 20 líneas en el archivo original, sólo cambiaron de casa.
+- ✅ Validado en el mismo entorno efímero aislado: 21/21 archivos de test en 0
+  fallas — incluida a propósito la batería más sensible a este archivo
+  ("Concurrencia del sync", "Detección de reset de contador y volumen
+  mensual", "Ciclo de vida del agente", "Heartbeat") — `tsc` limpio, portal
+  check limpio.
+
 **Pendiente de Fase 2** (orden descendente de tamaño, tabla de Fase 0):
-`agentService.ts` (1529, esperando que se estabilice) → `deviceController.ts`
-(777) → `portalAgentController.ts` (610, también tocado ahora) →
+`services/agentService/telemetry.ts` (decomponer `syncReadings`, pasada
+dedicada) → `deviceController.ts` (777) → `portalAgentController.ts` (610) →
 `dashboardController.ts` (593) → `deviceLifecycleService.ts` (516) →
-`authController.ts` (385, quieto) → `reportService.ts` (355) →
-`clientController.ts` (345) → `suppliesService.ts` (301) — más lo que haya
-crecido por encima de 300 desde que se congeló esa tabla. Frontend
-(`Settings.tsx` 869, `DeviceDetail.tsx` 772, etc.) sigue sin arrancar.
+`authController.ts` (385) → `reportService.ts` (355) → `clientController.ts`
+(345) → `suppliesService.ts` (301) — más lo que haya crecido por encima de 300
+desde que se congeló esa tabla. Frontend (`Settings.tsx` 869, `DeviceDetail.tsx`
+772, etc.) sigue sin arrancar.
 
 ## 0. Punto de partida (medido 2026-08-24)
 
