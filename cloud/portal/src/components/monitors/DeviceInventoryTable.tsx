@@ -1,11 +1,18 @@
 import { useState } from 'react';
 import { useNow } from '../../hooks/useNow';
 import { Link } from 'react-router-dom';
-import { Printer, Download, X, Trash2 } from 'lucide-react';
-import { DEVICE_OFFLINE_THRESHOLD_MS } from '../../lib/constants';
+import { Printer, Download, X, Trash2, CheckSquare, Square, RotateCcw, ArrowRightLeft, Radio } from 'lucide-react';
+import { DEVICE_OFFLINE_THRESHOLD_MS, MONITOR_STATE_LABELS, MONITOR_STATE_COLORS, type MonitorState } from '../../lib/constants';
 import type { Device } from '../../types/monitor';
 import { api } from '../../lib/api';
 import { getDeviceStatusInfo } from '../../lib/formatters';
+import { useRowSelection } from '../../hooks/useRowSelection';
+import { useToast } from '../../context/ToastContext';
+import BulkActionBar from '../BulkActionBar';
+import {
+  BulkDecommissionModal, BulkRecommissionModal, BulkMoveDevicesModal, BulkMonitorStateModal,
+  type BulkActionResult,
+} from '../devices/DeviceLifecycleModals';
 
 interface Props {
   devices: Device[];
@@ -17,7 +24,7 @@ interface Props {
 
 function exportCountersCSV(devices: Device[], monitorName: string, discriminate: boolean) {
   const today = new Date().toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-  const rows = ['SERIE;FECHA;TIPO;CLASE;CONTADOR;CLASE;CONTADOR;MOTIVO;OBSERVACIONES'];
+  const rows = ['SERIE;FECHA;TIPO;CLASE;CONTADOR;CLASE;CONTADOR;MOTIVO;OBSERVACIONES;NUMERO_ACTIVO;NUMERO_ETIQUETA;USO_30D;CICLO_TRABAJO'];
 
   for (const d of devices) {
     const serie = d.serial_number ?? 'S/N';
@@ -25,14 +32,15 @@ function exportCountersCSV(devices: Device[], monitorName: string, discriminate:
     const color = d.color_pages ?? 0;
     const total = d.total_pages ?? (mono + color);
     const isColor = color > 0;
+    const inventoryCols = `${d.asset_number ?? ''};${d.asset_tag ?? ''};${d.pages_30d ?? ''};${d.duty_cycle_effective ?? ''}`;
 
     let row: string;
     if (isColor) {
       row = discriminate
-        ? `${serie};${today};7;10;${mono};20;${color};;`
-        : `${serie};${today};7;20;${total};;;;`;
+        ? `${serie};${today};7;10;${mono};20;${color};;;${inventoryCols}`
+        : `${serie};${today};7;20;${total};;;;;${inventoryCols}`;
     } else {
-      row = `${serie};${today};7;10;${mono};;;;`;
+      row = `${serie};${today};7;10;${mono};;;;;${inventoryCols}`;
     }
     rows.push(row);
   }
@@ -48,6 +56,20 @@ function exportCountersCSV(devices: Device[], monitorName: string, discriminate:
 
 const DeviceInventoryTable = ({ devices, monitorName, onRefresh, agentId, isReadOnlyViewer = false }: Props) => {
   const [showExportModal, setShowExportModal] = useState(false);
+  const { showToast } = useToast();
+
+  // Acciones en bloque (Fase 9 del gap analysis vs HP SDS).
+  const rowSelection = useRowSelection(devices.map((d) => d.id));
+  const [bulkModal, setBulkModal] = useState<'decommission' | 'recommission' | 'move' | 'monitor-state' | null>(null);
+  const selectedIds = Array.from(rowSelection.selected);
+  const firstSelected = devices.find((d) => rowSelection.selected.has(d.id));
+
+  const handleBulkDone = (result: BulkActionResult) => {
+    rowSelection.clear();
+    if (onRefresh) onRefresh();
+    const skippedMsg = result.skipped.length > 0 ? ` — ${result.skipped.length} sin aplicar` : '';
+    showToast(`${result.count} equipo(s) actualizados${skippedMsg}`, result.count > 0 ? 'success' : 'error');
+  };
 
   const now = useNow();
   const offlineCount = devices.filter(d => {
@@ -127,24 +149,51 @@ const DeviceInventoryTable = ({ devices, monitorName, onRefresh, agentId, isRead
           </div>
         </header>
 
+        {!isReadOnlyViewer && (
+          <BulkActionBar count={rowSelection.count} onClear={rowSelection.clear}>
+            <button onClick={() => setBulkModal('decommission')} className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-[11px] font-black uppercase tracking-wider transition-all">
+              <Trash2 size={13} /> Dar de baja
+            </button>
+            <button onClick={() => setBulkModal('recommission')} className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-[11px] font-black uppercase tracking-wider transition-all">
+              <RotateCcw size={13} /> Reactivar
+            </button>
+            <button onClick={() => setBulkModal('move')} className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-600 hover:bg-slate-700 text-white rounded-xl text-[11px] font-black uppercase tracking-wider transition-all">
+              <ArrowRightLeft size={13} /> Mover
+            </button>
+            <button onClick={() => setBulkModal('monitor-state')} className="flex items-center gap-1.5 px-3 py-1.5 bg-brand hover:bg-brand-hover text-white rounded-xl text-[11px] font-black uppercase tracking-wider transition-all">
+              <Radio size={13} /> Estado de monitoreo
+            </button>
+          </BulkActionBar>
+        )}
+
         <div className="overflow-x-auto">
           <table className="cd-table">
             <thead>
               <tr>
-                <th className="!bg-brand-charcoal !text-white !rounded-tl-2xl">Dispositivo</th>
-                <th className="!bg-brand-charcoal !text-white">Red</th>
-                <th className="!bg-brand-charcoal !text-white">Número de Serie</th>
-                <th className="!bg-brand-charcoal !text-white">Tóner</th>
-                <th className={`!bg-brand-charcoal !text-white !text-right ${isReadOnlyViewer ? '!rounded-tr-2xl' : ''}`}>Contadores (Total / Mono / Color)</th>
                 {!isReadOnlyViewer && (
-                  <th className="!bg-brand-charcoal !text-white !text-center !rounded-tr-2xl">Acción</th>
+                  <th className="!bg-brand-charcoal !text-white !rounded-tl-2xl !px-3 !py-3 !w-10">
+                    <button onClick={rowSelection.toggleAll} className="text-white/70 hover:text-white" title="Seleccionar todos">
+                      {rowSelection.allSelected ? <CheckSquare size={16} /> : <Square size={16} />}
+                    </button>
+                  </th>
+                )}
+                <th className={`!bg-brand-charcoal !text-white !px-4 !py-3 ${isReadOnlyViewer ? '!rounded-tl-2xl' : ''}`}>Dispositivo</th>
+                <th className="!bg-brand-charcoal !text-white !px-4 !py-3">Red</th>
+                <th className="!bg-brand-charcoal !text-white !px-4 !py-3">Número de Serie</th>
+                <th className="!bg-brand-charcoal !text-white !px-4 !py-3">Tóner</th>
+                <th className="!bg-brand-charcoal !text-white !px-4 !py-3">Inventario</th>
+                <th className="!bg-brand-charcoal !text-white !px-4 !py-3">Uso 30d</th>
+                <th className="!bg-brand-charcoal !text-white !px-4 !py-3">Monitoreo</th>
+                <th className={`!bg-brand-charcoal !text-white !text-right !px-4 !py-3 ${isReadOnlyViewer ? '!rounded-tr-2xl' : ''}`}>Contadores (Total / Mono / Color)</th>
+                {!isReadOnlyViewer && (
+                  <th className="!bg-brand-charcoal !text-white !text-center !rounded-tr-2xl !px-4 !py-3">Acción</th>
                 )}
               </tr>
             </thead>
             <tbody>
               {devices.length === 0 ? (
                 <tr>
-                  <td colSpan={isReadOnlyViewer ? 5 : 6} className="px-8 py-20 text-center">
+                  <td colSpan={isReadOnlyViewer ? 8 : 10} className="px-8 py-20 text-center">
                     <div className="flex flex-col items-center gap-3">
                       <Printer size={48} className="text-slate-200" />
                       <p className="text-slate-500 font-bold text-xs uppercase tracking-widest">No se han descubierto dispositivos en este segmento</p>
@@ -157,10 +206,17 @@ const DeviceInventoryTable = ({ devices, monitorName, onRefresh, agentId, isRead
 
                   return (
                     <tr key={device.id} className="group hover:bg-slate-50/50 transition-all">
-                      <td className="px-8 py-5">
-                        <Link to={`/devices/${device.id}`} className="flex items-center gap-4 group/device">
-                          <div className="w-10 h-10 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-400 group-hover/device:bg-brand group-hover/device:text-white transition-all">
-                            <Printer size={18} />
+                      {!isReadOnlyViewer && (
+                        <td className="!px-3 !py-3">
+                          <button onClick={() => rowSelection.toggle(device.id)} className="text-slate-300 hover:text-brand">
+                            {rowSelection.selected.has(device.id) ? <CheckSquare size={16} className="text-brand" /> : <Square size={16} />}
+                          </button>
+                        </td>
+                      )}
+                      <td className="!px-4 !py-3">
+                        <Link to={`/devices/${device.id}`} className="flex items-center gap-3 group/device">
+                          <div className="w-9 h-9 shrink-0 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-400 group-hover/device:bg-brand group-hover/device:text-white transition-all">
+                            <Printer size={16} />
                           </div>
                           <div>
                             <p className="text-sm font-black text-[#1a2333] tracking-tight group-hover/device:text-brand transition-colors">{device.model || 'Modelo Genérico'}</p>
@@ -168,7 +224,7 @@ const DeviceInventoryTable = ({ devices, monitorName, onRefresh, agentId, isRead
                           </div>
                         </Link>
                       </td>
-                      <td className="px-8 py-5">
+                      <td className="!px-4 !py-3">
                         <div className="flex flex-col">
                           <span className="text-xs font-bold text-slate-600 font-mono">{device.ip_address}</span>
                           <span className={`text-[9px] font-black uppercase tracking-widest flex items-center gap-1 mt-0.5 ${statusInfo.textClass}`}>
@@ -177,14 +233,14 @@ const DeviceInventoryTable = ({ devices, monitorName, onRefresh, agentId, isRead
                           </span>
                         </div>
                       </td>
-                    <td className="px-8 py-5">
-                      <span className="px-3 py-1 bg-slate-100 text-slate-600 rounded-lg font-mono text-xs font-bold border border-slate-200">
+                    <td className="!px-4 !py-3">
+                      <span className="px-2 py-1 bg-slate-100 text-slate-600 rounded-lg font-mono text-xs font-bold border border-slate-200 whitespace-nowrap">
                         {device.serial_number || 'N/A'}
                       </span>
                     </td>
-                    <td className="px-8 py-5">
+                    <td className="!px-4 !py-3">
                       {device.toner_black !== undefined && device.toner_black !== null ? (
-                        <div className="w-28 space-y-1.5">
+                        <div className="w-24 space-y-1.5">
                           {device.toner_cyan === null || device.toner_cyan === undefined ? (
                             // Monocromo
                             <div className="space-y-1">
@@ -237,12 +293,38 @@ const DeviceInventoryTable = ({ devices, monitorName, onRefresh, agentId, isRead
                         <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">n/a</span>
                       )}
                     </td>
-                    <td className="px-8 py-5 text-right">
+                    <td className="!px-4 !py-3">
+                      <div className="flex flex-col gap-0.5 text-[10px] font-bold text-slate-600 font-mono">
+                        {device.asset_number && <span title="Nº de activo">{device.asset_number}</span>}
+                        {device.asset_tag && <span className="text-slate-400" title="Nº de etiqueta">{device.asset_tag}</span>}
+                        {!device.asset_number && !device.asset_tag && <span className="text-slate-300">—</span>}
+                      </div>
+                    </td>
+                    <td className="!px-4 !py-3">
+                      {device.pages_30d != null ? (
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-xs font-black text-slate-700 tabular-nums">{device.pages_30d.toLocaleString()}</span>
+                          {device.utilization_pct != null && (
+                            <span className={`inline-flex w-fit px-1.5 py-0.5 rounded text-[9px] font-black ${
+                              device.utilization_pct > 100 ? 'bg-rose-100 text-rose-700' : device.utilization_pct > 80 ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'
+                            }`}>{device.utilization_pct}% ciclo</span>
+                          )}
+                        </div>
+                      ) : <span className="text-slate-300 text-xs">—</span>}
+                    </td>
+                    <td className="!px-4 !py-3">
+                      {device.monitor_state && device.monitor_state !== 'full' ? (
+                        <span className={`inline-flex px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider ${MONITOR_STATE_COLORS[device.monitor_state as MonitorState]}`}>
+                          {MONITOR_STATE_LABELS[device.monitor_state as MonitorState]}
+                        </span>
+                      ) : <span className="text-slate-300 text-xs">—</span>}
+                    </td>
+                    <td className="!px-4 !py-3 text-right">
                       <div className="flex flex-col items-end gap-1">
-                        <p className="text-sm font-black text-[#1a2333] tabular-nums">
+                        <p className="text-sm font-black text-[#1a2333] tabular-nums whitespace-nowrap">
                           {(device.total_pages || 0).toLocaleString()} <span className="text-[10px] text-slate-500 font-bold uppercase">Total</span>
                         </p>
-                        <div className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-widest text-slate-500">
+                        <div className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-widest text-slate-500 whitespace-nowrap">
                           <span>{(device.mono_pages || 0).toLocaleString()} M</span>
                           <span className="w-1 h-1 bg-slate-200 rounded-full" />
                           <span className="text-brand">{(device.color_pages || 0).toLocaleString()} C</span>
@@ -250,7 +332,7 @@ const DeviceInventoryTable = ({ devices, monitorName, onRefresh, agentId, isRead
                       </div>
                     </td>
                     {!isReadOnlyViewer && (
-                      <td className="px-6 py-5 text-center">
+                      <td className="!px-3 !py-3 text-center">
                         {statusInfo.status !== 'online' ? (
                           <button
                             onClick={(e) => {
@@ -258,7 +340,7 @@ const DeviceInventoryTable = ({ devices, monitorName, onRefresh, agentId, isRead
                               e.stopPropagation();
                               handleDeleteDevice(device.id, device.model, device.ip_address);
                             }}
-                            className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 hover:text-rose-800 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all border border-rose-200 inline-flex items-center gap-1.5 shadow-sm"
+                            className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 hover:text-rose-800 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all border border-rose-200 inline-flex items-center gap-1.5 shadow-sm whitespace-nowrap"
                             title="Eliminar este equipo sin conexión"
                           >
                             <Trash2 size={13} /> Eliminar
@@ -266,7 +348,7 @@ const DeviceInventoryTable = ({ devices, monitorName, onRefresh, agentId, isRead
                         ) : (
                           <button
                             disabled
-                            className="px-3 py-1.5 bg-slate-100 text-slate-300 rounded-xl text-[11px] font-black uppercase tracking-wider cursor-not-allowed inline-flex items-center gap-1.5 border border-slate-200/50 opacity-60"
+                            className="px-3 py-1.5 bg-slate-100 text-slate-300 rounded-xl text-[11px] font-black uppercase tracking-wider cursor-not-allowed inline-flex items-center gap-1.5 border border-slate-200/50 opacity-60 whitespace-nowrap"
                             title="Solo se pueden eliminar equipos sin conexión"
                           >
                             <Trash2 size={13} /> Eliminar
@@ -313,6 +395,24 @@ const DeviceInventoryTable = ({ devices, monitorName, onRefresh, agentId, isRead
           </div>
         </div>
       )}
+
+      <BulkDecommissionModal
+        isOpen={bulkModal === 'decommission'} onClose={() => setBulkModal(null)}
+        onDone={handleBulkDone} deviceIds={selectedIds}
+      />
+      <BulkRecommissionModal
+        isOpen={bulkModal === 'recommission'} onClose={() => setBulkModal(null)}
+        onDone={handleBulkDone} deviceIds={selectedIds}
+      />
+      <BulkMoveDevicesModal
+        isOpen={bulkModal === 'move'} onClose={() => setBulkModal(null)}
+        onDone={handleBulkDone} deviceIds={selectedIds}
+        currentClientId={firstSelected?.client_id ?? null} currentAgentId={agentId ?? firstSelected?.agent_id ?? null}
+      />
+      <BulkMonitorStateModal
+        isOpen={bulkModal === 'monitor-state'} onClose={() => setBulkModal(null)}
+        onDone={handleBulkDone} deviceIds={selectedIds}
+      />
     </>
   );
 };
