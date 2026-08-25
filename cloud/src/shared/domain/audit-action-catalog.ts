@@ -9,6 +9,12 @@
  * `auditActionMeta()` devuelve un fallback legible (el propio código, categoría
  * `other`), así que este catálogo puede quedar desactualizado sin que el feed
  * se rompa.
+ *
+ * Vive en `shared/domain` (no en `modules/audit/`) porque desde el handoff hifi
+ * "Monitor — detalle" (25/08/2026) el módulo `agents` también lo consume (timeline
+ * de "Actividad reciente") — mismo criterio que `alertCatalog.ts` en `src/services/`:
+ * un catálogo puro cruzando módulos vive fuera de cualquiera de ellos, nunca se
+ * importa un módulo desde adentro de otro (`check-guards.mjs :: arch-cross-module`).
  */
 
 export type AuditCategory = "device" | "agent" | "client" | "security" | "alert" | "report" | "user" | "other";
