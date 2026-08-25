@@ -309,6 +309,8 @@ export interface Client {
   device_count: number;
   /** Fase 7 del gap analysis vs HP SDS — cola de registro de dispositivos. */
   device_approval_required: boolean;
+  /** Handoff hifi "Cliente — detalle" (25/08/2026): metadatos del header ("Alta DD/MM/AAAA · ID …"). */
+  created_at: string;
 }
 
 /** `GET /clients/:id/api-keys` — nunca trae el valor en claro (sólo al crearla). */
@@ -345,6 +347,10 @@ export interface Monitor {
 
 export interface UsageMonth {
   month: string;
+  /** ISO del primer día del mes — clave estable para rellenar meses sin lecturas
+   * (ver `ClientUsageChart.tsx`), a diferencia de `month` ("Mon YYYY" en inglés,
+   * no ordenable/parseable de forma confiable en el front). */
+  month_date: string;
   mono: number;
   color: number;
 }

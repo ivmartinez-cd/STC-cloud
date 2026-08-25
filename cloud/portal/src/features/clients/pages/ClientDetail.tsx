@@ -1,36 +1,55 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useNow } from '../../../shared/hooks/useNow';
-import { useParams, Link } from 'react-router-dom';
-import { ChevronRight, Users, Loader2 } from 'lucide-react';
+import { useParams, useSearchParams, Link } from 'react-router-dom';
+import { Loader2, Bell, Droplets } from 'lucide-react';
 import { useClientDetail } from '../hooks/useClientDetail';
 import { useToast } from '../../../store/ToastContext';
 import { useAuth } from '../../../store/AuthContext';
-import { OFFLINE_THRESHOLD_MS } from '../../../shared/lib/constants';
 import ConfirmModal from '../../../shared/components/ConfirmModal';
-import ClientUsageChart from '../components/ClientUsageChart';
 import CreateMonitorModal from '../components/CreateMonitorModal';
-import ApiKeysCard from '../components/ApiKeysCard';
-import CustomFieldsCard from '../components/CustomFieldsCard';
-import IncidentRulesCard from '../components/IncidentRulesCard';
-import SupplyRequestSettingsCard from '../components/SupplyRequestSettingsCard';
-import NotificationEventsCard from '../components/NotificationEventsCard';
-import NotificationSettingsCard from '../components/NotificationSettingsCard';
-import DeviceApprovalCard from '../components/DeviceApprovalCard';
-import DuplicateDevicesCard from '../components/DuplicateDevicesCard';
-import ClientMetricsCards from '../components/ClientMetricsCards';
 import ClientProfileCard from '../components/ClientProfileCard';
+import ClientMetricsCards from '../components/ClientMetricsCards';
+import ClientDetailTabs from '../components/ClientDetailTabs';
+import ClientAttentionZone from '../components/ClientAttentionZone';
+import ClientConfigZone from '../components/ClientConfigZone';
+import ClientDevicesSection from '../components/ClientDevicesSection';
+import ClientTabRedirect from '../components/ClientTabRedirect';
 import ClientMonitorsSection from '../components/ClientMonitorsSection';
+import type { ClientDetailTab } from '../types/clientDetail';
 
+function parseTab(v: string | null): ClientDetailTab {
+  return v === 'dispositivos' || v === 'alertas' || v === 'consumibles' || v === 'configuracion' ? v : 'resumen';
+}
+
+/** Tab activa reflejada en `?tab=` (README: "Tab... reflejados en la URL"). */
+function useActiveTab() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [tab, setTabState] = useState<ClientDetailTab>(() => parseTab(searchParams.get('tab')));
+  const setTab = useCallback((next: ClientDetailTab) => {
+    setTabState(next);
+    const params = new URLSearchParams(searchParams);
+    if (next === 'resumen') params.delete('tab'); else params.set('tab', next);
+    setSearchParams(params, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+  return { tab, setTab };
+}
+
+/** Rediseño hifi "Cliente — detalle" (handoff 25/08/2026): jerarquiza en 3 zonas
+ * rotuladas (identidad + 6 métricas + tabs; "Requiere atención"; "Configuración de
+ * la cuenta") más la tabla "Infraestructura de monitoreo", en vez del mosaico plano
+ * de ~10 tarjetas del mismo peso que había antes. */
 const ClientDetail = () => {
   const { id } = useParams<{ id: string }>();
   const { role } = useAuth();
-  // Alta/baja de monitor son POST/DELETE /agents — fuera del allowlist de
-  // client_viewer (ver rolePolicy.ts): sin este chequeo el botón mandaría la
-  // request y el usuario vería un 403 recién al hacer click.
   const isReadOnlyViewer = role === 'client_viewer';
   const { showToast } = useToast();
   const now = useNow();
-  const { client, monitors, usage, loading, error, createMonitor, deleteMonitor, updateNotifications, updateDeviceApprovalRequired } = useClientDetail(id!);
+  const {
+    client, monitors, usage, stats, loading, error,
+    createMonitor, deleteMonitor, updateNotifications, updateDeviceApprovalRequired, updateClientProfile,
+  } = useClientDetail(id!);
+  const { tab, setTab } = useActiveTab();
 
   const [showMonitorModal, setShowMonitorModal] = useState(false);
   const [monitorToDelete, setMonitorToDelete] = useState<{ id: string; name: string } | null>(null);
@@ -50,83 +69,61 @@ const ClientDetail = () => {
     }
   };
 
-  const onlineMonitors = monitors.filter(m =>
-    m.status === 'active' && m.last_seen !== null
-    && (now - new Date(m.last_seen).getTime() <= OFFLINE_THRESHOLD_MS)
-  ).length;
-
-  const totalPagesMonth = usage.length > 0
-    ? usage[usage.length - 1].mono + usage[usage.length - 1].color
-    : 0;
-
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
-      {/* Breadcrumb */}
-      <nav className="flex items-center gap-3 text-xs">
-        <Link to="/clients" className="flex items-center gap-2 text-slate-400 hover:text-brand font-bold uppercase tracking-widest transition-colors">
-          <Users size={14} /> Clientes
-        </Link>
-        <ChevronRight size={14} className="text-slate-400" />
-        {client ? (
-          <span className="text-brand font-extrabold uppercase tracking-widest">{client.name}</span>
-        ) : (
-          <div className="h-4 w-24 bg-slate-100 animate-pulse rounded-full" />
-        )}
+    <div className="-m-4 min-w-0 flex flex-col gap-4 bg-surface-page px-[34px] pb-9 pt-[26px] md:-m-10">
+      <nav className="mb-1 flex items-center gap-2 font-sans text-xs">
+        <Link to="/clients" className="font-semibold text-brand-accent hover:underline">Clientes</Link>
+        <span className="text-ink-sep-light">/</span>
+        {client ? <span className="text-ink-700">{client.name}</span> : <div className="h-4 w-24 animate-pulse rounded-full bg-slate-100" />}
       </nav>
 
       {loading && (
-        <div className="flex flex-col items-center justify-center py-24 gap-4">
+        <div className="flex flex-col items-center justify-center gap-4 py-24">
           <Loader2 className="animate-spin text-brand" size={40} />
-          <p className="text-slate-400 font-extrabold uppercase tracking-widest text-[10px]">Cargando expediente del cliente...</p>
+          <p className="font-extrabold uppercase tracking-widest text-[10px] text-ink-300">Cargando expediente del cliente...</p>
         </div>
       )}
 
-      {error && (
-        <div className="bg-rose-50 border border-rose-100 rounded-[24px] p-8 text-rose-600 font-bold animate-in shake">
-          {error}
-        </div>
-      )}
+      {error && <div className="rounded-[24px] border border-rose-100 bg-rose-50 p-8 font-bold text-rose-600">{error}</div>}
 
       {!loading && !error && client && (
         <>
-          {/* Header Dashboard */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <ClientMetricsCards
-              deviceCount={client.device_count}
-              monitorCount={monitors.length}
-              onlineMonitors={onlineMonitors}
-              totalPagesMonth={totalPagesMonth}
-            />
-
-            <ClientProfileCard client={client} />
-
-            <NotificationSettingsCard
-              email={client.notification_email}
-              webhookUrl={client.notification_webhook_url}
-              canEdit={!isReadOnlyViewer}
-              onSave={updateNotifications}
-            />
-
-            {!isReadOnlyViewer && id && (
-              <DeviceApprovalCard
-                enabled={client.device_approval_required}
-                canEdit={!isReadOnlyViewer}
-                onSave={updateDeviceApprovalRequired}
-                clientId={id}
-              />
-            )}
-
-            {!isReadOnlyViewer && id && <DuplicateDevicesCard clientId={id} />}
-
-            {/* Usage Chart */}
-            <ClientUsageChart usage={usage} />
-
-            {!isReadOnlyViewer && id && <ApiKeysCard clientId={id} canEdit={!isReadOnlyViewer} />}
-            {!isReadOnlyViewer && id && <CustomFieldsCard clientId={id} canEdit={!isReadOnlyViewer} />}
-            {!isReadOnlyViewer && id && <IncidentRulesCard clientId={id} canEdit={!isReadOnlyViewer} />}
-            {!isReadOnlyViewer && id && <SupplyRequestSettingsCard clientId={id} canEdit={!isReadOnlyViewer} />}
-            {!isReadOnlyViewer && id && <NotificationEventsCard clientId={id} canEdit={!isReadOnlyViewer} />}
+          <div className="rounded-[5px] border border-line-100 bg-white">
+            <ClientProfileCard client={client} monitors={monitors} canEdit={!isReadOnlyViewer} onSave={updateClientProfile} />
+            <ClientMetricsCards client={client} monitors={monitors} usage={usage} stats={stats} />
+            <ClientDetailTabs active={tab} onChange={setTab} />
           </div>
+
+          {tab === 'resumen' && (
+            <>
+              <ClientAttentionZone
+                client={client} usage={usage} isReadOnlyViewer={isReadOnlyViewer}
+                onSaveNotifications={updateNotifications} onToggleDeviceApproval={updateDeviceApprovalRequired}
+              />
+              {!isReadOnlyViewer && <ClientConfigZone clientId={id!} canEdit={!isReadOnlyViewer} />}
+              <ClientDevicesSection clientId={id!} active={tab === 'resumen'} />
+            </>
+          )}
+
+          {tab === 'dispositivos' && <ClientDevicesSection clientId={id!} active={tab === 'dispositivos'} />}
+
+          {tab === 'alertas' && (
+            <ClientTabRedirect
+              icon={Bell} title="Alertas de este cliente"
+              description="Reusa el listado completo de alertas, filtrado por este cliente."
+              href={`/alerts?client_id=${id}`} cta="Ver alertas"
+            />
+          )}
+
+          {tab === 'consumibles' && (
+            <ClientTabRedirect
+              icon={Droplets} title="Consumibles de este cliente"
+              description="Reusa el listado completo de consumibles de flota, filtrado por este cliente."
+              href={`/supplies?client_id=${id}`} cta="Ver consumibles"
+            />
+          )}
+
+          {tab === 'configuracion' && !isReadOnlyViewer && <ClientConfigZone clientId={id!} canEdit={!isReadOnlyViewer} />}
 
           <ClientMonitorsSection
             monitors={monitors}
@@ -138,11 +135,7 @@ const ClientDetail = () => {
         </>
       )}
 
-      <CreateMonitorModal
-        isOpen={showMonitorModal}
-        onClose={() => setShowMonitorModal(false)}
-        onCreate={createMonitor}
-      />
+      <CreateMonitorModal isOpen={showMonitorModal} onClose={() => setShowMonitorModal(false)} onCreate={createMonitor} />
 
       <ConfirmModal
         isOpen={!!monitorToDelete}

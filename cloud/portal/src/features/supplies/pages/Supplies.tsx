@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Droplets, Loader2, ChevronLeft, ChevronRight, Download, ShieldCheck, CheckSquare, Square } from 'lucide-react';
 import { api } from '../../../shared/lib/api';
 import { useAuth } from '../../../store/AuthContext';
@@ -47,7 +47,11 @@ const Supplies = () => {
   const [error, setError] = useState('');
   const [page, setPage] = useState(0);
 
-  const [clientId, setClientId] = useState('');
+  const [initialParams] = useSearchParams();
+  // Lee `client_id` de la URL al montar — habilita el deep-link real
+  // `/supplies?client_id=` desde la tab "Consumibles" del detalle de cliente
+  // (handoff hifi "Cliente — detalle", 25/08/2026).
+  const [clientId, setClientId] = useState(() => initialParams.get('client_id') ?? '');
   const [kind, setKind] = useState('');
   const [maxDays, setMaxDays] = useState('');
 

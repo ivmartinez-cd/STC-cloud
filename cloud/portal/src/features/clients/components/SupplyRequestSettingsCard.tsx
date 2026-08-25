@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Loader2, PackageSearch, Save } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { api } from '../../../shared/lib/api';
 import { useToast } from '../../../store/ToastContext';
+import ConfigCardShell from './ConfigCardShell';
 
 interface Settings { enabled: boolean; threshold_pct: number; }
 
@@ -39,17 +40,12 @@ export default function SupplyRequestSettingsCard({ clientId, canEdit }: { clien
   if (!canEdit) return null;
 
   return (
-    <div className="cd-panel p-8">
-      <div className="flex items-center justify-between mb-6">
-        <h3 className="text-sm font-black text-[#1a2333] tracking-tight flex items-center gap-3">
-          <div className="p-2 bg-brand/10 text-brand rounded-xl"><PackageSearch size={18} /></div>
-          Pedidos Automáticos de Consumibles
-        </h3>
-        <button onClick={save} disabled={saving || !settings}
-          className="flex items-center gap-2 px-4 py-2 bg-brand hover:bg-brand-hover text-white rounded-xl text-[11px] font-black uppercase tracking-wider transition-all disabled:opacity-50">
-          {saving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />} Guardar
-        </button>
-      </div>
+    <ConfigCardShell
+      title="Pedidos automáticos de consumibles"
+      status={{ label: settings?.enabled ? 'ACTIVO' : 'SIN CONFIGURAR', active: !!settings?.enabled }}
+      meta={settings ? `Umbral ${settings.threshold_pct}%` : '—'}
+      cta={{ label: saving ? 'Guardando…' : 'Administrar', onClick: save }}
+    >
       <p className="text-xs text-slate-500 font-medium mb-4">
         Si está activo, un consumible que cae bajo el umbral abre un pedido automático,
         y el pedido se completa solo cuando el nivel vuelve a subir (cartucho reemplazado).
@@ -73,6 +69,6 @@ export default function SupplyRequestSettingsCard({ clientId, canEdit }: { clien
           </label>
         </div>
       )}
-    </div>
+    </ConfigCardShell>
   );
 }

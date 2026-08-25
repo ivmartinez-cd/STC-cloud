@@ -48,7 +48,10 @@ function useAlertFilters(): AlertFiltersState {
   const [alertClass, setAlertClass] = useState(() => initial.get('class') ?? '');
   const [resolved, setResolved] = useState<ResolvedFilter>(() => initialResolved(initial));
   const [acknowledged, setAcknowledged] = useState<AcknowledgedFilter>('');
-  const [clientId, setClientId] = useState('');
+  // Lee `client_id` de la URL al montar (mismo criterio que `alertClass`/`resolved`
+  // arriba) — habilita el deep-link real `/alerts?client_id=` desde la tab
+  // "Alertas" del detalle de cliente (handoff hifi "Cliente — detalle", 25/08/2026).
+  const [clientId, setClientId] = useState(() => initial.get('client_id') ?? '');
   useUrlSync(alertClass, resolved);
   return { severity, setSeverity, alertClass, setAlertClass, resolved, setResolved, acknowledged, setAcknowledged, clientId, setClientId };
 }

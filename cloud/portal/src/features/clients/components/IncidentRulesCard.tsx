@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
-import { AlertOctagon, Loader2, Save } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { api } from '../../../shared/lib/api';
 import { useToast } from '../../../store/ToastContext';
+import ConfigCardShell from './ConfigCardShell';
 import type { IncidentRule } from '../../../shared/types/incidents';
 import type { AlertClassOption } from '../../../shared/types/alerts';
 
@@ -57,17 +58,16 @@ export default function IncidentRulesCard({ clientId, canEdit }: { clientId: str
 
   if (!canEdit) return null;
 
+  const activeCount = rules.filter((r) => r.enabled).length;
+  const lastEdited = rules.reduce<string | null>((max, r) => (!max || r.updated_at > max ? r.updated_at : max), null);
+
   return (
-    <div className="cd-panel p-8">
-      <div className="flex items-center justify-between mb-6">
-        <h3 className="text-sm font-black text-[#1a2333] tracking-tight flex items-center gap-3">
-          <div className="p-2 bg-brand/10 text-brand rounded-xl"><AlertOctagon size={18} /></div>
-          Reglas de Incidentes Automáticos
-        </h3>
-        <button onClick={save} disabled={saving || loading} className="flex items-center gap-2 px-4 py-2 bg-brand hover:bg-brand-hover text-white rounded-xl text-[11px] font-black uppercase tracking-wider transition-all disabled:opacity-50">
-          {saving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />} Guardar
-        </button>
-      </div>
+    <ConfigCardShell
+      title="Reglas de incidentes automáticos"
+      status={{ label: activeCount > 0 ? `${activeCount} activas` : 'SIN CONFIGURAR', active: activeCount > 0 }}
+      meta={lastEdited ? `Última edición ${new Date(lastEdited).toLocaleDateString('es-AR')}` : 'Sin ediciones'}
+      cta={{ label: saving ? 'Guardando…' : 'Administrar', onClick: save }}
+    >
       <p className="text-xs text-slate-500 font-medium mb-4">
         Opt-in por clase de alerta: si está activo, una alerta que cumpla la severidad mínima abre (o agrupa en) un incidente automático para este cliente.
       </p>
@@ -127,6 +127,6 @@ export default function IncidentRulesCard({ clientId, canEdit }: { clientId: str
           </table>
         </div>
       )}
-    </div>
+    </ConfigCardShell>
   );
 }

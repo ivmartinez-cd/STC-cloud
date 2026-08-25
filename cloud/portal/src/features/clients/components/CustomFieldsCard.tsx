@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Tag, Plus, Archive, Loader2, X } from 'lucide-react';
+import { Archive, Loader2, X } from 'lucide-react';
 import { api } from '../../../shared/lib/api';
 import { useToast } from '../../../store/ToastContext';
 import ConfirmModal from '../../../shared/components/ConfirmModal';
+import ConfigCardShell from './ConfigCardShell';
 import type { CustomFieldDef, CustomFieldType } from '../../../shared/types/inventory';
 
 const TYPE_LABELS: Record<CustomFieldType, string> = {
@@ -68,18 +69,15 @@ export default function CustomFieldsCard({ clientId, canEdit }: { clientId: stri
   };
 
   return (
-    <div className="cd-panel p-8">
-      <div className="flex items-center justify-between mb-6">
-        <h3 className="text-sm font-black text-[#1a2333] tracking-tight flex items-center gap-3">
-          <div className="p-2 bg-brand/10 text-brand rounded-xl"><Tag size={18} /></div>
-          Campos Personalizados
-        </h3>
-        {canEdit && !creating && (
-          <button onClick={() => setCreating(true)} className="p-2 text-slate-400 hover:text-brand hover:bg-brand/10 rounded-xl transition-all">
-            <Plus size={16} />
-          </button>
-        )}
-      </div>
+    <ConfigCardShell
+      title="Campos personalizados"
+      status={{ label: fields.length > 0 ? `${fields.length} definido${fields.length === 1 ? '' : 's'}` : 'SIN CONFIGURAR', active: fields.length > 0 }}
+      meta={`${fields.length} campo${fields.length === 1 ? '' : 's'} definido${fields.length === 1 ? '' : 's'}`}
+      cta={{ label: 'Agregar campo', onClick: () => setCreating(true) }}
+    >
+      <p className="mb-3.5 font-sans text-[12.5px] leading-[1.55] text-ink-100">
+        Agregá centro de costo, sucursal o responsable para clasificar los dispositivos de este cliente en los informes.
+      </p>
 
       {creating && (
         <div className="space-y-2 mb-4 p-4 bg-slate-50/50 rounded-2xl">
@@ -141,6 +139,6 @@ export default function CustomFieldsCard({ clientId, canEdit }: { clientId: stri
         isDanger
         isLoading={busy}
       />
-    </div>
+    </ConfigCardShell>
   );
 }

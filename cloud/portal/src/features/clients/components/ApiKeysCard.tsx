@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
-import { KeyRound, Plus, Trash2, Loader2, X, Copy, Check, Webhook, RefreshCw, Save } from 'lucide-react';
+import { KeyRound, Trash2, Loader2, X, Copy, Check, Webhook, RefreshCw, Save } from 'lucide-react';
 import { api } from '../../../shared/lib/api';
 import { useToast } from '../../../store/ToastContext';
 import ConfirmModal from '../../../shared/components/ConfirmModal';
+import ConfigCardShell from './ConfigCardShell';
 import type { ApiKeyRecord, WebhookConfig, PublicApiEvent } from '../../../shared/types/monitor';
 
 const EVENT_LABELS: Record<PublicApiEvent, string> = {
@@ -268,18 +269,15 @@ export default function ApiKeysCard({ clientId, canEdit }: { clientId: string; c
   const activeKeys = keys.filter((k) => !k.revoked_at);
 
   return (
-    <div className="cd-panel p-8">
-      <div className="flex items-center justify-between mb-6">
-        <h3 className="text-sm font-black text-[#1a2333] tracking-tight flex items-center gap-3">
-          <div className="p-2 bg-brand/10 text-brand rounded-xl"><KeyRound size={18} /></div>
-          API Pública / Integración ERP
-        </h3>
-        {canEdit && !creating && (
-          <button onClick={() => setCreating(true)} className="p-2 text-slate-400 hover:text-brand hover:bg-brand/10 rounded-xl transition-all">
-            <Plus size={16} />
-          </button>
-        )}
-      </div>
+    <ConfigCardShell
+      title="API pública / integración ERP"
+      status={{ label: activeKeys.length > 0 ? `${activeKeys.length} activa${activeKeys.length === 1 ? '' : 's'}` : 'SIN CONFIGURAR', active: activeKeys.length > 0 }}
+      meta={activeKeys.length > 0 ? `${activeKeys.length} clave(s) activa(s)` : 'Sin claves activas'}
+      cta={{ label: 'Generar token', onClick: () => setCreating(true) }}
+    >
+      <p className="mb-3.5 font-sans text-[12.5px] leading-[1.55] text-ink-100">
+        Sincronizá inventario y consumos con el ERP del cliente mediante token de API.
+      </p>
 
       {creating && (
         <div className="flex items-center gap-2 mb-4">
@@ -337,6 +335,6 @@ export default function ApiKeysCard({ clientId, canEdit }: { clientId: string; c
         isDanger
         isLoading={busy}
       />
-    </div>
+    </ConfigCardShell>
   );
 }

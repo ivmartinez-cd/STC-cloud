@@ -64,6 +64,14 @@
   --color-ink-650: #5c6265;           /* texto de chip neutro (estado "ACTIVO") — entre ink-600 e ink-100,
                                           la numeración ya no era estrictamente monotónica antes de esto */
 
+  /* Tokens que faltaban del handoff hifi "Cliente — detalle" (25/08/2026) — mismo
+     sistema, sólo se suman los que "Panel de Control"/"Clientes" no necesitaron
+     (rótulo de zona, eje del gráfico de 12 barras, separadores de breadcrumb). */
+  --color-ink-550: #7a8085;           /* rótulo de zona ("REQUIERE ATENCIÓN"/"CONFIGURACIÓN DE LA CUENTA"/etc) */
+  --color-chart-axis: #a5aaad;        /* etiquetas de mes bajo las barras del consumo mensual */
+  --color-ink-sep: #d8dcdd;           /* separador "·" de metadatos (header de identidad) */
+  --color-ink-sep-light: #c9cdce;     /* separador "/" del breadcrumb */
+
   /* Tipografía de "Manual de marca.pdf": Montserrat (Título) + Source Sans Pro (Cuerpo). */
   --font-sans: 'Source Sans 3', 'Source Sans Pro', system-ui, -apple-system, sans-serif;
   --font-heading: 'Montserrat', sans-serif;
