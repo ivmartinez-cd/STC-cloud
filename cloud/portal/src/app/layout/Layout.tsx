@@ -2,10 +2,11 @@ import { useState, Suspense, useEffect, useRef } from 'react';
 import { Link, Outlet } from 'react-router-dom';
 import { api } from '../../shared/lib/api';
 import {
-  LayoutDashboard, Users, LogOut, Search, Settings, Menu, X, Shield, MessageSquarePlus, Bell, FileText, History, UserCheck, Droplets, AlertOctagon, CalendarClock, PackageSearch, MailCheck, Radio
+  LayoutDashboard, Users, LogOut, Search, Settings, Menu, X, Shield, MessageSquarePlus, Bell, FileText, History, UserCheck, Droplets, AlertOctagon, CalendarClock, PackageSearch, MailCheck, Radio, Printer
 } from 'lucide-react';
 import { useAuth } from '../../store/AuthContext';
 import FeedbackModal from '../../shared/components/FeedbackModal';
+import { useDebounce } from '../../shared/hooks/useDebounce';
 import SidebarNav from './SidebarNav';
 import { filterNavTreeByRole, type NavEntry } from './navTree';
 
@@ -28,6 +29,7 @@ const navTree: NavEntry[] = [
     name: 'Gestión de Clientes', icon: Users,
     children: [
       { name: 'Clientes', path: '/clients', icon: Users },
+      { name: 'Dispositivos', path: '/devices', icon: Printer },
       { name: 'Pendientes', path: '/pending', icon: UserCheck, roles: ['admin', 'operator'], badgeKey: 'pending' },
     ],
   },
@@ -73,15 +75,6 @@ const ROLE_LABELS: Record<string, string> = {
   admin: 'Administrador',
   operator: 'Operador',
   client_viewer: 'Cliente',
-};
-
-const useDebounce = (value: string, delay: number) => {
-  const [debouncedValue, setDebouncedValue] = useState(value);
-  useEffect(() => {
-    const handler = setTimeout(() => setDebouncedValue(value), delay);
-    return () => clearTimeout(handler);
-  }, [value, delay]);
-  return debouncedValue;
 };
 
 const Layout = () => {

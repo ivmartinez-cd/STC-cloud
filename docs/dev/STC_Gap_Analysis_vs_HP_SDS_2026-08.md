@@ -1817,10 +1817,9 @@ argentino en vez del local).
 ### R8 · Cobertura de marcas — **P1**
 Familias reales sólo HP/Samsung/Lexmark (18 perfiles). Ricoh/Brother/Xerox → `generic.ews` + OIDs parciales (`BROTHER_OIDS.totalPages` vacío; Xerox mono=color). Canon, Kyocera, Konica Minolta, Epson, Sharp, Toshiba, OKI, Pantum ni siquiera son `Brand` → caen a `generic` (Printer‑MIB sirve para total/insumos, pero sin desglose color ni alertas ricas). En un MPS multimarca esto limita la promesa comercial.
 
-### R9 · Portal — **P1** — cerrado salvo paginación
-Sin paginación (500 equipos = inusable) — **único punto de R9 que sigue
-abierto**, deliberadamente fuera de esta pasada (es un cambio de forma de
-API + UI en varios listados, no un fix puntual). Todo lo demás: ~~3 tipos
+### R9 · Portal — **P1** — cerrado
+✅ **Paginación server-side real, primer listado** (25/08/2026, ver abajo).
+Todo lo demás: ~~3 tipos
 `Alert` distintos~~ (✅ ya consolidados en `types/alerts.ts` por una pasada
 previa de alertas — ver docblock ahí), ~~tipo `MonitorData.config` miente
 (se parsea como string)~~ (✅ 24/08/2026 — resultó ser código muerto en el
@@ -1942,6 +1941,64 @@ Playwright real contra el stack Docker: deep-link sin sesión → login →
 vuelve al deep-link (no a `/`); cookie de sesión corrompida a mitad de uso
 → 401 → login → vuelve a la página en la que estaba.
 
+✅ **Paginación server-side real: `GET /devices` + `Devices.tsx`**
+(25/08/2026). Alcance decidido sin pedir confirmación (mandato explícito
+de Ivan: elegir el diseño más óptimo/mantenible y ejecutar) — de las 3
+superficies de listado de equipos (`GET /devices` global,
+`GET /clients/:id/devices` por cliente, `GET /agents/:id/devices` por
+monitor), se priorizó la primera: es la que el hallazgo original nombraba
+explícitamente, y ya tenía un techo de seguridad `.limit(5000)` fácil de
+convertir en paginación real. Las otras dos (`/clients/:id/devices` sin
+ningún techo, hoy sólo alimenta selectores chicos; `/agents/:id/devices`,
+alcance típicamente menor) quedan para una pasada aparte.
+
+Implementación: `KnexDeviceRepository.list()` pasa de `Promise<DeviceRow[]>`
+a `Promise<{items, total}>`, mismo criterio ya establecido en el propio
+módulo (`ListPendingDevicesUseCase`/`listPending` — límite 50, techo 200,
+`Promise.all([itemsQuery, countQuery])`) — no el de `/audit-logs`, que
+además devuelve `limit`/`offset` en la respuesta; acá no hace falta, el
+caller ya sabe qué pidió. Búsqueda (`q`) corrida server-side vía `ILIKE`
+sobre IP/serial/marca/modelo/nombre/cliente/monitor — antes era un
+`.filter()` client-side sobre las (hasta 5000) filas ya traídas.
+
+**Bug real encontrado en el camino, no buscado**: la interfaz `Device` del
+portal declaraba campos `ip`/`serial` que **el backend nunca envió**
+(los reales son `ip_address`/`serial_number`) — confirmado con un `curl`
+directo a la API. Significa que en esta página la IP y el número de serie
+nunca se mostraron (siempre `undefined` en las cards) ni se pudieron
+buscar client-side, desde que existe el componente. Corregido de paso.
+
+**Segundo hallazgo, más grande**: `Devices.tsx` (el componente entero,
+con agrupado por cliente, búsqueda, cards) **no estaba registrado en el
+router ni en el menú** — código huérfano, inalcanzable desde la UI. Esto
+resignifica el hallazgo original: "sin paginación" no era (sólo) que
+faltara construir la paginación, sino que la página que la iba a tener
+nunca llegó a conectarse — quienquiera que necesitara un inventario global
+de equipos debía usar vistas menos escalables (por cliente, por monitor).
+Se registró la ruta (`/devices` en `App.tsx`) y un ítem de nav nuevo
+("Dispositivos", ícono `Printer`) dentro del grupo "Gestión de Clientes"
+en `Layout.tsx`, visible para cualquier rol autenticado (mismo criterio
+que "Clientes": el backend ya scopea por `client_id` para `client_viewer`,
+confirmado por el test de RBAC existente).
+
+Refactor chico de paso: `useDebounce` vivía duplicado e inline dentro de
+`Layout.tsx` (usado por el buscador global `Ctrl+K`) — se extrajo a
+`shared/hooks/useDebounce.ts` y `Devices.tsx` lo reusa para el debounce
+de 300ms de su propio buscador, en vez de escribir una segunda copia.
+
+Verificado de punta a punta contra el stack Docker real (no sólo tests):
+`deviceLifecycle.test.ts`/`rbac.test.ts` actualizados al nuevo contrato
+`{items, total}` (antes asumían un array plano) — sin usar el `total`
+global de la base como invariante de test (con paginación real no tiene
+sentido), sino filtrando por el serial único del fixture, doble uso:
+prueba decommission/recommission Y la búsqueda nueva a la vez. CI completo
+32/32 archivos en 0. Playwright real: click en el ítem de nav nuevo →
+aterriza en `/devices`; buscar por un serial único → 1 resultado con la
+IP real visible (confirma el fix `ip_address`); "Página 1 de 37" con la
+flota real de prueba; click en "Siguiente" → cambia el contenido (offset
+real, no una ilusión client-side) → "Página 2 de 37"; cero errores de
+consola en todo el flujo.
+
 ### R10 · Documentación divergente — **P2** — los 2 documentos citados, actualizados (25/08/2026)
 ✅ `docs/security/data_collection_inventory.md` y
 `docs/cliente/STC_Auditoria_Sistemas_IT_v1.7.html` actualizados a v2.1,
@@ -1982,7 +2039,7 @@ que este hallazgo nombraba explícitamente.
 ### Fase 1 — Paridad operativa con SDS (≈ 1 mes) — completa: 9 de 9 ítems cerrados
 - ✅ **Alert loop** — lifecycle server-side completo: alertas `agent_offline`, `device_offline`, `counter_reset` (ya de Fase 0), normalización de las alertas EWS que ya llegaban del agente; **ack/resolve** y filtros; **notificaciones** email + webhook. ⬜ El loop *dedicado 3/15 min del lado agente* no se tocó (las alertas del agente siguen en el loop de supplies, 60/240 min); ⬜ digest diario no implementado.
 - ✅ **Reportes por cliente**: selector de período, cierre mensual inmutable (lectura inicial/final, delta, fuente), export CSV/XLSX, y **entrega automática** (email/webhook) para reemplazar el flujo FTP/mail del STC legado. ⬜ Export a PDF y entrega por SFTP no se hicieron (quedó CSV/XLSX + email/webhook).
-- ✅ **RBAC por cliente**: rol `client_viewer`, scoping por `client_id` en todos los controladores. ⬜ Paginación server‑side no se hizo (sigue sin paginación ninguna tabla del portal).
+- ✅ **RBAC por cliente**: rol `client_viewer`, scoping por `client_id` en todos los controladores. ✅ (25/08/2026) Paginación server-side real en el primer listado (`GET /devices` + `Devices.tsx`, ver R9) — el resto de las tablas del portal la siguen sin tener.
 - ✅ **SNMPv3 y lista de credenciales** (v1/v2c/v3) por agente, hasta 8 credenciales probadas en orden, secretos cifrados at-rest, fail-fast para no multiplicar timeouts contra un host muerto.
 - ✅ **CIDR + tope de rango + exclusiones**: `ip_ranges` acepta CIDR y exclusión de IPs individuales, compilado del lado cloud a pares planos (cero cambios en el agente); tope de 2000 IPs declaradas por agente, validado en cloud y reforzado en el agente. ⬜ Exclusión de sub-rangos/CIDR anidados e IPv6 quedan fuera.
 - ✅ **Horario laboral y TZ configurables** por agente: `agents.business_hours` (jsonb, default = comportamiento hardcodeado de siempre), enviado en heartbeat config; de paso corrige el offset `-03:00` hardcodeado al ingerir logs/lecturas naive de agentes viejos, usando el TZ real del agente. ⬜ Cosmética de locale del portal (`es-AR`) queda para una pasada de polish aparte.

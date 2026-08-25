@@ -6,6 +6,15 @@ export interface ReadingsQuery {
   limit?: string;
 }
 
+export interface ListDevicesQuery {
+  scope: DeviceScope;
+  includeDecommissioned: boolean;
+  /** Busca por IP, serial, marca, modelo, nombre, cliente o monitor — mismo criterio que `PendingQuery.q` en `device-registration-repository.ts`. */
+  q?: string;
+  limit?: number;
+  offset?: number;
+}
+
 export interface UsageHistoryQuery {
   granularity?: string;
   limit?: string;
@@ -22,8 +31,8 @@ export interface DecommissionFields {
  * orden y dentro de qué transacción) es de los casos de uso.
  */
 export interface DeviceRepository {
-  /** `devices.*` + estado derivado + nombre de monitor/cliente. Techo 5000. */
-  list(scope: DeviceScope, includeDecommissioned: boolean): Promise<DeviceRow[]>;
+  /** `devices.*` + estado derivado + nombre de monitor/cliente, paginado (R9 gap analysis: "sin paginación ninguna tabla del portal"). */
+  list(query: ListDevicesQuery): Promise<{ items: DeviceRow[]; total: number }>;
   /** Ficha completa (join a modelos, uso 30d, lápida). Acepta uuid, prefijo de uuid, serial o IP. SIN filtro de ciclo de vida a propósito. */
   getDetail(identifier: string, scope: DeviceScope): Promise<DeviceRow | null>;
   /** Resuelve uuid/prefijo/serial/IP a un id dentro del scope (sin filtro de ciclo de vida). `allowIp=false` para usage-history (histórico). */

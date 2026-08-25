@@ -4,13 +4,13 @@
     "src/services/incidentService.ts": 363,
     "src/services/notificationService.ts": 372,
     "src/tests/alerts.test.ts": 499,
-    "src/tests/deviceLifecycle.test.ts": 465,
+    "src/tests/deviceLifecycle.test.ts": 467,
     "src/tests/e2e.test.ts": 521,
     "src/tests/incidents.test.ts": 324,
     "src/tests/ipRangeSpec.test.ts": 361,
     "src/tests/rbac.test.ts": 747,
     "src/ws/index.ts": 310,
-    "portal/src/app/layout/Layout.tsx": 467,
+    "portal/src/app/layout/Layout.tsx": 468,
     "portal/src/features/alerts/pages/Alerts.tsx": 447,
     "portal/src/features/clients/components/ApiKeysCard.tsx": 343,
     "portal/src/features/clients/pages/Clients.tsx": 334,
@@ -602,7 +602,7 @@
     "portal/src/App.tsx": [
       {
         "name": "App",
-        "length": 38
+        "length": 39
       }
     ],
     "portal/src/app/layout/Layout.tsx": [

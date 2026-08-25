@@ -11,6 +11,7 @@ const Clients      = lazy(() => import('./features/clients/pages/Clients'));
 const ClientDetail = lazy(() => import('./features/clients/pages/ClientDetail'));
 const MonitorDetail   = lazy(() => import('./features/monitors/pages/MonitorDetail'));
 const DeviceDetail = lazy(() => import('./features/devices/pages/DeviceDetail'));
+const Devices      = lazy(() => import('./features/devices/pages/Devices'));
 const Settings     = lazy(() => import('./features/settings/pages/Settings'));
 const Agents       = lazy(() => import('./features/monitors/pages/Agents'));
 const Alerts       = lazy(() => import('./features/alerts/pages/Alerts'));
@@ -70,6 +71,7 @@ function App() {
                 <Route path="/incidents"     element={<Incidents />} />
                 <Route path="/incidents/:id" element={<IncidentDetail />} />
                 <Route path="/clients"       element={<Clients />} />
+                <Route path="/devices"       element={<Devices />} />
                 <Route path="/clients/:id"   element={<ClientDetail />} />
                 <Route path="/monitors/:id"  element={<MonitorDetail />} />
                 <Route element={<RequireRole allowed={['admin', 'operator']} />}>

@@ -8,9 +8,11 @@ import type {
 
 export class ListDevicesUseCase {
   constructor(private readonly devices: DeviceRepository) {}
-  execute(input: ListDevicesInput): Promise<DeviceRow[]> {
+  execute(input: ListDevicesInput): Promise<{ items: DeviceRow[]; total: number }> {
     const includeDecommissioned = input.include === "decommissioned" || input.include === "all";
-    return this.devices.list(input.scope, includeDecommissioned);
+    return this.devices.list({
+      scope: input.scope, includeDecommissioned, q: input.q, limit: input.limit, offset: input.offset,
+    });
   }
 }
 

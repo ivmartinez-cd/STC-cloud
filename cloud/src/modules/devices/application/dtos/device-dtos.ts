@@ -14,6 +14,9 @@ export interface ScopedId {
 export interface ListDevicesInput {
   scope: DeviceScope;
   include?: string;
+  q?: string;
+  limit?: number;
+  offset?: number;
 }
 
 export interface DeviceReadingsInput extends ScopedId {

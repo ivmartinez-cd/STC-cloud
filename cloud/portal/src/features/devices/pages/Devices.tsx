@@ -1,14 +1,17 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../../../shared/lib/api';
-import { ChevronRight, WifiOff, RefreshCw, Search, Printer } from 'lucide-react';
+import { ChevronRight, ChevronLeft, WifiOff, RefreshCw, Search, Printer } from 'lucide-react';
+import { useDebounce } from '../../../shared/hooks/useDebounce';
 
 import { DEVICE_OFFLINE_THRESHOLD_MS } from '../../../shared/lib/constants';
 
+const PAGE_SIZE = 50;
+
 interface Device {
   id: string;
-  ip: string;
-  serial: string | null;
+  ip_address: string;
+  serial_number: string | null;
   brand: string;
   model: string;
   name: string;
@@ -23,52 +26,54 @@ interface Device {
   toner_yellow?:  number | null;
 }
 
-const Devices = () => {
-  const [devices, setDevices] = useState<Device[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError]     = useState('');
-  const [search, setSearch]   = useState('');
-  const [includeDecommissioned, setIncludeDecommissioned] = useState(false);
+/** IP/serial/marca/modelo/nombre/cliente/monitor — mismo criterio de búsqueda que el backend (`applyDeviceSearch`, `knex-device-repository.ts`), ahora corrido server-side. */
+async function fetchDevices(q: string, includeDecommissioned: boolean, page: number): Promise<{ items: Device[]; total: number }> {
+  const params = new URLSearchParams({ limit: String(PAGE_SIZE), offset: String((page - 1) * PAGE_SIZE) });
+  if (q.trim()) params.set('q', q.trim());
+  if (includeDecommissioned) params.set('include', 'decommissioned');
+  return api.get<{ items: Device[]; total: number }>(`/devices?${params}`);
+}
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const data = await api.get<Device[]>(`/devices${includeDecommissioned ? '?include=decommissioned' : ''}`);
-      setDevices(Array.isArray(data) ? data : []);
-    } catch (e: unknown) {
-      setError((e as Error).message);
-    } finally {
-      setLoading(false);
-    }
-  }, [includeDecommissioned]);
-
-  useEffect(() => {
-    void (async () => {
-      await load();
-    })();
-  }, [load]);
-
-  const filtered = devices.filter(d => {
-    if (!search.trim()) return true;
-    const q = search.toLowerCase();
-    return (
-      d.ip?.toLowerCase().includes(q) ||
-      d.serial?.toLowerCase().includes(q) ||
-      d.brand?.toLowerCase().includes(q) ||
-      d.model?.toLowerCase().includes(q) ||
-      d.name?.toLowerCase().includes(q) ||
-      d.client_name?.toLowerCase().includes(q) ||
-      d.monitor_name?.toLowerCase().includes(q)
-    );
-  });
-
-  // Group by client
-  const byClient = filtered.reduce<Record<string, { clientName: string; devices: Device[] }>>((acc, d) => {
+/** Sólo agrupa la página actual (el orden `clients.name` ya viene del servidor) — no es un agrupado global. */
+function groupByClient(devices: Device[]): Record<string, { clientName: string; devices: Device[] }> {
+  return devices.reduce<Record<string, { clientName: string; devices: Device[] }>>((acc, d) => {
     const key = d.client_name || 'Sin cliente';
     if (!acc[key]) acc[key] = { clientName: key, devices: [] };
     acc[key].devices.push(d);
     return acc;
   }, {});
+}
+
+const Devices = () => {
+  const [devices, setDevices] = useState<Device[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [error, setError]     = useState('');
+  const [search, setSearch]   = useState('');
+  const debouncedSearch = useDebounce(search, 300);
+  const [includeDecommissioned, setIncludeDecommissioned] = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await fetchDevices(debouncedSearch, includeDecommissioned, page);
+      setDevices(data.items ?? []);
+      setTotal(data.total ?? 0);
+    } catch (e: unknown) {
+      setError((e as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  }, [debouncedSearch, includeDecommissioned, page]);
+
+  useEffect(() => { void load(); }, [load]);
+  // Volver a la primera página cuando cambia el filtro — si no, se puede quedar
+  // en una página que ya no existe para el nuevo resultado.
+  useEffect(() => { setPage(1); }, [debouncedSearch, includeDecommissioned]);
+
+  const byClient = groupByClient(devices);
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -76,7 +81,7 @@ const Devices = () => {
         <div>
           <h1 className="text-3xl font-extrabold text-[#1a2333] tracking-tight">Inventario de Dispositivos</h1>
           <p className="text-slate-500 mt-1 font-medium">
-            Control global de impresoras — {devices.length} dispositivo(s)
+            Control global de impresoras — {total} dispositivo(s)
           </p>
         </div>
         <div className="flex gap-3 items-center">
@@ -126,7 +131,7 @@ const Devices = () => {
         </div>
       )}
 
-      {!loading && !error && filtered.length === 0 && (
+      {!loading && !error && devices.length === 0 && (
         <div className="bg-white rounded-[32px] border border-slate-100 p-20 text-center shadow-sm">
           <div className="w-20 h-20 bg-slate-50 rounded-[24px] flex items-center justify-center mx-auto mb-6 text-slate-300">
             <Printer size={40} />
@@ -180,7 +185,7 @@ const Devices = () => {
 
                 <div className="flex-1">
                   <h3 className="font-extrabold text-[#1a2333] group-hover:text-brand transition-colors truncate">
-                    {device.name || device.ip}
+                    {device.name || device.ip_address}
                   </h3>
                   <p className="text-xs font-bold text-slate-400 mt-1 uppercase tracking-wider">
                     {device.brand?.toUpperCase() || 'Genérico'} — <span className="opacity-70">{device.model || 'S/M'}</span>
@@ -230,7 +235,7 @@ const Devices = () => {
                 <div className="mt-6 pt-5 border-t border-slate-50 flex items-center justify-between">
                   <div className="space-y-1">
                     <div className="text-[11px] font-mono font-bold text-brand bg-brand/10 px-2 py-0.5 rounded-md inline-block">
-                      {device.ip}
+                      {device.ip_address}
                     </div>
                     <div className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest truncate max-w-[140px]">
                       {device.monitor_name}
@@ -241,9 +246,9 @@ const Devices = () => {
                   </div>
                 </div>
 
-                {device.serial && (
+                {device.serial_number && (
                   <div className="mt-3 text-[9px] font-bold text-slate-500 uppercase tracking-widest truncate">
-                    S/N: {device.serial}
+                    S/N: {device.serial_number}
                   </div>
                 )}
               </Link>
@@ -252,6 +257,28 @@ const Devices = () => {
           </div>
         </div>
       ))}
+
+      {!loading && !error && total > 0 && (
+        <div className="flex items-center justify-center gap-6 pt-4">
+          <button
+            onClick={() => setPage(p => Math.max(1, p - 1))}
+            disabled={page <= 1}
+            className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-slate-500 bg-white border border-slate-200 rounded-xl hover:text-brand hover:border-brand disabled:opacity-40 disabled:hover:text-slate-500 disabled:hover:border-slate-200 transition-all"
+          >
+            <ChevronLeft size={14} /> Anterior
+          </button>
+          <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+            Página {page} de {totalPages}
+          </span>
+          <button
+            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+            disabled={page >= totalPages}
+            className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-slate-500 bg-white border border-slate-200 rounded-xl hover:text-brand hover:border-brand disabled:opacity-40 disabled:hover:text-slate-500 disabled:hover:border-slate-200 transition-all"
+          >
+            Siguiente <ChevronRight size={14} />
+          </button>
+        </div>
+      )}
     </div>
   );
 };

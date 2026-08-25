@@ -44,9 +44,21 @@ export async function replyingDeviceErrors<T>(reply: FastifyReply, fn: () => Pro
   }
 }
 
+type ListDevicesQueryString = { include?: string; q?: string; limit?: string; offset?: string };
+
+/** `{items, total}` — el caller ya sabe qué `limit`/`offset` pidió, mismo criterio que `listPendingDevices` en `client-controller.ts`. */
+function listDevices(uc: DeviceUseCases, request: Req) {
+  const { include, q, limit, offset } = request.query as ListDevicesQueryString;
+  return uc.list.execute({
+    scope: getScope(request), include, q,
+    limit: limit !== undefined ? Number(limit) : undefined,
+    offset: offset !== undefined ? Number(offset) : undefined,
+  });
+}
+
 function readHandlers(uc: DeviceUseCases) {
   return {
-    listDevices: (request: Req) => uc.list.execute({ scope: getScope(request), include: (request.query as { include?: string }).include }),
+    listDevices: (request: Req) => listDevices(uc, request),
     getDevice: (request: Req, reply: FastifyReply) => replyingDeviceErrors(reply, () => uc.get.execute(scopedId(request))),
     getDeviceReadings: (request: Req, reply: FastifyReply) =>
       replyingDeviceErrors(reply, () => uc.readings.execute({ ...scopedId(request), ...(request.query as { from?: string; to?: string; limit?: string }) })),

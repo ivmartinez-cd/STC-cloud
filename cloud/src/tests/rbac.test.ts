@@ -281,8 +281,8 @@ describe('RBAC — /devices', () => {
   test('/devices lista sólo dispositivos del cliente propio', async () => {
     const { status, data } = await req('GET', '/devices', undefined, rbac.viewerToken);
     assert.equal(status, 200);
-    assert.ok(data.every((d: any) => d.client_id === rbac.clientAId));
-    assert.ok(!data.some((d: any) => d.serial_number === rbac.deviceBSerial));
+    assert.ok(data.items.every((d: any) => d.client_id === rbac.clientAId));
+    assert.ok(!data.items.some((d: any) => d.serial_number === rbac.deviceBSerial));
   });
 
   test('/devices/:id de OTRO cliente por UUID → 404', async () => {

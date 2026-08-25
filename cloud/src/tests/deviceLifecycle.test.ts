@@ -159,19 +159,21 @@ describe('Ciclo de vida — editar (columna generada, la ingesta no la pisa)', (
 
 describe('Ciclo de vida — dar de baja / reactivar', () => {
   test('decommission excluye del listado y del dashboard, pero la ficha e historial siguen', async () => {
-    const before = await req('GET', '/devices', undefined, ctx.adminToken);
-    const beforeCount = before.data.length;
+    // Buscado por su serial único (no por el total global — con paginación real
+    // el total de TODA la base no es un buen invariante para un test aislado).
+    const serialQ = `q=SN-CONVERGE-${ts}`;
+    const before = await req('GET', `/devices?${serialQ}`, undefined, ctx.adminToken);
+    assert.equal(before.data.total, 1);
 
     const dec = await req('POST', `/devices/${ctx.deviceId}/decommission`, { reason: 'Prueba de baja' }, ctx.adminToken);
     assert.equal(dec.status, 200);
     assert.ok(dec.data.decommissioned_at);
 
-    const after = await req('GET', '/devices', undefined, ctx.adminToken);
-    assert.equal(after.data.length, beforeCount - 1);
-    assert.ok(!after.data.some((d: any) => d.id === ctx.deviceId));
+    const after = await req('GET', `/devices?${serialQ}`, undefined, ctx.adminToken);
+    assert.equal(after.data.total, 0);
 
-    const withInclude = await req('GET', '/devices?include=decommissioned', undefined, ctx.adminToken);
-    assert.ok(withInclude.data.some((d: any) => d.id === ctx.deviceId));
+    const withInclude = await req('GET', `/devices?${serialQ}&include=decommissioned`, undefined, ctx.adminToken);
+    assert.ok(withInclude.data.items.some((d: any) => d.id === ctx.deviceId));
 
     const detail = await req('GET', `/devices/${ctx.deviceId}`, undefined, ctx.adminToken);
     assert.equal(detail.status, 200, 'La ficha debe seguir abriendo');
@@ -186,8 +188,8 @@ describe('Ciclo de vida — dar de baja / reactivar', () => {
     assert.equal(recomm.status, 200);
     assert.equal(recomm.data.decommissioned_at, null);
 
-    const afterRecomm = await req('GET', '/devices', undefined, ctx.adminToken);
-    assert.ok(afterRecomm.data.some((d: any) => d.id === ctx.deviceId));
+    const afterRecomm = await req('GET', `/devices?${serialQ}`, undefined, ctx.adminToken);
+    assert.ok(afterRecomm.data.items.some((d: any) => d.id === ctx.deviceId));
   });
 
   test('decommission sin reason → 400', async () => {
