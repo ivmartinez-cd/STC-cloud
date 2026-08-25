@@ -138,10 +138,31 @@ export function useMonitorDetail(id: string) {
     navigate('/monitoring');
   }, [id, showToast, navigate]);
 
+  /** `SINCRONIZAR AHORA` (handoff hifi "Monitor — detalle", 25/08/2026) — reusa
+   * `POST /agents/:id/scan` (ya empuja `RESCAN` instantáneo vía WSS o lo encola
+   * para el próximo latido), no hace falta un endpoint nuevo. El botón pasa a
+   * "SINCRONIZANDO…" mientras `syncing` es true; al terminar se refresca el
+   * monitor (para que el chip de "último contacto" muestre "AHORA" si el barrido
+   * fue instantáneo) — las métricas/tira/tabla se refrescan solas en su propio poll. */
+  const [syncing, setSyncing] = useState(false);
+  const syncNow = useCallback(async () => {
+    setSyncing(true);
+    try {
+      await api.post(`/agents/${id}/scan`);
+      showToast('Barrido solicitado', 'success');
+      await fetchAll();
+    } catch (err: unknown) {
+      showToast((err as Error).message || 'Error al solicitar el barrido', 'error');
+    } finally {
+      setSyncing(false);
+    }
+  }, [id, showToast, fetchAll]);
+
   return {
     monitor, devices, loading, error,
     commandLoading, sendCommand,
     saveConfig, saveSnmpCredentials, regenerateKey, revokeMonitor,
+    syncing, syncNow,
     refetch, fetchDevices,
   };
 }

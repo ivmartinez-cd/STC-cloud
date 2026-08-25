@@ -72,9 +72,17 @@
   --color-ink-sep: #d8dcdd;           /* separador "·" de metadatos (header de identidad) */
   --color-ink-sep-light: #c9cdce;     /* separador "/" del breadcrumb */
 
+  /* Tokens que faltaban del handoff hifi "Monitor — detalle" (25/08/2026) — mismo
+     sistema, sólo se suman los que las vistas anteriores no necesitaron. */
+  --color-brand-warn-hover: #fbebd8;  /* hover de botón de advertencia (REGENERAR LLAVE) */
+  --color-brand-warn-text: #8a6033;   /* texto de detalle sobre fondo naranja suave (aviso ENLACE CIFRADO) */
+
   /* Tipografía de "Manual de marca.pdf": Montserrat (Título) + Source Sans Pro (Cuerpo). */
   --font-sans: 'Source Sans 3', 'Source Sans Pro', system-ui, -apple-system, sans-serif;
   --font-heading: 'Montserrat', sans-serif;
+  /* JetBrains Mono — valores técnicos/copiables (host, IP, hardware id, nombre del
+     agente). Si el codebase sumara otra mono propia en el futuro, unificar acá. */
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
 
   /* Z-index scale — single source of truth */
   --z-sidebar: 50;

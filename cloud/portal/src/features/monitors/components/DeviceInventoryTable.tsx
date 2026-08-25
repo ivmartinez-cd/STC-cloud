@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import { useNow } from '../../../shared/hooks/useNow';
 import { Link } from 'react-router-dom';
-import { Printer, Download, X, Trash2, CheckSquare, Square, RotateCcw, ArrowRightLeft, Radio } from 'lucide-react';
-import { DEVICE_OFFLINE_THRESHOLD_MS, MONITOR_STATE_LABELS, MONITOR_STATE_COLORS, type MonitorState } from '../../../shared/lib/constants';
+import { Search, ChevronRight, CheckSquare, Square, Trash2, RotateCcw, ArrowRightLeft, Radio, X, Download } from 'lucide-react';
 import type { Device } from '../../../shared/types/monitor';
+import type { AgentDeviceDirectoryRow, AgentDeviceSegment, AgentDeviceSortField, SortDir } from '../types/monitorDetail';
 import { api } from '../../../shared/lib/api';
-import { getDeviceStatusInfo } from '../../../shared/lib/formatters';
+import { fmt } from '../../../shared/lib/formatters';
 import { useRowSelection } from '../../../shared/hooks/useRowSelection';
+import { useMonitorDeviceDirectory, MONITOR_DEVICE_PAGE_SIZE } from '../hooks/useMonitorDeviceDirectory';
 import { useToast } from '../../../store/ToastContext';
 import BulkActionBar from '../../../shared/components/BulkActionBar';
 import {
@@ -15,11 +15,113 @@ import {
 } from '../../../shared/components/DeviceLifecycleModals';
 
 interface Props {
+  /** Lista COMPLETA (sin paginar) — sólo para exportar CSV de contadores y previsualizar
+   * "dar de baja desconectados"; la tabla en pantalla usa `useMonitorDeviceDirectory`
+   * (paginada/filtrada/ordenada server-side). */
   devices: Device[];
   monitorName: string;
+  agentId: string;
+  clientId: string;
+  pendingCount: number;
+  active: boolean;
   onRefresh?: () => void;
-  agentId?: string;
   isReadOnlyViewer?: boolean;
+}
+
+const GRID_COLS = 'grid-cols-[minmax(250px,1fr)_132px_130px_128px_90px_96px_40px]';
+
+const SEGMENT_OPTIONS: Array<{ value: AgentDeviceSegment; label: string }> = [
+  { value: 'todos', label: 'TODOS' },
+  { value: 'sin_conexion', label: 'OFFLINE' },
+  { value: 'con_alertas', label: 'CON ALERTAS' },
+  { value: 'sin_aprobar', label: 'SIN APROBAR' },
+];
+
+const SORTABLE_HEADERS: Array<{ field: AgentDeviceSortField; label: string }> = [
+  { field: 'consumible_pct', label: 'CONSUMIBLES' },
+  { field: 'alerts_count', label: 'ALERTAS' },
+  { field: 'last_seen', label: 'ÚLT. REPORTE' },
+];
+
+const SORT_LABELS: Record<AgentDeviceSortField, string> = { alerts_count: 'alertas', consumible_pct: 'consumibles', last_seen: 'último reporte' };
+
+function brandBadge(brand: string | null): string {
+  return brand ? brand.replace(/[^A-Za-z]/g, '').slice(0, 2).toUpperCase() || '—' : '—';
+}
+
+function formatLastReport(iso: string | null): string {
+  if (!iso) return 'sin reporte';
+  const min = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60_000));
+  if (min < 1) return 'hace un momento';
+  if (min < 60) return `hace ${min} min`;
+  const hrs = Math.round(min / 60);
+  if (hrs < 24) return `hace ${hrs} h`;
+  return `hace ${Math.round(hrs / 24)} d`;
+}
+
+function EstadoChip({ estado }: { estado: AgentDeviceDirectoryRow['estado'] }) {
+  if (estado === 'en_linea') {
+    return (
+      <span className="inline-flex items-center gap-[6px] justify-self-start rounded-[2px] bg-surface-avatar px-[9px] py-1 font-montserrat text-[9.5px] font-semibold uppercase tracking-[.08em] text-ink-650">
+        <span className="block h-1.5 w-1.5 rounded-full bg-brand-gray" /> EN LÍNEA
+      </span>
+    );
+  }
+  const label = estado === 'sin_conexion' ? 'SIN CONEXIÓN' : 'SIN APROBAR';
+  return (
+    <span className="inline-flex items-center gap-[6px] justify-self-start rounded-[2px] bg-brand-soft px-[9px] py-1 font-montserrat text-[9.5px] font-semibold uppercase tracking-[.08em] text-brand-accent">
+      <span className="block h-1.5 w-1.5 rounded-full bg-brand" /> {label}
+    </span>
+  );
+}
+
+function ConsumibleCell({ pct }: { pct: number | null }) {
+  if (pct === null) return <span className="font-sans text-[12.5px] text-ink-200">—</span>;
+  const color = pct <= 15 ? 'bg-brand-severe' : pct <= 35 ? 'bg-brand' : 'bg-brand-gray';
+  const width = Math.max(3, pct);
+  return (
+    <div className="flex items-center gap-2.5">
+      <span className="block h-1.5 flex-1 overflow-hidden rounded-[3px] bg-surface-track">
+        <span className={`block h-full rounded-[3px] ${color}`} style={{ width: `${width}%` }} />
+      </span>
+      <span className="min-w-[30px] text-right font-montserrat text-[11.5px] font-semibold tabular-nums text-ink-100">{pct}%</span>
+    </div>
+  );
+}
+
+function AlertsCell({ count }: { count: number }) {
+  if (count === 0) return <div className="text-right font-montserrat text-[12.5px] font-semibold text-ink-200">—</div>;
+  const cls = count >= 5 ? 'text-brand-severe' : 'text-ink-600';
+  return <div className={`text-right font-montserrat text-[12.5px] font-semibold tabular-nums ${cls}`}>{fmt(count)}</div>;
+}
+
+function SortableHeader({ label, field, active, dir, onToggle }: {
+  label: string; field: AgentDeviceSortField; active: boolean; dir: SortDir; onToggle: (f: AgentDeviceSortField) => void;
+}) {
+  return (
+    <div role="columnheader" aria-sort={active ? (dir === 'asc' ? 'ascending' : 'descending') : 'none'} className="text-right">
+      <button
+        type="button" onClick={() => onToggle(field)}
+        className={`font-montserrat text-[8.5px] font-bold uppercase tracking-[.14em] transition-colors duration-150 ease-in-out ${active ? 'text-ink-600' : 'text-ink-300 hover:text-ink-100'}`}
+      >
+        {label}{active ? (dir === 'desc' ? ' ↓' : ' ↑') : ''}
+      </button>
+    </div>
+  );
+}
+
+function pageWindow(current: number, totalPages: number): Array<number | 'ellipsis'> {
+  const withEnds = new Set<number>([0, totalPages - 1]);
+  for (let i = Math.max(0, current - 1); i <= Math.min(totalPages - 1, current + 1); i++) withEnds.add(i);
+  const sorted = Array.from(withEnds).sort((a, b) => a - b);
+  const result: Array<number | 'ellipsis'> = [];
+  let prev: number | null = null;
+  for (const p of sorted) {
+    if (prev !== null && p - prev > 1) result.push('ellipsis');
+    result.push(p);
+    prev = p;
+  }
+  return result;
 }
 
 function exportCountersCSV(devices: Device[], monitorName: string, discriminate: boolean) {
@@ -54,61 +156,80 @@ function exportCountersCSV(devices: Device[], monitorName: string, discriminate:
   URL.revokeObjectURL(url);
 }
 
-const DeviceInventoryTable = ({ devices, monitorName, onRefresh, agentId, isReadOnlyViewer = false }: Props) => {
+/** "Equipos detectados por este monitor" (handoff hifi "Monitor — detalle", 25/08/2026)
+ * — paginada/filtrada/ordenada server-side vía `useMonitorDeviceDirectory`, mismo
+ * patrón que `ClientDevicesTable.tsx`. Conserva las acciones en bloque reales que ya
+ * existían (dar de baja/reactivar/mover/estado de monitoreo/exportar CSV) — el handoff
+ * pide cerrar la deuda de paginación, no perder funcionalidad ya construida. */
+const DeviceInventoryTable = ({ devices, monitorName, agentId, clientId, pendingCount, active, onRefresh, isReadOnlyViewer = false }: Props) => {
   const [showExportModal, setShowExportModal] = useState(false);
+  const [approving, setApproving] = useState(false);
   const { showToast } = useToast();
+  const dir = useMonitorDeviceDirectory(agentId, active);
+  const { rows, total, totalPages, page, setPage, loading, error, refetch, rawQuery, setRawQuery, segment, setSegment, sortField, sortDir, toggleSort, hasActiveFilters, clearFilters } = dir;
 
-  // Acciones en bloque (Fase 9 del gap analysis vs HP SDS).
-  const rowSelection = useRowSelection(devices.map((d) => d.id));
+  const rowSelection = useRowSelection(rows.map((d) => d.id));
   const [bulkModal, setBulkModal] = useState<'decommission' | 'recommission' | 'move' | 'monitor-state' | null>(null);
   const selectedIds = Array.from(rowSelection.selected);
-  const firstSelected = devices.find((d) => rowSelection.selected.has(d.id));
 
   const handleBulkDone = (result: BulkActionResult) => {
     rowSelection.clear();
+    refetch();
     if (onRefresh) onRefresh();
     const skippedMsg = result.skipped.length > 0 ? ` — ${result.skipped.length} sin aplicar` : '';
     showToast(`${result.count} equipo(s) actualizados${skippedMsg}`, result.count > 0 ? 'success' : 'error');
   };
 
-  const now = useNow();
-  const offlineCount = devices.filter(d => {
-    if (d.last_seen == null) return !(d.active ?? false);
-    return (Math.abs(now - new Date(d.last_seen).getTime()) > DEVICE_OFFLINE_THRESHOLD_MS);
-  }).length;
-
-  const handleDeleteDevice = async (id: string, model: string | null, ip: string) => {
-    if (window.confirm(`¿Seguro que deseas eliminar el equipo ${model || ip} de la base de datos?`)) {
+  const handleDeleteDevice = async (id: string, model: string | null, ip: string | null) => {
+    if (window.confirm(`¿Seguro que deseas eliminar el equipo ${model || ip || 'seleccionado'} de la base de datos?`)) {
       try {
         await api.delete(`/devices/${id}`);
+        refetch();
         if (onRefresh) onRefresh();
-        else window.location.reload();
       } catch (e: unknown) {
-        const msg = e instanceof Error ? e.message : String(e);
-        alert('Error al eliminar dispositivo: ' + msg);
+        showToast('Error al eliminar dispositivo: ' + ((e as Error).message ?? String(e)), 'error');
       }
     }
   };
 
   const handleDeleteOffline = async () => {
-    // Reemplaza el DELETE /devices/offline (borrado en duro sin scope) por
-    // decommission-stale: da de baja en vez de borrar, y muestra la lista
-    // real (dryRun) antes de confirmar, en vez de sólo un conteo.
-    const targetAgentId = agentId ?? devices.find(d => d.agent_id)?.agent_id;
-    if (!targetAgentId) return;
     try {
       const preview = await api.post<{ count: number; devices: Array<{ serial_number: string | null; ip_address: string | null; last_seen: string | null }> }>(
-        `/agents/${targetAgentId}/devices/decommission-stale`, { dryRun: true }
+        `/agents/${agentId}/devices/decommission-stale`, { dryRun: true }
       );
-      if (preview.count === 0) { alert('No hay equipos desconectados para dar de baja.'); return; }
-      const list = preview.devices.map(d => `• ${d.serial_number ?? d.ip_address ?? '—'}`).join('\n');
+      if (preview.count === 0) { showToast('No hay equipos desconectados para dar de baja.', 'warning'); return; }
+      const list = preview.devices.map((d) => `• ${d.serial_number ?? d.ip_address ?? '—'}`).join('\n');
       if (!window.confirm(`Se dará de baja ${preview.count} equipo(s) desconectado(s):\n\n${list}\n\n¿Confirmar?`)) return;
-      await api.post(`/agents/${targetAgentId}/devices/decommission-stale`, {});
+      await api.post(`/agents/${agentId}/devices/decommission-stale`, {});
+      refetch();
       if (onRefresh) onRefresh();
-      else window.location.reload();
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : String(e);
-      alert('Error al dar de baja equipos desconectados: ' + msg);
+      showToast('Error al dar de baja equipos desconectados: ' + ((e as Error).message ?? String(e)), 'error');
+    }
+  };
+
+  /** Reusa el flujo YA existente de "Dispositivos pendientes de registro" del módulo
+   * `clients` (`GET/POST /clients/:id/pending-devices*`, filtrado por `agentId`) — no
+   * hace falta un endpoint nuevo en `agents` para esto. */
+  const handleApproveDiscovered = async () => {
+    if (!window.confirm(`¿Aprobar los ${pendingCount} equipo(s) descubierto(s) por este monitor?`)) return;
+    setApproving(true);
+    try {
+      const pending = await api.get<{ items: Array<{ id: string }>; total: number }>(
+        `/clients/${clientId}/pending-devices?agentId=${agentId}&limit=200`
+      );
+      const deviceIds = pending.items.map((d) => d.id);
+      if (deviceIds.length === 0) { showToast('No hay equipos pendientes de aprobar.', 'warning'); return; }
+      const result = await api.post<{ registered: number; skipped: Array<{ id: string; reason: string }> }>(
+        `/clients/${clientId}/pending-devices/register`, { deviceIds }
+      );
+      showToast(`${result.registered} equipo(s) aprobado(s)`, 'success');
+      refetch();
+      if (onRefresh) onRefresh();
+    } catch (e: unknown) {
+      showToast('Error al aprobar descubiertos: ' + ((e as Error).message ?? String(e)), 'error');
+    } finally {
+      setApproving(false);
     }
   };
 
@@ -117,37 +238,69 @@ const DeviceInventoryTable = ({ devices, monitorName, onRefresh, agentId, isRead
     setShowExportModal(false);
   };
 
+  const from = page * MONITOR_DEVICE_PAGE_SIZE + 1;
+  const to = Math.min((page + 1) * MONITOR_DEVICE_PAGE_SIZE, total);
+
   return (
     <>
-      <div className="cd-panel overflow-hidden border-none shadow-xl shadow-brand/5 animate-in slide-in-from-bottom-4 duration-500">
-        <header className="px-8 py-6 bg-white border-b border-slate-100 flex items-center justify-between flex-wrap gap-3">
-          <div>
-            <h3 className="text-sm font-black text-[#1a2333] uppercase tracking-tight">Parque de Impresión</h3>
-            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Dispositivos descubiertos y monitorizados por este nodo</p>
-          </div>
-          <div className="flex items-center gap-3">
-            {offlineCount > 0 && !isReadOnlyViewer && (
-              <button
-                onClick={handleDeleteOffline}
-                className="flex items-center gap-2 px-3.5 py-2 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-xl text-[11px] font-black uppercase tracking-wider transition-colors border border-amber-200"
-                title="Dar de baja todos los equipos desconectados de este monitor"
-              >
-                <Trash2 size={13} /> Dar de Baja Desconectados ({offlineCount})
-              </button>
-            )}
+      <div className="flex items-end justify-between gap-3.5 flex-wrap mb-[26px]">
+        <div className="flex items-center gap-[11px]">
+          <span className="block h-0.5 w-5 bg-brand" />
+          <span className="font-montserrat text-[9px] font-bold uppercase tracking-[.19em] text-ink-550">
+            Equipos detectados por este monitor · {fmt(total)}
+          </span>
+        </div>
+        {!isReadOnlyViewer && (
+          <div className="flex gap-2.5">
             {devices.length > 0 && (
               <button
-                onClick={() => setShowExportModal(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl text-[11px] font-black uppercase tracking-wider transition-colors border border-emerald-200"
+                type="button" onClick={() => setShowExportModal(true)}
+                className="flex items-center gap-2 rounded-[3px] border border-line-300 bg-white px-3.5 py-2.5 font-montserrat text-[10px] font-semibold uppercase tracking-[.08em] text-ink-600 hover:bg-surface-btn-hover"
               >
-                <Download size={13} /> Exportar CSV
+                <Download size={13} /> Exportar
               </button>
             )}
-            <span className="px-4 py-1.5 bg-slate-100 text-slate-500 rounded-full text-[10px] font-black uppercase tracking-widest">
-              {devices.length} Equipos
-            </span>
+            {pendingCount > 0 && (
+              <button
+                type="button" onClick={handleApproveDiscovered} disabled={approving}
+                className="rounded-[3px] bg-brand px-3.5 py-2.5 font-montserrat text-[10px] font-semibold uppercase tracking-[.08em] text-white hover:bg-brand-severe disabled:opacity-60"
+              >
+                {approving ? 'Aprobando…' : `Aprobar ${pendingCount} descubierto${pendingCount === 1 ? '' : 's'}`}
+              </button>
+            )}
           </div>
-        </header>
+        )}
+      </div>
+
+      <div className="rounded-[5px] border border-line-100 bg-white">
+        <div className="flex flex-wrap items-center gap-3 border-b border-line-150 px-5 py-3.5">
+          <div className="relative min-w-[240px] max-w-[400px] flex-1">
+            <Search size={11} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#a9aeb0]" />
+            <input
+              type="text" value={rawQuery} onChange={(e) => setRawQuery(e.target.value)}
+              placeholder="Buscar por serie, modelo o IP…"
+              className="w-full rounded-[3px] border border-line-100 bg-surface-input py-[9px] pl-8 pr-3 font-sans text-[12.5px] text-ink-900 outline-none placeholder:text-ink-300"
+            />
+          </div>
+          <div className="flex flex-wrap items-center gap-1.5">
+            {SEGMENT_OPTIONS.map((opt) => {
+              const isActive = segment === opt.value;
+              return (
+                <button
+                  key={opt.value} type="button" onClick={() => setSegment(opt.value)} aria-pressed={isActive}
+                  className={`rounded-[3px] border px-3 py-2 font-montserrat text-[10px] font-semibold uppercase tracking-[.08em] ${
+                    isActive ? 'border-brand-chip-border bg-brand-soft text-brand-accent' : 'border-line-100 bg-white text-ink-100 hover:bg-surface-btn-hover'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              );
+            })}
+          </div>
+          <div className="ml-auto font-sans text-[11.5px] text-ink-300">
+            Ordenado por {SORT_LABELS[sortField]} · {sortDir}
+          </div>
+        </div>
 
         {!isReadOnlyViewer && (
           <BulkActionBar count={rowSelection.count} onClear={rowSelection.clear}>
@@ -163,236 +316,149 @@ const DeviceInventoryTable = ({ devices, monitorName, onRefresh, agentId, isRead
             <button onClick={() => setBulkModal('monitor-state')} className="flex items-center gap-1.5 px-3 py-1.5 bg-brand hover:bg-brand-hover text-white rounded-xl text-[11px] font-black uppercase tracking-wider transition-all">
               <Radio size={13} /> Estado de monitoreo
             </button>
+            {!isReadOnlyViewer && (
+              <button onClick={handleDeleteOffline} className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-500 hover:bg-rose-600 text-white rounded-xl text-[11px] font-black uppercase tracking-wider transition-all">
+                <Trash2 size={13} /> Dar de baja desconectados
+              </button>
+            )}
           </BulkActionBar>
         )}
 
         <div className="overflow-x-auto">
-          <table className="cd-table">
-            <thead>
-              <tr>
-                {!isReadOnlyViewer && (
-                  <th className="!bg-brand-charcoal !text-white !rounded-tl-2xl !px-3 !py-3 !w-10">
-                    <button onClick={rowSelection.toggleAll} className="text-white/70 hover:text-white" title="Seleccionar todos">
-                      {rowSelection.allSelected ? <CheckSquare size={16} /> : <Square size={16} />}
-                    </button>
-                  </th>
-                )}
-                <th className={`!bg-brand-charcoal !text-white !px-4 !py-3 ${isReadOnlyViewer ? '!rounded-tl-2xl' : ''}`}>Dispositivo</th>
-                <th className="!bg-brand-charcoal !text-white !px-4 !py-3">Red</th>
-                <th className="!bg-brand-charcoal !text-white !px-4 !py-3">Número de Serie</th>
-                <th className="!bg-brand-charcoal !text-white !px-4 !py-3">Tóner</th>
-                <th className="!bg-brand-charcoal !text-white !px-4 !py-3">Inventario</th>
-                <th className="!bg-brand-charcoal !text-white !px-4 !py-3">Uso 30d</th>
-                <th className="!bg-brand-charcoal !text-white !px-4 !py-3">Monitoreo</th>
-                <th className={`!bg-brand-charcoal !text-white !text-right !px-4 !py-3 ${isReadOnlyViewer ? '!rounded-tr-2xl' : ''}`}>Contadores (Total / Mono / Color)</th>
-                {!isReadOnlyViewer && (
-                  <th className="!bg-brand-charcoal !text-white !text-center !rounded-tr-2xl !px-4 !py-3">Acción</th>
-                )}
-              </tr>
-            </thead>
-            <tbody>
-              {devices.length === 0 ? (
-                <tr>
-                  <td colSpan={isReadOnlyViewer ? 8 : 10} className="px-8 py-20 text-center">
-                    <div className="flex flex-col items-center gap-3">
-                      <Printer size={48} className="text-slate-200" />
-                      <p className="text-slate-500 font-bold text-xs uppercase tracking-widest">No se han descubierto dispositivos en este segmento</p>
-                    </div>
-                  </td>
-                </tr>
-              ) : (
-                devices.map((device) => {
-                  const statusInfo = getDeviceStatusInfo(device.last_seen, now);
-
-                  return (
-                    <tr key={device.id} className="group hover:bg-slate-50/50 transition-all">
-                      {!isReadOnlyViewer && (
-                        <td className="!px-3 !py-3">
-                          <button onClick={() => rowSelection.toggle(device.id)} className="text-slate-300 hover:text-brand">
-                            {rowSelection.selected.has(device.id) ? <CheckSquare size={16} className="text-brand" /> : <Square size={16} />}
-                          </button>
-                        </td>
-                      )}
-                      <td className="!px-4 !py-3">
-                        <Link to={`/devices/${device.id}`} className="flex items-center gap-3 group/device">
-                          <div className="w-9 h-9 shrink-0 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-400 group-hover/device:bg-brand group-hover/device:text-white transition-all">
-                            <Printer size={16} />
-                          </div>
-                          <div>
-                            <p className="text-sm font-black text-[#1a2333] tracking-tight group-hover/device:text-brand transition-colors">{device.model || 'Modelo Genérico'}</p>
-                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{device.brand || 'Marca n/a'}</p>
-                          </div>
-                        </Link>
-                      </td>
-                      <td className="!px-4 !py-3">
-                        <div className="flex flex-col">
-                          <span className="text-xs font-bold text-slate-600 font-mono">{device.ip_address}</span>
-                          <span className={`text-[9px] font-black uppercase tracking-widest flex items-center gap-1 mt-0.5 ${statusInfo.textClass}`}>
-                            <span className={`w-1.5 h-1.5 rounded-full inline-block ${statusInfo.dotClass} ${statusInfo.status === 'online' ? 'animate-pulse' : ''}`}></span>
-                            {statusInfo.status === 'online' ? 'Conexión OK' : statusInfo.label}
-                          </span>
-                        </div>
-                      </td>
-                    <td className="!px-4 !py-3">
-                      <span className="px-2 py-1 bg-slate-100 text-slate-600 rounded-lg font-mono text-xs font-bold border border-slate-200 whitespace-nowrap">
-                        {device.serial_number || 'N/A'}
-                      </span>
-                    </td>
-                    <td className="!px-4 !py-3">
-                      {device.supply_origin === 'non_genuine' && (
-                        <span className="inline-flex items-center gap-1 mb-1 px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 text-[9px] font-black uppercase tracking-wider" title="Al menos un cartucho detectado como no original">
-                          No original
-                        </span>
-                      )}
-                      {device.toner_black !== undefined && device.toner_black !== null ? (
-                        <div className="w-24 space-y-1.5">
-                          {device.toner_cyan === null || device.toner_cyan === undefined ? (
-                            // Monocromo
-                            <div className="space-y-1">
-                              <div className="flex justify-between items-center text-[9px] font-extrabold uppercase tracking-widest text-slate-500">
-                                <span>Negro</span>
-                                <span className={device.toner_black <= 15 ? 'text-amber-500 animate-pulse font-black' : 'text-slate-600'}>
-                                  {device.toner_black}%
-                                </span>
-                              </div>
-                              <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden border border-slate-200/50">
-                                <div 
-                                  className={`h-full rounded-full transition-all duration-500 ${
-                                    device.toner_black <= 15 ? 'bg-amber-400' : 'bg-slate-800'
-                                  }`} 
-                                  style={{ width: `${device.toner_black}%` }}
-                                />
-                              </div>
-                            </div>
-                          ) : (
-                            // Color CMYK
-                            <div className="space-y-1">
-                              <div className="flex justify-between items-center text-[9px] font-extrabold uppercase tracking-widest text-slate-500">
-                                <span>CMYK</span>
-                                <span className={
-                                  (device.toner_black <= 15 || device.toner_cyan <= 15 || device.toner_magenta <= 15 || device.toner_yellow <= 15)
-                                    ? 'text-amber-500 animate-pulse font-black'
-                                    : 'text-slate-600'
-                                }>
-                                  Mín: {Math.min(device.toner_black, device.toner_cyan, device.toner_magenta, device.toner_yellow)}%
-                                </span>
-                              </div>
-                              <div className="grid grid-cols-4 gap-1">
-                                <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden border border-slate-200/30" title={`Negro: ${device.toner_black}%`}>
-                                  <div className={`h-full ${device.toner_black <= 15 ? 'bg-amber-400 animate-pulse' : 'bg-slate-800'}`} style={{ width: `${device.toner_black}%` }} />
-                                </div>
-                                <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden border border-slate-200/30" title={`Cian: ${device.toner_cyan}%`}>
-                                  <div className={`h-full ${device.toner_cyan <= 15 ? 'bg-amber-400 animate-pulse' : 'bg-[#00adef]'}`} style={{ width: `${device.toner_cyan}%` }} />
-                                </div>
-                                <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden border border-slate-200/30" title={`Magenta: ${device.toner_magenta}%`}>
-                                  <div className={`h-full ${device.toner_magenta <= 15 ? 'bg-amber-400 animate-pulse' : 'bg-[#ec008c]'}`} style={{ width: `${device.toner_magenta}%` }} />
-                                </div>
-                                <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden border border-slate-200/30" title={`Amarillo: ${device.toner_yellow}%`}>
-                                  <div className={`h-full ${device.toner_yellow <= 15 ? 'bg-amber-400 animate-pulse' : 'bg-[#f5c400]'}`} style={{ width: `${device.toner_yellow}%` }} />
-                                </div>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">n/a</span>
-                      )}
-                    </td>
-                    <td className="!px-4 !py-3">
-                      <div className="flex flex-col gap-0.5 text-[10px] font-bold text-slate-600 font-mono">
-                        {device.asset_number && <span title="Nº de activo">{device.asset_number}</span>}
-                        {device.asset_tag && <span className="text-slate-400" title="Nº de etiqueta">{device.asset_tag}</span>}
-                        {!device.asset_number && !device.asset_tag && <span className="text-slate-300">—</span>}
-                      </div>
-                    </td>
-                    <td className="!px-4 !py-3">
-                      {device.pages_30d != null ? (
-                        <div className="flex flex-col gap-0.5">
-                          <span className="text-xs font-black text-slate-700 tabular-nums">{device.pages_30d.toLocaleString()}</span>
-                          {device.utilization_pct != null && (
-                            <span className={`inline-flex w-fit px-1.5 py-0.5 rounded text-[9px] font-black ${
-                              device.utilization_pct > 100 ? 'bg-rose-100 text-rose-700' : device.utilization_pct > 80 ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'
-                            }`}>{device.utilization_pct}% ciclo</span>
-                          )}
-                        </div>
-                      ) : <span className="text-slate-300 text-xs">—</span>}
-                    </td>
-                    <td className="!px-4 !py-3">
-                      {device.monitor_state && device.monitor_state !== 'full' ? (
-                        <span className={`inline-flex px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider ${MONITOR_STATE_COLORS[device.monitor_state as MonitorState]}`}>
-                          {MONITOR_STATE_LABELS[device.monitor_state as MonitorState]}
-                        </span>
-                      ) : <span className="text-slate-300 text-xs">—</span>}
-                    </td>
-                    <td className="!px-4 !py-3 text-right">
-                      <div className="flex flex-col items-end gap-1">
-                        <p className="text-sm font-black text-[#1a2333] tabular-nums whitespace-nowrap">
-                          {(device.total_pages || 0).toLocaleString()} <span className="text-[10px] text-slate-500 font-bold uppercase">Total</span>
-                        </p>
-                        <div className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-widest text-slate-500 whitespace-nowrap">
-                          <span>{(device.mono_pages || 0).toLocaleString()} M</span>
-                          <span className="w-1 h-1 bg-slate-200 rounded-full" />
-                          <span className="text-brand">{(device.color_pages || 0).toLocaleString()} C</span>
-                        </div>
-                      </div>
-                    </td>
-                    {!isReadOnlyViewer && (
-                      <td className="!px-3 !py-3 text-center">
-                        {statusInfo.status !== 'online' ? (
-                          <button
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              handleDeleteDevice(device.id, device.model, device.ip_address);
-                            }}
-                            className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 hover:text-rose-800 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all border border-rose-200 inline-flex items-center gap-1.5 shadow-sm whitespace-nowrap"
-                            title="Eliminar este equipo sin conexión"
-                          >
-                            <Trash2 size={13} /> Eliminar
-                          </button>
-                        ) : (
-                          <button
-                            disabled
-                            className="px-3 py-1.5 bg-slate-100 text-slate-300 rounded-xl text-[11px] font-black uppercase tracking-wider cursor-not-allowed inline-flex items-center gap-1.5 border border-slate-200/50 opacity-60 whitespace-nowrap"
-                            title="Solo se pueden eliminar equipos sin conexión"
-                          >
-                            <Trash2 size={13} /> Eliminar
-                          </button>
-                        )}
-                      </td>
-                    )}
-                  </tr>
-                  );
-                })
+          <div className="min-w-[1180px]" role="table" aria-label="Equipos detectados por este monitor">
+            <div role="row" className={`grid ${GRID_COLS} items-center gap-x-[14px] border-b border-line-100 bg-surface-table-head px-5 py-3`}>
+              {!isReadOnlyViewer && (
+                <button onClick={rowSelection.toggleAll} className="justify-self-start text-ink-300 hover:text-ink-100" title="Seleccionar todos">
+                  {rowSelection.allSelected ? <CheckSquare size={14} /> : <Square size={14} />}
+                </button>
               )}
-            </tbody>
-          </table>
+              {isReadOnlyViewer && <div role="columnheader" className="font-montserrat text-[8.5px] font-bold uppercase tracking-[.14em] text-ink-300">EQUIPO</div>}
+              <div role="columnheader" className="font-montserrat text-[8.5px] font-bold uppercase tracking-[.14em] text-ink-300">ESTADO</div>
+              <div role="columnheader" className="font-montserrat text-[8.5px] font-bold uppercase tracking-[.14em] text-ink-300">DIRECCIÓN IP</div>
+              {SORTABLE_HEADERS.map((h) => (
+                <SortableHeader key={h.field} label={h.label} field={h.field} active={sortField === h.field} dir={sortDir} onToggle={toggleSort} />
+              ))}
+              <div role="columnheader" />
+            </div>
+
+            {error && (
+              <div className="flex flex-col items-center justify-center gap-1.5 py-20 text-center">
+                <span className="font-sans text-[12.5px] text-ink-900">No se pudo cargar</span>
+                <button type="button" onClick={refetch} className="font-montserrat text-[9.5px] font-semibold uppercase tracking-[.1em] text-brand-accent hover:underline">Reintentar</button>
+              </div>
+            )}
+
+            {!error && loading && (
+              Array.from({ length: 10 }).map((_, i) => (
+                <div key={i} className={`grid ${GRID_COLS} items-center gap-x-[14px] border-b border-line-200 px-5 py-[11px]`} style={{ height: 54 }}>
+                  <span className="h-3 w-3/5 animate-pulse rounded bg-surface-track" />
+                  <span className="h-3 w-2/5 animate-pulse rounded bg-surface-track" />
+                  <span className="h-3 w-1/2 animate-pulse rounded bg-surface-track" />
+                  <span className="h-3 w-3/5 justify-self-end animate-pulse rounded bg-surface-track" />
+                  <span className="h-3 w-3/5 justify-self-end animate-pulse rounded bg-surface-track" />
+                  <span className="h-3 w-2/5 justify-self-end animate-pulse rounded bg-surface-track" />
+                  <span />
+                </div>
+              ))
+            )}
+
+            {!error && !loading && rows.length === 0 && (
+              <div className="flex flex-col items-center justify-center gap-1.5 py-20 text-center">
+                <span className="font-sans text-[12.5px] text-ink-300">No se han descubierto equipos en este segmento</span>
+                {hasActiveFilters && (
+                  <button type="button" onClick={clearFilters} className="font-montserrat text-[9.5px] font-semibold uppercase tracking-[.1em] text-brand-accent hover:underline">Limpiar filtros</button>
+                )}
+              </div>
+            )}
+
+            {!error && !loading && rows.map((d) => (
+              <div key={d.id} className={`group grid ${GRID_COLS} min-h-[54px] items-center gap-x-[14px] border-b border-line-200 px-5 py-[11px] transition-colors duration-150 ease-in-out hover:bg-surface-hover`}>
+                {!isReadOnlyViewer && (
+                  <button onClick={() => rowSelection.toggle(d.id)} className="justify-self-start text-slate-300 hover:text-brand">
+                    {rowSelection.selected.has(d.id) ? <CheckSquare size={14} className="text-brand" /> : <Square size={14} />}
+                  </button>
+                )}
+                <Link to={`/devices/${d.id}`} className="flex min-w-0 items-center gap-3">
+                  <span className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-[3px] border border-line-avatar bg-surface-avatar font-montserrat text-[9px] font-bold text-ink-400">
+                    {brandBadge(d.brand)}
+                  </span>
+                  <div className="min-w-0">
+                    <div className="truncate font-sans text-[12.5px] font-semibold text-ink-900">{d.model ?? d.name ?? 'Equipo'}</div>
+                    <div className="truncate font-sans text-[11px] text-ink-300">Serie {d.serial_number ?? '—'}</div>
+                  </div>
+                </Link>
+
+                <EstadoChip estado={d.estado} />
+                <div className="min-w-0 truncate font-mono text-[11.5px] text-ink-700">{d.ip_address ?? '—'}</div>
+                <ConsumibleCell pct={d.consumible_pct} />
+                <AlertsCell count={d.alerts_count} />
+                <div className="text-right font-sans text-[12px] text-ink-400">{formatLastReport(d.last_seen)}</div>
+
+                <div className="flex justify-end">
+                  {!isReadOnlyViewer && d.estado === 'sin_conexion' ? (
+                    <button
+                      onClick={(e) => { e.preventDefault(); handleDeleteDevice(d.id, d.model, d.ip_address); }}
+                      title="Eliminar este equipo sin conexión"
+                      className="flex h-[26px] w-[26px] items-center justify-center rounded-[3px] border border-rose-200 text-rose-500 hover:bg-rose-50"
+                    >
+                      <X size={13} />
+                    </button>
+                  ) : (
+                    <Link to={`/devices/${d.id}`} className="flex h-[26px] w-[26px] items-center justify-center rounded-[3px] border border-line-avatar text-ink-300 transition-colors duration-150 ease-in-out group-hover:border-line-300 group-hover:text-ink-100">
+                      <ChevronRight size={13} />
+                    </Link>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
+
+        {total > 0 && (
+          <div className="flex flex-wrap items-center justify-between gap-2.5 px-5 py-3.5">
+            <div className="font-sans text-xs text-ink-400">{fmt(from)}–{fmt(to)} de {fmt(total)} equipos</div>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <button
+                type="button" disabled={page === 0} onClick={() => setPage(page - 1)}
+                className="rounded-[3px] border border-line-avatar px-[11px] py-[7px] font-montserrat text-[10.5px] font-semibold uppercase tracking-[.05em] text-ink-200 disabled:cursor-default enabled:border-line-300 enabled:text-ink-600 enabled:hover:bg-surface-btn-hover"
+              >
+                ANTERIOR
+              </button>
+              {pageWindow(page, totalPages).map((p, i) => p === 'ellipsis' ? (
+                <span key={`e${i}`} className="px-1 font-sans text-xs text-ink-200">…</span>
+              ) : (
+                <button
+                  key={p} type="button" onClick={() => setPage(p)} aria-current={p === page ? 'page' : undefined}
+                  className={`rounded-[3px] px-[11px] py-[7px] font-montserrat text-[10.5px] ${p === page ? 'bg-brand-soft font-bold text-brand-accent' : 'font-semibold text-ink-100 hover:bg-surface-btn-hover'}`}
+                >
+                  {p + 1}
+                </button>
+              ))}
+              <button
+                type="button" disabled={page >= totalPages - 1} onClick={() => setPage(page + 1)}
+                className="rounded-[3px] border border-line-300 px-[11px] py-[7px] font-montserrat text-[10.5px] font-semibold uppercase tracking-[.05em] text-ink-600 hover:bg-surface-btn-hover disabled:cursor-default disabled:border-line-avatar disabled:text-ink-200 disabled:hover:bg-transparent"
+              >
+                SIGUIENTE
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {showExportModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setShowExportModal(false)}>
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
-          <div
-            className="relative bg-white rounded-[32px] shadow-2xl shadow-black/20 w-full max-w-sm p-8 animate-in zoom-in-95 duration-200"
-            onClick={e => e.stopPropagation()}
-          >
+          <div className="relative bg-white rounded-[32px] shadow-2xl shadow-black/20 w-full max-w-sm p-8 animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center gap-4 mb-6">
-              <div className="p-3 bg-emerald-50 rounded-2xl">
-                <Download size={22} className="text-emerald-600" />
-              </div>
+              <div className="p-3 bg-emerald-50 rounded-2xl"><Download size={22} className="text-emerald-600" /></div>
               <div>
                 <h3 className="text-base font-black text-[#1a2333] tracking-tight">Exportar Contadores</h3>
                 <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">¿Discriminar mono / color?</p>
               </div>
             </div>
             <div className="flex flex-col gap-3 mb-4">
-              <button onClick={() => handleExport(true)} className="w-full py-4 rounded-2xl border-2 border-emerald-200 bg-emerald-50 hover:bg-emerald-100 transition-colors text-sm font-black text-emerald-700">
-                Sí, discriminar
-              </button>
-              <button onClick={() => handleExport(false)} className="w-full py-4 rounded-2xl border-2 border-slate-200 bg-slate-50 hover:bg-slate-100 transition-colors text-sm font-black text-slate-700">
-                No
-              </button>
+              <button onClick={() => handleExport(true)} className="w-full py-4 rounded-2xl border-2 border-emerald-200 bg-emerald-50 hover:bg-emerald-100 transition-colors text-sm font-black text-emerald-700">Sí, discriminar</button>
+              <button onClick={() => handleExport(false)} className="w-full py-4 rounded-2xl border-2 border-slate-200 bg-slate-50 hover:bg-slate-100 transition-colors text-sm font-black text-slate-700">No</button>
             </div>
             <button onClick={() => setShowExportModal(false)} className="w-full py-3 rounded-2xl text-slate-500 text-xs font-bold hover:bg-slate-50 transition-colors flex items-center justify-center gap-2">
               <X size={14} /> Cancelar
@@ -401,23 +467,10 @@ const DeviceInventoryTable = ({ devices, monitorName, onRefresh, agentId, isRead
         </div>
       )}
 
-      <BulkDecommissionModal
-        isOpen={bulkModal === 'decommission'} onClose={() => setBulkModal(null)}
-        onDone={handleBulkDone} deviceIds={selectedIds}
-      />
-      <BulkRecommissionModal
-        isOpen={bulkModal === 'recommission'} onClose={() => setBulkModal(null)}
-        onDone={handleBulkDone} deviceIds={selectedIds}
-      />
-      <BulkMoveDevicesModal
-        isOpen={bulkModal === 'move'} onClose={() => setBulkModal(null)}
-        onDone={handleBulkDone} deviceIds={selectedIds}
-        currentClientId={firstSelected?.client_id ?? null} currentAgentId={agentId ?? firstSelected?.agent_id ?? null}
-      />
-      <BulkMonitorStateModal
-        isOpen={bulkModal === 'monitor-state'} onClose={() => setBulkModal(null)}
-        onDone={handleBulkDone} deviceIds={selectedIds}
-      />
+      <BulkDecommissionModal isOpen={bulkModal === 'decommission'} onClose={() => setBulkModal(null)} onDone={handleBulkDone} deviceIds={selectedIds} />
+      <BulkRecommissionModal isOpen={bulkModal === 'recommission'} onClose={() => setBulkModal(null)} onDone={handleBulkDone} deviceIds={selectedIds} />
+      <BulkMoveDevicesModal isOpen={bulkModal === 'move'} onClose={() => setBulkModal(null)} onDone={handleBulkDone} deviceIds={selectedIds} currentClientId={clientId} currentAgentId={agentId} />
+      <BulkMonitorStateModal isOpen={bulkModal === 'monitor-state'} onClose={() => setBulkModal(null)} onDone={handleBulkDone} deviceIds={selectedIds} />
     </>
   );
 };

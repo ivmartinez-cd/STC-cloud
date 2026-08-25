@@ -1,76 +1,77 @@
-import { Printer } from 'lucide-react';
-import { useNow } from '../../../shared/hooks/useNow';
-import { OFFLINE_THRESHOLD_MS, DEVICE_OFFLINE_THRESHOLD_MS } from '../../../shared/lib/constants';
-import type { MonitorData, Device } from '../../../shared/types/monitor';
+import { fmt } from '../../../shared/lib/formatters';
+import type { AgentStats } from '../types/monitorDetail';
 
-interface Props {
-  devices: Device[];
-  monitor: MonitorData;
-}
+const R = 45;
+const CIRCUMFERENCE = 2 * Math.PI * R;
 
-const DeviceSummaryCard = ({ devices, monitor }: Props) => {
-  const now = useNow();
-  const agentOnline = monitor.status === 'active'
-    && monitor.last_seen !== null
-    && (now - new Date(monitor.last_seen).getTime() <= OFFLINE_THRESHOLD_MS);
-
-  const offlineCount = devices.filter(d => {
-    if (!agentOnline) return true;
-    if (d.last_seen == null) return true;
-    return (now - new Date(d.last_seen).getTime() > DEVICE_OFFLINE_THRESHOLD_MS);
-  }).length;
-
-  const activeCount = devices.length - offlineCount;
-  const activeRatio = devices.length > 0 ? activeCount / devices.length : 0;
-  const strokeDashoffset = devices.length === 0 ? '251.2' : `${(1 - activeRatio) * 251.2}`;
-  const ringColor = activeRatio === 1 ? '#10b981' : activeRatio > 0 ? '#f59e0b' : '#ef4444';
+/** "Equipos del sitio" (handoff hifi "Monitor — detalle", 25/08/2026) — donut de
+ * activos/offline (gestionados) + leyenda con descubiertos sin aprobar aparte
+ * (no integran el total gestionado). Reemplaza el cálculo client-side por umbral
+ * que tenía antes: activos/offline ya vienen resueltos por el mismo `AgentStats`
+ * que alimenta la tira de métricas, para que nunca se desincronicen. */
+export default function DeviceSummaryCard({ stats, loading, error, onRetry }: {
+  stats: AgentStats | null; loading: boolean; error: boolean; onRetry: () => void;
+}) {
+  const total = stats?.devices_total ?? 0;
+  const active = stats?.devices_active ?? 0;
+  const offline = stats?.devices_offline ?? 0;
+  const pending = stats?.discovered_pending ?? 0;
+  const activeLen = total > 0 ? CIRCUMFERENCE * (active / total) : 0;
+  const offlineLen = total > 0 ? CIRCUMFERENCE * (offline / total) : 0;
+  const offlineRotation = total > 0 ? -90 + (active / total) * 360 : -90;
 
   return (
-    <div className="cd-panel overflow-hidden border-none shadow-xl shadow-brand/5 relative bg-white h-full">
-      <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-400 to-teal-500" />
-      <div className="cd-header-primary flex items-center justify-between px-6 py-5">
-        <div className="flex items-center gap-3 text-white">
-          <Printer size={18} className="text-emerald-400" />
-          <span className="font-black uppercase tracking-widest text-sm text-white">Dispositivos</span>
-        </div>
-        <span className="text-[10px] font-bold text-white border border-white/30 bg-white/10 px-2 py-1 rounded-md shadow-sm">
-          {devices.length} Total
-        </span>
+    <div className="flex h-full flex-col rounded-[5px] border border-line-100 bg-white">
+      <div className="flex items-baseline justify-between px-5 py-3.5">
+        <span className="font-montserrat text-[9px] font-bold uppercase tracking-[.15em] text-ink-600">Equipos del sitio</span>
+        {!loading && !error && <span className="font-sans text-[11.5px] text-ink-300">{fmt(total)} en total</span>}
       </div>
-      <div className="p-6 space-y-6">
-        <ul className="space-y-3">
-          <li className="flex justify-between items-center text-xs">
-            <span className="font-bold text-slate-500 uppercase tracking-widest">Activos</span>
-            <span className="font-black text-emerald-600 text-sm">{activeCount}</span>
-          </li>
-          <li className="flex justify-between items-center text-xs">
-            <span className="font-bold text-slate-500 uppercase tracking-widest">Offline / No Gestionados</span>
-            <span className="font-black text-amber-500 text-sm">{offlineCount}</span>
-          </li>
-          <li className="flex justify-between items-center text-xs pt-3 border-t border-slate-100">
-            <span className="font-black text-[#1a2333] uppercase tracking-widest">Total</span>
-            <span className="font-black text-brand text-lg">{devices.length}</span>
-          </li>
-        </ul>
-        <div className="flex justify-center py-4">
-          <div className="relative w-32 h-32 flex items-center justify-center">
-            <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-              <circle cx="50" cy="50" r="40" fill="transparent" stroke="#f1f5f9" strokeWidth="12" />
-              <circle cx="50" cy="50" r="40" fill="transparent" stroke={ringColor} strokeWidth="12"
-                strokeDasharray="251.2"
-                strokeDashoffset={strokeDashoffset}
-                className="transition-all duration-1000 ease-out"
-              />
-            </svg>
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className="text-2xl font-black text-[#1a2333]">{devices.length}</span>
-              <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Equipos</span>
+
+      {error ? (
+        <div className="flex flex-1 flex-col items-center justify-center gap-1.5 px-5 pb-6 text-center">
+          <span className="font-sans text-[12.5px] text-ink-900">No se pudo cargar</span>
+          <button type="button" onClick={onRetry} className="font-montserrat text-[9.5px] font-semibold uppercase tracking-[.1em] text-brand-accent hover:underline">Reintentar</button>
+        </div>
+      ) : (
+        <div className="flex flex-1 items-center gap-5 px-5 pb-5 pt-[2px]">
+          <svg width={112} height={112} viewBox="0 0 112 112" className="shrink-0">
+            <circle cx={56} cy={56} r={R} fill="none" stroke="var(--color-surface-track)" strokeWidth={15} />
+            {!loading && total > 0 && (
+              <>
+                <circle
+                  cx={56} cy={56} r={R} fill="none" stroke="var(--color-brand)" strokeWidth={15}
+                  strokeDasharray={`${activeLen} ${CIRCUMFERENCE - activeLen}`} transform="rotate(-90 56 56)"
+                />
+                <circle
+                  cx={56} cy={56} r={R} fill="none" stroke="var(--color-brand-severe)" strokeWidth={15}
+                  strokeDasharray={`${offlineLen} ${CIRCUMFERENCE - offlineLen}`} transform={`rotate(${offlineRotation} 56 56)`}
+                />
+              </>
+            )}
+            <text x={56} y={53} textAnchor="middle" fill="var(--color-ink-900)" className="font-montserrat text-[22px] font-extrabold">{fmt(total)}</text>
+            <text x={56} y={70} textAnchor="middle" fill="var(--color-ink-300)" className="font-sans text-[10px]">equipos</text>
+          </svg>
+
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center justify-between border-b border-line-200 py-2">
+              <span className="flex items-center gap-2 font-sans text-[12.5px] text-ink-700"><span className="block h-2 w-2 rounded-full bg-brand" /> Activos</span>
+              <span className="font-montserrat text-[13px] font-semibold tabular-nums text-ink-900">{fmt(active)}</span>
+            </div>
+            <div className="flex items-center justify-between border-b border-line-200 py-2">
+              <span className="flex items-center gap-2 font-sans text-[12.5px] text-ink-700"><span className="block h-2 w-2 rounded-full bg-brand-severe" /> Offline / no gestionados</span>
+              <span className="font-montserrat text-[13px] font-semibold tabular-nums text-ink-900">{fmt(offline)}</span>
+            </div>
+            <div className="flex items-center justify-between py-2">
+              <span className="flex items-center gap-2 font-sans text-[12.5px] text-ink-700"><span className="block h-2 w-2 rounded-full bg-surface-track-alt" /> Descubiertos sin aprobar</span>
+              <span className="font-montserrat text-[13px] font-semibold tabular-nums text-ink-900">{fmt(pending)}</span>
+            </div>
+            <div className="flex items-center justify-between pt-[9px]">
+              <span className="font-sans text-[10.5px] tracking-[.04em] text-ink-300">TOTAL GESTIONADO</span>
+              <span className="font-montserrat text-[14px] font-bold tabular-nums text-ink-900">{fmt(total)}</span>
             </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
-};
-
-export default DeviceSummaryCard;
+}

@@ -1,81 +1,147 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Shield, HardDrive, Key, Check, Copy } from 'lucide-react';
+import { Check, Copy } from 'lucide-react';
+import { fmt } from '../../../shared/lib/formatters';
 import type { MonitorData } from '../../../shared/types/monitor';
+import type { AgentLicense } from '../types/monitorDetail';
 
 interface Props {
   monitor: MonitorData;
+  license: AgentLicense | null;
+  loading: boolean;
+  error: boolean;
+  onRetry: () => void;
   keyCopied: boolean;
   onCopyKey: () => void;
 }
 
-const LicenseCard = ({ monitor, keyCopied, onCopyKey }: Props) => (
-  <div className="cd-panel overflow-hidden border-none shadow-xl shadow-brand/5 bg-white h-full relative">
-    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-amber-400 to-orange-500" />
-    <div className="cd-header-primary flex items-center gap-3 px-6 py-5 text-white">
-      <Shield size={18} className="text-amber-400" />
-      <span className="font-black uppercase tracking-widest text-sm text-white">Detalles de la Licencia</span>
-    </div>
-    <div className="p-6 space-y-6">
-      <div>
-        <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2 block">Organización Vinculada</label>
-        <Link
-          to={`/clients/${monitor.client_id}`}
-          className="block p-4 bg-gradient-to-r from-brand/10 to-brand-gray/10 border border-brand/20 rounded-3xl group hover:shadow-lg hover:shadow-brand/10 transition-all hover:-translate-y-0.5 relative overflow-hidden"
-        >
-          <div className="flex items-center gap-3 relative z-10">
-            <div className="w-10 h-10 rounded-2xl bg-white shadow-sm flex items-center justify-center text-brand font-black text-lg border border-brand/10 group-hover:scale-105 transition-transform">
-              {monitor.client_name?.charAt(0)}
-            </div>
-            <div>
-              <p className="text-xs font-black text-brand uppercase tracking-tight">{monitor.client_name}</p>
-              <p className="text-[9px] font-bold text-brand-gray uppercase tracking-widest group-hover:text-brand-hover transition-colors">
-                Ver Perfil &rarr;
-              </p>
-            </div>
-          </div>
-        </Link>
-      </div>
+function initialsOf(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '?';
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[1][0]).toUpperCase();
+}
 
-      <div className="space-y-2">
-        <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
-          <HardDrive size={12} /> Hardware Identifier
-        </label>
-        <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100">
-          <span className="font-mono text-[10px] font-bold text-slate-700 break-all">
-            {monitor.hardware_id || 'SIN VINCULAR'}
+/** "Licencia y vínculo" (handoff hifi "Monitor — detalle", 25/08/2026) — organización
+ * vinculada, hardware identifier (copiable), aviso de enlace cifrado y vigencia/fechas.
+ * Un agente aún `pending` (nunca activado, sin `hardware_id`) no tiene nada de esto
+ * todavía — se mantiene el bloque simple original de "llave de activación" para ese
+ * caso (workflow real de alta de monitores, fuera del alcance del handoff). */
+export default function LicenseCard({ monitor, license, loading, error, onRetry, keyCopied, onCopyKey }: Props) {
+  const [hwCopied, setHwCopied] = useState(false);
+
+  const copyHardwareId = () => {
+    if (!license?.hardware_id) return;
+    navigator.clipboard.writeText(license.hardware_id);
+    setHwCopied(true);
+    setTimeout(() => setHwCopied(false), 1500);
+  };
+
+  if (monitor.status === 'pending' && monitor.activation_key) {
+    return (
+      <div className="flex h-full flex-col rounded-[5px] border border-line-100 bg-white">
+        <div className="flex items-center justify-between px-5 py-3.5">
+          <span className="font-montserrat text-[9px] font-bold uppercase tracking-[.15em] text-ink-600">Licencia y vínculo</span>
+          <span className="inline-flex items-center gap-[7px] rounded-[2px] bg-brand-soft px-[9px] py-1 font-montserrat text-[9.5px] font-semibold uppercase tracking-[.08em] text-brand-accent">
+            <span className="block h-1.5 w-1.5 rounded-full bg-brand" /> Pendiente de activación
           </span>
         </div>
-      </div>
-
-      {monitor.activation_key ? (
-        <div className="p-5 bg-emerald-50 border border-emerald-100 rounded-3xl">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2 text-emerald-700">
-              <Key size={14} />
-              <p className="text-[9px] font-black uppercase tracking-widest">Clave de Activación</p>
-            </div>
-            <button
-              onClick={onCopyKey}
-              className="p-1.5 bg-white text-emerald-600 rounded-lg shadow-sm hover:bg-emerald-600 hover:text-white transition-all active:scale-90"
-            >
-              {keyCopied ? <Check size={14} /> : <Copy size={14} />}
+        <div className="flex-1 px-5 pb-5 pt-1">
+          <p className="mb-2.5 font-sans text-[12.5px] text-ink-700">Instalá el agente en el sitio y usá esta llave para activarlo.</p>
+          <div className="flex items-center gap-2.5 rounded-[3px] border border-line-150 bg-surface-input px-[13px] py-[10px]">
+            <span className="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap font-mono text-[11.5px] text-ink-600">{monitor.activation_key}</span>
+            <button type="button" onClick={onCopyKey} className="shrink-0 font-montserrat text-[10px] font-semibold uppercase tracking-[.08em] text-brand-accent hover:underline">
+              {keyCopied ? 'Copiado' : 'Copiar'}
             </button>
           </div>
-          <p className="font-mono text-xs font-bold text-emerald-900 break-all bg-white/50 p-2 rounded-xl">
-            {monitor.activation_key}
-          </p>
         </div>
-      ) : (
-        <div className="p-5 bg-brand/10 border border-brand/20 rounded-3xl flex items-center gap-3">
-          <div className="p-2 bg-white rounded-xl shadow-sm text-brand"><Check size={16} /></div>
-          <div>
-            <p className="text-[9px] font-black text-brand uppercase tracking-widest">Enlace Cifrado</p>
-            <p className="text-[10px] font-bold text-brand-charcoal uppercase">Telemetría Activa</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex h-full flex-col rounded-[5px] border border-line-100 bg-white">
+      <div className="flex flex-wrap items-center justify-between gap-2 px-5 py-3.5">
+        <span className="font-montserrat text-[9px] font-bold uppercase tracking-[.15em] text-ink-600">Licencia y vínculo</span>
+        {!loading && !error && license && (
+          <span className={`inline-flex items-center gap-[7px] rounded-[2px] px-[9px] py-1 font-montserrat text-[9.5px] font-semibold uppercase tracking-[.08em] ${
+            license.estado === 'vigente' ? 'bg-surface-avatar text-ink-650' : 'bg-brand-soft text-brand-severe'
+          }`}>
+            <span className={`block h-1.5 w-1.5 rounded-full ${license.estado === 'vigente' ? 'bg-brand-gray' : 'bg-brand-severe'}`} />
+            {license.estado === 'vigente' ? 'Vigente' : 'Revocada'}
+          </span>
+        )}
+      </div>
+
+      {error && (
+        <div className="flex flex-1 flex-col items-center justify-center gap-1.5 px-5 pb-6 text-center">
+          <span className="font-sans text-[12.5px] text-ink-900">No se pudo cargar</span>
+          <button type="button" onClick={onRetry} className="font-montserrat text-[9.5px] font-semibold uppercase tracking-[.1em] text-brand-accent hover:underline">Reintentar</button>
+        </div>
+      )}
+
+      {!error && (loading || !license) && (
+        <div className="flex-1 space-y-3 px-5 pb-5 pt-1">
+          <div className="h-16 animate-pulse rounded-[3px] bg-surface-track" />
+          <div className="h-10 animate-pulse rounded-[3px] bg-surface-track" />
+          <div className="h-12 animate-pulse rounded-[3px] bg-surface-track" />
+        </div>
+      )}
+
+      {!error && !loading && license && (
+        <div className="flex-1 px-5 pb-[18px] pt-1">
+          <div className="mb-[9px] font-montserrat text-[8.5px] font-bold uppercase tracking-[.13em] text-ink-300">Organización vinculada</div>
+          <Link
+            to={`/clients/${monitor.client_id}`}
+            className="mb-4 flex items-center gap-3 rounded-[3px] border border-line-150 bg-surface-input px-[13px] py-[11px] hover:bg-surface-btn-hover"
+          >
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[3px] border border-brand-chip-border bg-brand-soft font-montserrat text-[10.5px] font-bold text-brand-accent">
+              {initialsOf(license.organizacion.nombre)}
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="truncate font-sans text-[12.5px] font-semibold text-ink-900">{license.organizacion.nombre}</div>
+              <div className="font-sans text-[11px] text-ink-300">
+                {fmt(license.organizacion.device_count)} dispositivos · {fmt(license.organizacion.monitor_count)} monitores
+              </div>
+            </div>
+            <span className="shrink-0 whitespace-nowrap font-montserrat text-[10px] font-semibold uppercase tracking-[.08em] text-brand-accent">Ver perfil →</span>
+          </Link>
+
+          <div className="mb-[9px] flex items-center gap-2 font-montserrat text-[8.5px] font-bold uppercase tracking-[.13em] text-ink-300">Hardware identifier</div>
+          <div className="mb-4 flex items-center gap-2.5 rounded-[3px] border border-line-150 bg-surface-input px-[13px] py-[10px]">
+            <span
+              className="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap font-mono text-[11.5px] text-ink-600"
+              aria-label={license.hardware_id ?? 'sin vincular'}
+            >
+              {license.hardware_id || 'SIN VINCULAR'}
+            </span>
+            {license.hardware_id && (
+              <button type="button" onClick={copyHardwareId} className="flex shrink-0 items-center gap-1 font-montserrat text-[10px] font-semibold uppercase tracking-[.08em] text-brand-accent hover:underline">
+                {hwCopied ? <><Check size={11} /> Copiado</> : <><Copy size={11} /> Copiar</>}
+              </button>
+            )}
+          </div>
+
+          <div className="mb-4 flex items-center gap-[11px] rounded-[3px] border border-brand-chip-border bg-brand-soft px-[13px] py-3">
+            <span className="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full bg-brand text-[11px] font-bold text-white">✓</span>
+            <div>
+              <div className="font-montserrat text-[8.5px] font-bold uppercase tracking-[.13em] text-brand-accent">Enlace cifrado</div>
+              <div className="font-sans text-[12px] text-[var(--color-brand-warn-text)]">
+                Telemetría activa · TLS 1.3 · rotación cada {license.rotacion_dias} días
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between border-b border-line-200 py-2">
+            <span className="font-sans text-[12.5px] text-ink-700">Emitida</span>
+            <span className="font-sans text-[12.5px] font-semibold text-ink-900">{new Date(license.emitida_at).toLocaleDateString('es-AR')}</span>
+          </div>
+          <div className="flex items-center justify-between py-2">
+            <span className="font-sans text-[12.5px] text-ink-700">Próxima rotación</span>
+            <span className="font-sans text-[12.5px] font-semibold text-ink-900">{new Date(license.proxima_rotacion_at).toLocaleDateString('es-AR')}</span>
           </div>
         </div>
       )}
     </div>
-  </div>
-);
-
-export default LicenseCard;
+  );
+}

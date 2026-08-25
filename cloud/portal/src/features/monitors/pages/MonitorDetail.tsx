@@ -1,18 +1,18 @@
 import { useState } from 'react';
 import { useParams, Link, useSearchParams } from 'react-router-dom';
-import {
-  ArrowLeft, HardDrive, Activity, Clock,
-  Settings, RefreshCw, ShieldOff,
-  AlertTriangle, Loader2,
-  Command, Terminal as TerminalIcon, Download, BarChart2,
-} from 'lucide-react';
+import { Loader2, ShieldOff, ArrowLeft, Command, AlertTriangle } from 'lucide-react';
 import { useAuth } from '../../../store/AuthContext';
 import { useMonitorDetail } from '../hooks/useMonitorDetail';
+import { useMonitorStats, useMonitorConnectivity, useMonitorLicense, useMonitorActivity } from '../hooks/useMonitorOverview';
 import { useTime } from '../../../shared/hooks/useTime';
-import { formatRelativeTime } from '../../../shared/lib/formatters';
-import MonitorSpecsCard from '../components/MonitorSpecsCard';
+import MonitorProfileCard from '../components/MonitorProfileCard';
+import MonitorMetricsStrip from '../components/MonitorMetricsStrip';
+import MonitorDetailTabs from '../components/MonitorDetailTabs';
 import DeviceSummaryCard from '../components/DeviceSummaryCard';
+import MonitorSpecsCard from '../components/MonitorSpecsCard';
 import LicenseCard from '../components/LicenseCard';
+import ConnectivityStrip from '../components/ConnectivityStrip';
+import RecentActivityCard from '../components/RecentActivityCard';
 import DeviceInventoryTable from '../components/DeviceInventoryTable';
 import ReportsTabPanel from '../components/ReportsTabPanel';
 import RemoteToolsPanel from '../components/RemoteToolsPanel';
@@ -28,10 +28,10 @@ const MonitorDetail = () => {
   const { id } = useParams<{ id: string }>();
   const { showToast } = useToast();
   const { role } = useAuth();
-  // El backend deniega (403) consola/config/logs para un client_viewer — ver
-  // `rolePolicy.ts` (CLIENT_VIEWER_ROUTES no incluye `/agents/:id/config` ni
-  // `/agents/:id/logs*`, y ninguna ruta de comando/revocación/regeneración).
-  // Ocultar acá evita mandar esas requests y recibir un 403 en pantalla.
+  // El backend deniega (403) consola/config/logs/actividad para un client_viewer —
+  // ver `rolePolicy.ts` (CLIENT_VIEWER_ROUTES no incluye `/agents/:id/config`,
+  // `/agents/:id/logs*` ni `/agents/:id/activity`). Ocultar acá evita mandar esas
+  // requests y recibir un 403 en pantalla.
   const isReadOnlyViewer = role === 'client_viewer';
   const now = useTime(30000);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -48,7 +48,13 @@ const MonitorDetail = () => {
     monitor, devices, loading, error,
     commandLoading, sendCommand,
     saveConfig, saveSnmpCredentials, regenerateKey, revokeMonitor,
+    syncing, syncNow, refetch,
   } = useMonitorDetail(id!);
+
+  const { stats, loading: statsLoading, error: statsError, refetch: refetchStats } = useMonitorStats(id!);
+  const { days, loading: daysLoading, error: daysError, refetch: refetchDays } = useMonitorConnectivity(id!);
+  const { license, loading: licenseLoading, error: licenseError, refetch: refetchLicense } = useMonitorLicense(id!);
+  const { events, loading: eventsLoading, error: eventsError, refetch: refetchEvents } = useMonitorActivity(id!, !isReadOnlyViewer);
 
   const handleTabChange = (tab: Tab) => {
     setActiveTab(tab);
@@ -75,6 +81,11 @@ const MonitorDetail = () => {
     }
   };
 
+  const handleSync = async () => {
+    await syncNow();
+    refetchStats();
+  };
+
   const copyKey = () => {
     if (!monitor?.activation_key) return;
     navigator.clipboard.writeText(monitor.activation_key);
@@ -85,9 +96,9 @@ const MonitorDetail = () => {
 
   if (loading && !monitor) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-[#f8fafc]">
-        <Loader2 className="animate-spin text-brand mb-6" size={64} />
-        <p className="text-slate-400 font-black uppercase tracking-[0.3em] text-xs">Cifrando Enlace...</p>
+      <div className="flex flex-col items-center justify-center min-h-screen bg-surface-page">
+        <Loader2 className="animate-spin text-brand mb-6" size={40} />
+        <p className="text-ink-300 font-bold uppercase tracking-[0.3em] text-[10px]">Cargando monitor…</p>
       </div>
     );
   }
@@ -107,82 +118,58 @@ const MonitorDetail = () => {
     );
   }
 
-  const TABS: { id: Tab; label: string; icon: typeof Activity }[] = [
-    { id: 'overview', label: 'Resumen',       icon: Activity },
-    { id: 'devices',  label: 'Dispositivos',  icon: HardDrive },
-    ...(isReadOnlyViewer ? [] : [{ id: 'console' as Tab, label: 'Consola', icon: TerminalIcon }]),
-    { id: 'reports',  label: 'Reportes',      icon: BarChart2 },
-    ...(isReadOnlyViewer ? [] : [{ id: 'config' as Tab, label: 'Configuración', icon: Settings }]),
+  const TABS: Array<{ id: Tab; label: string }> = [
+    { id: 'overview', label: 'Resumen' },
+    { id: 'devices', label: 'Dispositivos' },
+    ...(isReadOnlyViewer ? [] : [{ id: 'console' as Tab, label: 'Consola' }]),
+    { id: 'reports', label: 'Reportes' },
+    ...(isReadOnlyViewer ? [] : [{ id: 'config' as Tab, label: 'Configuración' }]),
   ];
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-700">
-      {/* Header */}
-      <header className="flex flex-col md:flex-row md:items-end justify-between gap-8 pb-4">
-        <div className="space-y-4">
-          <Link to="/monitoring" className="group flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] hover:text-brand transition-all">
-            <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" /> Volver a Infraestructura
-          </Link>
-          <div className="flex items-center gap-6">
-            <div className="p-5 bg-white shadow-xl shadow-brand/5 rounded-[28px] text-brand">
-              <HardDrive size={32} />
-            </div>
-            <div>
-              <div className="flex items-center gap-3 mb-1">
-                <h1 className="text-4xl font-black text-[#1a2333] tracking-tighter uppercase">{monitor.name}</h1>
-                <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${
-                  monitor.status === 'active' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
-                  monitor.status === 'offline' ? 'bg-amber-50 text-amber-600 border-amber-100' :
-                  'bg-slate-100 text-slate-500 border-slate-200'
-                }`}>{monitor.status}</span>
-              </div>
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                <Clock size={14} /> Último contacto: {formatRelativeTime(monitor.last_seen, now)}
-              </p>
-            </div>
-          </div>
-        </div>
-        {!isReadOnlyViewer && (
-          <div className="flex items-center gap-3">
-            <button onClick={() => window.open(`/api/v1/agents/${id}/logs/export`, '_blank')}
-              className="px-6 py-4 bg-white text-emerald-600 font-black text-[10px] uppercase tracking-widest rounded-2xl shadow-xl shadow-brand/5 hover:bg-emerald-50 transition-all active:scale-95 flex items-center gap-3">
-              <Download size={18} /> Descargar Logs
-            </button>
-            <button onClick={() => handleTabChange('config')}
-              className="px-6 py-4 bg-white text-[#1a2333] font-black text-[10px] uppercase tracking-widest rounded-2xl shadow-xl shadow-brand/5 hover:bg-slate-50 transition-all active:scale-95 flex items-center gap-3">
-              <Settings size={18} /> Ajustes
-            </button>
-            <button onClick={handleRegen}
-              className="px-6 py-4 bg-white text-amber-600 font-black text-[10px] uppercase tracking-widest rounded-2xl shadow-xl shadow-brand/5 hover:bg-amber-50 transition-all active:scale-95 flex items-center gap-3">
-              <RefreshCw size={18} /> Regenerar Llave
-            </button>
-            <button onClick={() => setShowRevokeModal(true)}
-              className="px-6 py-4 bg-rose-50 text-rose-600 font-black text-[10px] uppercase tracking-widest rounded-2xl hover:bg-rose-600 hover:text-white transition-all active:scale-95 flex items-center gap-3">
-              <ShieldOff size={18} /> Revocar
-            </button>
-          </div>
-        )}
-      </header>
+    <div className="-m-4 min-w-0 flex flex-col gap-4 bg-surface-page px-[34px] pb-9 pt-[26px] md:-m-10">
+      <nav className="mb-1 flex items-center gap-2 font-sans text-xs">
+        <Link to="/monitoring" className="font-semibold text-brand-accent hover:underline">Clientes</Link>
+        <span className="text-ink-sep-light">/</span>
+        <Link to={`/clients/${monitor.client_id}`} className="font-semibold text-brand-accent hover:underline">{monitor.client_name}</Link>
+        <span className="text-ink-sep-light">/</span>
+        <Link to={`/clients/${monitor.client_id}`} className="font-semibold text-brand-accent hover:underline">Infraestructura</Link>
+        <span className="text-ink-sep-light">/</span>
+        <span className="text-ink-700">{monitor.name}</span>
+      </nav>
 
-      {/* Tabs */}
-      <div className="flex gap-1 bg-slate-100/50 p-1.5 rounded-[24px] w-fit">
-        {TABS.map(({ id: tabId, label, icon: Icon }) => (
-          <button key={tabId} onClick={() => handleTabChange(tabId)}
-            className={`px-8 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${
-              activeTab === tabId ? 'bg-white text-brand shadow-sm shadow-brand/5' : 'text-slate-400 hover:text-slate-600'
-            }`}>
-            <Icon size={14} /> {label}
-          </button>
-        ))}
+      <div className="rounded-[5px] border border-line-100 bg-white">
+        <MonitorProfileCard
+          monitor={monitor} now={now} isReadOnlyViewer={isReadOnlyViewer}
+          syncing={syncing} onSync={handleSync}
+          onDownloadLogs={() => window.open(`/api/v1/agents/${id}/logs/export`, '_blank')}
+          onOpenSettings={() => handleTabChange('config')}
+          onRegenKey={handleRegen}
+        />
+        <MonitorMetricsStrip stats={stats} loading={statsLoading} error={statsError} onRetry={refetchStats} />
+        <MonitorDetailTabs tabs={TABS} active={activeTab} onChange={handleTabChange} />
       </div>
 
       {/* Overview Tab */}
       {activeTab === 'overview' && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <DeviceSummaryCard devices={devices} monitor={monitor} />
-          <MonitorSpecsCard monitor={monitor} now={now} />
-          <LicenseCard monitor={monitor} keyCopied={keyCopied} onCopyKey={copyKey} />
-        </div>
+        <>
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(320px,1fr))] gap-4">
+            <DeviceSummaryCard stats={stats} loading={statsLoading} error={statsError} onRetry={refetchStats} />
+            <MonitorSpecsCard monitor={monitor} now={now} stats={stats} onViewDiagnostics={() => handleTabChange('reports')} />
+            <LicenseCard monitor={monitor} license={license} loading={licenseLoading} error={licenseError} onRetry={refetchLicense} keyCopied={keyCopied} onCopyKey={copyKey} />
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 min-[1100px]:grid-cols-[1.55fr_1fr]">
+            <ConnectivityStrip
+              days={days} loading={daysLoading} error={daysError} onRetry={refetchDays}
+              uptimePct={stats?.uptime_30d_pct ?? null} outages={stats?.outages_30d ?? null}
+            />
+            <RecentActivityCard
+              events={events} loading={eventsLoading} error={eventsError} onRetry={refetchEvents}
+              visible={!isReadOnlyViewer} onViewConsole={isReadOnlyViewer ? undefined : () => handleTabChange('console')}
+            />
+          </div>
+        </>
       )}
 
       {/* Devices Tab */}
@@ -191,14 +178,18 @@ const MonitorDetail = () => {
           devices={devices}
           monitorName={monitor.name}
           agentId={monitor.id}
+          clientId={monitor.client_id}
+          pendingCount={stats?.discovered_pending ?? 0}
+          active={activeTab === 'devices'}
+          onRefresh={() => { refetch(); refetchStats(); }}
           isReadOnlyViewer={isReadOnlyViewer}
         />
       )}
 
       {/* Console Tab */}
       {activeTab === 'console' && !isReadOnlyViewer && (
-        <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
-          <div className="bg-white p-8 rounded-[32px] border border-slate-100 shadow-xl shadow-brand/5">
+        <div className="space-y-6">
+          <div className="rounded-[5px] border border-line-100 bg-white p-8">
             <div className="flex items-center gap-4 mb-8">
               <div className="p-3 bg-slate-900 text-white rounded-2xl"><Command size={24} /></div>
               <h3 className="text-lg font-black text-[#1a2333] tracking-tight">Consola de STC Cloud</h3>
@@ -226,7 +217,7 @@ const MonitorDetail = () => {
 
       {/* Config Tab */}
       {activeTab === 'config' && !isReadOnlyViewer && (
-        <ConfigTabPanel monitor={monitor} onSave={saveConfig} onSaveSnmpCredentials={saveSnmpCredentials} />
+        <ConfigTabPanel monitor={monitor} onSave={saveConfig} onSaveSnmpCredentials={saveSnmpCredentials} onRequestRevoke={() => setShowRevokeModal(true)} />
       )}
 
       {/* Revoke Confirm */}

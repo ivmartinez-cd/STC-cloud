@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Settings, AlertTriangle, Clock, Loader2 } from 'lucide-react';
+import { Settings, AlertTriangle, Clock, Loader2, ShieldOff } from 'lucide-react';
 import { useToast } from '../../../store/ToastContext';
 import IpRangesEditor from './IpRangesEditor';
 import SnmpCredentialsPanel from './SnmpCredentialsPanel';
@@ -10,6 +10,12 @@ interface ConfigTabPanelProps {
   monitor: MonitorData;
   onSave: (form: EditFormData) => Promise<void>;
   onSaveSnmpCredentials: (credentials: SnmpCredentialInput[], expectedRev: number) => Promise<void>;
+  /** `REVOCAR` (handoff hifi "Monitor — detalle", 25/08/2026) — se reubica acá
+   * desde la barra de acciones del header (deja de ser una acción destructiva de
+   * primer nivel). El modal de doble confirmación sigue viviendo en
+   * `MonitorDetail.tsx` (mismo `ConfirmModal` de siempre); este panel sólo dispara
+   * el pedido de apertura. */
+  onRequestRevoke: () => void;
 }
 
 /** ISO weekday: 1=lunes..7=domingo — mismo convenio que `businessHours.days`. */
@@ -27,7 +33,7 @@ const COMMON_TIMEZONES = [
   'Asia/Shanghai', 'Asia/Tokyo', 'Asia/Singapore', 'Australia/Sydney', 'Pacific/Auckland', 'UTC',
 ];
 
-export default function ConfigTabPanel({ monitor, onSave, onSaveSnmpCredentials }: ConfigTabPanelProps) {
+export default function ConfigTabPanel({ monitor, onSave, onSaveSnmpCredentials, onRequestRevoke }: ConfigTabPanelProps) {
   const [form, setForm] = useState<EditFormData>(() => {
     // `MonitorData.config.ip_ranges` es siempre un array ya parseado — la
     // columna `agents.ip_ranges` es `jsonb`, node-pg la devuelve parseada
@@ -268,6 +274,30 @@ export default function ConfigTabPanel({ monitor, onSave, onSaveSnmpCredentials 
           rev={monitor.config?.snmp_credentials_rev ?? 0}
           onSave={onSaveSnmpCredentials}
         />
+
+        {/* Zona de riesgo — `REVOCAR` reubicado acá (handoff hifi "Monitor — detalle",
+            25/08/2026): dejó de ser una acción de la barra principal del header. */}
+        <div className="rounded-[32px] border border-rose-100 bg-rose-50/40 p-8 space-y-4 lg:col-span-2">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-rose-100 text-rose-600 rounded-2xl">
+              <ShieldOff size={24} />
+            </div>
+            <div>
+              <h3 className="text-lg font-black text-rose-700 tracking-tight uppercase">Zona de riesgo</h3>
+              <p className="text-[10px] font-black text-rose-400 uppercase tracking-widest mt-0.5">Revocar la licencia de este monitor</p>
+            </div>
+          </div>
+          <p className="text-xs text-rose-600/80 font-bold leading-relaxed max-w-2xl">
+            Revocar desconecta el agente de forma permanente: deja de reportar telemetría y su llave de activación queda inválida.
+            Los equipos que monitoreaba dejan de recibir lecturas nuevas hasta vincularlos a otro monitor.
+          </p>
+          <button
+            type="button" onClick={onRequestRevoke}
+            className="px-6 py-3.5 bg-white border border-rose-200 text-rose-600 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-rose-600 hover:text-white hover:border-rose-600 transition-all active:scale-95 flex items-center gap-3"
+          >
+            <ShieldOff size={16} /> Revocar licencia
+          </button>
+        </div>
       </div>
 
       {/* Botones de acción */}
