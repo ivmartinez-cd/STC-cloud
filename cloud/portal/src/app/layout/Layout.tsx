@@ -21,7 +21,7 @@ const Sidebar = ({ isHovered, isMobileMenuOpen, onHover, onCloseMobile }: Sideba
   const pendingCount = usePendingBadge(role);
   return (
     <aside onMouseEnter={() => onHover(true)} onMouseLeave={() => onHover(false)}
-      className={`fixed inset-y-0 left-0 bg-white border-r border-slate-200 text-slate-700 flex flex-col z-[70] transition-all duration-500 cubic-bezier(0.4, 0, 0.2, 1) overflow-hidden
+      className={`fixed inset-y-0 left-0 bg-white border-r border-slate-200 text-slate-700 flex flex-col z-[70] transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] overflow-hidden
         ${isHovered ? 'w-72 shadow-[20px_0_50px_rgba(0,0,0,0.05)]' : 'md:w-20 w-0 -translate-x-full md:translate-x-0'}
         ${isMobileMenuOpen ? 'w-72 translate-x-0 shadow-2xl' : ''}`}>
       <div className="absolute top-0 left-0 w-full h-64 bg-orange-500/5 blur-[100px] pointer-events-none" />
