@@ -47,7 +47,7 @@ function LeafRow({ leaf, active, isHovered, badge, indented, onClick }: {
         </div>
 
         <span className={`
-          text-[13px] font-bold whitespace-nowrap transition-all duration-500
+          font-montserrat text-[13px] font-bold whitespace-nowrap transition-all duration-500
           ${isHovered ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4 pointer-events-none w-0'}
           ${active ? 'text-brand' : 'text-slate-500'}
         `}>
@@ -129,7 +129,7 @@ export default function SidebarNav({
                   />
                 </div>
                 <span className={`
-                  flex-1 text-left text-[13px] font-bold whitespace-nowrap transition-all duration-500
+                  flex-1 text-left font-montserrat text-[13px] font-bold whitespace-nowrap transition-all duration-500
                   ${isHovered ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4 pointer-events-none w-0'}
                   ${groupActive ? 'text-brand' : 'text-slate-500'}
                 `}>

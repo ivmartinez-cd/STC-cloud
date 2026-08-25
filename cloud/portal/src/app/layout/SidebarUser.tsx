@@ -18,7 +18,7 @@ const Avatar = ({ isHovered, initial }: { isHovered: boolean; initial: string })
 
 const LogoutButton = ({ isHovered, onLogout }: Pick<Props, 'isHovered' | 'onLogout'>) => (
   <button onClick={onLogout} title="Cerrar Sesión"
-    className={`flex items-center justify-center gap-2 rounded-xl bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-[11px] font-black uppercase tracking-widest text-slate-500 transition-all duration-300 border border-slate-200 ${
+    className={`flex items-center justify-center gap-2 rounded-xl bg-slate-100 hover:bg-rose-50 hover:text-rose-600 font-montserrat text-[11px] font-black uppercase tracking-widest text-slate-500 transition-all duration-300 border border-slate-200 ${
       isHovered ? 'w-full py-2.5 px-4' : 'absolute inset-0 opacity-0 group-hover:opacity-100 bg-white/95 backdrop-blur-sm border border-slate-200 rounded-2xl'}`}>
     <LogOut size={isHovered ? 14 : 18} />
     {isHovered && 'Salir'}
@@ -33,8 +33,8 @@ const SidebarUser = ({ isHovered, email, role, onLogout }: Props) => (
       <div className={`flex items-center gap-4 relative z-10 w-full ${isHovered ? 'mb-4 md:justify-start' : 'justify-center'}`}>
         <Avatar isHovered={isHovered} initial={(email || 'A')[0].toUpperCase()} />
         <div className={`flex flex-col min-w-0 transition-all duration-500 ${isHovered ? 'opacity-100' : 'opacity-0 w-0 h-0 overflow-hidden'}`}>
-          <span className="text-sm font-bold text-slate-800 truncate">{email?.split('@')[0] || 'admin'}</span>
-          <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">{ROLE_LABELS[role] ?? role}</span>
+          <span className="font-sans text-sm font-bold text-slate-800 truncate">{email?.split('@')[0] || 'admin'}</span>
+          <span className="font-montserrat text-[10px] text-slate-500 font-bold uppercase tracking-wider">{ROLE_LABELS[role] ?? role}</span>
         </div>
       </div>
       <LogoutButton isHovered={isHovered} onLogout={onLogout} />

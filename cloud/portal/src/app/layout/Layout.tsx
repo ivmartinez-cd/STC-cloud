@@ -27,7 +27,7 @@ const Sidebar = ({ isHovered, isMobileMenuOpen, onHover, onCloseMobile }: Sideba
       <div className="absolute top-0 left-0 w-full h-64 bg-orange-500/5 blur-[100px] pointer-events-none" />
       <SidebarBrand isHovered={isHovered} isMobileMenuOpen={isMobileMenuOpen} onNavigate={onCloseMobile} onCloseMobile={onCloseMobile} />
       <nav className="flex-1 px-3 py-6 space-y-2 overflow-y-auto relative custom-scrollbar overflow-x-hidden">
-        <div className={`text-[10px] text-slate-500 font-bold uppercase tracking-[0.2em] mb-6 px-5 transition-opacity duration-300 ${isHovered ? 'opacity-100' : 'opacity-0'}`}>
+        <div className={`font-montserrat text-[10px] text-slate-500 font-bold uppercase tracking-[0.2em] mb-6 px-5 transition-opacity duration-300 ${isHovered ? 'opacity-100' : 'opacity-0'}`}>
           Navegación
         </div>
         <SidebarNav entries={filterNavTreeByRole(NAV_TREE, role)} isHovered={isHovered} pendingCount={pendingCount} onNavigate={onCloseMobile} />
@@ -46,7 +46,7 @@ const TopHeader = ({ onToggleMobile }: { onToggleMobile: () => void }) => {
           <Menu size={20} />
         </button>
         <div className="hidden md:block">
-          <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Centro de Operaciones</span>
+          <span className="font-montserrat text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Centro de Operaciones</span>
         </div>
       </div>
       <div className="flex items-center gap-4">
@@ -61,7 +61,7 @@ const ModuleFallback = () => (
   <div className="flex items-center justify-center min-h-[400px]">
     <div className="flex flex-col items-center gap-4">
       <div className="w-12 h-12 border-4 border-slate-200 border-t-brand rounded-full animate-spin" />
-      <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] animate-pulse">Cargando Módulo...</span>
+      <span className="font-montserrat text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] animate-pulse">Cargando Módulo...</span>
     </div>
   </div>
 );
