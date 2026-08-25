@@ -1,7 +1,7 @@
 import type { Knex } from "knex";
 import { onlyLiveDevices } from "../../../../api/utils/deviceFilters";
 import type { AgentRow, DeviceRow, DeviceScope, StaleDeviceRow } from "../../domain/entities/device";
-import type { DecommissionFields, DeviceRepository, ListDevicesQuery, ReadingsQuery, UsageHistoryQuery } from "../../domain/repositories/device-repository";
+import type { DecommissionFields, DeviceRepository, ReadingsQuery, UsageHistoryQuery } from "../../domain/repositories/device-repository";
 import { UUID_RE } from "../../domain/services/device-rules";
 import { DUPLICATES_SQL, duplicatesBindings } from "./device-sql";
 
@@ -20,46 +20,23 @@ function whereScope(q: Knex.QueryBuilder, scope: DeviceScope, column = "devices.
   if (scope.kind === "client") q.andWhere(column, scope.id);
 }
 
-/** IP, serial, marca, modelo, nombre, cliente o monitor — ILIKE OR'd, mismo criterio que `pendingQuery` en `device-registration-repository.ts`. */
-function applyDeviceSearch(q: Knex.QueryBuilder, term: string) {
-  q.andWhere((b) => {
-    b.whereRaw("devices.ip_address::text ILIKE ?", [`%${term}%`])
-      .orWhereRaw("devices.serial_number ILIKE ?", [`%${term}%`])
-      .orWhereRaw("devices.brand ILIKE ?", [`%${term}%`])
-      .orWhereRaw("devices.model ILIKE ?", [`%${term}%`])
-      .orWhereRaw("devices.name ILIKE ?", [`%${term}%`])
-      .orWhereRaw("clients.name ILIKE ?", [`%${term}%`])
-      .orWhereRaw("agents.name ILIKE ?", [`%${term}%`]);
-  });
-}
-
 export class KnexDeviceRepository implements DeviceRepository {
   constructor(private readonly db: Knex | Knex.Transaction) {}
 
-  private baseListQuery(query: ListDevicesQuery) {
+  list(scope: DeviceScope, includeDecommissioned: boolean): Promise<DeviceRow[]> {
     return this.db("devices")
       .join("agents", "devices.agent_id", "agents.id")
       .join("clients", "devices.client_id", "clients.id")
       .modify((q) => {
-        if (!query.includeDecommissioned) onlyLiveDevices(q, "devices");
+        if (!includeDecommissioned) onlyLiveDevices(q, "devices");
         else q.whereNull("devices.merged_into"); // las lápidas nunca se listan
-        whereScope(q, query.scope);
+        whereScope(q, scope);
       })
-      .modify((q) => { if (query.q) applyDeviceSearch(q, query.q); });
-  }
-
-  /** Paginado (R9 gap analysis: "sin paginación ninguna tabla del portal") — mismo criterio que `listPending` en `device-registration-repository.ts`. */
-  async list(query: ListDevicesQuery): Promise<{ items: DeviceRow[]; total: number }> {
-    const limit = Math.min(query.limit ?? 50, 200);
-    const offset = Math.max(query.offset ?? 0, 0);
-    const [items, [{ count }]] = await Promise.all([
-      this.baseListQuery(query)
-        .select("devices.*", this.db.raw(STATUS_SQL), "agents.name as monitor_name", "agents.status as agent_status",
-          "agents.last_seen as agent_last_seen", "clients.name as client_name")
-        .orderBy("clients.name").limit(limit).offset(offset),
-      this.baseListQuery(query).count("devices.id as count"),
-    ]);
-    return { items, total: Number(count) };
+      .select("devices.*", this.db.raw(STATUS_SQL), "agents.name as monitor_name", "agents.status as agent_status",
+        "agents.last_seen as agent_last_seen", "clients.name as client_name")
+      .orderBy("clients.name")
+      // Techo de seguridad (dispositivos es la tabla de mayor volumen).
+      .limit(5000);
   }
 
   async getDetail(identifier: string, scope: DeviceScope): Promise<DeviceRow | null> {
