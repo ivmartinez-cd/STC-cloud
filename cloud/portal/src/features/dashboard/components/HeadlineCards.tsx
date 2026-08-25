@@ -93,7 +93,7 @@ function OfflineMonitorsCard({ stats, loading, error, onRetry }: Pick<HeadlinePr
   const pctOnline = total > 0 ? Math.max(0, 100 - pctOffline) : 0;
 
   return (
-    <Shell accent="var(--color-brand-severe)">
+    <Shell accent="var(--color-severity-critical)">
       <Header label="Monitores sin conexión" delta={!loading && !error ? `${pctOffline.toLocaleString('es-AR', { maximumFractionDigits: 1 })}% del parque` : undefined} />
       {error ? (
         <CardError onRetry={onRetry} className="py-6" />
@@ -105,9 +105,11 @@ function OfflineMonitorsCard({ stats, loading, error, onRetry }: Pick<HeadlinePr
       ) : (
         <>
           <Value value={fmt(offline)} legend={`de ${fmt(total)} instalados · ${fmt(online)} en línea`} />
+          {/* Mismo semáforo sutil que MonitorPresenceCard: sin conexión =
+              tono más severo, en línea = tono más calmo de la escala. */}
           <div className="mt-[14px] flex h-1.5 overflow-hidden rounded-[3px]">
-            <div style={{ width: `${pctOffline}%`, background: 'var(--color-brand-severe)' }} />
-            <div style={{ width: `${pctOnline}%`, background: 'var(--color-brand)' }} />
+            <div style={{ width: `${pctOffline}%`, background: 'var(--color-severity-critical)' }} />
+            <div style={{ width: `${pctOnline}%`, background: 'var(--color-severity-ok)' }} />
           </div>
         </>
       )}

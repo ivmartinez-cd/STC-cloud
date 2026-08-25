@@ -40,6 +40,20 @@
   --color-surface-hover: #fcfcfc;     /* hover de tarjeta clicable */
   --color-surface-btn-hover: #fbfbfb; /* hover botón secundario */
 
+  /* Escala de severidad tipo semáforo (25/08/2026, ajuste post-handoff): Ivan
+     pidió noción de "bien/regular/mal" en colas y alertas, pero el handoff es
+     explícito en "sin introducir rojo/verde" — así que la escala se resuelve
+     con gradiente DENTRO del naranja institucional + gris, nunca con rojo o
+     verde literal. Son alias semánticos sobre tonos que ya existían arriba
+     (no hex nuevos): así el significado de cada uno queda documentado en un
+     solo lugar y separado de sus otros usos decorativos (categorías de
+     marca/versión, etc). */
+  --color-severity-critical: var(--color-brand-severe); /* #c6710a — requiere acción ya (crítico/abierto/sin conexión) */
+  --color-severity-warning: var(--color-brand);         /* #f7941d — en curso/atención media */
+  --color-severity-ok: var(--color-ink-100);            /* #6c7275 — resuelto/sin urgencia: gris oscuro (ya documentado
+                                                            arriba para "columna secundaria" de tarjetas de cola), NO
+                                                            verde — a propósito recede en vez de "celebrar" en color */
+
   /* Tipografía de "Manual de marca.pdf": Montserrat (Título) + Source Sans Pro (Cuerpo). */
   --font-sans: 'Source Sans 3', 'Source Sans Pro', system-ui, -apple-system, sans-serif;
   --font-heading: 'Montserrat', sans-serif;

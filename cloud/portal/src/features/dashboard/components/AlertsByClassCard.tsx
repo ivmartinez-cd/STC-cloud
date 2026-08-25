@@ -12,15 +12,20 @@ type AlertRow = NonNullable<DashboardData['alertsByClass']>[number];
 // Paleta sólo institucional (naranja + grises — README): severidad se
 // resuelve con tono, nunca con rojo/verde. Mismo agrupamiento semántico que
 // tenía la versión anterior (crítico / atención / informativo / disponible),
-// re-mapeado a los 5 tonos que pide el handoff hifi.
+// re-mapeado a los tonos que pide el handoff hifi. Las clases realmente
+// críticas usan el mismo `--color-severity-critical` que colas y presencia
+// de monitores (misma escala en todo el panel); "atención" se queda un
+// escalón más claro (`brand-light`) para no perder la distinción con
+// "crítico" — colapsarlas en un solo tono de advertencia sería MENOS
+// granular que lo que ya había, no más.
 const CLASS_COLOR: Record<string, string> = {
   availability: 'var(--color-brand)',
   system_change: 'var(--color-brand-gray)',
-  consumable_out: 'var(--color-brand-severe)',
-  system_failure: 'var(--color-brand-severe)',
-  jam: 'var(--color-brand-severe)',
-  subunit_out: 'var(--color-brand-severe)',
-  media_out: 'var(--color-brand-severe)',
+  consumable_out: 'var(--color-severity-critical)',
+  system_failure: 'var(--color-severity-critical)',
+  jam: 'var(--color-severity-critical)',
+  subunit_out: 'var(--color-severity-critical)',
+  media_out: 'var(--color-severity-critical)',
   consumable_low: 'var(--color-brand-light)',
   system_warning: 'var(--color-brand-light)',
   user_action: 'var(--color-brand-light)',

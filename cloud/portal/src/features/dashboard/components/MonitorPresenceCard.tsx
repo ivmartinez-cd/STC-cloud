@@ -7,20 +7,26 @@ import { fmt } from '../../../shared/lib/formatters';
 const R = 36;
 const CIRC = 2 * Math.PI * R;
 
+// Semáforo sutil (README: sin rojo/verde): "en línea" es el tono más calmo
+// de la escala de severidad (gris — nada que atender) y "sin conexión" el
+// más severo (naranja oscuro) — misma escala que las colas del panel.
 function Donut({ online, offline }: { online: number; offline: number }) {
   const total = online + offline;
   const offlineLen = total > 0 ? (offline / total) * CIRC : 0;
   const onlineLen = total > 0 ? (online / total) * CIRC : 0;
+  // Mismo origen para ambos arcos: el de ENCIMA debe ser siempre el más
+  // corto o "come" entero al de abajo, dejando un hueco color track en vez
+  // del tono correcto — por eso el orden se decide según cuál es mayor.
+  const [base, top] = offline >= online
+    ? [{ len: offlineLen, color: 'var(--color-severity-critical)' }, { len: onlineLen, color: 'var(--color-severity-ok)' }]
+    : [{ len: onlineLen, color: 'var(--color-severity-ok)' }, { len: offlineLen, color: 'var(--color-severity-critical)' }];
   return (
     <svg width={92} height={92} viewBox="0 0 92 92" className="shrink-0">
       <circle cx={46} cy={46} r={R} fill="none" stroke="var(--color-surface-track)" strokeWidth={14} />
-      {/* Mayoría dibujada primero; la minoría se dibuja encima desde el mismo
-          origen y "come" el inicio del arco mayor — técnica estándar para un
-          donut de exactamente dos categorías. */}
-      <circle cx={46} cy={46} r={R} fill="none" stroke="var(--color-brand-gray)" strokeWidth={14}
-        strokeDasharray={`${offlineLen} ${CIRC}`} transform="rotate(-90 46 46)" />
-      <circle cx={46} cy={46} r={R} fill="none" stroke="var(--color-brand)" strokeWidth={14}
-        strokeDasharray={`${onlineLen} ${CIRC}`} transform="rotate(-90 46 46)" />
+      <circle cx={46} cy={46} r={R} fill="none" stroke={base.color} strokeWidth={14}
+        strokeDasharray={`${base.len} ${CIRC}`} transform="rotate(-90 46 46)" />
+      <circle cx={46} cy={46} r={R} fill="none" stroke={top.color} strokeWidth={14}
+        strokeDasharray={`${top.len} ${CIRC}`} transform="rotate(-90 46 46)" />
     </svg>
   );
 }
@@ -69,8 +75,8 @@ export default function MonitorPresenceCard({
           <>
             <Donut online={online} offline={offline} />
             <div className="min-w-0 flex-1">
-              <LegendRow dot="var(--color-brand)" label="En línea" value={online} />
-              <LegendRow dot="var(--color-brand-gray)" label="Sin conexión" value={offline} />
+              <LegendRow dot="var(--color-severity-ok)" label="En línea" value={online} />
+              <LegendRow dot="var(--color-severity-critical)" label="Sin conexión" value={offline} />
               <div className="flex items-center justify-between gap-2 pt-[7px]">
                 <span className="whitespace-nowrap font-sans text-[10.5px] tracking-[.04em] text-ink-300">TOTAL</span>
                 <span className="shrink-0 font-montserrat text-[13px] font-bold text-ink-900">{fmt(total)}</span>

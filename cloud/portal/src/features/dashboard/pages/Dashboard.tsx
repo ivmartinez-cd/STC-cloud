@@ -130,9 +130,9 @@ const Dashboard = () => {
             error={mainError}
             onRetry={fetchDashboardData}
             cells={[
-              { label: 'Descubiertos hoy', value: d?.today ?? 0 },
-              { label: 'Ayer', value: d?.yesterday ?? 0 },
-              { label: 'Pendientes', value: d?.pendingTotal ?? 0 },
+              { label: 'Descubiertos hoy', value: d?.today ?? 0, severity: 'warning' },
+              { label: 'Ayer', value: d?.yesterday ?? 0, severity: 'warning' },
+              { label: 'Pendientes', value: d?.pendingTotal ?? 0, severity: 'warning' },
             ]}
           />
           <CounterPanel
@@ -153,9 +153,9 @@ const Dashboard = () => {
             error={supplyRequestsError && !supplyRequests}
             onRetry={retrySupplyRequests}
             cells={[
-              { label: 'Pendientes', value: sr.pending ?? 0 },
-              { label: 'Procesadas', value: sr.processed ?? 0 },
-              { label: 'Completadas', value: sr.completed ?? 0 },
+              { label: 'Pendientes', value: sr.pending ?? 0, severity: 'critical' },
+              { label: 'Procesadas', value: sr.processed ?? 0, severity: 'warning' },
+              { label: 'Completadas', value: sr.completed ?? 0, severity: 'ok' },
             ]}
           />
           <CounterPanel
@@ -165,9 +165,9 @@ const Dashboard = () => {
             error={incidentsError && !incidents}
             onRetry={retryIncidents}
             cells={[
-              { label: 'Abiertas', value: inc.open ?? 0 },
-              { label: 'En curso', value: inc.in_progress ?? 0 },
-              { label: 'Cerradas', value: inc.closed ?? 0 },
+              { label: 'Abiertas', value: inc.open ?? 0, severity: 'critical' },
+              { label: 'En curso', value: inc.in_progress ?? 0, severity: 'warning' },
+              { label: 'Cerradas', value: inc.closed ?? 0, severity: 'ok' },
             ]}
           />
         </div>

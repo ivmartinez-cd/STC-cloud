@@ -3,15 +3,26 @@ import { fmt } from '../../../shared/lib/formatters';
 import CardError from './CardError';
 import SkeletonBlock from './Skeleton';
 
-export interface CounterCell { label: string; value: number }
+/** Severidad de la celda en la escala sutil naranja/gris (nunca rojo/verde —
+ * ver `--color-severity-*` en index.css). `undefined` = cifra neutra (la
+ * cola no tiene una noción de "bien/mal" para esa celda, ej. "Movimientos y
+ * cambios"). */
+export type CellSeverity = 'critical' | 'warning' | 'ok';
 
-const VALUE_COLOR = ['text-ink-900', 'text-ink-100', 'text-brand-severe'];
+export interface CounterCell { label: string; value: number; severity?: CellSeverity }
 
-function Cell({ cell, index, alignRight }: { cell: CounterCell; index: number; alignRight: boolean }) {
+const SEVERITY_COLOR: Record<CellSeverity, string> = {
+  critical: 'text-severity-critical',
+  warning: 'text-severity-warning',
+  ok: 'text-severity-ok',
+};
+
+function Cell({ cell, alignRight }: { cell: CounterCell; alignRight: boolean }) {
+  const colorClass = cell.severity ? SEVERITY_COLOR[cell.severity] : 'text-ink-900';
   return (
     <div className={alignRight ? 'text-right' : undefined}>
       <div className="font-sans text-[10.5px] leading-[1.3] text-ink-300">{cell.label}</div>
-      <div className={`font-montserrat text-[20px] font-bold leading-[1.3] tabular-nums ${VALUE_COLOR[index % VALUE_COLOR.length]}`}>
+      <div className={`font-montserrat text-[20px] font-bold leading-[1.3] tabular-nums ${colorClass}`}>
         {fmt(cell.value)}
       </div>
     </div>
@@ -50,7 +61,7 @@ export default function CounterPanel({
                   <SkeletonBlock heightPx={20} widthPct={70} className="mt-1" />
                 </div>
               ))
-            : cells.map((c, i) => <Cell key={c.label} cell={c} index={i} alignRight={i === cells.length - 1 && cells.length > 1} />)}
+            : cells.map((c, i) => <Cell key={c.label} cell={c} alignRight={i === cells.length - 1 && cells.length > 1} />)}
         </div>
       )}
 
