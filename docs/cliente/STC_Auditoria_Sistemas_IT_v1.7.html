@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>STC Cloud - Guía de Auditoría de Sistemas e IT v2.0</title>
+    <title>STC Cloud - Guía de Auditoría de Sistemas e IT v2.1</title>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Inter:wght@400;600&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -321,7 +321,7 @@
             <h1 class="main-title">GUÍA DE AUDITORÍA DE SISTEMAS</h1>
             <h1 class="main-subtitle">SEGURIDAD, CRIPTOGRAFÍA Y ARQUITECTURA</h1>
 
-            <div class="version-tag">Edición de Seguridad IT | v2.0 | Agosto 2026</div>
+            <div class="version-tag">Edición de Seguridad IT | v2.1 | Agosto 2026</div>
         </div>
 
         <div class="footer">
@@ -398,6 +398,10 @@
 
         <div class="note-callout" style="padding: 10px 15px; margin: 15px 0 0 0; font-size: 12px;">
             <strong>Novedades desde v1.7 (mayo 2026):</strong> autenticación WSS por ticket de un solo uso (§7), red de seguridad de rollback en las actualizaciones de firmware del agente (§8), soporte SNMPv3 con credenciales cifradas at-rest (§9), y dos secciones nuevas — acceso remoto controlado a EWS (§10) y política formal de retención de datos (§11).
+        </div>
+
+        <div class="note-callout" style="padding: 10px 15px; margin: 15px 0 0 0; font-size: 12px;">
+            <strong>Novedades desde v2.0 (agosto 2026):</strong> primera capacidad de <strong>escritura SNMP (SNMP SET)</strong> del sistema — reinicio remoto de impresora, ver §9 — hasta ahora todo el tráfico SNMP descrito en esta guía era exclusivamente de lectura (GET); y auditoría de inicio de sesión al portal (éxito y falla, con IP) sumada a `audit_logs`, sin cambiar su política de retención sin purga (§11).
         </div>
 
         <div class="footer">
@@ -748,6 +752,16 @@ monoPages = Number(GXI_BILLING_SIMPLEX_BW_TOTAL_CNT) + Number(GXI_BILLING_DUPLEX
             </tbody>
         </table>
 
+        <h3>Escritura SNMP (SNMP SET): Reinicio Remoto de Impresora</h3>
+        <p>
+            Todos los OIDs de esta sección son de <strong>lectura (GET)</strong>. La única excepción, agregada en esta versión, es un comando administrativo puntual: reiniciar la impresora en sí (no el agente) vía SNMP SET sobre <code>prtGeneralReset</code> (<code>1.3.6.1.2.1.43.5.1.1.3.1</code>, estándar Printer-MIB, RFC 3805), con el valor <code>powerCycleReset</code>.
+        </p>
+        <ul>
+            <li><strong>Sin credencial de escritura separada:</strong> reutiliza el mismo pool de credenciales SNMP de <strong>lectura</strong> ya configurado para el escaneo rutinario — si esa credencial no tiene permiso de escritura en el dispositivo, la operación falla con un error explícito reportado al operador (nunca un éxito silencioso ni un fallo silencioso).</li>
+            <li><strong>Origen exclusivamente administrativo:</strong> sólo se dispara por una acción explícita de un operador del portal (individual o en lote programado) — nunca automático, nunca como parte del ciclo de escaneo rutinario.</li>
+            <li><strong>Auditado:</strong> cada intento queda registrado en `audit_logs`, con el resultado (éxito, sin permiso de escritura, error de dispositivo, o sin respuesta).</li>
+        </ul>
+
         <h3>Soporte SNMPv3: Autenticación y Cifrado de Payload</h3>
         <p>
             Para redes corporativas donde SNMPv2c (comunidades en texto plano) está prohibido por política de seguridad, el agente soporta perfiles SNMPv3 completos por rango de IP o por agente — hasta 8 credenciales configurables, con combinaciones de autenticación (`MD5`/`SHA-2`) y privacidad de payload (`DES`/`AES`). Las credenciales SNMPv3 nunca se almacenan en texto plano: se cifran at-rest con el mismo esquema AES-256-GCM + derivación HKDF-SHA256 utilizado para el resto de los secretos sensibles del sistema, y se transmiten al agente únicamente dentro del canal WSS ya autenticado.
@@ -816,8 +830,12 @@ monoPages = Number(GXI_BILLING_SIMPLEX_BW_TOTAL_CNT) + Number(GXI_BILLING_DUPLEX
                     <td>12 meses</td>
                 </tr>
                 <tr>
-                    <td>Registros de auditoría (`audit_logs`)</td>
+                    <td>Registros de auditoría (`audit_logs`) — incluye intentos de login al portal desde v2.1</td>
                     <td>Sin purga automática</td>
+                </tr>
+                <tr>
+                    <td>Bitácora de entrega de email (`email_log`)</td>
+                    <td>12 meses</td>
                 </tr>
                 <tr>
                     <td>Cola local del agente (SQLite, ver Sección 6)</td>
