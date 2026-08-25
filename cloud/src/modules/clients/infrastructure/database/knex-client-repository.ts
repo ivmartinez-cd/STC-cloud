@@ -97,6 +97,16 @@ export class KnexClientRepository implements ClientRepository {
     return result.rows as ClientUsageMonth[];
   }
 
+  /**
+   * Techo de seguridad (R9 gap analysis vs HP SDS): esta consulta no tenía
+   * NINGÚN límite — a diferencia de `DeviceRepository.list()` (paginado
+   * 25/08/2026) o el viejo `.limit(5000)` que tenía antes. Los 2 consumidores
+   * actuales (`CreateIncidentModal`, `RemoteActions`) son `<select>` chicos,
+   * no tablas — no justifican paginación real todavía, pero un cliente
+   * atípico con cientos de equipos no debería poder tumbar ese selector.
+   * Si algún día un consumidor necesita más de 500, esa es la señal de que
+   * necesita el mismo tratamiento de paginación que ya tiene `/devices`.
+   */
   listDevices(clientId: string, includeDecommissioned: boolean): Promise<ClientDeviceRow[]> {
     return this.db("devices")
       .leftJoin("agents", "devices.agent_id", "agents.id")
@@ -108,6 +118,7 @@ export class KnexClientRepository implements ClientRepository {
         "agents.name as monitor_name",
         "agents.last_seen as monitor_last_seen"
       )
-      .orderBy("devices.brand");
+      .orderBy("devices.brand")
+      .limit(500);
   }
 }

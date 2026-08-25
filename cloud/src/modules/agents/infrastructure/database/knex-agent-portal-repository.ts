@@ -82,6 +82,7 @@ export class KnexAgentPortalRepository implements AgentPortalRepository {
     return row ?? null;
   }
 
+  /** Techo de seguridad (R9 gap analysis vs HP SDS) — no tenía límite alguno; ver el mismo criterio en `KnexClientRepository.listDevices`. */
   listDevices(agentId: string, includeDecommissioned: boolean): Promise<unknown[]> {
     const db = this.db;
     return db("devices").where("devices.agent_id", agentId)
@@ -102,7 +103,8 @@ export class KnexAgentPortalRepository implements AgentPortalRepository {
         END as utilization_pct
       `)
       )
-      .orderBy("devices.brand");
+      .orderBy("devices.brand")
+      .limit(1000);
   }
 
   async snapshotForDelete(id: string): Promise<AgentDeleteSnapshot | null> {

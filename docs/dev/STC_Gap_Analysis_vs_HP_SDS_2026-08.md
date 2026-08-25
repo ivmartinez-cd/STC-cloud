@@ -1948,9 +1948,21 @@ superficies de listado de equipos (`GET /devices` global,
 `GET /clients/:id/devices` por cliente, `GET /agents/:id/devices` por
 monitor), se priorizó la primera: es la que el hallazgo original nombraba
 explícitamente, y ya tenía un techo de seguridad `.limit(5000)` fácil de
-convertir en paginación real. Las otras dos (`/clients/:id/devices` sin
-ningún techo, hoy sólo alimenta selectores chicos; `/agents/:id/devices`,
-alcance típicamente menor) quedan para una pasada aparte.
+convertir en paginación real.
+
+✅ **Techo de seguridad en las otras 2 superficies** (25/08/2026). No
+justificaban paginación real todavía (`/clients/:id/devices` sólo
+alimenta 2 `<select>` chicos — `CreateIncidentModal`, `RemoteActions` —,
+no una tabla; construir un combobox de búsqueda ahí sería sobre-ingeniería
+dado el tamaño real de la flota, ~1,7 equipos por cliente en promedio),
+pero **`/clients/:id/devices` no tenía NINGÚN límite** (peor que el
+`.limit(5000)` que sí tenía `/devices` antes de esta pasada) — un cliente
+atípico con cientos de equipos podía tumbar ese selector. Se agregó
+`.limit(500)` ahí y `.limit(1000)` a `/agents/:id/devices` (alimenta
+`DeviceInventoryTable.tsx`, una tabla real con selección/exportación — más
+candidata a paginación real en el futuro si algún sitio la satura, pero
+eso es un rediseño de UI aparte, no un fix de una línea). CI completo
+32/32 en 0 tras el cambio.
 
 Implementación: `KnexDeviceRepository.list()` pasa de `Promise<DeviceRow[]>`
 a `Promise<{items, total}>`, mismo criterio ya establecido en el propio
