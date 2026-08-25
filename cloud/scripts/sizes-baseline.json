@@ -1,6 +1,7 @@
 {
   "files": {
     "src/api/server.ts": 384,
+    "src/modules/agents/infrastructure/database/knex-agent-portal-repository.ts": 519,
     "src/modules/clients/infrastructure/database/knex-client-repository.ts": 434,
     "src/services/incidentService.ts": 363,
     "src/services/notificationService.ts": 383,
@@ -12,7 +13,8 @@
     "src/tests/rbac.test.ts": 765,
     "src/ws/index.ts": 310,
     "portal/src/features/clients/components/ApiKeysCard.tsx": 341,
-    "portal/src/features/monitors/components/DeviceInventoryTable.tsx": 426,
+    "portal/src/features/monitors/components/ConfigTabPanel.tsx": 315,
+    "portal/src/features/monitors/components/DeviceInventoryTable.tsx": 479,
     "portal/src/features/monitors/components/ReportsTabPanel.tsx": 451,
     "portal/src/features/monitors/components/SnmpCredentialsPanel.tsx": 354,
     "portal/src/features/monitors/pages/RemoteActions.tsx": 313,
@@ -251,6 +253,22 @@
       {
         "name": "listDevices",
         "length": 23
+      },
+      {
+        "name": "computeConnectivityWindow",
+        "length": 32
+      },
+      {
+        "name": "getStats",
+        "length": 37
+      },
+      {
+        "name": "getRecentActivity",
+        "length": 72
+      },
+      {
+        "name": "getLicense",
+        "length": 40
       }
     ],
     "src/modules/agents/presentation/agent-controller.ts": [
@@ -262,10 +280,14 @@
     "src/modules/agents/presentation/agent-wiring.ts": [
       {
         "name": "buildAgentUseCases",
-        "length": 43
+        "length": 48
       }
     ],
     "src/modules/agents/presentation/portal-agent-controller.ts": [
+      {
+        "name": "readHandlers",
+        "length": 28
+      },
       {
         "name": "lifecycleHandlers",
         "length": 38
@@ -278,7 +300,7 @@
     "src/modules/agents/presentation/portal-agent-routes.ts": [
       {
         "name": "registerPortalAgentRoutes",
-        "length": 28
+        "length": 37
       }
     ],
     "src/modules/alerts/domain/services/alert-catalog.ts": [
@@ -601,6 +623,12 @@
         "length": 89
       }
     ],
+    "src/tests/monitorDetail.test.ts": [
+      {
+        "name": "before",
+        "length": 52
+      }
+    ],
     "src/ws/index.ts": [
       {
         "name": "registerWebSocket",
@@ -725,12 +753,8 @@
     ],
     "portal/src/features/clients/components/ClientMonitorsSection.tsx": [
       {
-        "name": "MonitorStatusBadge",
-        "length": 25
-      },
-      {
         "name": "ClientMonitorsSection",
-        "length": 98
+        "length": 96
       }
     ],
     "portal/src/features/clients/components/ClientProfileCard.tsx": [
@@ -1070,11 +1094,17 @@
     "portal/src/features/monitors/components/ConfigTabPanel.tsx": [
       {
         "name": "ConfigTabPanel",
-        "length": 255
+        "length": 279
       },
       {
         "name": "handleSubmit",
         "length": 37
+      }
+    ],
+    "portal/src/features/monitors/components/ConnectivityStrip.tsx": [
+      {
+        "name": "ConnectivityStrip",
+        "length": 61
       }
     ],
     "portal/src/features/monitors/components/DeviceInventoryTable.tsx": [
@@ -1084,21 +1114,17 @@
       },
       {
         "name": "DeviceInventoryTable",
-        "length": 367
+        "length": 313
       },
       {
-        "name": "handleDeleteOffline",
+        "name": "handleApproveDiscovered",
         "length": 21
-      },
-      {
-        "name": "anonymous",
-        "length": 163
       }
     ],
     "portal/src/features/monitors/components/DeviceSummaryCard.tsx": [
       {
         "name": "DeviceSummaryCard",
-        "length": 64
+        "length": 66
       }
     ],
     "portal/src/features/monitors/components/IpRangesEditor.tsx": [
@@ -1115,6 +1141,12 @@
         "length": 44
       }
     ],
+    "portal/src/features/monitors/components/LicenseCard.tsx": [
+      {
+        "name": "LicenseCard",
+        "length": 118
+      }
+    ],
     "portal/src/features/monitors/components/MonitorConfigModal.tsx": [
       {
         "name": "MonitorConfigModal",
@@ -1125,16 +1157,46 @@
         "length": 21
       }
     ],
+    "portal/src/features/monitors/components/MonitorDetailTabs.tsx": [
+      {
+        "name": "MonitorDetailTabs",
+        "length": 27
+      }
+    ],
+    "portal/src/features/monitors/components/MonitorMetricsStrip.tsx": [
+      {
+        "name": "MonitorMetricsStrip",
+        "length": 53
+      }
+    ],
+    "portal/src/features/monitors/components/MonitorProfileCard.tsx": [
+      {
+        "name": "MonitorProfileCard",
+        "length": 63
+      }
+    ],
     "portal/src/features/monitors/components/MonitorRegenKeyModal.tsx": [
       {
         "name": "MonitorRegenKeyModal",
         "length": 45
       }
     ],
+    "portal/src/features/monitors/components/MonitorSpecsCard.tsx": [
+      {
+        "name": "MonitorSpecsCard",
+        "length": 43
+      }
+    ],
     "portal/src/features/monitors/components/MonitorsTable.tsx": [
       {
         "name": "MonitorsTable",
         "length": 131
+      }
+    ],
+    "portal/src/features/monitors/components/RecentActivityCard.tsx": [
+      {
+        "name": "RecentActivityCard",
+        "length": 60
       }
     ],
     "portal/src/features/monitors/components/RegisterMonitorPanel.tsx": [
@@ -1240,7 +1302,23 @@
     "portal/src/features/monitors/hooks/useMonitorDetail.ts": [
       {
         "name": "useMonitorDetail",
-        "length": 139
+        "length": 160
+      }
+    ],
+    "portal/src/features/monitors/hooks/useMonitorDeviceDirectory.ts": [
+      {
+        "name": "useDeviceFilters",
+        "length": 26
+      },
+      {
+        "name": "useDeviceRows",
+        "length": 31
+      }
+    ],
+    "portal/src/features/monitors/hooks/useMonitorOverview.ts": [
+      {
+        "name": "usePolledResource",
+        "length": 24
       }
     ],
     "portal/src/features/monitors/pages/Agents.tsx": [
@@ -1252,7 +1330,7 @@
     "portal/src/features/monitors/pages/MonitorDetail.tsx": [
       {
         "name": "MonitorDetail",
-        "length": 224
+        "length": 215
       }
     ],
     "portal/src/features/monitors/pages/Monitors.tsx": [

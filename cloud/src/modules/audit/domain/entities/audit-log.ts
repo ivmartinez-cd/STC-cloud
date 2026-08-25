@@ -1,4 +1,4 @@
-import type { AuditCategory } from "../services/audit-action-catalog";
+import type { AuditCategory } from "../../../../shared/domain/audit-action-catalog";
 
 export type AuditTargetKind = "device" | "agent" | "client";
 

@@ -119,6 +119,15 @@ export function registerPortalAgentRoutes(fastify: FastifyInstance, db: Knex, re
   fastify.get("/api/v1/agents", { ...auth, handler: ctrl.listAgents });
   fastify.get("/api/v1/agents/:id", { ...auth, handler: ctrl.getAgent });
   fastify.get("/api/v1/agents/:id/devices", { ...auth, handler: ctrl.getAgentDevices });
+  // Handoff hifi "Monitor — detalle" (25/08/2026): tira de 6 métricas, conectividad
+  // 30 días, licencia y tabla de equipos paginada/filtrada/ordenada. `activity` queda
+  // deliberadamente FUERA de `CLIENT_VIEWER_ROUTES` (rolePolicy.ts) — expone quién
+  // hizo qué (mismo criterio que excluir `/agents/:id/logs`).
+  fastify.get("/api/v1/agents/:id/stats", { ...auth, handler: ctrl.getAgentStats });
+  fastify.get("/api/v1/agents/:id/connectivity", { ...auth, handler: ctrl.getAgentConnectivity });
+  fastify.get("/api/v1/agents/:id/activity", { ...auth, handler: ctrl.getAgentActivity });
+  fastify.get("/api/v1/agents/:id/license", { ...auth, handler: ctrl.getAgentLicense });
+  fastify.get("/api/v1/agents/:id/devices/directory", { ...auth, handler: ctrl.listAgentDeviceDirectory });
   fastify.post("/api/v1/agents", { ...auth, schema: createAgentSchema, handler: ctrl.createAgent });
   fastify.delete("/api/v1/agents/:id", { ...auth, handler: ctrl.deleteAgent });
   fastify.post("/api/v1/agents/:id/revoke", { ...auth, handler: ctrl.revokeAgent });

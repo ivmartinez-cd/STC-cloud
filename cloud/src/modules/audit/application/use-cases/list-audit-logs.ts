@@ -1,6 +1,6 @@
 import type { AuditLogEntry } from "../../domain/entities/audit-log";
 import type { AuditLogFilter, AuditLogRepository } from "../../domain/repositories/audit-log-repository";
-import { auditActionMeta, listAuditActionCatalog } from "../../domain/services/audit-action-catalog";
+import { auditActionMeta, listAuditActionCatalog } from "../../../../shared/domain/audit-action-catalog";
 import type { ListAuditLogsInput } from "../dtos/audit-dtos";
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;

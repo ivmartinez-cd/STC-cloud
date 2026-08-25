@@ -39,6 +39,18 @@ function readHandlers(uc: AgentUseCases) {
     listAgents: (request: Req) => uc.listAgents.execute(getScope(request)),
     getAgent: (request: Req, reply: FastifyReply) => replyingAgentErrors(reply, () => uc.getAgentDetail.execute(idOf(request), getScope(request))),
     getAgentDevices: (request: Req) => uc.getAgentDevices.execute(idOf(request), (request.query as { include?: string }).include),
+    getAgentStats: (request: Req) => uc.getAgentStats.execute(idOf(request)),
+    getAgentConnectivity: (request: Req) => uc.getAgentConnectivity.execute(idOf(request)),
+    getAgentActivity: (request: Req) => uc.getAgentActivity.execute(idOf(request), Number((request.query as { limit?: string }).limit) || undefined),
+    getAgentLicense: (request: Req, reply: FastifyReply) => replyingAgentErrors(reply, () => uc.getAgentLicense.execute(idOf(request))),
+    listAgentDeviceDirectory: (request: Req) => {
+      const q = request.query as { q?: string; segment?: string; sort?: string; dir?: string; limit?: string; offset?: string };
+      return uc.listAgentDeviceDirectory.execute({
+        agentId: idOf(request), q: q.q, segment: q.segment, sortField: q.sort, sortDir: q.dir,
+        limit: q.limit !== undefined ? Number(q.limit) : undefined,
+        offset: q.offset !== undefined ? Number(q.offset) : undefined,
+      });
+    },
     getLogs: (request: Req) => {
       const { limit } = request.query as { limit?: string };
       return uc.logs.list(idOf(request), limit ? parseInt(limit, 10) : 50);

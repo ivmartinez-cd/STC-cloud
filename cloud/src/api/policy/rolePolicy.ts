@@ -63,6 +63,13 @@ export const CLIENT_VIEWER_ROUTES: ReadonlySet<string> = new Set([
   "GET /api/v1/agents",
   "GET /api/v1/agents/:id",
   "GET /api/v1/agents/:id/devices",
+  // Handoff hifi "Monitor — detalle" (25/08/2026) — lecturas scopeadas, mismo
+  // criterio que las de arriba. `/agents/:id/activity` queda deliberadamente
+  // afuera (expone quién hizo qué — mismo motivo que excluir `logs`/`config`).
+  "GET /api/v1/agents/:id/stats",
+  "GET /api/v1/agents/:id/connectivity",
+  "GET /api/v1/agents/:id/license",
+  "GET /api/v1/agents/:id/devices/directory",
   "GET /api/v1/devices",
   "GET /api/v1/devices/:id",
   "GET /api/v1/devices/:id/readings",

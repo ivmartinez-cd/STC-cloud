@@ -9,6 +9,9 @@ import {
   ActivateAgentUseCase, CreateActivationKeyUseCase, RefreshAgentTokenUseCase, RegenerateActivationKeyUseCase, RevokeTokenUseCase,
 } from "../application/use-cases/lifecycle-use-cases";
 import { AgentLogsUseCase } from "../application/use-cases/log-use-cases";
+import {
+  GetAgentActivityUseCase, GetAgentConnectivityUseCase, GetAgentLicenseUseCase, GetAgentStatsUseCase, ListAgentDeviceDirectoryUseCase,
+} from "../application/use-cases/monitor-detail-use-cases";
 import { DeleteAgentUseCase, GetAgentDetailUseCase, GetAgentDevicesUseCase, ListAgentsUseCase } from "../application/use-cases/portal-agent-use-cases";
 import { ProcessReadingUseCase } from "../application/use-cases/process-reading";
 import { RegisterDevicesFromAgentUseCase } from "../application/use-cases/register-devices";
@@ -66,6 +69,11 @@ export function buildAgentUseCases(db: Knex, redis?: RedisClient) {
     listAgents: new ListAgentsUseCase(portal),
     getAgentDetail: new GetAgentDetailUseCase(portal, (id) => maskedCredentials.execute(id)),
     getAgentDevices: new GetAgentDevicesUseCase(portal),
+    getAgentStats: new GetAgentStatsUseCase(portal),
+    getAgentConnectivity: new GetAgentConnectivityUseCase(portal),
+    getAgentActivity: new GetAgentActivityUseCase(portal),
+    getAgentLicense: new GetAgentLicenseUseCase(portal),
+    listAgentDeviceDirectory: new ListAgentDeviceDirectoryUseCase(portal),
     deleteAgent: new DeleteAgentUseCase(new KnexAgentUnitOfWork(db)),
     sendCommand: new SendAgentCommandUseCase(commands, link, audit),
     triggerScan: new TriggerScanUseCase(commands, link),

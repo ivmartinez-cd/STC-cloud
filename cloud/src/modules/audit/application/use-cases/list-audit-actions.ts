@@ -1,6 +1,6 @@
 import type { AuditActionSummary } from "../../domain/entities/audit-log";
 import type { AuditLogRepository } from "../../domain/repositories/audit-log-repository";
-import { auditActionMeta, listAuditActionCatalog } from "../../domain/services/audit-action-catalog";
+import { auditActionMeta, listAuditActionCatalog } from "../../../../shared/domain/audit-action-catalog";
 
 const NINETY_DAYS_MS = 90 * 24 * 60 * 60 * 1000;
 const CACHE_TTL_MS = 60_000;
