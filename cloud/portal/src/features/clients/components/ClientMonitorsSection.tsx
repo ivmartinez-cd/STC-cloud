@@ -1,44 +1,60 @@
-import { Radio, Plus, Clock, Trash2 } from 'lucide-react';
+import { Radio, Trash2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import ZoneLabel from './ZoneLabel';
 import { OFFLINE_THRESHOLD_MS } from '../../../shared/lib/constants';
 import type { Monitor } from '../../../shared/types/monitor';
 
-function MonitorStatusBadge({ status, last_seen, now }: { status: string; last_seen: string | null; now: number }) {
-  const isOnline = status === 'active'
-    && last_seen !== null
-    && (now - new Date(last_seen).getTime() <= OFFLINE_THRESHOLD_MS);
+const GRID_COLS = 'grid-cols-[minmax(240px,1fr)_150px_170px_130px_50px]';
 
-  if (status === 'active' && isOnline) {
-    return (
-      <span className="inline-flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-wider text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full">
-        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> Activo
-      </span>
-    );
+type Severity = 'ok' | 'warning' | 'critical';
+
+const CHIP_STYLES: Record<Severity, string> = {
+  ok: 'bg-surface-avatar text-ink-650',
+  warning: 'bg-brand-soft text-brand-accent',
+  critical: 'bg-severity-critical/10 text-severity-critical',
+};
+const DOT_STYLES: Record<Severity, string> = {
+  ok: 'bg-severity-ok',
+  warning: 'bg-severity-warning',
+  critical: 'bg-severity-critical',
+};
+
+/** Mapea estado del monitor a severidad + rótulo — nunca emerald/amber/rose,
+ * sólo la escala `--color-severity-*` (naranja/gris): en línea = ok, sin
+ * contacto/pendiente = warning, offline = critical. */
+function monitorSeverity(status: string, isOnline: boolean): { level: Severity; label: string } {
+  if (status === 'active' && isOnline) return { level: 'ok', label: 'En línea' };
+  if ((status === 'active' && !isOnline) || status === 'pending') {
+    return { level: 'warning', label: status === 'pending' ? 'Pendiente' : 'Sin contacto' };
   }
-  if (status === 'active' && !isOnline) {
-    return (
-      <span className="inline-flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-wider text-amber-600 bg-amber-50 px-2.5 py-1 rounded-full">
-        <span className="w-1.5 h-1.5 rounded-full bg-amber-400" /> Sin Contacto
-      </span>
-    );
-  }
+  return { level: 'critical', label: 'Offline' };
+}
+
+/** Chip de estado del monitor — mismo patrón que `EstadoChip` de
+ * `ClientDevicesTable`/`ClientsDirectoryTable`, extendido a 3 niveles. */
+function MonitorStatusChip({ status, last_seen, now }: { status: string; last_seen: string | null; now: number }) {
+  const isOnline = status === 'active' && last_seen !== null && (now - new Date(last_seen).getTime() <= OFFLINE_THRESHOLD_MS);
+  const { level, label } = monitorSeverity(status, isOnline);
   return (
-    <span className="inline-flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-wider text-rose-600 bg-rose-50 px-2.5 py-1 rounded-full">
-      <span className="w-1.5 h-1.5 rounded-full bg-rose-500" /> {status === 'pending' ? 'Pendiente' : 'Offline'}
+    <span className={`inline-flex items-center gap-[6px] justify-self-start rounded-[2px] px-[9px] py-1 font-montserrat text-[9.5px] font-semibold uppercase tracking-[.08em] ${CHIP_STYLES[level]}`}>
+      <span className={`block h-1.5 w-1.5 rounded-full ${DOT_STYLES[level]}`} /> {label}
     </span>
   );
 }
 
-function timeAgo(dateStr: string | null, now: number): string {
-  if (!dateStr) return 'Nunca';
-  const diff = now - new Date(dateStr).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return 'Ahora';
-  if (mins < 60) return `hace ${mins}m`;
-  const hrs = Math.floor(mins / 60);
-  return hrs < 24 ? `hace ${hrs}h` : `hace ${Math.floor(hrs / 24)}d`;
+/** "hace N min/h/d" — mismo formato que `formatLastReport` de `ClientDevicesTable`. */
+function formatLastSeen(iso: string | null, now: number): string {
+  if (!iso) return 'nunca';
+  const min = Math.max(0, Math.round((now - new Date(iso).getTime()) / 60_000));
+  if (min < 1) return 'hace un momento';
+  if (min < 60) return `hace ${min} min`;
+  const hrs = Math.round(min / 60);
+  return hrs < 24 ? `hace ${hrs} h` : `hace ${Math.round(hrs / 24)} d`;
 }
 
+/** Zona "Monitores instalados" (handoff hifi "Cliente — detalle", 25/08/2026) —
+ * los nodos DCA del cliente, no confundir con `ClientDevicesSection` (equipos/
+ * impresoras) que se muestra arriba en la misma página. */
 export default function ClientMonitorsSection({
   monitors,
   now,
@@ -53,87 +69,85 @@ export default function ClientMonitorsSection({
   onDeleteClick: (monitor: { id: string; name: string }) => void;
 }) {
   return (
-    <div className="space-y-6 pt-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-black text-[#1a2333] tracking-tight flex items-center gap-4">
-          <div className="p-2 bg-brand/10 text-brand rounded-xl shadow-sm"><Radio size={20} /></div>
-          Infraestructura de Monitoreo
-          <span className="ml-2 px-2.5 py-0.5 bg-slate-100 text-slate-500 text-[10px] font-extrabold rounded-full tracking-widest">
-            {monitors.length} NODOS
-          </span>
-        </h2>
+    <section className="space-y-3.5">
+      <div className="flex flex-wrap items-end justify-between gap-3.5">
+        <ZoneLabel text={`Monitores instalados · ${monitors.length} nodos`} lineColorClass="bg-brand-gray" />
         {!isReadOnlyViewer && (
           <button
+            type="button"
             onClick={onCreateClick}
-            className="bg-brand hover:bg-brand-hover text-white px-6 py-3 rounded-2xl flex items-center gap-3 text-sm font-extrabold shadow-lg shadow-brand/10 transition-all active:scale-95 group"
+            className="rounded-[3px] bg-brand px-3.5 py-2.5 font-montserrat text-[10px] font-semibold uppercase tracking-[.08em] text-white transition-colors duration-150 ease-in-out hover:bg-brand-severe"
           >
-            <Plus size={20} className="group-hover:rotate-90 transition-transform duration-300" />
-            Registrar Nuevo Monitor
+            + Registrar monitor
           </button>
         )}
       </div>
 
-      <div className="cd-panel overflow-hidden animate-in slide-in-from-bottom-4 duration-500">
-        {monitors.length === 0 ? (
-          <div className="text-center py-24 bg-white">
-            <Radio size={64} className="mx-auto mb-6 text-slate-50" />
-            <p className="text-slate-400 font-extrabold uppercase tracking-widest text-xs">Sin monitores configurados</p>
-          </div>
-        ) : (
-          <table className="cd-table">
-            <thead>
-              <tr>
-                <th>Identificador del Nodo</th>
-                <th>Estado</th>
-                <th className="hidden md:table-cell">Última Actividad</th>
-                <th className="text-center">Dispositivos</th>
-                <th className="hidden lg:table-cell">Intervalo</th>
-                <th className="text-right">Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {monitors.map(m => (
-                <tr key={m.id} className="hover:bg-slate-50/50 transition-colors">
-                  <td>
-                    <Link to={`/monitors/${m.id}`} className="flex items-center gap-4 group/m">
-                      <div className="p-3 bg-slate-50 rounded-2xl group-hover/m:bg-brand/10 transition-colors">
-                        <Radio size={16} className="text-slate-400 group-hover/m:text-brand" />
-                      </div>
-                      <div>
-                        <p className="font-extrabold text-[#1a2333] group-hover/m:text-brand transition-colors">{m.name}</p>
-                        {m.host_name && <p className="text-[10px] font-bold text-slate-400 tracking-tighter font-mono">{m.host_name}</p>}
-                      </div>
-                    </Link>
-                  </td>
-                  <td><MonitorStatusBadge status={m.status} last_seen={m.last_seen} now={now} /></td>
-                  <td className="hidden md:table-cell">
-                    <div className="flex items-center gap-2 text-slate-500 font-bold text-xs">
-                      <Clock size={12} className="text-slate-400" /> {timeAgo(m.last_seen, now)}
+      <div className="rounded-[5px] border border-line-100 bg-white">
+        <div className="overflow-x-auto">
+          <div className="min-w-[760px]" role="table" aria-label="Monitores instalados">
+            <div role="row" className={`grid ${GRID_COLS} items-center gap-x-[14px] border-b border-line-100 bg-surface-table-head px-5 py-3`}>
+              <div role="columnheader" className="font-montserrat text-[8.5px] font-bold uppercase tracking-[.14em] text-ink-300">NODO</div>
+              <div role="columnheader" className="font-montserrat text-[8.5px] font-bold uppercase tracking-[.14em] text-ink-300">ESTADO</div>
+              <div role="columnheader" className="text-right font-montserrat text-[8.5px] font-bold uppercase tracking-[.14em] text-ink-300">ÚLTIMA ACTIVIDAD</div>
+              <div role="columnheader" className="text-right font-montserrat text-[8.5px] font-bold uppercase tracking-[.14em] text-ink-300">DISPOSITIVOS</div>
+              <div role="columnheader" />
+            </div>
+
+            {monitors.length === 0 && (
+              <div className="flex flex-col items-center justify-center gap-1.5 py-20 text-center">
+                <span className="font-sans text-[12.5px] text-ink-300">Sin monitores configurados</span>
+              </div>
+            )}
+
+            {monitors.map((m) => (
+              <div
+                key={m.id}
+                role="row"
+                className={`grid ${GRID_COLS} min-h-[54px] items-center gap-x-[14px] border-b border-line-200 px-5 py-[11px] transition-colors duration-150 ease-in-out hover:bg-surface-hover`}
+              >
+                <div role="cell" className="min-w-0">
+                  <Link to={`/monitors/${m.id}`} className="group/m flex min-w-0 items-center gap-3">
+                    <span className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-[3px] border border-line-avatar bg-surface-avatar text-ink-400 transition-colors duration-150 ease-in-out group-hover/m:border-brand group-hover/m:text-brand">
+                      <Radio size={14} />
+                    </span>
+                    <div className="min-w-0">
+                      <div className="truncate font-sans text-[12.5px] font-semibold text-ink-900 transition-colors duration-150 ease-in-out group-hover/m:text-brand-accent">{m.name}</div>
+                      {m.host_name && <div className="truncate font-sans text-[11px] text-ink-300">{m.host_name}</div>}
                     </div>
-                  </td>
-                  <td className="text-center">
-                    <Link to={`/monitors/${m.id}?tab=devices`}
-                      className="inline-flex items-center justify-center min-w-[40px] h-10 px-3 rounded-2xl bg-slate-100 text-sm font-black text-brand hover:bg-brand hover:text-white hover:shadow-lg hover:shadow-brand/20 transition-all active:scale-90">
-                      {m.device_count}
-                    </Link>
-                  </td>
-                  <td className="text-right">
-                    {!isReadOnlyViewer && (
-                      <button
-                        onClick={() => onDeleteClick({ id: m.id, name: m.name })}
-                        className="p-3 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-2xl transition-all active:scale-90"
-                        title="Eliminar Monitor"
-                      >
-                        <Trash2 size={18} />
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+                  </Link>
+                </div>
+
+                <MonitorStatusChip status={m.status} last_seen={m.last_seen} now={now} />
+
+                <div className="text-right font-sans text-[12px] text-ink-400">{formatLastSeen(m.last_seen, now)}</div>
+
+                <div className="flex justify-end">
+                  <Link
+                    to={`/monitors/${m.id}?tab=devices`}
+                    className="inline-flex h-[26px] min-w-[36px] items-center justify-center rounded-[3px] border border-line-avatar bg-surface-avatar px-2 font-montserrat text-[11.5px] font-semibold tabular-nums text-ink-600 transition-colors duration-150 ease-in-out hover:border-brand hover:text-brand-accent"
+                  >
+                    {m.device_count}
+                  </Link>
+                </div>
+
+                <div className="flex justify-end">
+                  {!isReadOnlyViewer && (
+                    <button
+                      type="button"
+                      onClick={() => onDeleteClick({ id: m.id, name: m.name })}
+                      title="Eliminar monitor"
+                      className="flex h-[26px] w-[26px] items-center justify-center rounded-[3px] border border-line-avatar text-ink-300 transition-colors duration-150 ease-in-out hover:border-severity-critical hover:text-severity-critical"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
-    </div>
+    </section>
   );
 }
