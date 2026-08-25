@@ -84,7 +84,7 @@ const Layout = () => {
     <div className="h-screen overflow-hidden bg-[#f8fafc] text-[#1a2333] font-sans flex">
       {isMobileMenuOpen && <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[60] md:hidden" onClick={closeMobile} />}
       <Sidebar isHovered={isHovered} isMobileMenuOpen={isMobileMenuOpen} onHover={setIsHovered} onCloseMobile={closeMobile} />
-      <div className={`flex flex-col flex-1 h-screen min-h-0 transition-all duration-500 ease-in-out md:pl-20 ${isHovered ? 'md:pl-72' : ''}`}>
+      <div className={`flex flex-col flex-1 min-w-0 h-screen min-h-0 transition-all duration-500 ease-in-out md:pl-20 ${isHovered ? 'md:pl-72' : ''}`}>
         <TopHeader onToggleMobile={() => setIsMobileMenuOpen((v) => !v)} />
         <main className="flex-1 min-h-0 overflow-y-auto animate-fade-in bg-[#f8fafc]">
           <div className="max-w-[1400px] mx-auto p-4 md:p-10 xl:h-full xl:flex xl:flex-col">
