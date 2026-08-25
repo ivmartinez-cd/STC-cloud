@@ -12,6 +12,34 @@
   --color-brand-muted: #b5b5b5;
   --color-primary: #f7941d;
 
+  /* Paleta exacta del handoff hifi "Panel de Control" (25/08/2026) — extiende
+     la paleta institucional de arriba con los tonos intermedios de severidad,
+     texto y superficies que pide ese rediseño. Sólo naranja + grises (nunca
+     violeta/DaaS, celeste/Signage ni magenta: esas son otras líneas). */
+  --color-brand-severe: #c6710a;      /* naranja oscuro — severidad/atención */
+  --color-brand-accent: #b4700b;      /* texto de acento sobre fondo suave */
+  --color-brand-soft: #fdf4e9;        /* fondo suave (chips) */
+  --color-brand-light: #fbc486;       /* categorías secundarias en barras/donuts */
+  --color-ink-900: #2e3033;           /* texto base (títulos) */
+  --color-ink-700: #3c4144;           /* texto de fila */
+  --color-ink-600: #4b5053;           /* texto de botón / título de sección */
+  --color-ink-500: #9ba0a2;           /* gris medio (series neutras secundarias) */
+  --color-ink-400: #8a9094;           /* texto secundario */
+  --color-ink-300: #9fa4a7;           /* labels en mayúscula */
+  --color-ink-200: #b4b9bb;           /* índices (top cuentas) */
+  --color-ink-100: #6c7275;           /* columna secundaria (tarjetas de cola) */
+  --color-line-100: #e2e6e6;          /* borde de tarjeta */
+  --color-line-150: #edefef;          /* borde de cabecera interna */
+  --color-line-200: #f3f5f5;          /* borde de fila */
+  --color-line-300: #d5d9da;          /* borde de botón secundario */
+  --color-line-400: #e5e8e8;          /* gap de la tira de KPIs */
+  --color-line-hover: #c4c9ca;        /* hover borde botón secundario */
+  --color-surface-page: #f7f8f8;      /* fondo del panel de control */
+  --color-surface-track: #f0f2f2;     /* track de barra */
+  --color-surface-track-alt: #dde1e2; /* resto en barra apilada */
+  --color-surface-hover: #fcfcfc;     /* hover de tarjeta clicable */
+  --color-surface-btn-hover: #fbfbfb; /* hover botón secundario */
+
   /* Tipografía de "Manual de marca.pdf": Montserrat (Título) + Source Sans Pro (Cuerpo). */
   --font-sans: 'Source Sans 3', 'Source Sans Pro', system-ui, -apple-system, sans-serif;
   --font-heading: 'Montserrat', sans-serif;

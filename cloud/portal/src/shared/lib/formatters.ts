@@ -110,3 +110,9 @@ export function pctOf(part: number, total: number): number {
 export function fmtPct(part: number, total: number): string {
   return `${pctOf(part, total).toLocaleString('es-AR', { maximumFractionDigits: 1 })}%`;
 }
+
+/** Formateo `es-AR` (punto de miles) — helper reusado por todo el Panel de
+ * Control hifi (README: "Números: locale es-AR... usar en toda cifra"). */
+export function fmt(n: number): string {
+  return n.toLocaleString('es-AR');
+}

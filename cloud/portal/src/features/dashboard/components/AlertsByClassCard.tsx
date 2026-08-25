@@ -1,59 +1,114 @@
 import { Link } from 'react-router-dom';
 import type { DashboardData } from '../../../shared/types/monitor';
 import SdsPanel from './SdsPanel';
+import CardError from './CardError';
+import CardEmpty from './CardEmpty';
+import SkeletonBlock from './Skeleton';
+import MiniBar from './MiniBar';
+import { fmt } from '../../../shared/lib/formatters';
 
-// Mismo criterio de color por familia que `Alerts.tsx` (Fase 2): rojo = ya
-// pasó algo, ámbar = por pasar, slate = informativo, azul = disponibilidad.
-const CLASS_DOT: Record<string, string> = {
-  consumable_out: 'bg-rose-500', system_failure: 'bg-rose-500',
-  jam: 'bg-rose-500', subunit_out: 'bg-rose-500', media_out: 'bg-rose-500',
-  consumable_low: 'bg-amber-500', system_warning: 'bg-amber-500',
-  user_action: 'bg-amber-500', subunit_low: 'bg-amber-500', media_low: 'bg-amber-500',
-  information: 'bg-slate-400', system_change: 'bg-slate-400', other: 'bg-slate-400',
-  availability: 'bg-blue-500',
+type AlertRow = NonNullable<DashboardData['alertsByClass']>[number];
+
+// Paleta sólo institucional (naranja + grises — README): severidad se
+// resuelve con tono, nunca con rojo/verde. Mismo agrupamiento semántico que
+// tenía la versión anterior (crítico / atención / informativo / disponible),
+// re-mapeado a los 5 tonos que pide el handoff hifi.
+const CLASS_COLOR: Record<string, string> = {
+  availability: 'var(--color-brand)',
+  system_change: 'var(--color-brand-gray)',
+  consumable_out: 'var(--color-brand-severe)',
+  system_failure: 'var(--color-brand-severe)',
+  jam: 'var(--color-brand-severe)',
+  subunit_out: 'var(--color-brand-severe)',
+  media_out: 'var(--color-brand-severe)',
+  consumable_low: 'var(--color-brand-light)',
+  system_warning: 'var(--color-brand-light)',
+  user_action: 'var(--color-brand-light)',
+  subunit_low: 'var(--color-brand-light)',
+  media_low: 'var(--color-brand-light)',
+  information: 'var(--color-ink-500)',
+  other: 'var(--color-ink-500)',
 };
 
-/** "Resumen de alertas actuales por clase de alerta" del SDS: tabla
- * horizontal, una columna por clase + Total. Cada número es un deep-link a
- * `/alerts` ya filtrado por esa clase. */
-export default function AlertsByClassCard({ alertsByClass }: { alertsByClass: DashboardData['alertsByClass'] | undefined }) {
-  const rows = alertsByClass ?? [];
-  const total = rows.reduce((acc, r) => acc + r.count, 0);
+function classColor(alertClass: string): string {
+  return CLASS_COLOR[alertClass] ?? 'var(--color-ink-500)';
+}
+
+function Row({ row, max }: { row: AlertRow; max: number }) {
+  const pct = Math.max(1.2, max > 0 ? (row.count / max) * 100 : 0);
   return (
-    <SdsPanel title="Resumen de alertas actuales por clase de alerta" to="/alerts?resolved=false">
-      {rows.length === 0 ? (
-        <p className="px-3 py-2 text-[10px] font-bold text-emerald-600">✔ Sin alertas activas.</p>
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse">
-            <thead>
-              <tr className="bg-slate-50 border-b border-slate-100">
-                <th className="w-12" />
-                {rows.map((r) => (
-                  <th key={r.alert_class} className="px-1.5 py-1 text-[9px] font-black text-slate-500 uppercase tracking-wider text-center leading-tight align-top min-w-[64px]">
-                    <span className={`block w-1.5 h-1.5 rounded-full mx-auto mb-0.5 ${CLASS_DOT[r.alert_class] ?? 'bg-slate-300'}`} />
-                    {r.label}
-                  </th>
-                ))}
-                <th className="px-2 py-1 text-[9px] font-black text-slate-700 uppercase tracking-wider text-center">Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td className="px-2 py-1.5 text-[9px] font-black text-slate-500 uppercase tracking-widest">Total</td>
-                {rows.map((r) => (
-                  <td key={r.alert_class} className="px-2 py-1.5 text-center">
-                    <Link to={`/alerts?class=${r.alert_class}&resolved=false`} className="text-[13px] font-black text-[#1a2333] tabular-nums hover:underline">
-                      {r.count.toLocaleString('es-AR')}
-                    </Link>
-                  </td>
-                ))}
-                <td className="px-2 py-1.5 text-center text-[13px] font-black text-brand tabular-nums">{total.toLocaleString('es-AR')}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      )}
+    <Link
+      to={`/alerts?class=${row.alert_class}&resolved=false`}
+      className="grid grid-cols-[8px_158px_1fr_50px] items-center gap-[11px] border-b border-line-200 py-2 transition-colors duration-[120ms] ease-in-out hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-2"
+    >
+      <span className="block h-[7px] w-[7px] rounded-full" style={{ background: classColor(row.alert_class) }} />
+      <span className="truncate font-sans text-[12.5px] leading-[1.2] text-ink-700">{row.label}</span>
+      <span className="block h-1.5 rounded-[3px] bg-surface-track">
+        <span className="block h-full rounded-[3px]" style={{ width: `${pct}%`, background: classColor(row.alert_class) }} />
+      </span>
+      <span className="text-right font-montserrat text-[12.5px] font-semibold tabular-nums text-ink-900">{fmt(row.count)}</span>
+    </Link>
+  );
+}
+
+function RowSkeleton({ i }: { i: number }) {
+  return (
+    <div className="grid grid-cols-[8px_158px_1fr_50px] items-center gap-[11px] border-b border-line-200 py-2">
+      <SkeletonBlock heightPx={7} widthPct={100} className="rounded-full" />
+      <SkeletonBlock heightPx={10} widthPct={70 - (i % 3) * 8} />
+      <MiniBar pct={0} height={6} radius={3} />
+      <SkeletonBlock heightPx={10} widthPct={80} className="ml-auto" />
+    </div>
+  );
+}
+
+/** "Alertas actuales por clase" del handoff hifi: dos columnas de filas
+ * ordenadas de mayor a menor, barra escalada sobre el máximo, punto de color
+ * institucional por clase. Reemplaza la tabla horizontal anterior. */
+export default function AlertsByClassCard({
+  alertsByClass, loading, error, onRetry,
+}: {
+  alertsByClass: DashboardData['alertsByClass'] | undefined;
+  loading?: boolean;
+  error?: boolean;
+  onRetry?: () => void;
+}) {
+  const rows = [...(alertsByClass ?? [])].sort((a, b) => b.count - a.count);
+  const total = rows.reduce((acc, r) => acc + r.count, 0);
+  const max = rows[0]?.count ?? 0;
+  const half = Math.ceil(rows.length / 2);
+  const colA = rows.slice(0, half);
+  const colB = rows.slice(half);
+
+  return (
+    <SdsPanel
+      title="Alertas actuales por clase"
+      headerRight={
+        !loading && !error ? (
+          <span className="flex items-baseline gap-2">
+            <span className="font-sans text-[11px] text-ink-300">TOTAL</span>
+            <span className="font-montserrat text-[15px] font-bold tabular-nums text-brand-severe">{fmt(total)}</span>
+          </span>
+        ) : undefined
+      }
+    >
+      <div className="px-5 pb-4 pt-3">
+        {error ? (
+          <CardError onRetry={onRetry} />
+        ) : loading ? (
+          <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
+            <div>{Array.from({ length: 6 }, (_, i) => <RowSkeleton key={i} i={i} />)}</div>
+            <div>{Array.from({ length: 6 }, (_, i) => <RowSkeleton key={i} i={i} />)}</div>
+          </div>
+        ) : rows.length === 0 ? (
+          <CardEmpty />
+        ) : (
+          <div className="grid grid-cols-1 gap-x-8 md:grid-cols-2">
+            <div>{colA.map((r) => <Row key={r.alert_class} row={r} max={max} />)}</div>
+            <div>{colB.map((r) => <Row key={r.alert_class} row={r} max={max} />)}</div>
+          </div>
+        )}
+      </div>
     </SdsPanel>
   );
 }

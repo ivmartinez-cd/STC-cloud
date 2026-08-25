@@ -7,6 +7,13 @@ import type { DashboardData } from '../../../shared/types/monitor';
 export function useDashboard() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
+  /** Refleja el último poll: `false` mientras el chip de cabecera pueda decir
+   * "SINCRONIZADO hh:mm"; `true` cuando debe pasar a "SIN SINCRONIZAR". */
+  const [error, setError] = useState(false);
+  /** Momento del último poll exitoso — sostiene el chip de sincronización y,
+   * si `data` ya existe, evita que un poll fallido vuelva a mostrar skeletons:
+   * cada tarjeta sigue con los últimos números buenos hasta el próximo poll OK. */
+  const [lastSyncAt, setLastSyncAt] = useState<Date | null>(null);
   const { showToast } = useToast();
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scheduleNextRef = useRef<() => void>(() => {});
@@ -15,7 +22,10 @@ export function useDashboard() {
     try {
       const res = await api.get<DashboardData>('/dashboard');
       setData(res);
+      setLastSyncAt(new Date());
+      setError(false);
     } catch {
+      setError(true);
       showToast('Error al actualizar panel global', 'error');
     } finally {
       setLoading(false);
@@ -57,5 +67,5 @@ export function useDashboard() {
     };
   }, [load, scheduleNext]);
 
-  return { data, loading, fetchDashboardData: load };
+  return { data, loading, error, lastSyncAt, fetchDashboardData: load };
 }

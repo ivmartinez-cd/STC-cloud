@@ -275,6 +275,13 @@ export interface DashboardData {
     clients: number;
     volume: number;
     deviceTrend?: string | null;
+    /** Aún no expuesto por `/dashboard` (handoff hifi Panel de Control: "+X%
+     *  vs mes anterior" en el titular de Volumen mensual) — cuando el backend
+     *  lo agregue, la tarjeta ya sabe pintarlo; mientras tanto se omite en
+     *  vez de inventar un número. */
+    volumeDeltaPct?: number | null;
+    /** Ídem para el sparkline de 12 meses del mismo titular. */
+    volumeTrend?: number[] | null;
   };
   topClients: Array<{ id: string; name: string; device_count: number }>;
   brands: Array<{ brand: string; count: number }>;

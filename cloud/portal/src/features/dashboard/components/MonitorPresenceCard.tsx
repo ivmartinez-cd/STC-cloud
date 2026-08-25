@@ -1,47 +1,84 @@
-import { Link } from 'react-router-dom';
 import type { DashboardData } from '../../../shared/types/monitor';
 import SdsPanel from './SdsPanel';
-import MiniBar from './MiniBar';
-import { pctOf } from '../../../shared/lib/formatters';
+import CardError from './CardError';
+import SkeletonBlock from './Skeleton';
+import { fmt } from '../../../shared/lib/formatters';
 
-/** "Presencia de monitores" del SDS: en línea / sin conexión con barra de
- * proporción. Reemplaza la lista de "Nodos Offline" — el listado vive en
- * `/agents`, acá sólo el conteo. */
-export default function MonitorPresenceCard({ agents }: { agents: DashboardData['stats']['agents'] | undefined }) {
+const R = 36;
+const CIRC = 2 * Math.PI * R;
+
+function Donut({ online, offline }: { online: number; offline: number }) {
+  const total = online + offline;
+  const offlineLen = total > 0 ? (offline / total) * CIRC : 0;
+  const onlineLen = total > 0 ? (online / total) * CIRC : 0;
+  return (
+    <svg width={92} height={92} viewBox="0 0 92 92" className="shrink-0">
+      <circle cx={46} cy={46} r={R} fill="none" stroke="var(--color-surface-track)" strokeWidth={14} />
+      {/* Mayoría dibujada primero; la minoría se dibuja encima desde el mismo
+          origen y "come" el inicio del arco mayor — técnica estándar para un
+          donut de exactamente dos categorías. */}
+      <circle cx={46} cy={46} r={R} fill="none" stroke="var(--color-brand-gray)" strokeWidth={14}
+        strokeDasharray={`${offlineLen} ${CIRC}`} transform="rotate(-90 46 46)" />
+      <circle cx={46} cy={46} r={R} fill="none" stroke="var(--color-brand)" strokeWidth={14}
+        strokeDasharray={`${onlineLen} ${CIRC}`} transform="rotate(-90 46 46)" />
+    </svg>
+  );
+}
+
+function LegendRow({ dot, label, value }: { dot: string; label: string; value: number }) {
+  return (
+    <div className="flex items-center justify-between gap-2 border-b border-line-200 py-1.5">
+      <span className="flex min-w-0 items-center gap-2 font-sans text-[12px] text-ink-700">
+        <span className="block h-[7px] w-[7px] shrink-0 rounded-full" style={{ background: dot }} />
+        <span className="truncate">{label}</span>
+      </span>
+      <span className="shrink-0 font-montserrat text-[12.5px] font-semibold tabular-nums text-ink-900">{fmt(value)}</span>
+    </div>
+  );
+}
+
+/** "Presencia de monitores" del handoff hifi: donut 92×92 + leyenda En
+ * línea/Sin conexión/TOTAL. */
+export default function MonitorPresenceCard({
+  agents, loading, error, onRetry,
+}: {
+  agents: DashboardData['stats']['agents'] | undefined;
+  loading?: boolean;
+  error?: boolean;
+  onRetry?: () => void;
+}) {
   const total = agents?.total ?? 0;
   const online = agents?.online ?? 0;
   const offline = Math.max(0, total - online);
-  const rows = [
-    { label: 'En línea', value: online, dot: 'bg-emerald-500', tone: 'emerald' as const },
-    { label: 'Sin conexión', value: offline, dot: 'bg-slate-400', tone: offline > 0 ? ('rose' as const) : ('slate' as const) },
-  ];
+
   return (
-    <SdsPanel title="Presencia de monitores" to="/agents">
-      <table className="w-full border-collapse">
-        <thead>
-          <tr className="bg-slate-50 border-b border-slate-100">
-            <th className="px-3 py-1 text-[9px] font-black text-slate-500 uppercase tracking-wider text-left">Presencia</th>
-            <th className="px-3 py-1 text-[9px] font-black text-slate-500 uppercase tracking-wider text-right">Monitores</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-slate-50">
-          {rows.map((r) => (
-            <tr key={r.label}>
-              <td className="px-3 py-1.5 text-[10px] font-black text-[#1a2333] uppercase whitespace-nowrap">
-                <span className={`inline-block w-2 h-2 rounded-full mr-1.5 align-middle ${r.dot}`} />{r.label}
-              </td>
-              <td className="px-3 py-1.5 text-right whitespace-nowrap">
-                <Link to="/agents" className="text-[11px] font-black text-[#1a2333] tabular-nums mr-1.5 hover:underline">{r.value.toLocaleString('es-AR')}</Link>
-                <MiniBar pct={pctOf(r.value, total)} tone={r.tone} />
-              </td>
-            </tr>
-          ))}
-          <tr className="bg-slate-50 border-t border-slate-100">
-            <td className="px-3 py-1 text-[9px] font-black text-slate-500 uppercase tracking-widest">Total</td>
-            <td className="px-3 py-1 text-[11px] font-black text-brand text-right tabular-nums">{total.toLocaleString('es-AR')}</td>
-          </tr>
-        </tbody>
-      </table>
+    <SdsPanel title="Presencia de monitores" headerClassName="px-[18px] py-[14px]">
+      <div className="flex items-center gap-4 px-[18px] pb-4 pt-[18px]">
+        {error ? (
+          <CardError onRetry={onRetry} className="w-full py-2" />
+        ) : loading ? (
+          <>
+            <SkeletonBlock heightPx={92} className="shrink-0 rounded-full" style={{ width: 92 }} />
+            <div className="flex-1">
+              <SkeletonBlock heightPx={12} className="mb-2" />
+              <SkeletonBlock heightPx={12} className="mb-2" />
+              <SkeletonBlock heightPx={12} widthPct={50} />
+            </div>
+          </>
+        ) : (
+          <>
+            <Donut online={online} offline={offline} />
+            <div className="min-w-0 flex-1">
+              <LegendRow dot="var(--color-brand)" label="En línea" value={online} />
+              <LegendRow dot="var(--color-brand-gray)" label="Sin conexión" value={offline} />
+              <div className="flex items-center justify-between gap-2 pt-[7px]">
+                <span className="whitespace-nowrap font-sans text-[10.5px] tracking-[.04em] text-ink-300">TOTAL</span>
+                <span className="shrink-0 font-montserrat text-[13px] font-bold text-ink-900">{fmt(total)}</span>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
     </SdsPanel>
   );
 }

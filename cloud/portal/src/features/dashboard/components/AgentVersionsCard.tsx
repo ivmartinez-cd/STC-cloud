@@ -1,53 +1,71 @@
 import type { DashboardData } from '../../../shared/types/monitor';
 import SdsPanel from './SdsPanel';
+import CardError from './CardError';
+import CardEmpty from './CardEmpty';
+import SkeletonBlock from './Skeleton';
+import { fmt } from '../../../shared/lib/formatters';
 
-/** "Versiones del monitor" del SDS: tabla versión → cantidad, Total al pie y
- * la última versión publicada como footer ("Última publicación del DCA"). */
+function dotColor(version: string, current: string | undefined | null): string {
+  if (current && version === current) return 'var(--color-brand)';
+  if (version.toLowerCase() === 'desconocida') return 'var(--color-brand-severe)';
+  return 'var(--color-brand-gray)';
+}
+
+/** "Versiones del agente" del handoff hifi: cifra grande = monitores en
+ * versión desconocida (backend ya usa el literal `'desconocida'` para
+ * agentes sin `version`, `dashboard-queries.ts`) + filas versión → cantidad
+ * + TOTAL. */
 export default function AgentVersionsCard({
-  agentVersions, currentAgentVersion,
+  agentVersions, currentAgentVersion, loading, error, onRetry,
 }: {
   agentVersions: DashboardData['agentVersions'] | undefined;
   currentAgentVersion: DashboardData['currentAgentVersion'] | undefined;
+  loading?: boolean;
+  error?: boolean;
+  onRetry?: () => void;
 }) {
   const rows = agentVersions ?? [];
   const total = rows.reduce((acc, r) => acc + r.count, 0);
+  const unknown = rows.find((r) => r.version.toLowerCase() === 'desconocida')?.count ?? 0;
+
   return (
-    <SdsPanel
-      title="Versiones del monitor"
-      to="/agents"
-      footer={currentAgentVersion ? `Publicada: v${currentAgentVersion}` : undefined}
-    >
-      <table className="w-full table-fixed border-collapse">
-        <thead>
-          <tr className="bg-slate-50 border-b border-slate-100">
-            <th className="px-3 py-1 text-[9px] font-black text-slate-500 uppercase tracking-wider text-left">Versión</th>
-            <th className="w-20 px-3 py-1 text-[9px] font-black text-slate-500 uppercase tracking-wider text-right">Monitores</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-slate-50">
-          {rows.length === 0 && (
-            <tr><td colSpan={2} className="px-3 py-2 text-[10px] font-semibold text-slate-400">Sin agentes reportados todavía.</td></tr>
-          )}
-          {rows.map((v) => {
-            const outdated = !!currentAgentVersion && v.version !== currentAgentVersion;
-            return (
-              <tr key={v.version}>
-                <td className={`px-3 py-1 text-[10px] font-black uppercase min-w-0 ${outdated ? 'text-amber-600' : 'text-[#1a2333]'}`}>
-                  <span className="block truncate" title={v.version}>
-                    {v.version}
-                    {outdated && <span className="ml-1.5 px-1 py-0.5 rounded bg-amber-100 text-amber-700 text-[8px] normal-case">desact.</span>}
+    <SdsPanel title="Versiones del agente" headerClassName="px-[18px] py-[14px]">
+      <div className="px-[18px] pb-4 pt-4">
+        {error ? (
+          <CardError onRetry={onRetry} />
+        ) : loading ? (
+          <>
+            <SkeletonBlock heightPx={30} widthPct={30} className="mb-3.5" />
+            <SkeletonBlock heightPx={12} className="mb-2" />
+            <SkeletonBlock heightPx={12} widthPct={60} />
+          </>
+        ) : rows.length === 0 ? (
+          <CardEmpty />
+        ) : (
+          <>
+            <div className="mb-3.5 flex items-baseline gap-2">
+              <span className="font-montserrat text-[30px] font-extrabold leading-none text-brand-severe">{fmt(unknown)}</span>
+              <span className="font-sans text-[11.5px] leading-[1.3] text-ink-400">monitores en versión desconocida</span>
+            </div>
+            {rows.map((v) => {
+              const isCurrent = !!currentAgentVersion && v.version === currentAgentVersion;
+              return (
+                <div key={v.version} className="flex items-center justify-between border-b border-line-200 py-1.5">
+                  <span className="flex min-w-0 items-center gap-2 font-sans text-[12px] text-ink-700">
+                    <span className="block h-[7px] w-[7px] shrink-0 rounded-full" style={{ background: dotColor(v.version, currentAgentVersion) }} />
+                    <span className="truncate">{v.version}{isCurrent ? ' · publicada' : ''}</span>
                   </span>
-                </td>
-                <td className="px-3 py-1 text-[11px] font-black text-[#1a2333] text-right tabular-nums">{v.count.toLocaleString('es-AR')}</td>
-              </tr>
-            );
-          })}
-          <tr className="bg-slate-50 border-t border-slate-100">
-            <td className="px-3 py-1 text-[9px] font-black text-slate-500 uppercase tracking-widest">Total</td>
-            <td className="px-3 py-1 text-[11px] font-black text-brand text-right tabular-nums">{total.toLocaleString('es-AR')}</td>
-          </tr>
-        </tbody>
-      </table>
+                  <span className="shrink-0 font-montserrat text-[12.5px] font-semibold tabular-nums text-ink-900">{fmt(v.count)}</span>
+                </div>
+              );
+            })}
+            <div className="flex items-center justify-between pt-[7px]">
+              <span className="font-sans text-[10.5px] tracking-[.04em] text-ink-300">TOTAL</span>
+              <span className="font-montserrat text-[13px] font-bold text-ink-900">{fmt(total)}</span>
+            </div>
+          </>
+        )}
+      </div>
     </SdsPanel>
   );
 }

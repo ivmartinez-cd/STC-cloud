@@ -1,20 +1,27 @@
-const TONE_BG = {
-  emerald: 'bg-emerald-500',
-  amber: 'bg-amber-500',
-  rose: 'bg-rose-500',
-  slate: 'bg-slate-400',
-  brand: 'bg-brand',
-} as const;
-
-export type BarTone = keyof typeof TONE_BG;
-
-/** Barra de progreso inline (estilo "Monitors Reporting 57 (98,3%) ▬▬▬" del SDS). */
-export default function MiniBar({ pct, tone = 'emerald' }: { pct: number; tone?: BarTone }) {
-  const width = Math.max(0, Math.min(100, pct));
+/** Barra de progreso inline reusada por la tira de KPIs, las filas de
+ * "Alertas por clase" y "Top cuentas": track `#F0F2F2`, relleno de un solo
+ * color (institucional: naranja o gris, nunca rojo/verde — README). Alto y
+ * radio configurables porque el handoff usa 4px (mini KPI), 6px (fila) y
+ * 7-8px (apiladas) según el bloque. */
+export default function MiniBar({
+  pct, color = 'var(--color-brand)', height = 6, radius = 3, className = '', minPct,
+}: {
+  pct: number;
+  /** Color CSS del relleno — hex o `var(--color-*)`. */
+  color?: string;
+  height?: number;
+  radius?: number;
+  className?: string;
+  /** Piso visual para que una barra con datos reales nunca desaparezca del todo. */
+  minPct?: number;
+}) {
+  const width = Math.max(minPct ?? 0, Math.min(100, pct));
   return (
-    <span className="inline-block w-14 h-1.5 rounded-full bg-slate-200 overflow-hidden align-middle">
-      <span className={`block h-full rounded-full ${TONE_BG[tone]}`} style={{ width: `${width}%` }} />
+    <span
+      className={`block w-full overflow-hidden bg-surface-track ${className}`}
+      style={{ height, borderRadius: radius }}
+    >
+      <span className="block h-full" style={{ width: `${width}%`, backgroundColor: color, borderRadius: radius }} />
     </span>
   );
 }
-
