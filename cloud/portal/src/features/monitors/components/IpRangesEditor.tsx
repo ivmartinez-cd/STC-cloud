@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Plus, Trash2, X } from 'lucide-react';
-import type { IpRange } from '../types/agents';
+import type { IpRange } from '../../../shared/types/agents';
 
 type Mode = 'range' | 'cidr' | 'hostname';
 

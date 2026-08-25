@@ -1,7 +1,7 @@
 import { Activity, AlertTriangle } from 'lucide-react';
 import { Card, CardTitle } from './primitives';
 import { fmtDateTime } from './format';
-import { fmtDate, fmtInt, type SupplyRow, type UsageRate } from '../../../supplies/lib/supplies';
+import { fmtDate, fmtInt, type SupplyRow, type UsageRate } from '../../../../shared/lib/supplies';
 import type { DeviceDetailData } from '../../types/deviceDetailPage';
 
 export default function SuppliesTable({

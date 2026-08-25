@@ -13,7 +13,10 @@
     "test": "npx tsx --test --test-concurrency=1 src/tests/e2e.test.ts src/tests/rbac.test.ts src/tests/alertCatalog.test.ts src/tests/alerts.test.ts src/tests/reports.test.ts src/tests/deviceLifecycle.test.ts src/tests/auditFeed.test.ts src/tests/inventoryFields.test.ts src/tests/monitorState.test.ts src/tests/pendingDevices.test.ts src/tests/supplies.test.ts src/tests/supplyOrigin.test.ts src/tests/incidents.test.ts src/tests/scheduledReports.test.ts src/tests/supplyRequests.test.ts src/tests/messageTemplates.test.ts src/tests/emailLog.test.ts src/tests/deviceCosts.test.ts src/tests/remoteActions.test.ts src/tests/observability.test.ts src/tests/twoFactor.test.ts src/tests/snmpCredentials.test.ts src/tests/ipRangeSpec.test.ts src/tests/businessHours.test.ts src/tests/ipRangesCredentials.test.ts src/tests/publicApi.test.ts src/tests/deviceUsageHistory.test.ts src/tests/ewsProxyService.test.ts src/tests/portalAgentEws.test.ts",
     "test:load": "npx tsx src/tests/loadTest.ts",
     "check:sizes": "node scripts/check-sizes.mjs",
-    "check:sizes:baseline": "node scripts/check-sizes.mjs --write-baseline"
+    "check:sizes:baseline": "node scripts/check-sizes.mjs --write-baseline",
+    "check:guards": "node scripts/check-guards.mjs",
+    "check:guards:baseline": "node scripts/check-guards.mjs --write-baseline",
+    "check:arch": "npm run check:sizes && npm run check:guards"
   },
   "dependencies": {
     "@fastify/cookie": "^11.0.2",

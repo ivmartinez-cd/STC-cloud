@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react'; // v1.0.1-ui-fix
 import { Key, Plus, ShieldCheck, RefreshCw, Trash2, Globe, Server, Copy, Download } from 'lucide-react';
 import { api } from '../../../../shared/lib/api';
 import { useToast } from '../../../../store/ToastContext';
-import type { Client, IpRange } from '../../types/agents';
-import { emptyRange } from '../../types/agents';
+import type { Client, IpRange } from '../../../../shared/types/agents';
+import { emptyRange } from '../../../../shared/types/agents';
 import { SNMP_DEFAULT_COMMUNITY } from '../../../../shared/lib/constants';
 
 interface Props {

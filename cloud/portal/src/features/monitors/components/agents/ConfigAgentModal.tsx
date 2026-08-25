@@ -3,8 +3,8 @@ import { Link } from 'react-router-dom';
 import { X, Settings, Loader2, Check, KeyRound, Clock, Radio } from 'lucide-react';
 import { api } from '../../../../shared/lib/api';
 import { useToast } from '../../../../store/ToastContext';
-import type { AgentConfig } from '../../types/agents';
-import { defaultConfig } from '../../types/agents';
+import type { AgentConfig } from '../../../../shared/types/agents';
+import { defaultConfig } from '../../../../shared/types/agents';
 import IpRangesEditor from '../IpRangesEditor';
 
 interface Props {

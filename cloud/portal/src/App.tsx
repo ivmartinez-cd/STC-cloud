@@ -4,7 +4,7 @@ import { AuthProvider, useAuth } from './store/AuthContext';
 import { ToastProvider } from './store/ToastContext';
 import Layout from './app/layout/Layout';
 import Login from './features/auth/pages/Login';
-import { stashCurrentPath } from './features/auth/lib/postLoginRedirect';
+import { stashCurrentPath } from './shared/lib/postLoginRedirect';
 
 const Dashboard    = lazy(() => import('./features/dashboard/pages/Dashboard'));
 const Clients      = lazy(() => import('./features/clients/pages/Clients'));

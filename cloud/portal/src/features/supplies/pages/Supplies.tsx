@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Droplets, Loader2, ChevronLeft, ChevronRight, Download, ShieldCheck, CheckSquare, Square } from 'lucide-react';
 import { api } from '../../../shared/lib/api';
 import { useAuth } from '../../../store/AuthContext';
-import { fmtDate, fmtInt } from '../lib/supplies';
+import { fmtDate, fmtInt } from '../../../shared/lib/supplies';
 import { useRowSelection } from '../../../shared/hooks/useRowSelection';
 import BulkActionBar from '../../../shared/components/BulkActionBar';
 import type { FleetSupplyRow, FleetSuppliesResponse, SupplyKind } from '../../../shared/types/supplies';

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { deviceImageCandidates } from '../../../../shared/lib/deviceImage';
 import type { CounterTriple } from '../../../../shared/types/monitor';
-import { fmtInt } from '../../../supplies/lib/supplies';
+import { fmtInt } from '../../../../shared/lib/supplies';
 
 /** Fila "etiqueta → valor" de las tarjetas de datos (estilo SDS). */
 export const Row = ({ label, value, mono = false, muted = false }: { label: string; value: ReactNode; mono?: boolean; muted?: boolean }) => (

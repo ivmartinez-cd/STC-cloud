@@ -155,12 +155,12 @@ const start = async () => {
       } else {
         logger.error(`[DB] ERROR: El directorio de migraciones NO existe: ${migDir}`);
       }
-    } catch {}
+    } catch { /* diagnóstico opcional: un fallo al listar no debe frenar el arranque */ }
 
     try {
       const applied = await db("knex_migrations").select("name");
       logger.info(`[DB] Migraciones en DB: ${applied.map((m: { name: string }) => m.name).join(", ")}`);
-    } catch {}
+    } catch { /* primera corrida: knex_migrations todavía no existe */ }
 
     await db.migrate.latest({
       directory: path.join(__dirname, "../db/migrations"),

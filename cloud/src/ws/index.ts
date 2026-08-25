@@ -227,11 +227,11 @@ export async function registerWebSocket(fastify: FastifyInstance, db: Knex, redi
           try {
             // Enviar ping nativo (control frame) para mantener activa la conexión en proxies y firewalls
             socket.ping();
-          } catch {}
+          } catch { /* socket cerrándose entre el readyState y el ping: lo limpia el close */ }
           try {
             // Data frame de compatibilidad
             socket.send(JSON.stringify({ event: 'ping' }));
-          } catch {}
+          } catch { /* ídem: el close handler limpia el intervalo */ }
         } else {
           clearInterval(pingInterval!);
           pingInterval = null;

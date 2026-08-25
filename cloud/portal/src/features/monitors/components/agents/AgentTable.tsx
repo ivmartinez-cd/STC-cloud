@@ -1,8 +1,8 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { ShieldCheck, ShieldOff, RefreshCw, Key, Settings, Cpu, Clock, Activity, Search, Loader2, Server } from 'lucide-react';
-import type { Agent } from '../../types/agents';
-import { isAgentOffline } from '../../types/agents';
+import type { Agent } from '../../../../shared/types/agents';
+import { isAgentOffline } from '../../../../shared/types/agents';
 import { formatRelativeTime } from '../../../../shared/lib/formatters';
 
 interface Props {

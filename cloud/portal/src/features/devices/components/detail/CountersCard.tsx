@@ -1,7 +1,7 @@
 import { FileText } from 'lucide-react';
 import { Card, CardTitle, Row, TripleRows } from './primitives';
 import { fmtDateTime } from './format';
-import { fmtInt } from '../../../supplies/lib/supplies';
+import { fmtInt } from '../../../../shared/lib/supplies';
 import type { DetailedCounters } from '../../../../shared/types/monitor';
 import type { DeviceDetailData, Reading } from '../../types/deviceDetailPage';
 

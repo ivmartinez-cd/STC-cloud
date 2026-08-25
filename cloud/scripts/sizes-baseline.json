@@ -363,7 +363,6 @@
     "portal/src/app/layout/navTree.ts": 44,
     "portal/src/features/activity/pages/Activity.tsx": 248,
     "portal/src/features/alerts/pages/Alerts.tsx": 447,
-    "portal/src/features/auth/lib/postLoginRedirect.ts": 29,
     "portal/src/features/auth/pages/Login.tsx": 177,
     "portal/src/features/clients/components/ApiKeysCard.tsx": 343,
     "portal/src/features/clients/components/ClientMetricsCards.tsx": 42,
@@ -447,7 +446,6 @@
     "portal/src/features/monitors/pages/MonitorDetail.tsx": 253,
     "portal/src/features/monitors/pages/Monitors.tsx": 163,
     "portal/src/features/monitors/pages/RemoteActions.tsx": 313,
-    "portal/src/features/monitors/types/agents.ts": 83,
     "portal/src/features/monitors/types/monitorsPage.ts": 24,
     "portal/src/features/pending-devices/pages/PendingDevices.tsx": 270,
     "portal/src/features/pending-devices/types/pendingDevices.ts": 24,
@@ -469,7 +467,6 @@
     "portal/src/features/settings/pages/Settings.tsx": 90,
     "portal/src/features/settings/types/settings.ts": 31,
     "portal/src/features/supplies/components/SupplyRequestDetailModal.tsx": 132,
-    "portal/src/features/supplies/lib/supplies.ts": 172,
     "portal/src/features/supplies/pages/Supplies.tsx": 253,
     "portal/src/features/supplies/pages/SupplyRequests.tsx": 135,
     "portal/src/features/supplies/types/supplyRequests.ts": 62,
@@ -487,6 +484,9 @@
     "portal/src/shared/lib/constants.ts": 54,
     "portal/src/shared/lib/deviceImage.ts": 56,
     "portal/src/shared/lib/formatters.ts": 113,
+    "portal/src/shared/lib/postLoginRedirect.ts": 29,
+    "portal/src/shared/lib/supplies.ts": 172,
+    "portal/src/shared/types/agents.ts": 83,
     "portal/src/shared/types/alerts.ts": 68,
     "portal/src/shared/types/audit.ts": 29,
     "portal/src/shared/types/incidents.ts": 75,
@@ -2399,12 +2399,6 @@
         "length": 102
       }
     ],
-    "portal/src/features/supplies/lib/supplies.ts": [
-      {
-        "name": "buildSupplyRows",
-        "length": 43
-      }
-    ],
     "portal/src/features/supplies/pages/Supplies.tsx": [
       {
         "name": "Supplies",
@@ -2467,6 +2461,12 @@
       {
         "name": "getDeviceStatusInfo",
         "length": 69
+      }
+    ],
+    "portal/src/shared/lib/supplies.ts": [
+      {
+        "name": "buildSupplyRows",
+        "length": 43
       }
     ],
     "portal/src/store/AuthContext.tsx": [

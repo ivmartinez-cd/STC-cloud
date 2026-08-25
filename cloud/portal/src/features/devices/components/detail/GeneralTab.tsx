@@ -4,7 +4,7 @@ import { Card, CardTitle, Row, DeviceImage } from './primitives';
 import { POLL_LABEL, fmtDateTime } from './format';
 import CountersCard from './CountersCard';
 import SuppliesTable from './SuppliesTable';
-import { fmtInt, type SupplyRow, type UsageRate } from '../../../supplies/lib/supplies';
+import { fmtInt, type SupplyRow, type UsageRate } from '../../../../shared/lib/supplies';
 import type { DetailedCounters, DeviceExtraInfo } from '../../../../shared/types/monitor';
 import type { CustomFieldDef } from '../../../../shared/types/inventory';
 import type { ActiveAlertItem, DeviceDetailData, Reading } from '../../types/deviceDetailPage';

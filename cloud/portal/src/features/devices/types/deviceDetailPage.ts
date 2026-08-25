@@ -1,5 +1,5 @@
 import type { Device } from '../../../shared/types/monitor';
-import type { ReadingPoint } from '../../supplies/lib/supplies';
+import type { ReadingPoint } from '../../../shared/lib/supplies';
 
 export interface Reading extends ReadingPoint {
   id: string;

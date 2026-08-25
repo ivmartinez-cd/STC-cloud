@@ -1,4 +1,4 @@
-import type { IpRange, BusinessHoursConfig } from '../../features/monitors/types/agents';
+import type { IpRange, BusinessHoursConfig } from './agents';
 
 export interface SuppliesItem {
   percentage?: number | null;

@@ -6,7 +6,7 @@
  *  - Páginas restantes: las informa el equipo; si no, capacidad × % (sólo si la capacidad es real).
  *  - Días restantes: páginas restantes / ritmo de impresión observado en el historial de lecturas.
  */
-import type { Device, SuppliesDetails, SuppliesItem } from '../../../shared/types/monitor';
+import type { Device, SuppliesDetails, SuppliesItem } from '../types/monitor';
 
 export interface ReadingPoint {
   time: string;

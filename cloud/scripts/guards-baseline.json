@@ -1,0 +1,23 @@
+{
+  "arch-application|src/modules/message-templates/application/resolve-template.ts": 2,
+  "arch-application|src/modules/remote-actions/application/use-cases/process-batches.ts": 1,
+  "arch-cross-module|src/api/controllers/authController/session.ts": 3,
+  "arch-cross-module|src/jobs/heartbeatMonitor.ts": 1,
+  "arch-cross-module|src/jobs/notificationWorker.ts": 2,
+  "arch-cross-module|src/jobs/remoteActionWorker.ts": 2,
+  "arch-cross-module|src/jobs/reportDeliveryWorker.ts": 2,
+  "arch-cross-module|src/jobs/scheduledReportsWorker.ts": 4,
+  "arch-cross-module|src/jobs/supplyRequestWorker.ts": 4,
+  "arch-cross-module|src/modules/agents/presentation/portal-agent-controller.ts": 1,
+  "arch-cross-module|src/services/notificationService.ts": 1,
+  "arch-domain|src/modules/agents/domain/entities/agent.ts": 2,
+  "arch-domain|src/modules/agents/domain/services/agent-config-view.ts": 3,
+  "arch-domain|src/modules/agents/domain/services/agent-logs.ts": 1,
+  "arch-domain|src/modules/agents/domain/services/reading-parsing.ts": 1,
+  "arch-portal|portal/src/features/alerts/pages/Alerts.tsx": 1,
+  "arch-portal|portal/src/features/clients/components/DuplicateDevicesCard.tsx": 1,
+  "arch-portal|portal/src/features/clients/pages/ClientDetail.tsx": 2,
+  "arch-portal|portal/src/features/monitors/components/DeviceInventoryTable.tsx": 1,
+  "sql-interpolation|src/api/controllers/dashboardController/dashboard-queries.ts": 1,
+  "sql-interpolation|src/modules/agents/infrastructure/database/knex-agent-portal-repository.ts": 1
+}

@@ -4,7 +4,7 @@ import { useToast } from '../../../store/ToastContext';
 import IpRangesEditor from './IpRangesEditor';
 import SnmpCredentialsPanel from './SnmpCredentialsPanel';
 import type { EditFormData, MonitorData, SnmpCredentialInput } from '../../../shared/types/monitor';
-import { DEFAULT_BUSINESS_HOURS } from '../types/agents';
+import { DEFAULT_BUSINESS_HOURS } from '../../../shared/types/agents';
 
 interface ConfigTabPanelProps {
   monitor: MonitorData;

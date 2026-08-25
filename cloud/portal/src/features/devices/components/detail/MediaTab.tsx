@@ -1,6 +1,6 @@
 import { Inbox } from 'lucide-react';
 import { Card, CardTitle } from './primitives';
-import { fmtInt } from '../../../supplies/lib/supplies';
+import { fmtInt } from '../../../../shared/lib/supplies';
 import type { InputTrayInfo, OutputTrayInfo } from '../../../../shared/types/monitor';
 
 export default function MediaTab({ inputTrays, outputTrays }: { inputTrays: InputTrayInfo[] | undefined; outputTrays: OutputTrayInfo[] | undefined }) {

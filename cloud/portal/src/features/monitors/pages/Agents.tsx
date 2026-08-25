@@ -7,7 +7,7 @@ import ConfirmModal from '../../../shared/components/ConfirmModal';
 import AgentTable from '../components/agents/AgentTable';
 import ConfigAgentModal from '../components/agents/ConfigAgentModal';
 import RegenKeyModal from '../components/agents/RegenKeyModal';
-import type { Agent } from '../types/agents';
+import type { Agent } from '../../../shared/types/agents';
 
 const Agents = () => {
   const { showToast } = useToast();

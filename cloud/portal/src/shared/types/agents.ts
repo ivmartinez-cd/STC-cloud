@@ -1,4 +1,4 @@
-import { OFFLINE_THRESHOLD_MS, SNMP_DEFAULT_COMMUNITY } from '../../../shared/lib/constants';
+import { OFFLINE_THRESHOLD_MS, SNMP_DEFAULT_COMMUNITY } from '../lib/constants';
 
 export type Agent = {
   id: string;

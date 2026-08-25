@@ -8,7 +8,7 @@ import type { Alert } from '../../../shared/types/alerts';
 import type { AuditLogItem, AuditLogsResponse } from '../../../shared/types/audit';
 import type { CustomFieldDef } from '../../../shared/types/inventory';
 import type { Incident, IncidentListResponse } from '../../../shared/types/incidents';
-import { parseSuppliesDetails, buildSupplyRows, usageRate, type SupplyRow } from '../../supplies/lib/supplies';
+import { parseSuppliesDetails, buildSupplyRows, usageRate, type SupplyRow } from '../../../shared/lib/supplies';
 import { ConfirmationModal } from '../../../shared/components/ConfirmationModal';
 import { EditDeviceModal, DecommissionDeviceModal, MoveDeviceModal, MergeDeviceModal } from '../components/DeviceLifecycleModals';
 import DeviceDetailHeader from '../components/detail/DeviceDetailHeader';

@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../store/AuthContext';
 import { Lock, User, AlertCircle, Loader2, ShieldCheck } from 'lucide-react';
-import { consumePostLoginRedirect } from '../lib/postLoginRedirect';
+import { consumePostLoginRedirect } from '../../../shared/lib/postLoginRedirect';
 
 const Login = () => {
   const { login } = useAuth();

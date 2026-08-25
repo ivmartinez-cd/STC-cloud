@@ -1,4 +1,4 @@
-import { stashCurrentPath } from '../../features/auth/lib/postLoginRedirect';
+import { stashCurrentPath } from './postLoginRedirect';
 
 const BASE = '/api/v1';
 

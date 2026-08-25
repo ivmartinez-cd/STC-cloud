@@ -31,6 +31,25 @@ jobs:
       - run: npm run check    # ESLint + TypeScript + icon validation
       - run: npm run build
 
+  # ─── Arquitectura — guardas estáticas de docs/dev/ARCHITECTURE_GUIDE.md ──────
+  # Fase 5 del plan de migración: bloquean (ratchet contra baseline) tamaños de
+  # archivo/función (check-sizes) y reglas de dependencias entre capas/módulos/
+  # features, console.log, catch silenciosos y SQL interpolado (check-guards).
+  # No necesita Postgres ni Redis: corre rápido y en paralelo a los otros jobs.
+  arch:
+    name: Arquitectura — límites de tamaño y guardas de dependencias
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - run: npm ci
+      - run: npm run check:arch -w cloud
+
   # ─── API (Fastify + TypeScript) — build + tests de integración reales ─────
   api:
     name: API — typecheck, build & tests (Postgres + Redis)
