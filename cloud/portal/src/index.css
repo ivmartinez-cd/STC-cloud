@@ -54,6 +54,16 @@
                                                             arriba para "columna secundaria" de tarjetas de cola), NO
                                                             verde — a propósito recede en vez de "celebrar" en color */
 
+  /* Tokens que faltaban del handoff hifi "Clientes" (25/08/2026) — mismo sistema que
+     "Panel de Control" de arriba, sólo se suman los que ese rediseño no necesitó. */
+  --color-brand-chip-border: #f2dfc6; /* borde del chip de segmento activo */
+  --color-surface-input: #fafbfb;     /* fondo del buscador */
+  --color-surface-table-head: #fbfcfc;/* fondo del encabezado de tabla */
+  --color-surface-avatar: #f4f5f5;    /* fondo de avatar de iniciales / chip neutro */
+  --color-line-avatar: #e7eaea;       /* borde de avatar / chevron */
+  --color-ink-650: #5c6265;           /* texto de chip neutro (estado "ACTIVO") — entre ink-600 e ink-100,
+                                          la numeración ya no era estrictamente monotónica antes de esto */
+
   /* Tipografía de "Manual de marca.pdf": Montserrat (Título) + Source Sans Pro (Cuerpo). */
   --font-sans: 'Source Sans 3', 'Source Sans Pro', system-ui, -apple-system, sans-serif;
   --font-heading: 'Montserrat', sans-serif;

@@ -8,10 +8,9 @@
     "src/tests/e2e.test.ts": 521,
     "src/tests/incidents.test.ts": 324,
     "src/tests/ipRangeSpec.test.ts": 361,
-    "src/tests/rbac.test.ts": 747,
+    "src/tests/rbac.test.ts": 765,
     "src/ws/index.ts": 310,
     "portal/src/features/clients/components/ApiKeysCard.tsx": 343,
-    "portal/src/features/clients/pages/Clients.tsx": 334,
     "portal/src/features/monitors/components/DeviceInventoryTable.tsx": 426,
     "portal/src/features/monitors/components/ReportsTabPanel.tsx": 451,
     "portal/src/features/monitors/components/SnmpCredentialsPanel.tsx": 354,
@@ -327,10 +326,16 @@
         "length": 23
       }
     ],
+    "src/modules/clients/infrastructure/database/knex-client-repository.ts": [
+      {
+        "name": "summarizePortfolioRows",
+        "length": 24
+      }
+    ],
     "src/modules/clients/presentation/client-routes.ts": [
       {
         "name": "registerClientRoutes",
-        "length": 31
+        "length": 37
       }
     ],
     "src/modules/devices/application/use-cases/bulk-lifecycle-use-cases.ts": [
@@ -569,6 +574,12 @@
         "length": 36
       }
     ],
+    "src/tests/clientDirectory.test.ts": [
+      {
+        "name": "before",
+        "length": 25
+      }
+    ],
     "src/tests/loadTest.ts": [
       {
         "name": "setupAgent",
@@ -685,6 +696,28 @@
         "length": 53
       }
     ],
+    "portal/src/features/clients/components/ClientsDirectoryTable.tsx": [
+      {
+        "name": "ClientsDirectoryTable",
+        "length": 128
+      },
+      {
+        "name": "anonymous",
+        "length": 48
+      }
+    ],
+    "portal/src/features/clients/components/ClientsFilterBar.tsx": [
+      {
+        "name": "ClientsFilterBar",
+        "length": 50
+      }
+    ],
+    "portal/src/features/clients/components/ClientsPagination.tsx": [
+      {
+        "name": "ClientsPagination",
+        "length": 55
+      }
+    ],
     "portal/src/features/clients/components/CreateMonitorModal.tsx": [
       {
         "name": "CreateMonitorModal",
@@ -727,6 +760,12 @@
         "length": 97
       }
     ],
+    "portal/src/features/clients/components/PortfolioMetricsStrip.tsx": [
+      {
+        "name": "PortfolioMetricsStrip",
+        "length": 67
+      }
+    ],
     "portal/src/features/clients/components/SupplyRequestSettingsCard.tsx": [
       {
         "name": "SupplyRequestSettingsCard",
@@ -739,6 +778,16 @@
         "length": 66
       }
     ],
+    "portal/src/features/clients/hooks/useClientsDirectory.ts": [
+      {
+        "name": "useDirectoryFilters",
+        "length": 29
+      },
+      {
+        "name": "useDirectoryRows",
+        "length": 33
+      }
+    ],
     "portal/src/features/clients/pages/ClientDetail.tsx": [
       {
         "name": "ClientDetail",
@@ -747,12 +796,8 @@
     ],
     "portal/src/features/clients/pages/Clients.tsx": [
       {
-        "name": "StatusBadge",
-        "length": 24
-      },
-      {
         "name": "Clients",
-        "length": 285
+        "length": 199
       }
     ],
     "portal/src/features/dashboard/components/AgentVersionsCard.tsx": [
@@ -786,7 +831,7 @@
       },
       {
         "name": "OfflineMonitorsCard",
-        "length": 31
+        "length": 33
       },
       {
         "name": "VolumeCard",

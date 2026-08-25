@@ -1,83 +1,30 @@
-import { useEffect, useState, useCallback, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { useState } from 'react';
+import { Loader2, X } from 'lucide-react';
 import { api } from '../../../shared/lib/api';
 import { useToast } from '../../../store/ToastContext';
 import { useAuth } from '../../../store/AuthContext';
-import { Users, Search, Building2, ChevronRight, Plus, X, Loader2, MapPin, Mail, AlertTriangle } from 'lucide-react';
+import { fmt } from '../../../shared/lib/formatters';
+import { useClientsDirectory } from '../hooks/useClientsDirectory';
+import { exportClientsCsv } from '../lib/exportClientsCsv';
+import PortfolioMetricsStrip from '../components/PortfolioMetricsStrip';
+import ClientsFilterBar from '../components/ClientsFilterBar';
+import ClientsDirectoryTable from '../components/ClientsDirectoryTable';
+import ClientsPagination from '../components/ClientsPagination';
 
-interface Client {
-  id: string;
-  name: string;
-  contact_name: string | null;
-  contact_email: string | null;
-  address: string | null;
-  country: string | null;
-  created_at: string;
-  monitor_count: number;
-  device_count: number;
-  active_monitor_count: number;
-}
-
-function StatusBadge({ activeMonitors, devices }: { activeMonitors: number; devices: number }) {
-  if (activeMonitors > 0) {
-    return (
-      <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-emerald-600 bg-emerald-50 px-2 py-1 rounded-md border border-emerald-100">
-        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-        Activo
-      </span>
-    );
-  }
-  if (devices > 0) {
-    return (
-      <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-amber-600 bg-amber-50 px-2 py-1 rounded-md border border-amber-100">
-        <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-        Sin Contacto
-      </span>
-    );
-  }
-  return (
-    <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500 bg-slate-50 px-2 py-1 rounded-md border border-slate-200">
-      <span className="w-1.5 h-1.5 rounded-full bg-slate-300" />
-      Inactivo
-    </span>
-  );
-}
-
+/** Rediseño hifi "Clientes" (handoff 25/08/2026): listado paginado/filtrado/
+ * ordenado server-side, con estado operativo, alertas abiertas y último reporte
+ * derivados en el servidor (`GET /clients/directory`) + tira de métricas de
+ * cartera aparte (`GET /clients/summary`). Área de contenido únicamente —
+ * sidebar/topbar son de `app/layout/` y no se tocan acá. */
 const Clients = () => {
-  const [clients, setClients] = useState<Client[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError]     = useState('');
-  const [search, setSearch]   = useState('');
   const { showToast } = useToast();
   const { role } = useAuth();
-  
-  // Modal state
+  const dir = useClientsDirectory();
+
   const [showModal, setShowModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [formData, setFormData] = useState({
-    name: '',
-    contact_name: '',
-    contact_phone: '',
-    contact_email: '',
-  });
-
-  const fetchClients = useCallback(() => {
-    setLoading(true);
-    api.get<Client[]>('/clients')
-      .then(data => setClients(Array.isArray(data) ? data : []))
-      .catch((e: Error) => {
-        setError(e.message);
-        showToast('Error al cargar la lista de clientes', 'error');
-      })
-      .finally(() => setLoading(false));
-  }, [showToast]);
-
-  useEffect(() => {
-    const init = async () => {
-      await fetchClients();
-    };
-    void init();
-  }, [fetchClients]);
+  const [exporting, setExporting] = useState(false);
+  const [formData, setFormData] = useState({ name: '', contact_name: '', contact_phone: '', contact_email: '' });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -87,164 +34,104 @@ const Clients = () => {
       showToast('Cliente creado exitosamente', 'success');
       setShowModal(false);
       setFormData({ name: '', contact_name: '', contact_phone: '', contact_email: '' });
-      fetchClients();
+      void dir.refetch();
+      void dir.refetchSummary();
     } catch (err: unknown) {
-      showToast('Error al crear cliente: ' + (err as Error).message, 'error');
+      showToast('Error al crear cliente: ' + (err instanceof Error ? err.message : String(err)), 'error');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const filtered = useMemo(() => clients.filter(c => {
-    if (!search.trim()) return true;
-    const q = search.toLowerCase();
-    return (
-      c.name?.toLowerCase().includes(q) ||
-      c.contact_name?.toLowerCase().includes(q) ||
-      c.contact_email?.toLowerCase().includes(q) ||
-      c.address?.toLowerCase().includes(q) ||
-      c.country?.toLowerCase().includes(q)
-    );
-  }), [clients, search]);
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      await exportClientsCsv(dir.effectiveQuery, dir.segment, dir.sortField, dir.sortDir);
+    } catch (err: unknown) {
+      showToast('Error al exportar CSV: ' + (err instanceof Error ? err.message : String(err)), 'error');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const hasActiveFilters = dir.effectiveQuery !== '' || dir.segment !== 'todos';
 
   return (
-    <div className="space-y-8">
-      <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="-m-4 min-w-0 flex flex-col bg-surface-page px-[34px] pb-9 pt-[30px] md:-m-10">
+      <div className="mb-[22px] flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold text-[#1a2333] tracking-tight">Clientes</h1>
-          <p className="text-slate-500 text-sm font-medium mt-1">
-            {clients.length} empresa(s) en la red de monitoreo
-          </p>
-        </div>
-        {role !== 'client_viewer' && (
-          <button
-            onClick={() => setShowModal(true)}
-            className="bg-brand hover:bg-brand-hover text-white px-5 py-2.5 rounded-xl flex items-center justify-center gap-2 text-sm font-bold shadow-lg shadow-brand/20 transition-all active:scale-95 whitespace-nowrap"
-          >
-            <Plus size={18} />
-            Nuevo Cliente
-          </button>
-        )}
-      </header>
-
-      {/* Search & Stats Header */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-        <div className="lg:col-span-3 relative">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-          <input
-            type="text"
-            placeholder="Filtrar por nombre, contacto, país..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            className="cd-input w-full !pl-12 !h-12 !bg-white shadow-sm border-slate-200 focus:border-brand"
-          />
-        </div>
-        <div className="cd-panel bg-brand border-none p-3 flex items-center justify-center gap-3 text-white">
-          <Users size={18} className="opacity-80" />
-          <span className="text-sm font-bold uppercase tracking-wider">{filtered.length} Filtrados</span>
-        </div>
-      </div>
-
-      {/* Table Section */}
-      <div className="cd-panel border-slate-200">
-        {loading && (
-          <div className="flex flex-col items-center justify-center py-20 text-slate-400 gap-3">
-            <Loader2 size={32} className="animate-spin text-brand" />
-            <span className="text-sm font-bold uppercase tracking-widest opacity-50">Sincronizando...</span>
+          <div className="mb-2.5 flex items-center gap-3">
+            <span className="block h-0.5 w-5 bg-brand" />
+            <span className="font-montserrat text-[9px] font-bold uppercase leading-none tracking-[.19em] text-ink-300">
+              RED DE MONITOREO · CARTERA DE CLIENTES
+            </span>
           </div>
-        )}
-        {error && !loading && (
-          <div className="text-center py-20">
-            <AlertTriangle size={40} className="mx-auto mb-3 text-rose-300" />
-            <p className="text-rose-500 font-bold">{error}</p>
-          </div>
-        )}
-        {!loading && !error && filtered.length === 0 && (
-          <div className="text-center py-20">
-            <Building2 size={48} className="mx-auto mb-4 text-slate-200" />
-            <p className="text-slate-400 font-medium">
-              {search ? 'No se encontraron clientes para esta búsqueda.' : 'Aún no hay clientes registrados.'}
+          <h1 className="m-0 font-montserrat text-[34px] font-extrabold leading-[1.05] tracking-[-.018em] text-ink-900">
+            Clientes
+          </h1>
+          {dir.summary && (
+            <p className="mt-2.5 font-sans text-[12.5px] text-ink-400">
+              {fmt(dir.summary.clients_total)} empresas · {fmt(dir.summary.devices_total)} dispositivos gestionados · {fmt(dir.summary.monitors_total)} monitores instalados
             </p>
-          </div>
-        )}
-        {!loading && !error && filtered.length > 0 && (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm cd-table border-collapse">
-              <thead>
-                <tr className="bg-slate-50 text-slate-500 text-[10px] uppercase tracking-[0.15em]">
-                  <th className="px-6 py-4 text-left font-bold border-b border-slate-100">Información del Cliente</th>
-                  <th className="px-6 py-4 text-left font-bold border-b border-slate-100">Estado Operativo</th>
-                  <th className="px-6 py-4 text-left font-bold border-b border-slate-100 hidden md:table-cell">Contacto Directo</th>
-                  <th className="px-6 py-4 text-center font-bold border-b border-slate-100">Monitores</th>
-                  <th className="px-6 py-4 text-center font-bold border-b border-slate-100">Equipos</th>
-                  <th className="px-6 py-4 border-b border-slate-100" />
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-50">
-                {filtered.map(client => (
-                  <tr key={client.id} className="hover:bg-brand/5 transition-colors group">
-                    <td className="px-6 py-4">
-                      <Link to={`/clients/${client.id}`} className="flex items-center gap-4">
-                        <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center shrink-0 group-hover:bg-brand group-hover:text-white transition-all">
-                          <Building2 size={18} />
-                        </div>
-                        <div className="min-w-0">
-                          <div className="font-bold text-[#1a2333] group-hover:text-brand transition-colors truncate">
-                            {client.name}
-                          </div>
-                          {client.country && (
-                            <div className="flex items-center gap-1 text-[10px] text-slate-400 font-bold uppercase mt-0.5">
-                              <MapPin size={10} />
-                              {client.country}
-                            </div>
-                          )}
-                        </div>
-                      </Link>
-                    </td>
-                    <td className="px-6 py-4">
-                      <StatusBadge activeMonitors={client.active_monitor_count} devices={client.device_count} />
-                    </td>
-                    <td className="px-6 py-4 hidden md:table-cell">
-                      <div className="flex flex-col gap-1">
-                        <div className="text-xs font-bold text-slate-700 truncate max-w-[200px]">
-                          {client.contact_name || <span className="text-slate-500 italic font-medium">Sin asignar</span>}
-                        </div>
-                        {client.contact_email && (
-                          <div className="flex items-center gap-1.5 text-[10px] text-brand font-bold truncate max-w-[200px]">
-                            <Mail size={10} />
-                            {client.contact_email}
-                          </div>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <span className="inline-flex items-center justify-center px-2.5 py-1 rounded-lg bg-slate-100 text-xs font-extrabold text-brand min-w-[32px]">
-                        {client.monitor_count}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <span className="inline-flex items-center justify-center px-2.5 py-1 rounded-lg bg-slate-100 text-xs font-extrabold text-brand min-w-[32px]">
-                        {client.device_count}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <Link
-                        to={`/clients/${client.id}`}
-                        aria-label={`Ver detalle de ${client.name}`}
-                        className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-slate-400 group-hover:text-brand group-hover:bg-white transition-all shadow-sm"
-                      >
-                        <ChevronRight size={18} />
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          )}
+        </div>
+        <div className="flex gap-2.5">
+          <button
+            type="button"
+            onClick={handleExport}
+            disabled={exporting}
+            className="rounded-[3px] border border-line-300 bg-white px-[18px] py-[11px] font-montserrat text-[10.5px] font-semibold uppercase leading-none tracking-[.1em] text-ink-600 transition-colors duration-150 ease-in-out hover:border-line-hover hover:bg-surface-btn-hover disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-2"
+          >
+            {exporting ? 'EXPORTANDO…' : 'EXPORTAR CSV'}
+          </button>
+          {role !== 'client_viewer' && (
+            <button
+              type="button"
+              onClick={() => setShowModal(true)}
+              className="rounded-[3px] bg-brand px-[18px] py-[11px] font-montserrat text-[10.5px] font-semibold uppercase leading-none tracking-[.1em] text-white transition-colors duration-150 ease-in-out hover:bg-brand-severe focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-2"
+            >
+              + NUEVO CLIENTE
+            </button>
+          )}
+        </div>
+      </div>
+
+      <PortfolioMetricsStrip
+        summary={dir.summary}
+        loading={dir.summaryLoading}
+        error={dir.summaryError}
+        onRetry={dir.refetchSummary}
+      />
+
+      <div className="rounded-[5px] border border-line-100 bg-white">
+        <ClientsFilterBar
+          query={dir.rawQuery}
+          onQueryChange={dir.setRawQuery}
+          segment={dir.segment}
+          onSegmentChange={dir.setSegment}
+          sortField={dir.sortField}
+          sortDir={dir.sortDir}
+        />
+
+        <ClientsDirectoryTable
+          rows={dir.rows}
+          loading={dir.loading}
+          error={dir.error}
+          onRetry={dir.refetch}
+          maxDeviceCount={dir.maxDeviceCountOnPage}
+          sortField={dir.sortField}
+          sortDir={dir.sortDir}
+          onToggleSort={dir.toggleSort}
+          hasActiveFilters={hasActiveFilters}
+          onClearFilters={dir.clearFilters}
+        />
+
+        {!dir.error && !dir.loading && (
+          <ClientsPagination page={dir.page} totalPages={dir.totalPages} total={dir.total} onPageChange={dir.setPage} />
         )}
       </div>
 
-      {/* Add Client Modal */}
+      {/* Modal de alta de cliente — comportamiento existente, sólo se toca el trigger. */}
       {showModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-overlay-in">
           <div className="bg-white rounded-[24px] shadow-2xl w-full max-w-lg overflow-hidden animate-modal-in">
@@ -257,7 +144,7 @@ const Clients = () => {
                 <X size={24} />
               </button>
             </header>
-            
+
             <form onSubmit={handleSubmit} className="p-8 space-y-6">
               <div className="space-y-2">
                 <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest ml-1">Nombre de la Empresa *</label>
@@ -330,4 +217,3 @@ const Clients = () => {
 };
 
 export default Clients;
-
