@@ -1520,6 +1520,113 @@ con ids reales tomados por API (`/clients/:id`, `/monitors/:id`,
 `pageerror` y 0 errores de consola. `check-sizes.mjs` limpio tras regenerar
 baseline (sólo rutas renombradas, cero deuda nueva).
 
+## Fase 5 — Enforcement completo + cobertura (2026-08-25)
+
+Ivan dijo "continuar" tras la Fase 4. Los tres pares (`close-hp-sds-gaps`,
+`cd-test-83`, `manual-coordinate-correction-ui`) dieron OK antes del bloque
+pesado de cobertura; `close-hp-sds-gaps` pidió el portal para su selector de
+`credential_ids` y se le liberó recién después de commitear los moves de esta
+fase (3d94cb0), para no pisarnos en `IpRangesEditor.tsx`.
+
+**1. `check-sizes` bloquea en CI.** Job `arch` nuevo en `.github/workflows/ci.yml`
+(sin Postgres/Redis, corre en paralelo a `portal`/`api`/`agent`):
+`npm run check:arch -w cloud` = `check:sizes && check:guards && check:routes`.
+Al pasar a bloqueante apareció un defecto del ratchet: el baseline guardaba
+los 496 archivos y cualquier crecimiento sobre el tamaño congelado fallaba —
+incluso 281→285 líneas en un archivo sano. Corregido: un archivo por debajo
+del límite puede crecer hasta 300; sólo los que ya están por encima quedan
+congelados en su tamaño. El baseline ahora guarda sólo deuda real (21
+archivos >300 líneas + funciones >20), así un rename de un archivo sano ya
+no obliga a regenerarlo (pasó dos veces en la Fase 4).
+
+**2. `check-guards.mjs`** (`cloud/scripts/`, ratchet por archivo+regla contando
+ocurrencias, `guards-baseline.json`). Reglas, con la deuda que congeló:
+
+| Regla | Qué prohíbe | Deuda baseline |
+|---|---|---:|
+| `console-log` | `console.log`/`debugger` en producción (no tests, no `src/db`) | 0 |
+| `silent-catch` | `catch {}` sin ni siquiera un comentario | 0 (los 4 que había se comentaron) |
+| `sql-interpolation` | `.raw(\`…${x}…\`)` con `x` que no sea constante UPPER_SNAKE | 2 (fragmentos SQL condicionales, no input de usuario) |
+| `arch-domain` | `domain/` importando fuera de su `domain/` o paquetes npm (builtins de Node OK) | 7 (`agents/domain` → `services/{ipRangeSpec,businessHours,snmpCredentials}`) |
+| `arch-application` | `application/` importando infrastructure/presentation/`src/{api,db,ws,jobs}`/drivers | 3 (`message-templates/resolve-template`, `remote-actions/process-batches`) |
+| `arch-cross-module` | importar internals de un módulo con capas que no sean su facade (`index`) o `presentation/` | 20 (los workers de `src/jobs/*` y `authController/session` cablean repos/use-cases a mano) |
+| `arch-portal` | `shared/store/app` → `features/`, o feature → otro feature | 5 (los 2 de `DeviceLifecycleModals` de la Fase 4 + `CreateIncidentModal`, `ClientUsageChart`, `CreateMonitorModal`) |
+
+`observability/` y `metrics/` son módulos planos sin capas y se tratan como
+código compartido (no aplican las reglas de módulo). "Endpoints sin
+paginación" (punto 2 del plan original) NO se implementó: no es verificable
+estáticamente con fiabilidad; lo cubren los techos server-side de
+`listAgents/listClients/listDevices` (0218ca3) y los tests de integración.
+En vez de baselinear, se corrigieron 3 inversiones `shared → features` del
+portal moviendo a `shared/` lo que ya era transversal de hecho:
+`postLoginRedirect.ts` (lo usa `shared/lib/api.ts`), `types/agents.ts` (lo
+usa `shared/types/monitor.ts`) y `lib/supplies.ts` (lo usan `devices` y
+`supplies`), git mv + reescritura de imports en 22 archivos.
+
+**4. Checklist de seguridad por endpoint — `check-routes.mjs`.** Recorre las 152
+declaraciones `fastify.<verbo>(url, {…})` del backend (literales, `${base}/…`
+y `fastify.get(base, …)`; `preHandler` directo, `{ ...auth }` o identificador)
+y exige que cada una declare `preHandler` o esté en la allowlist explícita
+`PUBLIC_ROUTES` (9: `/`, `/health`, `/api/v1/health`, `download-installer`,
+`portal/login`, `portal/logout`, `agents/activate`, `agents/refresh`,
+`/metrics` — este último valida `METRICS_TOKEN` dentro del handler). También
+falla si `PUBLIC_ROUTES`, `ADMIN_ONLY_ROUTES` o `CLIENT_VIEWER_ROUTES`
+nombran una ruta que ya no existe (en runtime esto último ya lo cubre el
+assert de arranque de `server.ts`; acá se detecta sin levantar la API).
+Resultado de la auditoría: **0 rutas sin autenticación fuera de la
+allowlist**. El modelo real no es "`require_permission` por endpoint" sino
+deny-by-default en dos ejes (`rolePolicy.ts`): credencial por `preHandler`
+(`portalAuth`/`agentAuth`/`apiKeyAuth`) y, dentro del portal, allowlist
+para el rol scopeado `client_viewer` (40 rutas); `admin`/`operator` llegan
+a todo, y 8 handlers exigen además `role === "admin"` (usuarios, feedback,
+system-settings, versión del agente — lista `ADMIN_ONLY_ROUTES`, mantenida a
+mano porque el check de rol dentro del handler no es detectable
+estáticamente). `--write-catalog` genera `docs/dev/PERMISSIONS_CATALOG.md`
+(quién puede llamar cada ruta, por archivo) — el "catálogo de permisos por
+módulo" que pedía la guía, regenerable en vez de escrito a mano.
+
+**3. Cobertura — medida real y gate por capa.** No había ningún test unitario
+en `modules/` (0 archivos `*.test.ts`) y la suite es toda de integración
+contra la API corriendo en otro proceso, así que un `--coverage` del test
+runner mediría 0. Se mide lo que realmente se ejercita: la API corre bajo
+`NODE_V8_COVERAGE` (+ `--enable-source-maps` para mapear `dist/` → `src/`)
+durante la suite, y al recibir SIGTERM hace un cierre ordenado con
+`process.exit(0)` — handler nuevo en `server.ts` (`fastify.close()` +
+exit; un proceso matado por señal no vuelca el coverage; verificado: exit 0
+y volcado con `server.ts` adentro). `scripts/check-coverage.mjs` convierte el
+volcado con `c8` (devDependency nueva), agrega líneas por capa y por módulo
+y **falla si una capa queda bajo el mínimo de la guía**; los módulos bajo
+mínimo se listan como deuda sin bloquear ("módulo por módulo, no de
+golpe"). Paso nuevo al final del job `api` del CI.
+
+Baseline medido el 2026-08-25 con la suite completa en stack efímero
+(pg 55432 / redis 56379, 27/29 archivos verdes — los 2 rojos son los
+externos conocidos: `observability` pub/sub WS flaky y `twoFactor` 6.3 por
+rate-limit 429; sobre el stack compartido son 29/29):
+
+| Capa | Líneas | Mínimo guía | Estado |
+|---|---:|---:|---|
+| domain | **93,0 %** (2098/2257) | 90 % | OK |
+| application | **92,9 %** (2850/3069) | 85 % | OK |
+| infrastructure | **88,8 %** (2897/3262) | 70 % | OK |
+| presentation | **94,1 %** (3023/3214) | 60 % | OK |
+| legacy `src/api` · `services` · `jobs` · `ws` | 87,7 · 86,4 · 90,7 · 80,3 % | — | informativo |
+| total backend | 90,5 % líneas · 76,9 % ramas | | |
+
+Módulos con alguna capa bajo mínimo (deuda, la siguiente pasada de tests):
+`feedback` application 78 % · `inventory` domain 77 % · `scheduled-reports`
+domain 79 % · `system-settings` domain 75 % e infrastructure 65 % — en
+total ~80 líneas sin cubrir, todas ramas de error/validación.
+
+**Estado de la Fase 5:** completa en enforcement (1, 2, 4) y en medición +
+gate de cobertura (3); lo que queda de 3 es deuda acotada y listada arriba.
+Con esto los 5 puntos del plan original están cerrados o convertidos en
+checks de CI que bloquean. Pendiente fuera del plan: reducir la deuda
+baseline-ada (`guards-baseline.json`: sobre todo los workers de `src/jobs`
+que cablean internals de módulos a mano — el patrón correcto es un
+`presentation/<x>-wiring.ts` o una factory en el facade, como
+`createDecommissionStaleDevicesHandler` en `devices`).
+
 ## 0. Punto de partida (medido 2026-08-24)
 
 `stc-cloud` es un monolito con **varios dominios de negocio** bajo un mismo backend

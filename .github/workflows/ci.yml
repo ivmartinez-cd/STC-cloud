@@ -34,7 +34,8 @@ jobs:
   # ─── Arquitectura — guardas estáticas de docs/dev/ARCHITECTURE_GUIDE.md ──────
   # Fase 5 del plan de migración: bloquean (ratchet contra baseline) tamaños de
   # archivo/función (check-sizes) y reglas de dependencias entre capas/módulos/
-  # features, console.log, catch silenciosos y SQL interpolado (check-guards).
+  # features, console.log, catch silenciosos y SQL interpolado (check-guards) y
+  # que toda ruta declare su autenticación o esté en la allowlist pública (check-routes).
   # No necesita Postgres ni Redis: corre rápido y en paralelo a los otros jobs.
   arch:
     name: Arquitectura — límites de tamaño y guardas de dependencias
@@ -109,8 +110,10 @@ jobs:
 
       - name: Iniciar API en background (migra + bootstrap admin en el boot)
         working-directory: cloud
+        env:
+          NODE_V8_COVERAGE: /tmp/v8-coverage   # ver check-coverage.mjs (Fase 5, cobertura por capa)
         run: |
-          node dist/api/server.js &
+          node --enable-source-maps dist/api/server.js &
           echo $! > /tmp/api.pid
 
       - name: Esperar a que /health responda
@@ -132,9 +135,16 @@ jobs:
         working-directory: cloud
         run: node scripts/ci-test-runner.mjs
 
-      - name: Detener API
+      - name: Detener API (SIGTERM → cierre ordenado → V8 vuelca el coverage)
         if: always()
-        run: kill "$(cat /tmp/api.pid)" 2>/dev/null || true
+        run: |
+          PID="$(cat /tmp/api.pid)"
+          kill "$PID" 2>/dev/null || true
+          for i in $(seq 1 30); do kill -0 "$PID" 2>/dev/null || break; sleep 1; done
+
+      - name: Cobertura mínima por capa (docs/dev/ARCHITECTURE_GUIDE.md)
+        working-directory: cloud
+        run: NODE_V8_COVERAGE=/tmp/v8-coverage node scripts/check-coverage.mjs
 
   # ─── Agent (SNMP scanner → runtime embebido Windows) ──────────────────────
   agent:

@@ -16,7 +16,10 @@
     "check:sizes:baseline": "node scripts/check-sizes.mjs --write-baseline",
     "check:guards": "node scripts/check-guards.mjs",
     "check:guards:baseline": "node scripts/check-guards.mjs --write-baseline",
-    "check:arch": "npm run check:sizes && npm run check:guards"
+    "check:routes": "node scripts/check-routes.mjs",
+    "check:routes:catalog": "node scripts/check-routes.mjs --write-catalog",
+    "check:arch": "npm run check:sizes && npm run check:guards && npm run check:routes",
+    "check:coverage": "node scripts/check-coverage.mjs"
   },
   "dependencies": {
     "@fastify/cookie": "^11.0.2",
@@ -41,6 +44,7 @@
     "@types/node": "^20.11.20",
     "@types/nodemailer": "^8.0.1",
     "@types/ws": "^8.5.10",
+    "c8": "^12.0.0",
     "ts-node": "^10.9.2",
     "tsx": "^4.7.1",
     "typescript": "^5.3.3"

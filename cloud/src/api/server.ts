@@ -57,6 +57,7 @@ import { registerIncidentRoutes } from "./routes/incidentRoutes";
 import { getClientIp } from "./utils/ip";
 import { SERVER_VERSION } from "../version";
 import { CLIENT_VIEWER_ROUTES } from "./policy/rolePolicy";
+import { logMigrationDiagnostics, registerGracefulShutdown } from "./lifecycle";
 import { isEncryptionConfigured } from "../services/cryptoService";
 import { logger } from "../logger";
 
@@ -145,22 +146,7 @@ const start = async () => {
       logger.warn("[DB] No se pudo normalizar knex_migrations (posiblemente primera ejecución)");
     }
 
-    try {
-      const fs = require("fs");
-      const migDir = path.join(__dirname, "../db/migrations");
-      logger.info(`[DB] Directorio de migraciones: ${migDir}`);
-      if (fs.existsSync(migDir)) {
-        const files = fs.readdirSync(migDir);
-        logger.info(`[DB] Archivos encontrados: ${files.join(", ")}`);
-      } else {
-        logger.error(`[DB] ERROR: El directorio de migraciones NO existe: ${migDir}`);
-      }
-    } catch { /* diagnóstico opcional: un fallo al listar no debe frenar el arranque */ }
-
-    try {
-      const applied = await db("knex_migrations").select("name");
-      logger.info(`[DB] Migraciones en DB: ${applied.map((m: { name: string }) => m.name).join(", ")}`);
-    } catch { /* primera corrida: knex_migrations todavía no existe */ }
+    await logMigrationDiagnostics(db, path.join(__dirname, "../db/migrations"));
 
     await db.migrate.latest({
       directory: path.join(__dirname, "../db/migrations"),
@@ -386,6 +372,7 @@ const start = async () => {
     const port = Number(process.env.PORT) || 3000;
     await fastify.listen({ port, host: "0.0.0.0" });
     fastify.log.info(`Servidor listo en http://0.0.0.0:${port}`);
+    registerGracefulShutdown(fastify);
   } catch (err) {
     fastify.log.error(err);
     process.exit(1);
