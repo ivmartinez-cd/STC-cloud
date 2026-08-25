@@ -32,6 +32,8 @@ interface Props {
   credentials?: MaskedSnmpCredential[];
 }
 
+const INPUT = 'w-full rounded-[3px] border border-line-300 bg-white px-3 py-2.5 font-sans text-[12.5px] text-ink-900 outline-none focus:border-brand';
+
 function emptyRangeEntry(): IpRange {
   return { start: '', end: '' };
 }
@@ -52,22 +54,22 @@ export default function IpRangesEditor({ ranges, onChange, credentials = [] }: P
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {ranges.length === 0 && (
-        <div className="py-8 text-center border border-dashed border-slate-200 rounded-[20px]">
-          <p className="text-slate-400 text-xs font-bold uppercase tracking-widest">Sin segmentación configurada</p>
+        <div className="rounded-[5px] border border-dashed border-line-300 bg-white py-8 text-center">
+          <p className="font-montserrat text-[10px] font-bold uppercase tracking-[.13em] text-ink-300">Sin segmentación configurada</p>
         </div>
       )}
 
       {ranges.map((range, idx) => {
         const mode: Mode = range.hostname !== undefined ? 'hostname' : range.cidr !== undefined ? 'cidr' : 'range';
         return (
-          <div key={idx} className="bg-slate-50 p-3 rounded-[20px] border border-slate-100 space-y-3">
+          <div key={idx} className="space-y-3 rounded-[5px] border border-line-150 bg-surface-input p-3.5">
             <div className="flex items-center gap-2">
               <select
                 value={mode}
                 onChange={e => setMode(idx, e.target.value as Mode)}
-                className="cd-input !h-10 !w-32 !text-[11px] font-bold !bg-white border-transparent focus:!border-brand"
+                className="w-32 shrink-0 rounded-[3px] border border-line-300 bg-white px-2.5 py-2 font-sans text-[11px] font-semibold text-ink-900 outline-none focus:border-brand"
               >
                 <option value="range">Rango</option>
                 <option value="cidr">CIDR</option>
@@ -79,14 +81,14 @@ export default function IpRangesEditor({ ranges, onChange, credentials = [] }: P
                 placeholder="Etiqueta (opcional)"
                 value={range.label ?? ''}
                 onChange={e => update(idx, { label: e.target.value })}
-                className="cd-input w-full !h-10 !text-xs !bg-white border-transparent focus:!border-brand"
+                className={`${INPUT} text-[12px]`}
               />
 
               {ranges.length > 1 && (
                 <button
                   type="button"
                   onClick={() => remove(idx)}
-                  className="p-2.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all shrink-0"
+                  className="shrink-0 rounded-[3px] p-1.5 text-ink-300 transition-colors duration-150 ease-in-out hover:bg-surface-btn-hover hover:text-brand-severe"
                 >
                   <Trash2 size={16} />
                 </button>
@@ -100,15 +102,15 @@ export default function IpRangesEditor({ ranges, onChange, credentials = [] }: P
                   placeholder="IP Inicio"
                   value={range.start ?? ''}
                   onChange={e => update(idx, { start: e.target.value })}
-                  className="cd-input w-full !h-12 !text-xs font-mono !bg-white border-transparent focus:!border-brand"
+                  className={`${INPUT} font-mono`}
                 />
-                <span className="text-slate-300 font-black">—</span>
+                <span className="font-semibold text-ink-200">—</span>
                 <input
                   type="text"
                   placeholder="IP Fin"
                   value={range.end ?? ''}
                   onChange={e => update(idx, { end: e.target.value })}
-                  className="cd-input w-full !h-12 !text-xs font-mono !bg-white border-transparent focus:!border-brand"
+                  className={`${INPUT} font-mono`}
                 />
               </div>
             ) : mode === 'cidr' ? (
@@ -117,7 +119,7 @@ export default function IpRangesEditor({ ranges, onChange, credentials = [] }: P
                 placeholder="Ej: 10.0.1.0/24"
                 value={range.cidr ?? ''}
                 onChange={e => update(idx, { cidr: e.target.value })}
-                className="cd-input w-full !h-12 !text-xs font-mono !bg-white border-transparent focus:!border-brand"
+                className={`${INPUT} font-mono`}
               />
             ) : (
               <input
@@ -125,7 +127,7 @@ export default function IpRangesEditor({ ranges, onChange, credentials = [] }: P
                 placeholder="Ej: impresora-piso3.corp.local"
                 value={range.hostname ?? ''}
                 onChange={e => update(idx, { hostname: e.target.value })}
-                className="cd-input w-full !h-12 !text-xs font-mono !bg-white border-transparent focus:!border-brand"
+                className={`${INPUT} font-mono`}
               />
             )}
 
@@ -148,7 +150,7 @@ export default function IpRangesEditor({ ranges, onChange, credentials = [] }: P
       <button
         type="button"
         onClick={add}
-        className="flex items-center gap-2 text-[10px] font-black text-brand hover:text-brand/80 uppercase tracking-widest"
+        className="flex items-center gap-2 font-montserrat text-[10px] font-semibold uppercase tracking-[.08em] text-brand transition-colors duration-150 ease-in-out hover:text-brand-severe"
       >
         <Plus size={14} /> Adjuntar rango
       </button>
@@ -175,12 +177,12 @@ function ExcludeList({ exclude, onChange }: { exclude: string[]; onChange: (excl
           value={draft}
           onChange={e => setDraft(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addExclusion(); } }}
-          className="cd-input w-full !h-9 !text-[11px] font-mono !bg-white border-transparent focus:!border-brand"
+          className="w-full rounded-[3px] border border-line-300 bg-white px-2.5 py-2 font-mono text-[11px] text-ink-900 outline-none focus:border-brand"
         />
         <button
           type="button"
           onClick={addExclusion}
-          className="px-3 py-2 text-[10px] font-black text-slate-500 hover:text-brand uppercase tracking-widest shrink-0"
+          className="shrink-0 rounded-[3px] px-3 py-2 font-montserrat text-[10px] font-semibold uppercase tracking-[.08em] text-ink-400 transition-colors duration-150 ease-in-out hover:text-brand"
         >
           Excluir
         </button>
@@ -188,9 +190,9 @@ function ExcludeList({ exclude, onChange }: { exclude: string[]; onChange: (excl
       {exclude.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {exclude.map(ip => (
-            <span key={ip} className="flex items-center gap-1.5 px-2.5 py-1 bg-white border border-slate-200 rounded-lg text-[11px] font-mono text-slate-600">
+            <span key={ip} className="flex items-center gap-1.5 rounded-[2px] border border-line-300 bg-white px-2.5 py-1 font-mono text-[11px] text-ink-700">
               {ip}
-              <button type="button" onClick={() => onChange(exclude.filter(e => e !== ip))} className="text-slate-400 hover:text-rose-500">
+              <button type="button" onClick={() => onChange(exclude.filter(e => e !== ip))} className="text-ink-300 transition-colors duration-150 ease-in-out hover:text-brand-severe">
                 <X size={12} />
               </button>
             </span>

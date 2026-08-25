@@ -55,11 +55,11 @@ export function MergeDeviceModal({ isOpen, onClose, onDone, deviceId, clientId }
       variant="destructive" confirmLabel="Fusionar" confirmText="FUSIONAR" loading={loading} error={error}
       confirmDisabled={!sourceId || typed !== 'FUSIONAR'}
       extra={
-        <div className="space-y-3 mt-2">
+        <div className="space-y-3">
           {candidates.length === 0 ? (
-            <p className="text-[11px] text-slate-500">No se detectaron duplicados candidatos para este equipo.</p>
+            <p className="font-sans text-[12px] text-ink-300">No se detectaron duplicados candidatos para este equipo.</p>
           ) : (
-            <select value={sourceId} onChange={(e) => setSourceId(e.target.value)} className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm">
+            <select value={sourceId} onChange={(e) => setSourceId(e.target.value)} className="w-full rounded-[3px] border border-line-300 bg-white px-3 py-2.5 font-sans text-[13px] text-ink-900 outline-none focus:border-brand">
               <option value="">Elegí el equipo a fusionar…</option>
               {candidates.map((c) => (
                 <option key={otherIdOf(c)} value={otherIdOf(c)}>{labelOf(c)}</option>
@@ -68,7 +68,7 @@ export function MergeDeviceModal({ isOpen, onClose, onDone, deviceId, clientId }
           )}
           <input
             value={typed} onChange={(e) => setTyped(e.target.value)} placeholder="Escribí FUSIONAR para confirmar"
-            className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+            className="w-full rounded-[3px] border border-line-300 bg-white px-3 py-2.5 font-mono text-[13px] text-ink-900 outline-none focus:border-brand-severe"
           />
         </div>
       }

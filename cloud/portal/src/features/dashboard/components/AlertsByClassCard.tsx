@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import type { DashboardData } from '../../../shared/types/monitor';
 import SdsPanel from './SdsPanel';
-import CardError from './CardError';
+import CardError from '../../../shared/components/CardError';
 import CardEmpty from './CardEmpty';
 import SkeletonBlock from './Skeleton';
 import MiniBar from './MiniBar';

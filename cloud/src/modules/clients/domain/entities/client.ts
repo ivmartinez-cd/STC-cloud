@@ -135,6 +135,11 @@ export interface ClientDeviceDirectoryRow {
   serial_number: string | null;
   location: string | null;
   last_seen: Date | null;
+  /** Tóners individuales — un equipo color pinta una mini-barra por color (K/C/M/Y). */
+  toner_black: number | null;
+  toner_cyan: number | null;
+  toner_magenta: number | null;
+  toner_yellow: number | null;
   estado: ClientDeviceEstado;
   /** Mínimo entre los 4 tóners no nulos (LEAST ignora NULL en Postgres) — el
    * consumible más urgente del equipo. `null` si no reporta niveles de tóner

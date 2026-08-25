@@ -37,7 +37,7 @@ export function DecommissionDeviceModal({ isOpen, onClose, onDone, deviceId }: D
         <textarea
           value={reason} onChange={(e) => setReason(e.target.value)} rows={3}
           placeholder="Motivo de la baja (obligatorio)"
-          className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm mt-2"
+          className="w-full rounded-[3px] border border-line-300 bg-white px-3 py-2.5 font-sans text-[13px] text-ink-900 outline-none focus:border-brand"
         />
       }
     >

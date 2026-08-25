@@ -6,8 +6,8 @@ import { DeviceError } from "../domain/errors/device-error";
 import { MergeError, MergeOverlapError } from "../domain/errors/merge-error";
 import type { DeleteDeviceUseCase } from "../application/use-cases/delete-device";
 import type {
-  GetDeviceReadingsUseCase, GetDeviceSuppliesUseCase, GetDeviceUsageHistoryUseCase, GetDeviceUseCase,
-  ListDevicesUseCase, ListDuplicatesUseCase,
+  GetDevicePrintTrendUseCase, GetDeviceReadingsUseCase, GetDeviceStatsUseCase, GetDeviceSuppliesUseCase,
+  GetDeviceUsageHistoryUseCase, GetDeviceUseCase, ListDevicesUseCase, ListDuplicatesUseCase,
 } from "../application/use-cases/device-read-use-cases";
 import type { DecommissionDeviceUseCase, RecommissionDeviceUseCase } from "../application/use-cases/lifecycle-use-cases";
 import type { MergeDeviceRequestUseCase } from "../application/use-cases/merge-devices";
@@ -19,6 +19,7 @@ import type { UpdateDeviceUseCase } from "../application/use-cases/update-device
 export interface DeviceUseCases {
   list: ListDevicesUseCase; get: GetDeviceUseCase; readings: GetDeviceReadingsUseCase;
   supplies: GetDeviceSuppliesUseCase; usageHistory: GetDeviceUsageHistoryUseCase; duplicates: ListDuplicatesUseCase;
+  stats: GetDeviceStatsUseCase; printTrend: GetDevicePrintTrendUseCase;
   update: UpdateDeviceUseCase; remove: DeleteDeviceUseCase;
   decommission: DecommissionDeviceUseCase; recommission: RecommissionDeviceUseCase; move: MoveDeviceUseCase;
   merge: MergeDeviceRequestUseCase; monitorState: UpdateMonitorStateUseCase; unignore: UnignoreDeviceRequestUseCase;
@@ -65,6 +66,8 @@ function readHandlers(uc: DeviceUseCases) {
     getDeviceSupplies: (request: Req, reply: FastifyReply) => replyingDeviceErrors(reply, () => uc.supplies.execute(scopedId(request))),
     getDeviceUsageHistory: (request: Req, reply: FastifyReply) =>
       replyingDeviceErrors(reply, () => uc.usageHistory.execute({ ...scopedId(request), ...(request.query as { granularity?: string; limit?: string }) })),
+    getDeviceStats: (request: Req, reply: FastifyReply) => replyingDeviceErrors(reply, () => uc.stats.execute(scopedId(request))),
+    getDevicePrintTrend: (request: Req, reply: FastifyReply) => replyingDeviceErrors(reply, () => uc.printTrend.execute(scopedId(request))),
     listDuplicates: (request: Req, reply: FastifyReply) =>
       replyingDeviceErrors(reply, () => {
         const { client_id, agent_id } = request.query as { client_id?: string; agent_id?: string };

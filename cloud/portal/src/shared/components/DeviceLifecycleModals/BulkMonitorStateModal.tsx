@@ -39,20 +39,20 @@ export function BulkMonitorStateModal({ isOpen, onClose, onDone, deviceIds }: Bu
 
   return (
     <BrandModal isOpen={isOpen} onClose={onClose} title={`Cambiar estado de monitoreo — ${deviceIds.length} equipo(s)`} widthPx={440} error={error}>
-      <div className="p-5 space-y-4">
+      <div className="space-y-4">
         <div>
-          <label className="block text-xs font-bold text-slate-600 mb-1">Nuevo estado</label>
-          <select value={state} onChange={(e) => setState(e.target.value as typeof state)} className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm">
+          <label className="mb-1.5 block font-montserrat text-[8.5px] font-bold uppercase tracking-[.13em] text-ink-300">Nuevo estado</label>
+          <select value={state} onChange={(e) => setState(e.target.value as typeof state)} className="w-full rounded-[3px] border border-line-300 bg-white px-3 py-2.5 font-sans text-[13px] text-ink-900 outline-none focus:border-brand">
             {MONITOR_STATE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
         </div>
         <div>
-          <label className="block text-xs font-bold text-slate-600 mb-1">Motivo (opcional)</label>
-          <input value={reason} onChange={(e) => setReason(e.target.value)} className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" />
+          <label className="mb-1.5 block font-montserrat text-[8.5px] font-bold uppercase tracking-[.13em] text-ink-300">Motivo (opcional)</label>
+          <input value={reason} onChange={(e) => setReason(e.target.value)} className="w-full rounded-[3px] border border-line-300 bg-white px-3 py-2.5 font-sans text-[13px] text-ink-900 outline-none focus:border-brand" />
         </div>
-        <div className="flex justify-end gap-2 pt-2">
-          <button onClick={onClose} className="px-4 py-2 rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-100">Cancelar</button>
-          <button onClick={confirm} disabled={loading} className="px-4 py-2 rounded-xl text-xs font-bold bg-brand text-white hover:bg-brand-hover disabled:opacity-50">
+        <div className="flex justify-end gap-2.5 pt-2">
+          <button onClick={onClose} className="rounded-[3px] border border-line-300 bg-white px-4 py-2.5 font-montserrat text-[11px] font-semibold uppercase tracking-[.08em] text-ink-600 transition-colors duration-150 ease-in-out hover:bg-surface-btn-hover">Cancelar</button>
+          <button onClick={confirm} disabled={loading} className="rounded-[3px] bg-brand px-4 py-2.5 font-montserrat text-[11px] font-semibold uppercase tracking-[.08em] text-white transition-colors duration-150 ease-in-out hover:bg-brand-severe disabled:opacity-50">
             {loading ? 'Aplicando…' : 'Aplicar'}
           </button>
         </div>

@@ -1,5 +1,5 @@
 import type { Client, UsageMonth } from '../../../shared/types/monitor';
-import ZoneLabel from './ZoneLabel';
+import ZoneLabel from '../../../shared/components/ZoneLabel';
 import DuplicateDevicesCard from './DuplicateDevicesCard';
 import ClientUsageChart from './ClientUsageChart';
 import NotificationSettingsCard from './NotificationSettingsCard';

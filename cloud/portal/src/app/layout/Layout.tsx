@@ -1,5 +1,5 @@
-import { useState, Suspense } from 'react';
-import { Link, Outlet } from 'react-router-dom';
+import { useState, useRef, useEffect, Suspense } from 'react';
+import { Link, Outlet, useLocation } from 'react-router-dom';
 import { Menu, Settings } from 'lucide-react';
 import { useAuth } from '../../store/AuthContext';
 import FeedbackModal from '../../shared/components/FeedbackModal';
@@ -80,13 +80,26 @@ const Layout = () => {
   const [showFeedback, setShowFeedback] = useState(false);
   const closeMobile = () => setIsMobileMenuOpen(false);
 
+  // `<main>` es el contenedor que scrollea (no `window` — el layout es
+  // `h-screen overflow-hidden`), así que React Router no lo resetea solo al
+  // navegar: entrar a un nodo desde el fondo de una lista larga (ej. el
+  // listado de monitores de Cliente Detalle) dejaba la pantalla siguiente
+  // scrolleada al mismo punto en vez de arriba.
+  const mainRef = useRef<HTMLElement>(null);
+  const location = useLocation();
+  useEffect(() => { mainRef.current?.scrollTo(0, 0); }, [location.pathname]);
+  // El scroll-anchoring nativo del navegador reajusta scrollTop mientras el
+  // contenido de la página destino sigue montándose de forma asíncrona
+  // (tabs/paneles con su propio loading), deshaciendo el reset de arriba —
+  // sin esto la pantalla terminaba scrolleada a un valor residual en vez de 0.
+
   return (
     <div className="h-screen overflow-hidden bg-[#f8fafc] text-[#1a2333] font-sans flex">
       {isMobileMenuOpen && <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[60] md:hidden" onClick={closeMobile} />}
       <Sidebar isHovered={isHovered} isMobileMenuOpen={isMobileMenuOpen} onHover={setIsHovered} onCloseMobile={closeMobile} />
       <div className={`flex flex-col flex-1 min-w-0 h-screen min-h-0 transition-all duration-500 ease-in-out md:pl-20 ${isHovered ? 'md:pl-72' : ''}`}>
         <TopHeader onToggleMobile={() => setIsMobileMenuOpen((v) => !v)} />
-        <main className="flex-1 min-h-0 overflow-y-auto animate-fade-in bg-[#f8fafc]">
+        <main ref={mainRef} className="flex-1 min-h-0 overflow-y-auto animate-fade-in bg-[#f8fafc] [overflow-anchor:none]">
           <div className="max-w-[1400px] mx-auto p-4 md:p-10 xl:h-full xl:flex xl:flex-col">
             <Suspense fallback={<ModuleFallback />}>
               {totpEnrollmentRequired && <TotpBanner />}

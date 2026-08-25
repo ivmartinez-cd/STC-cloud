@@ -12,61 +12,46 @@ interface ConfirmModalProps {
   isLoading?: boolean;
 }
 
+/** Confirmación genérica (handoff hifi, transversal): sin degradado, radio 5px,
+ * severidad expresada en naranja oscuro — nunca rojo relleno. */
 const ConfirmModal = ({
-  isOpen,
-  onClose,
-  onConfirm,
-  title,
-  message,
-  confirmText = 'Confirmar',
-  cancelText = 'Cancelar',
-  isDanger = false,
-  isLoading = false
+  isOpen, onClose, onConfirm, title, message,
+  confirmText = 'Confirmar', cancelText = 'Cancelar', isDanger = false, isLoading = false,
 }: ConfirmModalProps) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-overlay-in">
-      <div className="bg-white rounded-[24px] shadow-2xl w-full max-w-sm overflow-hidden animate-modal-in">
-        <header className={`px-8 py-5 flex items-center justify-between text-white ${
-          isDanger ? 'bg-gradient-to-r from-rose-500 to-rose-600' : 'bg-gradient-to-r from-[#58595b] to-[#1a2333]'
-        }`}>
-          <div>
-            <h2 className="font-extrabold text-sm uppercase tracking-widest">{title}</h2>
-          </div>
-          <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-xl transition-colors">
-            <X size={20} />
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4" style={{ background: 'rgba(20,20,20,.55)' }}>
+      <div className="flex w-full max-w-sm flex-col overflow-hidden rounded-[5px] bg-white" style={{ boxShadow: '0 20px 60px rgba(0,0,0,.25)' }}>
+        <header className="flex items-center justify-between border-b border-line-150 px-6 py-4">
+          <h2 className="font-montserrat text-[13px] font-extrabold uppercase tracking-[.08em] text-ink-900">{title}</h2>
+          <button onClick={onClose} className="rounded-[3px] p-1.5 text-ink-300 transition-colors duration-150 ease-in-out hover:bg-surface-btn-hover hover:text-ink-600">
+            <X size={16} />
           </button>
         </header>
 
-        <div className="p-8">
-          <div className="flex flex-col items-center text-center gap-4 mb-8">
-            <div className={`p-4 rounded-2xl ${isDanger ? 'bg-rose-50 text-rose-500' : 'bg-brand/10 text-brand'}`}>
-              <AlertTriangle size={32} />
+        <div className="p-6">
+          <div className="mb-6 flex flex-col items-center gap-3.5 text-center">
+            <div className={`flex h-12 w-12 items-center justify-center rounded-full ${isDanger ? 'bg-brand-soft text-brand-severe' : 'bg-brand-soft text-brand-accent'}`}>
+              <AlertTriangle size={24} />
             </div>
-            <p className="text-sm font-medium text-slate-600 leading-relaxed">
-              {message}
-            </p>
+            <p className="font-sans text-[13px] leading-[1.55] text-ink-700">{message}</p>
           </div>
 
-          <div className="flex gap-4">
+          <div className="flex gap-3">
             <button
-              onClick={onClose}
-              disabled={isLoading}
-              className="flex-1 px-6 py-3 rounded-xl border border-slate-200 text-slate-600 font-bold hover:bg-slate-50 transition-all text-sm disabled:opacity-50"
+              onClick={onClose} disabled={isLoading}
+              className="flex-1 rounded-[3px] border border-line-300 px-4 py-2.5 font-montserrat text-[11px] font-semibold uppercase tracking-[.08em] text-ink-600 transition-colors duration-150 ease-in-out hover:bg-surface-btn-hover disabled:opacity-50"
             >
               {cancelText}
             </button>
             <button
-              onClick={onConfirm}
-              disabled={isLoading}
-              className={`flex-1 px-6 py-3 rounded-xl text-white font-extrabold transition-all shadow-lg text-sm disabled:opacity-50 flex items-center justify-center gap-2 ${
-                isDanger 
-                  ? 'bg-rose-500 hover:bg-rose-600 shadow-rose-900/20' 
-                  : 'bg-[#f7931d] hover:bg-[#d35400] shadow-orange-900/20'
+              onClick={onConfirm} disabled={isLoading}
+              className={`flex flex-1 items-center justify-center gap-2 rounded-[3px] px-4 py-2.5 font-montserrat text-[11px] font-semibold uppercase tracking-[.08em] text-white transition-colors duration-150 ease-in-out disabled:opacity-50 ${
+                isDanger ? 'bg-brand-severe hover:bg-[#a85c08]' : 'bg-brand hover:bg-brand-severe'
               }`}
             >
-              {isLoading ? <Loader2 size={18} className="animate-spin" /> : confirmText}
+              {isLoading ? <Loader2 size={15} className="animate-spin" /> : confirmText}
             </button>
           </div>
         </div>
@@ -76,4 +61,3 @@ const ConfirmModal = ({
 };
 
 export default ConfirmModal;
-

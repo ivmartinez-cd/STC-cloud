@@ -10,7 +10,7 @@ cliente) o está en la allowlist explícita de rutas públicas. Dentro del porta
 y sólo llega a `CLIENT_VIEWER_ROUTES` (scopeado a su cliente). Las marcadas `admin`
 además exigen `role === "admin"` en el handler.
 
-Total: 154 rutas · públicas: 9 · client_viewer: 42 · sólo admin: 8
+Total: 163 rutas · públicas: 9 · client_viewer: 50 · sólo admin: 8
 
 ## `src/api/routes/authRoutes.ts`
 
@@ -99,6 +99,11 @@ Total: 154 rutas · públicas: 9 · client_viewer: 42 · sólo admin: 8
 | GET | `/api/v1/agents` | admin · operator · client_viewer |
 | GET | `/api/v1/agents/:id` | admin · operator · client_viewer |
 | GET | `/api/v1/agents/:id/devices` | admin · operator · client_viewer |
+| GET | `/api/v1/agents/:id/stats` | admin · operator · client_viewer |
+| GET | `/api/v1/agents/:id/connectivity` | admin · operator · client_viewer |
+| GET | `/api/v1/agents/:id/activity` | admin · operator |
+| GET | `/api/v1/agents/:id/license` | admin · operator · client_viewer |
+| GET | `/api/v1/agents/:id/devices/directory` | admin · operator · client_viewer |
 | POST | `/api/v1/agents` | admin · operator |
 | DELETE | `/api/v1/agents/:id` | admin · operator |
 | POST | `/api/v1/agents/:id/revoke` | admin · operator |
@@ -145,6 +150,8 @@ Total: 154 rutas · públicas: 9 · client_viewer: 42 · sólo admin: 8
 | GET | `/api/v1/clients/:id/monitors` | admin · operator · client_viewer |
 | GET | `/api/v1/clients/:id/usage` | admin · operator · client_viewer |
 | GET | `/api/v1/clients/:id/devices` | admin · operator · client_viewer |
+| GET | `/api/v1/clients/:id/stats` | admin · operator · client_viewer |
+| GET | `/api/v1/clients/:id/devices/directory` | admin · operator · client_viewer |
 | GET | `/api/v1/clients/:id/pending-devices` | admin · operator |
 | POST | `/api/v1/clients/:id/pending-devices/register` | admin · operator |
 | POST | `/api/v1/clients/:id/pending-devices/ignore` | admin · operator |
@@ -171,6 +178,8 @@ Total: 154 rutas · públicas: 9 · client_viewer: 42 · sólo admin: 8
 | GET | `/api/v1/devices/:id/readings` | admin · operator · client_viewer |
 | GET | `/api/v1/devices/:id/usage-history` | admin · operator · client_viewer |
 | GET | `/api/v1/devices/:id/supplies` | admin · operator · client_viewer |
+| GET | `/api/v1/devices/:id/stats` | admin · operator · client_viewer |
+| GET | `/api/v1/devices/:id/print-trend` | admin · operator · client_viewer |
 | PUT | `/api/v1/devices/:id` | admin · operator |
 | POST | `/api/v1/devices/:id/decommission` | admin · operator |
 | POST | `/api/v1/devices/:id/recommission` | admin · operator |

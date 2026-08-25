@@ -1,6 +1,6 @@
 import type { DashboardData } from '../../../shared/types/monitor';
 import SdsPanel from './SdsPanel';
-import CardError from './CardError';
+import CardError from '../../../shared/components/CardError';
 import SkeletonBlock from './Skeleton';
 import { fmt } from '../../../shared/lib/formatters';
 

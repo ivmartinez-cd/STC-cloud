@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import type { DashboardData } from '../../../shared/types/monitor';
 import { fmt, pctOf } from '../../../shared/lib/formatters';
-import CardError from './CardError';
+import CardError from '../../../shared/components/CardError';
 import MiniBar from './MiniBar';
 import SkeletonBlock from './Skeleton';
 

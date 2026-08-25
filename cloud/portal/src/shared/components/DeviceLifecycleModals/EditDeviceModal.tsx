@@ -77,43 +77,43 @@ export function EditDeviceModal({
 
   return (
     <BrandModal isOpen={isOpen} onClose={onClose} title="Editar equipo" widthPx={480} error={error}>
-      <div className="p-5 space-y-4 max-h-[70vh] overflow-y-auto">
+      <div className="space-y-4 max-h-[70vh] overflow-y-auto">
         <div>
-          <label className="block text-xs font-bold text-slate-600 mb-1">Nombre</label>
-          <input value={name} onChange={(e) => setName(e.target.value)} className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" />
+          <label className="mb-1.5 block font-montserrat text-[8.5px] font-bold uppercase tracking-[.13em] text-ink-300">Nombre</label>
+          <input value={name} onChange={(e) => setName(e.target.value)} className="w-full rounded-[3px] border border-line-300 bg-white px-3 py-2.5 font-sans text-[13px] text-ink-900 outline-none focus:border-brand" />
           {reportedName && reportedName !== name && (
-            <p className="text-[11px] text-slate-400 mt-1">Reportado por el agente: {reportedName}</p>
+            <p className="mt-1 font-sans text-[11px] text-ink-300">Reportado por el agente: {reportedName}</p>
           )}
         </div>
         <div>
-          <label className="block text-xs font-bold text-slate-600 mb-1">Ubicación</label>
-          <input value={location} onChange={(e) => setLocation(e.target.value)} className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" placeholder="Ej: Piso 3, oficina de RRHH" />
+          <label className="mb-1.5 block font-montserrat text-[8.5px] font-bold uppercase tracking-[.13em] text-ink-300">Ubicación</label>
+          <input value={location} onChange={(e) => setLocation(e.target.value)} className="w-full rounded-[3px] border border-line-300 bg-white px-3 py-2.5 font-sans text-[13px] text-ink-900 outline-none focus:border-brand" placeholder="Ej: Piso 3, oficina de RRHH" />
           {reportedLocation && reportedLocation !== location && (
-            <p className="text-[11px] text-slate-400 mt-1">Reportado por el agente: {reportedLocation}</p>
+            <p className="mt-1 font-sans text-[11px] text-ink-300">Reportado por el agente: {reportedLocation}</p>
           )}
         </div>
         <div>
-          <label className="block text-xs font-bold text-slate-600 mb-1">Nº de activo</label>
-          <input value={assetNumber} onChange={(e) => setAssetNumber(e.target.value)} className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" placeholder="Ej: ACT-00123" />
+          <label className="mb-1.5 block font-montserrat text-[8.5px] font-bold uppercase tracking-[.13em] text-ink-300">Nº de activo</label>
+          <input value={assetNumber} onChange={(e) => setAssetNumber(e.target.value)} className="w-full rounded-[3px] border border-line-300 bg-white px-3 py-2.5 font-mono text-[13px] text-ink-900 outline-none focus:border-brand" placeholder="Ej: ACT-00123" />
         </div>
         <div>
-          <label className="block text-xs font-bold text-slate-600 mb-1">Nº de etiqueta</label>
-          <input value={assetTag} onChange={(e) => setAssetTag(e.target.value)} className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" placeholder="Ej: INV-4521" />
+          <label className="mb-1.5 block font-montserrat text-[8.5px] font-bold uppercase tracking-[.13em] text-ink-300">Nº de etiqueta</label>
+          <input value={assetTag} onChange={(e) => setAssetTag(e.target.value)} className="w-full rounded-[3px] border border-line-300 bg-white px-3 py-2.5 font-mono text-[13px] text-ink-900 outline-none focus:border-brand" placeholder="Ej: INV-4521" />
         </div>
         <div>
-          <label className="block text-xs font-bold text-slate-600 mb-1">Ciclos de trabajo (páginas/mes)</label>
-          <input type="number" min={1} value={dutyCycle} onChange={(e) => setDutyCycle(e.target.value)} className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" placeholder="Vacío = usar el del catálogo de modelos" />
+          <label className="mb-1.5 block font-montserrat text-[8.5px] font-bold uppercase tracking-[.13em] text-ink-300">Ciclos de trabajo (páginas/mes)</label>
+          <input type="number" min={1} value={dutyCycle} onChange={(e) => setDutyCycle(e.target.value)} className="w-full rounded-[3px] border border-line-300 bg-white px-3 py-2.5 font-sans text-[13px] text-ink-900 outline-none focus:border-brand" placeholder="Vacío = usar el del catálogo de modelos" />
         </div>
         {customFieldDefs.map((def) => (
           <div key={def.id}>
-            <label className="block text-xs font-bold text-slate-600 mb-1">{def.label}</label>
+            <label className="mb-1.5 block font-montserrat text-[8.5px] font-bold uppercase tracking-[.13em] text-ink-300">{def.label}</label>
             {def.type === 'select' ? (
-              <select value={customValues[def.key] ?? ''} onChange={(e) => setCustomValues((v) => ({ ...v, [def.key]: e.target.value }))} className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm">
+              <select value={customValues[def.key] ?? ''} onChange={(e) => setCustomValues((v) => ({ ...v, [def.key]: e.target.value }))} className="w-full rounded-[3px] border border-line-300 bg-white px-3 py-2.5 font-sans text-[13px] text-ink-900 outline-none focus:border-brand">
                 <option value="">—</option>
                 {(def.options ?? []).map((o) => <option key={o} value={o}>{o}</option>)}
               </select>
             ) : def.type === 'boolean' ? (
-              <select value={customValues[def.key] ?? ''} onChange={(e) => setCustomValues((v) => ({ ...v, [def.key]: e.target.value }))} className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm">
+              <select value={customValues[def.key] ?? ''} onChange={(e) => setCustomValues((v) => ({ ...v, [def.key]: e.target.value }))} className="w-full rounded-[3px] border border-line-300 bg-white px-3 py-2.5 font-sans text-[13px] text-ink-900 outline-none focus:border-brand">
                 <option value="">—</option>
                 <option value="true">Sí</option>
                 <option value="false">No</option>
@@ -123,14 +123,14 @@ export function EditDeviceModal({
                 type={def.type === 'number' ? 'number' : def.type === 'date' ? 'date' : 'text'}
                 value={customValues[def.key] ?? ''}
                 onChange={(e) => setCustomValues((v) => ({ ...v, [def.key]: e.target.value }))}
-                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+                className="w-full rounded-[3px] border border-line-300 bg-white px-3 py-2.5 font-sans text-[13px] text-ink-900 outline-none focus:border-brand"
               />
             )}
           </div>
         ))}
-        <div className="flex justify-end gap-2 pt-2">
-          <button onClick={onClose} className="px-4 py-2 rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-100">Cancelar</button>
-          <button onClick={save} disabled={saving} className="px-4 py-2 rounded-xl text-xs font-bold bg-brand text-white hover:bg-brand-hover disabled:opacity-50">
+        <div className="flex justify-end gap-2.5 pt-2">
+          <button onClick={onClose} className="rounded-[3px] border border-line-300 bg-white px-4 py-2.5 font-montserrat text-[11px] font-semibold uppercase tracking-[.08em] text-ink-600 transition-colors duration-150 ease-in-out hover:bg-surface-btn-hover">Cancelar</button>
+          <button onClick={save} disabled={saving} className="rounded-[3px] bg-brand px-4 py-2.5 font-montserrat text-[11px] font-semibold uppercase tracking-[.08em] text-white transition-colors duration-150 ease-in-out hover:bg-brand-severe disabled:opacity-50">
             {saving ? 'Guardando…' : 'Guardar'}
           </button>
         </div>

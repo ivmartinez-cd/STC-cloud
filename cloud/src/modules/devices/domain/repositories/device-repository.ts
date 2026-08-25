@@ -1,4 +1,5 @@
 import type { AgentRow, DeviceRow, DeviceScope, StaleDeviceRow } from "../entities/device";
+import type { DeviceStats, PrintTrendMonth } from "../entities/device-detail";
 
 export interface ReadingsQuery {
   from?: string;
@@ -40,6 +41,10 @@ export interface DeviceRepository {
   readings(deviceId: string, query: ReadingsQuery): Promise<unknown[]>;
   usageHistory(deviceId: string, query: UsageHistoryQuery): Promise<unknown[]>;
   duplicates(clientId: string, agentId?: string): Promise<unknown[]>;
+  /** Tira de 6 métricas del header (handoff "Dispositivo — detalle"). Sin `lowest_supply` — lo agrega el use case vía `DeviceSuppliesReader`. */
+  statsRaw(deviceId: string): Promise<Omit<DeviceStats, "lowest_supply">>;
+  /** 12 meses de deltas mono/color, siempre 12 filas (huecos en 0). */
+  printTrend(deviceId: string): Promise<PrintTrendMonth[]>;
 
   findOwned(id: string, scope: DeviceScope, forUpdate?: boolean): Promise<DeviceRow | null>;
   /** Filas que matchean `ids` Y el scope — un id ajeno simplemente no vuelve. */

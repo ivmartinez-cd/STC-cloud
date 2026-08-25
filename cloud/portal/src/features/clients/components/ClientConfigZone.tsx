@@ -1,4 +1,4 @@
-import ZoneLabel from './ZoneLabel';
+import ZoneLabel from '../../../shared/components/ZoneLabel';
 import ApiKeysCard from './ApiKeysCard';
 import CustomFieldsCard from './CustomFieldsCard';
 import IncidentRulesCard from './IncidentRulesCard';

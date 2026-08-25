@@ -44,7 +44,7 @@ export default function CountersTab({
             {counters.colorEngineCycles != null && <Row label="Ciclos del motor en color" value={fmtInt(counters.colorEngineCycles)} />}
           </div>
         ) : (
-          <p className="px-4 py-4 text-[11px] font-semibold text-slate-500">El equipo no expone desglose de contadores por función (sólo total/mono/color).</p>
+          <p className="px-4 py-4 font-sans text-[12.5px] text-ink-300">El equipo no expone desglose de contadores por función (sólo total/mono/color).</p>
         )}
       </Card>
     </div>

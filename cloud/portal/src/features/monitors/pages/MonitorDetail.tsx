@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import { useParams, Link, useSearchParams } from 'react-router-dom';
-import { Loader2, ShieldOff, ArrowLeft, Command, AlertTriangle } from 'lucide-react';
+import { Loader2, ShieldOff, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../../../store/AuthContext';
 import { useMonitorDetail } from '../hooks/useMonitorDetail';
 import { useMonitorStats, useMonitorConnectivity, useMonitorLicense, useMonitorActivity } from '../hooks/useMonitorOverview';
 import { useTime } from '../../../shared/hooks/useTime';
 import MonitorProfileCard from '../components/MonitorProfileCard';
 import MonitorMetricsStrip from '../components/MonitorMetricsStrip';
-import MonitorDetailTabs from '../components/MonitorDetailTabs';
+import DetailTabs from '../../../shared/components/DetailTabs';
 import DeviceSummaryCard from '../components/DeviceSummaryCard';
 import MonitorSpecsCard from '../components/MonitorSpecsCard';
 import LicenseCard from '../components/LicenseCard';
@@ -106,12 +106,12 @@ const MonitorDetail = () => {
   if (error || !monitor) {
     return (
       <div className="p-10 text-center">
-        <div className="bg-rose-50 border border-rose-100 rounded-[32px] p-12 max-w-xl mx-auto">
-          <ShieldOff size={64} className="text-rose-400 mx-auto mb-6" />
-          <h2 className="text-2xl font-black text-rose-900 mb-4 uppercase">Nodo No Encontrado</h2>
-          <p className="text-rose-700 font-bold mb-8">{error || 'El agente solicitado no existe o no tienes permisos.'}</p>
-          <Link to="/monitoring" className="cd-btn-primary inline-flex items-center gap-3">
-            <ArrowLeft size={20} /> Volver a Infraestructura
+        <div className="mx-auto max-w-xl rounded-[5px] border border-brand-chip-border bg-brand-soft p-12">
+          <ShieldOff size={48} className="mx-auto mb-5 text-brand-severe" />
+          <h2 className="mb-3.5 font-montserrat text-[19px] font-extrabold uppercase tracking-[.02em] text-ink-900">Nodo no encontrado</h2>
+          <p className="mb-6 font-sans text-[13px] text-ink-700">{error || 'El agente solicitado no existe o no tienes permisos.'}</p>
+          <Link to="/monitoring" className="inline-flex items-center gap-2.5 rounded-[3px] bg-brand px-4 py-2.5 font-montserrat text-[11px] font-semibold uppercase tracking-[.08em] text-white transition-colors duration-150 ease-in-out hover:bg-brand-severe">
+            <ArrowLeft size={16} /> Volver a Infraestructura
           </Link>
         </div>
       </div>
@@ -147,7 +147,7 @@ const MonitorDetail = () => {
           onRegenKey={handleRegen}
         />
         <MonitorMetricsStrip stats={stats} loading={statsLoading} error={statsError} onRetry={refetchStats} />
-        <MonitorDetailTabs tabs={TABS} active={activeTab} onChange={handleTabChange} />
+        <DetailTabs tabs={TABS} active={activeTab} onChange={handleTabChange} />
       </div>
 
       {/* Overview Tab */}
@@ -188,23 +188,17 @@ const MonitorDetail = () => {
 
       {/* Console Tab */}
       {activeTab === 'console' && !isReadOnlyViewer && (
-        <div className="space-y-6">
-          <div className="rounded-[5px] border border-line-100 bg-white p-8">
-            <div className="flex items-center gap-4 mb-8">
-              <div className="p-3 bg-slate-900 text-white rounded-2xl"><Command size={24} /></div>
-              <h3 className="text-lg font-black text-[#1a2333] tracking-tight">Consola de STC Cloud</h3>
-            </div>
-            <RemoteToolsPanel commandLoading={commandLoading} onCommand={sendCommand} />
-            <Terminal agentId={id ?? ''} />
-            <div className="mt-8 p-6 bg-slate-50 rounded-2xl border border-slate-100 flex items-start gap-4">
-              <AlertTriangle className="text-amber-500 shrink-0 mt-0.5" size={20} />
-              <div className="space-y-1">
-                <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Aviso de Seguridad</p>
-                <p className="text-xs text-slate-500 font-bold leading-relaxed">
-                  Todos los comandos ejecutados en esta consola son auditados y vinculados a su cuenta de usuario.
-                  Evite comandos destructivos a menos que sea necesario para el soporte técnico.
-                </p>
-              </div>
+        <div>
+          <RemoteToolsPanel commandLoading={commandLoading} onCommand={sendCommand} />
+          <Terminal agentId={id ?? ''} />
+          <div className="mt-4 flex items-start gap-3.5 rounded-[3px] border border-brand-chip-border bg-brand-soft p-4">
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand font-montserrat text-[13px] font-bold text-white">!</span>
+            <div>
+              <p className="mb-1 font-montserrat text-[9px] font-bold uppercase tracking-[.13em] text-brand-accent">Aviso de seguridad</p>
+              <p className="font-sans text-[12.5px] leading-[1.55] text-ink-700">
+                Todos los comandos ejecutados en esta consola son auditados y vinculados a tu cuenta de usuario.
+                Evitá comandos destructivos a menos que sea necesario para el soporte técnico.
+              </p>
             </div>
           </div>
         </div>

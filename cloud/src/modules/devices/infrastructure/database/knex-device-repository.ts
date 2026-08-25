@@ -1,9 +1,13 @@
 import type { Knex } from "knex";
 import { onlyLiveDevices } from "../../../../api/utils/deviceFilters";
 import type { AgentRow, DeviceRow, DeviceScope, StaleDeviceRow } from "../../domain/entities/device";
+import type { DeviceStats, PrintTrendMonth } from "../../domain/entities/device-detail";
 import type { DecommissionFields, DeviceRepository, ListDevicesQuery, ReadingsQuery, UsageHistoryQuery } from "../../domain/repositories/device-repository";
+import { extractTrayLabel } from "../../domain/services/jam-tray";
 import { UUID_RE } from "../../domain/services/device-rules";
-import { DUPLICATES_SQL, duplicatesBindings } from "./device-sql";
+import {
+  DEVICE_JAMS_30D_SQL, DEVICE_MONTH_VOLUME_SQL, DUPLICATES_SQL, PRINT_TREND_SQL, SITE_MONTH_VOLUME_SQL, duplicatesBindings,
+} from "./device-sql";
 
 const STATUS_SQL = "CASE WHEN devices.active = true THEN 'online' ELSE 'offline' END as status";
 
@@ -116,6 +120,53 @@ export class KnexDeviceRepository implements DeviceRepository {
   async duplicates(clientId: string, agentId?: string): Promise<unknown[]> {
     const rows = await this.db.raw(DUPLICATES_SQL(!!agentId), duplicatesBindings(clientId, agentId));
     return rows.rows;
+  }
+
+  /** `null`/0 si el sitio no imprimió nada este mes — evita división por cero, nunca "Infinity%". */
+  private static pct(part: number, whole: number): number | null {
+    return whole > 0 ? Math.round((part / whole) * 1000) / 10 : null;
+  }
+
+  private static jamsSummary(row: { jams_30d?: number; last_jam_at?: Date | null; last_jam_message?: string | null } | undefined) {
+    return {
+      count_30d: Number(row?.jams_30d ?? 0),
+      last_at: row?.last_jam_at ?? null,
+      tray_label: extractTrayLabel(row?.last_jam_message ?? null),
+    };
+  }
+
+  private static shapeStats(
+    device: { total_pages: unknown; mono_pages: unknown; color_pages: unknown } | undefined,
+    volumeMonth: number, siteVolumeMonth: number, jamsRow: Parameters<typeof KnexDeviceRepository.jamsSummary>[0],
+  ): Omit<DeviceStats, "lowest_supply"> {
+    const total = Number(device?.total_pages ?? 0);
+    const mono = Number(device?.mono_pages ?? 0);
+    const color = Number(device?.color_pages ?? 0);
+    return {
+      total_counter: total, volume_month: volumeMonth, volume_month_site_pct: KnexDeviceRepository.pct(volumeMonth, siteVolumeMonth),
+      mono_pages: mono, mono_pct: KnexDeviceRepository.pct(mono, total),
+      color_pages: color, color_pct: KnexDeviceRepository.pct(color, total),
+      jams: KnexDeviceRepository.jamsSummary(jamsRow),
+    };
+  }
+
+  async statsRaw(deviceId: string): Promise<Omit<DeviceStats, "lowest_supply">> {
+    const [device, monthRow, siteRow, jamsRow] = await Promise.all([
+      this.db("devices").where({ id: deviceId }).select("total_pages", "mono_pages", "color_pages").first(),
+      this.db.raw(DEVICE_MONTH_VOLUME_SQL, [deviceId]),
+      this.db.raw(SITE_MONTH_VOLUME_SQL, [deviceId]),
+      this.db.raw(DEVICE_JAMS_30D_SQL, [deviceId]),
+    ]);
+    return KnexDeviceRepository.shapeStats(
+      device, Number(monthRow.rows[0]?.volume_month ?? 0), Number(siteRow.rows[0]?.site_volume_month ?? 0), jamsRow.rows[0],
+    );
+  }
+
+  async printTrend(deviceId: string): Promise<PrintTrendMonth[]> {
+    const { rows } = await this.db.raw(PRINT_TREND_SQL, [deviceId]);
+    return rows.map((r: { month: string; month_date: Date; mono: string; color: string; total: string }) => ({
+      month: r.month, month_date: r.month_date, mono: Number(r.mono), color: Number(r.color), total: Number(r.total),
+    }));
   }
 
   async findOwned(id: string, scope: DeviceScope, forUpdate = false): Promise<DeviceRow | null> {

@@ -66,16 +66,16 @@ export default function NotificationEventsCard({ clientId, canEdit }: { clientId
       meta={events ? `${silenced} evento${silenced === 1 ? '' : 's'} silenciado${silenced === 1 ? '' : 's'}` : '—'}
       cta={{ label: saving ? 'Guardando…' : 'Administrar', onClick: save }}
     >
-      <p className="text-xs text-slate-500 font-medium mb-4">
+      <p className="mb-4 font-sans text-[12.5px] text-ink-400">
         Qué eventos llegan al email/webhook de este cliente. Destildar un evento lo silencia (el historial en el portal no cambia).
       </p>
       {!events ? (
-        <div className="py-6 flex justify-center"><Loader2 size={20} className="text-brand animate-spin" /></div>
+        <div className="flex justify-center py-6"><Loader2 size={18} className="animate-spin text-brand" /></div>
       ) : (
         <div className="space-y-2">
           {ALL_EVENTS.map((event) => (
-            <label key={event} className="flex items-center gap-3 text-xs font-bold text-slate-600 cursor-pointer">
-              <input type="checkbox" checked={events.includes(event)} onChange={() => toggle(event)} />
+            <label key={event} className="flex cursor-pointer items-center gap-3 font-sans text-[12.5px] font-semibold text-ink-700">
+              <input type="checkbox" checked={events.includes(event)} onChange={() => toggle(event)} className="accent-brand" />
               {EVENT_LABELS[event]}
             </label>
           ))}

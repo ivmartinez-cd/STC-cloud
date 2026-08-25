@@ -29,18 +29,21 @@ interface ConfirmationModalProps {
   widthPx?: number;
 }
 
+// Handoff hifi, transversal #1: sólo naranja institucional + grises — ninguna
+// variante usa amarillo ni rojo, ni siquiera "destructive" (zona de riesgo:
+// borde + fondo suave, nunca relleno).
 const BLOCK: Record<Exclude<ConfirmationVariant, 'simple'>, string> = {
-  warning:     'bg-[rgba(234,179,8,.08)] border-[rgba(234,179,8,.3)] text-[#92400e]',
-  destructive: 'bg-[rgba(239,68,68,.07)] border-[rgba(239,68,68,.25)] text-[#991b1b]',
+  warning:     'bg-brand-soft border-brand-chip-border text-brand-accent',
+  destructive: 'bg-brand-soft border-brand-chip-border text-brand-severe',
 };
 const ICON: Record<Exclude<ConfirmationVariant, 'simple'>, string> = {
-  warning:     'bg-[rgba(234,179,8,.15)] text-[#eab308]',
-  destructive: 'bg-[rgba(239,68,68,.12)] text-[#ef4444]',
+  warning:     'bg-white text-brand-accent',
+  destructive: 'bg-white text-brand-severe',
 };
 const BUTTON: Record<ConfirmationVariant, string> = {
-  simple:      'bg-[#f7931d] text-white hover:bg-[#d97e0f]',
-  warning:     'bg-[#eab308] text-white hover:bg-[#ca9a04]',
-  destructive: 'bg-[#ef4444] text-white hover:bg-[#dc2626]',
+  simple:      'bg-brand text-white hover:bg-brand-severe',
+  warning:     'bg-brand text-white hover:bg-brand-severe',
+  destructive: 'border border-brand-chip-border bg-white text-brand-severe hover:bg-brand-soft',
 };
 
 export function ConfirmationModal({
@@ -61,37 +64,37 @@ export function ConfirmationModal({
     <BrandModal isOpen={isOpen} onClose={onClose} title={title} widthPx={widthPx} error={error}>
       <div className="flex flex-col gap-[18px]">
         {variant === 'simple' ? (
-          <div className="text-sm leading-[1.55] text-slate-600">{children}</div>
+          <div className="font-sans text-[13px] leading-[1.55] text-ink-700">{children}</div>
         ) : (
-          <div className={`flex gap-3.5 rounded-[10px] border p-3.5 ${BLOCK[variant]}`}>
+          <div className={`flex gap-3.5 rounded-[3px] border p-3.5 ${BLOCK[variant]}`}>
             <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${ICON[variant]}`}>
               <Icon className="h-[18px] w-[18px]" />
             </span>
-            <div className="text-sm leading-[1.55]">{children}</div>
+            <div className="font-sans text-[13px] leading-[1.55]">{children}</div>
           </div>
         )}
         {needsTyping && (
           <div className="flex flex-col gap-1.5">
-            <label htmlFor={inputId} className="text-[11px] font-bold uppercase tracking-wide text-slate-500">
-              Escribí <span className="font-mono text-slate-800">{confirmText}</span> para confirmar
+            <label htmlFor={inputId} className="font-montserrat text-[8.5px] font-bold uppercase tracking-[.13em] text-ink-300">
+              Escribí <span className="font-mono text-ink-700">{confirmText}</span> para confirmar
             </label>
             <input
               id={inputId}
               value={typed}
               onChange={(e) => setTyped(e.target.value)}
               autoComplete="off"
-              className="h-10 rounded-[10px] border border-slate-200 px-3 text-sm font-mono outline-none focus:border-[#ef4444] focus:ring-2 focus:ring-[rgba(239,68,68,.2)]"
+              className="h-10 rounded-[3px] border border-line-300 px-3 font-mono text-[13px] text-ink-900 outline-none focus:border-brand-severe"
             />
           </div>
         )}
         {extra}
         <div className="mt-1 flex justify-end gap-2.5">
           {!hideCancel && (
-            <button onClick={onClose} disabled={loading} className="h-10 rounded-[10px] border border-slate-200 px-4 text-sm font-bold text-slate-600 transition-colors hover:bg-slate-50 disabled:opacity-50">
+            <button onClick={onClose} disabled={loading} className="h-10 rounded-[3px] border border-line-300 px-4 font-montserrat text-[11px] font-semibold uppercase tracking-[.08em] text-ink-600 transition-colors duration-150 ease-in-out hover:bg-surface-btn-hover disabled:opacity-50">
               {cancelLabel}
             </button>
           )}
-          <button onClick={onConfirm} disabled={!enabled} className={`inline-flex h-10 items-center gap-2 rounded-[10px] px-4 text-sm font-extrabold transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${BUTTON[variant]}`}>
+          <button onClick={onConfirm} disabled={!enabled} className={`inline-flex h-10 items-center gap-2 rounded-[3px] px-4 font-montserrat text-[11px] font-semibold uppercase tracking-[.08em] transition-colors duration-150 ease-in-out disabled:cursor-not-allowed disabled:opacity-50 ${BUTTON[variant]}`}>
             {loading && <Loader2 className="h-4 w-4 animate-spin" />}
             {confirmLabel}
           </button>

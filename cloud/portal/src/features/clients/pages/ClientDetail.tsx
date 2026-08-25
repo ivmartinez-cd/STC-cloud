@@ -74,7 +74,7 @@ const ClientDetail = () => {
       <nav className="mb-1 flex items-center gap-2 font-sans text-xs">
         <Link to="/clients" className="font-semibold text-brand-accent hover:underline">Clientes</Link>
         <span className="text-ink-sep-light">/</span>
-        {client ? <span className="text-ink-700">{client.name}</span> : <div className="h-4 w-24 animate-pulse rounded-full bg-slate-100" />}
+        {client ? <span className="text-ink-700">{client.name}</span> : <div className="h-4 w-24 animate-pulse rounded-full bg-surface-track" />}
       </nav>
 
       {loading && (
@@ -84,7 +84,9 @@ const ClientDetail = () => {
         </div>
       )}
 
-      {error && <div className="rounded-[24px] border border-rose-100 bg-rose-50 p-8 font-bold text-rose-600">{error}</div>}
+      {error && (
+        <div className="rounded-[5px] border border-brand-chip-border bg-brand-soft p-6 font-sans text-[13px] font-semibold text-brand-severe">{error}</div>
+      )}
 
       {!loading && !error && client && (
         <>
@@ -100,8 +102,13 @@ const ClientDetail = () => {
                 client={client} usage={usage} isReadOnlyViewer={isReadOnlyViewer}
                 onSaveNotifications={updateNotifications} onToggleDeviceApproval={updateDeviceApprovalRequired}
               />
-              {!isReadOnlyViewer && <ClientConfigZone clientId={id!} canEdit={!isReadOnlyViewer} />}
-              <ClientDevicesSection clientId={id!} active={tab === 'resumen'} />
+              <ClientMonitorsSection
+                monitors={monitors}
+                now={now}
+                isReadOnlyViewer={isReadOnlyViewer}
+                onCreateClick={() => setShowMonitorModal(true)}
+                onDeleteClick={setMonitorToDelete}
+              />
             </>
           )}
 
@@ -124,14 +131,6 @@ const ClientDetail = () => {
           )}
 
           {tab === 'configuracion' && !isReadOnlyViewer && <ClientConfigZone clientId={id!} canEdit={!isReadOnlyViewer} />}
-
-          <ClientMonitorsSection
-            monitors={monitors}
-            now={now}
-            isReadOnlyViewer={isReadOnlyViewer}
-            onCreateClick={() => setShowMonitorModal(true)}
-            onDeleteClick={setMonitorToDelete}
-          />
         </>
       )}
 

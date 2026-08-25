@@ -22,6 +22,10 @@ export interface ClientDeviceDirectoryRow {
   serial_number: string | null;
   location: string | null;
   last_seen: string | null;
+  toner_black: number | null;
+  toner_cyan: number | null;
+  toner_magenta: number | null;
+  toner_yellow: number | null;
   estado: ClientDeviceEstado;
   consumible_pct: number | null;
   alerts_count: number;

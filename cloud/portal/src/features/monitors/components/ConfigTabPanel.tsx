@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Settings, AlertTriangle, Clock, Loader2, ShieldOff } from 'lucide-react';
+import { Loader2, ShieldOff } from 'lucide-react';
 import { useToast } from '../../../store/ToastContext';
 import IpRangesEditor from './IpRangesEditor';
 import SnmpCredentialsPanel from './SnmpCredentialsPanel';
@@ -33,233 +33,140 @@ const COMMON_TIMEZONES = [
   'Asia/Shanghai', 'Asia/Tokyo', 'Asia/Singapore', 'Australia/Sydney', 'Pacific/Auckland', 'UTC',
 ];
 
-export default function ConfigTabPanel({ monitor, onSave, onSaveSnmpCredentials, onRequestRevoke }: ConfigTabPanelProps) {
-  const [form, setForm] = useState<EditFormData>(() => {
-    // `MonitorData.config.ip_ranges` es siempre un array ya parseado — la
-    // columna `agents.ip_ranges` es `jsonb`, node-pg la devuelve parseada
-    // siempre, y el backend (`parseAgentIpRanges` en
-    // `portalAgentController/reads.ts`) nunca manda un string crudo.
-    const ranges = monitor.config?.ip_ranges?.length ? monitor.config.ip_ranges : [{ start: '', end: '' }];
+const LABEL = 'mb-1.5 block font-montserrat text-[8.5px] font-bold uppercase tracking-[.13em] text-ink-300';
+const INPUT = 'w-full rounded-[3px] border border-line-300 bg-white px-3 py-2.5 font-sans text-[13px] text-ink-900 outline-none focus:border-brand';
 
-    return {
-      name: monitor.name,
-      ip_ranges: ranges,
-      snmp: monitor.config?.snmp_community ?? 'public',
-      tonerWarningThreshold: monitor.config?.toner_warning_threshold ?? 20,
-      tonerCriticalThreshold: monitor.config?.toner_critical_threshold ?? 10,
-      businessHours: monitor.config?.business_hours ?? DEFAULT_BUSINESS_HOURS,
-    };
-  });
+function formFromMonitor(monitor: MonitorData): EditFormData {
+  // `MonitorData.config.ip_ranges` es siempre un array ya parseado — la
+  // columna `agents.ip_ranges` es `jsonb`, node-pg la devuelve parseada
+  // siempre, y el backend (`parseAgentIpRanges` en
+  // `portalAgentController/reads.ts`) nunca manda un string crudo.
+  const ranges = monitor.config?.ip_ranges?.length ? monitor.config.ip_ranges : [{ start: '', end: '' }];
+  return {
+    name: monitor.name,
+    ip_ranges: ranges,
+    snmp: monitor.config?.snmp_community ?? 'public',
+    tonerWarningThreshold: monitor.config?.toner_warning_threshold ?? 20,
+    tonerCriticalThreshold: monitor.config?.toner_critical_threshold ?? 10,
+    businessHours: monitor.config?.business_hours ?? DEFAULT_BUSINESS_HOURS,
+  };
+}
+
+function validateForm(form: EditFormData, showToast: (msg: string, kind: 'error' | 'warning') => void): boolean {
+  if (form.tonerCriticalThreshold >= form.tonerWarningThreshold) {
+    showToast('El umbral crítico debe ser menor que el umbral de advertencia', 'error');
+    return false;
+  }
+  for (const r of form.ip_ranges) {
+    const invalid = r.hostname !== undefined ? !r.hostname.trim()
+      : r.cidr !== undefined ? !r.cidr.trim()
+      : (!r.start?.trim() || !r.end?.trim());
+    if (invalid) { showToast('Todos los rangos deben tener un CIDR, un hostname, o una IP de inicio y fin', 'warning'); return false; }
+  }
+  if (form.businessHours.days.length === 0) { showToast('El horario laboral requiere al menos un día', 'warning'); return false; }
+  if (form.businessHours.start_hour >= form.businessHours.end_hour) {
+    showToast('La hora de inicio del horario laboral debe ser menor que la de fin', 'warning');
+    return false;
+  }
+  return true;
+}
+
+export default function ConfigTabPanel({ monitor, onSave, onSaveSnmpCredentials, onRequestRevoke }: ConfigTabPanelProps) {
+  const [form, setForm] = useState<EditFormData>(() => formFromMonitor(monitor));
   const [saving, setSaving] = useState(false);
   const { showToast } = useToast();
 
-  const set = (key: keyof EditFormData, value: string | number) =>
-    setForm(prev => ({ ...prev, [key]: value }));
+  const set = (key: keyof EditFormData, value: string | number) => setForm(prev => ({ ...prev, [key]: value }));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (form.tonerCriticalThreshold >= form.tonerWarningThreshold) {
-      showToast('El umbral crítico debe ser menor que el umbral de advertencia', 'error');
-      return;
-    }
-
-    // Validación de forma en el cliente (mejor UX inmediata) — el cloud
-    // re-valida formato/topes en serio al guardar (`validateIpRangeSpecs`).
-    for (const r of form.ip_ranges) {
-      const invalid = r.hostname !== undefined ? !r.hostname.trim()
-        : r.cidr !== undefined ? !r.cidr.trim()
-        : (!r.start?.trim() || !r.end?.trim());
-      if (invalid) {
-        showToast('Todos los rangos deben tener un CIDR, un hostname, o una IP de inicio y fin', 'warning');
-        return;
-      }
-    }
-
-    if (form.businessHours.days.length === 0) {
-      showToast('El horario laboral requiere al menos un día', 'warning');
-      return;
-    }
-    if (form.businessHours.start_hour >= form.businessHours.end_hour) {
-      showToast('La hora de inicio del horario laboral debe ser menor que la de fin', 'warning');
-      return;
-    }
-
+    if (!validateForm(form, showToast)) return;
     setSaving(true);
-    try {
-      await onSave(form);
-    } catch (err: unknown) {
-      showToast((err as Error).message || 'Error al actualizar configuración', 'error');
-    } finally {
-      setSaving(false);
-    }
+    try { await onSave(form); } catch (err: unknown) { showToast((err as Error).message || 'Error al actualizar configuración', 'error'); }
+    finally { setSaving(false); }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-8 animate-in slide-in-from-bottom-4 duration-500">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-
-        {/* Panel Izquierdo: Ajustes de Escaneo */}
-        <div className="bg-white p-8 rounded-[32px] border border-slate-100 shadow-xl shadow-brand/5 space-y-6">
-          <div className="flex items-center gap-4 mb-2">
-            <div className="p-3 bg-brand/10 text-brand rounded-2xl">
-              <Settings size={24} />
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <div className="rounded-[5px] border border-line-100 bg-white p-5">
+          <div className="mb-4 border-b border-line-150 pb-3.5">
+            <span className="font-montserrat text-[9px] font-bold uppercase tracking-[.15em] text-ink-600">Parámetros de red</span>
+          </div>
+          <div className="space-y-4">
+            <div>
+              <label className={LABEL}>Nombre del sitio</label>
+              <input required type="text" value={form.name} className={INPUT} onChange={e => set('name', e.target.value)} />
             </div>
             <div>
-              <h3 className="text-lg font-black text-[#1a2333] tracking-tight uppercase">Parámetros de Red</h3>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5">Control de escaneo y conectividad</p>
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nombre del Nodo</label>
-            <input
-              required type="text" value={form.name}
-              className="cd-input w-full !h-14 !bg-slate-50 border-transparent focus:!border-brand focus:!bg-white"
-              onChange={e => set('name', e.target.value)}
-            />
-          </div>
-
-          {/* IP Ranges Multi-List */}
-          <div className="space-y-4">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Segmentos IP Activos</label>
-            <div className="max-h-[360px] overflow-y-auto pr-2 custom-scrollbar">
-              <IpRangesEditor
-                ranges={form.ip_ranges}
-                onChange={ranges => setForm(f => ({ ...f, ip_ranges: ranges }))}
-                credentials={monitor.config?.snmp_credentials ?? []}
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 gap-6">
-            <div className="space-y-3">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Comunidad SNMP</label>
-              <input type="text" value={form.snmp}
-                className="cd-input w-full !h-14 !bg-slate-50 border-transparent focus:!border-brand focus:!bg-white font-mono"
-                onChange={e => set('snmp', e.target.value)}
-              />
-            </div>
-          </div>
-
-        </div>
-
-        {/* Panel Derecho: Umbrales de Tóner */}
-        <div className="bg-white p-8 rounded-[32px] border border-slate-100 shadow-xl shadow-brand/5 space-y-8">
-          <div className="flex items-center gap-4 mb-2">
-            <div className="p-3 bg-amber-50 text-amber-600 rounded-2xl">
-              <AlertTriangle size={24} />
+              <label className={LABEL}>Segmentos IP barridos</label>
+              <div className="max-h-[300px] overflow-y-auto pr-1">
+                <IpRangesEditor ranges={form.ip_ranges} onChange={ranges => setForm(f => ({ ...f, ip_ranges: ranges }))} credentials={monitor.config?.snmp_credentials ?? []} />
+              </div>
             </div>
             <div>
-              <h3 className="text-lg font-black text-[#1a2333] tracking-tight uppercase">Umbrales de Consumibles</h3>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5">Alertas automáticas de nivel de tóner</p>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            <div className="flex justify-between items-center ml-1">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Advertencia de Tóner Bajo (Warning)</label>
-              <span className="px-3 py-1 bg-amber-50 text-amber-700 rounded-lg text-xs font-black">{form.tonerWarningThreshold}%</span>
-            </div>
-            <div className="flex items-center gap-4">
-              <input
-                type="range" min="1" max="99" value={form.tonerWarningThreshold}
-                className="w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-amber-500"
-                onChange={e => set('tonerWarningThreshold', parseInt(e.target.value))}
-              />
-            </div>
-            <p className="text-[11px] font-bold text-slate-400 leading-relaxed ml-1">
-              Se creará una alerta amarilla cuando algún color de tóner sea menor o igual a este porcentaje.
-            </p>
-          </div>
-
-          <div className="space-y-4">
-            <div className="flex justify-between items-center ml-1">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nivel Crítico de Tóner (Critical)</label>
-              <span className="px-3 py-1 bg-rose-50 text-rose-700 rounded-lg text-xs font-black">{form.tonerCriticalThreshold}%</span>
-            </div>
-            <div className="flex items-center gap-4">
-              <input
-                type="range" min="1" max="99" value={form.tonerCriticalThreshold}
-                className="w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-rose-500"
-                onChange={e => set('tonerCriticalThreshold', parseInt(e.target.value))}
-              />
-            </div>
-            <p className="text-[11px] font-bold text-slate-400 leading-relaxed ml-1">
-              Se creará una alerta roja y crítica cuando el nivel de tóner sea menor o igual a este porcentaje.
-            </p>
-          </div>
-
-          <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100 flex items-start gap-4">
-            <AlertTriangle className="text-amber-500 shrink-0 mt-0.5" size={20} />
-            <div className="space-y-1">
-              <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Comportamiento del Sensor</p>
-              <p className="text-xs text-slate-500 font-bold leading-relaxed">
-                El sistema evalúa cada color de tóner de forma independiente. Las alertas se resuelven automáticamente de inmediato en cuanto los niveles suben (por ejemplo, después de un cambio de cartucho).
-              </p>
+              <label className={LABEL}>Comunidad SNMP</label>
+              <input type="text" value={form.snmp} className={`${INPUT} font-mono`} onChange={e => set('snmp', e.target.value)} />
             </div>
           </div>
         </div>
 
-        <div className="bg-white p-8 rounded-[32px] border border-slate-100 shadow-xl shadow-brand/5 space-y-6 lg:col-span-2">
-          <div className="flex items-center gap-4 mb-2">
-            <div className="p-3 bg-emerald-50 text-emerald-600 rounded-2xl">
-              <Clock size={24} />
+        <div className="rounded-[5px] border border-line-100 bg-white p-5">
+          <div className="mb-4 border-b border-line-150 pb-3.5">
+            <span className="font-montserrat text-[9px] font-bold uppercase tracking-[.15em] text-ink-600">Umbrales de consumibles</span>
+          </div>
+          <div className="space-y-5">
+            <div>
+              <div className="mb-1.5 flex items-center justify-between">
+                <label className="font-montserrat text-[8.5px] font-bold uppercase tracking-[.13em] text-ink-300">Advertencia (naranja)</label>
+                <span className="font-montserrat text-[12.5px] font-semibold tabular-nums text-brand-accent">{form.tonerWarningThreshold}%</span>
+              </div>
+              <input type="range" min="1" max="99" value={form.tonerWarningThreshold} onChange={e => set('tonerWarningThreshold', parseInt(e.target.value))} className="h-1.5 w-full cursor-pointer appearance-none rounded-[3px] bg-surface-track accent-brand" />
+              <p className="mt-1.5 font-sans text-[11.5px] leading-[1.5] text-ink-300">Se crea una alerta cuando algún color de tóner baja de este porcentaje.</p>
             </div>
             <div>
-              <h3 className="text-lg font-black text-[#1a2333] tracking-tight uppercase">Horario Laboral</h3>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5">Define la frecuencia de escaneo según día/hora y zona horaria del sitio</p>
+              <div className="mb-1.5 flex items-center justify-between">
+                <label className="font-montserrat text-[8.5px] font-bold uppercase tracking-[.13em] text-ink-300">Crítico (naranja oscuro)</label>
+                <span className="font-montserrat text-[12.5px] font-semibold tabular-nums text-brand-severe">{form.tonerCriticalThreshold}%</span>
+              </div>
+              <input type="range" min="1" max="99" value={form.tonerCriticalThreshold} onChange={e => set('tonerCriticalThreshold', parseInt(e.target.value))} className="h-1.5 w-full cursor-pointer appearance-none rounded-[3px] bg-surface-track accent-brand-severe" />
+              <p className="mt-1.5 font-sans text-[11.5px] leading-[1.5] text-ink-300">Se crea una alerta crítica cuando el tóner baja de este porcentaje.</p>
             </div>
+            <p className="border-t border-line-150 pt-3.5 font-sans text-[11.5px] leading-[1.5] text-ink-300">
+              Cada color de tóner se evalúa de forma independiente; las alertas se resuelven solas apenas el nivel sube (p. ej. tras un cambio de cartucho).
+            </p>
           </div>
+        </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="space-y-3">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Zona horaria (IANA)</label>
-              <input
-                type="text" list="tz-datalist" value={form.businessHours.timezone}
-                onChange={e => setForm(f => ({ ...f, businessHours: { ...f.businessHours, timezone: e.target.value } }))}
-                className="cd-input w-full !h-12 !bg-slate-50 border-transparent focus:!border-brand focus:!bg-white font-mono !text-xs"
-              />
-              <datalist id="tz-datalist">
-                {COMMON_TIMEZONES.map(tz => <option key={tz} value={tz} />)}
-              </datalist>
+        <div className="rounded-[5px] border border-line-100 bg-white p-5 lg:col-span-2">
+          <div className="mb-4 border-b border-line-150 pb-3.5">
+            <span className="font-montserrat text-[9px] font-bold uppercase tracking-[.15em] text-ink-600">Horario laboral</span>
+          </div>
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <div>
+              <label className={LABEL}>Zona horaria (IANA)</label>
+              <input type="text" list="tz-datalist" value={form.businessHours.timezone} onChange={e => setForm(f => ({ ...f, businessHours: { ...f.businessHours, timezone: e.target.value } }))} className={`${INPUT} font-mono`} />
+              <datalist id="tz-datalist">{COMMON_TIMEZONES.map(tz => <option key={tz} value={tz} />)}</datalist>
             </div>
-
-            <div className="space-y-3">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Horario (hora local)</label>
-              <div className="flex items-center gap-3">
-                <input
-                  type="number" min={0} max={23} value={form.businessHours.start_hour}
-                  onChange={e => setForm(f => ({ ...f, businessHours: { ...f.businessHours, start_hour: parseInt(e.target.value, 10) || 0 } }))}
-                  className="cd-input w-full !h-12 !text-xs font-mono !bg-slate-50 border-transparent focus:!border-brand focus:!bg-white"
-                />
-                <span className="text-slate-300 font-black">—</span>
-                <input
-                  type="number" min={1} max={24} value={form.businessHours.end_hour}
-                  onChange={e => setForm(f => ({ ...f, businessHours: { ...f.businessHours, end_hour: parseInt(e.target.value, 10) || 1 } }))}
-                  className="cd-input w-full !text-xs font-mono !bg-slate-50 border-transparent focus:!border-brand focus:!bg-white"
-                />
+            <div>
+              <label className={LABEL}>Horario (hora local)</label>
+              <div className="flex items-center gap-2.5">
+                <input type="number" min={0} max={23} value={form.businessHours.start_hour} onChange={e => setForm(f => ({ ...f, businessHours: { ...f.businessHours, start_hour: parseInt(e.target.value, 10) || 0 } }))} className={`${INPUT} font-mono`} />
+                <span className="text-ink-200">—</span>
+                <input type="number" min={1} max={24} value={form.businessHours.end_hour} onChange={e => setForm(f => ({ ...f, businessHours: { ...f.businessHours, end_hour: parseInt(e.target.value, 10) || 1 } }))} className={`${INPUT} font-mono`} />
               </div>
             </div>
           </div>
-
-          <div className="space-y-3">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Días laborables</label>
+          <div className="mt-4">
+            <label className={LABEL}>Días laborables</label>
             <div className="flex flex-wrap gap-2">
               {WEEKDAY_LABELS.map(({ iso, label }) => {
                 const active = form.businessHours.days.includes(iso);
                 return (
                   <button
                     key={iso} type="button"
-                    onClick={() => setForm(f => ({
-                      ...f,
-                      businessHours: {
-                        ...f.businessHours,
-                        days: active ? f.businessHours.days.filter(d => d !== iso) : [...f.businessHours.days, iso].sort((a, b) => a - b),
-                      },
-                    }))}
-                    className={`px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${
-                      active ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/20' : 'bg-slate-50 text-slate-400 hover:bg-slate-100'
-                    }`}
+                    onClick={() => setForm(f => ({ ...f, businessHours: { ...f.businessHours, days: active ? f.businessHours.days.filter(d => d !== iso) : [...f.businessHours.days, iso].sort((a, b) => a - b) } }))}
+                    className={`rounded-[3px] px-3.5 py-2 font-montserrat text-[10.5px] font-semibold uppercase tracking-[.06em] transition-colors duration-150 ease-in-out ${active ? 'bg-brand text-white' : 'border border-line-300 bg-white text-ink-300 hover:bg-surface-btn-hover'}`}
                   >
                     {label}
                   </button>
@@ -269,44 +176,33 @@ export default function ConfigTabPanel({ monitor, onSave, onSaveSnmpCredentials,
           </div>
         </div>
 
-        <SnmpCredentialsPanel
-          credentials={monitor.config?.snmp_credentials ?? []}
-          rev={monitor.config?.snmp_credentials_rev ?? 0}
-          onSave={onSaveSnmpCredentials}
-        />
+        <SnmpCredentialsPanel credentials={monitor.config?.snmp_credentials ?? []} rev={monitor.config?.snmp_credentials_rev ?? 0} onSave={onSaveSnmpCredentials} />
 
-        {/* Zona de riesgo — `REVOCAR` reubicado acá (handoff hifi "Monitor — detalle",
-            25/08/2026): dejó de ser una acción de la barra principal del header. */}
-        <div className="rounded-[32px] border border-rose-100 bg-rose-50/40 p-8 space-y-4 lg:col-span-2">
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-rose-100 text-rose-600 rounded-2xl">
-              <ShieldOff size={24} />
-            </div>
-            <div>
-              <h3 className="text-lg font-black text-rose-700 tracking-tight uppercase">Zona de riesgo</h3>
-              <p className="text-[10px] font-black text-rose-400 uppercase tracking-widest mt-0.5">Revocar la licencia de este monitor</p>
-            </div>
-          </div>
-          <p className="text-xs text-rose-600/80 font-bold leading-relaxed max-w-2xl">
+        {/* Zona de riesgo (handoff §5 punto 21) — border-left naranja oscuro, REVOCAR en variante borde, nunca rojo relleno. */}
+        <div className="space-y-3.5 rounded-[5px] border border-brand-chip-border bg-white p-5 lg:col-span-2" style={{ borderLeftWidth: 3, borderLeftColor: '#C6710A' }}>
+          <span className="font-montserrat text-[9px] font-bold uppercase tracking-[.15em] text-ink-600">Zona de riesgo</span>
+          <p className="max-w-2xl font-sans text-[12.5px] leading-[1.55] text-ink-700">
             Revocar desconecta el agente de forma permanente: deja de reportar telemetría y su llave de activación queda inválida.
             Los equipos que monitoreaba dejan de recibir lecturas nuevas hasta vincularlos a otro monitor.
           </p>
           <button
             type="button" onClick={onRequestRevoke}
-            className="px-6 py-3.5 bg-white border border-rose-200 text-rose-600 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-rose-600 hover:text-white hover:border-rose-600 transition-all active:scale-95 flex items-center gap-3"
+            className="flex items-center gap-2.5 rounded-[3px] border border-brand-chip-border bg-white px-4 py-2.5 font-montserrat text-[10.5px] font-semibold uppercase tracking-[.08em] text-brand-severe transition-colors duration-150 ease-in-out hover:bg-brand-soft"
           >
-            <ShieldOff size={16} /> Revocar licencia
+            <ShieldOff size={14} /> Revocar licencia
           </button>
         </div>
       </div>
 
-      {/* Botones de acción */}
-      <div className="flex justify-end gap-4">
+      <div className="flex justify-end gap-3">
+        <button type="button" onClick={() => setForm(formFromMonitor(monitor))} className="rounded-[3px] border border-line-300 bg-white px-5 py-2.5 font-montserrat text-[11px] font-semibold uppercase tracking-[.08em] text-ink-600 transition-colors duration-150 ease-in-out hover:bg-surface-btn-hover">
+          Descartar
+        </button>
         <button
           type="submit" disabled={saving}
-          className="px-8 py-4 bg-brand text-white rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-xl shadow-brand/20 flex items-center gap-3 disabled:opacity-50 hover:bg-brand/90 transition-all active:scale-95"
+          className="flex items-center gap-2.5 rounded-[3px] bg-brand px-5 py-2.5 font-montserrat text-[11px] font-semibold uppercase tracking-[.08em] text-white transition-colors duration-150 ease-in-out hover:bg-brand-severe disabled:opacity-50"
         >
-          {saving ? <Loader2 size={18} className="animate-spin" /> : <Settings size={18} />} Guardar Cambios
+          {saving && <Loader2 size={14} className="animate-spin" />} Guardar cambios
         </button>
       </div>
     </form>

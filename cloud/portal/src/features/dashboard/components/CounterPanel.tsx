@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { fmt } from '../../../shared/lib/formatters';
-import CardError from './CardError';
+import CardError from '../../../shared/components/CardError';
 import SkeletonBlock from './Skeleton';
 
 /** Severidad de la celda en la escala sutil naranja/gris (nunca rojo/verde —

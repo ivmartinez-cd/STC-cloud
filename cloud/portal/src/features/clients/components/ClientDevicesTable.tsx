@@ -1,6 +1,8 @@
 import { Link } from 'react-router-dom';
 import { ChevronRight } from 'lucide-react';
 import { fmt } from '../../../shared/lib/formatters';
+import EstadoChip from '../../../shared/components/EstadoChip';
+import TonerLevelBars from '../../../shared/components/TonerLevelBars';
 import type { ClientDeviceDirectoryRow, ClientDeviceSortField, SortDir } from '../types/clientDetail';
 
 const GRID_COLS = 'grid-cols-[minmax(260px,1fr)_132px_190px_130px_90px_96px_40px]';
@@ -25,35 +27,9 @@ function formatLastReport(iso: string | null): string {
   return `hace ${Math.round(hrs / 24)} d`;
 }
 
-function EstadoChip({ estado }: { estado: ClientDeviceDirectoryRow['estado'] }) {
-  if (estado === 'en_linea') {
-    return (
-      <span className="inline-flex items-center gap-[6px] justify-self-start rounded-[2px] bg-surface-avatar px-[9px] py-1 font-montserrat text-[9.5px] font-semibold uppercase tracking-[.08em] text-ink-650">
-        <span className="block h-1.5 w-1.5 rounded-full bg-brand-gray" /> EN LÍNEA
-      </span>
-    );
-  }
-  const label = estado === 'sin_conexion' ? 'SIN CONEXIÓN' : 'SIN REPORTE';
-  return (
-    <span className="inline-flex items-center gap-[6px] justify-self-start rounded-[2px] bg-brand-soft px-[9px] py-1 font-montserrat text-[9.5px] font-semibold uppercase tracking-[.08em] text-brand-accent">
-      <span className="block h-1.5 w-1.5 rounded-full bg-brand" /> {label}
-    </span>
-  );
-}
-
-function ConsumibleCell({ pct }: { pct: number | null }) {
-  if (pct === null) return <span className="font-sans text-[12.5px] text-ink-200">—</span>;
-  const color = pct <= 15 ? 'bg-brand-severe' : pct <= 35 ? 'bg-brand' : 'bg-brand-gray';
-  const width = Math.max(3, pct);
-  return (
-    <div className="flex items-center gap-2.5">
-      <span className="block h-1.5 flex-1 overflow-hidden rounded-[3px] bg-surface-track">
-        <span className={`block h-full rounded-[3px] ${color}`} style={{ width: `${width}%` }} />
-      </span>
-      <span className="min-w-[30px] text-right font-montserrat text-[11.5px] font-semibold tabular-nums text-ink-100">{pct}%</span>
-    </div>
-  );
-}
+const ESTADO_LABEL: Record<ClientDeviceDirectoryRow['estado'], string> = {
+  en_linea: 'EN LÍNEA', sin_conexion: 'SIN CONEXIÓN', sin_reporte: 'SIN REPORTE',
+};
 
 function AlertsCell({ count }: { count: number }) {
   if (count === 0) return <div className="text-right font-montserrat text-[12.5px] font-semibold text-ink-200">—</div>;
@@ -159,9 +135,9 @@ export default function ClientDevicesTable({
               </div>
             </div>
 
-            <EstadoChip estado={d.estado} />
+            <EstadoChip variant={d.estado === 'en_linea' ? 'neutral' : 'attention'} label={ESTADO_LABEL[d.estado]} />
             <div className="min-w-0 truncate font-sans text-[12.5px] text-ink-700">{d.location ?? '—'}</div>
-            <ConsumibleCell pct={d.consumible_pct} />
+            <TonerLevelBars black={d.toner_black} cyan={d.toner_cyan} magenta={d.toner_magenta} yellow={d.toner_yellow} />
             <AlertsCell count={d.alerts_count} />
             <div className="text-right font-sans text-[12px] text-ink-400">{formatLastReport(d.last_seen)}</div>
 

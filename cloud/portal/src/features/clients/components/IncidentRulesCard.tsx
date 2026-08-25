@@ -3,6 +3,7 @@ import { Loader2 } from 'lucide-react';
 import { api } from '../../../shared/lib/api';
 import { useToast } from '../../../store/ToastContext';
 import ConfigCardShell from './ConfigCardShell';
+import EstadoChip from '../../../shared/components/EstadoChip';
 import type { IncidentRule } from '../../../shared/types/incidents';
 import type { AlertClassOption } from '../../../shared/types/alerts';
 
@@ -68,57 +69,52 @@ export default function IncidentRulesCard({ clientId, canEdit }: { clientId: str
       meta={lastEdited ? `Última edición ${new Date(lastEdited).toLocaleDateString('es-AR')}` : 'Sin ediciones'}
       cta={{ label: saving ? 'Guardando…' : 'Administrar', onClick: save }}
     >
-      <p className="text-xs text-slate-500 font-medium mb-4">
+      <p className="mb-4 font-sans text-[12.5px] text-ink-400">
         Opt-in por clase de alerta: si está activo, una alerta que cumpla la severidad mínima abre (o agrupa en) un incidente automático para este cliente.
       </p>
       {loading ? (
-        <div className="py-10 flex justify-center"><Loader2 size={24} className="text-brand animate-spin" /></div>
+        <div className="flex justify-center py-10"><Loader2 size={22} className="animate-spin text-brand" /></div>
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-[11px] border-collapse">
-            <thead className="bg-slate-50 border-b border-slate-100">
+          <table className="w-full border-collapse text-left text-[11.5px]">
+            <thead className="border-b border-line-150 bg-surface-table-head">
               <tr>
-                <th className="py-2 px-3 text-[10px] font-black text-slate-500 uppercase tracking-widest">Clase</th>
-                <th className="py-2 px-3 text-[10px] font-black text-slate-500 uppercase tracking-widest">Activo</th>
-                <th className="py-2 px-3 text-[10px] font-black text-slate-500 uppercase tracking-widest">Severidad mínima</th>
-                <th className="py-2 px-3 text-[10px] font-black text-slate-500 uppercase tracking-widest">Retardo (min)</th>
-                <th className="py-2 px-3 text-[10px] font-black text-slate-500 uppercase tracking-widest">SLA (hs)</th>
-                <th className="py-2 px-3 text-[10px] font-black text-slate-500 uppercase tracking-widest">Auto-cierre</th>
+                <th className="px-3 py-2 font-montserrat text-[8.5px] font-bold uppercase tracking-[.14em] text-ink-300">Clase</th>
+                <th className="px-3 py-2 font-montserrat text-[8.5px] font-bold uppercase tracking-[.14em] text-ink-300">Activo</th>
+                <th className="px-3 py-2 font-montserrat text-[8.5px] font-bold uppercase tracking-[.14em] text-ink-300">Severidad mínima</th>
+                <th className="px-3 py-2 font-montserrat text-[8.5px] font-bold uppercase tracking-[.14em] text-ink-300">Retardo (min)</th>
+                <th className="px-3 py-2 font-montserrat text-[8.5px] font-bold uppercase tracking-[.14em] text-ink-300">SLA (hs)</th>
+                <th className="px-3 py-2 font-montserrat text-[8.5px] font-bold uppercase tracking-[.14em] text-ink-300">Auto-cierre</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-50">
+            <tbody className="divide-y divide-line-200">
               {rules.map((r) => (
                 <tr key={r.class}>
-                  <td className="py-2 px-3 font-bold text-slate-700">{classOptions.find((c) => (c.id as string) === r.class)?.label ?? r.class}</td>
-                  <td className="py-2 px-3">
-                    <button
-                      onClick={() => updateRule(r.class, { enabled: !r.enabled })}
-                      className={`px-2.5 py-1 rounded-full text-[9px] font-extrabold uppercase tracking-wider transition-all ${
-                        r.enabled ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-slate-100 text-slate-500 border border-slate-200'
-                      }`}
-                    >
-                      {r.enabled ? 'Sí' : 'No'}
+                  <td className="px-3 py-2 font-sans font-semibold text-ink-900">{classOptions.find((c) => (c.id as string) === r.class)?.label ?? r.class}</td>
+                  <td className="px-3 py-2">
+                    <button type="button" onClick={() => updateRule(r.class, { enabled: !r.enabled })} className="block">
+                      <EstadoChip variant={r.enabled ? 'attention' : 'neutral'} label={r.enabled ? 'SÍ' : 'NO'} />
                     </button>
                   </td>
-                  <td className="py-2 px-3">
+                  <td className="px-3 py-2">
                     <select value={r.min_severity} onChange={(e) => updateRule(r.class, { min_severity: e.target.value as IncidentRule['min_severity'] })}
-                      className="bg-slate-50 text-slate-700 text-[11px] font-bold px-2 py-1 rounded-lg border border-slate-100 outline-none focus:border-brand cursor-pointer">
+                      className="cursor-pointer rounded-[3px] border border-line-300 bg-white px-2 py-1 font-sans text-[11.5px] text-ink-700 outline-none focus:border-brand">
                       <option value="critical">Crítico</option>
                       <option value="warning">Advertencia</option>
                     </select>
                   </td>
-                  <td className="py-2 px-3">
+                  <td className="px-3 py-2">
                     <input type="number" min={0} max={1440} value={r.delay_minutes}
                       onChange={(e) => updateRule(r.class, { delay_minutes: Number(e.target.value) })}
-                      className="w-16 bg-slate-50 text-slate-700 text-[11px] font-bold px-2 py-1 rounded-lg border border-slate-100 outline-none focus:border-brand" />
+                      className="w-16 rounded-[3px] border border-line-300 bg-white px-2 py-1 font-mono text-[11.5px] text-ink-700 outline-none focus:border-brand" />
                   </td>
-                  <td className="py-2 px-3">
+                  <td className="px-3 py-2">
                     <input type="number" min={1} value={r.sla_hours ?? ''} placeholder="—"
                       onChange={(e) => updateRule(r.class, { sla_hours: e.target.value ? Number(e.target.value) : null })}
-                      className="w-16 bg-slate-50 text-slate-700 text-[11px] font-bold px-2 py-1 rounded-lg border border-slate-100 outline-none focus:border-brand" />
+                      className="w-16 rounded-[3px] border border-line-300 bg-white px-2 py-1 font-mono text-[11.5px] text-ink-700 outline-none focus:border-brand" />
                   </td>
-                  <td className="py-2 px-3">
-                    <input type="checkbox" checked={r.auto_close_on_alerts_resolved}
+                  <td className="px-3 py-2">
+                    <input type="checkbox" checked={r.auto_close_on_alerts_resolved} className="accent-brand"
                       onChange={(e) => updateRule(r.class, { auto_close_on_alerts_resolved: e.target.checked })} />
                   </td>
                 </tr>

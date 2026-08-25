@@ -8,22 +8,22 @@ export default function DeviceStatusBanners({ device }: { device: DeviceDetailDa
   return (
     <>
       {device.merged_into && (
-        <div className="flex items-center gap-2 bg-slate-100 border border-slate-300 rounded-2xl px-5 py-3 text-xs font-bold text-slate-600">
-          <GitMerge size={16} />
+        <div className="flex items-center gap-2 rounded-[5px] border border-line-100 bg-surface-avatar px-5 py-3 font-sans text-[12.5px] text-ink-700">
+          <GitMerge size={15} className="text-ink-300" />
           Este registro fue fusionado con otro equipo{device.merged_into_serial ? ` (serial ${device.merged_into_serial})` : ''}.
-          <Link to={`/devices/${device.merged_into}`} className="text-brand-hover hover:underline">Ver el equipo superviviente →</Link>
+          <Link to={`/devices/${device.merged_into}`} className="font-semibold text-brand-accent hover:underline">Ver el equipo superviviente →</Link>
         </div>
       )}
       {device.decommissioned_at && !device.merged_into && (
-        <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-2xl px-5 py-3 text-xs font-bold text-amber-800">
-          <Archive size={16} />
+        <div className="flex items-center gap-2 rounded-[5px] border border-brand-chip-border bg-brand-soft px-5 py-3 font-sans text-[12.5px] text-brand-accent">
+          <Archive size={15} />
           Equipo dado de baja el {fmtDateTime(device.decommissioned_at)}
           {device.decommission_reason ? ` — ${device.decommission_reason}` : ''}.
         </div>
       )}
       {device.monitor_state && device.monitor_state !== 'full' && !device.merged_into && (
-        <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-2xl px-5 py-3 text-xs font-bold text-blue-800">
-          <Tag size={16} />
+        <div className="flex items-center gap-2 rounded-[5px] border border-line-100 bg-surface-avatar px-5 py-3 font-sans text-[12.5px] text-ink-700">
+          <Tag size={15} className="text-ink-300" />
           Estado de monitoreo: {MONITOR_STATE_LABELS[device.monitor_state]}
           {device.monitor_state === 'disabled' && ' — no se generan lecturas ni alertas para este equipo.'}
           {device.monitor_state === 'reports_only' && ' — factura, pero no genera alertas.'}

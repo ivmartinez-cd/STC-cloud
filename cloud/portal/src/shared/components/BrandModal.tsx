@@ -66,18 +66,18 @@ export function BrandModal({ isOpen, onClose, title, children, widthPx = 480, er
         className="flex max-h-[90vh] w-full max-w-[92vw] flex-col overflow-hidden rounded-[16px] bg-white focus:outline-none animate-modal-in"
       >
         <div className="flex items-center justify-between px-[30px] pt-7 pb-2">
-          <h2 id={titleId} className="text-[20px] font-extrabold tracking-[.01em] text-[#1a2333]" style={{ fontFamily: "Montserrat, 'Source Sans 3', sans-serif" }}>
+          <h2 id={titleId} className="font-montserrat text-[18px] font-extrabold tracking-[-.01em] text-ink-900">
             {title}
           </h2>
-          <button onClick={onClose} aria-label="Cerrar" className="cursor-pointer rounded-[8px] p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700">
+          <button onClick={onClose} aria-label="Cerrar" className="cursor-pointer rounded-[3px] p-1.5 text-ink-300 transition-colors duration-150 ease-in-out hover:bg-surface-btn-hover hover:text-ink-600">
             <X className="h-5 w-5" />
           </button>
         </div>
         <div className="flex-1 overflow-y-auto px-[30px] pb-[30px] pt-3">
           {error && (
-            <div className="mb-5 flex items-center gap-3 rounded-[10px] border border-rose-200 bg-rose-50 p-3 text-rose-700">
+            <div className="mb-5 flex items-center gap-3 rounded-[3px] border border-brand-chip-border bg-brand-soft p-3 text-brand-severe">
               <AlertTriangle className="h-4 w-4 shrink-0" />
-              <p className="text-xs font-semibold leading-tight">{error}</p>
+              <p className="font-sans text-[12px] font-semibold leading-tight">{error}</p>
             </div>
           )}
           {children}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Terminal as TerminalIcon, Send, Trash2, ShieldCheck, ChevronRight, Loader2 } from 'lucide-react';
+import { Terminal as TerminalIcon, Send, Trash2, ChevronRight, Loader2 } from 'lucide-react';
 import { api } from '../../../shared/lib/api';
 
 interface TerminalProps {
@@ -13,6 +13,12 @@ interface LogLine {
   timestamp: Date;
 }
 
+// Handoff hifi "Monitor — detalle" §5 puntos 12-13 — tokens propios de la
+// terminal, no están en src/index.css porque no se usan en ningún otro lado.
+const LINE_COLOR: Record<LogLine['type'], string> = {
+  input: 'text-[#E8EAEC]', output: 'text-[#8A9096]', error: 'text-brand-severe', info: 'text-brand font-semibold italic',
+};
+
 const Terminal: React.FC<TerminalProps> = ({ agentId }) => {
   const [lines, setLines] = useState<LogLine[]>([]);
   const [inputValue, setInputValue] = useState('');
@@ -21,36 +27,22 @@ const Terminal: React.FC<TerminalProps> = ({ agentId }) => {
   const inputRef = useRef<HTMLInputElement>(null);
   const wsRef = useRef<WebSocket | null>(null);
 
-  // Auto-focus input without scrolling the page
   useEffect(() => {
-    if (inputRef.current) {
-      inputRef.current.focus({ preventScroll: true });
-    }
+    if (inputRef.current) inputRef.current.focus({ preventScroll: true });
   }, []);
 
-  // Auto-scroll
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
+    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [lines]);
 
   const addLog = (type: LogLine['type'], content: string) => {
-    setLines(prev => [...prev, {
-      id: Math.random().toString(36).substring(7),
-      type,
-      content,
-      timestamp: new Date()
-    }]);
+    setLines(prev => [...prev, { id: Math.random().toString(36).substring(7), type, content, timestamp: new Date() }]);
   };
 
-  // WebSocket for real-time results
   useEffect(() => {
     let cancelled = false;
 
     const connect = async () => {
-      // Ticket de un solo uso — hay que pedir uno nuevo en cada intento de
-      // conexión (inicial y cada reconexión), no se puede reusar.
       let ticket: string | undefined;
       try {
         const res = await api.post<{ ticket: string }>('/portal/ws-ticket');
@@ -62,72 +54,44 @@ const Terminal: React.FC<TerminalProps> = ({ agentId }) => {
       }
       if (cancelled) return;
 
-      // Self-hosted: portal y API sirven del mismo dominio detrás de nginx —
-      // no hace falta distinguir hosting separado (Vercel no proxeaba WS,
-      // Render era el backend real; eso ya no aplica).
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const wsUrl = `${protocol}//${window.location.host}/ws?token=${ticket}`;
-
       const socket = new WebSocket(wsUrl);
       wsRef.current = socket;
 
-      socket.onopen = () => {
-        addLog('info', 'Conexión segura establecida con STC Cloud Console');
-      };
-
+      socket.onopen = () => addLog('info', 'Conexión segura establecida con STC Cloud Console');
       socket.onmessage = (event) => {
         try {
           const msg = JSON.parse(event.data);
-          if (msg.event === 'command_result' && msg.data.agentId === agentId) {
-            if (msg.data.type === 'STC_CONSOLE') {
-              addLog('output', msg.data.result?.output || 'Comando completado sin salida.');
-              setIsExecuting(false);
-            }
+          if (msg.event === 'command_result' && msg.data.agentId === agentId && msg.data.type === 'STC_CONSOLE') {
+            addLog('output', msg.data.result?.output || 'Comando completado sin salida.');
+            setIsExecuting(false);
           }
         } catch (e) {
           console.error('Error parsing WS message:', e);
         }
       };
-
       socket.onclose = () => {
         addLog('info', 'Conexión de consola perdida. Reconectando...');
         setTimeout(() => { if (!cancelled) void connect(); }, 3000);
       };
     };
 
-    // Solo conectar si estamos en el portal
-    // En producción /api es una ruta, pero el WS suele estar en la misma base
     void connect();
-
-    return () => {
-      cancelled = true;
-      wsRef.current?.close();
-    };
+    return () => { cancelled = true; wsRef.current?.close(); };
   }, [agentId]);
-
-
 
   const handleExecute = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     const cmd = inputValue.trim();
     if (!cmd) return;
-
-    if (cmd.toLowerCase() === 'clear') {
-      setLines([]);
-      setInputValue('');
-      return;
-    }
+    if (cmd.toLowerCase() === 'clear') { setLines([]); setInputValue(''); return; }
 
     addLog('input', cmd);
     setInputValue('');
     setIsExecuting(true);
-
     try {
-      await api.post(`/agents/${agentId}/command`, {
-        type: 'STC_CONSOLE',
-        payload: { command: cmd }
-      });
-      // El resultado llegará vía WebSocket
+      await api.post(`/agents/${agentId}/command`, { type: 'STC_CONSOLE', payload: { command: cmd } });
     } catch (err) {
       addLog('error', `Error al enviar comando: ${err instanceof Error ? err.message : String(err)}`);
       setIsExecuting(false);
@@ -135,105 +99,67 @@ const Terminal: React.FC<TerminalProps> = ({ agentId }) => {
   };
 
   const commonCommands = [
-    { label: 'Status', cmd: 'status' },
-    { label: 'Ping', cmd: 'ping ' },
-    { label: 'SNMP Check', cmd: 'snmp-check ' },
-    { label: 'Ayuda', cmd: 'help' },
+    { label: 'Status', cmd: 'status' }, { label: 'Ping', cmd: 'ping ' },
+    { label: 'SNMP Check', cmd: 'snmp-check ' }, { label: 'Ayuda', cmd: 'help' },
   ];
 
   return (
-    <div className="flex flex-col h-[600px] bg-[#0f172a] rounded-[32px] overflow-hidden border border-slate-800 shadow-2xl animate-in fade-in zoom-in-95 duration-500">
-      {/* Header */}
-      <div className="flex items-center justify-between px-8 py-4 bg-slate-900/50 border-b border-slate-800/50 backdrop-blur-md">
-        <div className="flex items-center gap-3">
-          <div className="flex gap-1.5 mr-4">
-            <div className="w-3 h-3 rounded-full bg-rose-500/80" />
-            <div className="w-3 h-3 rounded-full bg-amber-500/80" />
-            <div className="w-3 h-3 rounded-full bg-emerald-500/80" />
-          </div>
-          <TerminalIcon size={18} className="text-brand" />
-          <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">STC Cloud Console</span>
+    <div className="flex h-[560px] flex-col overflow-hidden rounded-[5px] border border-[#23252A]" style={{ background: '#17181A' }}>
+      <div className="flex items-center justify-between border-b border-[#23252A] px-6 py-3.5">
+        <div className="flex items-center gap-2.5">
+          <TerminalIcon size={15} className="text-brand" />
+          <span className="font-montserrat text-[9px] font-bold uppercase tracking-[.15em] text-[#8A9096]">STC Cloud Console</span>
         </div>
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 px-3 py-1 bg-emerald-500/10 rounded-full border border-emerald-500/20">
-            <ShieldCheck size={12} className="text-emerald-500" />
-            <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">Sesión Cifrada</span>
-          </div>
-          <button 
-            onClick={() => setLines([])}
-            className="p-2 text-slate-500 hover:text-rose-400 transition-colors"
-            title="Limpiar Consola"
-          >
-            <Trash2 size={18} />
+        <div className="flex items-center gap-3.5">
+          <span className="inline-flex items-center gap-[7px] rounded-[2px] bg-brand-soft px-[9px] py-1 font-montserrat text-[9px] font-semibold uppercase tracking-[.08em] text-brand-accent">
+            <span className="block h-1.5 w-1.5 rounded-full bg-brand" /> Sesión cifrada
+          </span>
+          <button type="button" onClick={() => setLines([])} className="rounded-[3px] p-1.5 text-[#8A9096] transition-colors duration-150 ease-in-out hover:text-brand-severe" title="Limpiar consola">
+            <Trash2 size={15} />
           </button>
         </div>
       </div>
 
-      {/* Output Area */}
-      <div 
-        ref={scrollRef}
-        className="flex-1 overflow-y-auto p-8 font-mono text-sm space-y-3 custom-scrollbar"
-      >
+      <div ref={scrollRef} className="flex-1 space-y-2.5 overflow-y-auto p-6 font-mono text-[13px]">
         {lines.map((line) => (
-          <div key={line.id} className={`flex gap-3 animate-in fade-in slide-in-from-left-2 duration-300 ${
-            line.type === 'input' ? 'text-slate-200' : 
-            line.type === 'error' ? 'text-rose-400' :
-            line.type === 'info' ? 'text-brand font-bold italic' :
-            'text-emerald-400'
-          }`}>
-            <span className="shrink-0 opacity-30 text-[10px] mt-1 font-sans">
-              {line.timestamp.toLocaleTimeString([], { hour12: false })}
-            </span>
-            <span className="shrink-0 font-black">
-              {line.type === 'input' ? '>' : line.type === 'error' ? '!' : '::'}
-            </span>
-            <pre className="whitespace-pre-wrap break-all leading-relaxed">
-              {line.content}
-            </pre>
+          <div key={line.id} className={`flex gap-3 ${LINE_COLOR[line.type]}`}>
+            <span className="mt-0.5 shrink-0 font-sans text-[10px] text-[#4E5459]">{line.timestamp.toLocaleTimeString([], { hour12: false })}</span>
+            <span className="shrink-0 font-bold">{line.type === 'input' ? '>' : line.type === 'error' ? '!' : '::'}</span>
+            <pre className="whitespace-pre-wrap break-all leading-relaxed">{line.content}</pre>
           </div>
         ))}
         {isExecuting && (
-          <div className="flex items-center gap-3 text-slate-500 animate-pulse">
-            <span className="shrink-0 opacity-30 text-[10px] font-sans">--:--:--</span>
-            <Loader2 size={14} className="animate-spin" />
-            <span className="text-[10px] font-black uppercase tracking-widest italic">Procesando en Agente STC...</span>
+          <div className="flex items-center gap-3 text-[#8A9096]">
+            <span className="shrink-0 font-sans text-[10px] text-[#4E5459]">--:--:--</span>
+            <Loader2 size={13} className="animate-spin" />
+            <span className="font-montserrat text-[9px] font-bold uppercase tracking-[.13em] italic">Procesando en agente STC…</span>
           </div>
         )}
       </div>
 
-      {/* Input Area */}
-      <div className="px-8 py-2 flex gap-2 overflow-x-auto bg-slate-900/50 border-t border-slate-800/30 custom-scrollbar">
+      <div className="flex gap-2 overflow-x-auto border-t border-[#23252A] px-6 py-2.5">
         {commonCommands.map(c => (
-          <button 
-            key={c.cmd}
-            onClick={() => { setInputValue(c.cmd); inputRef.current?.focus(); }}
-            className="px-3 py-1 bg-slate-800/50 border border-slate-700/50 rounded-lg hover:bg-brand/20 hover:border-brand/30 hover:text-brand transition-all text-[9px] font-bold text-slate-400 whitespace-nowrap"
+          <button
+            key={c.cmd} type="button" onClick={() => { setInputValue(c.cmd); inputRef.current?.focus(); }}
+            className="whitespace-nowrap rounded-[3px] border border-[#2A2D33] px-2.5 py-1 font-montserrat text-[9px] font-semibold uppercase tracking-[.06em] text-[#8A9096] transition-colors duration-150 ease-in-out hover:border-brand/40 hover:text-brand"
           >
             {c.label}
           </button>
         ))}
       </div>
 
-      <form 
-        onSubmit={handleExecute}
-        className="px-8 py-6 bg-slate-900/30 border-t border-slate-800/50 flex items-center gap-4 group"
-      >
-        <ChevronRight size={20} className="text-brand group-focus-within:translate-x-1 transition-transform" />
-        <input 
-          ref={inputRef}
-          type="text"
-          value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
-          disabled={isExecuting}
-          placeholder="Escribir comando..."
-          className="flex-1 bg-transparent border-none outline-none text-slate-200 font-mono text-sm placeholder:text-slate-600 disabled:opacity-50"
+      <form onSubmit={handleExecute} className="flex items-center gap-3.5 border-t border-[#23252A] px-6 py-4" style={{ background: '#1B1D21' }}>
+        <ChevronRight size={17} className="text-brand" />
+        <input
+          ref={inputRef} type="text" value={inputValue} onChange={(e) => setInputValue(e.target.value)} disabled={isExecuting}
+          placeholder="Escribir comando…"
+          className="flex-1 border-none bg-transparent font-mono text-[13px] text-[#E8EAEC] outline-none placeholder:text-[#4E5459] disabled:opacity-50"
         />
-        <button 
-          type="submit"
-          disabled={!inputValue.trim() || isExecuting}
-          className="p-3 bg-brand text-white rounded-xl shadow-lg shadow-brand/20 hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:scale-100"
+        <button
+          type="submit" disabled={!inputValue.trim() || isExecuting}
+          className="rounded-[3px] bg-brand px-3.5 py-2 font-montserrat text-[10px] font-semibold uppercase tracking-[.08em] text-white transition-colors duration-150 ease-in-out hover:bg-brand-severe disabled:opacity-50"
         >
-          <Send size={18} />
+          <Send size={14} />
         </button>
       </form>
     </div>

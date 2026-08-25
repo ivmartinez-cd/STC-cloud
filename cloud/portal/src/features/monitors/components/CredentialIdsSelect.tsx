@@ -23,7 +23,7 @@ export default function CredentialIdsSelect({ available, selected, onChange }: P
   const active = new Set(selected ?? []);
   return (
     <div className="space-y-1.5">
-      <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">
+      <label className="block font-montserrat text-[8.5px] font-bold uppercase tracking-[.13em] text-ink-300">
         Credenciales SNMP para este rango (vacío = probar todas)
       </label>
       <div className="flex flex-wrap gap-1.5">
@@ -41,8 +41,8 @@ function CredentialChip({ credential, active, onToggle }: { credential: MaskedSn
     <button
       type="button"
       onClick={onToggle}
-      className={`px-2.5 py-1 rounded-lg text-[10px] font-bold border transition-all ${
-        active ? 'bg-brand text-white border-brand' : 'bg-white text-slate-500 border-slate-200 hover:border-brand/40'
+      className={`rounded-[3px] px-2.5 py-1 font-montserrat text-[10px] font-semibold uppercase tracking-[.06em] transition-colors duration-150 ease-in-out ${
+        active ? 'bg-brand text-white' : 'border border-line-300 bg-white text-ink-400 hover:bg-surface-btn-hover'
       }`}
     >
       {label}

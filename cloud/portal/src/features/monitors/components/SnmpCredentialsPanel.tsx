@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Trash2, ArrowUp, ArrowDown, KeyRound, Loader2, Save, Pencil, X, ShieldCheck } from 'lucide-react';
+import { Plus, Trash2, ArrowUp, ArrowDown, Loader2, Pencil, X, ShieldCheck } from 'lucide-react';
 import { useToast } from '../../../store/ToastContext';
 import { ApiError } from '../../../shared/lib/api';
 import type {
@@ -26,6 +26,9 @@ import type {
 const AUTH_PROTOCOLS: SnmpAuthProtocol[] = ['md5', 'sha', 'sha224', 'sha256', 'sha384', 'sha512'];
 const PRIV_PROTOCOLS: SnmpPrivProtocol[] = ['des', 'aes', 'aes256b', 'aes256r'];
 const SECURITY_LEVELS: SnmpSecurityLevel[] = ['noAuthNoPriv', 'authNoPriv', 'authPriv'];
+
+const LABEL = 'block font-montserrat text-[8.5px] font-bold uppercase tracking-[.13em] text-ink-300';
+const INPUT = 'w-full rounded-[3px] border border-line-300 bg-white px-3 py-2.5 font-sans text-[12.5px] text-ink-900 outline-none focus:border-brand';
 
 interface Draft {
   version: SnmpVersion;
@@ -160,62 +163,57 @@ export default function SnmpCredentialsPanel({ credentials, rev, onSave }: Props
   };
 
   return (
-    <div className="bg-white p-8 rounded-[32px] border border-slate-100 shadow-xl shadow-brand/5 space-y-6 lg:col-span-2">
-      <div className="flex items-center gap-4 mb-2">
-        <div className="p-3 bg-brand-gray/10 text-brand-gray rounded-2xl">
-          <KeyRound size={24} />
-        </div>
-        <div>
-          <h3 className="text-lg font-black text-[#1a2333] tracking-tight uppercase">Credenciales SNMP</h3>
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5">
-            Lista probada en orden (v1 / v2c / v3) — la community de arriba sigue como respaldo legado
-          </p>
-        </div>
+    <div className="rounded-[5px] border border-line-100 bg-white lg:col-span-2">
+      <div className="border-b border-line-150 px-5 py-3.5">
+        <span className="font-montserrat text-[9px] font-bold uppercase tracking-[.15em] text-ink-600">Credenciales SNMP</span>
+        <p className="mt-1 font-sans text-[11.5px] leading-[1.5] text-ink-300">
+          Lista probada en orden (v1 / v2c / v3) — la community de arriba sigue como respaldo legado
+        </p>
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-4 px-5 pb-[18px] pt-4">
         {rows.length === 0 && (
-          <div className="py-8 text-center border border-dashed border-slate-200 rounded-[20px]">
-            <p className="text-slate-400 text-xs font-bold uppercase tracking-widest">Sin credenciales adicionales configuradas</p>
+          <div className="rounded-[5px] border border-dashed border-line-300 bg-white py-8 text-center">
+            <p className="font-montserrat text-[10px] font-bold uppercase tracking-[.13em] text-ink-300">Sin credenciales adicionales configuradas</p>
           </div>
         )}
 
         {rows.map((row, idx) => (
-          <div key={row.key} className="bg-slate-50 rounded-[24px] border border-slate-100 p-5 space-y-4">
+          <div key={row.key} className="space-y-3.5 rounded-[5px] border border-line-150 bg-surface-input p-3.5">
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2">
-                <span className="w-6 h-6 flex items-center justify-center rounded-full bg-[#1a2333] text-white text-[10px] font-black">{idx + 1}</span>
+                <span className="flex h-6 w-6 items-center justify-center rounded-[3px] border border-line-avatar bg-surface-avatar font-montserrat text-[10px] font-bold text-ink-400">{idx + 1}</span>
                 {row.kind === 'kept' ? (
                   <CredentialChip masked={row.masked} />
                 ) : (
-                  <span className="text-[10px] font-black text-brand-gray uppercase tracking-widest">
+                  <span className="font-montserrat text-[10px] font-semibold uppercase tracking-[.08em] text-brand-accent">
                     {row.kind === 'replace' ? 'Reemplazando credencial' : 'Credencial nueva'}
                   </span>
                 )}
               </div>
               <div className="flex items-center gap-1">
                 <button type="button" onClick={() => moveRow(idx, -1)} disabled={idx === 0}
-                  className="p-2 text-slate-400 hover:text-brand disabled:opacity-30 disabled:hover:text-slate-400 rounded-lg transition-all">
+                  className="rounded-[3px] p-1.5 text-ink-300 transition-colors duration-150 ease-in-out hover:bg-surface-btn-hover hover:text-ink-600 disabled:opacity-30 disabled:hover:text-ink-300">
                   <ArrowUp size={16} />
                 </button>
                 <button type="button" onClick={() => moveRow(idx, 1)} disabled={idx === rows.length - 1}
-                  className="p-2 text-slate-400 hover:text-brand disabled:opacity-30 disabled:hover:text-slate-400 rounded-lg transition-all">
+                  className="rounded-[3px] p-1.5 text-ink-300 transition-colors duration-150 ease-in-out hover:bg-surface-btn-hover hover:text-ink-600 disabled:opacity-30 disabled:hover:text-ink-300">
                   <ArrowDown size={16} />
                 </button>
                 {row.kind === 'kept' && (
                   <button type="button" onClick={() => startReplace(idx)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-black text-brand-gray hover:bg-brand-gray/10 uppercase tracking-widest rounded-lg transition-all">
+                    className="flex items-center gap-1.5 rounded-[3px] px-2.5 py-1.5 font-montserrat text-[10px] font-semibold uppercase tracking-[.08em] text-ink-600 transition-colors duration-150 ease-in-out hover:bg-surface-btn-hover">
                     <Pencil size={12} /> Reemplazar
                   </button>
                 )}
                 {row.kind === 'replace' && (
                   <button type="button" onClick={() => cancelReplace(idx)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-black text-slate-500 hover:bg-slate-100 uppercase tracking-widest rounded-lg transition-all">
+                    className="flex items-center gap-1.5 rounded-[3px] px-2.5 py-1.5 font-montserrat text-[10px] font-semibold uppercase tracking-[.08em] text-ink-400 transition-colors duration-150 ease-in-out hover:bg-surface-btn-hover">
                     <X size={12} /> Cancelar
                   </button>
                 )}
                 <button type="button" onClick={() => removeRow(idx)}
-                  className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-all">
+                  className="rounded-[3px] p-1.5 text-ink-300 transition-colors duration-150 ease-in-out hover:bg-surface-btn-hover hover:text-brand-severe">
                   <Trash2 size={16} />
                 </button>
               </div>
@@ -226,17 +224,17 @@ export default function SnmpCredentialsPanel({ credentials, rev, onSave }: Props
             )}
           </div>
         ))}
-      </div>
 
-      <div className="flex justify-between items-center pt-2">
-        <button type="button" onClick={addRow}
-          className="flex items-center gap-2 text-[10px] font-black text-brand hover:text-brand/80 uppercase tracking-widest">
-          <Plus size={14} /> Agregar credencial
-        </button>
-        <button type="button" onClick={handleSave} disabled={saving}
-          className="px-8 py-4 bg-brand text-white rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-xl shadow-brand/20 flex items-center gap-3 disabled:opacity-50 hover:bg-brand-hover transition-all active:scale-95">
-          {saving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />} Guardar Credenciales
-        </button>
+        <div className="flex items-center justify-between pt-2">
+          <button type="button" onClick={addRow}
+            className="flex items-center gap-2 font-montserrat text-[10px] font-semibold uppercase tracking-[.08em] text-brand transition-colors duration-150 ease-in-out hover:text-brand-severe">
+            <Plus size={14} /> Agregar credencial
+          </button>
+          <button type="button" onClick={handleSave} disabled={saving}
+            className="flex items-center gap-2.5 rounded-[3px] bg-brand px-4 py-2.5 font-montserrat text-[11px] font-semibold uppercase tracking-[.08em] text-white transition-colors duration-150 ease-in-out hover:bg-brand-severe disabled:opacity-50">
+            {saving && <Loader2 size={14} className="animate-spin" />} Guardar credenciales
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -248,18 +246,18 @@ function CredentialChip({ masked }: { masked: MaskedSnmpCredential }) {
   if (masked.has_auth_key) badges.push('auth configurada');
   if (masked.has_priv_key) badges.push('priv configurada');
   return (
-    <div className="flex items-center gap-2 flex-wrap">
-      <span className="px-2 py-0.5 bg-slate-200 text-slate-600 rounded-md text-[10px] font-black uppercase tracking-widest">
+    <div className="flex flex-wrap items-center gap-2">
+      <span className="rounded-[2px] bg-surface-avatar px-2 py-0.5 font-montserrat text-[10px] font-semibold uppercase tracking-[.08em] text-ink-650">
         {versionLabel(masked.version)}
       </span>
-      <span className="text-xs font-bold text-slate-700">
+      <span className="font-sans text-[12.5px] font-semibold text-ink-700">
         {masked.label || masked.username || 'Sin nombre'}
       </span>
       {masked.username && masked.version === 'v3' && (
-        <span className="text-[10px] font-mono text-slate-400">@{masked.username}</span>
+        <span className="font-mono text-[10px] text-ink-300">@{masked.username}</span>
       )}
       {badges.map((b) => (
-        <span key={b} className="flex items-center gap-1 px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded-md text-[9px] font-black uppercase tracking-widest">
+        <span key={b} className="flex items-center gap-1 rounded-[2px] bg-brand-soft px-2 py-0.5 font-montserrat text-[9px] font-semibold uppercase tracking-[.08em] text-brand-accent">
           <ShieldCheck size={10} /> {b}
         </span>
       ))}
@@ -269,80 +267,80 @@ function CredentialChip({ masked }: { masked: MaskedSnmpCredential }) {
 
 function DraftForm({ draft, onChange }: { draft: Draft; onChange: (patch: Partial<Draft>) => void }) {
   return (
-    <div className="space-y-4 pt-2 border-t border-slate-200">
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Versión</label>
+    <div className="space-y-3.5 border-t border-line-150 pt-3.5">
+      <div className="grid grid-cols-2 gap-3.5">
+        <div className="space-y-1.5">
+          <label className={LABEL}>Versión</label>
           <select value={draft.version} onChange={(e) => onChange({ version: e.target.value as SnmpVersion })}
-            className="cd-input w-full !h-12 !bg-white border-transparent focus:!border-brand !text-xs font-bold">
+            className={`${INPUT} font-semibold`}>
             <option value="v2c">v2c (community)</option>
             <option value="v1">v1 (community)</option>
             <option value="v3">v3 (USM)</option>
           </select>
         </div>
-        <div className="space-y-2">
-          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Etiqueta (opcional)</label>
+        <div className="space-y-1.5">
+          <label className={LABEL}>Etiqueta (opcional)</label>
           <input type="text" value={draft.label} onChange={(e) => onChange({ label: e.target.value })}
             placeholder="Ej: Corporativa"
-            className="cd-input w-full !h-12 !bg-white border-transparent focus:!border-brand !text-xs" />
+            className={INPUT} />
         </div>
       </div>
 
       {(draft.version === 'v1' || draft.version === 'v2c') && (
-        <div className="space-y-2">
-          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Community</label>
+        <div className="space-y-1.5">
+          <label className={LABEL}>Community</label>
           <input type="text" value={draft.community} onChange={(e) => onChange({ community: e.target.value })}
-            className="cd-input w-full !h-12 !bg-white border-transparent focus:!border-brand !text-xs font-mono" />
+            className={`${INPUT} font-mono`} />
         </div>
       )}
 
       {draft.version === 'v3' && (
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Username</label>
+        <div className="space-y-3.5">
+          <div className="grid grid-cols-2 gap-3.5">
+            <div className="space-y-1.5">
+              <label className={LABEL}>Username</label>
               <input type="text" value={draft.username} onChange={(e) => onChange({ username: e.target.value })}
-                className="cd-input w-full !h-12 !bg-white border-transparent focus:!border-brand !text-xs font-mono" />
+                className={`${INPUT} font-mono`} />
             </div>
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nivel de seguridad</label>
+            <div className="space-y-1.5">
+              <label className={LABEL}>Nivel de seguridad</label>
               <select value={draft.security_level} onChange={(e) => onChange({ security_level: e.target.value as SnmpSecurityLevel })}
-                className="cd-input w-full !h-12 !bg-white border-transparent focus:!border-brand !text-xs font-bold">
+                className={`${INPUT} font-semibold`}>
                 {SECURITY_LEVELS.map((l) => <option key={l} value={l}>{l}</option>)}
               </select>
             </div>
           </div>
 
           {draft.security_level !== 'noAuthNoPriv' && (
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Protocolo auth</label>
+            <div className="grid grid-cols-2 gap-3.5">
+              <div className="space-y-1.5">
+                <label className={LABEL}>Protocolo auth</label>
                 <select value={draft.auth_protocol} onChange={(e) => onChange({ auth_protocol: e.target.value as SnmpAuthProtocol })}
-                  className="cd-input w-full !h-12 !bg-white border-transparent focus:!border-brand !text-xs font-bold">
+                  className={`${INPUT} font-semibold`}>
                   {AUTH_PROTOCOLS.map((p) => <option key={p} value={p}>{p}</option>)}
                 </select>
               </div>
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Auth key (≥ 8 caracteres)</label>
+              <div className="space-y-1.5">
+                <label className={LABEL}>Auth key (≥ 8 caracteres)</label>
                 <input type="password" autoComplete="new-password" value={draft.auth_key} onChange={(e) => onChange({ auth_key: e.target.value })}
-                  className="cd-input w-full !h-12 !bg-white border-transparent focus:!border-brand !text-xs font-mono" />
+                  className={`${INPUT} font-mono`} />
               </div>
             </div>
           )}
 
           {draft.security_level === 'authPriv' && (
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Protocolo priv</label>
+            <div className="grid grid-cols-2 gap-3.5">
+              <div className="space-y-1.5">
+                <label className={LABEL}>Protocolo priv</label>
                 <select value={draft.priv_protocol} onChange={(e) => onChange({ priv_protocol: e.target.value as SnmpPrivProtocol })}
-                  className="cd-input w-full !h-12 !bg-white border-transparent focus:!border-brand !text-xs font-bold">
+                  className={`${INPUT} font-semibold`}>
                   {PRIV_PROTOCOLS.map((p) => <option key={p} value={p}>{p}</option>)}
                 </select>
               </div>
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Priv key (≥ 8 caracteres)</label>
+              <div className="space-y-1.5">
+                <label className={LABEL}>Priv key (≥ 8 caracteres)</label>
                 <input type="password" autoComplete="new-password" value={draft.priv_key} onChange={(e) => onChange({ priv_key: e.target.value })}
-                  className="cd-input w-full !h-12 !bg-white border-transparent focus:!border-brand !text-xs font-mono" />
+                  className={`${INPUT} font-mono`} />
               </div>
             </div>
           )}

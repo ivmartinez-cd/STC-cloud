@@ -1,3 +1,5 @@
+import type { DeviceLowestSupply } from "../../domain/entities/device-detail";
+
 /**
  * Detalle de consumibles de un equipo (Fase 8) — única implementación en
  * `services/suppliesService` (compartida con la superficie de consumibles),
@@ -5,4 +7,6 @@
  */
 export interface DeviceSuppliesReader {
   read(deviceId: string): Promise<unknown | null>;
+  /** Consumible con menor % restante, para la tira de métricas — `null` si ninguno reportó %. */
+  lowest(deviceId: string): Promise<DeviceLowestSupply | null>;
 }

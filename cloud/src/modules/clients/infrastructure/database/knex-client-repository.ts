@@ -354,6 +354,10 @@ export class KnexClientRepository implements ClientRepository {
       .select(
         "devices.id", "devices.brand", "devices.model", "devices.name", "devices.serial_number",
         "devices.location", "devices.last_seen",
+        // Los 4 tóners individuales (no sólo el mínimo) — la tabla pinta una
+        // mini-barra por color en equipos color (funcionalidad real que ya
+        // existía antes del rediseño hifi).
+        "devices.toner_black", "devices.toner_cyan", "devices.toner_magenta", "devices.toner_yellow",
         this.db.raw(`(${DEVICE_ESTADO_SQL}) as estado`),
         this.db.raw(`${CONSUMIBLE_PCT_SQL} as consumible_pct`),
         this.db.raw("COALESCE(alerts_agg.alerts_count, 0)::int as alerts_count")

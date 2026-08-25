@@ -1,13 +1,13 @@
 import { useState } from 'react';
-import {
-  Download, FileText, BarChart2, Package,
-  Printer, TrendingUp, AlertTriangle, X,
-} from 'lucide-react';
+import { Download, FileText, BarChart2, Package } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, Legend,
 } from 'recharts';
 import type { Device, MonitorData } from '../../../shared/types/monitor';
+import { fmt } from '../../../shared/lib/formatters';
+import ZoneLabel from '../../../shared/components/ZoneLabel';
+import { BrandModal } from '../../../shared/components/BrandModal';
 
 interface Props {
   devices: Device[];
@@ -25,20 +25,10 @@ function exportReportCSV(devices: Device[], monitorName: string) {
   ];
   for (const d of devices) {
     lines.push([
-      d.serial_number ?? 'S/N',
-      d.model ?? 'N/A',
-      d.brand ?? 'N/A',
-      d.ip_address ?? 'N/A',
-      Number(d.monthly_pages ?? 0),
-      Number(d.monthly_mono ?? 0),
-      Number(d.monthly_color ?? 0),
-      d.total_pages ?? 'N/A',
-      d.mono_pages ?? 'N/A',
-      d.color_pages ?? 'N/A',
-      d.toner_black ?? 'N/A',
-      d.toner_cyan ?? 'N/A',
-      d.toner_magenta ?? 'N/A',
-      d.toner_yellow ?? 'N/A',
+      d.serial_number ?? 'S/N', d.model ?? 'N/A', d.brand ?? 'N/A', d.ip_address ?? 'N/A',
+      Number(d.monthly_pages ?? 0), Number(d.monthly_mono ?? 0), Number(d.monthly_color ?? 0),
+      d.total_pages ?? 'N/A', d.mono_pages ?? 'N/A', d.color_pages ?? 'N/A',
+      d.toner_black ?? 'N/A', d.toner_cyan ?? 'N/A', d.toner_magenta ?? 'N/A', d.toner_yellow ?? 'N/A',
     ].join(';'));
   }
   const blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
@@ -67,382 +57,200 @@ function deviceTonerStatus(d: Device): TonerLevel {
   return 'ok';
 }
 
-const STATUS_STYLES: Record<TonerLevel, string> = {
-  ok:       'bg-emerald-50 text-emerald-600 border-emerald-100',
-  warning:  'bg-amber-50  text-amber-600  border-amber-100',
-  critical: 'bg-rose-50   text-rose-600   border-rose-100',
+// Mismo criterio de 3 niveles que `ALERT_TIER_STYLE` en el detalle de
+// Dispositivo (handoff, transversal #1: sólo naranja institucional + grises).
+const STATUS_STYLE: Record<TonerLevel, { bg: string; fg: string; dot: string }> = {
+  ok:       { bg: 'bg-surface-avatar', fg: 'text-ink-650',   dot: 'bg-brand-gray' },
+  warning:  { bg: 'bg-brand-soft',     fg: 'text-brand-accent', dot: 'bg-brand' },
+  critical: { bg: 'bg-brand-soft',     fg: 'text-brand-accent', dot: 'bg-brand-severe' },
 };
-const STATUS_LABELS: Record<TonerLevel, string> = {
-  ok: 'OK', warning: 'Advertencia', critical: 'Crítico',
-};
+const STATUS_LABELS: Record<TonerLevel, string> = { ok: 'OK', warning: 'Advertencia', critical: 'Crítico' };
 
-/* ─── Toner progress cell ────────────────────────────────────────── */
-interface TonerCellProps {
-  value: number | null | undefined;
-  colorClass: string;
-}
-
-const TonerCell = ({ value, colorClass }: TonerCellProps) => {
-  if (value == null) return <span className="text-[10px] text-slate-300 font-bold">-</span>;
+const TonerCell = ({ value }: { value: number | null | undefined }) => {
+  if (value == null) return <span className="font-sans text-[11.5px] text-ink-200">—</span>;
   const lvl = tonerStatus(value);
-  const bgClass = lvl === 'critical' ? 'bg-rose-400' : lvl === 'warning' ? 'bg-amber-400' : colorClass;
+  const barColor = lvl === 'critical' ? 'bg-brand-severe' : lvl === 'warning' ? 'bg-brand' : 'bg-brand-gray';
   return (
     <div className="flex items-center gap-2">
-      <div className="w-16 sm:w-20 bg-slate-100 h-1.5 rounded-full overflow-hidden border border-slate-200/50">
-        <div className={`h-full rounded-full transition-all duration-700 ${bgClass}`} style={{ width: `${value}%` }} />
-      </div>
-      <span className="text-[9px] font-bold text-slate-500 w-6 text-right">{value}%</span>
+      <span className="block h-1.5 w-16 overflow-hidden rounded-[3px] bg-surface-track">
+        <span className={`block h-full rounded-[3px] ${barColor}`} style={{ width: `${value}%` }} />
+      </span>
+      <span className="min-w-[28px] text-right font-montserrat text-[11px] font-semibold tabular-nums text-ink-600">{value}%</span>
     </div>
   );
 };
 
-/* ─── Custom chart tooltip ───────────────────────────────────────── */
 interface ChartEntry { name: string; fullName: string; mono: number; color: number }
 
-const ChartTooltip = ({
-  active, payload, label, data,
-}: {
-  active?: boolean;
-  payload?: { dataKey: string; value: number; fill: string }[];
-  label?: string;
-  data: ChartEntry[];
+const ChartTooltip = ({ active, payload, label, data }: {
+  active?: boolean; payload?: { dataKey: string; value: number; fill: string }[]; label?: string; data: ChartEntry[];
 }) => {
   if (!active || !payload?.length) return null;
   const item = data.find(d => d.name === label);
   return (
-    <div className="bg-white rounded-2xl shadow-xl shadow-brand-charcoal/10 border border-slate-100 p-4 min-w-[190px]">
-      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-3 leading-snug">
-        {item?.fullName}
-      </p>
+    <div className="min-w-[190px] rounded-[5px] border border-line-100 bg-white p-3.5">
+      <p className="mb-2.5 font-montserrat text-[9px] font-bold uppercase leading-snug tracking-[.13em] text-ink-300">{item?.fullName}</p>
       {payload.map(entry => (
-        <div key={entry.dataKey} className="flex items-center justify-between gap-6 mb-1">
-          <span className="flex items-center gap-2 text-xs font-bold text-slate-600">
-            <span className="w-2 h-2 rounded-full" style={{ background: entry.fill }} />
+        <div key={entry.dataKey} className="mb-1 flex items-center justify-between gap-6">
+          <span className="flex items-center gap-2 font-sans text-[12px] text-ink-600">
+            <span className="block h-2 w-2 rounded-full" style={{ background: entry.fill }} />
             {entry.dataKey === 'mono' ? 'Monocromo' : 'Color'}
           </span>
-          <span className="text-xs font-black text-[#1a2333] tabular-nums">
-            {entry.value.toLocaleString()}
-          </span>
+          <span className="font-montserrat text-[12px] font-semibold tabular-nums text-ink-900">{fmt(entry.value)}</span>
         </div>
       ))}
-      <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between">
-        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Total</span>
-        <span className="text-xs font-black text-[#1a2333] tabular-nums">
-          {((payload[0]?.value ?? 0) + (payload[1]?.value ?? 0)).toLocaleString()}
-        </span>
+      <div className="mt-2.5 flex items-center justify-between border-t border-line-150 pt-2.5">
+        <span className="font-montserrat text-[9px] font-bold uppercase tracking-[.13em] text-ink-300">Total</span>
+        <span className="font-montserrat text-[12px] font-semibold tabular-nums text-ink-900">{fmt((payload[0]?.value ?? 0) + (payload[1]?.value ?? 0))}</span>
       </div>
     </div>
   );
 };
 
-/* ─── Main component ─────────────────────────────────────────────── */
+function KpiCard({ label, value, note, accent }: { label: string; value: string; note: string; accent?: boolean }) {
+  return (
+    <div className="rounded-[5px] border border-line-100 bg-white p-5">
+      <span className="font-montserrat text-[8px] font-bold uppercase tracking-[.13em] text-ink-300">{label}</span>
+      <p className={`mt-1.5 font-montserrat text-[30px] font-extrabold leading-none tracking-[-.02em] tabular-nums ${accent ? 'text-brand-severe' : 'text-ink-900'}`}>{value}</p>
+      <p className="mt-1.5 font-sans text-[11.5px] text-ink-300">{note}</p>
+    </div>
+  );
+}
+
 const ReportsTabPanel = ({ devices, monitor }: Props) => {
   const [showExportModal, setShowExportModal] = useState(false);
 
-  const totalDevices   = devices.length;
-  const totalMono      = devices.reduce((s, d) => s + Number(d.monthly_mono  ?? 0), 0);
-  const totalColor     = devices.reduce((s, d) => s + Number(d.monthly_color ?? 0), 0);
-  const totalPages     = devices.reduce((s, d) => s + Number(d.monthly_pages ?? (Number(d.monthly_mono ?? 0) + Number(d.monthly_color ?? 0))), 0);
-  const lowTonerCount  = devices.filter(d => deviceTonerStatus(d) !== 'ok').length;
+  const totalDevices  = devices.length;
+  const totalMono     = devices.reduce((s, d) => s + Number(d.monthly_mono  ?? 0), 0);
+  const totalColor    = devices.reduce((s, d) => s + Number(d.monthly_color ?? 0), 0);
+  const totalPages    = devices.reduce((s, d) => s + Number(d.monthly_pages ?? (Number(d.monthly_mono ?? 0) + Number(d.monthly_color ?? 0))), 0);
+  const lowTonerCount = devices.filter(d => deviceTonerStatus(d) !== 'ok').length;
 
   const chartData: ChartEntry[] = devices.map(d => ({
-    name:     d.serial_number?.slice(-6) ?? d.model?.slice(0, 8) ?? 'N/A',
+    name: d.serial_number?.slice(-6) ?? d.model?.slice(0, 8) ?? 'N/A',
     fullName: `${d.model ?? 'N/A'} · ${d.serial_number ?? 'S/N'}`,
-    mono:     Number(d.monthly_mono  ?? 0),
-    color:    Number(d.monthly_color ?? 0),
+    mono: Number(d.monthly_mono ?? 0), color: Number(d.monthly_color ?? 0),
   }));
-
   const devicesWithToner = devices.filter(d => d.toner_black != null);
+  const top = [...devices].sort((a, b) => Number(b.monthly_pages ?? 0) - Number(a.monthly_pages ?? 0))[0];
 
   return (
-    <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500">
+    <div className="space-y-4">
+      {/* KPIs — handoff §5.15: cifras simples, sin iconos decorativos */}
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-4">
+        <KpiCard label="Equipos" value={fmt(totalDevices)} note="dispositivos activos" />
+        <KpiCard label="Total páginas" value={fmt(totalPages)} note="volumen mensual procesado" />
+        <KpiCard label="Distribución" value={`${totalPages > 0 ? Math.round((totalMono / totalPages) * 100) : 0}%`} note={`mono · ${totalPages > 0 ? Math.round((totalColor / totalPages) * 100) : 0}% color`} />
+        <KpiCard label="Alertas" value={fmt(lowTonerCount)} note="consumibles bajos" accent={lowTonerCount > 0} />
+      </div>
 
-      {/* ── Panel header + KPI cards ─────────────────────────────── */}
-      <div className="cd-panel overflow-hidden border-none shadow-xl shadow-brand/5">
-        <header className="px-8 py-6 bg-white border-b border-slate-100 flex items-center justify-between">
-          <div>
-            <h3 className="text-sm font-black text-[#1a2333] uppercase tracking-tight">Reportes del Nodo</h3>
-            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Análisis ejecutivo de uso e insumos</p>
-          </div>
+      {/* Reporte ejecutivo de uso */}
+      <div className="rounded-[5px] border border-line-100 bg-white">
+        <div className="flex items-center justify-between gap-3 border-b border-line-150 px-5 py-3.5">
+          <span className="font-montserrat text-[9px] font-bold uppercase tracking-[.15em] text-ink-600">Reporte ejecutivo de uso</span>
           {devices.length > 0 && (
-            <button
-              onClick={() => setShowExportModal(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl text-[11px] font-black uppercase tracking-wider transition-colors border border-emerald-200"
-            >
+            <button type="button" onClick={() => setShowExportModal(true)} className="flex items-center gap-2 rounded-[3px] border border-line-300 bg-white px-3.5 py-2.5 font-montserrat text-[10px] font-semibold uppercase tracking-[.08em] text-ink-600 transition-colors duration-150 ease-in-out hover:bg-surface-btn-hover">
               <Download size={13} /> Exportar CSV
             </button>
           )}
-        </header>
-
-        <div className="px-8 py-8 bg-white">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-
-            <div className="p-6 bg-slate-50 rounded-3xl border border-slate-100 space-y-3 group hover:shadow-md hover:-translate-y-0.5 transition-all duration-300">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 bg-brand-gray/10 text-brand-gray rounded-xl">
-                  <Printer size={18} />
-                </div>
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Equipos</span>
-              </div>
-              <p className="text-4xl font-black text-[#1a2333] tracking-tighter tabular-nums">{totalDevices}</p>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Dispositivos activos</p>
-            </div>
-
-            <div className="p-6 bg-slate-50 rounded-3xl border border-slate-100 space-y-3 group hover:shadow-md hover:-translate-y-0.5 transition-all duration-300">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 bg-brand-charcoal/10 text-brand-charcoal rounded-xl">
-                  <TrendingUp size={18} />
-                </div>
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Páginas</span>
-              </div>
-              <p className="text-4xl font-black text-[#1a2333] tracking-tighter tabular-nums">{totalPages.toLocaleString()}</p>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Volumen mensual (págs. procesadas)</p>
-            </div>
-
-            <div className="p-6 bg-slate-50 rounded-3xl border border-slate-100 space-y-3 group hover:shadow-md hover:-translate-y-0.5 transition-all duration-300">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 bg-brand/10 text-brand rounded-xl">
-                  <BarChart2 size={18} />
-                </div>
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Distribución</span>
-              </div>
-              <p className="text-4xl font-black text-[#1a2333] tracking-tighter tabular-nums">
-                {totalPages > 0 ? Math.round((totalMono / totalPages) * 100) : 0}
-                <span className="text-xl text-slate-400">%</span>
-              </p>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                Mono · {totalPages > 0 ? Math.round((totalColor / totalPages) * 100) : 0}% Color
-              </p>
-            </div>
-
-            <div className={`p-6 rounded-3xl border space-y-3 group hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 ${
-              lowTonerCount > 0 ? 'bg-amber-50/80 border-amber-100' : 'bg-slate-50 border-slate-100'
-            }`}>
-              <div className="flex items-center gap-3">
-                <div className={`p-2.5 rounded-xl ${lowTonerCount > 0 ? 'bg-amber-100 text-amber-600' : 'bg-emerald-50 text-emerald-600'}`}>
-                  <AlertTriangle size={18} />
-                </div>
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Alertas</span>
-              </div>
-              <p className={`text-4xl font-black tracking-tighter tabular-nums ${lowTonerCount > 0 ? 'text-amber-700' : 'text-[#1a2333]'}`}>
-                {lowTonerCount}
-              </p>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Consumibles bajos</p>
-            </div>
-
-          </div>
         </div>
-      </div>
-
-      {/* ── Reporte Ejecutivo de Uso ──────────────────────────────── */}
-      <div className="bg-white rounded-[32px] border border-slate-100 shadow-xl shadow-brand/5 overflow-hidden">
-        <header className="px-8 py-6 border-b border-slate-100 flex items-center gap-4">
-          <div className="p-3 bg-brand/10 text-brand rounded-2xl">
-            <BarChart2 size={22} />
-          </div>
-          <div>
-            <h3 className="text-sm font-black text-[#1a2333] uppercase tracking-tight">Reporte Ejecutivo de Uso</h3>
-            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Distribución de impresiones por dispositivo</p>
-          </div>
-        </header>
-
-        <div className="p-8">
+        <div className="p-5">
           {chartData.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 gap-4">
-              <BarChart2 size={48} className="text-slate-200" />
-              <p className="text-slate-500 font-bold text-xs uppercase tracking-widest">Sin datos de uso disponibles</p>
+            <div className="flex flex-col items-center justify-center gap-2 py-16">
+              <BarChart2 size={32} className="text-ink-200" />
+              <p className="font-sans text-[12.5px] text-ink-300">Sin datos de uso disponibles</p>
             </div>
           ) : (
             <>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart
-                  data={chartData}
-                  margin={{ top: 4, right: 4, left: -16, bottom: 0 }}
-                  barCategoryGap="40%"
-                  barGap={4}
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                  <XAxis
-                    dataKey="name"
-                    tick={{ fontSize: 9, fontWeight: 800, fill: '#94a3b8', letterSpacing: '0.06em' }}
-                    axisLine={false}
-                    tickLine={false}
-                  />
-                  <YAxis
-                    tick={{ fontSize: 9, fontWeight: 800, fill: '#94a3b8' }}
-                    axisLine={false}
-                    tickLine={false}
-                    tickFormatter={(v: number) => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v)}
-                  />
-                  <Tooltip
-                    cursor={{ fill: 'rgba(35,35,35,0.05)', radius: 12 }}
-                    content={<ChartTooltip data={chartData} />}
-                  />
-                  <Legend
-                    iconType="circle"
-                    iconSize={8}
-                    formatter={(value: string) => (
-                      <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 ml-1">
-                        {value === 'mono' ? 'Monocromo' : 'Color'}
-                      </span>
-                    )}
-                  />
-                  <Bar dataKey="mono"  fill="#58595b" radius={[6, 6, 0, 0]} maxBarSize={40} />
-                  <Bar dataKey="color" fill="#f7941d" radius={[6, 6, 0, 0]} maxBarSize={40} />
+              <ResponsiveContainer width="100%" height={280}>
+                <BarChart data={chartData} margin={{ top: 4, right: 4, left: -16, bottom: 0 }} barCategoryGap="40%" barGap={4}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#F0F2F2" vertical={false} />
+                  <XAxis dataKey="name" tick={{ fontSize: 9, fontWeight: 700, fill: '#A5AAAD', letterSpacing: '0.06em' }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 9, fontWeight: 700, fill: '#A5AAAD' }} axisLine={false} tickLine={false} tickFormatter={(v: number) => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v)} />
+                  <Tooltip cursor={{ fill: 'rgba(88,89,91,0.06)' }} content={<ChartTooltip data={chartData} />} />
+                  <Legend iconType="circle" iconSize={8} formatter={(value: string) => (
+                    <span className="ml-1 font-montserrat text-[10px] font-semibold uppercase tracking-[.08em] text-ink-300">{value === 'mono' ? 'Monocromo' : 'Color'}</span>
+                  )} />
+                  <Bar dataKey="mono" fill="#58595B" radius={[2, 2, 0, 0]} maxBarSize={36} />
+                  <Bar dataKey="color" fill="#F7941D" radius={[2, 2, 0, 0]} maxBarSize={36} />
                 </BarChart>
               </ResponsiveContainer>
 
-              {/* Top producer highlight */}
-              {(() => {
-                const top = [...devices].sort((a, b) =>
-                  Number(b.monthly_pages ?? 0) - Number(a.monthly_pages ?? 0)
-                )[0];
-                if (!top || Number(top.monthly_pages ?? 0) === 0) return null;
-                return (
-                  <div className="mt-6 flex items-center gap-4 p-5 bg-brand/5 rounded-2xl border border-brand/10">
-                    <div className="p-3 bg-brand/10 text-brand rounded-xl">
-                      <TrendingUp size={20} />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Mayor Productor del Mes</p>
-                      <p className="text-sm font-black text-[#1a2333] tracking-tight">
-                        {top.model ?? 'N/A'} · <span className="font-mono text-brand">{top.serial_number ?? 'S/N'}</span>
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-2xl font-black text-[#1a2333] tabular-nums tracking-tighter">
-                        {Number(top.monthly_pages ?? 0).toLocaleString()}
-                      </p>
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">páginas este mes</p>
-                    </div>
+              {top && Number(top.monthly_pages ?? 0) > 0 && (
+                <div className="mt-5 flex items-center gap-4 rounded-[3px] border border-brand-chip-border bg-brand-soft p-4">
+                  <div className="flex-1">
+                    <p className="mb-0.5 font-montserrat text-[8.5px] font-bold uppercase tracking-[.13em] text-brand-accent">Mayor productor del mes</p>
+                    <p className="font-sans text-[13px] font-semibold text-ink-900">{top.model ?? 'N/A'} · <span className="font-mono text-[12px] text-brand-accent">{top.serial_number ?? 'S/N'}</span></p>
                   </div>
-                );
-              })()}
+                  <div className="text-right">
+                    <p className="font-montserrat text-[21px] font-bold tabular-nums text-ink-900">{fmt(Number(top.monthly_pages ?? 0))}</p>
+                    <p className="font-sans text-[11px] text-ink-300">páginas este mes</p>
+                  </div>
+                </div>
+              )}
             </>
           )}
         </div>
       </div>
 
-      {/* ── Reporte de Insumos ───────────────────────────────────── */}
-      <div className="bg-white rounded-[32px] border border-slate-100 shadow-xl shadow-brand/5 overflow-hidden">
-        <header className="px-8 py-6 border-b border-slate-100 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-amber-50 text-amber-600 rounded-2xl">
-              <Package size={22} />
-            </div>
-            <div>
-              <h3 className="text-sm font-black text-[#1a2333] uppercase tracking-tight">Reporte de Insumos</h3>
-              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Estado de consumibles por dispositivo</p>
-            </div>
-          </div>
+      {/* Reporte de insumos */}
+      <div>
+        <div className="mb-3.5 flex items-center justify-between gap-3">
+          <ZoneLabel text={`Reporte de insumos · ${fmt(devicesWithToner.length)}`} lineColorClass="bg-brand" />
           {devicesWithToner.length > 0 && (
-            <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${
-              lowTonerCount > 0 ? 'bg-amber-50 text-amber-600 border-amber-100' : 'bg-emerald-50 text-emerald-600 border-emerald-100'
-            }`}>
+            <span className={`inline-flex items-center gap-[7px] rounded-[2px] px-[9px] py-1 font-montserrat text-[9.5px] font-semibold uppercase tracking-[.08em] ${STATUS_STYLE[lowTonerCount > 0 ? 'warning' : 'ok'].bg} ${STATUS_STYLE[lowTonerCount > 0 ? 'warning' : 'ok'].fg}`}>
+              <span className={`block h-1.5 w-1.5 rounded-full ${STATUS_STYLE[lowTonerCount > 0 ? 'warning' : 'ok'].dot}`} />
               {lowTonerCount > 0 ? `${lowTonerCount} alerta${lowTonerCount > 1 ? 's' : ''}` : 'Todo OK'}
             </span>
           )}
-        </header>
-
-        <div className="p-8">
+        </div>
+        <div className="rounded-[5px] border border-line-100 bg-white">
           {devicesWithToner.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 gap-4">
-              <Package size={48} className="text-slate-200" />
-              <p className="text-slate-500 font-bold text-xs uppercase tracking-widest">Sin datos de consumibles disponibles</p>
+            <div className="flex flex-col items-center justify-center gap-2 py-16">
+              <Package size={32} className="text-ink-200" />
+              <p className="font-sans text-[12.5px] text-ink-300">Sin datos de consumibles disponibles</p>
             </div>
           ) : (
-            <div className="w-full overflow-x-auto">
-              <table className="w-full text-left border-collapse whitespace-nowrap">
-                <thead className="bg-slate-50 border-b border-slate-200">
-                  <tr>
-                    <th className="py-2 px-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Modelo</th>
-                    <th className="py-2 px-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Marca</th>
-                    <th className="py-2 px-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">S/N</th>
-                    <th className="py-2 px-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Estado</th>
-                    <th className="py-2 px-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Negro</th>
-                    <th className="py-2 px-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Cian</th>
-                    <th className="py-2 px-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Magenta</th>
-                    <th className="py-2 px-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Amarillo</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {devicesWithToner.map(device => {
-                    const status  = deviceTonerStatus(device);
-                    return (
-                      <tr key={device.id} className="hover:bg-slate-50 transition-colors">
-                        <td className="py-2 px-4 text-[10px] text-[#1a2333] font-bold">
-                          {device.model ?? 'N/A'}
-                        </td>
-                        <td className="py-2 px-4 text-[10px] text-slate-500 font-medium uppercase">
-                          {device.brand ?? 'N/A'}
-                        </td>
-                        <td className="py-2 px-4 text-[10px] text-slate-500 font-mono">
-                          {device.serial_number ?? 'S/N'}
-                        </td>
-                        <td className="py-2 px-4">
-                          <span className={`inline-flex px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider border ${STATUS_STYLES[status]}`}>
-                            {STATUS_LABELS[status]}
-                          </span>
-                        </td>
-                        <td className="py-2 px-4">
-                          <TonerCell value={device.toner_black} colorClass="bg-slate-800" />
-                        </td>
-                        <td className="py-2 px-4">
-                          <TonerCell value={device.toner_cyan} colorClass="bg-[#00adef]" />
-                        </td>
-                        <td className="py-2 px-4">
-                          <TonerCell value={device.toner_magenta} colorClass="bg-[#ec008c]" />
-                        </td>
-                        <td className="py-2 px-4">
-                          <TonerCell value={device.toner_yellow} colorClass="bg-[#f5c400]" />
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+            <div className="overflow-x-auto">
+              <div style={{ minWidth: 900 }}>
+                <div role="row" className="grid grid-cols-[minmax(180px,1fr)_110px_140px_110px_90px_90px_90px_90px] items-center gap-3.5 border-b border-line-100 bg-surface-table-head px-5 py-3">
+                  {['MODELO', 'MARCA', 'S/N', 'ESTADO', 'NEGRO', 'CIAN', 'MAGENTA', 'AMARILLO'].map((h) => (
+                    <span key={h} className="font-montserrat text-[8.5px] font-bold uppercase tracking-[.14em] text-ink-300">{h}</span>
+                  ))}
+                </div>
+                {devicesWithToner.map((device) => {
+                  const status = deviceTonerStatus(device);
+                  const s = STATUS_STYLE[status];
+                  return (
+                    <div key={device.id} role="row" className="grid min-h-[54px] grid-cols-[minmax(180px,1fr)_110px_140px_110px_90px_90px_90px_90px] items-center gap-3.5 border-b border-line-200 px-5 py-[11px] last:border-0">
+                      <span className="truncate font-sans text-[12.5px] font-semibold text-ink-900">{device.model ?? 'N/A'}</span>
+                      <span className="font-sans text-[12px] text-ink-400">{device.brand ?? 'N/A'}</span>
+                      <span className="font-mono text-[11.5px] text-ink-700">{device.serial_number ?? 'S/N'}</span>
+                      <span className={`inline-flex items-center gap-[7px] justify-self-start rounded-[2px] ${s.bg} px-[9px] py-1 font-montserrat text-[9.5px] font-semibold uppercase tracking-[.08em] ${s.fg}`}>
+                        <span className={`block h-1.5 w-1.5 rounded-full ${s.dot}`} />{STATUS_LABELS[status]}
+                      </span>
+                      <TonerCell value={device.toner_black} />
+                      <TonerCell value={device.toner_cyan} />
+                      <TonerCell value={device.toner_magenta} />
+                      <TonerCell value={device.toner_yellow} />
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           )}
         </div>
       </div>
 
-      {/* ── Export Modal ─────────────────────────────────────────── */}
-      {showExportModal && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          onClick={() => setShowExportModal(false)}
+      <BrandModal isOpen={showExportModal} onClose={() => setShowExportModal(false)} title="Exportar reporte" widthPx={400}>
+        <p className="mb-4 font-sans text-[12.5px] text-ink-400">Formato CSV completo del reporte ejecutivo.</p>
+        <button
+          type="button" onClick={() => { exportReportCSV(devices, monitor.name); setShowExportModal(false); }}
+          className="flex w-full items-center justify-center gap-2.5 rounded-[3px] bg-brand px-4 py-3 font-montserrat text-[11px] font-semibold uppercase tracking-[.08em] text-white transition-colors duration-150 ease-in-out hover:bg-brand-severe"
         >
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
-          <div
-            className="relative bg-white rounded-[32px] shadow-2xl shadow-black/20 w-full max-w-sm p-8 animate-in zoom-in-95 duration-200"
-            onClick={e => e.stopPropagation()}
-          >
-            <div className="flex items-center gap-4 mb-6">
-              <div className="p-3 bg-emerald-50 rounded-2xl">
-                <Download size={22} className="text-emerald-600" />
-              </div>
-              <div>
-                <h3 className="text-base font-black text-[#1a2333] tracking-tight">Exportar Reporte</h3>
-                <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Formato CSV completo</p>
-              </div>
-            </div>
-            <div className="flex flex-col gap-3 mb-4">
-              <button
-                onClick={() => { exportReportCSV(devices, monitor.name); setShowExportModal(false); }}
-                className="w-full py-4 rounded-2xl border-2 border-emerald-200 bg-emerald-50 hover:bg-emerald-100 transition-colors text-sm font-black text-emerald-700 flex items-center justify-center gap-3"
-              >
-                <FileText size={16} /> Reporte Ejecutivo Completo
-              </button>
-            </div>
-            <button
-              onClick={() => setShowExportModal(false)}
-              className="w-full py-3 rounded-2xl text-slate-500 text-xs font-bold hover:bg-slate-50 transition-colors flex items-center justify-center gap-2"
-            >
-              <X size={14} /> Cancelar
-            </button>
-          </div>
-        </div>
-      )}
+          <FileText size={15} /> Reporte ejecutivo completo
+        </button>
+      </BrandModal>
     </div>
   );
 };

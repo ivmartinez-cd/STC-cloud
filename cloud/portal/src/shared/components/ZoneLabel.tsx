@@ -1,6 +1,7 @@
 /** Rótulo de zona (handoff hifi "Cliente — detalle", 25/08/2026): línea 20×2px +
  * label — "REQUIERE ATENCIÓN" (`#C6710A`), "CONFIGURACIÓN DE LA CUENTA" (`#58595B`),
- * "INFRAESTRUCTURA DE MONITOREO · N DISPOSITIVOS" (`#F7941D`). */
+ * "INFRAESTRUCTURA DE MONITOREO · N DISPOSITIVOS" (`#F7941D`). También usado por
+ * el detalle de Dispositivo para "CONSUMIBLES ACTUALES · N INSTALADOS". */
 export default function ZoneLabel({ text, lineColorClass }: { text: string; lineColorClass: string }) {
   return (
     <div className="flex items-center gap-[11px]">

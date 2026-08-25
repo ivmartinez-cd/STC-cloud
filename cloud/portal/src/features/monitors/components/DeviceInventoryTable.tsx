@@ -9,6 +9,8 @@ import { useRowSelection } from '../../../shared/hooks/useRowSelection';
 import { useMonitorDeviceDirectory, MONITOR_DEVICE_PAGE_SIZE } from '../hooks/useMonitorDeviceDirectory';
 import { useToast } from '../../../store/ToastContext';
 import BulkActionBar from '../../../shared/components/BulkActionBar';
+import EstadoChip from '../../../shared/components/EstadoChip';
+import TonerLevelBars from '../../../shared/components/TonerLevelBars';
 import {
   BulkDecommissionModal, BulkRecommissionModal, BulkMoveDevicesModal, BulkMonitorStateModal,
   type BulkActionResult,
@@ -28,7 +30,12 @@ interface Props {
   isReadOnlyViewer?: boolean;
 }
 
-const GRID_COLS = 'grid-cols-[minmax(250px,1fr)_132px_130px_128px_90px_96px_40px]';
+// La casilla de selección es una columna propia (28px) — antes compartía la
+// pista ancha con "equipo" (el header nunca reservaba un track para ella),
+// así que la fila (8 elementos) quedaba corrida una posición contra el
+// header (7 elementos): "equipo" invadía la pista de ESTADO, ESTADO la de
+// DIRECCIÓN IP, etc. Ahora header y fila usan siempre las mismas 8 pistas.
+const GRID_COLS = 'grid-cols-[28px_minmax(220px,1fr)_132px_130px_128px_90px_96px_40px]';
 
 const SEGMENT_OPTIONS: Array<{ value: AgentDeviceSegment; label: string }> = [
   { value: 'todos', label: 'TODOS' },
@@ -59,35 +66,9 @@ function formatLastReport(iso: string | null): string {
   return `hace ${Math.round(hrs / 24)} d`;
 }
 
-function EstadoChip({ estado }: { estado: AgentDeviceDirectoryRow['estado'] }) {
-  if (estado === 'en_linea') {
-    return (
-      <span className="inline-flex items-center gap-[6px] justify-self-start rounded-[2px] bg-surface-avatar px-[9px] py-1 font-montserrat text-[9.5px] font-semibold uppercase tracking-[.08em] text-ink-650">
-        <span className="block h-1.5 w-1.5 rounded-full bg-brand-gray" /> EN LÍNEA
-      </span>
-    );
-  }
-  const label = estado === 'sin_conexion' ? 'SIN CONEXIÓN' : 'SIN APROBAR';
-  return (
-    <span className="inline-flex items-center gap-[6px] justify-self-start rounded-[2px] bg-brand-soft px-[9px] py-1 font-montserrat text-[9.5px] font-semibold uppercase tracking-[.08em] text-brand-accent">
-      <span className="block h-1.5 w-1.5 rounded-full bg-brand" /> {label}
-    </span>
-  );
-}
-
-function ConsumibleCell({ pct }: { pct: number | null }) {
-  if (pct === null) return <span className="font-sans text-[12.5px] text-ink-200">—</span>;
-  const color = pct <= 15 ? 'bg-brand-severe' : pct <= 35 ? 'bg-brand' : 'bg-brand-gray';
-  const width = Math.max(3, pct);
-  return (
-    <div className="flex items-center gap-2.5">
-      <span className="block h-1.5 flex-1 overflow-hidden rounded-[3px] bg-surface-track">
-        <span className={`block h-full rounded-[3px] ${color}`} style={{ width: `${width}%` }} />
-      </span>
-      <span className="min-w-[30px] text-right font-montserrat text-[11.5px] font-semibold tabular-nums text-ink-100">{pct}%</span>
-    </div>
-  );
-}
+const ESTADO_LABEL: Record<AgentDeviceDirectoryRow['estado'], string> = {
+  en_linea: 'EN LÍNEA', sin_conexion: 'SIN CONEXIÓN', sin_aprobar: 'SIN APROBAR',
+};
 
 function AlertsCell({ count }: { count: number }) {
   if (count === 0) return <div className="text-right font-montserrat text-[12.5px] font-semibold text-ink-200">—</div>;
@@ -178,18 +159,6 @@ const DeviceInventoryTable = ({ devices, monitorName, agentId, clientId, pending
     if (onRefresh) onRefresh();
     const skippedMsg = result.skipped.length > 0 ? ` — ${result.skipped.length} sin aplicar` : '';
     showToast(`${result.count} equipo(s) actualizados${skippedMsg}`, result.count > 0 ? 'success' : 'error');
-  };
-
-  const handleDeleteDevice = async (id: string, model: string | null, ip: string | null) => {
-    if (window.confirm(`¿Seguro que deseas eliminar el equipo ${model || ip || 'seleccionado'} de la base de datos?`)) {
-      try {
-        await api.delete(`/devices/${id}`);
-        refetch();
-        if (onRefresh) onRefresh();
-      } catch (e: unknown) {
-        showToast('Error al eliminar dispositivo: ' + ((e as Error).message ?? String(e)), 'error');
-      }
-    }
   };
 
   const handleDeleteOffline = async () => {
@@ -304,21 +273,21 @@ const DeviceInventoryTable = ({ devices, monitorName, agentId, clientId, pending
 
         {!isReadOnlyViewer && (
           <BulkActionBar count={rowSelection.count} onClear={rowSelection.clear}>
-            <button onClick={() => setBulkModal('decommission')} className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-[11px] font-black uppercase tracking-wider transition-all">
-              <Trash2 size={13} /> Dar de baja
+            <button onClick={() => setBulkModal('decommission')} className="flex items-center gap-1.5 rounded-[3px] border border-line-300 bg-white px-3 py-2 font-montserrat text-[10px] font-semibold uppercase tracking-[.08em] text-ink-600 transition-colors duration-150 ease-in-out hover:bg-surface-btn-hover">
+              <Trash2 size={12} /> Dar de baja
             </button>
-            <button onClick={() => setBulkModal('recommission')} className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-[11px] font-black uppercase tracking-wider transition-all">
-              <RotateCcw size={13} /> Reactivar
+            <button onClick={() => setBulkModal('recommission')} className="flex items-center gap-1.5 rounded-[3px] border border-line-300 bg-white px-3 py-2 font-montserrat text-[10px] font-semibold uppercase tracking-[.08em] text-ink-600 transition-colors duration-150 ease-in-out hover:bg-surface-btn-hover">
+              <RotateCcw size={12} /> Reactivar
             </button>
-            <button onClick={() => setBulkModal('move')} className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-600 hover:bg-slate-700 text-white rounded-xl text-[11px] font-black uppercase tracking-wider transition-all">
-              <ArrowRightLeft size={13} /> Mover
+            <button onClick={() => setBulkModal('move')} className="flex items-center gap-1.5 rounded-[3px] border border-line-300 bg-white px-3 py-2 font-montserrat text-[10px] font-semibold uppercase tracking-[.08em] text-ink-600 transition-colors duration-150 ease-in-out hover:bg-surface-btn-hover">
+              <ArrowRightLeft size={12} /> Mover
             </button>
-            <button onClick={() => setBulkModal('monitor-state')} className="flex items-center gap-1.5 px-3 py-1.5 bg-brand hover:bg-brand-hover text-white rounded-xl text-[11px] font-black uppercase tracking-wider transition-all">
-              <Radio size={13} /> Estado de monitoreo
+            <button onClick={() => setBulkModal('monitor-state')} className="flex items-center gap-1.5 rounded-[3px] border border-line-300 bg-white px-3 py-2 font-montserrat text-[10px] font-semibold uppercase tracking-[.08em] text-ink-600 transition-colors duration-150 ease-in-out hover:bg-surface-btn-hover">
+              <Radio size={12} /> Estado de monitoreo
             </button>
             {!isReadOnlyViewer && (
-              <button onClick={handleDeleteOffline} className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-500 hover:bg-rose-600 text-white rounded-xl text-[11px] font-black uppercase tracking-wider transition-all">
-                <Trash2 size={13} /> Dar de baja desconectados
+              <button onClick={handleDeleteOffline} className="flex items-center gap-1.5 rounded-[3px] border border-brand-chip-border bg-white px-3 py-2 font-montserrat text-[10px] font-semibold uppercase tracking-[.08em] text-brand-accent transition-colors duration-150 ease-in-out hover:bg-brand-soft">
+                <Trash2 size={12} /> Dar de baja desconectados
               </button>
             )}
           </BulkActionBar>
@@ -327,12 +296,14 @@ const DeviceInventoryTable = ({ devices, monitorName, agentId, clientId, pending
         <div className="overflow-x-auto">
           <div className="min-w-[1180px]" role="table" aria-label="Equipos detectados por este monitor">
             <div role="row" className={`grid ${GRID_COLS} items-center gap-x-[14px] border-b border-line-100 bg-surface-table-head px-5 py-3`}>
-              {!isReadOnlyViewer && (
-                <button onClick={rowSelection.toggleAll} className="justify-self-start text-ink-300 hover:text-ink-100" title="Seleccionar todos">
-                  {rowSelection.allSelected ? <CheckSquare size={14} /> : <Square size={14} />}
-                </button>
-              )}
-              {isReadOnlyViewer && <div role="columnheader" className="font-montserrat text-[8.5px] font-bold uppercase tracking-[.14em] text-ink-300">EQUIPO</div>}
+              <div className="justify-self-start">
+                {!isReadOnlyViewer && (
+                  <button onClick={rowSelection.toggleAll} className="text-ink-300 hover:text-ink-100" title="Seleccionar todos">
+                    {rowSelection.allSelected ? <CheckSquare size={14} /> : <Square size={14} />}
+                  </button>
+                )}
+              </div>
+              <div role="columnheader" className="font-montserrat text-[8.5px] font-bold uppercase tracking-[.14em] text-ink-300">EQUIPO</div>
               <div role="columnheader" className="font-montserrat text-[8.5px] font-bold uppercase tracking-[.14em] text-ink-300">ESTADO</div>
               <div role="columnheader" className="font-montserrat text-[8.5px] font-bold uppercase tracking-[.14em] text-ink-300">DIRECCIÓN IP</div>
               {SORTABLE_HEADERS.map((h) => (
@@ -374,7 +345,7 @@ const DeviceInventoryTable = ({ devices, monitorName, agentId, clientId, pending
             {!error && !loading && rows.map((d) => (
               <div key={d.id} className={`group grid ${GRID_COLS} min-h-[54px] items-center gap-x-[14px] border-b border-line-200 px-5 py-[11px] transition-colors duration-150 ease-in-out hover:bg-surface-hover`}>
                 {!isReadOnlyViewer && (
-                  <button onClick={() => rowSelection.toggle(d.id)} className="justify-self-start text-slate-300 hover:text-brand">
+                  <button onClick={() => rowSelection.toggle(d.id)} className="justify-self-start text-ink-300 hover:text-brand">
                     {rowSelection.selected.has(d.id) ? <CheckSquare size={14} className="text-brand" /> : <Square size={14} />}
                   </button>
                 )}
@@ -388,26 +359,16 @@ const DeviceInventoryTable = ({ devices, monitorName, agentId, clientId, pending
                   </div>
                 </Link>
 
-                <EstadoChip estado={d.estado} />
+                <EstadoChip variant={d.estado === 'en_linea' ? 'neutral' : 'attention'} label={ESTADO_LABEL[d.estado]} />
                 <div className="min-w-0 truncate font-mono text-[11.5px] text-ink-700">{d.ip_address ?? '—'}</div>
-                <ConsumibleCell pct={d.consumible_pct} />
+                <TonerLevelBars black={d.toner_black} cyan={d.toner_cyan} magenta={d.toner_magenta} yellow={d.toner_yellow} />
                 <AlertsCell count={d.alerts_count} />
                 <div className="text-right font-sans text-[12px] text-ink-400">{formatLastReport(d.last_seen)}</div>
 
                 <div className="flex justify-end">
-                  {!isReadOnlyViewer && d.estado === 'sin_conexion' ? (
-                    <button
-                      onClick={(e) => { e.preventDefault(); handleDeleteDevice(d.id, d.model, d.ip_address); }}
-                      title="Eliminar este equipo sin conexión"
-                      className="flex h-[26px] w-[26px] items-center justify-center rounded-[3px] border border-rose-200 text-rose-500 hover:bg-rose-50"
-                    >
-                      <X size={13} />
-                    </button>
-                  ) : (
-                    <Link to={`/devices/${d.id}`} className="flex h-[26px] w-[26px] items-center justify-center rounded-[3px] border border-line-avatar text-ink-300 transition-colors duration-150 ease-in-out group-hover:border-line-300 group-hover:text-ink-100">
-                      <ChevronRight size={13} />
-                    </Link>
-                  )}
+                  <Link to={`/devices/${d.id}`} className="flex h-[26px] w-[26px] items-center justify-center rounded-[3px] border border-line-avatar text-ink-300 transition-colors duration-150 ease-in-out group-hover:border-line-300 group-hover:text-ink-100">
+                    <ChevronRight size={13} />
+                  </Link>
                 </div>
               </div>
             ))}
@@ -446,22 +407,18 @@ const DeviceInventoryTable = ({ devices, monitorName, agentId, clientId, pending
       </div>
 
       {showExportModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setShowExportModal(false)}>
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
-          <div className="relative bg-white rounded-[32px] shadow-2xl shadow-black/20 w-full max-w-sm p-8 animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center gap-4 mb-6">
-              <div className="p-3 bg-emerald-50 rounded-2xl"><Download size={22} className="text-emerald-600" /></div>
-              <div>
-                <h3 className="text-base font-black text-[#1a2333] tracking-tight">Exportar Contadores</h3>
-                <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">¿Discriminar mono / color?</p>
-              </div>
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4" style={{ background: 'rgba(20,20,20,.55)' }} onClick={() => setShowExportModal(false)}>
+          <div className="w-full max-w-sm rounded-[5px] bg-white p-6" style={{ boxShadow: '0 20px 60px rgba(0,0,0,.25)' }} onClick={(e) => e.stopPropagation()}>
+            <div className="mb-5">
+              <h3 className="font-montserrat text-[15px] font-extrabold text-ink-900">Exportar contadores</h3>
+              <p className="mt-1 font-sans text-[12.5px] text-ink-300">¿Discriminar mono / color?</p>
             </div>
-            <div className="flex flex-col gap-3 mb-4">
-              <button onClick={() => handleExport(true)} className="w-full py-4 rounded-2xl border-2 border-emerald-200 bg-emerald-50 hover:bg-emerald-100 transition-colors text-sm font-black text-emerald-700">Sí, discriminar</button>
-              <button onClick={() => handleExport(false)} className="w-full py-4 rounded-2xl border-2 border-slate-200 bg-slate-50 hover:bg-slate-100 transition-colors text-sm font-black text-slate-700">No</button>
+            <div className="mb-4 flex flex-col gap-2.5">
+              <button onClick={() => handleExport(true)} className="w-full rounded-[3px] bg-brand py-3 font-montserrat text-[11px] font-semibold uppercase tracking-[.08em] text-white transition-colors duration-150 ease-in-out hover:bg-brand-severe">Sí, discriminar</button>
+              <button onClick={() => handleExport(false)} className="w-full rounded-[3px] border border-line-300 bg-white py-3 font-montserrat text-[11px] font-semibold uppercase tracking-[.08em] text-ink-600 transition-colors duration-150 ease-in-out hover:bg-surface-btn-hover">No</button>
             </div>
-            <button onClick={() => setShowExportModal(false)} className="w-full py-3 rounded-2xl text-slate-500 text-xs font-bold hover:bg-slate-50 transition-colors flex items-center justify-center gap-2">
-              <X size={14} /> Cancelar
+            <button onClick={() => setShowExportModal(false)} className="flex w-full items-center justify-center gap-2 rounded-[3px] py-2 font-montserrat text-[10.5px] font-semibold uppercase tracking-[.08em] text-ink-300 transition-colors duration-150 ease-in-out hover:text-ink-600">
+              <X size={13} /> Cancelar
             </button>
           </div>
         </div>

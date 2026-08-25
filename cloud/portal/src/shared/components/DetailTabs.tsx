@@ -1,8 +1,9 @@
 interface TabDef<T extends string> { id: T; label: string }
 
-/** Tabs del detalle de monitor (handoff hifi "Monitor — detalle", 25/08/2026) — cambian
- * el contenido bajo la tarjeta de identidad; header y tira de métricas persisten. */
-export default function MonitorDetailTabs<T extends string>({ tabs, active, onChange }: {
+/** Tabs de una pantalla de detalle (handoff hifi "Monitor — detalle", 25/08/2026) —
+ * cambian el contenido bajo la tarjeta de identidad; header y tira de métricas
+ * persisten. Genérico: reusado por Monitor y Dispositivo detalle. */
+export default function DetailTabs<T extends string>({ tabs, active, onChange }: {
   tabs: Array<TabDef<T>>;
   active: T;
   onChange: (tab: T) => void;

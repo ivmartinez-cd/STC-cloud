@@ -8,20 +8,21 @@ interface Props {
 }
 
 /**
- * Barra sticky de acciones en bloque (Fase 9 del gap analysis vs HP SDS) —
- * un único componente reusado por `DeviceInventoryTable.tsx`/`Alerts.tsx`/
- * `Supplies.tsx` para que las tres tablas seleccionables se vean y se
- * comporten igual. Oculta por completo si no hay nada seleccionado.
+ * Barra de acciones en bloque (Fase 9 del gap analysis vs HP SDS) — un único
+ * componente reusado por `DeviceInventoryTable.tsx`/`ClientDevicesTable.tsx`/
+ * `Alerts.tsx`/`Supplies.tsx`. Oculta por completo si no hay nada
+ * seleccionado. Fondo `#FDF4E9` (handoff hifi "Monitor — detalle", §5 punto 8:
+ * "barra de acciones masivas sobre fondo #FDF4E9").
  */
 export default function BulkActionBar({ count, onClear, children }: Props) {
   if (count === 0) return null;
   return (
-    <div className="cd-panel bg-brand/5 border border-brand/20 rounded-2xl px-5 py-3 flex items-center gap-3 sticky top-2 z-10 flex-wrap">
-      <span className="text-xs font-extrabold text-brand-charcoal whitespace-nowrap">{count} seleccionado(s)</span>
-      <div className="flex items-center gap-2 flex-wrap">{children}</div>
+    <div className="flex flex-wrap items-center gap-3 border-b border-brand-chip-border bg-brand-soft px-5 py-3">
+      <span className="whitespace-nowrap font-montserrat text-[10.5px] font-semibold uppercase tracking-[.08em] text-brand-accent">{count} seleccionado(s)</span>
+      <div className="flex flex-wrap items-center gap-2">{children}</div>
       <div className="flex-1" />
-      <button onClick={onClear} className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-white/60 transition-colors" title="Limpiar selección">
-        <X size={16} />
+      <button onClick={onClear} className="rounded-[3px] p-1.5 text-brand-accent transition-colors duration-150 ease-in-out hover:bg-white/60" title="Limpiar selección">
+        <X size={15} />
       </button>
     </div>
   );

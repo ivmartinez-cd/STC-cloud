@@ -1,6 +1,6 @@
 import { Radio, Trash2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import ZoneLabel from './ZoneLabel';
+import ZoneLabel from '../../../shared/components/ZoneLabel';
 import { OFFLINE_THRESHOLD_MS } from '../../../shared/lib/constants';
 import type { Monitor } from '../../../shared/types/monitor';
 

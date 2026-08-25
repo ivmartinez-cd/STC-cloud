@@ -1,6 +1,8 @@
 import type { DeviceRow } from "../../domain/entities/device";
+import type { DeviceStats, PrintTrend } from "../../domain/entities/device-detail";
 import { DeviceNotFoundError, DeviceValidationError } from "../../domain/errors/device-error";
 import type { DeviceRepository } from "../../domain/repositories/device-repository";
+import { summarizePrintTrend } from "../../domain/services/print-trend";
 import type { DeviceSuppliesReader } from "../ports/device-supplies-reader";
 import type {
   DeviceReadingsInput, DeviceUsageHistoryInput, ListDevicesInput, ListDuplicatesInput, ScopedId,
@@ -59,6 +61,28 @@ export class GetDeviceUsageHistoryUseCase {
     const id = await this.devices.resolveId(input.id, input.scope, false);
     if (!id) throw new DeviceNotFoundError();
     return this.devices.usageHistory(id, { granularity: input.granularity, limit: input.limit });
+  }
+}
+
+/** Tira de 6 métricas del header (handoff "Dispositivo — detalle") — `statsRaw()` del repo + el consumible más bajo, que necesita el puerto de consumibles. */
+export class GetDeviceStatsUseCase {
+  constructor(private readonly devices: DeviceRepository, private readonly supplies: DeviceSuppliesReader) {}
+  async execute(input: ScopedId): Promise<DeviceStats> {
+    const id = await this.devices.resolveId(input.id, input.scope, true);
+    if (!id) throw new DeviceNotFoundError();
+    const [stats, lowestSupply] = await Promise.all([this.devices.statsRaw(id), this.supplies.lowest(id)]);
+    return { ...stats, lowest_supply: lowestSupply };
+  }
+}
+
+/** "Tendencia de impresión · 12 meses" — también consultable para equipos de baja/fusionados, mismo criterio que `GetDeviceUsageHistoryUseCase`. */
+export class GetDevicePrintTrendUseCase {
+  constructor(private readonly devices: DeviceRepository) {}
+  async execute(input: ScopedId): Promise<PrintTrend> {
+    const id = await this.devices.resolveId(input.id, input.scope, false);
+    if (!id) throw new DeviceNotFoundError();
+    const months = await this.devices.printTrend(id);
+    return summarizePrintTrend(months);
   }
 }
 

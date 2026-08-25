@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import ZoneLabel from './ZoneLabel';
+import ZoneLabel from '../../../shared/components/ZoneLabel';
 import ClientDevicesFilterBar from './ClientDevicesFilterBar';
 import ClientDevicesTable from './ClientDevicesTable';
 import ClientDevicesPagination from './ClientDevicesPagination';

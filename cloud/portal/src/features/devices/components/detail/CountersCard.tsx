@@ -1,4 +1,3 @@
-import { FileText } from 'lucide-react';
 import { Card, CardTitle, Row, TripleRows } from './primitives';
 import { fmtDateTime } from './format';
 import { fmtInt } from '../../../../shared/lib/supplies';
@@ -22,11 +21,11 @@ export default function CountersCard({
 }) {
   return (
     <Card>
-      <CardTitle icon={<FileText size={16} />}>Últimos recuentos de páginas</CardTitle>
-      <div className="divide-y divide-slate-100">
+      <CardTitle>Últimos recuentos de páginas</CardTitle>
+      <div className="px-5 pb-[18px] pt-2">
         <Row label="Páginas monocromáticas" value={fmtInt(monoPages)} />
         <Row label="Páginas a color" value={fmtInt(colorPages)} />
-        <Row label="Número total de páginas" value={<span className="text-brand-hover font-black">{fmtInt(totalPages)}</span>} />
+        <Row label="Número total de páginas" value={<span className="font-montserrat font-bold text-brand-accent">{fmtInt(totalPages)}</span>} />
         {counters?.equivalentA4 && <TripleRows label="Equivalente A4" t={counters.equivalentA4} />}
         {counters?.print && <Row label="Impresiones" value={fmtInt(counters.print.total)} />}
         {counters?.copy && <Row label="Copias" value={fmtInt(counters.copy.total)} />}

@@ -1,8 +1,8 @@
 {
   "files": {
     "src/api/server.ts": 384,
-    "src/modules/agents/infrastructure/database/knex-agent-portal-repository.ts": 519,
-    "src/modules/clients/infrastructure/database/knex-client-repository.ts": 434,
+    "src/modules/agents/infrastructure/database/knex-agent-portal-repository.ts": 523,
+    "src/modules/clients/infrastructure/database/knex-client-repository.ts": 438,
     "src/services/incidentService.ts": 363,
     "src/services/notificationService.ts": 383,
     "src/tests/alerts.test.ts": 529,
@@ -12,11 +12,9 @@
     "src/tests/ipRangeSpec.test.ts": 361,
     "src/tests/rbac.test.ts": 765,
     "src/ws/index.ts": 310,
-    "portal/src/features/clients/components/ApiKeysCard.tsx": 341,
-    "portal/src/features/monitors/components/ConfigTabPanel.tsx": 315,
-    "portal/src/features/monitors/components/DeviceInventoryTable.tsx": 479,
-    "portal/src/features/monitors/components/ReportsTabPanel.tsx": 451,
-    "portal/src/features/monitors/components/SnmpCredentialsPanel.tsx": 354,
+    "portal/src/features/clients/components/ApiKeysCard.tsx": 340,
+    "portal/src/features/monitors/components/DeviceInventoryTable.tsx": 436,
+    "portal/src/features/monitors/components/SnmpCredentialsPanel.tsx": 352,
     "portal/src/features/monitors/pages/RemoteActions.tsx": 313,
     "portal/src/features/reports/pages/Reports.tsx": 367,
     "portal/src/shared/components/FeedbackModal.tsx": 335,
@@ -424,7 +422,7 @@
     "src/modules/devices/presentation/device-routes.ts": [
       {
         "name": "registerDeviceRoutes",
-        "length": 34
+        "length": 37
       }
     ],
     "src/modules/inventory/application/use-cases/custom-field-def-use-cases.ts": [
@@ -698,7 +696,7 @@
     "portal/src/features/clients/components/ApiKeysCard.tsx": [
       {
         "name": "NewKeyModal",
-        "length": 57
+        "length": 56
       },
       {
         "name": "WebhookSection",
@@ -806,7 +804,7 @@
     "portal/src/features/clients/components/CreateMonitorModal.tsx": [
       {
         "name": "CreateMonitorModal",
-        "length": 240
+        "length": 226
       }
     ],
     "portal/src/features/clients/components/CustomFieldsCard.tsx": [
@@ -836,7 +834,7 @@
     "portal/src/features/clients/components/IncidentRulesCard.tsx": [
       {
         "name": "IncidentRulesCard",
-        "length": 116
+        "length": 111
       }
     ],
     "portal/src/features/clients/components/NotificationEventsCard.tsx": [
@@ -866,7 +864,7 @@
     "portal/src/features/clients/components/SupplyRequestSettingsCard.tsx": [
       {
         "name": "SupplyRequestSettingsCard",
-        "length": 61
+        "length": 58
       }
     ],
     "portal/src/features/clients/hooks/useClientDetail.ts": [
@@ -904,13 +902,13 @@
     "portal/src/features/clients/pages/ClientDetail.tsx": [
       {
         "name": "ClientDetail",
-        "length": 111
+        "length": 110
       }
     ],
     "portal/src/features/clients/pages/Clients.tsx": [
       {
         "name": "Clients",
-        "length": 199
+        "length": 192
       }
     ],
     "portal/src/features/dashboard/components/AgentVersionsCard.tsx": [
@@ -994,13 +992,13 @@
     "portal/src/features/devices/components/detail/AlertsTab.tsx": [
       {
         "name": "AlertsTab",
-        "length": 22
+        "length": 39
       }
     ],
     "portal/src/features/devices/components/detail/CostsTab.tsx": [
       {
         "name": "CostsTab",
-        "length": 73
+        "length": 74
       }
     ],
     "portal/src/features/devices/components/detail/CountersCard.tsx": [
@@ -1015,10 +1013,32 @@
         "length": 45
       }
     ],
-    "portal/src/features/devices/components/detail/DeviceDetailHeader.tsx": [
+    "portal/src/features/devices/components/detail/CurrentCountersCard.tsx": [
       {
-        "name": "DeviceDetailHeader",
-        "length": 86
+        "name": "CurrentCountersCard",
+        "length": 38
+      }
+    ],
+    "portal/src/features/devices/components/detail/DeviceAlertsCard.tsx": [
+      {
+        "name": "DeviceAlertsCard",
+        "length": 40
+      }
+    ],
+    "portal/src/features/devices/components/detail/DeviceMetricsStrip.tsx": [
+      {
+        "name": "DeviceMetricsStrip",
+        "length": 40
+      }
+    ],
+    "portal/src/features/devices/components/detail/DeviceProfileCard.tsx": [
+      {
+        "name": "OverflowMenu",
+        "length": 28
+      },
+      {
+        "name": "DeviceProfileCard",
+        "length": 53
       }
     ],
     "portal/src/features/devices/components/detail/DeviceStatusBanners.tsx": [
@@ -1027,40 +1047,40 @@
         "length": 30
       }
     ],
-    "portal/src/features/devices/components/detail/GeneralTab.tsx": [
-      {
-        "name": "GeneralTab",
-        "length": 168
-      }
-    ],
     "portal/src/features/devices/components/detail/HistoryTab.tsx": [
       {
         "name": "HistoryTab",
-        "length": 29
+        "length": 36
       }
     ],
     "portal/src/features/devices/components/detail/IncidentsTab.tsx": [
       {
         "name": "IncidentsTab",
-        "length": 38
+        "length": 42
       }
     ],
     "portal/src/features/devices/components/detail/MediaTab.tsx": [
       {
         "name": "MediaTab",
-        "length": 43
+        "length": 50
+      }
+    ],
+    "portal/src/features/devices/components/detail/PrintTrendCard.tsx": [
+      {
+        "name": "PrintTrendCard",
+        "length": 46
       }
     ],
     "portal/src/features/devices/components/detail/SuppliesTable.tsx": [
       {
         "name": "SuppliesTable",
-        "length": 85
+        "length": 34
       }
     ],
     "portal/src/features/devices/pages/DeviceDetail.tsx": [
       {
         "name": "DeviceDetail",
-        "length": 258
+        "length": 145
       }
     ],
     "portal/src/features/devices/pages/Devices.tsx": [
@@ -1094,11 +1114,7 @@
     "portal/src/features/monitors/components/ConfigTabPanel.tsx": [
       {
         "name": "ConfigTabPanel",
-        "length": 279
-      },
-      {
-        "name": "handleSubmit",
-        "length": 37
+        "length": 137
       }
     ],
     "portal/src/features/monitors/components/ConnectivityStrip.tsx": [
@@ -1114,7 +1130,7 @@
       },
       {
         "name": "DeviceInventoryTable",
-        "length": 313
+        "length": 289
       },
       {
         "name": "handleApproveDiscovered",
@@ -1157,12 +1173,6 @@
         "length": 21
       }
     ],
-    "portal/src/features/monitors/components/MonitorDetailTabs.tsx": [
-      {
-        "name": "MonitorDetailTabs",
-        "length": 27
-      }
-    ],
     "portal/src/features/monitors/components/MonitorMetricsStrip.tsx": [
       {
         "name": "MonitorMetricsStrip",
@@ -1178,7 +1188,7 @@
     "portal/src/features/monitors/components/MonitorRegenKeyModal.tsx": [
       {
         "name": "MonitorRegenKeyModal",
-        "length": 45
+        "length": 42
       }
     ],
     "portal/src/features/monitors/components/MonitorSpecsCard.tsx": [
@@ -1212,29 +1222,21 @@
     "portal/src/features/monitors/components/ReportsTabPanel.tsx": [
       {
         "name": "exportReportCSV",
-        "length": 35
-      },
-      {
-        "name": "ChartTooltip",
-        "length": 35
-      },
-      {
-        "name": "ReportsTabPanel",
-        "length": 310
-      },
-      {
-        "name": "anonymous",
         "length": 25
       },
       {
-        "name": "anonymous",
-        "length": 33
+        "name": "ChartTooltip",
+        "length": 24
+      },
+      {
+        "name": "ReportsTabPanel",
+        "length": 137
       }
     ],
     "portal/src/features/monitors/components/SnmpCredentialsPanel.tsx": [
       {
         "name": "SnmpCredentialsPanel",
-        "length": 168
+        "length": 163
       },
       {
         "name": "buildPayload",
@@ -1252,19 +1254,15 @@
     "portal/src/features/monitors/components/Terminal.tsx": [
       {
         "name": "Terminal",
-        "length": 226
+        "length": 146
       },
       {
         "name": "useEffect",
-        "length": 59
+        "length": 41
       },
       {
         "name": "connect",
-        "length": 46
-      },
-      {
-        "name": "handleExecute",
-        "length": 26
+        "length": 34
       }
     ],
     "portal/src/features/monitors/components/agents/AgentTable.tsx": [
@@ -1315,12 +1313,6 @@
         "length": 31
       }
     ],
-    "portal/src/features/monitors/hooks/useMonitorOverview.ts": [
-      {
-        "name": "usePolledResource",
-        "length": 24
-      }
-    ],
     "portal/src/features/monitors/pages/Agents.tsx": [
       {
         "name": "Agents",
@@ -1330,7 +1322,7 @@
     "portal/src/features/monitors/pages/MonitorDetail.tsx": [
       {
         "name": "MonitorDetail",
-        "length": 215
+        "length": 209
       }
     ],
     "portal/src/features/monitors/pages/Monitors.tsx": [
@@ -1474,7 +1466,7 @@
     "portal/src/shared/components/ConfirmModal.tsx": [
       {
         "name": "ConfirmModal",
-        "length": 62
+        "length": 45
       }
     ],
     "portal/src/shared/components/ConfirmationModal.tsx": [
@@ -1491,6 +1483,12 @@
       {
         "name": "create",
         "length": 21
+      }
+    ],
+    "portal/src/shared/components/DetailTabs.tsx": [
+      {
+        "name": "DetailTabs",
+        "length": 27
       }
     ],
     "portal/src/shared/components/DeviceLifecycleModals/BulkDecommissionModal.tsx": [

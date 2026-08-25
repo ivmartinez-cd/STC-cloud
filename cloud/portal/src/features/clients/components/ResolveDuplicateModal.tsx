@@ -8,14 +8,14 @@ function Side({ label, serial, mac, ip, onPick, busy }: {
   label: string; serial: string | null; mac: string | null; ip: string | null; onPick: () => void; busy: boolean;
 }) {
   return (
-    <div className="flex-1 rounded-2xl border border-slate-100 p-5 space-y-2">
-      <p className="text-sm font-black text-slate-700">{label}</p>
-      <p className="text-xs text-slate-500">Serie: {serial ?? '—'}</p>
-      <p className="text-xs text-slate-500">MAC: {mac ?? '—'}</p>
-      <p className="text-xs text-slate-500">IP: {ip ?? '—'}</p>
+    <div className="flex-1 space-y-2 rounded-[5px] border border-line-100 p-5">
+      <p className="font-sans text-[13px] font-semibold text-ink-900">{label}</p>
+      <p className="font-sans text-[12px] text-ink-300">Serie: {serial ?? '—'}</p>
+      <p className="font-sans text-[12px] text-ink-300">MAC: {mac ?? '—'}</p>
+      <p className="font-sans text-[12px] text-ink-300">IP: {ip ?? '—'}</p>
       <button
         type="button" onClick={onPick} disabled={busy}
-        className="mt-2 w-full rounded-xl bg-brand px-4 py-2.5 text-xs font-black uppercase tracking-wider text-white transition-all hover:bg-brand-hover disabled:opacity-50"
+        className="mt-2 w-full rounded-[3px] bg-brand px-4 py-2.5 font-montserrat text-[11px] font-semibold uppercase tracking-[.08em] text-white transition-colors duration-150 ease-in-out hover:bg-brand-severe disabled:opacity-50"
       >
         Fusionar, manteniendo éste
       </button>
@@ -65,16 +65,16 @@ export default function ResolveDuplicateModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[150] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-md animate-overlay-in">
-      <div className="w-full max-w-2xl overflow-hidden rounded-[24px] bg-white shadow-2xl animate-modal-in">
-        <header className="flex items-center justify-between border-b border-slate-100 px-8 py-6">
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 animate-overlay-in" style={{ background: 'rgba(20,20,20,.55)' }}>
+      <div style={{ boxShadow: '0 20px 60px rgba(0,0,0,.25)' }} className="w-full max-w-2xl overflow-hidden rounded-[5px] bg-white animate-modal-in">
+        <header className="flex items-center justify-between border-b border-line-150 px-6 py-4">
           <div>
-            <h2 className="text-lg font-black tracking-tight text-[#1a2333]">Resolver duplicado</h2>
-            <p className="mt-1 text-xs font-bold uppercase tracking-wider text-slate-400">Elegí cuál de los dos se mantiene</p>
+            <h2 className="font-montserrat text-[18px] font-extrabold tracking-[-.01em] text-ink-900">Resolver duplicado</h2>
+            <p className="mt-0.5 font-sans text-[11.5px] text-ink-300">Elegí cuál de los dos se mantiene</p>
           </div>
-          <button onClick={onClose} className="rounded-xl p-2 hover:bg-slate-100"><X size={22} /></button>
+          <button onClick={onClose} className="rounded-[3px] p-1.5 text-ink-300 transition-colors duration-150 ease-in-out hover:bg-surface-btn-hover hover:text-ink-600"><X size={20} /></button>
         </header>
-        <div className="space-y-4 p-8">
+        <div className="space-y-4 p-6">
           <div className="flex gap-4">
             <Side
               label={labelOf(pair.a_brand, pair.a_model, pair.a_name, pair.a_serial)}
@@ -87,7 +87,7 @@ export default function ResolveDuplicateModal({
           </div>
           {busy && <div className="flex justify-center"><Loader2 size={18} className="animate-spin text-brand" /></div>}
           <div className="flex justify-end">
-            <button type="button" onClick={onClose} disabled={busy} className="px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-slate-500 hover:text-slate-700">
+            <button type="button" onClick={onClose} disabled={busy} className="px-5 py-2.5 font-montserrat text-[10px] font-semibold uppercase tracking-[.08em] text-ink-300 transition-colors duration-150 ease-in-out hover:text-ink-600">
               Mantener ambos (cerrar)
             </button>
           </div>

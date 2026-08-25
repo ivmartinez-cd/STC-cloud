@@ -3,8 +3,8 @@ import { BulkDecommissionUseCase, BulkMoveUseCase, BulkRecommissionUseCase } fro
 import { DecommissionStaleDevicesUseCase } from "../application/use-cases/decommission-stale-devices";
 import { DeleteDeviceUseCase } from "../application/use-cases/delete-device";
 import {
-  GetDeviceReadingsUseCase, GetDeviceSuppliesUseCase, GetDeviceUsageHistoryUseCase, GetDeviceUseCase,
-  ListDevicesUseCase, ListDuplicatesUseCase,
+  GetDevicePrintTrendUseCase, GetDeviceReadingsUseCase, GetDeviceStatsUseCase, GetDeviceSuppliesUseCase,
+  GetDeviceUsageHistoryUseCase, GetDeviceUseCase, ListDevicesUseCase, ListDuplicatesUseCase,
 } from "../application/use-cases/device-read-use-cases";
 import { DecommissionDeviceUseCase, RecommissionDeviceUseCase } from "../application/use-cases/lifecycle-use-cases";
 import { MergeDeviceRequestUseCase, MergeDevicesUseCase } from "../application/use-cases/merge-devices";
@@ -27,10 +27,12 @@ export function buildDeviceUseCases(db: Knex): DeviceUseCases {
   const audit = new KnexAuditLogWriter(db);
   const unitOfWork = new KnexDeviceUnitOfWork(db);
   const setMonitorState = new SetMonitorStateUseCase(devices, audit);
+  const suppliesReader = new SuppliesServiceDeviceSuppliesReader(db);
   return {
     list: new ListDevicesUseCase(devices), get: new GetDeviceUseCase(devices), readings: new GetDeviceReadingsUseCase(devices),
-    supplies: new GetDeviceSuppliesUseCase(devices, new SuppliesServiceDeviceSuppliesReader(db)),
+    supplies: new GetDeviceSuppliesUseCase(devices, suppliesReader),
     usageHistory: new GetDeviceUsageHistoryUseCase(devices), duplicates: new ListDuplicatesUseCase(devices),
+    stats: new GetDeviceStatsUseCase(devices, suppliesReader), printTrend: new GetDevicePrintTrendUseCase(devices),
     update: new UpdateDeviceUseCase(devices, new InventoryCustomFieldMerger(db), audit), remove: new DeleteDeviceUseCase(unitOfWork),
     decommission: new DecommissionDeviceUseCase(unitOfWork), recommission: new RecommissionDeviceUseCase(devices, audit),
     move: new MoveDeviceUseCase(unitOfWork),

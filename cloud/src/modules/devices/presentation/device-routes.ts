@@ -108,6 +108,9 @@ export function registerDeviceRoutes(fastify: FastifyInstance, db: Knex, portalA
   fastify.get("/api/v1/devices/:id/usage-history", { ...auth, handler: ctrl.getDeviceUsageHistory });
   // Fase 8 del gap analysis vs HP SDS — superficie de consumibles.
   fastify.get("/api/v1/devices/:id/supplies", { ...auth, handler: ctrl.getDeviceSupplies });
+  // Handoff hifi "Dispositivo — detalle" (25/08/2026) — tira de métricas y tendencia de 12 meses.
+  fastify.get("/api/v1/devices/:id/stats", { ...auth, handler: ctrl.getDeviceStats });
+  fastify.get("/api/v1/devices/:id/print-trend", { ...auth, handler: ctrl.getDevicePrintTrend });
 
   // Ninguna de las mutaciones de abajo entra a CLIENT_VIEWER_ROUTES: quedan en
   // 403 automático por deny-by-default (ver rolePolicy.ts).

@@ -89,6 +89,10 @@ export interface AgentDeviceDirectoryRow {
   serial_number: string | null;
   ip_address: string | null;
   last_seen: Date | null;
+  toner_black: number | null;
+  toner_cyan: number | null;
+  toner_magenta: number | null;
+  toner_yellow: number | null;
   estado: AgentDeviceEstado;
   consumible_pct: number | null;
   alerts_count: number;

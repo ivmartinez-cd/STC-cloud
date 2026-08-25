@@ -2,7 +2,7 @@ import type { DashboardData } from '../../../shared/types/monitor';
 import type { SuppliesSummaryResponse } from '../../../shared/types/supplies';
 import { fmt, fmtPct, pctOf } from '../../../shared/lib/formatters';
 import MiniBar from './MiniBar';
-import CardError from './CardError';
+import CardError from '../../../shared/components/CardError';
 import SkeletonBlock from './Skeleton';
 
 interface Cell {

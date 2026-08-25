@@ -75,6 +75,10 @@ export const CLIENT_VIEWER_ROUTES: ReadonlySet<string> = new Set([
   "GET /api/v1/devices/:id/readings",
   "GET /api/v1/devices/:id/usage-history",
   "GET /api/v1/devices/:id/supplies",
+  // Handoff hifi "Dispositivo — detalle" (25/08/2026) — lecturas scopeadas del
+  // equipo propio, mismo criterio que las de arriba.
+  "GET /api/v1/devices/:id/stats",
+  "GET /api/v1/devices/:id/print-trend",
   "GET /api/v1/supplies",
   "GET /api/v1/supplies/summary",
   // Fase 11 del gap analysis vs HP SDS — sólo lectura, scopeada. Crear/editar/

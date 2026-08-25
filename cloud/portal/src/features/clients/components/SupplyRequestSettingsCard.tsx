@@ -3,6 +3,7 @@ import { Loader2 } from 'lucide-react';
 import { api } from '../../../shared/lib/api';
 import { useToast } from '../../../store/ToastContext';
 import ConfigCardShell from './ConfigCardShell';
+import EstadoChip from '../../../shared/components/EstadoChip';
 
 interface Settings { enabled: boolean; threshold_pct: number; }
 
@@ -46,25 +47,22 @@ export default function SupplyRequestSettingsCard({ clientId, canEdit }: { clien
       meta={settings ? `Umbral ${settings.threshold_pct}%` : '—'}
       cta={{ label: saving ? 'Guardando…' : 'Administrar', onClick: save }}
     >
-      <p className="text-xs text-slate-500 font-medium mb-4">
+      <p className="mb-4 font-sans text-[12.5px] text-ink-400">
         Si está activo, un consumible que cae bajo el umbral abre un pedido automático,
         y el pedido se completa solo cuando el nivel vuelve a subir (cartucho reemplazado).
       </p>
       {!settings ? (
-        <div className="py-6 flex justify-center"><Loader2 size={20} className="text-brand animate-spin" /></div>
+        <div className="flex justify-center py-6"><Loader2 size={18} className="animate-spin text-brand" /></div>
       ) : (
-        <div className="flex items-center gap-6">
-          <button onClick={() => setSettings({ ...settings, enabled: !settings.enabled })}
-            className={`px-3 py-1.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider transition-all ${
-              settings.enabled ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-slate-100 text-slate-500 border border-slate-200'
-            }`}>
-            {settings.enabled ? 'Activo' : 'Inactivo'}
+        <div className="flex items-center gap-5">
+          <button type="button" onClick={() => setSettings({ ...settings, enabled: !settings.enabled })} className="block">
+            <EstadoChip variant={settings.enabled ? 'attention' : 'neutral'} label={settings.enabled ? 'ACTIVO' : 'INACTIVO'} />
           </button>
-          <label className="flex items-center gap-2 text-xs font-bold text-slate-600">
+          <label className="flex items-center gap-2 font-sans text-[12.5px] font-semibold text-ink-600">
             Umbral
             <input type="number" min={1} max={99} value={settings.threshold_pct}
               onChange={(e) => setSettings({ ...settings, threshold_pct: Number(e.target.value) })}
-              className="w-16 bg-slate-50 text-slate-700 text-[12px] font-bold px-2 py-1 rounded-lg border border-slate-100 outline-none focus:border-brand" />
+              className="w-16 rounded-[3px] border border-line-300 bg-white px-2 py-1 font-mono text-[12.5px] text-ink-700 outline-none focus:border-brand" />
             %
           </label>
         </div>

@@ -56,14 +56,14 @@ export default function NotificationSettingsCard({
         {editing ? (
           <div className="space-y-3">
             <input type="email" value={emailInput} onChange={(e) => setEmailInput(e.target.value)} placeholder="alertas@cliente.com"
-              className="cd-input w-full !bg-slate-50/50 border-transparent text-sm focus:!border-brand focus:!bg-white" />
+              className="w-full rounded-[3px] border border-line-300 bg-white px-3 py-2.5 font-sans text-[13px] text-ink-900 outline-none focus:border-brand" />
             <input type="text" value={webhookInput} onChange={(e) => setWebhookInput(e.target.value)} placeholder="https://webhook..."
-              className="cd-input w-full !bg-slate-50/50 border-transparent font-mono text-sm focus:!border-brand focus:!bg-white" />
+              className="w-full rounded-[3px] border border-line-300 bg-white px-3 py-2.5 font-mono text-[12.5px] text-ink-900 outline-none focus:border-brand" />
             <div className="flex items-center gap-2 pt-1">
-              <button type="button" onClick={() => setEditing(false)} disabled={saving} className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-slate-100 px-4 py-2 text-xs font-extrabold text-slate-600 hover:bg-slate-50">
+              <button type="button" onClick={() => setEditing(false)} disabled={saving} className="flex flex-1 items-center justify-center gap-2 rounded-[3px] border border-line-300 bg-white px-4 py-2.5 font-montserrat text-[10.5px] font-semibold uppercase tracking-[.08em] text-ink-600 transition-colors duration-150 ease-in-out hover:bg-surface-btn-hover">
                 <X size={13} /> Cancelar
               </button>
-              <button type="button" onClick={handleSave} disabled={saving} className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-brand px-4 py-2 text-xs font-extrabold text-white hover:bg-brand-hover disabled:opacity-60">
+              <button type="button" onClick={handleSave} disabled={saving} className="flex flex-1 items-center justify-center gap-2 rounded-[3px] bg-brand px-4 py-2.5 font-montserrat text-[10.5px] font-semibold uppercase tracking-[.08em] text-white transition-colors duration-150 ease-in-out hover:bg-brand-severe disabled:opacity-60">
                 {saving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />} Guardar
               </button>
             </div>

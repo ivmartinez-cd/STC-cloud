@@ -102,7 +102,7 @@ export default function DeviceApprovalCard({
           <button
             type="button" onClick={toggleRequireApproval} disabled={!canEdit || togglingApproval}
             className={`rounded-full px-2.5 py-1 font-montserrat text-[9px] font-semibold uppercase tracking-wider transition-all disabled:opacity-50 ${
-              requireApproval ? 'border border-emerald-100 bg-emerald-50 text-emerald-600' : 'border border-line-300 bg-surface-avatar text-ink-100'
+              requireApproval ? 'border border-brand-chip-border bg-brand-soft text-brand-accent' : 'border border-line-300 bg-surface-avatar text-ink-100'
             }`}
           >
             {togglingApproval ? <Loader2 size={11} className="animate-spin" /> : requireApproval ? 'Activo' : 'Inactivo'}

@@ -2,8 +2,11 @@ import { AlertOctagon, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardTitle } from './primitives';
 import { fmtDateTime } from './format';
-import { INCIDENT_STATUS_LABELS, INCIDENT_STATUS_COLORS } from '../../../../shared/lib/constants';
+import EstadoChip from '../../../../shared/components/EstadoChip';
+import { INCIDENT_STATUS_LABELS } from '../../../../shared/lib/constants';
 import type { Incident } from '../../../../shared/types/incidents';
+
+const OPEN_STATUSES = new Set(['open', 'in_progress']);
 
 export default function IncidentsTab({ incidents, incidentsLoading }: { incidents: Incident[] | null; incidentsLoading: boolean }) {
   const navigate = useNavigate();
@@ -14,31 +17,35 @@ export default function IncidentsTab({ incidents, incidentsLoading }: { incident
       {incidentsLoading ? (
         <div className="py-10 flex flex-col items-center justify-center">
           <Loader2 size={24} className="text-brand animate-spin mb-2" />
-          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Cargando incidentes...</p>
+          <p className="font-montserrat text-[9px] font-bold uppercase tracking-[.14em] text-ink-300">Cargando incidentes...</p>
         </div>
       ) : incidents && incidents.length ? (
-        <table className="w-full text-left text-[11px]">
-          <thead className="bg-slate-100/90 text-slate-600 font-black uppercase text-[10px] border-b border-slate-200">
-            <tr><th className="px-3 py-2.5">#</th><th className="px-3 py-2.5">Título</th><th className="px-3 py-2.5">Clase</th><th className="px-3 py-2.5">Estado</th><th className="px-3 py-2.5 text-right">Apertura</th></tr>
+        <table className="w-full text-left">
+          <thead className="border-b border-line-100 bg-surface-table-head">
+            <tr>
+              <th className="px-3 py-2.5 font-montserrat text-[8.5px] font-bold uppercase tracking-[.14em] text-ink-300">#</th>
+              <th className="px-3 py-2.5 font-montserrat text-[8.5px] font-bold uppercase tracking-[.14em] text-ink-300">Título</th>
+              <th className="px-3 py-2.5 font-montserrat text-[8.5px] font-bold uppercase tracking-[.14em] text-ink-300">Clase</th>
+              <th className="px-3 py-2.5 font-montserrat text-[8.5px] font-bold uppercase tracking-[.14em] text-ink-300">Estado</th>
+              <th className="px-3 py-2.5 text-right font-montserrat text-[8.5px] font-bold uppercase tracking-[.14em] text-ink-300">Apertura</th>
+            </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
+          <tbody className="divide-y divide-line-200">
             {incidents.map((inc) => (
-              <tr key={inc.id} className="hover:bg-slate-50 cursor-pointer" onClick={() => navigate(`/incidents/${inc.id}`)}>
-                <td className="px-3 py-2 font-mono text-slate-500">#{inc.number}</td>
-                <td className="px-3 py-2 font-semibold text-slate-800">{inc.title}</td>
-                <td className="px-3 py-2">{inc.class}</td>
+              <tr key={inc.id} className="cursor-pointer hover:bg-surface-avatar" onClick={() => navigate(`/incidents/${inc.id}`)}>
+                <td className="px-3 py-2 font-mono text-[11.5px] text-ink-700">#{inc.number}</td>
+                <td className="px-3 py-2 font-sans text-[12.5px] font-semibold text-ink-900">{inc.title}</td>
+                <td className="px-3 py-2 font-sans text-[12.5px] text-ink-700">{inc.class}</td>
                 <td className="px-3 py-2">
-                  <span className={`inline-flex px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider ${INCIDENT_STATUS_COLORS[inc.status]}`}>
-                    {INCIDENT_STATUS_LABELS[inc.status]}
-                  </span>
+                  <EstadoChip variant={OPEN_STATUSES.has(inc.status) ? 'attention' : 'neutral'} label={INCIDENT_STATUS_LABELS[inc.status]} />
                 </td>
-                <td className="px-3 py-2 text-right text-slate-500">{fmtDateTime(inc.opened_at)}</td>
+                <td className="px-3 py-2 text-right font-mono text-[11.5px] text-ink-700">{fmtDateTime(inc.opened_at)}</td>
               </tr>
             ))}
           </tbody>
         </table>
       ) : (
-        <p className="px-4 py-6 text-[11px] font-semibold text-slate-500 text-center">Sin incidentes para este equipo.</p>
+        <p className="px-4 py-6 text-center font-sans text-[12.5px] text-ink-300">Sin incidentes para este equipo.</p>
       )}
     </Card>
   );

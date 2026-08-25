@@ -133,79 +133,72 @@ const Clients = () => {
 
       {/* Modal de alta de cliente — comportamiento existente, sólo se toca el trigger. */}
       {showModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-overlay-in">
-          <div className="bg-white rounded-[24px] shadow-2xl w-full max-w-lg overflow-hidden animate-modal-in">
-            <header className="px-8 py-6 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-brand to-brand-gray text-white">
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4" style={{ background: 'rgba(20,20,20,.55)' }}>
+          <div className="flex w-full max-w-lg flex-col overflow-hidden rounded-[5px] bg-white" style={{ boxShadow: '0 20px 60px rgba(0,0,0,.25)' }}>
+            <header className="flex items-center justify-between border-b border-line-150 px-6 py-4">
               <div>
-                <h2 className="text-xl font-extrabold tracking-tight">Nuevo Cliente</h2>
-                <p className="text-white/70 text-xs font-bold uppercase tracking-wider mt-1">Registro de empresa</p>
+                <h2 className="font-montserrat text-[18px] font-extrabold tracking-[-.01em] text-ink-900">Nuevo cliente</h2>
+                <p className="mt-0.5 font-sans text-[12px] text-ink-300">Registro de empresa</p>
               </div>
-              <button onClick={() => setShowModal(false)} className="p-2 hover:bg-white/10 rounded-xl transition-colors">
-                <X size={24} />
+              <button onClick={() => setShowModal(false)} className="rounded-[3px] p-1.5 text-ink-300 transition-colors duration-150 ease-in-out hover:bg-surface-btn-hover hover:text-ink-600">
+                <X size={18} />
               </button>
             </header>
 
-            <form onSubmit={handleSubmit} className="p-8 space-y-6">
-              <div className="space-y-2">
-                <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest ml-1">Nombre de la Empresa *</label>
+            <form onSubmit={handleSubmit} className="space-y-4 px-6 py-5">
+              <div>
+                <label className="mb-1.5 block font-montserrat text-[8.5px] font-bold uppercase tracking-[.13em] text-ink-300">Nombre de la empresa *</label>
                 <input
-                  required
-                  type="text"
-                  className="cd-input w-full !h-12 !bg-slate-50 border-transparent focus:!bg-white focus:!border-brand"
-                  placeholder=""
+                  required type="text"
+                  className="w-full rounded-[3px] border border-line-300 bg-white px-3 py-2.5 font-sans text-[13px] text-ink-900 outline-none focus:border-brand"
                   value={formData.name}
                   onChange={e => setFormData({ ...formData, name: e.target.value })}
                 />
               </div>
 
-              <div className="space-y-2">
-                <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest ml-1">Contacto Principal</label>
+              <div>
+                <label className="mb-1.5 block font-montserrat text-[8.5px] font-bold uppercase tracking-[.13em] text-ink-300">Contacto principal</label>
                 <input
-                  type="text"
-                  className="cd-input w-full !h-12 !bg-slate-50 border-transparent focus:!bg-white focus:!border-brand"
-                  placeholder="Nombre y Apellido"
+                  type="text" placeholder="Nombre y apellido"
+                  className="w-full rounded-[3px] border border-line-300 bg-white px-3 py-2.5 font-sans text-[13px] text-ink-900 outline-none focus:border-brand"
                   value={formData.contact_name}
                   onChange={e => setFormData({ ...formData, contact_name: e.target.value })}
                 />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest ml-1">Teléfono</label>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1.5 block font-montserrat text-[8.5px] font-bold uppercase tracking-[.13em] text-ink-300">Teléfono</label>
                   <input
-                    type="tel"
-                    className="cd-input w-full !h-12 !bg-slate-50 border-transparent focus:!bg-white focus:!border-brand"
-                    placeholder="+54 11 ..."
+                    type="tel" placeholder="+54 11 ..."
+                    className="w-full rounded-[3px] border border-line-300 bg-white px-3 py-2.5 font-mono text-[13px] text-ink-900 outline-none focus:border-brand"
                     value={formData.contact_phone}
                     onChange={e => setFormData({ ...formData, contact_phone: e.target.value })}
                   />
                 </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest ml-1">Email Corporativo</label>
+                <div>
+                  <label className="mb-1.5 block font-montserrat text-[8.5px] font-bold uppercase tracking-[.13em] text-ink-300">Email corporativo</label>
                   <input
-                    type="email"
-                    className="cd-input w-full !h-12 !bg-slate-50 border-transparent focus:!bg-white focus:!border-brand"
-                    placeholder="email@empresa.com"
+                    type="email" placeholder="email@empresa.com"
+                    className="w-full rounded-[3px] border border-line-300 bg-white px-3 py-2.5 font-sans text-[13px] text-ink-900 outline-none focus:border-brand"
                     value={formData.contact_email}
                     onChange={e => setFormData({ ...formData, contact_email: e.target.value })}
                   />
                 </div>
               </div>
 
-              <div className="pt-6 flex gap-4">
+              <div className="flex justify-end gap-3 pt-2">
                 <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  className="flex-1 px-6 py-3 rounded-xl border border-slate-200 text-slate-600 font-bold hover:bg-slate-50 transition-all text-sm"
+                  type="button" onClick={() => setShowModal(false)}
+                  className="rounded-[3px] border border-line-300 bg-white px-4 py-2.5 font-montserrat text-[11px] font-semibold uppercase tracking-[.08em] text-ink-600 transition-colors duration-150 ease-in-out hover:bg-surface-btn-hover"
                 >
                   Cancelar
                 </button>
                 <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="flex-1 px-6 py-3 rounded-xl bg-brand text-white font-extrabold hover:bg-brand-hover transition-all disabled:opacity-50 flex items-center justify-center gap-2 text-sm shadow-lg shadow-brand/20"
+                  type="submit" disabled={isSubmitting}
+                  className="flex items-center justify-center gap-2 rounded-[3px] bg-brand px-4 py-2.5 font-montserrat text-[11px] font-semibold uppercase tracking-[.08em] text-white transition-colors duration-150 ease-in-out hover:bg-brand-severe disabled:opacity-50"
                 >
-                  {isSubmitting ? <Loader2 size={20} className="animate-spin" /> : 'Registrar Cliente'}
+                  {isSubmitting && <Loader2 size={14} className="animate-spin" />} Registrar cliente
                 </button>
               </div>
             </form>

@@ -80,27 +80,27 @@ export default function CustomFieldsCard({ clientId, canEdit }: { clientId: stri
       </p>
 
       {creating && (
-        <div className="space-y-2 mb-4 p-4 bg-slate-50/50 rounded-2xl">
+        <div className="mb-4 space-y-2 rounded-[3px] border border-line-150 bg-surface-input p-4">
           <div className="flex items-center gap-2">
             <input type="text" value={newKey} onChange={(e) => setNewKey(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
               placeholder="key (ej. color_cost_per_page)"
-              className="cd-input flex-1 !bg-white text-sm font-mono" />
-            <select value={newType} onChange={(e) => setNewType(e.target.value as CustomFieldType)} className="cd-input !bg-white text-sm">
+              className="flex-1 rounded-[3px] border border-line-300 bg-white px-3 py-2 font-mono text-[12.5px] text-ink-900 outline-none focus:border-brand" />
+            <select value={newType} onChange={(e) => setNewType(e.target.value as CustomFieldType)} className="rounded-[3px] border border-line-300 bg-white px-3 py-2 font-sans text-[12.5px] text-ink-900 outline-none focus:border-brand">
               {(Object.keys(TYPE_LABELS) as CustomFieldType[]).map((t) => <option key={t} value={t}>{TYPE_LABELS[t]}</option>)}
             </select>
           </div>
           <input type="text" value={newLabel} onChange={(e) => setNewLabel(e.target.value)}
             placeholder="Etiqueta visible (ej. Costo por página color)"
-            className="cd-input w-full !bg-white text-sm" />
+            className="w-full rounded-[3px] border border-line-300 bg-white px-3 py-2 font-sans text-[12.5px] text-ink-900 outline-none focus:border-brand" />
           {newType === 'select' && (
             <input type="text" value={newOptions} onChange={(e) => setNewOptions(e.target.value)}
               placeholder="Opciones separadas por coma"
-              className="cd-input w-full !bg-white text-sm" />
+              className="w-full rounded-[3px] border border-line-300 bg-white px-3 py-2 font-sans text-[12.5px] text-ink-900 outline-none focus:border-brand" />
           )}
           <div className="flex justify-end gap-2 pt-1">
-            <button onClick={() => setCreating(false)} className="p-2.5 text-slate-400 hover:bg-slate-100 rounded-xl"><X size={16} /></button>
+            <button onClick={() => setCreating(false)} className="rounded-[3px] p-2.5 text-ink-300 transition-colors duration-150 ease-in-out hover:bg-surface-btn-hover hover:text-ink-600"><X size={16} /></button>
             <button onClick={handleCreate} disabled={busy || !newKey.trim() || !newLabel.trim()}
-              className="px-4 py-2.5 bg-brand hover:bg-brand-hover text-white rounded-xl text-xs font-extrabold transition-all disabled:opacity-60">
+              className="rounded-[3px] bg-brand px-4 py-2.5 font-montserrat text-[10.5px] font-semibold uppercase tracking-[.08em] text-white transition-colors duration-150 ease-in-out hover:bg-brand-severe disabled:opacity-60">
               {busy ? <Loader2 size={14} className="animate-spin" /> : 'Crear'}
             </button>
           </div>
@@ -108,19 +108,19 @@ export default function CustomFieldsCard({ clientId, canEdit }: { clientId: stri
       )}
 
       {loading ? (
-        <p className="text-xs font-semibold text-slate-400">Cargando…</p>
+        <p className="font-sans text-[12.5px] text-ink-300">Cargando…</p>
       ) : fields.length === 0 ? (
-        <p className="text-xs font-semibold text-slate-400">Sin campos personalizados definidos para este cliente.</p>
+        <p className="font-sans text-[12.5px] text-ink-300">Sin campos personalizados definidos para este cliente.</p>
       ) : (
-        <ul className="divide-y divide-slate-100">
+        <ul className="divide-y divide-line-200">
           {fields.map((f) => (
-            <li key={f.id} className="py-3 flex items-center justify-between gap-3">
+            <li key={f.id} className="flex items-center justify-between gap-3 py-3">
               <div>
-                <p className="text-sm font-bold text-slate-700">{f.label}</p>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono">{f.key} · {TYPE_LABELS[f.type]}{f.client_id === null ? ' · global' : ''}</p>
+                <p className="font-sans text-[13px] font-semibold text-ink-900">{f.label}</p>
+                <p className="font-mono text-[10.5px] font-semibold uppercase tracking-[.08em] text-ink-300">{f.key} · {TYPE_LABELS[f.type]}{f.client_id === null ? ' · global' : ''}</p>
               </div>
               {canEdit && f.client_id !== null && (
-                <button onClick={() => setToArchive(f)} className="p-2 text-slate-300 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all" title="Archivar">
+                <button onClick={() => setToArchive(f)} className="rounded-[3px] p-2 text-ink-200 transition-colors duration-150 ease-in-out hover:bg-brand-soft hover:text-brand-severe" title="Archivar">
                   <Archive size={14} />
                 </button>
               )}

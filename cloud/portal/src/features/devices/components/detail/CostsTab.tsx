@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Coins, Loader2, Save } from 'lucide-react';
+import { Card, CardTitle } from './primitives';
 import { api } from '../../../../shared/lib/api';
 import { useToast } from '../../../../store/ToastContext';
 
@@ -69,36 +70,37 @@ export default function CostsTab({ deviceId }: { deviceId: string }) {
   }
 
   return (
-    <div className="bg-white rounded-3xl border border-slate-100 p-8 max-w-xl">
-      <div className="flex items-center justify-between mb-2">
-        <h3 className="text-sm font-black text-[#1a2333] tracking-tight flex items-center gap-3">
-          <div className="p-2 bg-brand/10 text-brand rounded-xl"><Coins size={18} /></div>
-          Costes
-        </h3>
-        <button onClick={save} disabled={saving}
-          className="flex items-center gap-2 px-4 py-2 bg-brand hover:bg-brand-hover text-white rounded-xl text-[11px] font-black uppercase tracking-wider transition-all disabled:opacity-50">
-          {saving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />} Guardar
-        </button>
-      </div>
-      <p className="text-xs text-slate-500 font-medium mb-5">
-        Los costes por página alimentan las columnas de facturación del informe de uso programado.
-      </p>
-      <div className="space-y-3">
+    <Card className="max-w-xl">
+      <CardTitle
+        icon={<Coins size={16} />}
+        right={
+          <button onClick={save} disabled={saving}
+            className="flex items-center gap-2 rounded-[3px] bg-brand px-3.5 py-2 font-montserrat text-[10px] font-semibold uppercase tracking-[.08em] text-white transition-colors duration-150 ease-in-out hover:bg-brand-severe disabled:opacity-50">
+            {saving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />} Guardar
+          </button>
+        }
+      >
+        Costes
+      </CardTitle>
+      <div className="px-5 pb-2 pt-3.5">
+        <p className="mb-2 font-sans text-[12px] leading-[1.5] text-ink-400">
+          Los costes por página alimentan las columnas de facturación del informe de uso programado.
+        </p>
         {FIELDS.map((f) => (
-          <label key={f.key} className="flex items-center justify-between gap-4 text-xs font-bold text-slate-600">
-            {f.label}
+          <label key={f.key} className="flex items-center justify-between gap-4 border-b border-line-200 py-[9px]">
+            <span className="font-montserrat text-[8.5px] font-bold uppercase leading-[1.3] tracking-[.13em] text-ink-300">{f.label}</span>
             <input type="number" min={0} step={f.step} value={(costs[f.key] as number | null) ?? ''}
               onChange={(e) => setField(f.key, e.target.value)}
-              className="w-36 bg-slate-50 text-slate-700 text-sm font-bold px-3 py-2 rounded-xl border border-slate-100 outline-none focus:border-brand text-right" />
+              className="w-32 rounded-[3px] border border-line-300 bg-white px-2.5 py-1.5 text-right font-mono text-[12.5px] text-ink-900 outline-none focus:border-brand" />
           </label>
         ))}
-        <label className="flex items-center justify-between gap-4 text-xs font-bold text-slate-600">
-          Moneda
+        <label className="flex items-center justify-between gap-4 py-[9px]">
+          <span className="font-montserrat text-[8.5px] font-bold uppercase leading-[1.3] tracking-[.13em] text-ink-300">Moneda</span>
           <input value={costs.currency} maxLength={3}
             onChange={(e) => setCosts({ ...costs, currency: e.target.value.toUpperCase() })}
-            className="w-36 bg-slate-50 text-slate-700 text-sm font-bold px-3 py-2 rounded-xl border border-slate-100 outline-none focus:border-brand text-right" />
+            className="w-32 rounded-[3px] border border-line-300 bg-white px-2.5 py-1.5 text-right font-mono text-[12.5px] text-ink-900 outline-none focus:border-brand" />
         </label>
       </div>
-    </div>
+    </Card>
   );
 }
