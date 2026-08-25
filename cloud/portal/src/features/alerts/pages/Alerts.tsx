@@ -6,7 +6,7 @@ import { useAuth } from '../../../store/AuthContext';
 import { useToast } from '../../../store/ToastContext';
 import { useRowSelection } from '../../../shared/hooks/useRowSelection';
 import BulkActionBar from '../../../shared/components/BulkActionBar';
-import CreateIncidentModal from '../../incidents/components/CreateIncidentModal';
+import CreateIncidentModal from '../../../shared/components/CreateIncidentModal';
 import type { Alert, AlertClass, AlertClassOption, ResponderOption, AlertSummary } from '../../../shared/types/alerts';
 
 interface ClientOption { id: string; name: string; }

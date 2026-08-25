@@ -2,7 +2,7 @@ import dns from "dns";
 import net from "net";
 import nodemailer from "nodemailer";
 import type { Knex } from "knex";
-import { KnexEmailLogRepository } from "../modules/email-log/infrastructure/database/knex-email-log-repository";
+import { recordEmailAttempt } from "../modules/email-log";
 
 /** Contexto de auditoría que los workers adjuntan al enviar (Fase 4.4). */
 export interface EmailAuditContext {
@@ -88,8 +88,7 @@ async function auditAttempt(
   error?: string
 ): Promise<void> {
   if (!opts.audit) return;
-  const repo = new KnexEmailLogRepository(opts.audit.db);
-  await repo.record({
+  await recordEmailAttempt(opts.audit.db, {
     clientId: opts.audit.clientId,
     event: opts.audit.event,
     recipient: opts.to ?? null,

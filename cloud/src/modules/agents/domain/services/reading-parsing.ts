@@ -1,5 +1,5 @@
 import net from "net";
-import { parseNaiveLocalTimestamp } from "../../../../services/businessHours";
+import { parseNaiveLocalTimestamp } from "../../../../shared/domain/business-hours";
 import type { IncomingReading, MappedReading } from "../entities/agent";
 import { isValidUuid } from "./supplies-details";
 

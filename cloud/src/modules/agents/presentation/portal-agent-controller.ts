@@ -1,12 +1,12 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type Redis from "ioredis";
-import { IpRangeValidationError } from "../../../services/ipRangeSpec";
-import { BusinessHoursValidationError } from "../../../services/businessHours";
+import { IpRangeValidationError } from "../../../shared/domain/ip-range-spec";
+import { BusinessHoursValidationError } from "../../../shared/domain/business-hours";
 import { MissingEncryptionKeyError } from "../../../services/cryptoService";
 import { SnmpCredentialValidationError } from "../../../services/snmpCredentials";
 import { getClientIp } from "../../../api/utils/ip";
 import { getPortalUser, getScope } from "../../../api/utils/scope";
-import { UUID_RE } from "../../devices/domain/services/device-rules";
+import { UUID_RE } from "../../devices";
 import type { AgentConfigUpdate } from "../domain/entities/agent";
 import { AgentDeleteConflictError, AgentNotFoundError } from "../application/use-cases/portal-agent-use-cases";
 import { RemoteActionError } from "../application/use-cases/remote-use-cases";

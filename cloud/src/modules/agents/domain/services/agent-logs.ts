@@ -1,4 +1,4 @@
-import { parseNaiveLocalTimestamp } from "../../../../services/businessHours";
+import { parseNaiveLocalTimestamp } from "../../../../shared/domain/business-hours";
 import type { IncomingLogEntry } from "../entities/agent";
 
 export interface AgentLogRow {

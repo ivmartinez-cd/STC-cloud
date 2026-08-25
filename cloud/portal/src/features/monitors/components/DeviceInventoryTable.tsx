@@ -12,7 +12,7 @@ import BulkActionBar from '../../../shared/components/BulkActionBar';
 import {
   BulkDecommissionModal, BulkRecommissionModal, BulkMoveDevicesModal, BulkMonitorStateModal,
   type BulkActionResult,
-} from '../../devices/components/DeviceLifecycleModals';
+} from '../../../shared/components/DeviceLifecycleModals';
 
 interface Props {
   devices: Device[];

@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import {
   validateBusinessHours, getUtcOffsetString, parseNaiveLocalTimestamp,
   BusinessHoursValidationError, DEFAULT_BUSINESS_HOURS,
-} from '../services/businessHours';
+} from '../shared/domain/business-hours';
 
 describe('businessHours — validateBusinessHours', () => {
   test('null explícito pasa (reset al default)', () => {

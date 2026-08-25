@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { BrandModal } from '../../../../shared/components/BrandModal';
-import { api } from '../../../../shared/lib/api';
+import { BrandModal } from '../BrandModal';
+import { api } from '../../lib/api';
 import type { BulkActionResult } from './types';
 
 const MONITOR_STATE_OPTIONS: Array<{ value: 'full' | 'supplies_only' | 'reports_only' | 'disabled'; label: string }> = [

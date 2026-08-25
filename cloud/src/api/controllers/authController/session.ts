@@ -1,7 +1,5 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
-import { verifyTotp } from "../../../modules/two-factor/domain/totp";
-import { looksLikeRecoveryCode } from "../../../modules/two-factor/domain/recovery-codes";
-import { KnexRecoveryCodeRepository } from "../../../modules/two-factor/infrastructure/database/knex-recovery-code-repository";
+import { consumeRecoveryCode, looksLikeRecoveryCode, verifyTotp } from "../../../modules/two-factor";
 import { writeAudit } from "../../../services/auditService";
 import { decryptSecret } from "../../../services/cryptoService";
 import crypto from "crypto";
@@ -73,7 +71,7 @@ async function portalLogin(fastify: FastifyInstance, db: Knex, request: FastifyR
     if (looksLikeRecoveryCode(totp_code)) {
       // Fase 6.2: un código de recuperación de un solo uso vale como segundo
       // factor (consumo atómico + auditoría — el usuario perdió el teléfono).
-      const consumed = await new KnexRecoveryCodeRepository(db).consume(user.id, totp_code);
+      const consumed = await consumeRecoveryCode(db, user.id, totp_code);
       if (!consumed) {
         await auditLoginFailure(db, request, cleanUsername, "bad_recovery_code", user);
         return reply.status(401).send({ error: "Credenciales inválidas", totp_required: true });

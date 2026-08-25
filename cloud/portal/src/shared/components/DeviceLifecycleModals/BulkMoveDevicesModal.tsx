@@ -1,18 +1,18 @@
 import { useEffect, useState } from 'react';
-import { BrandModal } from '../../../../shared/components/BrandModal';
-import { api } from '../../../../shared/lib/api';
-import type { ClientOption, AgentOption } from './types';
+import { BrandModal } from '../BrandModal';
+import { api } from '../../lib/api';
+import type { ClientOption, AgentOption, BulkActionResult } from './types';
 
-interface MoveDeviceModalProps {
+interface BulkMoveDevicesModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onDone: () => void;
-  deviceId: string;
+  onDone: (result: BulkActionResult) => void;
+  deviceIds: string[];
   currentClientId: string | null;
   currentAgentId: string | null;
 }
 
-export function MoveDeviceModal({ isOpen, onClose, onDone, deviceId, currentClientId, currentAgentId }: MoveDeviceModalProps) {
+export function BulkMoveDevicesModal({ isOpen, onClose, onDone, deviceIds, currentClientId, currentAgentId }: BulkMoveDevicesModalProps) {
   const [clients, setClients] = useState<ClientOption[]>([]);
   const [agents, setAgents] = useState<AgentOption[]>([]);
   const [clientId, setClientId] = useState('');
@@ -39,10 +39,10 @@ export function MoveDeviceModal({ isOpen, onClose, onDone, deviceId, currentClie
   const move = async () => {
     setLoading(true); setError(null);
     try {
-      await api.post(`/devices/${deviceId}/move`, {
-        agentId, reason, ...(clientChanged ? { confirmClientChange } : {}),
+      const result = await api.post<BulkActionResult>('/devices/bulk/move', {
+        ids: deviceIds, agentId, reason, ...(clientChanged ? { confirmClientChange } : {}),
       });
-      onDone(); onClose();
+      onDone(result); onClose();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -51,7 +51,7 @@ export function MoveDeviceModal({ isOpen, onClose, onDone, deviceId, currentClie
   };
 
   return (
-    <BrandModal isOpen={isOpen} onClose={onClose} title="Mover equipo" widthPx={480} error={error}>
+    <BrandModal isOpen={isOpen} onClose={onClose} title={`Mover ${deviceIds.length} equipo(s)`} widthPx={480} error={error}>
       <div className="p-5 space-y-4">
         <div>
           <label className="block text-xs font-bold text-slate-600 mb-1">Cliente destino</label>
@@ -75,6 +75,7 @@ export function MoveDeviceModal({ isOpen, onClose, onDone, deviceId, currentClie
           <label className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl p-3 text-[11px] text-amber-800">
             <input type="checkbox" checked={confirmClientChange} onChange={(e) => setConfirmClientChange(e.target.checked)} className="mt-0.5" />
             Entiendo que el historial ya facturado a este cliente queda con el cliente anterior — el cierre emitido no se recalcula.
+            Un equipo cuyo serial ya exista en el cliente destino queda afuera del movimiento (colisión).
           </label>
         )}
         <div className="flex justify-end gap-2 pt-2">

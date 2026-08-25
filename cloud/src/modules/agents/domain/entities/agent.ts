@@ -1,5 +1,5 @@
-import type { IpRangeSpecInput } from "../../../../services/ipRangeSpec";
-import type { BusinessHoursConfig } from "../../../../services/businessHours";
+import type { IpRangeSpecInput } from "../../../../shared/domain/ip-range-spec";
+import type { BusinessHoursConfig } from "../../../../shared/domain/business-hours";
 
 /**
  * Tipos del dominio `agents` (agentes DCA / monitores). Los payloads del

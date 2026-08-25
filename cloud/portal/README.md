@@ -25,10 +25,11 @@ src/
 ├── app/layout/          # App shell: Layout, SidebarNav, navTree (árbol de navegación por rol)
 ├── store/               # Estado global: AuthContext, ToastContext
 ├── shared/              # Transversal a todos los features
-│   ├── components/      #   BulkActionBar, ConfirmModal, FeedbackModal, ErrorBoundary, BrandModal…
+│   ├── components/      #   BulkActionBar, ConfirmModal, FeedbackModal, ErrorBoundary, BrandModal,
+│   │                    #   CreateIncidentModal, DeviceLifecycleModals/ (usados por ≥2 features)
 │   ├── hooks/           #   useNow, useTime, useRowSelection
-│   ├── lib/             #   Cliente API unificado, constantes, formateadores, imágenes de equipos
-│   └── types/           #   Contratos consumidos por ≥2 features (monitor, alerts, incidents, inventory, audit, supplies)
+│   ├── lib/             #   Cliente API unificado, constantes, formateadores, imágenes de equipos, supplies
+│   └── types/           #   Contratos consumidos por ≥2 features (monitor, agents, alerts, incidents, inventory, audit, supplies)
 ├── features/            # Un directorio por dominio de negocio
 │   └── <feature>/       #   auth · dashboard · clients · pending-devices · monitors · devices ·
 │       ├── pages/       #   alerts · incidents · supplies · reports · activity · email-log · settings

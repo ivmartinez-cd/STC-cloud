@@ -1,5 +1,5 @@
-import { validateIpRangeSpecs } from "../../../../services/ipRangeSpec";
-import { validateBusinessHours } from "../../../../services/businessHours";
+import { validateIpRangeSpecs } from "../../../../shared/domain/ip-range-spec";
+import { validateBusinessHours } from "../../../../shared/domain/business-hours";
 import type { AuditContext } from "../../domain/entities/agent";
 import type { AgentRepository } from "../../domain/repositories/agent-repository";
 import { hashToken, isActivationExpired, newActivationKey, newAgentId, newRefreshToken } from "../../domain/services/tokens";

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { ConfirmationModal } from '../../../../shared/components/ConfirmationModal';
-import { api } from '../../../../shared/lib/api';
+import { ConfirmationModal } from '../ConfirmationModal';
+import { api } from '../../lib/api';
 
 interface DuplicateCandidate {
   a_id: string; a_serial: string | null; a_mac: string | null; a_ip: string | null;

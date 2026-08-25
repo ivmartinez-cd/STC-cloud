@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { api } from '../../../shared/lib/api';
-import { MergeDeviceModal } from '../../devices/components/DeviceLifecycleModals';
+import { MergeDeviceModal } from '../../../shared/components/DeviceLifecycleModals';
 
 interface DuplicateCandidate {
   a_id: string; a_serial: string | null; a_mac: string | null; a_ip: string | null;

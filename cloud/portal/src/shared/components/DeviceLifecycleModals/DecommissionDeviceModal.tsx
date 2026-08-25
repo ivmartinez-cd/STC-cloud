@@ -1,16 +1,15 @@
 import { useEffect, useState } from 'react';
-import { ConfirmationModal } from '../../../../shared/components/ConfirmationModal';
-import { api } from '../../../../shared/lib/api';
-import type { BulkActionResult } from './types';
+import { ConfirmationModal } from '../ConfirmationModal';
+import { api } from '../../lib/api';
 
-interface BulkDecommissionModalProps {
+interface DecommissionModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onDone: (result: BulkActionResult) => void;
-  deviceIds: string[];
+  onDone: () => void;
+  deviceId: string;
 }
 
-export function BulkDecommissionModal({ isOpen, onClose, onDone, deviceIds }: BulkDecommissionModalProps) {
+export function DecommissionDeviceModal({ isOpen, onClose, onDone, deviceId }: DecommissionModalProps) {
   const [reason, setReason] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -20,8 +19,8 @@ export function BulkDecommissionModal({ isOpen, onClose, onDone, deviceIds }: Bu
   const confirm = async () => {
     setLoading(true); setError(null);
     try {
-      const result = await api.post<BulkActionResult>('/devices/bulk/decommission', { ids: deviceIds, reason });
-      onDone(result); onClose();
+      await api.post(`/devices/${deviceId}/decommission`, { reason });
+      onDone(); onClose();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -31,7 +30,7 @@ export function BulkDecommissionModal({ isOpen, onClose, onDone, deviceIds }: Bu
 
   return (
     <ConfirmationModal
-      isOpen={isOpen} onClose={onClose} onConfirm={confirm} title={`Dar de baja ${deviceIds.length} equipo(s)`}
+      isOpen={isOpen} onClose={onClose} onConfirm={confirm} title="Dar de baja este equipo"
       variant="warning" confirmLabel="Dar de baja" loading={loading} error={error}
       confirmDisabled={!reason.trim()}
       extra={
@@ -42,8 +41,8 @@ export function BulkDecommissionModal({ isOpen, onClose, onDone, deviceIds }: Bu
         />
       }
     >
-      Los equipos seleccionados dejan de contarse en inventario, dashboard y alertas.
-      Su historial se conserva intacto y se pueden reactivar en cualquier momento.
+      El equipo deja de contarse en inventario, dashboard y alertas. Su historial de lecturas
+      y sus cierres de facturación se conservan intactos, y se puede reactivar en cualquier momento.
     </ConfirmationModal>
   );
 }

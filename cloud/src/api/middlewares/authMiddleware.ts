@@ -3,7 +3,7 @@ import { Knex } from "knex";
 import Redis from "ioredis";
 import { AgentService } from "../../modules/agents";
 import { resolveApiKey } from "../../services/apiKeyService";
-import { DEFAULT_BUSINESS_HOURS, type BusinessHoursConfig } from "../../services/businessHours";
+import { DEFAULT_BUSINESS_HOURS, type BusinessHoursConfig } from "../../shared/domain/business-hours";
 import { policyFor } from "../policy/rolePolicy";
 import {
   agentIdParamMatchesScope,

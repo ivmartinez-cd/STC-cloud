@@ -5,7 +5,7 @@ import type { Knex } from "knex";
  * hoy hardcodeado 08-18 L-V America/Argentina/Buenos_Aires en
  * `agent/src/core/BusinessHours.ts`). Una sola columna `jsonb` nullable —
  * `null` significa "usa el default hardcodeado de hoy" (ver
- * `services/businessHours.ts::DEFAULT_BUSINESS_HOURS`), cero cambio de
+ * `shared/domain/business-hours.ts::DEFAULT_BUSINESS_HOURS`), cero cambio de
  * comportamiento para agentes existentes sin configurar.
  *
  * OJO: NO confundir con `agents.scan_schedule` (migración `20260524020000`,

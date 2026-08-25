@@ -126,7 +126,10 @@ function checkBackendImports(file, content, findings) {
     const pkg = isRelative ? null : spec.startsWith("@") ? spec.split("/").slice(0, 2).join("/") : spec.split("/")[0];
 
     if (self?.layer === "domain") {
-      const inside = target?.startsWith(`src/modules/${self.name}/domain`);
+      // Permitido: su propio domain/, el shared kernel (src/shared/**, guía §2:
+      // "ningún módulo importa domain/application de otro módulo, sólo shared/")
+      // y builtins de Node.
+      const inside = target?.startsWith(`src/modules/${self.name}/domain`) || target?.startsWith("src/shared/");
       const builtin = spec.startsWith("node:") || NODE_BUILTINS.has(spec);
       if (!inside && !builtin) {
         findings.push({ rule: "arch-domain", file: r, line, text: spec });

@@ -1,7 +1,7 @@
 import { BarChart2, TrendingUp } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
-import ErrorBoundary from '../../../../shared/components/ErrorBoundary';
-import type { UsageMonth } from '../../../../shared/types/monitor';
+import ErrorBoundary from '../../../shared/components/ErrorBoundary';
+import type { UsageMonth } from '../../../shared/types/monitor';
 
 interface Props {
   usage: UsageMonth[];

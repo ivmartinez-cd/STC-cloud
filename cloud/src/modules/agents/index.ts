@@ -1,6 +1,6 @@
 import type { Knex } from "knex";
-import { DEFAULT_BUSINESS_HOURS } from "../../services/businessHours";
-import type { IpRangeSpecInput } from "../../services/ipRangeSpec";
+import { DEFAULT_BUSINESS_HOURS } from "../../shared/domain/business-hours";
+import type { IpRangeSpecInput } from "../../shared/domain/ip-range-spec";
 import type { MaskedCredential } from "../../services/snmpCredentials";
 import type {
   AgentConfigUpdate, AuditContext, IncomingDevice, IncomingLogEntry, IncomingReading, RedisClient, SystemInfoPayload,

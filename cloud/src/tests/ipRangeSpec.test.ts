@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import {
   validateIpRangeSpecs, compileIpRangeSpecs, publicIpWarnings, extractHostSpecs, overlappingCredentialWarnings,
   IpRangeValidationError, type IpRangeSpecInput,
-} from '../services/ipRangeSpec';
+} from '../shared/domain/ip-range-spec';
 
 describe('ipRangeSpec — validateIpRangeSpecs', () => {
   test('rango manual válido', () => {

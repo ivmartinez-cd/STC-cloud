@@ -1,8 +1,8 @@
 {
   "files": {
-    "src/api/server.ts": 396,
+    "src/api/server.ts": 383,
     "src/services/incidentService.ts": 363,
-    "src/services/notificationService.ts": 373,
+    "src/services/notificationService.ts": 372,
     "src/tests/alerts.test.ts": 499,
     "src/tests/deviceLifecycle.test.ts": 465,
     "src/tests/e2e.test.ts": 521,
@@ -126,7 +126,7 @@
     "src/api/server.ts": [
       {
         "name": "start",
-        "length": 272
+        "length": 258
       },
       {
         "name": "healthHandler",
@@ -475,12 +475,6 @@
         "length": 23
       }
     ],
-    "src/services/businessHours.ts": [
-      {
-        "name": "validateBusinessHours",
-        "length": 36
-      }
-    ],
     "src/services/cryptoService.ts": [
       {
         "name": "decryptSecret",
@@ -569,6 +563,12 @@
       {
         "name": "buildMaintenanceRows",
         "length": 21
+      }
+    ],
+    "src/shared/domain/business-hours.ts": [
+      {
+        "name": "validateBusinessHours",
+        "length": 36
       }
     ],
     "src/tests/alertCatalog.test.ts": [
@@ -1331,6 +1331,12 @@
         "length": 53
       }
     ],
+    "portal/src/features/clients/components/CreateMonitorModal.tsx": [
+      {
+        "name": "CreateMonitorModal",
+        "length": 240
+      }
+    ],
     "portal/src/features/clients/components/CustomFieldsCard.tsx": [
       {
         "name": "CustomFieldsCard",
@@ -1449,58 +1455,6 @@
         "length": 92
       }
     ],
-    "portal/src/features/devices/components/DeviceLifecycleModals/BulkDecommissionModal.tsx": [
-      {
-        "name": "BulkDecommissionModal",
-        "length": 37
-      }
-    ],
-    "portal/src/features/devices/components/DeviceLifecycleModals/BulkMonitorStateModal.tsx": [
-      {
-        "name": "BulkMonitorStateModal",
-        "length": 43
-      }
-    ],
-    "portal/src/features/devices/components/DeviceLifecycleModals/BulkMoveDevicesModal.tsx": [
-      {
-        "name": "BulkMoveDevicesModal",
-        "length": 80
-      }
-    ],
-    "portal/src/features/devices/components/DeviceLifecycleModals/BulkRecommissionModal.tsx": [
-      {
-        "name": "BulkRecommissionModal",
-        "length": 25
-      }
-    ],
-    "portal/src/features/devices/components/DeviceLifecycleModals/DecommissionDeviceModal.tsx": [
-      {
-        "name": "DecommissionDeviceModal",
-        "length": 37
-      }
-    ],
-    "portal/src/features/devices/components/DeviceLifecycleModals/EditDeviceModal.tsx": [
-      {
-        "name": "EditDeviceModal",
-        "length": 117
-      },
-      {
-        "name": "save",
-        "length": 23
-      }
-    ],
-    "portal/src/features/devices/components/DeviceLifecycleModals/MergeDeviceModal.tsx": [
-      {
-        "name": "MergeDeviceModal",
-        "length": 62
-      }
-    ],
-    "portal/src/features/devices/components/DeviceLifecycleModals/MoveDeviceModal.tsx": [
-      {
-        "name": "MoveDeviceModal",
-        "length": 79
-      }
-    ],
     "portal/src/features/devices/components/detail/AlertsTab.tsx": [
       {
         "name": "AlertsTab",
@@ -1589,16 +1543,6 @@
         "length": 94
       }
     ],
-    "portal/src/features/incidents/components/CreateIncidentModal.tsx": [
-      {
-        "name": "CreateIncidentModal",
-        "length": 105
-      },
-      {
-        "name": "create",
-        "length": 21
-      }
-    ],
     "portal/src/features/incidents/pages/IncidentDetail.tsx": [
       {
         "name": "IncidentDetail",
@@ -1619,12 +1563,6 @@
       {
         "name": "handleSubmit",
         "length": 37
-      }
-    ],
-    "portal/src/features/monitors/components/CreateMonitorModal.tsx": [
-      {
-        "name": "CreateMonitorModal",
-        "length": 240
       }
     ],
     "portal/src/features/monitors/components/DeviceInventoryTable.tsx": [
@@ -1953,6 +1891,68 @@
       {
         "name": "ConfirmationModal",
         "length": 57
+      }
+    ],
+    "portal/src/shared/components/CreateIncidentModal.tsx": [
+      {
+        "name": "CreateIncidentModal",
+        "length": 105
+      },
+      {
+        "name": "create",
+        "length": 21
+      }
+    ],
+    "portal/src/shared/components/DeviceLifecycleModals/BulkDecommissionModal.tsx": [
+      {
+        "name": "BulkDecommissionModal",
+        "length": 37
+      }
+    ],
+    "portal/src/shared/components/DeviceLifecycleModals/BulkMonitorStateModal.tsx": [
+      {
+        "name": "BulkMonitorStateModal",
+        "length": 43
+      }
+    ],
+    "portal/src/shared/components/DeviceLifecycleModals/BulkMoveDevicesModal.tsx": [
+      {
+        "name": "BulkMoveDevicesModal",
+        "length": 80
+      }
+    ],
+    "portal/src/shared/components/DeviceLifecycleModals/BulkRecommissionModal.tsx": [
+      {
+        "name": "BulkRecommissionModal",
+        "length": 25
+      }
+    ],
+    "portal/src/shared/components/DeviceLifecycleModals/DecommissionDeviceModal.tsx": [
+      {
+        "name": "DecommissionDeviceModal",
+        "length": 37
+      }
+    ],
+    "portal/src/shared/components/DeviceLifecycleModals/EditDeviceModal.tsx": [
+      {
+        "name": "EditDeviceModal",
+        "length": 117
+      },
+      {
+        "name": "save",
+        "length": 23
+      }
+    ],
+    "portal/src/shared/components/DeviceLifecycleModals/MergeDeviceModal.tsx": [
+      {
+        "name": "MergeDeviceModal",
+        "length": 62
+      }
+    ],
+    "portal/src/shared/components/DeviceLifecycleModals/MoveDeviceModal.tsx": [
+      {
+        "name": "MoveDeviceModal",
+        "length": 79
       }
     ],
     "portal/src/shared/components/ErrorBoundary.tsx": [

@@ -2,10 +2,7 @@ import knex from "knex";
 import knexConfig from "../db/knexfile";
 import { logger } from "../logger";
 import { runGuardedTick } from "../modules/observability/guarded-tick";
-import { KnexScheduledReportRepository } from "../modules/scheduled-reports/infrastructure/database/knex-scheduled-report-repository";
-import { KnexReportRenderer } from "../modules/scheduled-reports/infrastructure/renderers/knex-report-renderer";
-import { SmtpReportMailer } from "../modules/scheduled-reports/infrastructure/mail/smtp-report-mailer";
-import { executeScheduledReport } from "../modules/scheduled-reports/application/use-cases/run-scheduled-report";
+import { createScheduledReportRunner } from "../modules/scheduled-reports";
 
 /**
  * Ejecutor de informes programados (Fase 4.1 del gap analysis vs HP SDS).
@@ -20,8 +17,7 @@ import { executeScheduledReport } from "../modules/scheduled-reports/application
 const INTERVAL_MS = 60_000;
 
 const db = knex(knexConfig.development);
-const repo = new KnexScheduledReportRepository(db);
-const deps = { repo, renderer: new KnexReportRenderer(db), mailer: new SmtpReportMailer(db) };
+const runner = createScheduledReportRunner(db);
 
 let running = false;
 
@@ -31,9 +27,9 @@ export async function tick(): Promise<void> {
   try {
     // Lock multi-réplica + métricas + Sentry — Fase 5.3 (el catch vive en el wrapper).
     await runGuardedTick(db, "scheduled-reports", async () => {
-      const due = await repo.listDue(new Date());
+      const due = await runner.listDue(new Date());
       for (const report of due) {
-        const result = await executeScheduledReport(deps, report);
+        const result = await runner.execute(report);
         if (result.status === "error") {
           logger.error({ reportId: report.id, error: result.error }, "[ScheduledReports] fallo al ejecutar informe");
         } else {

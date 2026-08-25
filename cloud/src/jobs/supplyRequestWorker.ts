@@ -4,16 +4,7 @@ import knex from "knex";
 import knexConfig from "../db/knexfile";
 import { logger } from "../logger";
 import { runGuardedTick } from "../modules/observability/guarded-tick";
-import { KnexSupplyRequestRepository } from "../modules/supply-requests/infrastructure/database/knex-supply-request-repository";
-import {
-  KnexEnabledClients,
-  KnexSupplySnapshot,
-} from "../modules/supply-requests/infrastructure/database/knex-supply-snapshot";
-import { BullRequestNotifier } from "../modules/supply-requests/infrastructure/queue/bull-request-notifier";
-import {
-  autoCompleteReplaced,
-  openDueRequests,
-} from "../modules/supply-requests/application/use-cases/detect-supply-requests";
+import { createSupplyRequestDetector } from "../modules/supply-requests";
 
 /**
  * Detección de pedidos de consumibles (Fase 4.2 del gap analysis vs HP SDS).
@@ -32,12 +23,7 @@ const redis = new Redis(process.env.REDIS_URL || "redis://localhost:6379", {
 /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
 const notificationsQueue = new Queue("notifications-queue", { connection: redis as any });
 
-const deps = {
-  repo: new KnexSupplyRequestRepository(db),
-  snapshot: new KnexSupplySnapshot(db),
-  clients: new KnexEnabledClients(db),
-  notifier: new BullRequestNotifier(notificationsQueue),
-};
+const detector = createSupplyRequestDetector(db, notificationsQueue);
 
 let running = false;
 
@@ -47,8 +33,8 @@ export async function tick(): Promise<void> {
   try {
     // Lock multi-réplica + métricas + Sentry — Fase 5.3 (el catch vive en el wrapper).
     await runGuardedTick(db, "supply-requests", async () => {
-      const completed = await autoCompleteReplaced(deps);
-      const opened = await openDueRequests(deps);
+      const completed = await detector.autoCompleteReplaced();
+      const opened = await detector.openDueRequests();
       if (opened || completed) {
         logger.info({ opened, completed }, "[SupplyRequests] tick con novedades");
       }

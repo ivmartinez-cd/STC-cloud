@@ -2,11 +2,10 @@ import knex from 'knex';
 import { runGuardedTick } from "../modules/observability/guarded-tick";
 import knexConfig from '../db/knexfile';
 import * as alertService from '../modules/alerts';
-import { KnexSystemSettingsRepository } from "../modules/system-settings/infrastructure/database/knex-system-settings-repository";
+import { readSystemSettings } from "../modules/system-settings";
 import { logger } from '../logger';
 
 const db = knex(knexConfig.development);
-const systemSettings = new KnexSystemSettingsRepository(db);
 
 // Default de arranque / fail-open si `system_settings` no responde por
 // algún motivo — nunca debe tumbar el tick completo por un umbral no
@@ -175,7 +174,7 @@ async function runChecks() {
     // disponible nunca debe tumbar el tick completo.
     let thresholdMinutes = DEFAULT_OFFLINE_THRESHOLD_MINUTES;
     try {
-      thresholdMinutes = (await systemSettings.get()).agentOfflineThresholdMinutes;
+      thresholdMinutes = (await readSystemSettings(db)).agentOfflineThresholdMinutes;
     } catch (err: unknown) {
       const errMsg = err instanceof Error ? err.message : String(err);
       logger.error({ err: errMsg }, `[HeartbeatMonitor] No se pudo leer system_settings, usando default (${DEFAULT_OFFLINE_THRESHOLD_MINUTES} min)`);

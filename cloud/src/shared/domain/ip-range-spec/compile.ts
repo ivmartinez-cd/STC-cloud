@@ -1,4 +1,4 @@
-import { logger } from "../../logger";
+import { logger } from "../../../logger";
 import { isValidIpv4, ipToInt, intToIp, parseCidr } from "./ip-arithmetic";
 import type { CompiledRange, HostSpec, IpRangeSpecInput } from "./types";
 

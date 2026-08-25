@@ -4,8 +4,7 @@ import knex from 'knex';
 import knexConfig from '../db/knexfile';
 import { sendAlertEmail, sendAlertWebhook, sendIncidentEmail, sendIncidentWebhook, sendSupplyRequestEmail } from '../services/notificationService';
 import { sendPublicApiWebhook } from '../services/publicWebhookService';
-import { renderFor } from '../modules/message-templates/application/resolve-template';
-import { eventEnabledFor } from '../modules/message-templates/domain/entities/message-template';
+import { eventEnabledFor, renderFor } from '../modules/message-templates';
 import { logger } from '../logger';
 
 /**

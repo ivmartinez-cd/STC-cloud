@@ -10,7 +10,7 @@ import type { CustomFieldDef } from '../../../shared/types/inventory';
 import type { Incident, IncidentListResponse } from '../../../shared/types/incidents';
 import { parseSuppliesDetails, buildSupplyRows, usageRate, type SupplyRow } from '../../../shared/lib/supplies';
 import { ConfirmationModal } from '../../../shared/components/ConfirmationModal';
-import { EditDeviceModal, DecommissionDeviceModal, MoveDeviceModal, MergeDeviceModal } from '../components/DeviceLifecycleModals';
+import { EditDeviceModal, DecommissionDeviceModal, MoveDeviceModal, MergeDeviceModal } from '../../../shared/components/DeviceLifecycleModals';
 import DeviceDetailHeader from '../components/detail/DeviceDetailHeader';
 import DeviceStatusBanners from '../components/detail/DeviceStatusBanners';
 import GeneralTab from '../components/detail/GeneralTab';

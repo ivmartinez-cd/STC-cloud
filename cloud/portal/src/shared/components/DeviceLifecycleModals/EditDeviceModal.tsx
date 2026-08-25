@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { BrandModal } from '../../../../shared/components/BrandModal';
-import { api } from '../../../../shared/lib/api';
-import type { CustomFieldDef } from '../../../../shared/types/inventory';
+import { BrandModal } from '../BrandModal';
+import { api } from '../../lib/api';
+import type { CustomFieldDef } from '../../types/inventory';
 
 interface EditDeviceModalProps {
   isOpen: boolean;

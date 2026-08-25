@@ -3,11 +3,7 @@ import knexConfig from "../db/knexfile";
 import { logger } from "../logger";
 import { runGuardedTick } from "../modules/observability/guarded-tick";
 import { AgentCommandService } from "../modules/agents";
-import { KnexRemoteActionRepository } from "../modules/remote-actions/infrastructure/database/knex-remote-action-repository";
-import {
-  dispatchDueBatches,
-  reconcileSentBatches,
-} from "../modules/remote-actions/application/use-cases/process-batches";
+import { createRemoteActionProcessor } from "../modules/remote-actions";
 
 /**
  * Despacho y reconciliación de lotes de acciones remotas (Fase 4.6 del gap
@@ -19,8 +15,7 @@ import {
 const INTERVAL_MS = 60_000;
 
 const db = knex(knexConfig.development);
-const repo = new KnexRemoteActionRepository(db);
-const commands = new AgentCommandService(db);
+const processor = createRemoteActionProcessor(db, new AgentCommandService(db));
 
 let running = false;
 
@@ -30,8 +25,8 @@ export async function tick(): Promise<void> {
   try {
     // Lock multi-réplica + métricas + Sentry — Fase 5.3 (el catch vive en el wrapper).
     await runGuardedTick(db, "remote-actions", async () => {
-      const dispatched = await dispatchDueBatches(repo, commands, new Date());
-      const closed = await reconcileSentBatches(repo);
+      const dispatched = await processor.dispatchDue(new Date());
+      const closed = await processor.reconcileSent();
       if (dispatched || closed) {
         logger.info({ dispatched, closed }, "[RemoteActions] tick con novedades");
       }

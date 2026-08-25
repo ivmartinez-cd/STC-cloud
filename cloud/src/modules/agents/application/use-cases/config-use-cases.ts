@@ -1,4 +1,5 @@
-import type { IpRangeSpecInput } from "../../../../services/ipRangeSpec";
+import type { IpRangeSpecInput } from "../../../../shared/domain/ip-range-spec";
+import { legacyCommunity } from "../../../../services/snmpCredentials";
 import {
   auditMetadata, buildStored, maskCredentials, toWire, validateCredentials, type MaskedCredential,
 } from "../../../../services/snmpCredentials";
@@ -7,7 +8,7 @@ import type { AgentConfigUpdate, AuditContext } from "../../domain/entities/agen
 import type { AgentRepository } from "../../domain/repositories/agent-repository";
 import {
   buildConfigUpdates, buildDevicePolicies, buildHeartbeatRanges, parseIpRangeSpecs, parseStoredCredentials,
-  resolveBusinessHours, resolveLegacyCommunity,
+  resolveBusinessHours,
 } from "../../domain/services/agent-config-view";
 import type { AuditLogWriter } from "../ports/audit-log-writer";
 import type { ReplaceSnmpCredentialsResult, UpdateConfigResult } from "../dtos/agent-dtos";
@@ -48,7 +49,7 @@ export class GetAgentHeartbeatConfigUseCase {
 
     const config: Record<string, any> = {
       ip_ranges,
-      snmp_community: resolveLegacyCommunity(stored, row.snmp_community ?? null),
+      snmp_community: legacyCommunity(stored, row.snmp_community ?? null),
       scan_interval_minutes: row.scan_interval_minutes,
       toner_warning_threshold: row.toner_warning_threshold,
       toner_critical_threshold: row.toner_critical_threshold,

@@ -6,7 +6,7 @@ import { useAuth } from '../../../store/AuthContext';
 import type { Incident, IncidentListResponse } from '../../../shared/types/incidents';
 import type { AlertClassOption } from '../../../shared/types/alerts';
 import { INCIDENT_STATUS_LABELS, INCIDENT_STATUS_COLORS, type IncidentStatus } from '../../../shared/lib/constants';
-import CreateIncidentModal from '../components/CreateIncidentModal';
+import CreateIncidentModal from '../../../shared/components/CreateIncidentModal';
 
 interface ClientOption { id: string; name: string; }
 

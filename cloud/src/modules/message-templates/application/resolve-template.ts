@@ -1,11 +1,15 @@
-import type { Knex } from "knex";
 import {
   DEFAULT_TEMPLATES,
   renderTemplate,
+  type MessageTemplate,
   type TemplateContent,
   type TemplateEvent,
 } from "../domain/entities/message-template";
-import { KnexTemplateRepository } from "../infrastructure/database/knex-template-repository";
+
+/** Puerto de lectura que necesita la resolución (lo implementa `KnexTemplateRepository`). */
+export interface TemplateReader {
+  findByScopeAndEvent(clientId: string | null, event: TemplateEvent): Promise<MessageTemplate | null>;
+}
 
 /**
  * Precedencia: plantilla del cliente → plantilla global → default hardcodeado.
@@ -13,12 +17,11 @@ import { KnexTemplateRepository } from "../infrastructure/database/knex-template
  * jamás debe frenar el envío de una notificación).
  */
 export async function resolveTemplate(
-  db: Knex,
+  repo: TemplateReader,
   clientId: string | null,
   event: TemplateEvent
 ): Promise<TemplateContent> {
   try {
-    const repo = new KnexTemplateRepository(db);
     if (clientId) {
       const own = await repo.findByScopeAndEvent(clientId, event);
       if (own) return { subject: own.subject, body: own.body };
@@ -31,12 +34,12 @@ export async function resolveTemplate(
   return DEFAULT_TEMPLATES[event];
 }
 
-/** Resuelve y renderiza en un paso — lo que consumen los workers. */
+/** Resuelve y renderiza en un paso — lo que consumen los workers (vía el facade del módulo). */
 export async function renderFor(
-  db: Knex,
+  repo: TemplateReader,
   clientId: string | null,
   event: TemplateEvent,
   vars: Record<string, string | number | null>
 ): Promise<TemplateContent> {
-  return renderTemplate(await resolveTemplate(db, clientId, event), vars);
+  return renderTemplate(await resolveTemplate(repo, clientId, event), vars);
 }

@@ -1,4 +1,4 @@
-import { DEFAULT_BUSINESS_HOURS } from "../../../../services/businessHours";
+import { DEFAULT_BUSINESS_HOURS } from "../../../../shared/domain/business-hours";
 import type { IncomingLogEntry } from "../../domain/entities/agent";
 import type { AgentLogRepository } from "../../domain/repositories/agent-log-repository";
 import { buildAgentLogRows, buildLogsReport } from "../../domain/services/agent-logs";

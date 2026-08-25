@@ -1,9 +1,9 @@
 import {
   compileIpRangeSpecs, extractHostSpecs, overlappingCredentialWarnings, publicIpWarnings, validateIpRangeSpecs,
   type CompiledRange, type HostSpec, type IpRangeSpecInput,
-} from "../../../../services/ipRangeSpec";
-import { DEFAULT_BUSINESS_HOURS, validateBusinessHours, type BusinessHoursConfig } from "../../../../services/businessHours";
-import { legacyCommunity, type StoredCredential } from "../../../../services/snmpCredentials";
+} from "../../../../shared/domain/ip-range-spec";
+import { DEFAULT_BUSINESS_HOURS, validateBusinessHours, type BusinessHoursConfig } from "../../../../shared/domain/business-hours";
+import type { StoredCredential } from "../../../../shared/domain/snmp-credential";
 import type { AgentConfigUpdate } from "../entities/agent";
 import { parseJsonColumn } from "./supplies-details";
 
@@ -86,6 +86,3 @@ export function resolveBusinessHours(value: unknown): BusinessHoursConfig {
 }
 
 /** `snmp_community` legacy SIEMPRE viaja (agentes sin actualizar sólo entienden este campo). */
-export function resolveLegacyCommunity(stored: StoredCredential[], column: string | null): string | null {
-  return legacyCommunity(stored, column);
-}

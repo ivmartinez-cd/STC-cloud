@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { BrandModal } from '../../../shared/components/BrandModal';
-import { api } from '../../../shared/lib/api';
-import type { AlertClassOption } from '../../../shared/types/alerts';
+import { BrandModal } from './BrandModal';
+import { api } from '../lib/api';
+import type { AlertClassOption } from '../types/alerts';
 
 interface ClientOption { id: string; name: string; }
 interface DeviceOption { id: string; serial_number: string | null; model: string | null; name: string | null; }

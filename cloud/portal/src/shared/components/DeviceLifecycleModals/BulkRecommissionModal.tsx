@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { ConfirmationModal } from '../../../../shared/components/ConfirmationModal';
-import { api } from '../../../../shared/lib/api';
+import { ConfirmationModal } from '../ConfirmationModal';
+import { api } from '../../lib/api';
 import type { BulkActionResult } from './types';
 
 interface BulkRecommissionModalProps {

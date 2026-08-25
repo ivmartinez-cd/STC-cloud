@@ -1,5 +1,5 @@
 import { aggregateStatus, type RemoteActionBatch } from "../../domain/entities/remote-action-batch";
-import type { KnexRemoteActionRepository } from "../../infrastructure/database/knex-remote-action-repository";
+import type { RemoteActionStore } from "../../domain/repositories/remote-action-store";
 
 /** Puerto mínimo sobre la cola de comandos existente (AgentCommandService). */
 export interface CommandEnqueuer {
@@ -8,7 +8,7 @@ export interface CommandEnqueuer {
 }
 
 async function dispatchBatch(
-  repo: KnexRemoteActionRepository,
+  repo: RemoteActionStore,
   commands: CommandEnqueuer,
   batch: RemoteActionBatch
 ): Promise<void> {
@@ -27,7 +27,7 @@ async function dispatchBatch(
 
 /** Despacha lotes programados vencidos → crea los `agent_commands`. */
 export async function dispatchDueBatches(
-  repo: KnexRemoteActionRepository,
+  repo: RemoteActionStore,
   commands: CommandEnqueuer,
   now: Date
 ): Promise<number> {
@@ -37,7 +37,7 @@ export async function dispatchDueBatches(
 }
 
 /** Reconcilia lotes enviados: cuando todos sus comandos terminaron, cierra el lote. */
-export async function reconcileSentBatches(repo: KnexRemoteActionRepository): Promise<number> {
+export async function reconcileSentBatches(repo: RemoteActionStore): Promise<number> {
   let closed = 0;
   for (const batch of await repo.listSent()) {
     const items = await repo.itemsOf(batch.id);

@@ -24,7 +24,7 @@ export { resolveDeviceIdentity } from "./infrastructure/database/knex-device-ide
 export { isIdentifyingSerial, normalizeMac, NOISE_MODEL_RE } from "./domain/services/device-identity";
 export { MergeError, MergeIdentityConflictError, MergeClientMismatchError, MergeTooLargeError, MergeOverlapError } from "./domain/errors/merge-error";
 export { BulkActionError, DeviceRegistrationError, MonitorStateError } from "./domain/errors/device-error";
-export { MAX_BULK_DEVICE_IDS } from "./domain/services/device-rules";
+export { MAX_BULK_DEVICE_IDS, UUID_RE } from "./domain/services/device-rules";
 
 /** Primitiva única de fusión. Abre su transacción, o compone con la de la ingesta si se le pasa `existingTrx`. */
 export function mergeDevices(db: Knex, params: MergeParams, existingTrx?: Knex.Transaction): Promise<MergeResult> {

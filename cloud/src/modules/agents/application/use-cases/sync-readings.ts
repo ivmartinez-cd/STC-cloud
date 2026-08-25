@@ -1,4 +1,4 @@
-import { DEFAULT_BUSINESS_HOURS } from "../../../../services/businessHours";
+import { DEFAULT_BUSINESS_HOURS } from "../../../../shared/domain/business-hours";
 import { logger } from "../../../../logger";
 import type { IncomingReading, InsertedReadingRow, MappedReading } from "../../domain/entities/agent";
 import type { AgentRepository } from "../../domain/repositories/agent-repository";
