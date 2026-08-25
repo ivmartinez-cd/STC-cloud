@@ -1,7 +1,8 @@
 import type { Knex } from "knex";
 import { notMerged, onlyLiveDevices } from "../../../../api/utils/deviceFilters";
 import type {
-  ClientDeviceRow, ClientDirectoryRow, ClientMonitorRow, ClientPortfolioSummary, ClientRecord, ClientUsageMonth,
+  ClientDetailStats, ClientDeviceDirectoryQuery, ClientDeviceDirectoryRow, ClientDeviceRow, ClientDirectoryRow,
+  ClientMonitorRow, ClientPortfolioSummary, ClientRecord, ClientUsageMonth,
 } from "../../domain/entities/client";
 import type { ClientDirectoryQuery, ClientRepository, ClientScope } from "../../domain/repositories/client-repository";
 
@@ -16,10 +17,21 @@ function clientCountsSelect(db: Knex) {
 
 // Suma de deltas positivos entre lecturas consecutivas por dispositivo (no MAX-MIN
 // del mes): un reset/decremento de contador no debe inflar ni romper el volumen.
-// El CTE calcula deltas sobre una ventana extendida 40 días atrás de los 4 meses
+// El CTE calcula deltas sobre una ventana extendida 40 días atrás de los 12 meses
 // mostrados, para que el primer delta de cada mes tome como base la última
 // lectura del mes anterior; el filtro por mes se aplica después, sobre la fecha
 // de la lectura actual (no sobre la que se usa como base).
+//
+// Ventana 12 meses (no 4): handoff hifi "Cliente — detalle" (25/08/2026) — "Consumo
+// mensual" pide 12 barras con el mes actual destacado. La ventana de 4 meses era la
+// causa real del bug "hoy ilegible (una barra)" que describe el README: con un
+// cliente de prueba que sólo tiene lecturas recientes, 4 meses de ventana devolvía
+// 1 sola fila (el resto sin lecturas en ese corte), y el front (recharts) con una
+// sola categoría en el eje X se ve como "una barra" — no era un bug de cómo el
+// front grafica, sino la ventana angosta pidiendo menos meses de los que el
+// diseño necesita. `ClientUsageChart.tsx` además tenía un bug real aparte (barras
+// apiladas mono/color en vez de una sola por mes, sin destacar el mes actual) —
+// corregido en el front, ver ese archivo.
 const USAGE_BY_MONTH_SQL = `
     WITH deltas AS (
       SELECT
@@ -30,7 +42,7 @@ const USAGE_BY_MONTH_SQL = `
       JOIN devices d ON r.device_id = d.id
       WHERE d.client_id = ?
         AND d.merged_into IS NULL
-        AND r.time >= date_trunc('month', NOW() - INTERVAL '4 months') - INTERVAL '40 days'
+        AND r.time >= date_trunc('month', NOW() - INTERVAL '11 months') - INTERVAL '40 days'
     )
     SELECT
       to_char(date_trunc('month', time), 'Mon YYYY') AS month,
@@ -38,10 +50,41 @@ const USAGE_BY_MONTH_SQL = `
       SUM(GREATEST(mono_delta, 0))::int  as mono,
       SUM(GREATEST(color_delta, 0))::int as color
     FROM deltas
-    WHERE time >= date_trunc('month', NOW() - INTERVAL '4 months')
+    WHERE time >= date_trunc('month', NOW() - INTERVAL '11 months')
     GROUP BY date_trunc('month', time)
     ORDER BY month_date ASC
 `;
+
+/** `estado` de UN dispositivo — ver docblock de `ClientDeviceEstado`. Umbral de 5 hs,
+ * igual que `heartbeatMonitor.ts::DEVICE_OFFLINE_THRESHOLD_MINUTES` (no reinventa un
+ * tercer umbral de "offline", ver nota en `formatters.ts` del portal sobre ese
+ * mismo problema ya resuelto para agentes). */
+const DEVICE_ESTADO_SQL = `
+  CASE
+    WHEN devices.last_seen IS NULL THEN 'sin_reporte'
+    WHEN devices.last_seen < NOW() - INTERVAL '5 hours' THEN 'sin_conexion'
+    ELSE 'en_linea'
+  END
+`;
+
+/** Mínimo entre los 4 tóners no nulos — Postgres ignora NULL en LEAST/GREATEST,
+ * NULL sólo si los 4 son NULL. Ver docblock de `consumible_pct` en `client.ts`. */
+const CONSUMIBLE_PCT_SQL = "LEAST(devices.toner_black, devices.toner_cyan, devices.toner_magenta, devices.toner_yellow)";
+
+const DEVICE_DIRECTORY_SORT_COLUMNS: Record<NonNullable<ClientDeviceDirectoryQuery["sortField"]>, string> = {
+  alerts_count: "alerts_count",
+  consumible_pct: "consumible_pct",
+  last_seen: "last_seen",
+};
+
+/** `serial_number`/`model`/`location` — ILIKE OR'd (README: "Buscar por serie, modelo o ubicación…"). */
+function applyClientDeviceSearch(q: Knex.QueryBuilder, term: string) {
+  q.andWhere((b) => {
+    b.whereRaw("serial_number ILIKE ?", [`%${term}%`])
+      .orWhereRaw("model ILIKE ?", [`%${term}%`])
+      .orWhereRaw("location ILIKE ?", [`%${term}%`]);
+  });
+}
 
 /** `name`/`contact_name`/`contact_email`/`country` — ILIKE OR'd, mismo criterio que `applyDeviceSearch` en `devices`. */
 function applyClientDirectorySearch(q: Knex.QueryBuilder, term: string) {
@@ -283,5 +326,108 @@ export class KnexClientRepository implements ClientRepository {
       )
       .orderBy("devices.brand")
       .limit(500);
+  }
+
+  /** Alertas ABIERTAS por dispositivo — mismo join base que `openAlertsPerClient`, pero
+   * agrupado por `device_id` (no por cliente) y sólo alertas CON equipo: una alerta
+   * agent-scoped sin `device_id` (p.ej. `agent_offline`) no puede atribuirse a una fila
+   * puntual de esta tabla, sólo cuenta en el agregado de cliente. */
+  private openAlertsPerDevice() {
+    return this.db("alerts")
+      .whereNotNull("alerts.device_id")
+      .where("alerts.resolved", false)
+      .groupBy("alerts.device_id")
+      .select("alerts.device_id as device_id", this.db.raw("COUNT(*)::int as alerts_count"));
+  }
+
+  /** Filas del cliente con `estado`/`consumible_pct`/`alerts_count` ya computados —
+   * a diferencia de `directoryAggregate` (clientes), acá no hace falta un wrap extra
+   * para "materializar" esos alias: ninguno depende de un GROUP BY de esta consulta
+   * (uno es por-fila sobre columnas base, el otro es un LEFT JOIN 1:1 por dispositivo),
+   * así que un solo nivel de wrap (en `clientDeviceFiltered`) alcanza para poder
+   * filtrar/ordenar por ellos. */
+  private clientDeviceBase(clientId: string) {
+    return this.db("devices")
+      .where("devices.client_id", clientId)
+      .modify((q) => onlyLiveDevices(q, "devices"))
+      .leftJoin(this.openAlertsPerDevice().as("alerts_agg"), "alerts_agg.device_id", "devices.id")
+      .select(
+        "devices.id", "devices.brand", "devices.model", "devices.name", "devices.serial_number",
+        "devices.location", "devices.last_seen",
+        this.db.raw(`(${DEVICE_ESTADO_SQL}) as estado`),
+        this.db.raw(`${CONSUMIBLE_PCT_SQL} as consumible_pct`),
+        this.db.raw("COALESCE(alerts_agg.alerts_count, 0)::int as alerts_count")
+      );
+  }
+
+  private clientDeviceFiltered(query: ClientDeviceDirectoryQuery) {
+    const rows = this.clientDeviceBase(query.clientId).as("rows");
+    return this.db.select("rows.*").from(rows).modify((q) => {
+      if (query.q) applyClientDeviceSearch(q, query.q);
+      if (query.segment === "sin_conexion") q.where("estado", "sin_conexion");
+      else if (query.segment === "con_alertas") q.where("alerts_count", ">", 0);
+      else if (query.segment === "consumible_bajo") q.where("consumible_pct", "<=", 35);
+    });
+  }
+
+  /** NULLS LAST en `last_seen` — mismo motivo que `applyDirectorySort` (clientes):
+   * un equipo que nunca reportó siempre al final, sin importar la dirección. */
+  private applyClientDeviceSort(q: Knex.QueryBuilder, sortColumn: string, sortDir: "asc" | "desc") {
+    if (sortColumn === "last_seen") q.orderByRaw(`last_seen ${sortDir === "asc" ? "ASC" : "DESC"} NULLS LAST`);
+    else q.orderByRaw(`${sortColumn} ${sortDir === "asc" ? "ASC" : "DESC"} NULLS LAST`);
+    q.orderBy("model", "asc");
+  }
+
+  /** Tabla "Infraestructura de monitoreo" del handoff hifi "Cliente — detalle"
+   * (25/08/2026) — paginado/filtrado/ordenado real, a diferencia de `listDevices()`
+   * de arriba. Default: alertas desc (README). */
+  async listDevicesDirectory(query: ClientDeviceDirectoryQuery): Promise<{ items: ClientDeviceDirectoryRow[]; total: number }> {
+    const limit = Math.min(query.limit ?? 50, 200);
+    const offset = Math.max(query.offset ?? 0, 0);
+    const sortColumn = DEVICE_DIRECTORY_SORT_COLUMNS[query.sortField ?? "alerts_count"];
+    const sortDir: "asc" | "desc" = query.sortDir === "asc" ? "asc" : "desc";
+
+    const [items, [{ count }]] = await Promise.all([
+      this.clientDeviceFiltered(query).modify((q) => this.applyClientDeviceSort(q, sortColumn, sortDir)).limit(limit).offset(offset),
+      this.clientDeviceFiltered(query).clearSelect().count("* as count"),
+    ]);
+    return { items, total: Number(count) };
+  }
+
+  /** Tira de métricas "requiere atención" del detalle de cliente — 2 queries chicas y
+   * dedicadas, sin tocar `withCounts()`/`clientCountsSelect` (compartidas con el viejo
+   * `GET /clients` sin paginar, que no se toca). */
+  private managedDeviceCountQuery(clientId: string) {
+    return this.db("devices")
+      .where("devices.client_id", clientId)
+      .andWhere("devices.monitor_state", "full")
+      .modify((q) => onlyLiveDevices(q, "devices"))
+      .count("* as count")
+      .first();
+  }
+
+  private openAlertsSummaryQuery(clientId: string) {
+    return this.db("alerts")
+      .leftJoin("devices", "alerts.device_id", "devices.id")
+      .leftJoin("agents", "agents.id", this.db.raw("COALESCE(devices.agent_id, alerts.agent_id)"))
+      .where("alerts.resolved", false)
+      .andWhere("agents.client_id", clientId)
+      .select(
+        this.db.raw("COUNT(*)::int as alerts_open"),
+        this.db.raw("COUNT(*) FILTER (WHERE alerts.alert_class = 'availability')::int as alerts_availability")
+      )
+      .first();
+  }
+
+  async getClientStats(clientId: string): Promise<ClientDetailStats> {
+    const [managedRow, alertsRow] = await Promise.all([
+      this.managedDeviceCountQuery(clientId),
+      this.openAlertsSummaryQuery(clientId),
+    ]);
+    return {
+      managed_device_count: Number(managedRow?.count ?? 0),
+      alerts_open_count: Number(alertsRow?.alerts_open ?? 0),
+      alerts_availability_count: Number(alertsRow?.alerts_availability ?? 0),
+    };
   }
 }

@@ -11,7 +11,8 @@ import type {
 } from "../application/use-cases/client-pending-device-use-cases";
 import type {
   CreateClientUseCase, GetClientDevicesUseCase, GetClientMonitorsUseCase, GetClientPortfolioSummaryUseCase,
-  GetClientUsageUseCase, GetClientUseCase, ListClientDirectoryUseCase, ListClientsUseCase, UpdateClientUseCase,
+  GetClientStatsUseCase, GetClientUsageUseCase, GetClientUseCase, ListClientDeviceDirectoryUseCase,
+  ListClientDirectoryUseCase, ListClientsUseCase, UpdateClientUseCase,
 } from "../application/use-cases/client-use-cases";
 import type { GetWebhookUseCase, PutWebhookUseCase } from "../application/use-cases/client-webhook-use-cases";
 
@@ -19,6 +20,7 @@ export interface ClientUseCases {
   create: CreateClientUseCase; update: UpdateClientUseCase; list: ListClientsUseCase; get: GetClientUseCase;
   monitors: GetClientMonitorsUseCase; usage: GetClientUsageUseCase; devices: GetClientDevicesUseCase;
   directory: ListClientDirectoryUseCase; portfolioSummary: GetClientPortfolioSummaryUseCase;
+  stats: GetClientStatsUseCase; deviceDirectory: ListClientDeviceDirectoryUseCase;
   listApiKeys: ListApiKeysUseCase; createApiKey: CreateApiKeyUseCase; revokeApiKey: RevokeApiKeyUseCase;
   getWebhook: GetWebhookUseCase; putWebhook: PutWebhookUseCase;
   listPending: ListPendingDevicesUseCase; registerPending: RegisterPendingDevicesUseCase; ignorePending: IgnorePendingDevicesUseCase;
@@ -58,17 +60,32 @@ function crudHandlers(uc: ClientUseCases) {
 /** Listado hifi de "Clientes" (handoff 25/08/2026): paginado/filtrado/ordenado
  * + tira de métricas, aparte de `crudHandlers` (mismo criterio de agrupación
  * que `integrationHandlers`/`pendingDeviceHandlers` de abajo). */
+type DirectoryQuery = { q?: string; segment?: string; sort?: string; dir?: string; limit?: string; offset?: string };
+
+function listClientDirectory(uc: ClientUseCases, request: FastifyRequest) {
+  const q = request.query as DirectoryQuery;
+  return uc.directory.execute({
+    scope: getScope(request), q: q.q, segment: q.segment, sortField: q.sort, sortDir: q.dir,
+    limit: q.limit !== undefined ? Number(q.limit) : undefined,
+    offset: q.offset !== undefined ? Number(q.offset) : undefined,
+  });
+}
+
+function listClientDeviceDirectory(uc: ClientUseCases, request: FastifyRequest) {
+  const q = request.query as DirectoryQuery;
+  return uc.deviceDirectory.execute({
+    clientId: idOf(request), q: q.q, segment: q.segment, sortField: q.sort, sortDir: q.dir,
+    limit: q.limit !== undefined ? Number(q.limit) : undefined,
+    offset: q.offset !== undefined ? Number(q.offset) : undefined,
+  });
+}
+
 function directoryHandlers(uc: ClientUseCases) {
   return {
-    listClientDirectory: (request: FastifyRequest) => {
-      const q = request.query as { q?: string; segment?: string; sort?: string; dir?: string; limit?: string; offset?: string };
-      return uc.directory.execute({
-        scope: getScope(request), q: q.q, segment: q.segment, sortField: q.sort, sortDir: q.dir,
-        limit: q.limit !== undefined ? Number(q.limit) : undefined,
-        offset: q.offset !== undefined ? Number(q.offset) : undefined,
-      });
-    },
+    listClientDirectory: (request: FastifyRequest) => listClientDirectory(uc, request),
     getClientPortfolioSummary: (request: FastifyRequest) => uc.portfolioSummary.execute({ scope: getScope(request) }),
+    getClientStats: (request: FastifyRequest) => uc.stats.execute(idOf(request)),
+    listClientDeviceDirectory: (request: FastifyRequest) => listClientDeviceDirectory(uc, request),
   };
 }
 

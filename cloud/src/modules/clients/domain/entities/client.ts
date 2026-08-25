@@ -92,6 +92,58 @@ export interface ClientPortfolioSummary {
   top5_device_share_pct: number;
 }
 
+/** Métricas de "requiere atención" del handoff hifi "Cliente — detalle" (25/08/2026)
+ * para la tira de 6 métricas — endpoint aparte (`GET /clients/:id/stats`), igual
+ * criterio que `getPortfolioSummary`: no ensucia `findWithCounts`/`listWithCounts`
+ * (que siguen alimentando `GET /clients/:id` y el viejo `GET /clients` sin cambios). */
+export interface ClientDetailStats {
+  /** `device_count` con `monitor_state = 'full'` (activamente monitoreado) — el resto
+   * del `device_count` de `ClientRecord` son equipos en `supplies_only`/`reports_only`. */
+  managed_device_count: number;
+  alerts_open_count: number;
+  /** Subconjunto de `alerts_open_count` con `alert_class = 'availability'` (Disponibilidad). */
+  alerts_availability_count: number;
+}
+
+/** Estado operativo de UN dispositivo (no confundir con `ClientEstado`, que es del
+ * CLIENTE) — derivado de `last_seen` con el mismo umbral que
+ * `heartbeatMonitor.ts::DEVICE_OFFLINE_THRESHOLD_MINUTES` (5 hs), no de
+ * `devices.active` (columna histórica que ningún código escribe nunca a `false`,
+ * ver knex-client-repository.ts). */
+export type ClientDeviceEstado = "en_linea" | "sin_conexion" | "sin_reporte";
+export type ClientDeviceSegment = "sin_conexion" | "con_alertas" | "consumible_bajo";
+export type ClientDeviceSortField = "alerts_count" | "consumible_pct" | "last_seen";
+
+export interface ClientDeviceDirectoryQuery {
+  clientId: string;
+  /** Busca en serie, modelo y ubicación (README: "Buscar por serie, modelo o ubicación…"). */
+  q?: string;
+  segment?: ClientDeviceSegment;
+  sortField?: ClientDeviceSortField;
+  sortDir?: "asc" | "desc";
+  limit?: number;
+  offset?: number;
+}
+
+/** Fila de la tabla "Infraestructura de monitoreo" del detalle de cliente — paginada/
+ * filtrada/ordenada server-side (mismo patrón que `ClientDirectoryRow`). */
+export interface ClientDeviceDirectoryRow {
+  id: string;
+  brand: string | null;
+  model: string | null;
+  name: string | null;
+  serial_number: string | null;
+  location: string | null;
+  last_seen: Date | null;
+  estado: ClientDeviceEstado;
+  /** Mínimo entre los 4 tóners no nulos (LEAST ignora NULL en Postgres) — el
+   * consumible más urgente del equipo. `null` si no reporta niveles de tóner
+   * (tambores/mantenimiento viven sólo en `supplies_details` JSON, fuera de
+   * alcance de esta barra única — ver `suppliesService` para el detalle completo). */
+  consumible_pct: number | null;
+  alerts_count: number;
+}
+
 /** Campos editables del cliente — el whitelist de `createClient`/`updateClient`. */
 export interface ClientContactFields {
   name?: string;

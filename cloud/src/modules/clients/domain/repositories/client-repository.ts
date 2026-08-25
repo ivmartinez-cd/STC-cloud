@@ -1,5 +1,6 @@
 import type {
-  ClientDeviceRow, ClientDirectoryRow, ClientMonitorRow, ClientPortfolioSummary, ClientRecord, ClientUsageMonth,
+  ClientDetailStats, ClientDeviceDirectoryQuery, ClientDeviceDirectoryRow, ClientDeviceRow, ClientDirectoryRow,
+  ClientMonitorRow, ClientPortfolioSummary, ClientRecord, ClientUsageMonth,
 } from "../entities/client";
 
 /** Estructuralmente idéntico a `api/utils/scope.ts::Scope` — duplicado para que el dominio no importe de HTTP. */
@@ -40,4 +41,14 @@ export interface ClientRepository {
   listDirectory(query: ClientDirectoryQuery): Promise<{ items: ClientDirectoryRow[]; total: number }>;
   /** Tira de métricas de cartera — endpoint aparte del listado paginado. */
   getPortfolioSummary(scope: ClientScope): Promise<ClientPortfolioSummary>;
+  /** Métricas de "requiere atención" del detalle de cliente (handoff hifi
+   * "Cliente — detalle", 25/08/2026) — endpoint aparte, no ensucia `findWithCounts`. */
+  getClientStats(clientId: string): Promise<ClientDetailStats>;
+  /**
+   * Tabla "Infraestructura de monitoreo" del detalle de cliente — paginado/filtrado/
+   * ordenado real (handoff hifi "Cliente — detalle", 25/08/2026), a diferencia de
+   * `listDevices()` de arriba (sin paginar, techo 500, para selects chicos). Techo
+   * 200, mismo criterio que `listDirectory()`.
+   */
+  listDevicesDirectory(query: ClientDeviceDirectoryQuery): Promise<{ items: ClientDeviceDirectoryRow[]; total: number }>;
 }

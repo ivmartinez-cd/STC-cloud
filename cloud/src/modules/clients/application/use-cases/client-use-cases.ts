@@ -1,5 +1,6 @@
 import type {
-  ClientDeviceRow, ClientDirectoryRow, ClientMonitorRow, ClientPortfolioSummary, ClientRecord, ClientUsageMonth,
+  ClientDetailStats, ClientDeviceDirectoryRow, ClientDeviceRow, ClientDeviceSegment, ClientDeviceSortField,
+  ClientDirectoryRow, ClientMonitorRow, ClientPortfolioSummary, ClientRecord, ClientUsageMonth,
 } from "../../domain/entities/client";
 import { ClientNotFoundError, ClientValidationError } from "../../domain/errors/client-error";
 import type {
@@ -8,8 +9,8 @@ import type {
 import { buildClientCreateData, buildClientUpdates } from "../../domain/services/client-rules";
 import type { AuditLogWriter } from "../ports/audit-log-writer";
 import type {
-  ClientDevicesInput, ClientMonitorsInput, CreateClientInput, ListClientDirectoryInput, ListClientsInput,
-  PortfolioSummaryInput, UpdateClientInput,
+  ClientDevicesInput, ClientMonitorsInput, CreateClientInput, ListClientDeviceDirectoryInput, ListClientDirectoryInput,
+  ListClientsInput, PortfolioSummaryInput, UpdateClientInput,
 } from "../dtos/client-dtos";
 
 const SEGMENTS: ReadonlySet<string> = new Set<ClientDirectorySegment>(["sin_contacto", "con_alertas", "sin_reporte_24h"]);
@@ -21,6 +22,17 @@ function normalizeSegment(segment?: string): ClientDirectorySegment | undefined 
 
 function normalizeSortField(sortField?: string): ClientDirectorySortField {
   return sortField && SORT_FIELDS.has(sortField) ? (sortField as ClientDirectorySortField) : "device_count";
+}
+
+const DEVICE_SEGMENTS: ReadonlySet<string> = new Set<ClientDeviceSegment>(["sin_conexion", "con_alertas", "consumible_bajo"]);
+const DEVICE_SORT_FIELDS: ReadonlySet<string> = new Set<ClientDeviceSortField>(["alerts_count", "consumible_pct", "last_seen"]);
+
+function normalizeDeviceSegment(segment?: string): ClientDeviceSegment | undefined {
+  return segment && DEVICE_SEGMENTS.has(segment) ? (segment as ClientDeviceSegment) : undefined;
+}
+
+function normalizeDeviceSortField(sortField?: string): ClientDeviceSortField {
+  return sortField && DEVICE_SORT_FIELDS.has(sortField) ? (sortField as ClientDeviceSortField) : "alerts_count";
 }
 
 /** Casos de uso chicos agrupados por agregado (mismo criterio que `modules/inventory`). */
@@ -116,5 +128,31 @@ export class GetClientPortfolioSummaryUseCase {
   constructor(private readonly clients: ClientRepository) {}
   execute(input: PortfolioSummaryInput): Promise<ClientPortfolioSummary> {
     return this.clients.getPortfolioSummary(input.scope);
+  }
+}
+
+/** Tira de métricas "requiere atención" del detalle de cliente (handoff hifi
+ * "Cliente — detalle", 25/08/2026) — `managed_device_count`/alertas abiertas y de
+ * disponibilidad, aparte de `findWithCounts` (ver docblock de `ClientDetailStats`). */
+export class GetClientStatsUseCase {
+  constructor(private readonly clients: ClientRepository) {}
+  execute(clientId: string): Promise<ClientDetailStats> {
+    return this.clients.getClientStats(clientId);
+  }
+}
+
+/** Tabla "Infraestructura de monitoreo" del detalle de cliente — paginada/filtrada/
+ * ordenada, mismo criterio "tolerante" que `ListClientDirectoryUseCase`. */
+export class ListClientDeviceDirectoryUseCase {
+  constructor(private readonly clients: ClientRepository) {}
+  execute(input: ListClientDeviceDirectoryInput): Promise<{ items: ClientDeviceDirectoryRow[]; total: number }> {
+    return this.clients.listDevicesDirectory({
+      clientId: input.clientId,
+      q: input.q?.trim() || undefined,
+      segment: normalizeDeviceSegment(input.segment),
+      sortField: normalizeDeviceSortField(input.sortField),
+      sortDir: input.sortDir === "asc" ? "asc" : "desc",
+      limit: input.limit, offset: input.offset,
+    });
   }
 }

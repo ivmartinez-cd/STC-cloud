@@ -10,6 +10,11 @@ import { spawn } from "node:child_process";
 const TEST_FILES = [
   "src/tests/e2e.test.ts",
   "src/tests/rbac.test.ts",
+  // clientDirectory.test.ts/clientDeviceDirectory.test.ts faltaban acá (sólo
+  // corrían via `npm test` local) — mismo criterio que el resto de este archivo,
+  // se agregan para que CI también las ejecute.
+  "src/tests/clientDirectory.test.ts",
+  "src/tests/clientDeviceDirectory.test.ts",
   "src/tests/alertCatalog.test.ts",
   "src/tests/alerts.test.ts",
   "src/tests/alertDigest.test.ts",

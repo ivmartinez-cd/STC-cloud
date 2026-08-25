@@ -37,6 +37,18 @@ export interface PortfolioSummaryInput {
   scope: ClientScope;
 }
 
+/** Query string cruda de `GET /clients/:id/devices/directory` (handoff hifi "Cliente
+ * — detalle", 25/08/2026) — mismo criterio "tolerante" que `ListClientDirectoryInput`. */
+export interface ListClientDeviceDirectoryInput {
+  clientId: string;
+  q?: string;
+  segment?: string;
+  sortField?: string;
+  sortDir?: string;
+  limit?: number;
+  offset?: number;
+}
+
 export interface ClientMonitorsInput {
   clientId: string;
   scope: ClientScope;

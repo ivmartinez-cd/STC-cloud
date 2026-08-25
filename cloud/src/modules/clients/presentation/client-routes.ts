@@ -7,7 +7,8 @@ import {
 } from "../application/use-cases/client-pending-device-use-cases";
 import {
   CreateClientUseCase, GetClientDevicesUseCase, GetClientMonitorsUseCase, GetClientPortfolioSummaryUseCase,
-  GetClientUsageUseCase, GetClientUseCase, ListClientDirectoryUseCase, ListClientsUseCase, UpdateClientUseCase,
+  GetClientStatsUseCase, GetClientUsageUseCase, GetClientUseCase, ListClientDeviceDirectoryUseCase,
+  ListClientDirectoryUseCase, ListClientsUseCase, UpdateClientUseCase,
 } from "../application/use-cases/client-use-cases";
 import { GetWebhookUseCase, PutWebhookUseCase } from "../application/use-cases/client-webhook-use-cases";
 import { ApiKeyServiceStore } from "../infrastructure/adapters/api-key-service-store";
@@ -111,6 +112,7 @@ function buildUseCases(db: Knex): ClientUseCases {
     list: new ListClientsUseCase(clients), get: new GetClientUseCase(clients),
     monitors: new GetClientMonitorsUseCase(clients), usage: new GetClientUsageUseCase(clients), devices: new GetClientDevicesUseCase(clients),
     directory: new ListClientDirectoryUseCase(clients), portfolioSummary: new GetClientPortfolioSummaryUseCase(clients),
+    stats: new GetClientStatsUseCase(clients), deviceDirectory: new ListClientDeviceDirectoryUseCase(clients),
     listApiKeys: new ListApiKeysUseCase(keys), createApiKey: new CreateApiKeyUseCase(keys), revokeApiKey: new RevokeApiKeyUseCase(keys),
     getWebhook: new GetWebhookUseCase(webhooks), putWebhook: new PutWebhookUseCase(webhooks),
     listPending: new ListPendingDevicesUseCase(registration), registerPending: new RegisterPendingDevicesUseCase(registration),
@@ -136,6 +138,12 @@ export function registerClientRoutes(fastify: FastifyInstance, db: Knex, portalA
   fastify.get("/api/v1/clients/:id/monitors", { preHandler: portalAuth, handler: ctrl.getClientMonitors });
   fastify.get("/api/v1/clients/:id/usage", { preHandler: portalAuth, handler: ctrl.getClientUsage });
   fastify.get("/api/v1/clients/:id/devices", { preHandler: portalAuth, handler: ctrl.getClientDevices });
+  // Handoff hifi "Cliente — detalle" (25/08/2026): tira de métricas "requiere
+  // atención" + tabla "Infraestructura de monitoreo" paginada/filtrada/ordenada
+  // (a diferencia de `/devices` de arriba, sin paginar, techo 500 — ver docblock
+  // de `listDevicesDirectory` en KnexClientRepository).
+  fastify.get("/api/v1/clients/:id/stats", { preHandler: portalAuth, handler: ctrl.getClientStats });
+  fastify.get("/api/v1/clients/:id/devices/directory", { preHandler: portalAuth, handler: ctrl.listClientDeviceDirectory });
 
   // Cola de registro de dispositivos (Fase 7 del gap analysis vs HP SDS) —
   // deliberadamente NO se agregan a CLIENT_VIEWER_ROUTES, deny-by-default.

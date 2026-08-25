@@ -1,10 +1,19 @@
 // Self-join de pares vivos del mismo cliente, por MAC, por IP-fantasma en
 // la misma sede, o por serial coincidente entre monitores distintos (el
 // caso que motiva la clave por cliente en primer lugar).
+//
+// `a_brand`/`a_model`/`a_name`/`b_*` y `detected_at` (25/08/2026): el handoff hifi
+// "Cliente — detalle" muestra el par como "HP LaserJet M428 ↔ HP LaserJet M428fdw"
+// (marca+modelo, no serie cruda) + antigüedad de la coincidencia — columnas nuevas,
+// aditivas, no cambian el shape que ya consume `DuplicateDevicesCard.tsx`/
+// `MergeDeviceModal.tsx` (siguen usando sólo `a_serial`/`a_ip`/`a_mac`/`reason`).
 export const DUPLICATES_SQL = (byAgent: boolean) => `SELECT a.id AS a_id, a.serial_number AS a_serial, a.mac AS a_mac, a.ip_address AS a_ip,
             a.agent_id AS a_agent_id, a.last_seen AS a_last_seen,
+            a.brand AS a_brand, a.model AS a_model, a.name AS a_name,
             b.id AS b_id, b.serial_number AS b_serial, b.mac AS b_mac, b.ip_address AS b_ip,
             b.agent_id AS b_agent_id, b.last_seen AS b_last_seen,
+            b.brand AS b_brand, b.model AS b_model, b.name AS b_name,
+            LEAST(a.created_at, b.created_at) AS detected_at,
             CASE
               WHEN a.mac IS NOT NULL AND a.mac = b.mac THEN 'same_mac'
               WHEN a.agent_id = b.agent_id AND a.ip_address = b.ip_address
