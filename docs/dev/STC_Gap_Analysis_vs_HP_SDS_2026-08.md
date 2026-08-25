@@ -1734,10 +1734,19 @@ Deploy limpio con `migrate:latest` crea `readings` con `id uuid PK`, sin hyperta
 - ✅ `VERSION` ya no está hardcodeada en ningún lado: `HeartbeatService.ts`,
   `UpdateService.ts`, `CliCommands.ts` y `ConsoleEngine.ts` importan todos
   de `core/version.ts` (verificado grepeando los 4 archivos — cero
-  literales `1.0.0`/`1.2.0` sueltos). `package.json`/`.iss`/`.csproj`
-  siguen siendo ecosistemas de versión separados (no hay un script que los
-  sincronice automáticamente), pero se mantienen alineados a mano en cada
-  release (así quedaron los 3 en 1.2.0 en la Fase 7).
+  literales `1.0.0`/`1.2.0` sueltos).
+  ✅ **Corrección (25/08/2026) a esta misma nota**: sí existe un script de
+  sincronización automática — `installer/build-installer.bat` ya traía un
+  mecanismo (PS1 temporal con `-replace`) que actualiza `.iss`,
+  `version.ts` y `.csproj` al pedir una versión nueva al build del release
+  (con un bugfix propio del 23/08/2026 documentado inline sobre
+  exactamente este tipo de desincronización silenciosa). Lo que faltaba de
+  verdad era sólo `agent/package.json` — no lo lee ningún código en
+  runtime, pero seguía divergiendo en la metadata que ve cualquiera que
+  corra `npm ls`/`npm view` sobre el agente. Se agregó al mismo mecanismo.
+  Sin verificar en Windows real (no hay PowerShell en este entorno Linux)
+  — verificada sólo la lógica del patrón de reemplazo contra el contenido
+  real de `package.json` en Node.
 - ✅ **CI ya no construye algo distinto de lo que se instala** (24/08/2026).
   Confirmado el bug real: el job `agent` de `.github/workflows/ci.yml`
   corría `npm run build:agent` → `npx pkg agent/dist/core/main.js --target
@@ -1958,7 +1967,7 @@ que este hallazgo nombraba explícitamente.
 4. ✅ Detección de reset/decremento en servidor al ingerir (marcar lectura, abrir alerta `counter_reset`) y en el cálculo mensual (sumar deltas positivos en vez de `MAX−MIN`).
 5. ✅ Seguridad mínima: CSRF (double‑submit), quitar login por env, no devolver token en body¹, `trustProxy`, schema en `PUT /agents/:id/config` y `createClient`, audit en deletes/comandos. ✅ WS ya no acepta el JWT de sesión por query string — nota desactualizada, ver R4 (parcial, 23/08/2026) más abajo: reemplazado por un ticket de un solo uso de 60s (`wsTicketService.ts`).
 6. ✅ Operación: `restart: unless-stopped`, `/health` real (DB+Redis), límites de recursos, `USER node`, `npm ci`; sacar binarios/dumps/secretos del repo y rotar `JWT_SECRET`/DB password.
-7. ⬜ Una sola fuente de versión: ✅ hecho en agente/cloud (`version.ts`); **sigue sin unificarse** con el instalador Inno Setup ni el `.csproj` del Monitor UI (siguen siendo ecosistemas de versión aparte). ✅ (23/08/2026) `capture.test.ts` y e2e de `cloud` corren en CI (Postgres/Redis como service containers en `.github/workflows/ci.yml`, job `api`).
+7. ✅ Una sola fuente de versión: hecho en agente/cloud (`version.ts`); sincronizada automáticamente con el instalador Inno Setup, el `.csproj` del Monitor UI y `agent/package.json` vía `installer/build-installer.bat` (ver R6, corrección 25/08/2026 — el mecanismo ya existía, sólo le faltaba `package.json`). ✅ (23/08/2026) `capture.test.ts` y e2e de `cloud` corren en CI (Postgres/Redis como service containers en `.github/workflows/ci.yml`, job `api`).
 
 ¹ `/portal/me` y la respuesta de login siguen devolviendo el token también en el body (fallback para el WS cuando no hay cookie entre orígenes) — es una decisión consciente, no un pendiente.
 
