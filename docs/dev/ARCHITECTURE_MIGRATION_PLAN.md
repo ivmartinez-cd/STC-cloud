@@ -1679,8 +1679,29 @@ tests sí cuentan. Tests nuevos (todos registrados en `ci-test-runner.mjs` y
   GET/PUT de `/settings/system`, 403 para operator, 400 por schema,
   persistencia y restauración. El módulo no tenía ningún test.
 Suite completa en worktree de `787ab41`: 746 OK, sólo los 2 rojos externos
-conocidos (2FA 6.3 rate-limit, pub/sub WS flaky). Los números por capa se
-vuelven a medir en el próximo run del CI (job `api`), que ya suma el runner.
+conocidos (2FA 6.3 rate-limit, pub/sub WS flaky).
+
+**Re-medición (worktree de `eb5f82c`, API + runner bajo `NODE_V8_COVERAGE`,
+con `a75cf9a` que deja `guards-baseline.json` en `{}`):** 777 OK; rojos
+sólo los externos (2FA 6.3, pub/sub WS, y el lock multi-réplica de
+`observability.test.ts` — los dos últimos sensibles a la carga extra de la
+instrumentación; en el stack compartido sin cobertura `close-hp-sds-gaps`
+midió 32 archivos / 0 fallos el mismo día).
+
+| Capa | Antes (60dc590) | Ahora | Mínimo |
+|---|---:|---:|---:|
+| domain | 93,0 % | **96,2 %** | 90 % |
+| application | 92,9 % | **93,5 %** | 85 % |
+| infrastructure | 88,8 % | **89,0 %** | 70 % |
+| presentation | 94,1 % | **94,9 %** | 60 % |
+| total | 90,5 % | **92,25 %** (ramas 78,6 %) | |
+
+`check-coverage` ya no lista ningún módulo bajo mínimo: `feedback`,
+`inventory`, `scheduled-reports` y `system-settings` cerrados. Con esto el
+punto 3 de la Fase 5 queda completo y no queda deuda baseline-ada en
+guards; la única deuda que sigue congelada es la de tamaños
+(`sizes-baseline.json`: 21 archivos >300 líneas y las funciones largas de
+producción), que se reduce archivo por archivo cuando se los toca.
 
 ## 0. Punto de partida (medido 2026-08-24)
 
