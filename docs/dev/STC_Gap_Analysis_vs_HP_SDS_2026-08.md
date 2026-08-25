@@ -164,8 +164,16 @@ decisión de negocio, no una obligación de compliance.
   `agentService.getConfig()`; rangos superpuestos con credenciales distintas
   y borrado de una credencial todavía referenciada generan warnings no
   bloqueantes. §2.1/§2.3 quedan resueltos — **Fase 1 completa**.
-  **Lo que NO se hizo**: UI de asignación de `credential_ids` en el portal
-  (API-only por ahora), resolución de solapamiento de rangos en runtime
+  ✅ **UI de asignación de `credential_ids` en el portal** (25/08/2026):
+  `CredentialIdsSelect.tsx`, nuevo componente chico (chips toggle, ninguno
+  activo = pool completo) usado desde `IpRangesEditor` — visible en los dos
+  lugares donde se edita `ip_ranges` (`MonitorDetail`/`ConfigTabPanel` y
+  `ConfigAgentModal`), sólo si el agente tiene credenciales SNMP
+  adicionales configuradas. Verificado de punta a punta contra el stack
+  real: cargar 2 credenciales por API, togglear una en el selector,
+  guardar, y confirmar por API que `ip_ranges[0].credential_ids` persistió
+  con el id correcto.
+  **Lo que NO se hizo**: resolución de solapamiento de rangos en runtime
   (sólo warning al guardar).
 
 ### Fase 2 — Diferenciación — arrancada: 5 de 7 ítems cerrados

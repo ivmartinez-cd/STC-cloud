@@ -5,6 +5,7 @@ import { api } from '../../../../shared/lib/api';
 import { useToast } from '../../../../store/ToastContext';
 import type { AgentConfig } from '../../../../shared/types/agents';
 import { defaultConfig } from '../../../../shared/types/agents';
+import type { MaskedSnmpCredential } from '../../../../shared/types/monitor';
 import IpRangesEditor from '../IpRangesEditor';
 
 interface Props {
@@ -126,7 +127,11 @@ export default function ConfigAgentModal({ modal, onClose }: Props) {
               <div className="space-y-6">
                 <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] ml-1">Segmentos IP Activos</label>
                 <div className="max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
-                  <IpRangesEditor ranges={configForm.ip_ranges} onChange={ranges => setConfigForm(f => ({ ...f, ip_ranges: ranges }))} />
+                  <IpRangesEditor
+                    ranges={configForm.ip_ranges}
+                    onChange={ranges => setConfigForm(f => ({ ...f, ip_ranges: ranges }))}
+                    credentials={(configForm.snmp_credentials ?? []) as MaskedSnmpCredential[]}
+                  />
                 </div>
               </div>
 

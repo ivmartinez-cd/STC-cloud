@@ -29,10 +29,10 @@ export type IpRange = {
   hostname?: string;
   exclude?: string[];
   /** Restringe qué credenciales de `snmp_credentials` se prueban para esta
-   *  entrada durante discovery. Ausente = pool completo (comportamiento de
-   *  siempre). Sin UI de asignación en el portal todavía (API-only) — el
-   *  campo existe en el tipo para que un valor ya seteado por API no se
-   *  pierda si se edita otra parte de la misma entrada acá. */
+   *  entrada durante discovery. Ausente/vacío = pool completo (comportamiento
+   *  de siempre). Editable desde `CredentialIdsSelect` (dentro de
+   *  `IpRangesEditor`) cuando el agente tiene credenciales adicionales
+   *  configuradas. */
   credential_ids?: string[];
 }
 

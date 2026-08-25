@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Plus, Trash2, X } from 'lucide-react';
 import type { IpRange } from '../../../shared/types/agents';
+import type { MaskedSnmpCredential } from '../../../shared/types/monitor';
+import CredentialIdsSelect from './CredentialIdsSelect';
 
 type Mode = 'range' | 'cidr' | 'hostname';
 
@@ -17,21 +19,24 @@ type Mode = 'range' | 'cidr' | 'hostname';
  * bloqueantes (ej. rango con IP pública, o rangos superpuestos con
  * credenciales distintas) que cada consumidor muestra aparte.
  *
- * `credential_ids` (credenciales SNMP por rango) es API-only por ahora — no
- * hay UI acá para asignarlo, pero un valor ya seteado por API se preserva
- * intacto si se edita otro campo de la misma entrada (ver `update()`, que
- * spreadea el objeto entero, nunca reconstruye uno "limpio").
+ * `credential_ids` (credenciales SNMP por rango) se edita acá vía
+ * `CredentialIdsSelect` — sólo aparece si el agente tiene credenciales
+ * adicionales configuradas (`credentials`, ver `SnmpCredentialsPanel`). Un
+ * valor ya seteado por API se preserva intacto si se edita otro campo de la
+ * misma entrada (ver `update()`, que spreadea el objeto entero, nunca
+ * reconstruye uno "limpio").
  */
 interface Props {
   ranges: IpRange[];
   onChange: (ranges: IpRange[]) => void;
+  credentials?: MaskedSnmpCredential[];
 }
 
 function emptyRangeEntry(): IpRange {
   return { start: '', end: '' };
 }
 
-export default function IpRangesEditor({ ranges, onChange }: Props) {
+export default function IpRangesEditor({ ranges, onChange, credentials = [] }: Props) {
   const update = (idx: number, patch: Partial<IpRange>) =>
     onChange(ranges.map((r, i) => (i === idx ? { ...r, ...patch } : r)));
 
@@ -130,6 +135,12 @@ export default function IpRangesEditor({ ranges, onChange }: Props) {
                 onChange={excl => update(idx, { exclude: excl.length > 0 ? excl : undefined })}
               />
             )}
+
+            <CredentialIdsSelect
+              available={credentials}
+              selected={range.credential_ids}
+              onChange={ids => update(idx, { credential_ids: ids })}
+            />
           </div>
         );
       })}

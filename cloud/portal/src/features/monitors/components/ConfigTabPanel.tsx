@@ -117,7 +117,11 @@ export default function ConfigTabPanel({ monitor, onSave, onSaveSnmpCredentials 
           <div className="space-y-4">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Segmentos IP Activos</label>
             <div className="max-h-[360px] overflow-y-auto pr-2 custom-scrollbar">
-              <IpRangesEditor ranges={form.ip_ranges} onChange={ranges => setForm(f => ({ ...f, ip_ranges: ranges }))} />
+              <IpRangesEditor
+                ranges={form.ip_ranges}
+                onChange={ranges => setForm(f => ({ ...f, ip_ranges: ranges }))}
+                credentials={monitor.config?.snmp_credentials ?? []}
+              />
             </div>
           </div>
 
