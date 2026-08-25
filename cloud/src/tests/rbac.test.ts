@@ -238,6 +238,24 @@ describe('RBAC — /portal/me y /clients', () => {
     assert.equal(status, 200);
     assert.equal(data.id, rbac.clientAId);
   });
+
+  // Handoff hifi "Clientes" (25/08/2026) — listado paginado/filtrado y tira de
+  // métricas nuevos: el scope de un client_viewer se resuelve igual que en
+  // /clients (getScope), sin `:id` en la URL así que no pasa por
+  // clientIdParamMatchesScope — hay que verificar la restricción a mano.
+  test('/clients/directory: un client_viewer sólo ve su propio cliente', async () => {
+    const { status, data } = await req('GET', '/clients/directory', undefined, rbac.viewerToken);
+    assert.equal(status, 200);
+    assert.equal(data.total, 1, 'Un client_viewer sólo debe ver su propio cliente');
+    assert.equal(data.items.length, 1);
+    assert.equal(data.items[0].id, rbac.clientAId);
+  });
+
+  test('/clients/summary: un client_viewer sólo ve métricas de su propio cliente', async () => {
+    const { status, data } = await req('GET', '/clients/summary', undefined, rbac.viewerToken);
+    assert.equal(status, 200);
+    assert.equal(data.clients_total, 1, 'Un client_viewer sólo debe contar su propio cliente');
+  });
 });
 
 describe('RBAC — /agents', () => {

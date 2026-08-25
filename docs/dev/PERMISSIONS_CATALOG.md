@@ -10,7 +10,7 @@ cliente) o está en la allowlist explícita de rutas públicas. Dentro del porta
 y sólo llega a `CLIENT_VIEWER_ROUTES` (scopeado a su cliente). Las marcadas `admin`
 además exigen `role === "admin"` en el handler.
 
-Total: 152 rutas · públicas: 9 · client_viewer: 40 · sólo admin: 8
+Total: 154 rutas · públicas: 9 · client_viewer: 42 · sólo admin: 8
 
 ## `src/api/routes/authRoutes.ts`
 
@@ -138,6 +138,8 @@ Total: 152 rutas · públicas: 9 · client_viewer: 40 · sólo admin: 8
 |---|---|---|
 | POST | `/api/v1/clients` | admin · operator |
 | GET | `/api/v1/clients` | admin · operator · client_viewer |
+| GET | `/api/v1/clients/summary` | admin · operator · client_viewer |
+| GET | `/api/v1/clients/directory` | admin · operator · client_viewer |
 | GET | `/api/v1/clients/:id` | admin · operator · client_viewer |
 | PUT | `/api/v1/clients/:id` | admin · operator |
 | GET | `/api/v1/clients/:id/monitors` | admin · operator · client_viewer |

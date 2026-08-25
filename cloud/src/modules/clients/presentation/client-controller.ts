@@ -10,14 +10,15 @@ import type {
   IgnorePendingDevicesUseCase, ListPendingDevicesUseCase, RegisterPendingDevicesUseCase,
 } from "../application/use-cases/client-pending-device-use-cases";
 import type {
-  CreateClientUseCase, GetClientDevicesUseCase, GetClientMonitorsUseCase, GetClientUsageUseCase, GetClientUseCase,
-  ListClientsUseCase, UpdateClientUseCase,
+  CreateClientUseCase, GetClientDevicesUseCase, GetClientMonitorsUseCase, GetClientPortfolioSummaryUseCase,
+  GetClientUsageUseCase, GetClientUseCase, ListClientDirectoryUseCase, ListClientsUseCase, UpdateClientUseCase,
 } from "../application/use-cases/client-use-cases";
 import type { GetWebhookUseCase, PutWebhookUseCase } from "../application/use-cases/client-webhook-use-cases";
 
 export interface ClientUseCases {
   create: CreateClientUseCase; update: UpdateClientUseCase; list: ListClientsUseCase; get: GetClientUseCase;
   monitors: GetClientMonitorsUseCase; usage: GetClientUsageUseCase; devices: GetClientDevicesUseCase;
+  directory: ListClientDirectoryUseCase; portfolioSummary: GetClientPortfolioSummaryUseCase;
   listApiKeys: ListApiKeysUseCase; createApiKey: CreateApiKeyUseCase; revokeApiKey: RevokeApiKeyUseCase;
   getWebhook: GetWebhookUseCase; putWebhook: PutWebhookUseCase;
   listPending: ListPendingDevicesUseCase; registerPending: RegisterPendingDevicesUseCase; ignorePending: IgnorePendingDevicesUseCase;
@@ -51,6 +52,23 @@ function crudHandlers(uc: ClientUseCases) {
     getClientUsage: (request: FastifyRequest) => uc.usage.execute(idOf(request)),
     getClientDevices: (request: FastifyRequest) =>
       uc.devices.execute({ clientId: idOf(request), include: (request.query as { include?: string }).include }),
+  };
+}
+
+/** Listado hifi de "Clientes" (handoff 25/08/2026): paginado/filtrado/ordenado
+ * + tira de métricas, aparte de `crudHandlers` (mismo criterio de agrupación
+ * que `integrationHandlers`/`pendingDeviceHandlers` de abajo). */
+function directoryHandlers(uc: ClientUseCases) {
+  return {
+    listClientDirectory: (request: FastifyRequest) => {
+      const q = request.query as { q?: string; segment?: string; sort?: string; dir?: string; limit?: string; offset?: string };
+      return uc.directory.execute({
+        scope: getScope(request), q: q.q, segment: q.segment, sortField: q.sort, sortDir: q.dir,
+        limit: q.limit !== undefined ? Number(q.limit) : undefined,
+        offset: q.offset !== undefined ? Number(q.offset) : undefined,
+      });
+    },
+    getClientPortfolioSummary: (request: FastifyRequest) => uc.portfolioSummary.execute({ scope: getScope(request) }),
   };
 }
 
@@ -94,5 +112,8 @@ function pendingDeviceHandlers(uc: ClientUseCases) {
 }
 
 export function createClientController(useCases: ClientUseCases) {
-  return { ...crudHandlers(useCases), ...integrationHandlers(useCases), ...pendingDeviceHandlers(useCases) };
+  return {
+    ...crudHandlers(useCases), ...directoryHandlers(useCases),
+    ...integrationHandlers(useCases), ...pendingDeviceHandlers(useCases),
+  };
 }

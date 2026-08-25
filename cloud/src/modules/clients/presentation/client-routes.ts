@@ -6,8 +6,8 @@ import {
   IgnorePendingDevicesUseCase, ListPendingDevicesUseCase, RegisterPendingDevicesUseCase,
 } from "../application/use-cases/client-pending-device-use-cases";
 import {
-  CreateClientUseCase, GetClientDevicesUseCase, GetClientMonitorsUseCase, GetClientUsageUseCase, GetClientUseCase,
-  ListClientsUseCase, UpdateClientUseCase,
+  CreateClientUseCase, GetClientDevicesUseCase, GetClientMonitorsUseCase, GetClientPortfolioSummaryUseCase,
+  GetClientUsageUseCase, GetClientUseCase, ListClientDirectoryUseCase, ListClientsUseCase, UpdateClientUseCase,
 } from "../application/use-cases/client-use-cases";
 import { GetWebhookUseCase, PutWebhookUseCase } from "../application/use-cases/client-webhook-use-cases";
 import { ApiKeyServiceStore } from "../infrastructure/adapters/api-key-service-store";
@@ -110,6 +110,7 @@ function buildUseCases(db: Knex): ClientUseCases {
     create: new CreateClientUseCase(clients, audit), update: new UpdateClientUseCase(clients, audit),
     list: new ListClientsUseCase(clients), get: new GetClientUseCase(clients),
     monitors: new GetClientMonitorsUseCase(clients), usage: new GetClientUsageUseCase(clients), devices: new GetClientDevicesUseCase(clients),
+    directory: new ListClientDirectoryUseCase(clients), portfolioSummary: new GetClientPortfolioSummaryUseCase(clients),
     listApiKeys: new ListApiKeysUseCase(keys), createApiKey: new CreateApiKeyUseCase(keys), revokeApiKey: new RevokeApiKeyUseCase(keys),
     getWebhook: new GetWebhookUseCase(webhooks), putWebhook: new PutWebhookUseCase(webhooks),
     listPending: new ListPendingDevicesUseCase(registration), registerPending: new RegisterPendingDevicesUseCase(registration),
@@ -122,6 +123,12 @@ export function registerClientRoutes(fastify: FastifyInstance, db: Knex, portalA
 
   fastify.post("/api/v1/clients", { preHandler: portalAuth, schema: createClientSchema, handler: ctrl.createClient });
   fastify.get("/api/v1/clients", { preHandler: portalAuth, handler: ctrl.listClients });
+  // Listado hifi de "Clientes" (handoff 25/08/2026): paginado/filtrado/ordenado, con
+  // estado/alertas/último-reporte — rutas nuevas, deliberadamente NO reemplazan
+  // GET /clients (ese sigue siendo la lista plana sin paginar que ya consumen ~15
+  // selects de cliente en el resto del portal, ver Monitors/Reports/Incidents/etc).
+  fastify.get("/api/v1/clients/summary", { preHandler: portalAuth, handler: ctrl.getClientPortfolioSummary });
+  fastify.get("/api/v1/clients/directory", { preHandler: portalAuth, handler: ctrl.listClientDirectory });
   fastify.get("/api/v1/clients/:id", { preHandler: portalAuth, handler: ctrl.getClient });
   // No se agrega a CLIENT_VIEWER_ROUTES (rolePolicy.ts) — deny-by-default alcanza
   // para que un client_viewer reciba 403 acá, mismo criterio que PUT /alerts/:id.

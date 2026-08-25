@@ -20,6 +20,23 @@ export interface ListClientsInput {
   scope: ClientScope;
 }
 
+/** Query string cruda de `GET /clients/directory` — sin validar todavía (eso lo hace
+ * el use case: valores fuera del enum caen al default, no 400 — mismo criterio
+ * "tolerante" que `include` en `ListDevicesInput`). */
+export interface ListClientDirectoryInput {
+  scope: ClientScope;
+  q?: string;
+  segment?: string;
+  sortField?: string;
+  sortDir?: string;
+  limit?: number;
+  offset?: number;
+}
+
+export interface PortfolioSummaryInput {
+  scope: ClientScope;
+}
+
 export interface ClientMonitorsInput {
   clientId: string;
   scope: ClientScope;

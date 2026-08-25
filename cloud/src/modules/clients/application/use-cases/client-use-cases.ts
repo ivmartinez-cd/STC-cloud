@@ -1,11 +1,27 @@
-import type { ClientDeviceRow, ClientMonitorRow, ClientRecord, ClientUsageMonth } from "../../domain/entities/client";
+import type {
+  ClientDeviceRow, ClientDirectoryRow, ClientMonitorRow, ClientPortfolioSummary, ClientRecord, ClientUsageMonth,
+} from "../../domain/entities/client";
 import { ClientNotFoundError, ClientValidationError } from "../../domain/errors/client-error";
-import type { ClientRepository } from "../../domain/repositories/client-repository";
+import type {
+  ClientDirectorySegment, ClientDirectorySortField, ClientRepository,
+} from "../../domain/repositories/client-repository";
 import { buildClientCreateData, buildClientUpdates } from "../../domain/services/client-rules";
 import type { AuditLogWriter } from "../ports/audit-log-writer";
 import type {
-  ClientDevicesInput, ClientMonitorsInput, CreateClientInput, ListClientsInput, UpdateClientInput,
+  ClientDevicesInput, ClientMonitorsInput, CreateClientInput, ListClientDirectoryInput, ListClientsInput,
+  PortfolioSummaryInput, UpdateClientInput,
 } from "../dtos/client-dtos";
+
+const SEGMENTS: ReadonlySet<string> = new Set<ClientDirectorySegment>(["sin_contacto", "con_alertas", "sin_reporte_24h"]);
+const SORT_FIELDS: ReadonlySet<string> = new Set<ClientDirectorySortField>(["monitor_count", "device_count", "alerts_count", "last_report_at"]);
+
+function normalizeSegment(segment?: string): ClientDirectorySegment | undefined {
+  return segment && SEGMENTS.has(segment) ? (segment as ClientDirectorySegment) : undefined;
+}
+
+function normalizeSortField(sortField?: string): ClientDirectorySortField {
+  return sortField && SORT_FIELDS.has(sortField) ? (sortField as ClientDirectorySortField) : "device_count";
+}
 
 /** Casos de uso chicos agrupados por agregado (mismo criterio que `modules/inventory`). */
 
@@ -73,5 +89,32 @@ export class GetClientDevicesUseCase {
   execute(input: ClientDevicesInput): Promise<ClientDeviceRow[]> {
     const includeDecommissioned = input.include === "decommissioned" || input.include === "all";
     return this.clients.listDevices(input.clientId, includeDecommissioned);
+  }
+}
+
+/** Listado hifi de "Clientes" (handoff 25/08/2026): paginado/filtrado/ordenado, con
+ * `estado`/alertas/último reporte ya resueltos por `KnexClientRepository.listDirectory()`.
+ * Valores de `segment`/`sortField` fuera del enum caen al default en vez de 400 — mismo
+ * criterio "tolerante" que el resto de los query strings del módulo. */
+export class ListClientDirectoryUseCase {
+  constructor(private readonly clients: ClientRepository) {}
+  execute(input: ListClientDirectoryInput): Promise<{ items: ClientDirectoryRow[]; total: number }> {
+    return this.clients.listDirectory({
+      scope: input.scope,
+      q: input.q?.trim() || undefined,
+      segment: normalizeSegment(input.segment),
+      sortField: normalizeSortField(input.sortField),
+      sortDir: input.sortDir === "asc" ? "asc" : "desc",
+      limit: input.limit, offset: input.offset,
+    });
+  }
+}
+
+/** Tira de métricas de cartera — endpoint aparte del listado paginado (ver README del
+ * handoff, "State Management" → `portfolioSummary`). */
+export class GetClientPortfolioSummaryUseCase {
+  constructor(private readonly clients: ClientRepository) {}
+  execute(input: PortfolioSummaryInput): Promise<ClientPortfolioSummary> {
+    return this.clients.getPortfolioSummary(input.scope);
   }
 }
