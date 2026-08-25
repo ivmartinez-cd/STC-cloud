@@ -71,10 +71,10 @@ describe('Plantillas — e2e', () => {
     ctx.clientId = client.data.id;
   });
 
-  test('GET sin filas → los 5 eventos con source=default', async () => {
+  test('GET sin filas → los 6 eventos con source=default', async () => {
     const res = await req('GET', '/message-templates', undefined, ctx.adminToken);
     assert.equal(res.status, 200);
-    assert.equal(res.data.length, 5);
+    assert.equal(res.data.length, 6);
     // sin plantilla global guardada, todo evento que no toque otro test es default
     const supply = res.data.find((t: any) => t.event === 'supply_request.completed');
     assert.equal(supply.source, 'default');

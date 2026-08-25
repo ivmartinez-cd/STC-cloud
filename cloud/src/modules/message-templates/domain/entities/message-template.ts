@@ -10,6 +10,7 @@ export const TEMPLATE_EVENTS = [
   "supply_request.created",
   "supply_request.completed",
   "report.closed",
+  "alert.digest",
 ] as const;
 export type TemplateEvent = (typeof TEMPLATE_EVENTS)[number];
 
@@ -35,6 +36,7 @@ export const EVENT_PLACEHOLDERS: Record<TemplateEvent, string[]> = {
   "supply_request.created": ["client_name", "device_serial", "supply", "level_pct"],
   "supply_request.completed": ["client_name", "device_serial", "supply", "level_pct"],
   "report.closed": ["client_name", "period", "total_pages"],
+  "alert.digest": ["client_name", "critical_count", "warning_count", "opened_24h", "top_classes"],
 };
 
 export const DEFAULT_TEMPLATES: Record<TemplateEvent, TemplateContent> = {
@@ -66,6 +68,14 @@ export const DEFAULT_TEMPLATES: Record<TemplateEvent, TemplateContent> = {
       "Cliente: {{client_name}}\nPeríodo: {{period}}\nTotal de páginas: {{total_pages}}\n\n" +
       "Se adjunta el detalle del cierre (CSV/XLSX).",
   },
+  "alert.digest": {
+    subject: "[STC Cloud] Resumen diario de alertas — {{client_name}}",
+    body:
+      "Resumen de alertas de {{client_name}}.\n\n" +
+      "Abiertas actualmente: {{critical_count}} crítica(s), {{warning_count}} de advertencia.\n" +
+      "Nuevas en las últimas 24h: {{opened_24h}}.\n" +
+      "Principales clases: {{top_classes}}\n",
+  },
 };
 
 /**
@@ -74,7 +84,12 @@ export const DEFAULT_TEMPLATES: Record<TemplateEvent, TemplateContent> = {
  */
 export function renderTemplate(content: TemplateContent, vars: Record<string, string | number | null>): TemplateContent {
   const substitute = (text: string): string =>
-    text.replace(/\{\{\s*([a-z_]+)\s*\}\}/g, (_m, key: string) => {
+    // `[a-z0-9_]+` (no sólo `[a-z_]+`): `alert.digest` introdujo el primer
+    // placeholder con dígito (`opened_24h`) — sin el rango numérico, ese
+    // `{{opened_24h}}` nunca matcheaba y quedaba literal en el mail (bug real,
+    // atrapado por el test "los defaults calcan los eventos y renderizan
+    // completos" de messageTemplates.test.ts).
+    text.replace(/\{\{\s*([a-z0-9_]+)\s*\}\}/g, (_m, key: string) => {
       const value = vars[key];
       return value == null || value === "" ? "—" : String(value);
     });

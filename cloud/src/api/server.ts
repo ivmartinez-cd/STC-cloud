@@ -23,6 +23,7 @@ import "../jobs/incidentWorker";
 import "../jobs/scheduledReportsWorker";
 import "../jobs/supplyRequestWorker";
 import "../jobs/remoteActionWorker";
+import "../jobs/alertDigestJob";
 import { initSentry, captureError } from "../modules/observability/sentry";
 import { registerMetricsRoutes } from "../modules/metrics/http-metrics";
 import { setQueueDepthProvider } from "../modules/metrics/registry";

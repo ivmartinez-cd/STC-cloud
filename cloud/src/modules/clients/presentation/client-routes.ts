@@ -52,6 +52,7 @@ const updateClientSchema = {
         items: { type: "string", enum: [
           "alert.created", "incident.created",
           "supply_request.created", "supply_request.completed", "report.closed",
+          "alert.digest",
         ] },
       },
       device_approval_required: { type: "boolean" },

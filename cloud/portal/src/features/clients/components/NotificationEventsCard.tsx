@@ -6,6 +6,7 @@ import { useToast } from '../../../store/ToastContext';
 const ALL_EVENTS = [
   'alert.created', 'incident.created',
   'supply_request.created', 'supply_request.completed', 'report.closed',
+  'alert.digest',
 ] as const;
 
 const EVENT_LABELS: Record<string, string> = {
@@ -14,6 +15,7 @@ const EVENT_LABELS: Record<string, string> = {
   'supply_request.created': 'Pedidos de consumibles (nuevos)',
   'supply_request.completed': 'Pedidos de consumibles (completados)',
   'report.closed': 'Cierres mensuales',
+  'alert.digest': 'Resumen diario de alertas (07:00)',
 };
 
 /**

@@ -20,6 +20,7 @@ const EVENT_LABELS: Record<string, string> = {
   'supply_request.created': 'Pedido de consumible nuevo',
   'supply_request.completed': 'Pedido de consumible completado',
   'report.closed': 'Cierre mensual',
+  'alert.digest': 'Resumen diario de alertas',
 };
 
 const inputCls = 'w-full bg-slate-50 text-slate-700 text-sm font-medium px-3 py-2 rounded-xl border border-slate-100 outline-none focus:border-brand';

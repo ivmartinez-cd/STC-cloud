@@ -12,6 +12,7 @@ const TEST_FILES = [
   "src/tests/rbac.test.ts",
   "src/tests/alertCatalog.test.ts",
   "src/tests/alerts.test.ts",
+  "src/tests/alertDigest.test.ts",
   "src/tests/reports.test.ts",
   "src/tests/deviceLifecycle.test.ts",
   "src/tests/auditFeed.test.ts",
