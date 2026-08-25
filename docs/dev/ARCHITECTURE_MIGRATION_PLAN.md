@@ -1627,6 +1627,61 @@ que cablean internals de módulos a mano — el patrón correcto es un
 `presentation/<x>-wiring.ts` o una factory en el facade, como
 `createDecommissionStaleDevicesHandler` en `devices`).
 
+## Post-Fase 5 — deuda de guards y cobertura por módulo (2026-08-25)
+
+Ivan dijo "continuar" y después "una vez que termine la suite comenzar
+automáticamente con otro paso". Regla nueva del mismo día, ya global en
+`~/.claude/CLAUDE.md`: **la suite completa la lanza una sola terminal a la
+vez**; antes de lanzarla se pregunta a las otras cuánto les falta.
+
+**Deuda de guards: 37 → 2** (`40064ba`, corregido por `787ab41`). Facades
+`index.ts` nuevos en `remote-actions` (con puerto `RemoteActionStore` en
+`domain/repositories`, así `application/` deja de importar el repo Knex),
+`scheduled-reports`, `supply-requests`, `message-templates` (con puerto
+`TemplateReader`), `system-settings`, `two-factor` y `email-log`; los 6
+workers de `src/jobs`, el login 2FA y `notificationService` consumen sólo
+facades. Shared kernel: `services/businessHours.ts` →
+`shared/domain/business-hours.ts`, `services/ipRangeSpec/` →
+`shared/domain/ip-range-spec/`, tipos SNMP → `shared/domain/snmp-credential.ts`
+(`services/snmpCredentials.ts` los re-exporta: cero cambios en consumidores);
+`agents/domain` ya no importa `services/*` (`resolveLegacyCommunity`, que
+descifra, sale del dominio). Portal: `CreateIncidentModal` y
+`DeviceLifecycleModals/` → `shared/components/` (≥2 features),
+`ClientUsageChart`/`CreateMonitorModal` → `features/clients/` (un solo
+consumidor); 0 imports entre features. Quedan los 2 `.raw` con fragmentos
+SQL literales condicionales — no son input de usuario y no hay forma
+razonable de expresarlos con bindings.
+
+Dos incidentes de coordinación, ambos resueltos el mismo día y anotados en
+memoria: (1) `40064ba` barrió el WIP del par en `knex-device-repository.ts`
+porque el pathspec del commit se derivó de `git status` en la misma línea
+que el `git add` — restaurado en HEAD con `git restore --source --staged`
+sin tocar su copia de trabajo (`787ab41`); desde ahora el pathspec es una
+lista fija. (2) `cloud/package-lock.json` es un lockfile standalone para el
+Dockerfile y `60dc590` no lo había regenerado al agregar `c8` →
+`docker build` roto (EUSAGE); `4d3ecea` lo regenera fuera del workspace.
+
+**Cobertura, módulo por módulo (punto 3 de la Fase 5).** Dos hallazgos de
+medición antes que de tests: (a) los tests unitarios puros ya existentes
+(`computeNextRunAt` en `scheduledReports.test.ts`) corren en el proceso del
+runner, no en la API, así que `check-coverage` no los veía — ahora el paso
+de tests del CI también corre bajo `NODE_V8_COVERAGE` y c8 mezcla ambos
+volcados; (b) `check-sizes` contaba los callbacks de `describe()/test()` de
+los tests como funciones >20 líneas (29 entradas de deuda ficticia en el
+baseline) — exentos ahora en archivos de test; las funciones auxiliares de
+tests sí cuentan. Tests nuevos (todos registrados en `ci-test-runner.mjs` y
+`npm test`):
+- `customFieldRules.test.ts` (unitario puro, 10 casos): key/type/label/
+  options y las 5 coerciones de `mergeCustomFieldData` + errores.
+- `feedbackUseCases.test.ts` (unitario con fakes de los puertos, 6 casos):
+  403/404/camino feliz de listar y cambiar estado, alta por cualquier rol.
+- `systemSettings.test.ts` (unitario + e2e, 8 casos): validación del umbral,
+  GET/PUT de `/settings/system`, 403 para operator, 400 por schema,
+  persistencia y restauración. El módulo no tenía ningún test.
+Suite completa en worktree de `787ab41`: 746 OK, sólo los 2 rojos externos
+conocidos (2FA 6.3 rate-limit, pub/sub WS flaky). Los números por capa se
+vuelven a medir en el próximo run del CI (job `api`), que ya suma el runner.
+
 ## 0. Punto de partida (medido 2026-08-24)
 
 `stc-cloud` es un monolito con **varios dominios de negocio** bajo un mismo backend

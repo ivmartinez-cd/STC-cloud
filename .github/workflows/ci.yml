@@ -133,6 +133,10 @@ jobs:
 
       - name: Tests de integración (flush de Redis entre archivos — ver ci-test-runner.mjs)
         working-directory: cloud
+        env:
+          # Los tests unitarios (domain/application con fakes) corren en el proceso
+          # del runner, no en la API: sin esto su cobertura no contaría (check-coverage.mjs).
+          NODE_V8_COVERAGE: /tmp/v8-coverage
         run: node scripts/ci-test-runner.mjs
 
       - name: Detener API (SIGTERM → cierre ordenado → V8 vuelca el coverage)
