@@ -81,20 +81,19 @@ async function createAgentFor(clientId: string): Promise<string> {
 
 let alertSeq = 0;
 
-async function insertAlert(
-  agentId: string,
-  opts: {
-    severity: 'critical' | 'warning';
-    resolved?: boolean;
-    createdAt?: Date;
-    alertClass?: string | null;
-  }
-): Promise<void> {
+interface InsertAlertOpts {
+  severity: 'critical' | 'warning';
+  resolved?: boolean;
+  createdAt?: Date;
+  alertClass?: string | null;
+}
+
+// `type` único por llamada: `alerts_agent_type_open_uniq` es un índice único
+// parcial sobre (agent_id, type) WHERE resolved=false — dos alertas abiertas
+// del mismo agente con el mismo `type` violarían la constraint (real: las
+// alertas reales siempre difieren por tipo, toner_black_low/device_offline/etc.).
+async function insertAlert(agentId: string, opts: InsertAlertOpts): Promise<void> {
   alertSeq += 1;
-  // `type` único por llamada: `alerts_agent_type_open_uniq` es un índice único
-  // parcial sobre (agent_id, type) WHERE resolved=false — dos alertas abiertas
-  // del mismo agente con el mismo `type` violarían la constraint (real: las
-  // alertas reales siempre difieren por tipo, toner_black_low/device_offline/etc.).
   await rawDb('alerts').insert({
     agent_id: agentId,
     type: `digest_test_alert_${alertSeq}`,

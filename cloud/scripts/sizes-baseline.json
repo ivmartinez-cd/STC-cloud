@@ -1,6 +1,6 @@
 {
   "files": {
-    "src/api/server.ts": 383,
+    "src/api/server.ts": 384,
     "src/services/incidentService.ts": 363,
     "src/services/notificationService.ts": 383,
     "src/tests/alerts.test.ts": 529,
@@ -10,8 +10,6 @@
     "src/tests/ipRangeSpec.test.ts": 361,
     "src/tests/rbac.test.ts": 747,
     "src/ws/index.ts": 310,
-    "portal/src/app/layout/Layout.tsx": 468,
-    "portal/src/features/alerts/pages/Alerts.tsx": 447,
     "portal/src/features/clients/components/ApiKeysCard.tsx": 343,
     "portal/src/features/clients/pages/Clients.tsx": 334,
     "portal/src/features/monitors/components/DeviceInventoryTable.tsx": 426,
@@ -20,7 +18,7 @@
     "portal/src/features/monitors/pages/RemoteActions.tsx": 313,
     "portal/src/features/reports/pages/Reports.tsx": 367,
     "portal/src/shared/components/FeedbackModal.tsx": 335,
-    "portal/src/shared/types/monitor.ts": 351
+    "portal/src/shared/types/monitor.ts": 358
   },
   "functions": {
     "src/api/controllers/authController/agent-auth.ts": [
@@ -608,7 +606,7 @@
     "portal/src/app/layout/Layout.tsx": [
       {
         "name": "Layout",
-        "length": 385
+        "length": 27
       }
     ],
     "portal/src/app/layout/SidebarNav.tsx": [
@@ -642,7 +640,7 @@
     "portal/src/features/alerts/pages/Alerts.tsx": [
       {
         "name": "Alerts",
-        "length": 400
+        "length": 23
       }
     ],
     "portal/src/features/auth/pages/Login.tsx": [
@@ -760,55 +758,79 @@
     "portal/src/features/dashboard/components/AgentVersionsCard.tsx": [
       {
         "name": "AgentVersionsCard",
-        "length": 48
+        "length": 54
       }
     ],
     "portal/src/features/dashboard/components/AlertsByClassCard.tsx": [
       {
         "name": "AlertsByClassCard",
-        "length": 41
+        "length": 47
       }
     ],
     "portal/src/features/dashboard/components/BrandDistributionCard.tsx": [
       {
         "name": "BrandDistributionCard",
-        "length": 34
+        "length": 44
       }
     ],
     "portal/src/features/dashboard/components/CounterPanel.tsx": [
       {
         "name": "CounterPanel",
+        "length": 39
+      }
+    ],
+    "portal/src/features/dashboard/components/HeadlineCards.tsx": [
+      {
+        "name": "AlertsCard",
+        "length": 32
+      },
+      {
+        "name": "OfflineMonitorsCard",
+        "length": 31
+      },
+      {
+        "name": "VolumeCard",
         "length": 28
+      }
+    ],
+    "portal/src/features/dashboard/components/MiniBar.tsx": [
+      {
+        "name": "MiniBar",
+        "length": 22
       }
     ],
     "portal/src/features/dashboard/components/MonitorPresenceCard.tsx": [
       {
         "name": "MonitorPresenceCard",
-        "length": 38
+        "length": 43
       }
     ],
-    "portal/src/features/dashboard/components/SdsPanel.tsx": [
+    "portal/src/features/dashboard/components/StatsStrip.tsx": [
       {
-        "name": "SdsPanel",
-        "length": 30
+        "name": "buildCells",
+        "length": 26
+      },
+      {
+        "name": "StatsStrip",
+        "length": 43
       }
     ],
     "portal/src/features/dashboard/components/TopClientsCard.tsx": [
       {
         "name": "TopClientsCard",
-        "length": 31
+        "length": 55
       }
     ],
     "portal/src/features/dashboard/hooks/useDashboard.ts": [
       {
         "name": "useDashboard",
-        "length": 55
+        "length": 65
       }
     ],
     "portal/src/features/dashboard/pages/Dashboard.tsx": [
       {
         "name": "Dashboard",
-        "length": 92
+        "length": 177
       }
     ],
     "portal/src/features/devices/components/detail/AlertsTab.tsx": [

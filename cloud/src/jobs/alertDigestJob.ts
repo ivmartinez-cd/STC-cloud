@@ -93,19 +93,31 @@ function formatTopClasses(classRows: ClassCount[]): string {
     .join(', ') || 'ninguna';
 }
 
+function querySeverityCounts(clientId: string): Promise<SeverityCount[]> {
+  return alertsForClient(clientId)
+    .where('resolved', false)
+    .groupBy('severity')
+    .select('severity')
+    .count('* as count') as Promise<SeverityCount[]>;
+}
+
+function queryClassCounts(clientId: string): Promise<ClassCount[]> {
+  return alertsForClient(clientId)
+    // Sin calificar, "created_at" es ambiguo: `devices` y `agents` (ambos
+    // en el LEFT JOIN de `alertsForClient`) también tienen su propia
+    // columna `created_at` — Postgres rechaza la query entera si no se
+    // especifica de cuál tabla.
+    .where('alerts.created_at', '>=', db.raw(`now() - interval '24 hours'`))
+    .groupBy('alert_class')
+    .select('alert_class')
+    .count('* as count')
+    .orderBy('count', 'desc') as unknown as Promise<ClassCount[]>;
+}
+
 export async function gatherDigestStats(clientId: string): Promise<DigestStats> {
   const [severityRows, classRows] = await Promise.all([
-    alertsForClient(clientId).where('resolved', false).groupBy('severity').select('severity').count('* as count') as Promise<SeverityCount[]>,
-    alertsForClient(clientId)
-      // Sin calificar, "created_at" es ambiguo: `devices` y `agents` (ambos
-      // en el LEFT JOIN de `alertsForClient`) también tienen su propia
-      // columna `created_at` — Postgres rechaza la query entera si no se
-      // especifica de cuál tabla.
-      .where('alerts.created_at', '>=', db.raw(`now() - interval '24 hours'`))
-      .groupBy('alert_class')
-      .select('alert_class')
-      .count('* as count')
-      .orderBy('count', 'desc') as unknown as Promise<ClassCount[]>,
+    querySeverityCounts(clientId),
+    queryClassCounts(clientId),
   ]);
 
   return {
