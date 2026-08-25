@@ -1443,6 +1443,83 @@ alcance acordado (`clients, devices, agents, alerts, reports, audit,
 inventory, pending-devices`). Siguientes fases: 4 (frontend a
 feature-slices) y 5 (enforcement + cobertura).
 
+## Fase 4 — portal a feature-slices (2026-08-25)
+
+Ivan dijo "continuar" tras el cierre de la Fase 3. OK explícito de
+`close-hp-sds-gaps` (cero archivos del portal sin commitear de su lado) antes
+de mover nada — es el peor caso de colisión posible: 136 archivos.
+
+**Qué se movió (todo con `git mv`, historial intacto):** los 136 archivos de
+`pages/`, `components/`, `hooks/`, `lib/`, `types/` y `context/` — los seis
+directorios planos desaparecen. Destino según la estructura de frontend de
+la guía (§2):
+- `app/layout/` ← `Layout.tsx`, `layout/SidebarNav.tsx`, `layout/navTree.ts`
+  (app shell, no es un feature).
+- `store/` ← `context/{AuthContext,ToastContext}` (estado global — nombre de
+  la guía).
+- `shared/{components,hooks,lib,types}/` ← lo transversal: `BulkActionBar`,
+  `ConfirmModal`, `FeedbackModal`, `ErrorBoundary`, `ui/{BrandModal,
+  ConfirmationModal}`; `useNow`/`useTime`/`useRowSelection`; `api`/
+  `constants`/`formatters`/`deviceImage`; y los tipos consumidos por ≥2
+  features (`monitor`, `alerts`, `incidents`, `inventory`, `audit`,
+  `supplies`) — regla objetiva, medida con el grafo de imports, no a ojo.
+- `features/<f>/{pages,components,hooks,types,lib}/` para 13 features:
+  `auth` (Login + postLoginRedirect), `dashboard`, `clients`,
+  `pending-devices`, `monitors` (Agents/Monitors/MonitorDetail/RemoteActions
+  + `components/{agents,monitors}` + `Terminal` + `useMonitorDetail` +
+  tipos `agents`/`monitorsPage`), `devices` (Devices/DeviceDetail +
+  `components/devices/**` + `deviceDetailPage`), `alerts`, `incidents`,
+  `supplies` (Supplies/SupplyRequests + `supplyRequests` + `lib/supplies`),
+  `reports` (Reports/ScheduledReports + tipos), `activity`, `email-log`,
+  `settings`. El nombre `monitors` (no `agents`) sigue al nav del portal
+  ("Gestión de Agentes" muestra monitores) y al de la tabla `agents` en la
+  UI (`Monitors.tsx`/`MonitorDetail.tsx`).
+
+**Cómo:** un script (`fase4_move.py`, en el scratchpad de la sesión — no se
+commitea, es de un solo uso) con el mapa old→new, que para CADA archivo
+fuente resuelve cada import relativo contra el árbol viejo, lo traduce al
+árbol nuevo y recalcula la ruta relativa desde la nueva ubicación del
+archivo importador; después `git mv` + escritura. Dry-run previo: 136
+movimientos, 0 imports sin resolver. Un solo caso lo pasó por alto: los 3
+imports de DIRECTORIO (`…/DeviceLifecycleModals` → `index.ts`), corregidos
+a mano. Sin cambios de comportamiento: ningún archivo cambió más que sus
+imports.
+
+**Tooling adaptado:** `portal/scripts/check-icons.js` tenía hardcodeado
+`src/pages`; ahora recorre `src/features` y chequea sólo los `.tsx` bajo un
+directorio `pages/` (mismo alcance que antes). `sizes-baseline.json`
+regenerado — las únicas "violaciones nuevas" eran las MISMAS funciones de
+siempre bajo sus rutas nuevas (`AuthContext`/`ToastContext` en `store/`),
+ninguna deuda real nueva. `portal/README.md` reescrito con el árbol nuevo y
+la regla de dependencias (feature → shared/store/app, nunca al revés).
+
+**Deuda declarada, no resuelta acá:** dos imports cruzados entre features
+(`features/clients/components/DuplicateDevicesCard.tsx` y
+`features/monitors/components/DeviceInventoryTable.tsx` importan
+`features/devices/components/DeviceLifecycleModals`). Son exactamente el
+caso que la guía pide evitar; se dejan explícitos en vez de mover los
+modales a `shared/` (son lógica de ciclo de vida de `devices`, no UI
+genérica). Candidato natural para la Fase 5 (regla de imports en CI).
+`shared/types/monitor.ts` sigue siendo el grab-bag histórico
+(`DashboardData`, `Client`, `Monitor`, `Device`…) — el plan preveía derivar
+estos tipos de los DTOs del backend; eso es un cambio de contrato de wire,
+no de estructura, y queda fuera de esta pasada.
+
+**Validación:** `npm run check` del portal limpio — con el `tsc` REAL
+(`-p tsconfig.app.json`, el bug del tsc no-op lo corrigió `close-hp-sds-gaps`
+en fa59f10 el día anterior; hasta entonces cualquier "tsc limpio" del portal
+no verificaba nada), eslint y el chequeo de íconos adaptado. `vite build` OK
+(2.332 módulos). Contenedor `stc_portal` reconstruido y desplegado (OK previo
+de las 3 sesiones) y **smoke de Playwright contra `localhost:5173`: 17/17
+rutas verdes** — login (feature `auth`), las 14 rutas estáticas del nav
+(`/`, `/clients`, `/agents`, `/pending`, `/alerts`, `/incidents`,
+`/supplies`, `/supply-requests`, `/reports`, `/scheduled-reports`,
+`/activity`, `/email-log`, `/remote-actions`, `/settings`) y las 3 dinámicas
+con ids reales tomados por API (`/clients/:id`, `/monitors/:id`,
+`/devices/:id`), cada una con contenido renderizado en `<main>`, 0
+`pageerror` y 0 errores de consola. `check-sizes.mjs` limpio tras regenerar
+baseline (sólo rutas renombradas, cero deuda nueva).
+
 ## 0. Punto de partida (medido 2026-08-24)
 
 `stc-cloud` es un monolito con **varios dominios de negocio** bajo un mismo backend

@@ -358,143 +358,143 @@
     "src/version.ts": 6,
     "src/ws/index.ts": 310,
     "portal/src/App.tsx": 96,
-    "portal/src/components/BulkActionBar.tsx": 29,
-    "portal/src/components/ConfirmModal.tsx": 80,
-    "portal/src/components/ErrorBoundary.tsx": 59,
-    "portal/src/components/FeedbackModal.tsx": 335,
-    "portal/src/components/Layout.tsx": 475,
-    "portal/src/components/Terminal.tsx": 244,
-    "portal/src/components/agents/AgentTable.tsx": 194,
-    "portal/src/components/agents/ClientUsageChart.tsx": 54,
-    "portal/src/components/agents/ConfigAgentModal.tsx": 216,
-    "portal/src/components/agents/CreateAgentModal.tsx": 285,
-    "portal/src/components/agents/RegenKeyModal.tsx": 81,
-    "portal/src/components/clients/ApiKeysCard.tsx": 343,
-    "portal/src/components/clients/ClientMetricsCards.tsx": 42,
-    "portal/src/components/clients/ClientMonitorsSection.tsx": 140,
-    "portal/src/components/clients/ClientProfileCard.tsx": 57,
-    "portal/src/components/clients/CustomFieldsCard.tsx": 147,
-    "portal/src/components/clients/DeviceApprovalCard.tsx": 67,
-    "portal/src/components/clients/DuplicateDevicesCard.tsx": 72,
-    "portal/src/components/clients/IncidentRulesCard.tsx": 133,
-    "portal/src/components/clients/NotificationEventsCard.tsx": 87,
-    "portal/src/components/clients/NotificationSettingsCard.tsx": 108,
-    "portal/src/components/clients/SupplyRequestSettingsCard.tsx": 79,
-    "portal/src/components/dashboard/AgentVersionsCard.tsx": 54,
-    "portal/src/components/dashboard/AlertsByClassCard.tsx": 60,
-    "portal/src/components/dashboard/BrandDistributionCard.tsx": 43,
-    "portal/src/components/dashboard/CounterPanel.tsx": 60,
-    "portal/src/components/dashboard/MiniBar.tsx": 21,
-    "portal/src/components/dashboard/MonitorPresenceCard.tsx": 48,
-    "portal/src/components/dashboard/SdsPanel.tsx": 37,
-    "portal/src/components/dashboard/StatsStrip.tsx": 51,
-    "portal/src/components/dashboard/SuppliesPanel.tsx": 24,
-    "portal/src/components/dashboard/TopClientsCard.tsx": 37,
-    "portal/src/components/devices/DeviceLifecycleModals/BulkDecommissionModal.tsx": 50,
-    "portal/src/components/devices/DeviceLifecycleModals/BulkMonitorStateModal.tsx": 63,
-    "portal/src/components/devices/DeviceLifecycleModals/BulkMoveDevicesModal.tsx": 95,
-    "portal/src/components/devices/DeviceLifecycleModals/BulkRecommissionModal.tsx": 38,
-    "portal/src/components/devices/DeviceLifecycleModals/DecommissionDeviceModal.tsx": 49,
-    "portal/src/components/devices/DeviceLifecycleModals/EditDeviceModal.tsx": 141,
-    "portal/src/components/devices/DeviceLifecycleModals/MergeDeviceModal.tsx": 81,
-    "portal/src/components/devices/DeviceLifecycleModals/MoveDeviceModal.tsx": 94,
-    "portal/src/components/devices/DeviceLifecycleModals/index.ts": 16,
-    "portal/src/components/devices/DeviceLifecycleModals/types.ts": 12,
-    "portal/src/components/devices/detail/AlertsTab.tsx": 28,
-    "portal/src/components/devices/detail/CostsTab.tsx": 105,
-    "portal/src/components/devices/detail/CountersCard.tsx": 42,
-    "portal/src/components/devices/detail/CountersTab.tsx": 53,
-    "portal/src/components/devices/detail/DeviceDetailHeader.tsx": 92,
-    "portal/src/components/devices/detail/DeviceStatusBanners.tsx": 37,
-    "portal/src/components/devices/detail/GeneralTab.tsx": 198,
-    "portal/src/components/devices/detail/HistoryTab.tsx": 35,
-    "portal/src/components/devices/detail/IncidentsTab.tsx": 46,
-    "portal/src/components/devices/detail/MediaTab.tsx": 49,
-    "portal/src/components/devices/detail/SuppliesTable.tsx": 92,
-    "portal/src/components/devices/detail/format.ts": 5,
-    "portal/src/components/devices/detail/primitives.tsx": 51,
-    "portal/src/components/incidents/CreateIncidentModal.tsx": 130,
-    "portal/src/components/layout/SidebarNav.tsx": 165,
-    "portal/src/components/layout/navTree.ts": 44,
-    "portal/src/components/monitors/ConfigTabPanel.tsx": 281,
-    "portal/src/components/monitors/CreateMonitorModal.tsx": 258,
-    "portal/src/components/monitors/DeviceInventoryTable.tsx": 426,
-    "portal/src/components/monitors/DeviceSummaryCard.tsx": 77,
-    "portal/src/components/monitors/IpRangesEditor.tsx": 192,
-    "portal/src/components/monitors/LicenseCard.tsx": 82,
-    "portal/src/components/monitors/MonitorConfigModal.tsx": 173,
-    "portal/src/components/monitors/MonitorRegenKeyModal.tsx": 49,
-    "portal/src/components/monitors/MonitorSpecsCard.tsx": 59,
-    "portal/src/components/monitors/MonitorsTable.tsx": 147,
-    "portal/src/components/monitors/RegisterMonitorPanel.tsx": 168,
-    "portal/src/components/monitors/RemoteToolsPanel.tsx": 72,
-    "portal/src/components/monitors/ReportsTabPanel.tsx": 451,
-    "portal/src/components/monitors/SnmpCredentialsPanel.tsx": 354,
-    "portal/src/components/reports/ScheduledReportModal.tsx": 169,
-    "portal/src/components/settings/FeedbackCard.tsx": 122,
-    "portal/src/components/settings/MessageTemplatesCard.tsx": 129,
-    "portal/src/components/settings/MonitorThresholdCard.tsx": 45,
-    "portal/src/components/settings/SmtpInfoCard.tsx": 71,
-    "portal/src/components/settings/TwoFactorCard.tsx": 168,
-    "portal/src/components/settings/operators/CreateUserModal.tsx": 169,
-    "portal/src/components/settings/operators/OperatorsCard.tsx": 188,
-    "portal/src/components/settings/operators/ResetPasswordModal.tsx": 95,
-    "portal/src/components/settings/operators/RoleChangeModal.tsx": 69,
-    "portal/src/components/settings/operators/UserTable.tsx": 109,
-    "portal/src/components/supplies/SupplyRequestDetailModal.tsx": 132,
-    "portal/src/components/ui/BrandModal.tsx": 91,
-    "portal/src/components/ui/ConfirmationModal.tsx": 105,
-    "portal/src/context/AuthContext.tsx": 105,
-    "portal/src/context/ToastContext.tsx": 79,
-    "portal/src/hooks/useClientDetail.ts": 71,
-    "portal/src/hooks/useDashboard.ts": 62,
-    "portal/src/hooks/useDashboardExtras.ts": 24,
-    "portal/src/hooks/useMonitorDetail.ts": 148,
-    "portal/src/hooks/useNow.ts": 17,
-    "portal/src/hooks/useRowSelection.ts": 33,
-    "portal/src/hooks/useTime.ts": 12,
-    "portal/src/lib/api.ts": 87,
-    "portal/src/lib/constants.ts": 54,
-    "portal/src/lib/deviceImage.ts": 56,
-    "portal/src/lib/formatters.ts": 113,
-    "portal/src/lib/postLoginRedirect.ts": 29,
-    "portal/src/lib/supplies.ts": 172,
+    "portal/src/app/layout/Layout.tsx": 475,
+    "portal/src/app/layout/SidebarNav.tsx": 165,
+    "portal/src/app/layout/navTree.ts": 44,
+    "portal/src/features/activity/pages/Activity.tsx": 248,
+    "portal/src/features/alerts/pages/Alerts.tsx": 447,
+    "portal/src/features/auth/lib/postLoginRedirect.ts": 29,
+    "portal/src/features/auth/pages/Login.tsx": 177,
+    "portal/src/features/clients/components/ApiKeysCard.tsx": 343,
+    "portal/src/features/clients/components/ClientMetricsCards.tsx": 42,
+    "portal/src/features/clients/components/ClientMonitorsSection.tsx": 140,
+    "portal/src/features/clients/components/ClientProfileCard.tsx": 57,
+    "portal/src/features/clients/components/CustomFieldsCard.tsx": 147,
+    "portal/src/features/clients/components/DeviceApprovalCard.tsx": 67,
+    "portal/src/features/clients/components/DuplicateDevicesCard.tsx": 72,
+    "portal/src/features/clients/components/IncidentRulesCard.tsx": 133,
+    "portal/src/features/clients/components/NotificationEventsCard.tsx": 87,
+    "portal/src/features/clients/components/NotificationSettingsCard.tsx": 108,
+    "portal/src/features/clients/components/SupplyRequestSettingsCard.tsx": 79,
+    "portal/src/features/clients/hooks/useClientDetail.ts": 71,
+    "portal/src/features/clients/pages/ClientDetail.tsx": 162,
+    "portal/src/features/clients/pages/Clients.tsx": 334,
+    "portal/src/features/dashboard/components/AgentVersionsCard.tsx": 54,
+    "portal/src/features/dashboard/components/AlertsByClassCard.tsx": 60,
+    "portal/src/features/dashboard/components/BrandDistributionCard.tsx": 43,
+    "portal/src/features/dashboard/components/CounterPanel.tsx": 60,
+    "portal/src/features/dashboard/components/MiniBar.tsx": 21,
+    "portal/src/features/dashboard/components/MonitorPresenceCard.tsx": 48,
+    "portal/src/features/dashboard/components/SdsPanel.tsx": 37,
+    "portal/src/features/dashboard/components/StatsStrip.tsx": 51,
+    "portal/src/features/dashboard/components/SuppliesPanel.tsx": 24,
+    "portal/src/features/dashboard/components/TopClientsCard.tsx": 37,
+    "portal/src/features/dashboard/hooks/useDashboard.ts": 62,
+    "portal/src/features/dashboard/hooks/useDashboardExtras.ts": 24,
+    "portal/src/features/dashboard/pages/Dashboard.tsx": 115,
+    "portal/src/features/devices/components/DeviceLifecycleModals/BulkDecommissionModal.tsx": 50,
+    "portal/src/features/devices/components/DeviceLifecycleModals/BulkMonitorStateModal.tsx": 63,
+    "portal/src/features/devices/components/DeviceLifecycleModals/BulkMoveDevicesModal.tsx": 95,
+    "portal/src/features/devices/components/DeviceLifecycleModals/BulkRecommissionModal.tsx": 38,
+    "portal/src/features/devices/components/DeviceLifecycleModals/DecommissionDeviceModal.tsx": 49,
+    "portal/src/features/devices/components/DeviceLifecycleModals/EditDeviceModal.tsx": 141,
+    "portal/src/features/devices/components/DeviceLifecycleModals/MergeDeviceModal.tsx": 81,
+    "portal/src/features/devices/components/DeviceLifecycleModals/MoveDeviceModal.tsx": 94,
+    "portal/src/features/devices/components/DeviceLifecycleModals/index.ts": 16,
+    "portal/src/features/devices/components/DeviceLifecycleModals/types.ts": 12,
+    "portal/src/features/devices/components/detail/AlertsTab.tsx": 28,
+    "portal/src/features/devices/components/detail/CostsTab.tsx": 105,
+    "portal/src/features/devices/components/detail/CountersCard.tsx": 42,
+    "portal/src/features/devices/components/detail/CountersTab.tsx": 53,
+    "portal/src/features/devices/components/detail/DeviceDetailHeader.tsx": 92,
+    "portal/src/features/devices/components/detail/DeviceStatusBanners.tsx": 37,
+    "portal/src/features/devices/components/detail/GeneralTab.tsx": 198,
+    "portal/src/features/devices/components/detail/HistoryTab.tsx": 35,
+    "portal/src/features/devices/components/detail/IncidentsTab.tsx": 46,
+    "portal/src/features/devices/components/detail/MediaTab.tsx": 49,
+    "portal/src/features/devices/components/detail/SuppliesTable.tsx": 92,
+    "portal/src/features/devices/components/detail/format.ts": 5,
+    "portal/src/features/devices/components/detail/primitives.tsx": 51,
+    "portal/src/features/devices/pages/DeviceDetail.tsx": 287,
+    "portal/src/features/devices/pages/Devices.tsx": 261,
+    "portal/src/features/devices/types/deviceDetailPage.ts": 35,
+    "portal/src/features/email-log/pages/EmailLog.tsx": 145,
+    "portal/src/features/incidents/components/CreateIncidentModal.tsx": 130,
+    "portal/src/features/incidents/pages/IncidentDetail.tsx": 264,
+    "portal/src/features/incidents/pages/Incidents.tsx": 211,
+    "portal/src/features/monitors/components/ConfigTabPanel.tsx": 281,
+    "portal/src/features/monitors/components/CreateMonitorModal.tsx": 258,
+    "portal/src/features/monitors/components/DeviceInventoryTable.tsx": 426,
+    "portal/src/features/monitors/components/DeviceSummaryCard.tsx": 77,
+    "portal/src/features/monitors/components/IpRangesEditor.tsx": 192,
+    "portal/src/features/monitors/components/LicenseCard.tsx": 82,
+    "portal/src/features/monitors/components/MonitorConfigModal.tsx": 173,
+    "portal/src/features/monitors/components/MonitorRegenKeyModal.tsx": 49,
+    "portal/src/features/monitors/components/MonitorSpecsCard.tsx": 59,
+    "portal/src/features/monitors/components/MonitorsTable.tsx": 147,
+    "portal/src/features/monitors/components/RegisterMonitorPanel.tsx": 168,
+    "portal/src/features/monitors/components/RemoteToolsPanel.tsx": 72,
+    "portal/src/features/monitors/components/ReportsTabPanel.tsx": 451,
+    "portal/src/features/monitors/components/SnmpCredentialsPanel.tsx": 354,
+    "portal/src/features/monitors/components/Terminal.tsx": 244,
+    "portal/src/features/monitors/components/agents/AgentTable.tsx": 194,
+    "portal/src/features/monitors/components/agents/ClientUsageChart.tsx": 54,
+    "portal/src/features/monitors/components/agents/ConfigAgentModal.tsx": 216,
+    "portal/src/features/monitors/components/agents/CreateAgentModal.tsx": 285,
+    "portal/src/features/monitors/components/agents/RegenKeyModal.tsx": 81,
+    "portal/src/features/monitors/hooks/useMonitorDetail.ts": 148,
+    "portal/src/features/monitors/pages/Agents.tsx": 120,
+    "portal/src/features/monitors/pages/MonitorDetail.tsx": 253,
+    "portal/src/features/monitors/pages/Monitors.tsx": 163,
+    "portal/src/features/monitors/pages/RemoteActions.tsx": 313,
+    "portal/src/features/monitors/types/agents.ts": 83,
+    "portal/src/features/monitors/types/monitorsPage.ts": 24,
+    "portal/src/features/pending-devices/pages/PendingDevices.tsx": 270,
+    "portal/src/features/pending-devices/types/pendingDevices.ts": 24,
+    "portal/src/features/reports/components/ScheduledReportModal.tsx": 169,
+    "portal/src/features/reports/pages/Reports.tsx": 367,
+    "portal/src/features/reports/pages/ScheduledReports.tsx": 160,
+    "portal/src/features/reports/types/reports.ts": 78,
+    "portal/src/features/reports/types/scheduledReports.ts": 43,
+    "portal/src/features/settings/components/FeedbackCard.tsx": 122,
+    "portal/src/features/settings/components/MessageTemplatesCard.tsx": 129,
+    "portal/src/features/settings/components/MonitorThresholdCard.tsx": 45,
+    "portal/src/features/settings/components/SmtpInfoCard.tsx": 71,
+    "portal/src/features/settings/components/TwoFactorCard.tsx": 168,
+    "portal/src/features/settings/components/operators/CreateUserModal.tsx": 169,
+    "portal/src/features/settings/components/operators/OperatorsCard.tsx": 188,
+    "portal/src/features/settings/components/operators/ResetPasswordModal.tsx": 95,
+    "portal/src/features/settings/components/operators/RoleChangeModal.tsx": 69,
+    "portal/src/features/settings/components/operators/UserTable.tsx": 109,
+    "portal/src/features/settings/pages/Settings.tsx": 90,
+    "portal/src/features/settings/types/settings.ts": 31,
+    "portal/src/features/supplies/components/SupplyRequestDetailModal.tsx": 132,
+    "portal/src/features/supplies/lib/supplies.ts": 172,
+    "portal/src/features/supplies/pages/Supplies.tsx": 253,
+    "portal/src/features/supplies/pages/SupplyRequests.tsx": 135,
+    "portal/src/features/supplies/types/supplyRequests.ts": 62,
     "portal/src/main.tsx": 14,
-    "portal/src/pages/Activity.tsx": 248,
-    "portal/src/pages/Agents.tsx": 120,
-    "portal/src/pages/Alerts.tsx": 447,
-    "portal/src/pages/ClientDetail.tsx": 162,
-    "portal/src/pages/Clients.tsx": 334,
-    "portal/src/pages/Dashboard.tsx": 115,
-    "portal/src/pages/DeviceDetail.tsx": 287,
-    "portal/src/pages/Devices.tsx": 261,
-    "portal/src/pages/EmailLog.tsx": 145,
-    "portal/src/pages/IncidentDetail.tsx": 264,
-    "portal/src/pages/Incidents.tsx": 211,
-    "portal/src/pages/Login.tsx": 177,
-    "portal/src/pages/MonitorDetail.tsx": 253,
-    "portal/src/pages/Monitors.tsx": 163,
-    "portal/src/pages/PendingDevices.tsx": 270,
-    "portal/src/pages/RemoteActions.tsx": 313,
-    "portal/src/pages/Reports.tsx": 367,
-    "portal/src/pages/ScheduledReports.tsx": 160,
-    "portal/src/pages/Settings.tsx": 90,
-    "portal/src/pages/Supplies.tsx": 253,
-    "portal/src/pages/SupplyRequests.tsx": 135,
-    "portal/src/types/agents.ts": 83,
-    "portal/src/types/alerts.ts": 68,
-    "portal/src/types/audit.ts": 29,
-    "portal/src/types/deviceDetailPage.ts": 35,
-    "portal/src/types/incidents.ts": 75,
-    "portal/src/types/inventory.ts": 24,
-    "portal/src/types/monitor.ts": 351,
-    "portal/src/types/monitorsPage.ts": 24,
-    "portal/src/types/pendingDevices.ts": 24,
-    "portal/src/types/reports.ts": 78,
-    "portal/src/types/scheduledReports.ts": 43,
-    "portal/src/types/settings.ts": 31,
-    "portal/src/types/supplies.ts": 45,
-    "portal/src/types/supplyRequests.ts": 62
+    "portal/src/shared/components/BrandModal.tsx": 91,
+    "portal/src/shared/components/BulkActionBar.tsx": 29,
+    "portal/src/shared/components/ConfirmModal.tsx": 80,
+    "portal/src/shared/components/ConfirmationModal.tsx": 105,
+    "portal/src/shared/components/ErrorBoundary.tsx": 59,
+    "portal/src/shared/components/FeedbackModal.tsx": 335,
+    "portal/src/shared/hooks/useNow.ts": 17,
+    "portal/src/shared/hooks/useRowSelection.ts": 33,
+    "portal/src/shared/hooks/useTime.ts": 12,
+    "portal/src/shared/lib/api.ts": 87,
+    "portal/src/shared/lib/constants.ts": 54,
+    "portal/src/shared/lib/deviceImage.ts": 56,
+    "portal/src/shared/lib/formatters.ts": 113,
+    "portal/src/shared/types/alerts.ts": 68,
+    "portal/src/shared/types/audit.ts": 29,
+    "portal/src/shared/types/incidents.ts": 75,
+    "portal/src/shared/types/inventory.ts": 24,
+    "portal/src/shared/types/monitor.ts": 351,
+    "portal/src/shared/types/supplies.ts": 45,
+    "portal/src/store/AuthContext.tsx": 105,
+    "portal/src/store/ToastContext.tsx": 79
   },
   "functions": {
     "src/api/controllers/authController/agent-auth.ts": [
@@ -1723,333 +1723,13 @@
         "length": 38
       }
     ],
-    "portal/src/components/ConfirmModal.tsx": [
-      {
-        "name": "ConfirmModal",
-        "length": 62
-      }
-    ],
-    "portal/src/components/ErrorBoundary.tsx": [
-      {
-        "name": "render",
-        "length": 30
-      }
-    ],
-    "portal/src/components/FeedbackModal.tsx": [
-      {
-        "name": "FeedbackModal",
-        "length": 323
-      },
-      {
-        "name": "handleSubmit",
-        "length": 21
-      }
-    ],
-    "portal/src/components/Layout.tsx": [
+    "portal/src/app/layout/Layout.tsx": [
       {
         "name": "Layout",
         "length": 385
       }
     ],
-    "portal/src/components/Terminal.tsx": [
-      {
-        "name": "Terminal",
-        "length": 226
-      },
-      {
-        "name": "useEffect",
-        "length": 59
-      },
-      {
-        "name": "connect",
-        "length": 46
-      },
-      {
-        "name": "handleExecute",
-        "length": 26
-      }
-    ],
-    "portal/src/components/agents/AgentTable.tsx": [
-      {
-        "name": "AgentTable",
-        "length": 173
-      }
-    ],
-    "portal/src/components/agents/ConfigAgentModal.tsx": [
-      {
-        "name": "ConfigAgentModal",
-        "length": 201
-      },
-      {
-        "name": "saveConfig",
-        "length": 28
-      }
-    ],
-    "portal/src/components/agents/CreateAgentModal.tsx": [
-      {
-        "name": "CreateAgentModal",
-        "length": 267
-      },
-      {
-        "name": "generateKey",
-        "length": 26
-      }
-    ],
-    "portal/src/components/agents/RegenKeyModal.tsx": [
-      {
-        "name": "RegenKeyModal",
-        "length": 71
-      }
-    ],
-    "portal/src/components/clients/ApiKeysCard.tsx": [
-      {
-        "name": "NewKeyModal",
-        "length": 57
-      },
-      {
-        "name": "WebhookSection",
-        "length": 137
-      },
-      {
-        "name": "ApiKeysCard",
-        "length": 126
-      }
-    ],
-    "portal/src/components/clients/ClientMetricsCards.tsx": [
-      {
-        "name": "ClientMetricsCards",
-        "length": 39
-      }
-    ],
-    "portal/src/components/clients/ClientMonitorsSection.tsx": [
-      {
-        "name": "MonitorStatusBadge",
-        "length": 25
-      },
-      {
-        "name": "ClientMonitorsSection",
-        "length": 98
-      }
-    ],
-    "portal/src/components/clients/ClientProfileCard.tsx": [
-      {
-        "name": "ClientProfileCard",
-        "length": 53
-      }
-    ],
-    "portal/src/components/clients/CustomFieldsCard.tsx": [
-      {
-        "name": "CustomFieldsCard",
-        "length": 129
-      }
-    ],
-    "portal/src/components/clients/DeviceApprovalCard.tsx": [
-      {
-        "name": "DeviceApprovalCard",
-        "length": 53
-      }
-    ],
-    "portal/src/components/clients/DuplicateDevicesCard.tsx": [
-      {
-        "name": "DuplicateDevicesCard",
-        "length": 53
-      }
-    ],
-    "portal/src/components/clients/IncidentRulesCard.tsx": [
-      {
-        "name": "IncidentRulesCard",
-        "length": 117
-      }
-    ],
-    "portal/src/components/clients/NotificationEventsCard.tsx": [
-      {
-        "name": "NotificationEventsCard",
-        "length": 63
-      }
-    ],
-    "portal/src/components/clients/NotificationSettingsCard.tsx": [
-      {
-        "name": "NotificationSettingsCard",
-        "length": 97
-      }
-    ],
-    "portal/src/components/clients/SupplyRequestSettingsCard.tsx": [
-      {
-        "name": "SupplyRequestSettingsCard",
-        "length": 66
-      }
-    ],
-    "portal/src/components/dashboard/AgentVersionsCard.tsx": [
-      {
-        "name": "AgentVersionsCard",
-        "length": 48
-      }
-    ],
-    "portal/src/components/dashboard/AlertsByClassCard.tsx": [
-      {
-        "name": "AlertsByClassCard",
-        "length": 41
-      }
-    ],
-    "portal/src/components/dashboard/BrandDistributionCard.tsx": [
-      {
-        "name": "BrandDistributionCard",
-        "length": 34
-      }
-    ],
-    "portal/src/components/dashboard/CounterPanel.tsx": [
-      {
-        "name": "CounterPanel",
-        "length": 28
-      }
-    ],
-    "portal/src/components/dashboard/MonitorPresenceCard.tsx": [
-      {
-        "name": "MonitorPresenceCard",
-        "length": 38
-      }
-    ],
-    "portal/src/components/dashboard/SdsPanel.tsx": [
-      {
-        "name": "SdsPanel",
-        "length": 30
-      }
-    ],
-    "portal/src/components/dashboard/TopClientsCard.tsx": [
-      {
-        "name": "TopClientsCard",
-        "length": 31
-      }
-    ],
-    "portal/src/components/devices/DeviceLifecycleModals/BulkDecommissionModal.tsx": [
-      {
-        "name": "BulkDecommissionModal",
-        "length": 37
-      }
-    ],
-    "portal/src/components/devices/DeviceLifecycleModals/BulkMonitorStateModal.tsx": [
-      {
-        "name": "BulkMonitorStateModal",
-        "length": 43
-      }
-    ],
-    "portal/src/components/devices/DeviceLifecycleModals/BulkMoveDevicesModal.tsx": [
-      {
-        "name": "BulkMoveDevicesModal",
-        "length": 80
-      }
-    ],
-    "portal/src/components/devices/DeviceLifecycleModals/BulkRecommissionModal.tsx": [
-      {
-        "name": "BulkRecommissionModal",
-        "length": 25
-      }
-    ],
-    "portal/src/components/devices/DeviceLifecycleModals/DecommissionDeviceModal.tsx": [
-      {
-        "name": "DecommissionDeviceModal",
-        "length": 37
-      }
-    ],
-    "portal/src/components/devices/DeviceLifecycleModals/EditDeviceModal.tsx": [
-      {
-        "name": "EditDeviceModal",
-        "length": 117
-      },
-      {
-        "name": "save",
-        "length": 23
-      }
-    ],
-    "portal/src/components/devices/DeviceLifecycleModals/MergeDeviceModal.tsx": [
-      {
-        "name": "MergeDeviceModal",
-        "length": 62
-      }
-    ],
-    "portal/src/components/devices/DeviceLifecycleModals/MoveDeviceModal.tsx": [
-      {
-        "name": "MoveDeviceModal",
-        "length": 79
-      }
-    ],
-    "portal/src/components/devices/detail/AlertsTab.tsx": [
-      {
-        "name": "AlertsTab",
-        "length": 22
-      }
-    ],
-    "portal/src/components/devices/detail/CostsTab.tsx": [
-      {
-        "name": "CostsTab",
-        "length": 73
-      }
-    ],
-    "portal/src/components/devices/detail/CountersCard.tsx": [
-      {
-        "name": "CountersCard",
-        "length": 34
-      }
-    ],
-    "portal/src/components/devices/detail/CountersTab.tsx": [
-      {
-        "name": "CountersTab",
-        "length": 45
-      }
-    ],
-    "portal/src/components/devices/detail/DeviceDetailHeader.tsx": [
-      {
-        "name": "DeviceDetailHeader",
-        "length": 86
-      }
-    ],
-    "portal/src/components/devices/detail/DeviceStatusBanners.tsx": [
-      {
-        "name": "DeviceStatusBanners",
-        "length": 30
-      }
-    ],
-    "portal/src/components/devices/detail/GeneralTab.tsx": [
-      {
-        "name": "GeneralTab",
-        "length": 168
-      }
-    ],
-    "portal/src/components/devices/detail/HistoryTab.tsx": [
-      {
-        "name": "HistoryTab",
-        "length": 29
-      }
-    ],
-    "portal/src/components/devices/detail/IncidentsTab.tsx": [
-      {
-        "name": "IncidentsTab",
-        "length": 38
-      }
-    ],
-    "portal/src/components/devices/detail/MediaTab.tsx": [
-      {
-        "name": "MediaTab",
-        "length": 43
-      }
-    ],
-    "portal/src/components/devices/detail/SuppliesTable.tsx": [
-      {
-        "name": "SuppliesTable",
-        "length": 85
-      }
-    ],
-    "portal/src/components/incidents/CreateIncidentModal.tsx": [
-      {
-        "name": "CreateIncidentModal",
-        "length": 105
-      },
-      {
-        "name": "create",
-        "length": 21
-      }
-    ],
-    "portal/src/components/layout/SidebarNav.tsx": [
+    "portal/src/app/layout/SidebarNav.tsx": [
       {
         "name": "LeafRow",
         "length": 62
@@ -2063,7 +1743,349 @@
         "length": 68
       }
     ],
-    "portal/src/components/monitors/ConfigTabPanel.tsx": [
+    "portal/src/features/activity/pages/Activity.tsx": [
+      {
+        "name": "Activity",
+        "length": 202
+      },
+      {
+        "name": "useCallback",
+        "length": 21
+      },
+      {
+        "name": "anonymous",
+        "length": 38
+      }
+    ],
+    "portal/src/features/alerts/pages/Alerts.tsx": [
+      {
+        "name": "Alerts",
+        "length": 400
+      }
+    ],
+    "portal/src/features/auth/pages/Login.tsx": [
+      {
+        "name": "Login",
+        "length": 167
+      }
+    ],
+    "portal/src/features/clients/components/ApiKeysCard.tsx": [
+      {
+        "name": "NewKeyModal",
+        "length": 57
+      },
+      {
+        "name": "WebhookSection",
+        "length": 137
+      },
+      {
+        "name": "ApiKeysCard",
+        "length": 126
+      }
+    ],
+    "portal/src/features/clients/components/ClientMetricsCards.tsx": [
+      {
+        "name": "ClientMetricsCards",
+        "length": 39
+      }
+    ],
+    "portal/src/features/clients/components/ClientMonitorsSection.tsx": [
+      {
+        "name": "MonitorStatusBadge",
+        "length": 25
+      },
+      {
+        "name": "ClientMonitorsSection",
+        "length": 98
+      }
+    ],
+    "portal/src/features/clients/components/ClientProfileCard.tsx": [
+      {
+        "name": "ClientProfileCard",
+        "length": 53
+      }
+    ],
+    "portal/src/features/clients/components/CustomFieldsCard.tsx": [
+      {
+        "name": "CustomFieldsCard",
+        "length": 129
+      }
+    ],
+    "portal/src/features/clients/components/DeviceApprovalCard.tsx": [
+      {
+        "name": "DeviceApprovalCard",
+        "length": 53
+      }
+    ],
+    "portal/src/features/clients/components/DuplicateDevicesCard.tsx": [
+      {
+        "name": "DuplicateDevicesCard",
+        "length": 53
+      }
+    ],
+    "portal/src/features/clients/components/IncidentRulesCard.tsx": [
+      {
+        "name": "IncidentRulesCard",
+        "length": 117
+      }
+    ],
+    "portal/src/features/clients/components/NotificationEventsCard.tsx": [
+      {
+        "name": "NotificationEventsCard",
+        "length": 63
+      }
+    ],
+    "portal/src/features/clients/components/NotificationSettingsCard.tsx": [
+      {
+        "name": "NotificationSettingsCard",
+        "length": 97
+      }
+    ],
+    "portal/src/features/clients/components/SupplyRequestSettingsCard.tsx": [
+      {
+        "name": "SupplyRequestSettingsCard",
+        "length": 66
+      }
+    ],
+    "portal/src/features/clients/hooks/useClientDetail.ts": [
+      {
+        "name": "useClientDetail",
+        "length": 66
+      }
+    ],
+    "portal/src/features/clients/pages/ClientDetail.tsx": [
+      {
+        "name": "ClientDetail",
+        "length": 136
+      }
+    ],
+    "portal/src/features/clients/pages/Clients.tsx": [
+      {
+        "name": "StatusBadge",
+        "length": 24
+      },
+      {
+        "name": "Clients",
+        "length": 285
+      }
+    ],
+    "portal/src/features/dashboard/components/AgentVersionsCard.tsx": [
+      {
+        "name": "AgentVersionsCard",
+        "length": 48
+      }
+    ],
+    "portal/src/features/dashboard/components/AlertsByClassCard.tsx": [
+      {
+        "name": "AlertsByClassCard",
+        "length": 41
+      }
+    ],
+    "portal/src/features/dashboard/components/BrandDistributionCard.tsx": [
+      {
+        "name": "BrandDistributionCard",
+        "length": 34
+      }
+    ],
+    "portal/src/features/dashboard/components/CounterPanel.tsx": [
+      {
+        "name": "CounterPanel",
+        "length": 28
+      }
+    ],
+    "portal/src/features/dashboard/components/MonitorPresenceCard.tsx": [
+      {
+        "name": "MonitorPresenceCard",
+        "length": 38
+      }
+    ],
+    "portal/src/features/dashboard/components/SdsPanel.tsx": [
+      {
+        "name": "SdsPanel",
+        "length": 30
+      }
+    ],
+    "portal/src/features/dashboard/components/TopClientsCard.tsx": [
+      {
+        "name": "TopClientsCard",
+        "length": 31
+      }
+    ],
+    "portal/src/features/dashboard/hooks/useDashboard.ts": [
+      {
+        "name": "useDashboard",
+        "length": 55
+      }
+    ],
+    "portal/src/features/dashboard/pages/Dashboard.tsx": [
+      {
+        "name": "Dashboard",
+        "length": 92
+      }
+    ],
+    "portal/src/features/devices/components/DeviceLifecycleModals/BulkDecommissionModal.tsx": [
+      {
+        "name": "BulkDecommissionModal",
+        "length": 37
+      }
+    ],
+    "portal/src/features/devices/components/DeviceLifecycleModals/BulkMonitorStateModal.tsx": [
+      {
+        "name": "BulkMonitorStateModal",
+        "length": 43
+      }
+    ],
+    "portal/src/features/devices/components/DeviceLifecycleModals/BulkMoveDevicesModal.tsx": [
+      {
+        "name": "BulkMoveDevicesModal",
+        "length": 80
+      }
+    ],
+    "portal/src/features/devices/components/DeviceLifecycleModals/BulkRecommissionModal.tsx": [
+      {
+        "name": "BulkRecommissionModal",
+        "length": 25
+      }
+    ],
+    "portal/src/features/devices/components/DeviceLifecycleModals/DecommissionDeviceModal.tsx": [
+      {
+        "name": "DecommissionDeviceModal",
+        "length": 37
+      }
+    ],
+    "portal/src/features/devices/components/DeviceLifecycleModals/EditDeviceModal.tsx": [
+      {
+        "name": "EditDeviceModal",
+        "length": 117
+      },
+      {
+        "name": "save",
+        "length": 23
+      }
+    ],
+    "portal/src/features/devices/components/DeviceLifecycleModals/MergeDeviceModal.tsx": [
+      {
+        "name": "MergeDeviceModal",
+        "length": 62
+      }
+    ],
+    "portal/src/features/devices/components/DeviceLifecycleModals/MoveDeviceModal.tsx": [
+      {
+        "name": "MoveDeviceModal",
+        "length": 79
+      }
+    ],
+    "portal/src/features/devices/components/detail/AlertsTab.tsx": [
+      {
+        "name": "AlertsTab",
+        "length": 22
+      }
+    ],
+    "portal/src/features/devices/components/detail/CostsTab.tsx": [
+      {
+        "name": "CostsTab",
+        "length": 73
+      }
+    ],
+    "portal/src/features/devices/components/detail/CountersCard.tsx": [
+      {
+        "name": "CountersCard",
+        "length": 34
+      }
+    ],
+    "portal/src/features/devices/components/detail/CountersTab.tsx": [
+      {
+        "name": "CountersTab",
+        "length": 45
+      }
+    ],
+    "portal/src/features/devices/components/detail/DeviceDetailHeader.tsx": [
+      {
+        "name": "DeviceDetailHeader",
+        "length": 86
+      }
+    ],
+    "portal/src/features/devices/components/detail/DeviceStatusBanners.tsx": [
+      {
+        "name": "DeviceStatusBanners",
+        "length": 30
+      }
+    ],
+    "portal/src/features/devices/components/detail/GeneralTab.tsx": [
+      {
+        "name": "GeneralTab",
+        "length": 168
+      }
+    ],
+    "portal/src/features/devices/components/detail/HistoryTab.tsx": [
+      {
+        "name": "HistoryTab",
+        "length": 29
+      }
+    ],
+    "portal/src/features/devices/components/detail/IncidentsTab.tsx": [
+      {
+        "name": "IncidentsTab",
+        "length": 38
+      }
+    ],
+    "portal/src/features/devices/components/detail/MediaTab.tsx": [
+      {
+        "name": "MediaTab",
+        "length": 43
+      }
+    ],
+    "portal/src/features/devices/components/detail/SuppliesTable.tsx": [
+      {
+        "name": "SuppliesTable",
+        "length": 85
+      }
+    ],
+    "portal/src/features/devices/pages/DeviceDetail.tsx": [
+      {
+        "name": "DeviceDetail",
+        "length": 258
+      }
+    ],
+    "portal/src/features/devices/pages/Devices.tsx": [
+      {
+        "name": "Devices",
+        "length": 232
+      },
+      {
+        "name": "anonymous",
+        "length": 103
+      }
+    ],
+    "portal/src/features/email-log/pages/EmailLog.tsx": [
+      {
+        "name": "EmailLog",
+        "length": 94
+      }
+    ],
+    "portal/src/features/incidents/components/CreateIncidentModal.tsx": [
+      {
+        "name": "CreateIncidentModal",
+        "length": 105
+      },
+      {
+        "name": "create",
+        "length": 21
+      }
+    ],
+    "portal/src/features/incidents/pages/IncidentDetail.tsx": [
+      {
+        "name": "IncidentDetail",
+        "length": 238
+      }
+    ],
+    "portal/src/features/incidents/pages/Incidents.tsx": [
+      {
+        "name": "Incidents",
+        "length": 178
+      }
+    ],
+    "portal/src/features/monitors/components/ConfigTabPanel.tsx": [
       {
         "name": "ConfigTabPanel",
         "length": 251
@@ -2073,13 +2095,13 @@
         "length": 37
       }
     ],
-    "portal/src/components/monitors/CreateMonitorModal.tsx": [
+    "portal/src/features/monitors/components/CreateMonitorModal.tsx": [
       {
         "name": "CreateMonitorModal",
         "length": 240
       }
     ],
-    "portal/src/components/monitors/DeviceInventoryTable.tsx": [
+    "portal/src/features/monitors/components/DeviceInventoryTable.tsx": [
       {
         "name": "exportCountersCSV",
         "length": 31
@@ -2097,13 +2119,13 @@
         "length": 163
       }
     ],
-    "portal/src/components/monitors/DeviceSummaryCard.tsx": [
+    "portal/src/features/monitors/components/DeviceSummaryCard.tsx": [
       {
         "name": "DeviceSummaryCard",
         "length": 64
       }
     ],
-    "portal/src/components/monitors/IpRangesEditor.tsx": [
+    "portal/src/features/monitors/components/IpRangesEditor.tsx": [
       {
         "name": "IpRangesEditor",
         "length": 113
@@ -2117,7 +2139,7 @@
         "length": 44
       }
     ],
-    "portal/src/components/monitors/MonitorConfigModal.tsx": [
+    "portal/src/features/monitors/components/MonitorConfigModal.tsx": [
       {
         "name": "MonitorConfigModal",
         "length": 159
@@ -2127,19 +2149,19 @@
         "length": 21
       }
     ],
-    "portal/src/components/monitors/MonitorRegenKeyModal.tsx": [
+    "portal/src/features/monitors/components/MonitorRegenKeyModal.tsx": [
       {
         "name": "MonitorRegenKeyModal",
         "length": 45
       }
     ],
-    "portal/src/components/monitors/MonitorsTable.tsx": [
+    "portal/src/features/monitors/components/MonitorsTable.tsx": [
       {
         "name": "MonitorsTable",
         "length": 131
       }
     ],
-    "portal/src/components/monitors/RegisterMonitorPanel.tsx": [
+    "portal/src/features/monitors/components/RegisterMonitorPanel.tsx": [
       {
         "name": "RegisterMonitorPanel",
         "length": 159
@@ -2149,7 +2171,7 @@
         "length": 24
       }
     ],
-    "portal/src/components/monitors/ReportsTabPanel.tsx": [
+    "portal/src/features/monitors/components/ReportsTabPanel.tsx": [
       {
         "name": "exportReportCSV",
         "length": 35
@@ -2171,7 +2193,7 @@
         "length": 33
       }
     ],
-    "portal/src/components/monitors/SnmpCredentialsPanel.tsx": [
+    "portal/src/features/monitors/components/SnmpCredentialsPanel.tsx": [
       {
         "name": "SnmpCredentialsPanel",
         "length": 168
@@ -2189,7 +2211,93 @@
         "length": 84
       }
     ],
-    "portal/src/components/reports/ScheduledReportModal.tsx": [
+    "portal/src/features/monitors/components/Terminal.tsx": [
+      {
+        "name": "Terminal",
+        "length": 226
+      },
+      {
+        "name": "useEffect",
+        "length": 59
+      },
+      {
+        "name": "connect",
+        "length": 46
+      },
+      {
+        "name": "handleExecute",
+        "length": 26
+      }
+    ],
+    "portal/src/features/monitors/components/agents/AgentTable.tsx": [
+      {
+        "name": "AgentTable",
+        "length": 173
+      }
+    ],
+    "portal/src/features/monitors/components/agents/ConfigAgentModal.tsx": [
+      {
+        "name": "ConfigAgentModal",
+        "length": 201
+      },
+      {
+        "name": "saveConfig",
+        "length": 28
+      }
+    ],
+    "portal/src/features/monitors/components/agents/CreateAgentModal.tsx": [
+      {
+        "name": "CreateAgentModal",
+        "length": 267
+      },
+      {
+        "name": "generateKey",
+        "length": 26
+      }
+    ],
+    "portal/src/features/monitors/components/agents/RegenKeyModal.tsx": [
+      {
+        "name": "RegenKeyModal",
+        "length": 71
+      }
+    ],
+    "portal/src/features/monitors/hooks/useMonitorDetail.ts": [
+      {
+        "name": "useMonitorDetail",
+        "length": 139
+      }
+    ],
+    "portal/src/features/monitors/pages/Agents.tsx": [
+      {
+        "name": "Agents",
+        "length": 106
+      }
+    ],
+    "portal/src/features/monitors/pages/MonitorDetail.tsx": [
+      {
+        "name": "MonitorDetail",
+        "length": 224
+      }
+    ],
+    "portal/src/features/monitors/pages/Monitors.tsx": [
+      {
+        "name": "Monitors",
+        "length": 150
+      }
+    ],
+    "portal/src/features/monitors/pages/RemoteActions.tsx": [
+      {
+        "name": "RemoteActions",
+        "length": 241
+      }
+    ],
+    "portal/src/features/pending-devices/pages/PendingDevices.tsx": [
+      {
+        "name": "PendingDevices",
+        "length": 251
+      }
+    ],
+    "portal/src/features/reports/components/ScheduledReportModal.tsx": [
       {
         "name": "ScheduledReportModal",
         "length": 141
@@ -2199,7 +2307,19 @@
         "length": 26
       }
     ],
-    "portal/src/components/settings/FeedbackCard.tsx": [
+    "portal/src/features/reports/pages/Reports.tsx": [
+      {
+        "name": "Reports",
+        "length": 341
+      }
+    ],
+    "portal/src/features/reports/pages/ScheduledReports.tsx": [
+      {
+        "name": "ScheduledReports",
+        "length": 136
+      }
+    ],
+    "portal/src/features/settings/components/FeedbackCard.tsx": [
       {
         "name": "FeedbackCard",
         "length": 116
@@ -2209,31 +2329,31 @@
         "length": 61
       }
     ],
-    "portal/src/components/settings/MessageTemplatesCard.tsx": [
+    "portal/src/features/settings/components/MessageTemplatesCard.tsx": [
       {
         "name": "MessageTemplatesCard",
         "length": 96
       }
     ],
-    "portal/src/components/settings/MonitorThresholdCard.tsx": [
+    "portal/src/features/settings/components/MonitorThresholdCard.tsx": [
       {
         "name": "MonitorThresholdCard",
         "length": 41
       }
     ],
-    "portal/src/components/settings/SmtpInfoCard.tsx": [
+    "portal/src/features/settings/components/SmtpInfoCard.tsx": [
       {
         "name": "SmtpInfoCard",
         "length": 52
       }
     ],
-    "portal/src/components/settings/TwoFactorCard.tsx": [
+    "portal/src/features/settings/components/TwoFactorCard.tsx": [
       {
         "name": "TwoFactorCard",
         "length": 151
       }
     ],
-    "portal/src/components/settings/operators/CreateUserModal.tsx": [
+    "portal/src/features/settings/components/operators/CreateUserModal.tsx": [
       {
         "name": "CreateUserModal",
         "length": 163
@@ -2243,49 +2363,113 @@
         "length": 25
       }
     ],
-    "portal/src/components/settings/operators/OperatorsCard.tsx": [
+    "portal/src/features/settings/components/operators/OperatorsCard.tsx": [
       {
         "name": "OperatorsCard",
         "length": 177
       }
     ],
-    "portal/src/components/settings/operators/ResetPasswordModal.tsx": [
+    "portal/src/features/settings/components/operators/ResetPasswordModal.tsx": [
       {
         "name": "ResetPasswordModal",
         "length": 89
       }
     ],
-    "portal/src/components/settings/operators/RoleChangeModal.tsx": [
+    "portal/src/features/settings/components/operators/RoleChangeModal.tsx": [
       {
         "name": "RoleChangeModal",
         "length": 64
       }
     ],
-    "portal/src/components/settings/operators/UserTable.tsx": [
+    "portal/src/features/settings/components/operators/UserTable.tsx": [
       {
         "name": "UserTable",
         "length": 105
       }
     ],
-    "portal/src/components/supplies/SupplyRequestDetailModal.tsx": [
+    "portal/src/features/settings/pages/Settings.tsx": [
+      {
+        "name": "Settings",
+        "length": 74
+      }
+    ],
+    "portal/src/features/supplies/components/SupplyRequestDetailModal.tsx": [
       {
         "name": "SupplyRequestDetailModal",
         "length": 102
       }
     ],
-    "portal/src/components/ui/BrandModal.tsx": [
+    "portal/src/features/supplies/lib/supplies.ts": [
+      {
+        "name": "buildSupplyRows",
+        "length": 43
+      }
+    ],
+    "portal/src/features/supplies/pages/Supplies.tsx": [
+      {
+        "name": "Supplies",
+        "length": 212
+      }
+    ],
+    "portal/src/features/supplies/pages/SupplyRequests.tsx": [
+      {
+        "name": "SupplyRequests",
+        "length": 111
+      }
+    ],
+    "portal/src/shared/components/BrandModal.tsx": [
       {
         "name": "BrandModal",
         "length": 70
       }
     ],
-    "portal/src/components/ui/ConfirmationModal.tsx": [
+    "portal/src/shared/components/ConfirmModal.tsx": [
+      {
+        "name": "ConfirmModal",
+        "length": 62
+      }
+    ],
+    "portal/src/shared/components/ConfirmationModal.tsx": [
       {
         "name": "ConfirmationModal",
         "length": 57
       }
     ],
-    "portal/src/context/AuthContext.tsx": [
+    "portal/src/shared/components/ErrorBoundary.tsx": [
+      {
+        "name": "render",
+        "length": 30
+      }
+    ],
+    "portal/src/shared/components/FeedbackModal.tsx": [
+      {
+        "name": "FeedbackModal",
+        "length": 323
+      },
+      {
+        "name": "handleSubmit",
+        "length": 21
+      }
+    ],
+    "portal/src/shared/hooks/useRowSelection.ts": [
+      {
+        "name": "useRowSelection",
+        "length": 24
+      }
+    ],
+    "portal/src/shared/lib/api.ts": [
+      {
+        "name": "request",
+        "length": 54
+      }
+    ],
+    "portal/src/shared/lib/formatters.ts": [
+      {
+        "name": "getDeviceStatusInfo",
+        "length": 69
+      }
+    ],
+    "portal/src/store/AuthContext.tsx": [
       {
         "name": "AuthProvider",
         "length": 79
@@ -2295,7 +2479,7 @@
         "length": 33
       }
     ],
-    "portal/src/context/ToastContext.tsx": [
+    "portal/src/store/ToastContext.tsx": [
       {
         "name": "ToastProvider",
         "length": 27
@@ -2303,190 +2487,6 @@
       {
         "name": "ToastItem",
         "length": 25
-      }
-    ],
-    "portal/src/hooks/useClientDetail.ts": [
-      {
-        "name": "useClientDetail",
-        "length": 66
-      }
-    ],
-    "portal/src/hooks/useDashboard.ts": [
-      {
-        "name": "useDashboard",
-        "length": 55
-      }
-    ],
-    "portal/src/hooks/useMonitorDetail.ts": [
-      {
-        "name": "useMonitorDetail",
-        "length": 139
-      }
-    ],
-    "portal/src/hooks/useRowSelection.ts": [
-      {
-        "name": "useRowSelection",
-        "length": 24
-      }
-    ],
-    "portal/src/lib/api.ts": [
-      {
-        "name": "request",
-        "length": 54
-      }
-    ],
-    "portal/src/lib/formatters.ts": [
-      {
-        "name": "getDeviceStatusInfo",
-        "length": 69
-      }
-    ],
-    "portal/src/lib/supplies.ts": [
-      {
-        "name": "buildSupplyRows",
-        "length": 43
-      }
-    ],
-    "portal/src/pages/Activity.tsx": [
-      {
-        "name": "Activity",
-        "length": 202
-      },
-      {
-        "name": "useCallback",
-        "length": 21
-      },
-      {
-        "name": "anonymous",
-        "length": 38
-      }
-    ],
-    "portal/src/pages/Agents.tsx": [
-      {
-        "name": "Agents",
-        "length": 106
-      }
-    ],
-    "portal/src/pages/Alerts.tsx": [
-      {
-        "name": "Alerts",
-        "length": 400
-      }
-    ],
-    "portal/src/pages/ClientDetail.tsx": [
-      {
-        "name": "ClientDetail",
-        "length": 136
-      }
-    ],
-    "portal/src/pages/Clients.tsx": [
-      {
-        "name": "StatusBadge",
-        "length": 24
-      },
-      {
-        "name": "Clients",
-        "length": 285
-      }
-    ],
-    "portal/src/pages/Dashboard.tsx": [
-      {
-        "name": "Dashboard",
-        "length": 92
-      }
-    ],
-    "portal/src/pages/DeviceDetail.tsx": [
-      {
-        "name": "DeviceDetail",
-        "length": 258
-      }
-    ],
-    "portal/src/pages/Devices.tsx": [
-      {
-        "name": "Devices",
-        "length": 232
-      },
-      {
-        "name": "anonymous",
-        "length": 103
-      }
-    ],
-    "portal/src/pages/EmailLog.tsx": [
-      {
-        "name": "EmailLog",
-        "length": 94
-      }
-    ],
-    "portal/src/pages/IncidentDetail.tsx": [
-      {
-        "name": "IncidentDetail",
-        "length": 238
-      }
-    ],
-    "portal/src/pages/Incidents.tsx": [
-      {
-        "name": "Incidents",
-        "length": 178
-      }
-    ],
-    "portal/src/pages/Login.tsx": [
-      {
-        "name": "Login",
-        "length": 167
-      }
-    ],
-    "portal/src/pages/MonitorDetail.tsx": [
-      {
-        "name": "MonitorDetail",
-        "length": 224
-      }
-    ],
-    "portal/src/pages/Monitors.tsx": [
-      {
-        "name": "Monitors",
-        "length": 150
-      }
-    ],
-    "portal/src/pages/PendingDevices.tsx": [
-      {
-        "name": "PendingDevices",
-        "length": 251
-      }
-    ],
-    "portal/src/pages/RemoteActions.tsx": [
-      {
-        "name": "RemoteActions",
-        "length": 241
-      }
-    ],
-    "portal/src/pages/Reports.tsx": [
-      {
-        "name": "Reports",
-        "length": 341
-      }
-    ],
-    "portal/src/pages/ScheduledReports.tsx": [
-      {
-        "name": "ScheduledReports",
-        "length": 136
-      }
-    ],
-    "portal/src/pages/Settings.tsx": [
-      {
-        "name": "Settings",
-        "length": 74
-      }
-    ],
-    "portal/src/pages/Supplies.tsx": [
-      {
-        "name": "Supplies",
-        "length": 212
-      }
-    ],
-    "portal/src/pages/SupplyRequests.tsx": [
-      {
-        "name": "SupplyRequests",
-        "length": 111
       }
     ]
   }

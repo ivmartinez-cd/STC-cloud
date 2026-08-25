@@ -1,0 +1,425 @@
+import { useState } from 'react';
+import { useNow } from '../../../shared/hooks/useNow';
+import { Link } from 'react-router-dom';
+import { Printer, Download, X, Trash2, CheckSquare, Square, RotateCcw, ArrowRightLeft, Radio } from 'lucide-react';
+import { DEVICE_OFFLINE_THRESHOLD_MS, MONITOR_STATE_LABELS, MONITOR_STATE_COLORS, type MonitorState } from '../../../shared/lib/constants';
+import type { Device } from '../../../shared/types/monitor';
+import { api } from '../../../shared/lib/api';
+import { getDeviceStatusInfo } from '../../../shared/lib/formatters';
+import { useRowSelection } from '../../../shared/hooks/useRowSelection';
+import { useToast } from '../../../store/ToastContext';
+import BulkActionBar from '../../../shared/components/BulkActionBar';
+import {
+  BulkDecommissionModal, BulkRecommissionModal, BulkMoveDevicesModal, BulkMonitorStateModal,
+  type BulkActionResult,
+} from '../../devices/components/DeviceLifecycleModals';
+
+interface Props {
+  devices: Device[];
+  monitorName: string;
+  onRefresh?: () => void;
+  agentId?: string;
+  isReadOnlyViewer?: boolean;
+}
+
+function exportCountersCSV(devices: Device[], monitorName: string, discriminate: boolean) {
+  const today = new Date().toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  const rows = ['SERIE;FECHA;TIPO;CLASE;CONTADOR;CLASE;CONTADOR;MOTIVO;OBSERVACIONES;NUMERO_ACTIVO;NUMERO_ETIQUETA;USO_30D;CICLO_TRABAJO'];
+
+  for (const d of devices) {
+    const serie = d.serial_number ?? 'S/N';
+    const mono = d.mono_pages ?? 0;
+    const color = d.color_pages ?? 0;
+    const total = d.total_pages ?? (mono + color);
+    const isColor = color > 0;
+    const inventoryCols = `${d.asset_number ?? ''};${d.asset_tag ?? ''};${d.pages_30d ?? ''};${d.duty_cycle_effective ?? ''}`;
+
+    let row: string;
+    if (isColor) {
+      row = discriminate
+        ? `${serie};${today};7;10;${mono};20;${color};;;${inventoryCols}`
+        : `${serie};${today};7;20;${total};;;;;${inventoryCols}`;
+    } else {
+      row = `${serie};${today};7;10;${mono};;;;;${inventoryCols}`;
+    }
+    rows.push(row);
+  }
+
+  const blob = new Blob(['﻿' + rows.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `contadores_${monitorName.replace(/\s+/g, '_')}_${today.replace(/\//g, '-')}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+const DeviceInventoryTable = ({ devices, monitorName, onRefresh, agentId, isReadOnlyViewer = false }: Props) => {
+  const [showExportModal, setShowExportModal] = useState(false);
+  const { showToast } = useToast();
+
+  // Acciones en bloque (Fase 9 del gap analysis vs HP SDS).
+  const rowSelection = useRowSelection(devices.map((d) => d.id));
+  const [bulkModal, setBulkModal] = useState<'decommission' | 'recommission' | 'move' | 'monitor-state' | null>(null);
+  const selectedIds = Array.from(rowSelection.selected);
+  const firstSelected = devices.find((d) => rowSelection.selected.has(d.id));
+
+  const handleBulkDone = (result: BulkActionResult) => {
+    rowSelection.clear();
+    if (onRefresh) onRefresh();
+    const skippedMsg = result.skipped.length > 0 ? ` — ${result.skipped.length} sin aplicar` : '';
+    showToast(`${result.count} equipo(s) actualizados${skippedMsg}`, result.count > 0 ? 'success' : 'error');
+  };
+
+  const now = useNow();
+  const offlineCount = devices.filter(d => {
+    if (d.last_seen == null) return !(d.active ?? false);
+    return (Math.abs(now - new Date(d.last_seen).getTime()) > DEVICE_OFFLINE_THRESHOLD_MS);
+  }).length;
+
+  const handleDeleteDevice = async (id: string, model: string | null, ip: string) => {
+    if (window.confirm(`¿Seguro que deseas eliminar el equipo ${model || ip} de la base de datos?`)) {
+      try {
+        await api.delete(`/devices/${id}`);
+        if (onRefresh) onRefresh();
+        else window.location.reload();
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : String(e);
+        alert('Error al eliminar dispositivo: ' + msg);
+      }
+    }
+  };
+
+  const handleDeleteOffline = async () => {
+    // Reemplaza el DELETE /devices/offline (borrado en duro sin scope) por
+    // decommission-stale: da de baja en vez de borrar, y muestra la lista
+    // real (dryRun) antes de confirmar, en vez de sólo un conteo.
+    const targetAgentId = agentId ?? devices.find(d => d.agent_id)?.agent_id;
+    if (!targetAgentId) return;
+    try {
+      const preview = await api.post<{ count: number; devices: Array<{ serial_number: string | null; ip_address: string | null; last_seen: string | null }> }>(
+        `/agents/${targetAgentId}/devices/decommission-stale`, { dryRun: true }
+      );
+      if (preview.count === 0) { alert('No hay equipos desconectados para dar de baja.'); return; }
+      const list = preview.devices.map(d => `• ${d.serial_number ?? d.ip_address ?? '—'}`).join('\n');
+      if (!window.confirm(`Se dará de baja ${preview.count} equipo(s) desconectado(s):\n\n${list}\n\n¿Confirmar?`)) return;
+      await api.post(`/agents/${targetAgentId}/devices/decommission-stale`, {});
+      if (onRefresh) onRefresh();
+      else window.location.reload();
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      alert('Error al dar de baja equipos desconectados: ' + msg);
+    }
+  };
+
+  const handleExport = (discriminate: boolean) => {
+    exportCountersCSV(devices, monitorName, discriminate);
+    setShowExportModal(false);
+  };
+
+  return (
+    <>
+      <div className="cd-panel overflow-hidden border-none shadow-xl shadow-brand/5 animate-in slide-in-from-bottom-4 duration-500">
+        <header className="px-8 py-6 bg-white border-b border-slate-100 flex items-center justify-between flex-wrap gap-3">
+          <div>
+            <h3 className="text-sm font-black text-[#1a2333] uppercase tracking-tight">Parque de Impresión</h3>
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Dispositivos descubiertos y monitorizados por este nodo</p>
+          </div>
+          <div className="flex items-center gap-3">
+            {offlineCount > 0 && !isReadOnlyViewer && (
+              <button
+                onClick={handleDeleteOffline}
+                className="flex items-center gap-2 px-3.5 py-2 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-xl text-[11px] font-black uppercase tracking-wider transition-colors border border-amber-200"
+                title="Dar de baja todos los equipos desconectados de este monitor"
+              >
+                <Trash2 size={13} /> Dar de Baja Desconectados ({offlineCount})
+              </button>
+            )}
+            {devices.length > 0 && (
+              <button
+                onClick={() => setShowExportModal(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl text-[11px] font-black uppercase tracking-wider transition-colors border border-emerald-200"
+              >
+                <Download size={13} /> Exportar CSV
+              </button>
+            )}
+            <span className="px-4 py-1.5 bg-slate-100 text-slate-500 rounded-full text-[10px] font-black uppercase tracking-widest">
+              {devices.length} Equipos
+            </span>
+          </div>
+        </header>
+
+        {!isReadOnlyViewer && (
+          <BulkActionBar count={rowSelection.count} onClear={rowSelection.clear}>
+            <button onClick={() => setBulkModal('decommission')} className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-[11px] font-black uppercase tracking-wider transition-all">
+              <Trash2 size={13} /> Dar de baja
+            </button>
+            <button onClick={() => setBulkModal('recommission')} className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-[11px] font-black uppercase tracking-wider transition-all">
+              <RotateCcw size={13} /> Reactivar
+            </button>
+            <button onClick={() => setBulkModal('move')} className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-600 hover:bg-slate-700 text-white rounded-xl text-[11px] font-black uppercase tracking-wider transition-all">
+              <ArrowRightLeft size={13} /> Mover
+            </button>
+            <button onClick={() => setBulkModal('monitor-state')} className="flex items-center gap-1.5 px-3 py-1.5 bg-brand hover:bg-brand-hover text-white rounded-xl text-[11px] font-black uppercase tracking-wider transition-all">
+              <Radio size={13} /> Estado de monitoreo
+            </button>
+          </BulkActionBar>
+        )}
+
+        <div className="overflow-x-auto">
+          <table className="cd-table">
+            <thead>
+              <tr>
+                {!isReadOnlyViewer && (
+                  <th className="!bg-brand-charcoal !text-white !rounded-tl-2xl !px-3 !py-3 !w-10">
+                    <button onClick={rowSelection.toggleAll} className="text-white/70 hover:text-white" title="Seleccionar todos">
+                      {rowSelection.allSelected ? <CheckSquare size={16} /> : <Square size={16} />}
+                    </button>
+                  </th>
+                )}
+                <th className={`!bg-brand-charcoal !text-white !px-4 !py-3 ${isReadOnlyViewer ? '!rounded-tl-2xl' : ''}`}>Dispositivo</th>
+                <th className="!bg-brand-charcoal !text-white !px-4 !py-3">Red</th>
+                <th className="!bg-brand-charcoal !text-white !px-4 !py-3">Número de Serie</th>
+                <th className="!bg-brand-charcoal !text-white !px-4 !py-3">Tóner</th>
+                <th className="!bg-brand-charcoal !text-white !px-4 !py-3">Inventario</th>
+                <th className="!bg-brand-charcoal !text-white !px-4 !py-3">Uso 30d</th>
+                <th className="!bg-brand-charcoal !text-white !px-4 !py-3">Monitoreo</th>
+                <th className={`!bg-brand-charcoal !text-white !text-right !px-4 !py-3 ${isReadOnlyViewer ? '!rounded-tr-2xl' : ''}`}>Contadores (Total / Mono / Color)</th>
+                {!isReadOnlyViewer && (
+                  <th className="!bg-brand-charcoal !text-white !text-center !rounded-tr-2xl !px-4 !py-3">Acción</th>
+                )}
+              </tr>
+            </thead>
+            <tbody>
+              {devices.length === 0 ? (
+                <tr>
+                  <td colSpan={isReadOnlyViewer ? 8 : 10} className="px-8 py-20 text-center">
+                    <div className="flex flex-col items-center gap-3">
+                      <Printer size={48} className="text-slate-200" />
+                      <p className="text-slate-500 font-bold text-xs uppercase tracking-widest">No se han descubierto dispositivos en este segmento</p>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                devices.map((device) => {
+                  const statusInfo = getDeviceStatusInfo(device.last_seen, now);
+
+                  return (
+                    <tr key={device.id} className="group hover:bg-slate-50/50 transition-all">
+                      {!isReadOnlyViewer && (
+                        <td className="!px-3 !py-3">
+                          <button onClick={() => rowSelection.toggle(device.id)} className="text-slate-300 hover:text-brand">
+                            {rowSelection.selected.has(device.id) ? <CheckSquare size={16} className="text-brand" /> : <Square size={16} />}
+                          </button>
+                        </td>
+                      )}
+                      <td className="!px-4 !py-3">
+                        <Link to={`/devices/${device.id}`} className="flex items-center gap-3 group/device">
+                          <div className="w-9 h-9 shrink-0 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-400 group-hover/device:bg-brand group-hover/device:text-white transition-all">
+                            <Printer size={16} />
+                          </div>
+                          <div>
+                            <p className="text-sm font-black text-[#1a2333] tracking-tight group-hover/device:text-brand transition-colors">{device.model || 'Modelo Genérico'}</p>
+                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{device.brand || 'Marca n/a'}</p>
+                          </div>
+                        </Link>
+                      </td>
+                      <td className="!px-4 !py-3">
+                        <div className="flex flex-col">
+                          <span className="text-xs font-bold text-slate-600 font-mono">{device.ip_address}</span>
+                          <span className={`text-[9px] font-black uppercase tracking-widest flex items-center gap-1 mt-0.5 ${statusInfo.textClass}`}>
+                            <span className={`w-1.5 h-1.5 rounded-full inline-block ${statusInfo.dotClass} ${statusInfo.status === 'online' ? 'animate-pulse' : ''}`}></span>
+                            {statusInfo.status === 'online' ? 'Conexión OK' : statusInfo.label}
+                          </span>
+                        </div>
+                      </td>
+                    <td className="!px-4 !py-3">
+                      <span className="px-2 py-1 bg-slate-100 text-slate-600 rounded-lg font-mono text-xs font-bold border border-slate-200 whitespace-nowrap">
+                        {device.serial_number || 'N/A'}
+                      </span>
+                    </td>
+                    <td className="!px-4 !py-3">
+                      {device.supply_origin === 'non_genuine' && (
+                        <span className="inline-flex items-center gap-1 mb-1 px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 text-[9px] font-black uppercase tracking-wider" title="Al menos un cartucho detectado como no original">
+                          No original
+                        </span>
+                      )}
+                      {device.toner_black !== undefined && device.toner_black !== null ? (
+                        <div className="w-24 space-y-1.5">
+                          {device.toner_cyan === null || device.toner_cyan === undefined ? (
+                            // Monocromo
+                            <div className="space-y-1">
+                              <div className="flex justify-between items-center text-[9px] font-extrabold uppercase tracking-widest text-slate-500">
+                                <span>Negro</span>
+                                <span className={device.toner_black <= 15 ? 'text-amber-500 animate-pulse font-black' : 'text-slate-600'}>
+                                  {device.toner_black}%
+                                </span>
+                              </div>
+                              <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden border border-slate-200/50">
+                                <div 
+                                  className={`h-full rounded-full transition-all duration-500 ${
+                                    device.toner_black <= 15 ? 'bg-amber-400' : 'bg-slate-800'
+                                  }`} 
+                                  style={{ width: `${device.toner_black}%` }}
+                                />
+                              </div>
+                            </div>
+                          ) : (
+                            // Color CMYK
+                            <div className="space-y-1">
+                              <div className="flex justify-between items-center text-[9px] font-extrabold uppercase tracking-widest text-slate-500">
+                                <span>CMYK</span>
+                                <span className={
+                                  (device.toner_black <= 15 || device.toner_cyan <= 15 || device.toner_magenta <= 15 || device.toner_yellow <= 15)
+                                    ? 'text-amber-500 animate-pulse font-black'
+                                    : 'text-slate-600'
+                                }>
+                                  Mín: {Math.min(device.toner_black, device.toner_cyan, device.toner_magenta, device.toner_yellow)}%
+                                </span>
+                              </div>
+                              <div className="grid grid-cols-4 gap-1">
+                                <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden border border-slate-200/30" title={`Negro: ${device.toner_black}%`}>
+                                  <div className={`h-full ${device.toner_black <= 15 ? 'bg-amber-400 animate-pulse' : 'bg-slate-800'}`} style={{ width: `${device.toner_black}%` }} />
+                                </div>
+                                <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden border border-slate-200/30" title={`Cian: ${device.toner_cyan}%`}>
+                                  <div className={`h-full ${device.toner_cyan <= 15 ? 'bg-amber-400 animate-pulse' : 'bg-[#00adef]'}`} style={{ width: `${device.toner_cyan}%` }} />
+                                </div>
+                                <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden border border-slate-200/30" title={`Magenta: ${device.toner_magenta}%`}>
+                                  <div className={`h-full ${device.toner_magenta <= 15 ? 'bg-amber-400 animate-pulse' : 'bg-[#ec008c]'}`} style={{ width: `${device.toner_magenta}%` }} />
+                                </div>
+                                <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden border border-slate-200/30" title={`Amarillo: ${device.toner_yellow}%`}>
+                                  <div className={`h-full ${device.toner_yellow <= 15 ? 'bg-amber-400 animate-pulse' : 'bg-[#f5c400]'}`} style={{ width: `${device.toner_yellow}%` }} />
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">n/a</span>
+                      )}
+                    </td>
+                    <td className="!px-4 !py-3">
+                      <div className="flex flex-col gap-0.5 text-[10px] font-bold text-slate-600 font-mono">
+                        {device.asset_number && <span title="Nº de activo">{device.asset_number}</span>}
+                        {device.asset_tag && <span className="text-slate-400" title="Nº de etiqueta">{device.asset_tag}</span>}
+                        {!device.asset_number && !device.asset_tag && <span className="text-slate-300">—</span>}
+                      </div>
+                    </td>
+                    <td className="!px-4 !py-3">
+                      {device.pages_30d != null ? (
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-xs font-black text-slate-700 tabular-nums">{device.pages_30d.toLocaleString()}</span>
+                          {device.utilization_pct != null && (
+                            <span className={`inline-flex w-fit px-1.5 py-0.5 rounded text-[9px] font-black ${
+                              device.utilization_pct > 100 ? 'bg-rose-100 text-rose-700' : device.utilization_pct > 80 ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'
+                            }`}>{device.utilization_pct}% ciclo</span>
+                          )}
+                        </div>
+                      ) : <span className="text-slate-300 text-xs">—</span>}
+                    </td>
+                    <td className="!px-4 !py-3">
+                      {device.monitor_state && device.monitor_state !== 'full' ? (
+                        <span className={`inline-flex px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider ${MONITOR_STATE_COLORS[device.monitor_state as MonitorState]}`}>
+                          {MONITOR_STATE_LABELS[device.monitor_state as MonitorState]}
+                        </span>
+                      ) : <span className="text-slate-300 text-xs">—</span>}
+                    </td>
+                    <td className="!px-4 !py-3 text-right">
+                      <div className="flex flex-col items-end gap-1">
+                        <p className="text-sm font-black text-[#1a2333] tabular-nums whitespace-nowrap">
+                          {(device.total_pages || 0).toLocaleString()} <span className="text-[10px] text-slate-500 font-bold uppercase">Total</span>
+                        </p>
+                        <div className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-widest text-slate-500 whitespace-nowrap">
+                          <span>{(device.mono_pages || 0).toLocaleString()} M</span>
+                          <span className="w-1 h-1 bg-slate-200 rounded-full" />
+                          <span className="text-brand">{(device.color_pages || 0).toLocaleString()} C</span>
+                        </div>
+                      </div>
+                    </td>
+                    {!isReadOnlyViewer && (
+                      <td className="!px-3 !py-3 text-center">
+                        {statusInfo.status !== 'online' ? (
+                          <button
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleDeleteDevice(device.id, device.model, device.ip_address);
+                            }}
+                            className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 hover:text-rose-800 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all border border-rose-200 inline-flex items-center gap-1.5 shadow-sm whitespace-nowrap"
+                            title="Eliminar este equipo sin conexión"
+                          >
+                            <Trash2 size={13} /> Eliminar
+                          </button>
+                        ) : (
+                          <button
+                            disabled
+                            className="px-3 py-1.5 bg-slate-100 text-slate-300 rounded-xl text-[11px] font-black uppercase tracking-wider cursor-not-allowed inline-flex items-center gap-1.5 border border-slate-200/50 opacity-60 whitespace-nowrap"
+                            title="Solo se pueden eliminar equipos sin conexión"
+                          >
+                            <Trash2 size={13} /> Eliminar
+                          </button>
+                        )}
+                      </td>
+                    )}
+                  </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {showExportModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setShowExportModal(false)}>
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+          <div
+            className="relative bg-white rounded-[32px] shadow-2xl shadow-black/20 w-full max-w-sm p-8 animate-in zoom-in-95 duration-200"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-4 mb-6">
+              <div className="p-3 bg-emerald-50 rounded-2xl">
+                <Download size={22} className="text-emerald-600" />
+              </div>
+              <div>
+                <h3 className="text-base font-black text-[#1a2333] tracking-tight">Exportar Contadores</h3>
+                <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">¿Discriminar mono / color?</p>
+              </div>
+            </div>
+            <div className="flex flex-col gap-3 mb-4">
+              <button onClick={() => handleExport(true)} className="w-full py-4 rounded-2xl border-2 border-emerald-200 bg-emerald-50 hover:bg-emerald-100 transition-colors text-sm font-black text-emerald-700">
+                Sí, discriminar
+              </button>
+              <button onClick={() => handleExport(false)} className="w-full py-4 rounded-2xl border-2 border-slate-200 bg-slate-50 hover:bg-slate-100 transition-colors text-sm font-black text-slate-700">
+                No
+              </button>
+            </div>
+            <button onClick={() => setShowExportModal(false)} className="w-full py-3 rounded-2xl text-slate-500 text-xs font-bold hover:bg-slate-50 transition-colors flex items-center justify-center gap-2">
+              <X size={14} /> Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+
+      <BulkDecommissionModal
+        isOpen={bulkModal === 'decommission'} onClose={() => setBulkModal(null)}
+        onDone={handleBulkDone} deviceIds={selectedIds}
+      />
+      <BulkRecommissionModal
+        isOpen={bulkModal === 'recommission'} onClose={() => setBulkModal(null)}
+        onDone={handleBulkDone} deviceIds={selectedIds}
+      />
+      <BulkMoveDevicesModal
+        isOpen={bulkModal === 'move'} onClose={() => setBulkModal(null)}
+        onDone={handleBulkDone} deviceIds={selectedIds}
+        currentClientId={firstSelected?.client_id ?? null} currentAgentId={agentId ?? firstSelected?.agent_id ?? null}
+      />
+      <BulkMonitorStateModal
+        isOpen={bulkModal === 'monitor-state'} onClose={() => setBulkModal(null)}
+        onDone={handleBulkDone} deviceIds={selectedIds}
+      />
+    </>
+  );
+};
+
+export default DeviceInventoryTable;

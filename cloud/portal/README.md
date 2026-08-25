@@ -16,20 +16,32 @@ Este directorio alberga el portal web de administración y monitoreo de **STC-Cl
 
 ## 📁 Arquitectura del Directorio (`src/`)
 
-El código sigue una distribución orientada a dominios y separación de concernimientos (SoC). A continuación, se detalla el mapa mental de la aplicación:
+El código sigue la estructura de *feature slices* de `docs/dev/ARCHITECTURE_GUIDE.md`
+(§2, "Frontend"), adoptada en la Fase 4 de `docs/dev/ARCHITECTURE_MIGRATION_PLAN.md`:
 
 ```
 src/
-├── assets/         # Recursos estáticos (Logos, imágenes corporativas)
-├── components/     # Componentes de presentación (UI pura sin lógica de red)
-│   ├── agents/     # Modales, tablas y gráficos de la gestión de clientes
-│   └── monitors/   # Componentes para monitores (Specs, consola, comandos)
-├── context/        # Proveedores de estado global (Auth, Toast, etc.)
-├── hooks/          # Capa lógica: Custom hooks de fetching, polling y mutaciones
-├── lib/            # Utilidades centrales (Cliente API unificado, formateadores)
-├── pages/          # Orquestadores de rutas (Vistas extremadamente livianas)
-└── types/          # Modelos y contratos de TypeScript rígidos (Cero 'any')
+├── App.tsx / main.tsx   # Raíz: rutas (lazy por página) y proveedores
+├── app/layout/          # App shell: Layout, SidebarNav, navTree (árbol de navegación por rol)
+├── store/               # Estado global: AuthContext, ToastContext
+├── shared/              # Transversal a todos los features
+│   ├── components/      #   BulkActionBar, ConfirmModal, FeedbackModal, ErrorBoundary, BrandModal…
+│   ├── hooks/           #   useNow, useTime, useRowSelection
+│   ├── lib/             #   Cliente API unificado, constantes, formateadores, imágenes de equipos
+│   └── types/           #   Contratos consumidos por ≥2 features (monitor, alerts, incidents, inventory, audit, supplies)
+├── features/            # Un directorio por dominio de negocio
+│   └── <feature>/       #   auth · dashboard · clients · pending-devices · monitors · devices ·
+│       ├── pages/       #   alerts · incidents · supplies · reports · activity · email-log · settings
+│       ├── components/  #   Orquestadores de ruta (livianos) / UI del feature /
+│       ├── hooks/       #   fetching, polling y mutaciones / contratos propios /
+│       ├── types/       #   utilidades propias
+│       └── lib/
+└── assets/              # Recursos estáticos (logos, imágenes corporativas)
 ```
+
+Regla de dependencias: un feature puede importar de `shared/`, `store/` y `app/`, y
+(excepcionalmente, documentado) componentes de otro feature; nunca al revés —
+`shared/` no conoce a ningún feature.
 
 ---
 
@@ -38,7 +50,7 @@ src/
 Cualquier desarrollador que trabaje en esta base de código debe preservar los siguientes pilares arquitectónicos:
 
 ### 1. Separación estricta de Vista y Datos (SoC)
-Ningún componente en `src/pages/` realiza peticiones directas de red ni gestiona timers locales. Toda la orquestación asíncrona de datos, la gestión de estados de carga (`loading`), errores (`error`) y mutaciones se delega a **Custom Hooks** en `src/hooks/`.
+Ningún componente en `features/<feature>/pages/` realiza peticiones directas de red ni gestiona timers locales. Toda la orquestación asíncrona de datos, la gestión de estados de carga (`loading`), errores (`error`) y mutaciones se delega a **Custom Hooks** en `features/<feature>/hooks/` (o `shared/hooks/` si son transversales).
 *   *Ventaja*: Facilita las pruebas de caja blanca y unitarias de la UI sin mockear interfaces de red complejas.
 
 ### 2. Polling Seguro y Adaptativo (Smart Polling)

@@ -3,7 +3,10 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const PAGES_DIR = path.join(__dirname, '../src/pages');
+// Fase 4 (feature-slices): las páginas viven en src/features/<feature>/pages/.
+// Se recorre features/ entero pero sólo se chequean los .tsx bajo un directorio
+// `pages/` — mismo alcance que el `src/pages/` plano de antes.
+const PAGES_DIR = path.join(__dirname, '../src/features');
 
 const IGNORED_COMPONENTS = new Set([
   'Link', 'BarChart', 'Bar', 'XAxis', 'YAxis', 'Tooltip', 
@@ -34,6 +37,7 @@ function checkIcons(dir) {
     }
 
     if (!file.endsWith('.tsx')) continue;
+    if (!fullPath.includes(`${path.sep}pages${path.sep}`)) continue;
 
     const content = fs.readFileSync(fullPath, 'utf8');
     
