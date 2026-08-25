@@ -222,10 +222,18 @@ async function assertSafeWebhookUrl(rawUrl: string): Promise<URL> {
 }
 
 /**
- * POST genérico contra un webhook — reusado por alertas y cierres. Un solo
- * intento (BullMQ ya da reintento/backoff a nivel de job), timeout corto, sin
- * seguir redirects (una 3xx a una URL privada burlaría el guard SSRF si se
- * siguiera automáticamente).
+ * POST genérico contra un webhook — reusado por alertas, cierres e
+ * integración ERP. Un solo intento acá (BullMQ da reintento/backoff a nivel
+ * de job — ver los `.add(..., {attempts,backoff})` de cada enqueuer), timeout
+ * corto, sin seguir redirects (una 3xx a una URL privada burlaría el guard
+ * SSRF si se siguiera automáticamente).
+ *
+ * Bug real (25/08/2026): `fetch` sólo rechaza la promesa ante una falla de
+ * RED — una respuesta 4xx/5xx del receptor es una promesa resuelta como
+ * cualquier otra, así que el catch de cada worker nunca la veía y una
+ * entrega fallida quedaba indistinguible de una exitosa (nunca se
+ * reintentaba, aunque BullMQ ya tuviera el mecanismo listo). Se agrega el
+ * chequeo de `res.ok` explícito.
  */
 export async function postWebhook(
   webhookUrl: string,
@@ -233,13 +241,16 @@ export async function postWebhook(
   extraHeaders?: Record<string, string>
 ): Promise<void> {
   const url = await assertSafeWebhookUrl(webhookUrl);
-  await fetch(url, {
+  const res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json", ...extraHeaders },
     body: JSON.stringify(body),
     redirect: "manual",
     signal: AbortSignal.timeout(5000),
   });
+  if (!res.ok) {
+    throw new Error(`Webhook respondió ${res.status} ${res.statusText}`);
+  }
 }
 
 /** Wrapper delgado sobre `postWebhook` — comportamiento sin cambios respecto de antes del refactor. */

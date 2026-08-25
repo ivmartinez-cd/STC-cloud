@@ -1562,6 +1562,60 @@ Código y tests quedan completos y verdes; falta el paso operativo de
 firmar+empaquetar+publicar el release real, a cargo de quien tenga acceso
 a esas claves.
 
+### Fase 8 — Retry/expiración real de webhooks (25/08/2026) — completa
+
+Origen: pendiente explícito de la Fase 2 ("API pública con webhooks —
+falta expiración/retry automáticos"). Los 5 canales de entrega
+(`alert.created`, `incident.created`, `report.closed`, `supply_request.*`,
+`reading.created` de la API pública) ya encolaban con
+`{attempts:3, backoff:{type:'exponential', delay:5000}}` desde que se
+escribió el código original — el reintento nunca se había activado.
+
+✅ **Dos bugs reales, ambos necesarios para que el retry funcionara de
+verdad**: (1) `postWebhook` (`notificationService.ts`) nunca chequeaba
+`res.ok` — `fetch` sólo rechaza la promesa ante una falla de RED, así que
+una respuesta 4xx/5xx del receptor se trataba como entrega exitosa; (2)
+`notificationWorker.ts`, `publicWebhookWorker.ts` y
+`reportDeliveryWorker.ts` usaban `Promise.allSettled` + loguear los
+rechazos sin relanzar nunca — el handler del job de BullMQ siempre
+terminaba "bien" a ojos de la cola, así que el `{attempts:3,...}` ya
+configurado jamás se disparaba. Se agregó `throwIfAnyRejected()` (mismo
+patrón en los 3 workers, adaptado a cada mensaje de contexto) que relanza
+si CUALQUIER canal falló, para que BullMQ reintente el job entero.
+Trade-off aceptado: un reintento puede reenviar un canal que ya había
+tenido éxito en el intento anterior (no hay tracking por canal dentro del
+job) — mejor una notificación duplicada que una perdida silenciosamente,
+mismo criterio que R1.
+
+✅ **Cobertura de `{attempts,backoff}` completada en los 2 encolados que
+no lo tenían**: `enqueueReadingWebhook` (`bullmq-ingest-queues.ts`, API
+pública de lecturas) y `BullRequestNotifier.created()/completed()`
+(`bull-request-notifier.ts`, pedidos de insumos) — antes encolaban sin
+config, un intento único.
+
+**Verificado en vivo contra el stack Docker real** (no sólo tests
+unitarios): cliente con `notification_webhook_url` apuntando a un endpoint
+público que siempre devuelve 500 (`httpbin.org/status/500`, guard SSRF
+exige un receptor público real — no se puede apuntar a loopback), tóner
+crítico real vía `/devices/sync` → logs de `stc_api` confirman **3
+intentos reales** del job (`[NotificationWorker] Job N falló` x3, con el
+backoff exponencial esperado entre cada uno) antes de agotar los
+reintentos — comportamiento que antes del fix nunca ocurría (un solo log
+de error y el job quedaba "exitoso" para BullMQ). Además, 3 tests nuevos
+con `fetch` mockeado (`alerts.test.ts`, sin red — mismo criterio que el
+resto del describe de guard SSRF) prueban `postWebhook` en aislamiento:
+2xx resuelve, 4xx/5xx rechaza con el status en el mensaje. 35/35 tests de
+`alerts.test.ts` verdes contra el contenedor rebuildeado; `tsc`/
+`check:arch` limpios.
+
+**No se hizo** (fuera de alcance de este pendiente puntual): tracking de
+qué canal específico ya tuvo éxito dentro de un job con reintento (para
+evitar el duplicado del trade-off de arriba) — requeriría partir cada
+canal en su propio job, cambio de forma mayor no justificado por el
+volumen actual; dead-letter queue o alerta al operador cuando un job agota
+sus 3 intentos (hoy sólo queda en el log de `stc_api`) — quedó anotado
+como posible mejora futura, no bloqueante.
+
 ### Otros puntos de §3 (riesgos) que siguen abiertos y no forman parte de ningún ítem de arriba
 - ✅ **R4 (parcial, 23/08/2026)**: el WS del portal ya NO acepta el JWT de
   sesión por query string. Investigado antes de tocarlo: no era vestigial —
@@ -2060,7 +2114,7 @@ que este hallazgo nombraba explícitamente.
 - ✅ Identidad `(client_id, serial)` + MAC secundaria + merge de duplicados; decommission/mover/editar dispositivo.
 
 ### Fase 2 — Diferenciación (2–3 meses) — arrancada: 5 de 7 ítems cerrados
-- ✅ (23/08/2026) API pública con API keys por cliente + webhooks (lecturas, alertas, cierres) → integración ERP. UI de portal ya hecha (23/08/2026); falta expiración/retry automáticos — ver "Estado de implementación".
+- ✅ (23/08/2026) API pública con API keys por cliente + webhooks (lecturas, alertas, cierres) → integración ERP. UI de portal ya hecha (23/08/2026). ✅ (25/08/2026) Retry/expiración automáticos — ver Fase 8 en "Estado de implementación".
 - ✅ (23/08/2026) Remote EWS por túnel sobre el WSS existente (allowlist en dos capas, staleness, audit) — sólo el acceso EWS en sí, sin paridad IMIL completa (MIB walk remoto, deshabilitar monitoreo, reenviar lecturas, descubrir IP puntual quedan pendientes). Ver "Estado de implementación".
 - Backend multi‑réplica: pub/sub Redis para WS, jobs BullMQ repetibles (heartbeat monitor), métricas Prometheus, Sentry. ✅ (23/08/2026) **Sub-ítem cerrado**: logs estructurados con pino en vez de `console.log` (`cloud/src/logger.ts`), sin dependencia de ninguna decisión de arquitectura pendiente — ver "Estado de implementación". El resto (pub/sub Redis, BullMQ repeatable, Prometheus, Sentry) sigue sin tocar.
 - ✅ (23/08/2026) Agregados continuos (diario/mensual por equipo, `readings_daily_agg`/`readings_monthly_agg`) — sólo backend/endpoint, sin dashboard de portal todavía. Ver "Estado de implementación".

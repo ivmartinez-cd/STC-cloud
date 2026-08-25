@@ -8,6 +8,25 @@ import { eventEnabledFor, renderFor } from '../modules/message-templates';
 import { logger } from '../logger';
 
 /**
+ * Bug real (25/08/2026): `Promise.allSettled` + loguear los rechazos NUNCA
+ * relanzaba nada — el handler del job siempre terminaba "bien" a los ojos de
+ * BullMQ, así que el `{attempts:3, backoff:...}` que cada enqueuer ya
+ * configuraba nunca se activaba: una entrega fallida (email, webhook interno,
+ * o webhook de la API pública) quedaba silenciosamente perdida para siempre.
+ * Se re-lanza acá si CUALQUIERA de los canales falló, para que el job se
+ * reintente de verdad. Trade-off aceptado: un reintento puede reenviar un
+ * canal que ya había tenido éxito en el intento anterior (no hay tracking
+ * por canal) — mejor una notificación duplicada que una perdida.
+ */
+function throwIfAnyRejected(results: PromiseSettledResult<unknown>[], context: string): void {
+  const rejected = results.filter((r): r is PromiseRejectedResult => r.status === 'rejected');
+  for (const r of rejected) logger.error({ err: r.reason }, `[NotificationWorker] Error enviando notificación de ${context}`);
+  if (rejected.length > 0) {
+    throw new Error(`${rejected.length}/${results.length} canal(es) de notificación fallaron para ${context}`);
+  }
+}
+
+/**
  * Procesa la cola `notifications-queue` (encolada desde `alertService.openAlert`,
  * sólo para alertas nuevas de severidad crítica). Deliberadamente separado del
  * envío en sí: si se llamara a `sendMail`/`fetch` en línea desde donde se abre la
@@ -109,11 +128,7 @@ async function processAlertNotification(alertId: number): Promise<void> {
       device_name: alert.device_name, agent_name: alert.agent_name,
     }),
   ]);
-  for (const r of results) {
-    if (r.status === 'rejected') {
-      logger.error({ err: r.reason }, `[NotificationWorker] Error enviando notificación de alerta ${alertId}`);
-    }
-  }
+  throwIfAnyRejected(results, `alerta ${alertId}`);
 }
 
 /**
@@ -163,11 +178,7 @@ async function processIncidentNotification(incidentId: string): Promise<void> {
       id: incident.id, number: Number(incident.number), class: incident.class, title: incident.title, severity: incident.severity,
     }),
   ]);
-  for (const r of results) {
-    if (r.status === 'rejected') {
-      logger.error({ err: r.reason }, `[NotificationWorker] Error enviando notificación de incidente ${incidentId}`);
-    }
-  }
+  throwIfAnyRejected(results, `incidente ${incidentId}`);
 }
 
 export 
@@ -208,11 +219,7 @@ async function processSupplyRequestNotification(requestId: string, completed: bo
       sku: request.sku, level_pct: request.level_pct,
     }),
   ]);
-  for (const r of results) {
-    if (r.status === 'rejected') {
-      logger.error({ err: r.reason }, `[NotificationWorker] Error notificando pedido ${requestId}`);
-    }
-  }
+  throwIfAnyRejected(results, `pedido ${requestId}`);
 }
 
 const notificationWorker = new Worker(

@@ -16,6 +16,20 @@ import { logger } from '../logger';
  * `notificationWorker.ts` (conexión propia, relee por id, envía best-effort).
  */
 
+/**
+ * Bug real (25/08/2026, mismo hallazgo que `notificationWorker.ts` y
+ * `publicWebhookWorker.ts`): `Promise.allSettled` + loguear nunca relanzaba,
+ * así que el `{attempts:3, backoff:...}` que ya trae el enqueuer
+ * (`bullmq-report-delivery-enqueuer.ts`) nunca se activaba.
+ */
+function throwIfAnyRejected(results: PromiseSettledResult<unknown>[], closureId: string): void {
+  const rejected = results.filter((r): r is PromiseRejectedResult => r.status === 'rejected');
+  for (const r of rejected) logger.error({ err: r.reason }, `[ReportDeliveryWorker] Error entregando cierre ${closureId}`);
+  if (rejected.length > 0) {
+    throw new Error(`${rejected.length}/${results.length} canal(es) de entrega fallaron para el cierre ${closureId}`);
+  }
+}
+
 const db = knex(knexConfig.development);
 const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379', {
   maxRetriesPerRequest: null,
@@ -95,11 +109,7 @@ async function processReportDelivery(closureId: string): Promise<void> {
       closure_id: closure.id, period, total_pages: Number(closure.total_pages),
     }),
   ]);
-  for (const r of results) {
-    if (r.status === 'rejected') {
-      logger.error({ err: r.reason }, `[ReportDeliveryWorker] Error entregando cierre ${closureId}`);
-    }
-  }
+  throwIfAnyRejected(results, closureId);
 }
 
 export const reportDeliveryWorker = new Worker(

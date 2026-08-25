@@ -10,7 +10,7 @@ import { test, describe, after } from 'node:test';
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import knexLib from 'knex';
-import { sendAlertWebhook } from '../services/notificationService';
+import { sendAlertWebhook, postWebhook } from '../services/notificationService';
 
 const API  = process.env.API_URL  || 'http://localhost:3000/api/v1';
 const USER = process.env.PORTAL_ADMIN_USER     || 'admin';
@@ -494,5 +494,35 @@ describe('Notificaciones — guard SSRF del webhook (sin red: sólo los casos qu
 
   test('rechaza IPv6 loopback (::1)', async () => {
     await assert.rejects(sendAlertWebhook(dummyPayload, 'https://[::1]/hook'), /red interna/i);
+  });
+});
+
+// Regresión del bug real (25/08/2026): `fetch` sólo rechaza ante una falla de
+// RED, una 4xx/5xx del receptor resolvía la promesa igual que un 200 y el
+// catch de cada worker nunca la veía. Se mockea `global.fetch` (sin red real,
+// misma restricción que el describe de arriba) y se usa un IP público LITERAL
+// (8.8.8.8) para que el guard SSRF no dispare una resolución DNS real —
+// `isPrivateOrLoopbackIPv4` lo evalúa sin tocar la red.
+describe('Notificaciones — postWebhook distingue 2xx de 4xx/5xx (fetch mockeado, sin red)', () => {
+  const originalFetch = global.fetch;
+
+  after(() => {
+    global.fetch = originalFetch;
+  });
+
+  test('respuesta 500 hace que postWebhook rechace', async () => {
+    global.fetch = (async () =>
+      new Response('boom', { status: 500, statusText: 'Internal Server Error' })) as typeof fetch;
+    await assert.rejects(postWebhook('https://8.8.8.8/hook', { hello: 'world' }), /respondió 500/);
+  });
+
+  test('respuesta 404 hace que postWebhook rechace', async () => {
+    global.fetch = (async () => new Response('not found', { status: 404, statusText: 'Not Found' })) as typeof fetch;
+    await assert.rejects(postWebhook('https://8.8.8.8/hook', { hello: 'world' }), /respondió 404/);
+  });
+
+  test('respuesta 200 hace que postWebhook resuelva sin lanzar', async () => {
+    global.fetch = (async () => new Response('ok', { status: 200 })) as typeof fetch;
+    await assert.doesNotReject(postWebhook('https://8.8.8.8/hook', { hello: 'world' }));
   });
 });

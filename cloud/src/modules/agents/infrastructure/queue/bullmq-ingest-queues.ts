@@ -21,10 +21,15 @@ export class BullmqIngestQueues implements IngestQueues {
   }
 
   // Webhook "reading.created" de la API pública — un job por LOTE con las filas realmente insertadas.
+  // R9 gap analysis vs HP SDS ("falta expiración/retry automáticos"): igual
+  // criterio que alert.created/report.closed/incident.created.
   async enqueueReadingWebhook(inserted: InsertedReadingRow[]): Promise<void> {
     if (inserted.length === 0) return;
     try {
-      await new Queue("public-api-readings-queue", { connection: this.redis as any }).add("notify-readings", { readings: inserted });
+      await new Queue("public-api-readings-queue", { connection: this.redis as any }).add(
+        "notify-readings", { readings: inserted },
+        { attempts: 3, backoff: { type: "exponential", delay: 5000 } }
+      );
     } catch (e: unknown) {
       logger.error({ err: e }, "[SYNC] BullMQ (public-api-readings-queue) no disponible");
     }

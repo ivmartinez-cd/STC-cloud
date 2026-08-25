@@ -14,6 +14,24 @@ import { logger } from '../logger';
  * array de lecturas nuevas de ESE cliente.
  */
 
+/**
+ * Bug real (25/08/2026, mismo hallazgo que `notificationWorker.ts`):
+ * `Promise.allSettled` + loguear nunca relanzaba, así que el `{attempts:3,
+ * backoff:...}` que ya trae el enqueuer (`bullmq-ingest-queues.ts`) nunca se
+ * activaba — una entrega fallida a un cliente quedaba perdida para siempre.
+ * Trade-off aceptado al re-lanzar: un reintento puede reenviar a un cliente
+ * cuyo webhook ya había tenido éxito en el intento anterior (no hay
+ * tracking por cliente dentro del batch) — mejor una notificación
+ * duplicada que una perdida.
+ */
+function throwIfAnyRejected(results: PromiseSettledResult<unknown>[]): void {
+  const rejected = results.filter((r): r is PromiseRejectedResult => r.status === 'rejected');
+  for (const r of rejected) logger.error({ err: r.reason }, '[PublicWebhookWorker] Error enviando webhook de lecturas');
+  if (rejected.length > 0) {
+    throw new Error(`${rejected.length}/${results.length} webhook(s) de lecturas fallaron`);
+  }
+}
+
 const db = knex(knexConfig.development);
 const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379', {
   maxRetriesPerRequest: null,
@@ -50,11 +68,7 @@ async function processPublicReadingsNotification(readings: InsertedReading[]): P
       sendPublicApiWebhook(db, clientId, 'reading.created', { readings: clientReadings })
     )
   );
-  for (const r of results) {
-    if (r.status === 'rejected') {
-      logger.error({ err: r.reason }, '[PublicWebhookWorker] Error enviando webhook de lecturas');
-    }
-  }
+  throwIfAnyRejected(results);
 }
 
 export const publicWebhookWorker = new Worker(

@@ -2,8 +2,8 @@
   "files": {
     "src/api/server.ts": 383,
     "src/services/incidentService.ts": 363,
-    "src/services/notificationService.ts": 372,
-    "src/tests/alerts.test.ts": 499,
+    "src/services/notificationService.ts": 383,
+    "src/tests/alerts.test.ts": 529,
     "src/tests/deviceLifecycle.test.ts": 467,
     "src/tests/e2e.test.ts": 521,
     "src/tests/incidents.test.ts": 324,
@@ -176,27 +176,27 @@
     "src/jobs/notificationWorker.ts": [
       {
         "name": "processAlertNotification",
-        "length": 74
+        "length": 70
       },
       {
         "name": "processIncidentNotification",
-        "length": 45
+        "length": 41
       },
       {
         "name": "processSupplyRequestNotification",
-        "length": 44
+        "length": 40
       }
     ],
     "src/jobs/publicWebhookWorker.ts": [
       {
         "name": "processPublicReadingsNotification",
-        "length": 26
+        "length": 22
       }
     ],
     "src/jobs/reportDeliveryWorker.ts": [
       {
         "name": "processReportDelivery",
-        "length": 64
+        "length": 60
       }
     ],
     "src/jobs/retentionJob.ts": [
@@ -252,7 +252,7 @@
     "src/modules/agents/infrastructure/database/knex-agent-portal-repository.ts": [
       {
         "name": "listDevices",
-        "length": 22
+        "length": 23
       }
     ],
     "src/modules/agents/presentation/agent-controller.ts": [

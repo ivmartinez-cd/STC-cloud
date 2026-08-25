@@ -11,11 +11,15 @@ import type { RequestNotifier } from "../../application/ports/request-notifier";
 export class BullRequestNotifier implements RequestNotifier {
   constructor(private readonly queue: Queue) {}
 
+  // Mismo criterio que alert.created/report.closed/incident.created (R9 gap
+  // analysis vs HP SDS: "falta expiración/retry automáticos").
+  private static readonly RETRY = { attempts: 3, backoff: { type: "exponential" as const, delay: 5000 } };
+
   async created(request: SupplyRequest): Promise<void> {
-    await this.queue.add("supply_request.created", { requestId: request.id });
+    await this.queue.add("supply_request.created", { requestId: request.id }, BullRequestNotifier.RETRY);
   }
 
   async completed(request: SupplyRequest): Promise<void> {
-    await this.queue.add("supply_request.completed", { requestId: request.id });
+    await this.queue.add("supply_request.completed", { requestId: request.id }, BullRequestNotifier.RETRY);
   }
 }
