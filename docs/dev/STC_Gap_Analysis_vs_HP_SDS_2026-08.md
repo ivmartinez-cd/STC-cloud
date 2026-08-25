@@ -1925,8 +1925,27 @@ Playwright real contra el stack Docker: deep-link sin sesión → login →
 vuelve al deep-link (no a `/`); cookie de sesión corrompida a mitad de uso
 → 401 → login → vuelve a la página en la que estaba.
 
-### R10 · Documentación divergente — **P2**
-Ver §1. Especialmente `data_collection_inventory.md` (privacidad) y los HTML de auditoría IT que describen la cascada vieja, PBKDF2 100k y "SNMP sólo identificación".
+### R10 · Documentación divergente — **P2** — los 2 documentos citados, actualizados (25/08/2026)
+✅ `docs/security/data_collection_inventory.md` y
+`docs/cliente/STC_Auditoria_Sistemas_IT_v1.7.html` actualizados a v2.1,
+verificado contra el código (no supuesto). Hallazgo: "PBKDF2 100k" y "la
+cascada vieja" ya estaban correctos en ambos documentos (210k
+iteraciones, cascada de negociación real) — quedaron desactualizados en
+ESTE mismo doc, no en los que describía. Lo que sí faltaba de verdad: un
+§2.5 nuevo en el inventario de datos cubriendo cuentas de operador del
+portal + 2FA, auditoría de login (usuario+IP, sin purga) y direcciones de
+email de destinatarios de reportes/alertas — la conclusión ejecutiva "cero
+PII" de v2.0 no distinguía el agente (sin PII, sigue siendo cierto) del
+portal (sí procesa datos de personas identificadas del staff de IT del
+cliente, nunca de usuarios finales); y la primera capacidad de SNMP SET
+del sistema (reinicio remoto de impresora, agente v1.2.0) documentada en
+ambos — "SNMP sólo identificación" era cierto hasta ayer, ahora hay una
+excepción explícita, auditada y acotada. `email_log` sumado a las tablas
+de retención de ambos (12 meses, ya purgado pero nunca documentado).
+
+**Fuera de esta pasada, sigue igual que antes:** el resto de "Ver §1" —
+documentación más antigua/dispersa que no forma parte de los 2 documentos
+que este hallazgo nombraba explícitamente.
 
 ---
 
