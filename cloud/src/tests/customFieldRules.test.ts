@@ -27,6 +27,16 @@ const DEFS = [
   def('area', 'select', ['ventas', 'admin']),
 ];
 
+describe('custom-field-rules — CustomFieldError', () => {
+  test('statusCode 400 por defecto y 409 explícito para key duplicada', () => {
+    assert.equal(new CustomFieldError('x').statusCode, 400);
+    const dup = new CustomFieldError('key duplicada', 409);
+    assert.equal(dup.statusCode, 409);
+    assert.equal(dup.message, 'key duplicada');
+    assert.ok(dup instanceof Error);
+  });
+});
+
 describe('custom-field-rules — definiciones', () => {
   test('key: se normaliza (trim + minúsculas) y rechaza formas inválidas', () => {
     assert.equal(normalizeAndValidateKey('  Floor_Number '), 'floor_number');
