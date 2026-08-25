@@ -39,23 +39,35 @@ export function queryClientsCount(db: Knex, cid: string | null) {
 // cliente va DENTRO del subselect con ventana (no afuera, sobre `sub`): así el
 // LAG de cada dispositivo sigue viendo su propia lectura previa aunque se
 // filtre por cliente.
-export function queryMonthlyVolume(db: Knex, cid: string | null) {
-  return db
-    .raw(
-      `
+// Dos SQL literales (con y sin filtro por cliente) en vez de armar el texto por
+// interpolación: el único valor variable (`client_id`) viaja como binding.
+const MONTHLY_VOLUME_SQL = `
     SELECT SUM(GREATEST(delta, 0))::bigint as total FROM (
       SELECT
         r.time,
         r.total_pages - LAG(r.total_pages) OVER (PARTITION BY r.device_id ORDER BY r.time) as delta
       FROM readings r
-      ${cid ? "JOIN devices d ON d.id = r.device_id" : ""}
       WHERE r.time >= date_trunc('month', now()) - INTERVAL '40 days'
-      ${cid ? "AND d.client_id = ? AND d.merged_into IS NULL" : ""}
     ) sub
     WHERE delta IS NOT NULL AND time >= date_trunc('month', now())
-  `,
-      cid ? [cid] : []
-    )
+  `;
+
+const MONTHLY_VOLUME_BY_CLIENT_SQL = `
+    SELECT SUM(GREATEST(delta, 0))::bigint as total FROM (
+      SELECT
+        r.time,
+        r.total_pages - LAG(r.total_pages) OVER (PARTITION BY r.device_id ORDER BY r.time) as delta
+      FROM readings r
+      JOIN devices d ON d.id = r.device_id
+      WHERE r.time >= date_trunc('month', now()) - INTERVAL '40 days'
+        AND d.client_id = ? AND d.merged_into IS NULL
+    ) sub
+    WHERE delta IS NOT NULL AND time >= date_trunc('month', now())
+  `;
+
+export function queryMonthlyVolume(db: Knex, cid: string | null) {
+  return db
+    .raw(cid ? MONTHLY_VOLUME_BY_CLIENT_SQL : MONTHLY_VOLUME_SQL, cid ? [cid] : [])
     .then((r: { rows: Array<{ total: string | null }> }) => r.rows[0]);
 }
 

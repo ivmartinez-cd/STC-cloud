@@ -47,6 +47,14 @@ const MONTHLY_SUBQUERY = `
     ) as m
 `;
 
+// Conteos de dispositivos del agente por estado, como SQL literal (sin
+// interpolación: ni las condiciones ni los alias son variables).
+const DEVICE_COUNT_EXPRESSIONS = [
+  "COUNT(DISTINCT CASE WHEN d.active = true AND d.decommissioned_at IS NULL AND d.merged_into IS NULL THEN d.id END)::int AS active_device_count",
+  "COUNT(DISTINCT CASE WHEN d.decommissioned_at IS NULL AND d.merged_into IS NULL THEN d.id END)::int AS total_device_count",
+  "COUNT(DISTINCT CASE WHEN d.decommissioned_at IS NOT NULL AND d.merged_into IS NULL THEN d.id END)::int AS decommissioned_device_count",
+] as const;
+
 export class KnexAgentPortalRepository implements AgentPortalRepository {
   constructor(private readonly db: Knex | Knex.Transaction) {}
 
@@ -62,13 +70,10 @@ export class KnexAgentPortalRepository implements AgentPortalRepository {
   async getDetail(id: string, full: boolean): Promise<Record<string, any> | null> {
     const db = this.db;
     const columns = full ? [...AGENT_SAFE_COLUMNS, "agents.activation_key"] : AGENT_SAFE_COLUMNS;
-    const count = (cond: string, alias: string) => db.raw(`COUNT(DISTINCT CASE WHEN ${cond} THEN d.id END)::int AS ${alias}`);
     const row = await db("agents").where("agents.id", id)
       .select(
         ...columns, "clients.name as client_name",
-        count("d.active = true AND d.decommissioned_at IS NULL AND d.merged_into IS NULL", "active_device_count"),
-        count("d.decommissioned_at IS NULL AND d.merged_into IS NULL", "total_device_count"),
-        count("d.decommissioned_at IS NOT NULL AND d.merged_into IS NULL", "decommissioned_device_count"),
+        ...DEVICE_COUNT_EXPRESSIONS.map((sql) => db.raw(sql)),
         ...(full ? CONFIG_COLUMNS : [])
       )
       .leftJoin("clients", "clients.id", "agents.client_id")

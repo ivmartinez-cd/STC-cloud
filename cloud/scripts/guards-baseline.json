@@ -1,4 +1,1 @@
-{
-  "sql-interpolation|src/api/controllers/dashboardController/dashboard-queries.ts": 1,
-  "sql-interpolation|src/modules/agents/infrastructure/database/knex-agent-portal-repository.ts": 1
-}
+{}
