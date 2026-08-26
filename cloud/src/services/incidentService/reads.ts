@@ -130,6 +130,11 @@ const INSTANT_CLOSE_THRESHOLD_SECONDS = 60;
  * incidentes viejos sin `rule_id` o clientes con reglas propias distintas
  * para la misma clase, no hay una regla única que señalar). */
 function instantClosuresQuery(db: Knex, clientId?: string | null) {
+  // Postgres no tiene MIN/MAX nativo para `uuid` (error 42883) — castear a
+  // `text` para elegir "cualquier valor determinístico del grupo" (no hace
+  // falta el mínimo real, sólo uno estable), mismo criterio en las dos
+  // columnas uuid de acá. Bug real encontrado por la sesión hermana vía
+  // `/dashboard` (500) tras el build de Fase 4 — corregido acá.
   return db("incidents")
     .modify((q) => { if (clientId) q.andWhere("client_id", clientId); })
     .where({ status: "closed", origin: "auto" })
@@ -138,8 +143,8 @@ function instantClosuresQuery(db: Knex, clientId?: string | null) {
     .select("class")
     .count("id as count")
     .countDistinct({ distinct_rules: "rule_id" })
-    .min({ rule_id: "rule_id" })
-    .min({ sample_client_id: "client_id" })
+    .min({ rule_id: db.raw("rule_id::text") })
+    .min({ sample_client_id: db.raw("client_id::text") })
     .groupBy("class")
     .orderBy("count", "desc");
 }
