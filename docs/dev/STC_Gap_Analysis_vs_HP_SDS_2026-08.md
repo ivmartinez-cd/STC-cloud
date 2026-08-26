@@ -15,6 +15,17 @@ análisis para saber qué falta. El resto del documento (§1-§3) describe el es
 **al momento de la auditoría** — donde algo ya se resolvió, esta sección lo dice
 explícitamente; si no aparece acá, sigue tal como está descrito abajo.
 
+**Cierre de esta ronda (26/08/2026):** Fases 0 a 19 completas (últimas 5: relay
+multi-réplica del proxy EWS, réplicas reales de `api` + fix de DNS dinámico en
+nginx, dashboards Grafana + alerting sobre Prometheus, polish de locale + fix
+real de TZ hardcodeada en el export de logs, export PDF + entrega SFTP de
+reportes). De lo que quedaba en el backlog corto (§4), sólo siguen abiertos dos
+ítems bloqueados por factores externos a este repo, no por falta de código:
+**R8/cobertura de marcas** (Ricoh/Kyocera/Brother/Xerox/Canon/Konica — necesita
+hardware real para fixtures, no completable desde acá) y el **DPA** (documento
+legal, requiere revisión de abogado). Sin pendientes de código conocidos más
+allá de eso.
+
 ### Fase 0 — Parar hemorragias — ✅ **completa**
 Los 7 ítems de §4 Fase 0 están cerrados: cola del agente (no purga lo no
 sincronizado), idempotencia (`reading_id` + `ON CONFLICT`), migración de
