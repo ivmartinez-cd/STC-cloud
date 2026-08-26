@@ -13,6 +13,12 @@ import { KnexPeriodUsageQuery } from "./infrastructure/database/knex-period-usag
 export { parsePeriod, formatPeriod } from "./domain/services/period";
 export { buildClosureCsv, type ExportClosure, type ExportLine } from "./domain/services/closure-csv";
 export { buildClosureXlsx } from "./infrastructure/export/closure-xlsx-renderer";
+// PdfkitClosureRenderer.render en vez de la función suelta `buildClosurePdf`
+// (a diferencia de CSV/XLSX de arriba): necesita el contrato de clase por
+// `ClosurePdfRenderer` (puerto), no porque `reportDeliveryWorker.ts` use DI —
+// se instancia directo, mismo criterio que el resto de este archivo.
+export { PdfkitClosureRenderer } from "./infrastructure/export/closure-pdf-renderer";
+export type { ExportClosurePdfContext } from "./application/use-cases/export-closure";
 export type { PeriodUsageLine } from "./domain/entities/period-usage-line";
 export { ClosurePeriodConflictError } from "./domain/errors/report-error";
 

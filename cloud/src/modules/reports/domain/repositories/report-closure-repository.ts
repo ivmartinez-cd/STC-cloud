@@ -28,4 +28,6 @@ export interface ReportClosureRepository {
   findLines(closureId: string): Promise<ReportClosureLine[]>;
   /** Sólo estado/auditoría — NUNCA las columnas numéricas. `null` si no existe. */
   reopen(closureId: string, input: ReopenClosureInput): Promise<ReportClosure | null>;
+  /** Sólo para la portada del PDF (Fase 19) — `ReportClosure` no carga `clientId` a nombre. */
+  findClientName(clientId: string): Promise<string | null>;
 }

@@ -8,4 +8,4 @@ export type {
 } from './snmp';
 export type { MonitorData, EditFormData, Monitor, CreateMonitorForm } from './monitor-agent';
 export type { DashboardData } from './dashboard';
-export type { Client, ApiKeyRecord, PublicApiEvent, WebhookConfig, UsageMonth } from './client';
+export type { Client, ApiKeyRecord, PublicApiEvent, WebhookConfig, SftpDestinationConfig, UsageMonth } from './client';

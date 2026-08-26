@@ -60,6 +60,8 @@ const TEST_FILES = [
   "src/tests/feedbackUseCases.test.ts",
   "src/tests/systemSettings.test.ts",
   "src/tests/agentLogsReport.test.ts",
+  "src/tests/sftpDestination.test.ts",
+  "src/tests/clientSftpDestination.test.ts",
 ];
 
 function runFile(file) {

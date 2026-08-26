@@ -1,4 +1,4 @@
-import { Download, FileSpreadsheet, Unlock, ChevronDown, ChevronUp, CheckCircle2, Loader2 } from 'lucide-react';
+import { Download, FileSpreadsheet, FileText, Unlock, ChevronDown, ChevronUp, CheckCircle2, Loader2 } from 'lucide-react';
 import type { Closure, ClosureDetail } from '../types/reports';
 import { APP_LOCALE } from '../../../shared/lib/formatters';
 
@@ -15,7 +15,7 @@ interface Props {
   detailLoading: boolean;
   isReadOnlyViewer: boolean;
   onToggleExpand: (closure: Closure) => void;
-  onDownload: (closureId: string, format: 'csv' | 'xlsx') => void;
+  onDownload: (closureId: string, format: 'csv' | 'xlsx' | 'pdf') => void;
   onReopenRequest: (closure: Closure) => void;
 }
 
@@ -57,6 +57,10 @@ export default function ReportsClosuresHistory({
                 <button onClick={() => onDownload(c.id, 'xlsx')} title="Descargar XLSX"
                   className="p-2 bg-slate-50 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all">
                   <FileSpreadsheet size={14} />
+                </button>
+                <button onClick={() => onDownload(c.id, 'pdf')} title="Descargar PDF"
+                  className="p-2 bg-slate-50 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all">
+                  <FileText size={14} />
                 </button>
                 {!isReadOnlyViewer && c.status === 'closed' && (
                   <button onClick={() => onReopenRequest(c)} title="Reabrir"

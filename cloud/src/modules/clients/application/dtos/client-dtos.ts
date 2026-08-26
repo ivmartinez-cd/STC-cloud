@@ -80,6 +80,12 @@ export interface PutWebhookInput {
   regenerateSecret?: boolean;
 }
 
+/** `body: null` borra el destino configurado (deja de intentar la entrega SFTP). */
+export interface PutSftpDestinationInput extends Actor {
+  clientId: string;
+  body: unknown;
+}
+
 export interface PendingDevicesListInput {
   clientId: string;
   limit?: string;

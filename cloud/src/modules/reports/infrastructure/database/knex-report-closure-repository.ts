@@ -95,4 +95,9 @@ export class KnexReportClosureRepository implements ReportClosureRepository {
       .returning("*");
     return row ? toClosure(row) : null;
   }
+
+  async findClientName(clientId: string): Promise<string | null> {
+    const row = await this.db("clients").where({ id: clientId }).select("name").first();
+    return row?.name ?? null;
+  }
 }

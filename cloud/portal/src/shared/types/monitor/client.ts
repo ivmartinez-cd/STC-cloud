@@ -39,6 +39,17 @@ export interface WebhookConfig {
   active: boolean;
 }
 
+/** `GET/PUT /clients/:id/sftp-destination` (Fase 19) — nunca trae password/private_key, sólo si hay uno configurado. */
+export interface SftpDestinationConfig {
+  configured: boolean;
+  host?: string;
+  port?: number;
+  username?: string;
+  auth_method?: 'password' | 'private_key';
+  remote_path?: string;
+  updated_at?: string;
+}
+
 export interface UsageMonth {
   month: string;
   /** ISO del primer día del mes — clave estable para rellenar meses sin lecturas

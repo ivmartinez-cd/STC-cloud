@@ -4,8 +4,9 @@ import CustomFieldsCard from './CustomFieldsCard';
 import IncidentRulesCard from './IncidentRulesCard';
 import SupplyRequestSettingsCard from './SupplyRequestSettingsCard';
 import NotificationEventsCard from './NotificationEventsCard';
+import SftpDestinationCard from './SftpDestinationCard';
 
-/** Zona "Configuración de la cuenta" completa (rótulo + grilla de 5 tarjetas) —
+/** Zona "Configuración de la cuenta" completa (rótulo + grilla de 6 tarjetas) —
  * reusada tal cual en "Resumen" y en la tab "Configuración" a pantalla completa. */
 export default function ClientConfigZone({ clientId, canEdit }: { clientId: string; canEdit: boolean }) {
   return (
@@ -17,6 +18,7 @@ export default function ClientConfigZone({ clientId, canEdit }: { clientId: stri
         <IncidentRulesCard clientId={clientId} canEdit={canEdit} />
         <SupplyRequestSettingsCard clientId={clientId} canEdit={canEdit} />
         <NotificationEventsCard clientId={clientId} canEdit={canEdit} />
+        <SftpDestinationCard clientId={clientId} canEdit={canEdit} />
       </div>
     </section>
   );

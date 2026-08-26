@@ -3,6 +3,8 @@ import { getClientIp } from "../../../api/utils/ip";
 import { getPortalUser, getScope } from "../../../api/utils/scope";
 import { DeviceRegistrationError } from "../../devices";
 import { ClientError } from "../domain/errors/client-error";
+import { SftpDestinationValidationError } from "../../../services/sftpDestination";
+import { MissingEncryptionKeyError } from "../../../services/cryptoService";
 import type {
   CreateApiKeyUseCase, ListApiKeysUseCase, RevokeApiKeyUseCase,
 } from "../application/use-cases/client-api-key-use-cases";
@@ -15,6 +17,9 @@ import type {
   ListClientDirectoryUseCase, ListClientsUseCase, UpdateClientUseCase,
 } from "../application/use-cases/client-use-cases";
 import type { GetWebhookUseCase, PutWebhookUseCase } from "../application/use-cases/client-webhook-use-cases";
+import type {
+  DeleteSftpDestinationUseCase, GetSftpDestinationUseCase, PutSftpDestinationUseCase,
+} from "../application/use-cases/client-sftp-use-cases";
 
 export interface ClientUseCases {
   create: CreateClientUseCase; update: UpdateClientUseCase; list: ListClientsUseCase; get: GetClientUseCase;
@@ -23,6 +28,8 @@ export interface ClientUseCases {
   stats: GetClientStatsUseCase; deviceDirectory: ListClientDeviceDirectoryUseCase;
   listApiKeys: ListApiKeysUseCase; createApiKey: CreateApiKeyUseCase; revokeApiKey: RevokeApiKeyUseCase;
   getWebhook: GetWebhookUseCase; putWebhook: PutWebhookUseCase;
+  getSftpDestination: GetSftpDestinationUseCase; putSftpDestination: PutSftpDestinationUseCase;
+  deleteSftpDestination: DeleteSftpDestinationUseCase;
   listPending: ListPendingDevicesUseCase; registerPending: RegisterPendingDevicesUseCase; ignorePending: IgnorePendingDevicesUseCase;
 }
 
@@ -37,6 +44,14 @@ async function replyingClientErrors<T>(reply: FastifyReply, fn: () => Promise<T>
   } catch (err) {
     if (err instanceof ClientError || err instanceof DeviceRegistrationError) {
       return reply.status(err.statusCode).send({ error: err.message });
+    }
+    if (err instanceof SftpDestinationValidationError) {
+      return reply.status(400).send({ error: err.message, field: err.field });
+    }
+    // Falta SNMP_CREDENTIALS_KEY en este despliegue — mismo criterio que
+    // `portal-agent-controller.ts` para el mismo error de SNMP.
+    if (err instanceof MissingEncryptionKeyError) {
+      return reply.status(503).send({ error: err.message, code: err.code });
     }
     throw err;
   }
@@ -107,6 +122,13 @@ function integrationHandlers(uc: ClientUseCases) {
         const b = request.body as { url?: string; events?: string[]; active?: boolean; regenerate_secret?: boolean };
         return uc.putWebhook.execute({ clientId: idOf(request), url: b.url, events: b.events, active: b.active, regenerateSecret: b.regenerate_secret });
       }),
+    getSftpDestination: (request: FastifyRequest, reply: FastifyReply) =>
+      replyingClientErrors(reply, () => uc.getSftpDestination.execute(idOf(request))),
+    putSftpDestination: (request: FastifyRequest, reply: FastifyReply) =>
+      replyingClientErrors(reply, () =>
+        uc.putSftpDestination.execute({ clientId: idOf(request), body: request.body, ...actorOf(request) })),
+    deleteSftpDestination: (request: FastifyRequest, reply: FastifyReply) =>
+      replyingClientErrors(reply, () => uc.deleteSftpDestination.execute(idOf(request), actorOf(request))),
   };
 }
 

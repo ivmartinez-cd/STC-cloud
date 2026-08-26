@@ -145,7 +145,7 @@ const Reports = () => {
     }
   };
 
-  const downloadExport = (closureId: string, format: 'csv' | 'xlsx') => {
+  const downloadExport = (closureId: string, format: 'csv' | 'xlsx' | 'pdf') => {
     window.open(`/api/v1/clients/${selectedClientId}/reports/${closureId}/export.${format}`, '_blank');
   };
 

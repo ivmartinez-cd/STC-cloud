@@ -11,6 +11,9 @@ import {
   ListClientDirectoryUseCase, ListClientsUseCase, UpdateClientUseCase,
 } from "../application/use-cases/client-use-cases";
 import { GetWebhookUseCase, PutWebhookUseCase } from "../application/use-cases/client-webhook-use-cases";
+import {
+  DeleteSftpDestinationUseCase, GetSftpDestinationUseCase, PutSftpDestinationUseCase,
+} from "../application/use-cases/client-sftp-use-cases";
 import { ApiKeyServiceStore } from "../infrastructure/adapters/api-key-service-store";
 import { DeviceRegistrationServiceGateway } from "../infrastructure/adapters/device-registration-service-gateway";
 import { PublicWebhookConfigStore } from "../infrastructure/adapters/public-webhook-config-store";
@@ -113,6 +116,27 @@ const putWebhookSchema = {
   },
 };
 
+// Sin `additionalProperties: false` ni tipar `password`/`private_key` acá a
+// propósito: la validación real (uno u otro según `auth_method`, longitudes,
+// etc.) vive en `services/sftpDestination.ts` (mismo criterio que
+// `snmpCredentialsSchema` — el schema de Ajv es sólo la forma gruesa, nunca
+// la única barrera).
+const putSftpDestinationSchema = {
+  body: {
+    type: "object",
+    required: ["host", "username", "auth_method"],
+    properties: {
+      host: { type: "string", maxLength: 255 },
+      port: { type: "integer", minimum: 1, maximum: 65535 },
+      username: { type: "string", maxLength: 100 },
+      auth_method: { type: "string", enum: ["password", "private_key"] },
+      password: { type: "string" },
+      private_key: { type: "string" },
+      remote_path: { type: "string", maxLength: 500 },
+    },
+  },
+};
+
 function buildUseCases(db: Knex): ClientUseCases {
   const clients = new KnexClientRepository(db);
   const audit = new KnexAuditLogWriter(db);
@@ -127,6 +151,8 @@ function buildUseCases(db: Knex): ClientUseCases {
     stats: new GetClientStatsUseCase(clients), deviceDirectory: new ListClientDeviceDirectoryUseCase(clients),
     listApiKeys: new ListApiKeysUseCase(keys), createApiKey: new CreateApiKeyUseCase(keys), revokeApiKey: new RevokeApiKeyUseCase(keys),
     getWebhook: new GetWebhookUseCase(webhooks), putWebhook: new PutWebhookUseCase(webhooks),
+    getSftpDestination: new GetSftpDestinationUseCase(clients), putSftpDestination: new PutSftpDestinationUseCase(clients, audit),
+    deleteSftpDestination: new DeleteSftpDestinationUseCase(clients, audit),
     listPending: new ListPendingDevicesUseCase(registration), registerPending: new RegisterPendingDevicesUseCase(registration),
     ignorePending: new IgnorePendingDevicesUseCase(registration),
   };
@@ -174,4 +200,11 @@ export function registerClientRoutes(fastify: FastifyInstance, db: Knex, portalA
   // deny-by-default para client_viewer que las API keys de arriba.
   fastify.get("/api/v1/clients/:id/webhook", { preHandler: portalAuth, handler: ctrl.getWebhook });
   fastify.put("/api/v1/clients/:id/webhook", { schema: putWebhookSchema, preHandler: portalAuth, handler: ctrl.putWebhook });
+
+  // Destino SFTP de entrega de reportes (Fase 19 del gap analysis) — mismo
+  // criterio deny-by-default para client_viewer: gestionar una credencial de
+  // entrega no es su rol.
+  fastify.get("/api/v1/clients/:id/sftp-destination", { preHandler: portalAuth, handler: ctrl.getSftpDestination });
+  fastify.put("/api/v1/clients/:id/sftp-destination", { schema: putSftpDestinationSchema, preHandler: portalAuth, handler: ctrl.putSftpDestination });
+  fastify.delete("/api/v1/clients/:id/sftp-destination", { preHandler: portalAuth, handler: ctrl.deleteSftpDestination });
 }

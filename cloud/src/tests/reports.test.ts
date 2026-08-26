@@ -216,3 +216,18 @@ describe('Reportes — export XLSX', () => {
     assert.ok(buffer.length > 1000, 'El archivo no debe estar vacío/truncado');
   });
 });
+
+describe('Reportes — export PDF (Fase 19)', () => {
+  test('GET .../export.pdf trae un PDF real con el nombre del cliente y los totales', async () => {
+    const { status, contentType, buffer } = await getBinary(`/clients/${ctx.clientId}/reports/${ctx.closureId}/export.pdf`, ctx.adminToken);
+    assert.equal(status, 200);
+    assert.equal(contentType, 'application/pdf');
+    assert.equal(buffer.subarray(0, 4).toString('latin1'), '%PDF');
+    assert.ok(buffer.length > 500, 'El archivo no debe estar vacío/truncado');
+  });
+
+  test('export.pdf de un cierre de otro cliente → 404', async () => {
+    const { status } = await getBinary(`/clients/${ctx.clientBId}/reports/${ctx.closureId}/export.pdf`, ctx.adminToken);
+    assert.equal(status, 404);
+  });
+});

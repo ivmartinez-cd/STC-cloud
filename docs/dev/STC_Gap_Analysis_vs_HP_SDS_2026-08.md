@@ -83,7 +83,8 @@ decisión de negocio, no una obligación de compliance.
   mensual inmutable (lectura inicial/final, delta, método/fuente, `superseded_by`
   al reabrir), export CSV/XLSX, y entrega automática por email/webhook (mismo
   transporte de notificaciones de Fase 1). §2.5 queda resuelto.
-  **Lo que NO se hizo de §2.5**: export a PDF (quedó CSV/XLSX), entrega por SFTP.
+  **Lo que NO se hizo de §2.5 en esta pasada**: export a PDF (quedó CSV/XLSX),
+  entrega por SFTP. ✅ (26/08/2026) Ver Fase 19.
 - ✅ **Identidad de dispositivo por cliente** (commit `2d4eef5`): clave compuesta
   `(client_id, serial)` en vez de `(agent_id, serial)` — dos agentes viendo la
   misma impresora ya no la duplican; decommission (soft-delete + reactivar),
@@ -2326,12 +2327,12 @@ Grafana Alerting nativo (decisión explícita, ver arriba, no un pendiente).
 
 ### Fase 18 — Polish de locale: portal, agente y un bug real en el camino (26/08/2026) — completa
 
-Origen: último de los ítems reales que quedaban del backlog corto (junto a
-export PDF/SFTP de reportes, ya descartado por requerir decisiones de
-producto sobre credenciales/entrega que no correspondía asumir solo, y la
+Origen: uno de los ítems reales que quedaban del backlog corto (junto a la
 UI de `credential_ids` — investigada primero, resultó ya estar cerrada
 desde el 25/08/2026, sólo una referencia cruzada de este mismo documento
-había quedado sin actualizar, corregida aparte sin abrir una fase). El
+había quedado sin actualizar, corregida aparte sin abrir una fase; el
+export PDF/SFTP de reportes quedó pausado en ESTA pasada hasta definir
+alcance con Ivan — ver Fase 19, inmediatamente después). El
 propio R7/Fase 1 de este documento ya traía el hallazgo anotado como
 "cosmético, no un bug" — verificado antes de tocar nada, y **una de las
 dos partes SÍ resultó ser un bug real**, no sólo estético.
@@ -2413,6 +2414,134 @@ locale); back-fill de reportes YA exportados/guardados con la TZ vieja
 servidor (nunca fue `es-AR`, ya usa timestamps ISO — fuera del alcance de
 este hallazgo, que era específicamente sobre texto pensado para un
 lector humano).
+
+### Fase 19 — Export PDF + entrega SFTP de reportes (26/08/2026) — completa
+
+Origen: único ítem real del backlog corto de Fase 1 que había quedado sin
+tocar ("Export a PDF y entrega por SFTP no se hicieron"). A diferencia de
+las fases anteriores, ésta arrancó con una ronda explícita de scoping con
+Ivan (4 preguntas) antes de escribir código — a propósito: implica
+decisiones de producto reales (forma del PDF, dónde vive una credencial
+SFTP que es inherentemente por cliente) que este documento venía
+señalando como fuera de lo que corresponde decidir solo. Definido:
+PDF "presentable" (portada + totales + tabla, no un espejo del CSV/XLSX);
+`pdfkit` sobre Puppeteer (footprint mínimo, sin Chromium embebido — encaja
+con el límite de 512m/réplica de `api`); config SFTP en autoservicio desde
+el portal, cifrada at-rest; canal nuevo con convención propia (no replica
+el FTP legado).
+
+✅ **Cifrado generalizado** (`services/cryptoService.ts`): antes servía
+sólo a SNMPv3 (`SNMP_CREDENTIALS_KEY` fija, un único `HKDF_INFO`). Ahora
+`encryptSecret`/`decryptSecret`/`isEncryptionConfigured` toman un `purpose`
+opcional (`"snmp"` default, sin tocar ningún call-site existente) que
+deriva una subclave HKDF INDEPENDIENTE por tipo de credencial a partir de
+la MISMA env var — comprometer la subclave SFTP no compromete la SNMP ni
+viceversa. El nombre de la env var (`SNMP_CREDENTIALS_KEY`) queda igual a
+propósito: renombrarla rompería `.env.production` ya desplegados. Test
+nuevo que verifica la separación real (cifrar con `"snmp"`, intentar
+descifrar con `"sftp"` → falla) — no se asumió que HKDF con info distinto
+alcanzaba, se lo probó.
+
+✅ **Destino SFTP por cliente** (`clients.sftp_destination jsonb`,
+migración `20260826020000`): mismo patrón que `agents.snmp_credentials`
+(campos `*_enc` cifrados individualmente, resto en claro, vista
+enmascarada `{configured, host, port, username, auth_method, remote_path,
+updated_at}` que nunca lleva password/private_key). A diferencia de SNMP
+(lista de hasta 8 por agente, resolución por `ref`), acá es UN solo
+destino por cliente sin `id` — el PUT siempre reemplaza el objeto entero;
+password/private_key son write-only, no se pueden "ver" después de
+guardados (ni siquiera enmascarados como el secret de un webhook). Soporta
+auth por contraseña o clave privada, mutuamente excluyentes, validado en
+`services/sftpDestination.ts`. `GET/PUT/DELETE /clients/:id/sftp-destination`
+(no `PUT null` — DELETE aparte, evita la complejidad de un schema Ajv
+"objeto o null" para un caso que ya tiene el verbo HTTP correcto).
+
+✅ **Hallazgo real en el camino, no buscado**: `clients.*`/`returning('*')`
+(usados en casi todo `KnexClientRepository` — `findWithCounts`,
+`listWithCounts`, `insertClient`, `updateClient`) hubieran empezado a
+devolver `sftp_destination` (con sus `*_enc`) en CUALQUIER `GET /clients`,
+`GET /clients/:id`, o incluso una edición común de nombre/contacto, apenas
+se agregara la columna — mismo criterio "ancho, `clients.*`" que ya usa
+el resto de la tabla, pero éste es un secreto cifrado, no un dato de
+negocio más. Se agregó `stripSftpDestination()` en `crud.ts` (un único
+punto, cubre las 4 funciones) en vez de convertir el select a una
+whitelist explícita — hubiera ido contra el criterio ya establecido para
+el resto de columnas nuevas de `clients`. Test e2e que confirma
+específicamente esto: `GET /clients/:id` general no expone
+`sftp_destination` aunque el cliente tenga uno configurado.
+
+✅ **PDF** (`pdfkit`, `modules/reports/infrastructure/export/closure-pdf-renderer.ts`):
+portada (cliente, período, estado, fecha de cierre) + 3 tarjetas de
+totales (páginas/mono/color) + tabla de equipos paginada a mano (`pdfkit`
+no trae layout de tablas — filas de ancho fijo, salto de página manual
+cuando se acerca al margen inferior). `ExportClosureUseCase` gana un
+tercer puerto (`ClosurePdfRenderer`) junto a CSV/XLSX — sólo el PDF
+necesita el nombre del cliente (`ReportClosure` no lo carga, sólo
+`clientId`), así que `findClientName` se resuelve nada más que para esa
+rama, no se le agregó a los otros dos formatos que no lo necesitan.
+Verificado con un PDF real generado con 60 filas (fuerza 2 páginas) y
+parseado con `pypdf` — no sólo "no tiró excepción": el texto extraído
+confirma cliente/período/totales con el separador de miles `es-AR`
+correcto y que la fila 2 de la tabla efectivamente cayó en la página 2.
+`GET /clients/:id/reports/:closureId/export.pdf` — mismo criterio que
+`.csv`/`.xlsx` (404 si el cierre no es del cliente).
+
+✅ **Entrega SFTP** (`services/sftpDeliveryService.ts`, `ssh2-sftp-client`):
+cuarto canal independiente en `reportDeliveryWorker.ts` (`Promise.allSettled`
+junto a email/webhook/ERP), mismo opt-out por evento (`notification_events`,
+`report.closed`) que los otros dos. Conexión nueva por entrega, sin pool —
+es 1x/mes por cliente, no vale la pena sostener conexiones SFTP abiertas
+en el proceso de la API para eso. Sube el PDF (no CSV/XLSX — el destino
+SFTP es para que un cliente lo reciba como documento, no para integrarlo a
+otro sistema, ahí ya está la API pública/webhook con datos estructurados)
+como `cierre_{periodo}.pdf` a `remote_path`. No auto-crea el directorio
+remoto (`mkdir`) si no existe — es el SFTP de un TERCERO, actuar sobre su
+filesystem sin que se pida es más sorpresa que ayuda; si la ruta no
+existe, la subida falla y cae en el mismo mecanismo de reintento/audit que
+ya tenían los otros 3 canales.
+
+Verificado: 17 tests nuevos puros (`sftpDestination.test.ts` — validación,
+cifrado/enmascarado/round-trip, separación de purpose) + 12 tests e2e
+(`clientSftpDestination.test.ts` — ciclo GET/PUT/DELETE completo, 400 por
+campo, 404, y el hallazgo de `sftp_destination` filtrando por `GET
+/clients/:id` general) + 2 tests e2e nuevos en `reports.test.ts`
+(`export.pdf` real vía HTTP, 404 cruzado entre clientes) — todos contra el
+stack Docker real, `stc_api` reconstruido con las dependencias nuevas
+(46/46 verdes). **Hallazgo real al escribir los tests de "cliente
+inexistente"**: `00000000-0000-0000-0000-000000000000` (el UUID all-zeros
+que ya usa `reports.test.ts` para "cierre inexistente") NO sirve para
+"cliente inexistente" — es el id real de "Cliente de Prueba", un cliente
+semilla que existe en la base de desarrollo desde mayo. Los primeros 2
+tests de 404 dieron falso 200 por esto (no por un bug del código, un bug
+del propio test) — corregido usando `crypto.randomUUID()` en vez de un
+literal fijo. `tsc --noEmit` (cloud y portal) limpio, `npm run check`/
+`build` del portal sin errores nuevos. `cloud/package-lock.json`
+regenerado fuera del árbol del repo (mismo procedimiento ya documentado
+para el gotcha del lockfile dual de Docker) — `npm ci --dry-run` confirma
+que quedó en sync. Probado también el camino de fallo real de
+`sftpDeliveryService.ts` (conexión a un puerto cerrado) — falla limpio con
+el error real de `ssh2` ("Timed out while waiting for handshake"), no
+sólo el camino feliz.
+
+✅ **Portal**: `SftpDestinationCard.tsx`, sexta tarjeta de "Configuración de
+la cuenta" (mismo `ConfigCardShell` que API keys/webhook/reglas de
+incidente/etc.) — form de host/puerto/usuario, toggle contraseña↔clave
+privada, botón "Quitar" con confirmación. Botón de descarga PDF nuevo en
+`ReportsClosuresHistory.tsx`, junto a CSV/XLSX.
+
+**Lo que NO se hizo**: paridad de convención con el FTP/mail del STC
+legado (decisión explícita de Ivan — canal nuevo, sin atarse a esa
+convención vieja); reintentos/backoff específicos para fallas de
+conectividad SFTP más allá del mecanismo genérico de BullMQ que ya
+heredan los otros 3 canales; un botón "Probar conexión" en el portal antes
+de guardar (hubiera evitado descubrir una credencial mala recién en el
+próximo cierre — es una mejora real, pero no se pidió y agranda el
+alcance ya scopeado); auto-crear el directorio remoto si no existe
+(decisión explícita, ver arriba); un campo de locale/idioma explícito
+para el PDF (usa `es-AR` fijo para el separador de miles, igual que el
+resto del sistema pre-Fase 18 — no se conectó con `APP_LOCALE` del portal
+porque el PDF se genera en el servidor, sin `navigator`, y no había
+pedido de scoping para eso acá).
 
 ### Otros puntos de §3 (riesgos) que siguen abiertos y no forman parte de ningún ítem de arriba
 - ✅ **R4 (parcial, 23/08/2026)**: el WS del portal ya NO acepta el JWT de
@@ -2906,7 +3035,7 @@ que este hallazgo nombraba explícitamente.
 
 ### Fase 1 — Paridad operativa con SDS (≈ 1 mes) — completa: 9 de 9 ítems cerrados
 - ✅ **Alert loop** — lifecycle server-side completo: alertas `agent_offline`, `device_offline`, `counter_reset` (ya de Fase 0), normalización de las alertas EWS que ya llegaban del agente; **ack/resolve** y filtros; **notificaciones** email + webhook. ✅ (25/08/2026) **digest diario de alertas por email**: opt-in por cliente vía `notification_events` (`alert.digest`, reusa el mecanismo de Fase 4.3, no un boolean paralelo), envío único diario a las 07:00 hora local del cliente (`America/Argentina/Buenos_Aires`), con conteo de críticas/advertencias abiertas + top de clases de alerta de las últimas 24h; idempotente vía `clients.last_alert_digest_sent_at` (`jobs/alertDigestJob.ts`). ✅ (26/08/2026) El loop *dedicado 3/15 min del lado agente* — ver Fase 12, agente v1.3.0.
-- ✅ **Reportes por cliente**: selector de período, cierre mensual inmutable (lectura inicial/final, delta, fuente), export CSV/XLSX, y **entrega automática** (email/webhook) para reemplazar el flujo FTP/mail del STC legado. ⬜ Export a PDF y entrega por SFTP no se hicieron (quedó CSV/XLSX + email/webhook).
+- ✅ **Reportes por cliente**: selector de período, cierre mensual inmutable (lectura inicial/final, delta, fuente), export CSV/XLSX, y **entrega automática** (email/webhook) para reemplazar el flujo FTP/mail del STC legado. ✅ (26/08/2026) Export a PDF y entrega por SFTP — ver Fase 19.
 - ✅ **RBAC por cliente**: rol `client_viewer`, scoping por `client_id` en todos los controladores. ✅ (25/08/2026) Paginación server-side real en el primer listado (`GET /devices` + `Devices.tsx`, ver R9). ✅ (26/08/2026) Resto del portal — ver Fase 10: la mayoría ya la tenía, se cerraron los 2 huecos reales (`EmailLog`/`SupplyRequests`) y se borró un cluster de código muerto (`Monitors.tsx`). Sólo `Alerts.tsx` (paginación "ciega", funcional pero sin total) y `ScheduledReports.tsx` (sin paginar, bajo riesgo) quedan como decisión de alcance, no pendiente.
 - ✅ **SNMPv3 y lista de credenciales** (v1/v2c/v3) por agente, hasta 8 credenciales probadas en orden, secretos cifrados at-rest, fail-fast para no multiplicar timeouts contra un host muerto.
 - ✅ **CIDR + tope de rango + exclusiones**: `ip_ranges` acepta CIDR y exclusión de IPs individuales, compilado del lado cloud a pares planos (cero cambios en el agente); tope de 2000 IPs declaradas por agente, validado en cloud y reforzado en el agente. ⬜ Exclusión de sub-rangos/CIDR anidados e IPv6 quedan fuera.

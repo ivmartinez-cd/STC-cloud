@@ -37,7 +37,7 @@ export interface ClosureDetail {
   lines: ReportClosureLine[];
 }
 
-export type ExportFormat = "csv" | "xlsx";
+export type ExportFormat = "csv" | "xlsx" | "pdf";
 
 export interface ExportClosureInput extends ClosureLookupInput {
   format: ExportFormat;

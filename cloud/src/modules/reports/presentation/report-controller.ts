@@ -109,5 +109,6 @@ export function createReportController(useCases: ReportUseCases) {
     reopenPeriodHandler: buildReopenHandler(useCases.reopen),
     exportCsv: buildExportHandler(useCases.export, "csv"),
     exportXlsx: buildExportHandler(useCases.export, "xlsx"),
+    exportPdf: buildExportHandler(useCases.export, "pdf"),
   };
 }

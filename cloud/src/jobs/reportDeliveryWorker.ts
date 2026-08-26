@@ -5,8 +5,12 @@ import knexConfig from '../db/knexfile';
 import { sendReportEmail, sendReportWebhook } from '../services/notificationService';
 import { sendPublicApiWebhook } from '../services/publicWebhookService';
 import { eventEnabledFor, renderFor } from '../modules/message-templates';
-import { buildClosureCsv, buildClosureXlsx, formatPeriod } from '../modules/reports';
+import { buildClosureCsv, buildClosureXlsx, formatPeriod, PdfkitClosureRenderer } from '../modules/reports';
+import { uploadReportViaSftp } from '../services/sftpDeliveryService';
+import type { StoredSftpDestination } from '../shared/domain/sftp-destination';
 import { logger } from '../logger';
+
+const pdfRenderer = new PdfkitClosureRenderer();
 
 /**
  * Procesa la cola `report-delivery-queue` (encolada desde `reportService.closePeriod`,
@@ -46,9 +50,12 @@ interface ClosureRow {
   status: string;
   closed_at: Date;
   total_pages: number;
+  total_mono: number;
+  total_color: number;
   notification_email: string | null;
   notification_events?: unknown;
   notification_webhook_url: string | null;
+  sftp_destination: StoredSftpDestination | null;
 }
 
 async function processReportDelivery(closureId: string): Promise<void> {
@@ -61,8 +68,10 @@ async function processReportDelivery(closureId: string): Promise<void> {
     .select(
       'report_closures.id', 'report_closures.client_id', 'report_closures.period',
       'report_closures.status', 'report_closures.closed_at', 'report_closures.total_pages',
+      'report_closures.total_mono', 'report_closures.total_color',
       'clients.name as client_name',
-      'clients.notification_email', 'clients.notification_webhook_url', 'clients.notification_events'
+      'clients.notification_email', 'clients.notification_webhook_url', 'clients.notification_events',
+      'clients.sftp_destination'
     )
     .first() as ClosureRow | undefined;
 
@@ -108,6 +117,18 @@ async function processReportDelivery(closureId: string): Promise<void> {
     sendPublicApiWebhook(db, closure.client_id, 'report.closed', {
       closure_id: closure.id, period, total_pages: Number(closure.total_pages),
     }),
+    (async () => {
+      // Fase 19: cuarto canal, mismo opt-out por evento que email/webhook —
+      // independiente del resto (IIFE propia, re-consulta `lines` como ya
+      // hace el canal de email, no comparte estado entre canales a propósito).
+      if (!closure.sftp_destination || !eventEnabledFor(closure.notification_events, 'report.closed')) return;
+      const lines = await db('report_closure_lines').where({ closure_id: closure.id }).orderBy('device_serial').select('*');
+      const pdf = await pdfRenderer.render(
+        { ...closure, clientName: payload.clientName, totalPages: Number(closure.total_pages), totalMono: Number(closure.total_mono), totalColor: Number(closure.total_color) },
+        lines
+      );
+      await uploadReportViaSftp(closure.sftp_destination, `cierre_${period}.pdf`, pdf);
+    })(),
   ]);
   throwIfAnyRejected(results, closureId);
 }

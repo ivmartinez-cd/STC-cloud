@@ -2,6 +2,7 @@ import type {
   ClientDetailStats, ClientDeviceDirectoryQuery, ClientDeviceDirectoryRow, ClientDeviceRow, ClientDirectoryRow,
   ClientMonitorRow, ClientPortfolioSummary, ClientRecord, ClientUsageMonth,
 } from "../entities/client";
+import type { StoredSftpDestination } from "../../../../shared/domain/sftp-destination";
 
 /** Estructuralmente idéntico a `api/utils/scope.ts::Scope` — duplicado para que el dominio no importe de HTTP. */
 export type ClientScope = { kind: "all" } | { kind: "client"; id: string };
@@ -51,4 +52,13 @@ export interface ClientRepository {
    * 200, mismo criterio que `listDirectory()`.
    */
   listDevicesDirectory(query: ClientDeviceDirectoryQuery): Promise<{ items: ClientDeviceDirectoryRow[]; total: number }>;
+  /**
+   * Destino SFTP (Fase 19) — columna dedicada, NUNCA pasa por `findWithCounts`/
+   * `listWithCounts`/`update` genéricos (esos la excluyen a propósito, ver
+   * `stripSftpDestination` en `crud.ts`). `null` si el cliente no tiene uno
+   * configurado.
+   */
+  findSftpDestinationRaw(clientId: string): Promise<StoredSftpDestination | null>;
+  /** Reemplaza el destino entero; `null` lo borra (deja de intentar la entrega SFTP). */
+  updateSftpDestination(clientId: string, stored: StoredSftpDestination | null): Promise<void>;
 }

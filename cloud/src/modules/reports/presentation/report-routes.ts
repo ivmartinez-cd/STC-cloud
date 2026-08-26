@@ -11,6 +11,7 @@ import { KnexPeriodUsageQuery } from "../infrastructure/database/knex-period-usa
 import { KnexReportClosureRepository } from "../infrastructure/database/knex-report-closure-repository";
 import { KnexReportUnitOfWork } from "../infrastructure/database/knex-report-unit-of-work";
 import { ExcelJsClosureXlsxRenderer } from "../infrastructure/export/closure-xlsx-renderer";
+import { PdfkitClosureRenderer } from "../infrastructure/export/closure-pdf-renderer";
 import { BullmqReportDeliveryEnqueuer } from "../infrastructure/queue/bullmq-report-delivery-enqueuer";
 import { createReportController, type ReportUseCases } from "./report-controller";
 
@@ -54,7 +55,7 @@ function buildUseCases(db: Knex): ReportUseCases {
     reopen: new ReopenPeriodUseCase(unitOfWork),
     list: new ListClosuresUseCase(closures),
     get: new GetClosureUseCase(closures),
-    export: new ExportClosureUseCase(closures, new ExcelJsClosureXlsxRenderer()),
+    export: new ExportClosureUseCase(closures, new ExcelJsClosureXlsxRenderer(), new PdfkitClosureRenderer()),
   };
 }
 
@@ -66,6 +67,7 @@ export function registerReportRoutes(fastify: FastifyInstance, db: Knex, portalA
   fastify.get("/api/v1/clients/:id/reports/:closureId", { preHandler: portalAuth, handler: ctrl.getClosure });
   fastify.get("/api/v1/clients/:id/reports/:closureId/export.csv", { preHandler: portalAuth, handler: ctrl.exportCsv });
   fastify.get("/api/v1/clients/:id/reports/:closureId/export.xlsx", { preHandler: portalAuth, handler: ctrl.exportXlsx });
+  fastify.get("/api/v1/clients/:id/reports/:closureId/export.pdf", { preHandler: portalAuth, handler: ctrl.exportPdf });
 
   // No se agregan a CLIENT_VIEWER_ROUTES (rolePolicy.ts) — deny-by-default alcanza
   // para que un client_viewer reciba 403 acá, mismo criterio que
