@@ -43,6 +43,7 @@ const TEST_FILES = [
   "src/tests/deviceUsageHistory.test.ts",
   "src/tests/ewsProxyService.test.ts",
   "src/tests/portalAgentEws.test.ts",
+  "src/tests/ewsProxyRelay.test.ts",
   "src/tests/customFieldRules.test.ts",
   "src/tests/feedbackUseCases.test.ts",
   "src/tests/systemSettings.test.ts",

@@ -7,7 +7,7 @@
 
 ---
 
-## Estado de implementación (actualizado 22 de agosto de 2026)
+## Estado de implementación (actualizado 26 de agosto de 2026)
 
 Este documento sigue siendo la foto original del 21/08. Esta sección se actualiza a
 medida que se cierran ítems del roadmap de §4, para no tener que releer todo el
@@ -1373,8 +1373,8 @@ caído, fallback a entrega local. **Límite documentado**: los canales con
 afinidad de socket (push inmediato de comandos a un agente puntual, proxy
 EWS) requieren la réplica dueña del socket del agente — el fallback
 replica-agnóstico para comandos ya existe (entrega por polling de
-heartbeat), y el proxy EWS en multi-réplica necesitaría sticky sessions o
-un relay request/reply por Redis (fuera de alcance de esta fase).
+heartbeat). ✅ (26/08/2026) El proxy EWS SÍ tiene ahora su relay
+request/reply por Redis — ver Fase 15.
 
 Verificado: 8/8 tests nuevos (`observability.test.ts` — exclusión REAL del
 advisory lock con dos conexiones Postgres separadas [una corre, la otra
@@ -1390,8 +1390,8 @@ tras el despliegue.
 **Lo que NO se hizo**: habilitar multi-réplica real en los compose (los
 locks y el pub/sub dejan el backend listo; el paso operativo — `deploy:
 replicas` + LB — es decisión de infraestructura aparte), dashboards de
-Grafana/alerting sobre las métricas (solo el endpoint), y el relay
-request/reply para afinidad de socket del proxy EWS.
+Grafana/alerting sobre las métricas (solo el endpoint). ✅ (26/08/2026) El
+relay request/reply para afinidad de socket del proxy EWS — ver Fase 15.
 
 ### Fase 6 — Seguridad (24/08/2026) — completa: 4 de 4 ítems cerrados
 
@@ -2046,6 +2046,85 @@ una key venza (ni email ni notificación — el admin tiene que fijarse en el
 badge); renovación de un click (hoy renovar = crear una key nueva y migrar
 el ERP, no hay "extender vencimiento" sobre la misma key, mismo criterio
 que un secret de webhook que tampoco se "extiende").
+
+### Fase 15 — Relay Redis multi-réplica del proxy EWS (26/08/2026) — completa
+
+Origen: la Fase 5 ("producción-readiness") había dejado el backend listo para
+multi-réplica (advisory locks, métricas, Sentry, pub/sub de broadcasts de
+portal) pero documentaba un límite explícito en su "Lo que NO se hizo": el
+proxy EWS remoto (`POST /agents/:id/ews-proxy`, síncrono) sólo funcionaba si
+la request HTTP caía en la MISMA réplica que tenía el socket WSS del agente
+— con >1 réplica, un agente conectado a la réplica B era indistinguible de
+"no conectado" para una request que cayó en la réplica A (503 incorrecto).
+Consultado explícitamente con Ivan cuál de los 3 pendientes reales de
+multi-réplica atacar (relay EWS, habilitar N réplicas en los compose, o
+dashboards de Grafana) — eligió el relay EWS por ser el único gap
+*funcional* real (los otros dos son decisiones operativas/observabilidad,
+no correctitud).
+
+✅ **Relay de 3 piezas sobre Redis** (`cloud/src/ws/index.ts`), mismo patrón
+que el pub/sub de broadcasts de portal de la Fase 5.4:
+1. **`stc:ws:ews-online`** (SET): qué agentes están conectados a ALGUNA
+   réplica ahora mismo — actualizado en connect/disconnect. Permite seguir
+   fallando rápido (503 inmediato, sin esperar nada) cuando el agente no
+   está conectado a NINGUNA réplica — preserva EXACTO el comportamiento que
+   ya cubría `portalAgentEws.test.ts` ("agente no conectado → 503"), que
+   sigue en verde sin tocarlo.
+2. **`stc:ws:ews-push`** (pub/sub): si el agente está online mundo pero no
+   en ESTA réplica, se publica el pedido de push — la réplica dueña del
+   socket lo entrega (`sendCommandToAgent` local).
+3. **`stc:ws:ews-result`** (pub/sub): el `command_result` del agente (y la
+   desconexión de su socket) se publican SIEMPRE acá, nunca sólo resueltos
+   local — cada réplica con una promesa pendiente para ese `commandId` la
+   resuelve al recibir el mensaje (no-op si no la tiene, mismo criterio
+   idempotente que ya tenía `ewsProxyService.ts` para el caso de una sola
+   réplica).
+
+`EwsProxyGateway` (puerto de la capa de aplicación) gana `pushCommand`
+(antes era responsabilidad de `AgentLink.pushCommand`, local-only) — con
+esto `EwsProxyUseCase` ya no depende de `AgentLink` en absoluto, se sacó del
+constructor. `AgentLink.pushCommand` queda sin tocar para los comandos
+genéricos (RESCAN/RESTART/etc.): ya tienen su propio fallback
+replica-agnóstico (encolado + entrega en el próximo heartbeat), no
+necesitan el relay síncrono — extenderlo ahí habría sido alcance de más.
+
+Verificado contra el stack Docker real (rebuild de `stc_api`, no sólo
+tests): `ewsProxyRelay.test.ts` (nuevo, 7 tests) publica directo a los 3
+canales vía `docker exec stc_redis redis-cli publish` — mismo mecanismo que
+ya usaba `observability.test.ts` para simular "otra réplica" — probando
+cada dirección del relay de forma aislada (push que llega a un socket real
+conectado a esta réplica; resultado que NUNCA se manda por el WS del
+agente, sólo por Redis, y aun así resuelve la request HTTP; desconexión
+relayeada que rechaza una request en vuelo). `observability.test.ts` y
+`portalAgentEws.test.ts` completos (19 tests) sin regresiones — incluido el
+503 fail-fast exacto. `tsc --noEmit` limpio. Sumado a `package.json` →
+`test` y a `scripts/ci-test-runner.mjs`.
+
+**Advertencia heredada, no introducida por esta pasada**: los 3 tests que
+usan `docker exec stc_redis redis-cli publish` (el nuevo `ewsProxyRelay.
+test.ts` y el pub/sub de `observability.test.ts`) asumen un contenedor
+llamado literalmente `stc_redis` — cierto contra `docker-compose.yml`
+local, pero el job `api` de `.github/workflows/ci.yml` levanta Redis como
+`services:` de GitHub Actions, que NO se llama `stc_redis` (nombre
+autogenerado). Esto ya era cierto para el pub/sub de portal desde la Fase
+5.4 — no se investigó ni se corrigió en esa pasada tampoco, y sigue sin
+corregirse acá: es infraestructura de CI ajena al relay EWS en sí, y hay
+otra sesión auditando `ARCHITECTURE_GUIDE.md`/CI en paralelo sobre el resto
+del árbol. Marcado para quien retome CI: o se le pone `container_name:
+stc_redis` explícito de alguna forma al service de GH Actions, o estos 2
+tests se saltean fuera de Docker Compose local.
+
+**Lo que NO se hizo**: `stc:ws:ews-online` puede quedar con una entrada
+fantasma si una réplica muere sin disparar el `close`/`error` del socket
+(crash duro del proceso) — degrada con gracia (en el peor caso, una
+request espera el timeout de 15s en vez de fallar en 503 al instante),
+no se agregó TTL ni expiración porque el caso normal (restart ordenado,
+`docker compose down`) sí dispara el handler; afinidad de socket para
+comandos push genéricos (RESCAN/RESTART/FORCE_UPDATE/STC_CONSOLE) sigue sin
+relay — ya tienen su fallback de heartbeat, alcance deliberado; habilitar N
+réplicas de verdad en los compose (`deploy: replicas` + load balancer) y
+dashboards de Grafana/alerting sobre las métricas de la Fase 5 siguen
+pendientes, quedaron fuera de esta pasada por elección explícita de Ivan.
 
 ### Otros puntos de §3 (riesgos) que siguen abiertos y no forman parte de ningún ítem de arriba
 - ✅ **R4 (parcial, 23/08/2026)**: el WS del portal ya NO acepta el JWT de

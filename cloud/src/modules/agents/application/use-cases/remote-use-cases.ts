@@ -63,7 +63,6 @@ export class EwsProxyUseCase {
   constructor(
     private readonly repo: AgentPortalRepository,
     private readonly commands: AgentCommandsUseCase,
-    private readonly link: AgentLink,
     private readonly gateway: EwsProxyGateway,
     private readonly audit: AuditLogWriter
   ) {}
@@ -76,7 +75,10 @@ export class EwsProxyUseCase {
     }
     const payload = { ip: device.ip_address, path, method: "GET" };
     const command = await this.commands.add(input.agentId, "EWS_PROXY", payload, input.userId ?? undefined);
-    if (!this.link.pushCommand(input.agentId, "EWS_PROXY", payload, command.id)) {
+    // `pushCommand` intenta local y, si el agente está conectado a OTRA
+    // réplica, hace relay por Redis (ver `ws/index.ts`) — sólo devuelve
+    // `false` cuando no está conectado a NINGUNA réplica.
+    if (!(await this.gateway.pushCommand(input.agentId, command.id, payload))) {
       await this.commands.updateResult(command.id, "error", { error: "Agente no conectado" });
       throw new RemoteActionError("El agente no está conectado ahora mismo", 503);
     }
