@@ -4,6 +4,7 @@ import type {
   ScheduledReport,
   ScheduleFreq,
 } from "../../domain/entities/scheduled-report";
+import type { ReportTemplate } from "../../domain/entities/report-templates";
 
 /**
  * DTOs del contrato HTTP (snake_case como el resto de la API del portal —
@@ -75,4 +76,15 @@ function scheduleView(r: ScheduledReport) {
 
 export function toViewDto(r: ScheduledReport): ScheduledReportViewDto {
   return { ...definitionView(r), ...scheduleView(r) };
+}
+
+export function toTemplateView(t: ReportTemplate) {
+  return {
+    report_type: t.reportType,
+    label: t.label,
+    description: t.description,
+    default_format: t.defaultFormat,
+    default_params: t.defaultParams,
+    suggested_frequency: t.suggestedFrequency,
+  };
 }

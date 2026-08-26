@@ -20,6 +20,9 @@ export function toClosureView(c: ReportClosure) {
     total_pages: c.totalPages,
     total_mono: c.totalMono,
     total_color: c.totalColor,
+    total_other: c.totalOther,
+    device_count: c.deviceCount,
+    anomalies_count: c.anomaliesCount,
   };
 }
 
@@ -44,6 +47,8 @@ export function toClosureLineView(l: ReportClosureLine) {
     delta_total: l.deltaTotal,
     delta_mono: l.deltaMono,
     delta_color: l.deltaColor,
+    delta_other: l.deltaOther,
+    delta_estimated: l.deltaEstimated,
     source: l.source,
     had_counter_reset: l.hadCounterReset,
   };

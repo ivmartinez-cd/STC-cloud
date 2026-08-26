@@ -6,6 +6,7 @@ export interface ListAuditLogsInput {
   clientId?: string;
   targetId?: string;
   userId?: string;
+  excludeUserId?: string;
   limit?: string;
   offset?: string;
 }

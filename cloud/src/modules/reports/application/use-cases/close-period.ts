@@ -1,6 +1,6 @@
 import type { ClosureTotals, ReportClosure } from "../../domain/entities/report-closure";
 import { ClosurePeriodConflictError } from "../../domain/errors/report-error";
-import { parsePeriod, sumUsageTotals } from "../../domain/services/period";
+import { closureMeta, parsePeriod, sumUsageTotals } from "../../domain/services/period";
 import type { ReportDeliveryEnqueuer } from "../ports/report-delivery-enqueuer";
 import type { ReportTransactionScope, ReportUnitOfWork } from "../ports/report-unit-of-work";
 import type { ClosePeriodInput } from "../dtos/report-dtos";
@@ -34,8 +34,9 @@ export class ClosePeriodUseCase {
     const reopened = await tx.closures.findReopenedUnsuperseded(input.clientId, periodStart);
     const lines = await tx.usage.compute(input.clientId, input.period);
     const totals = sumUsageTotals(lines);
+    const meta = closureMeta(lines);
 
-    const closure = await tx.closures.insertClosure({ clientId: input.clientId, periodStart, closedBy: input.userId, ...totals });
+    const closure = await tx.closures.insertClosure({ clientId: input.clientId, periodStart, closedBy: input.userId, ...totals, ...meta });
     if (lines.length > 0) await tx.closures.insertLines(closure.id, lines);
     if (reopened) await tx.closures.markSuperseded(reopened.id, closure.id);
 

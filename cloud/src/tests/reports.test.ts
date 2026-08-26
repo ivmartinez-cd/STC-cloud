@@ -122,6 +122,12 @@ describe('Reportes — preview (no persiste nada)', () => {
     // La primera lectura no tiene base previa (equipo recién creado) → su delta no cuenta.
     assert.equal(Number(line.delta_total), 50, 'El delta debe ser la suma de deltas positivos, no last-first');
     assert.equal(line.had_counter_reset, true, 'Debe detectar el reset dentro del período (cruzado contra alerts)');
+    // mono_pages = total_pages en este fixture (color siempre 0) → el residuo debe dar exactamente 0.
+    assert.equal(Number(line.delta_other), 0, 'total = mono + color acá, delta_other no debe absorber nada');
+    // Handoff hifi #3, fase 5: sin historial previo de 90 días (equipo recién
+    // creado), el estimador da 0 — nunca null (ya se resolvió que hubo reset)
+    // ni un número inventado sin base de datos real.
+    assert.equal(Number(line.delta_estimated), 0, 'sin histórico previo, la estimación es 0, no null ni un valor inventado');
   });
 
   test('preview con period inválido → 400', async () => {
@@ -141,6 +147,9 @@ describe('Reportes — cierre inmutable', () => {
     assert.equal(status, 200);
     assert.equal(data.status, 'closed');
     assert.equal(Number(data.total_pages), 50);
+    assert.equal(Number(data.total_other), 0);
+    assert.equal(Number(data.device_count), 1);
+    assert.equal(Number(data.anomalies_count), 1, 'el único equipo del cierre tuvo reset de contador');
     ctx.closureId = data.id;
 
     const detail = await req('GET', `/clients/${ctx.clientId}/reports/${ctx.closureId}`, undefined, ctx.adminToken);

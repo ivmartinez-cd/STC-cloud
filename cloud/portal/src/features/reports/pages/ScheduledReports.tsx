@@ -1,160 +1,124 @@
 import { useState, useEffect, useCallback } from 'react';
-import {
-  CalendarClock, Download, Loader2, Pencil, Play, Plus, Trash2,
-} from 'lucide-react';
 import { api } from '../../../shared/lib/api';
 import { useToast } from '../../../store/ToastContext';
+import PageHeader from '../../../shared/components/PageHeader';
+import { BTN_PRIMARY_LG } from '../../../shared/lib/buttons';
 import ScheduledReportModal from '../components/ScheduledReportModal';
-import {
-  FREQ_LABELS, REPORT_TYPE_LABELS, type ScheduledReport,
-} from '../types/scheduledReports';
-import { APP_LOCALE } from '../../../shared/lib/formatters';
+import ScheduledReportTemplates from '../components/ScheduledReportTemplates';
+import ScheduledReportsTable from '../components/ScheduledReportsTable';
+import type { ReportTemplate, ScheduledReport } from '../types/scheduledReports';
 
-interface ClientOption { id: string; name: string; }
+interface ClientOption { id: string; name: string }
 
-function fmtDate(v: string | null): string {
-  if (!v) return '—';
-  return new Date(v).toLocaleString(APP_LOCALE, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
-}
-
-/**
- * Informes guardados/programados (Fase 4.1 del gap analysis vs HP SDS —
- * equivalente de "Informes configurados" del SDS). Solo admin/operator
- * (ruta protegida en App.tsx + deny-by-default del backend).
- */
-export default function ScheduledReports() {
-  const { showToast } = useToast();
+function useScheduledReportsData() {
   const [items, setItems] = useState<ScheduledReport[]>([]);
+  const [templates, setTemplates] = useState<ReportTemplate[]>([]);
   const [clients, setClients] = useState<ClientOption[]>([]);
   const [loading, setLoading] = useState(true);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editing, setEditing] = useState<ScheduledReport | null>(null);
-  const [busyId, setBusyId] = useState<string | null>(null);
 
   const load = useCallback(() => {
     setLoading(true);
-    api.get<ScheduledReport[]>('/scheduled-reports')
-      .then(setItems)
-      .catch(() => setItems([]))
-      .finally(() => setLoading(false));
+    api.get<ScheduledReport[]>('/scheduled-reports').then(setItems).catch(() => setItems([])).finally(() => setLoading(false));
   }, []);
 
   useEffect(() => {
     load();
-    api.get<ClientOption[]>('/clients').then((c) => setClients(c)).catch(() => setClients([]));
+    api.get<ReportTemplate[]>('/scheduled-reports/templates').then(setTemplates).catch(() => setTemplates([]));
+    api.get<ClientOption[]>('/clients').then(setClients).catch(() => setClients([]));
   }, [load]);
 
+  const clientName = (id: string | null) => (id ? clients.find((c) => c.id === id)?.name ?? '…' : 'Toda la red');
+  return { items, templates, clients, loading, load, clientName };
+}
+
+async function requestRunNow(r: ScheduledReport): Promise<string> {
+  const res = await api.post<{ status: string; sent_to: string[] }>(`/scheduled-reports/${r.id}/run`);
+  return res.sent_to.length ? `Informe enviado a ${res.sent_to.join(', ')}` : 'Informe generado (sin destinatarios)';
+}
+
+function useRunNow(load: () => void) {
+  const { showToast } = useToast();
+  const [busyId, setBusyId] = useState<string | null>(null);
   const runNow = async (r: ScheduledReport) => {
     setBusyId(r.id);
+    try { showToast(await requestRunNow(r), 'success'); load(); }
+    catch (err) { showToast(err instanceof Error ? err.message : 'Error al ejecutar', 'error'); }
+    finally { setBusyId(null); }
+  };
+  return { busyId, runNow };
+}
+
+function useReportActions(load: () => void) {
+  const { showToast } = useToast();
+  const { busyId, runNow } = useRunNow(load);
+
+  const togglePause = async (r: ScheduledReport) => {
     try {
-      const res = await api.post<{ status: string; sent_to: string[] }>(`/scheduled-reports/${r.id}/run`);
-      showToast(res.sent_to.length ? `Informe enviado a ${res.sent_to.join(', ')}` : 'Informe generado (sin destinatarios)', 'success');
+      await api.put(`/scheduled-reports/${r.id}`, { enabled: !r.enabled });
+      showToast(r.enabled ? 'Informe pausado' : 'Informe reanudado', 'success');
       load();
-    } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Error al ejecutar', 'error');
-    } finally {
-      setBusyId(null);
-    }
+    } catch (err) { showToast(err instanceof Error ? err.message : 'Error al actualizar', 'error'); }
   };
 
   const remove = async (r: ScheduledReport) => {
     if (!window.confirm(`¿Eliminar el informe "${r.name}"?`)) return;
-    try {
-      await api.delete(`/scheduled-reports/${r.id}`);
-      showToast('Informe eliminado', 'success');
-      load();
-    } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Error al eliminar', 'error');
-    }
+    try { await api.delete(`/scheduled-reports/${r.id}`); showToast('Informe eliminado', 'success'); load(); }
+    catch (err) { showToast(err instanceof Error ? err.message : 'Error al eliminar', 'error'); }
   };
 
-  const clientName = (id: string | null) => (id ? clients.find((c) => c.id === id)?.name ?? '…' : 'Todos');
+  return { busyId, runNow, togglePause, remove };
+}
+
+/**
+ * Informes guardados/programados (Fase 4.1 del gap analysis vs HP SDS,
+ * hifi #3 fase 5, 26/08/2026) — plantillas reales + tabla "Tus informes".
+ * Sólo admin/operator (ruta protegida en App.tsx + deny-by-default backend).
+ */
+export default function ScheduledReports() {
+  const data = useScheduledReportsData();
+  const actions = useReportActions(data.load);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editing, setEditing] = useState<ScheduledReport | null>(null);
+  const [template, setTemplate] = useState<ReportTemplate | null>(null);
+
+  const openCreate = () => { setEditing(null); setTemplate(null); setModalOpen(true); };
+  const openFromTemplate = (t: ReportTemplate) => { setEditing(null); setTemplate(t); setModalOpen(true); };
+  const openEdit = (r: ScheduledReport) => { setEditing(r); setTemplate(null); setModalOpen(true); };
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
-      <header className="flex items-center justify-between">
+    <div className="-m-4 flex min-w-0 flex-col bg-surface-page px-[34px] pb-9 pt-[30px] md:-m-10">
+      <PageHeader
+        eyebrow="INFORMES GUARDADOS Y PROGRAMADOS" title="Informes"
+        subtitle={data.items.length === 0 ? 'Se generan solos según su frecuencia y llegan por email a los destinatarios definidos. Todavía no creaste ninguno.' : 'Se generan solos según su frecuencia y llegan por email a los destinatarios definidos.'}
+        actions={<button type="button" onClick={openCreate} className={BTN_PRIMARY_LG}>+ NUEVO INFORME</button>}
+      />
+
+      <div className="mb-6 flex items-start gap-4 rounded-[5px] border border-line-100 bg-white p-7">
+        <span className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[3px] border border-brand-chip-border bg-brand-soft font-montserrat text-[15px] font-bold text-brand-accent">+</span>
         <div>
-          <h1 className="text-3xl font-extrabold text-[#1a2333] tracking-tight flex items-center gap-3">
-            <CalendarClock size={28} className="text-brand" /> Informes
-          </h1>
-          <p className="text-sm text-slate-500 font-medium mt-1">
-            Informes guardados y programados — se generan solos y llegan por email.
+          <h2 className="m-0 font-montserrat text-[19px] font-extrabold tracking-[-.01em] text-ink-900">Empezá con una plantilla</h2>
+          <p className="mt-2 max-w-[80ch] font-sans text-[13px] leading-[1.6] text-ink-500">
+            Elegí una de las plantillas de abajo o creá un informe desde cero. Cualquiera de ellas se puede editar después: alcance, período, formato, frecuencia y destinatarios.
           </p>
         </div>
-        <button onClick={() => { setEditing(null); setModalOpen(true); }}
-          className="flex items-center gap-2 px-5 py-3 bg-[#1a2333] hover:bg-black text-white rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all">
-          <Plus size={15} /> Nuevo informe
-        </button>
-      </header>
+      </div>
 
-      {loading ? (
-        <div className="py-16 flex justify-center"><Loader2 size={28} className="text-brand animate-spin" /></div>
-      ) : items.length === 0 ? (
-        <div className="bg-white rounded-3xl border border-slate-100 p-12 text-center text-sm text-slate-400 font-medium">
-          Sin informes todavía. Creá el primero con "Nuevo informe".
-        </div>
-      ) : (
-        <div className="bg-white rounded-3xl border border-slate-100 overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-slate-50 border-b border-slate-100">
-              <tr>
-                {['Nombre', 'Tipo', 'Cliente', 'Frecuencia', 'Próxima corrida', 'Última corrida', 'Destinatarios', ''].map((h) => (
-                  <th key={h} className="py-3 px-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-50">
-              {items.map((r) => (
-                <tr key={r.id} className="hover:bg-slate-50/50">
-                  <td className="py-3 px-4 font-bold text-slate-700">{r.name}</td>
-                  <td className="py-3 px-4 text-slate-500 font-medium">{REPORT_TYPE_LABELS[r.report_type]}</td>
-                  <td className="py-3 px-4 text-slate-500 font-medium">{clientName(r.client_id)}</td>
-                  <td className="py-3 px-4">
-                    <span className={`px-2.5 py-1 rounded-full text-[9px] font-extrabold uppercase tracking-wider ${
-                      r.schedule_freq === 'none' ? 'bg-slate-100 text-slate-500' : 'bg-emerald-50 text-emerald-600'
-                    }`}>{FREQ_LABELS[r.schedule_freq]}</span>
-                  </td>
-                  <td className="py-3 px-4 text-slate-500 font-medium">{fmtDate(r.next_run_at)}</td>
-                  <td className="py-3 px-4">
-                    {r.last_run_at ? (
-                      <span className={`font-bold ${r.last_run_status === 'ok' ? 'text-emerald-600' : 'text-rose-600'}`}
-                        title={r.last_run_error ?? undefined}>
-                        {fmtDate(r.last_run_at)} {r.last_run_status === 'ok' ? '✓' : '✗'}
-                      </span>
-                    ) : <span className="text-slate-400">—</span>}
-                  </td>
-                  <td className="py-3 px-4 text-slate-500 font-medium max-w-[180px] truncate" title={r.recipients.join(', ')}>
-                    {r.recipients.length || '—'}
-                  </td>
-                  <td className="py-3 px-4">
-                    <div className="flex items-center gap-1.5 justify-end">
-                      <a href={`/api/v1/scheduled-reports/${r.id}/download`} target="_blank" rel="noreferrer" title="Descargar ahora"
-                        className="p-2 bg-slate-100 text-slate-500 rounded-xl hover:bg-slate-200 transition-all">
-                        <Download size={13} />
-                      </a>
-                      <button onClick={() => runNow(r)} disabled={busyId === r.id} title="Ejecutar y enviar ahora"
-                        className="p-2 bg-brand/10 text-brand rounded-xl hover:bg-brand/20 transition-all disabled:opacity-50">
-                        {busyId === r.id ? <Loader2 size={13} className="animate-spin" /> : <Play size={13} />}
-                      </button>
-                      <button onClick={() => { setEditing(r); setModalOpen(true); }} title="Editar"
-                        className="p-2 bg-slate-100 text-slate-500 rounded-xl hover:bg-slate-200 transition-all">
-                        <Pencil size={13} />
-                      </button>
-                      <button onClick={() => remove(r)} title="Eliminar"
-                        className="p-2 bg-rose-50 text-rose-500 rounded-xl hover:bg-rose-100 transition-all">
-                        <Trash2 size={13} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+      <div className="mb-3.5 flex items-center gap-[11px]">
+        <span className="block h-0.5 w-5 bg-ink-500" />
+        <span className="font-montserrat text-[9px] font-bold uppercase tracking-[.19em] text-ink-400">PLANTILLAS DISPONIBLES</span>
+      </div>
+      <ScheduledReportTemplates templates={data.templates} onUse={openFromTemplate} />
 
-      <ScheduledReportModal isOpen={modalOpen} onClose={() => setModalOpen(false)} onSaved={load}
-        clients={clients} editing={editing} />
+      <div className="mb-3.5 flex items-center gap-[11px]">
+        <span className="block h-0.5 w-5 bg-ink-500" />
+        <span className="font-montserrat text-[9px] font-bold uppercase tracking-[.19em] text-ink-400">TUS INFORMES</span>
+      </div>
+      <ScheduledReportsTable
+        items={data.items} loading={data.loading} clientName={data.clientName} busyId={actions.busyId}
+        onRun={actions.runNow} onTogglePause={actions.togglePause} onEdit={openEdit} onRemove={actions.remove} onCreate={openCreate}
+      />
+
+      <ScheduledReportModal isOpen={modalOpen} onClose={() => setModalOpen(false)} onSaved={data.load} clients={data.clients} editing={editing} initialTemplate={template} />
     </div>
   );
 }

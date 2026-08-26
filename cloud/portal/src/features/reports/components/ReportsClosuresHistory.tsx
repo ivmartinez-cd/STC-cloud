@@ -1,107 +1,67 @@
-import { Download, FileSpreadsheet, FileText, Unlock, ChevronDown, ChevronUp, CheckCircle2, Loader2 } from 'lucide-react';
-import type { Closure, ClosureDetail } from '../types/reports';
-import { APP_LOCALE } from '../../../shared/lib/formatters';
-
-function fmtDate(v: string | null): string {
-  if (!v) return '—';
-  return new Date(v).toLocaleString(APP_LOCALE, { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-}
+import { Download, FileSpreadsheet, FileText, Unlock } from 'lucide-react';
+import EstadoChip from '../../../shared/components/EstadoChip';
+import { fmtClosedAt, fmtInt } from '../lib/reportsPresentation';
+import type { Closure } from '../types/reports';
 
 interface Props {
   closures: Closure[];
   closuresLoading: boolean;
-  expandedId: string | null;
-  detail: ClosureDetail | null;
-  detailLoading: boolean;
+  activePeriod: string;
   isReadOnlyViewer: boolean;
-  onToggleExpand: (closure: Closure) => void;
+  onSelectPeriod: (period: string) => void;
   onDownload: (closureId: string, format: 'csv' | 'xlsx' | 'pdf') => void;
   onReopenRequest: (closure: Closure) => void;
 }
 
-export default function ReportsClosuresHistory({
-  closures, closuresLoading, expandedId, detail, detailLoading, isReadOnlyViewer, onToggleExpand, onDownload, onReopenRequest,
-}: Props) {
+function DownloadButtons({ c, onDownload }: { c: Closure; onDownload: Props['onDownload'] }) {
   return (
-    <div className="bg-white rounded-3xl border border-slate-100 shadow-xl shadow-brand/5 overflow-hidden">
-      <header className="px-6 py-4 border-b border-slate-100">
-        <h3 className="text-xs font-black text-slate-500 uppercase tracking-widest">Historial de cierres</h3>
-      </header>
+    <div className="flex items-center gap-1">
+      <button type="button" onClick={() => onDownload(c.id, 'csv')} title="Descargar CSV" className="rounded-[3px] p-1.5 text-ink-300 hover:bg-surface-btn-hover hover:text-brand-accent"><Download size={13} /></button>
+      <button type="button" onClick={() => onDownload(c.id, 'xlsx')} title="Descargar XLSX" className="rounded-[3px] p-1.5 text-ink-300 hover:bg-surface-btn-hover hover:text-brand-accent"><FileSpreadsheet size={13} /></button>
+      <button type="button" onClick={() => onDownload(c.id, 'pdf')} title="Descargar PDF" className="rounded-[3px] p-1.5 text-ink-300 hover:bg-surface-btn-hover hover:text-brand-accent"><FileText size={13} /></button>
+    </div>
+  );
+}
+
+function ClosureRow({ c, active, isReadOnlyViewer, onSelectPeriod, onDownload, onReopenRequest }: {
+  c: Closure; active: boolean; isReadOnlyViewer: boolean;
+  onSelectPeriod: Props['onSelectPeriod']; onDownload: Props['onDownload']; onReopenRequest: Props['onReopenRequest'];
+}) {
+  return (
+    <div className={`flex flex-wrap items-center gap-3 px-5 py-3 ${active ? 'bg-brand-soft/40' : ''}`}>
+      <button type="button" onClick={() => onSelectPeriod(c.period.slice(0, 7))} className="font-mono text-[12px] font-semibold text-ink-900 hover:text-brand-accent hover:underline">
+        {c.period.slice(0, 7)}
+      </button>
+      <EstadoChip label={c.status === 'closed' ? 'CERRADO' : 'REABIERTO'} variant={c.status === 'closed' ? 'neutral' : 'attention'} />
+      <span className="font-sans text-[11px] text-ink-300">{fmtClosedAt(c.closed_at)}</span>
+      <span className="ml-auto font-montserrat text-[12px] font-semibold tabular-nums text-ink-900">{fmtInt(c.total_pages)} págs.</span>
+      <DownloadButtons c={c} onDownload={onDownload} />
+      {!isReadOnlyViewer && c.status === 'closed' && (
+        <button type="button" onClick={() => onReopenRequest(c)} title="Reabrir" className="rounded-[3px] p-1.5 text-ink-300 hover:bg-surface-btn-hover hover:text-brand-accent"><Unlock size={13} /></button>
+      )}
+    </div>
+  );
+}
+
+/** Historial compacto (handoff hifi #3, fase 5) — sin expandir línea por
+ * línea acá (eso ya lo muestra `ReportsDetailTable` para el período
+ * seleccionado, sería la misma tabla dos veces): clickear un período lo
+ * selecciona arriba en `ReportsPeriodBar`. */
+export default function ReportsClosuresHistory({ closures, closuresLoading, activePeriod, isReadOnlyViewer, onSelectPeriod, onDownload, onReopenRequest }: Props) {
+  return (
+    <div className="mt-4 rounded-[5px] border border-line-100 bg-white">
+      <div className="border-b border-line-150 px-5 py-[14px]">
+        <span className="font-montserrat text-[9px] font-bold uppercase tracking-[.15em] text-ink-600">HISTORIAL DE CIERRES</span>
+      </div>
       {closuresLoading ? (
-        <div className="h-24 flex items-center justify-center"><Loader2 size={20} className="animate-spin text-brand" /></div>
+        <div className="h-16 animate-pulse bg-surface-track" />
       ) : closures.length === 0 ? (
-        <div className="h-24 flex items-center justify-center text-xs font-bold text-slate-400 uppercase tracking-widest">
-          Sin cierres todavía
-        </div>
+        <div className="py-8 text-center font-sans text-[12.5px] text-ink-300">Sin cierres todavía</div>
       ) : (
-        <div className="divide-y divide-slate-50">
+        <div className="divide-y divide-line-200">
           {closures.map((c) => (
-            <div key={c.id}>
-              <div className="flex items-center gap-4 px-6 py-3 hover:bg-slate-50/50">
-                <button onClick={() => onToggleExpand(c)} className="text-slate-400 hover:text-brand">
-                  {expandedId === c.id ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                </button>
-                <span className="text-xs font-black text-[#1a2333] w-20">{c.period.slice(0, 7)}</span>
-                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider ${
-                  c.status === 'closed' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
-                }`}>
-                  {c.status === 'closed' ? <CheckCircle2 size={10} /> : <Unlock size={10} />}
-                  {c.status === 'closed' ? 'Cerrado' : 'Reabierto'}
-                </span>
-                <span className="text-[11px] text-slate-500 font-medium">{fmtDate(c.closed_at)}</span>
-                <span className="text-[11px] font-black text-slate-700 ml-auto">{Number(c.total_pages).toLocaleString()} págs.</span>
-                <button onClick={() => onDownload(c.id, 'csv')} title="Descargar CSV"
-                  className="p-2 bg-slate-50 text-slate-500 hover:text-brand hover:bg-brand/10 rounded-xl transition-all">
-                  <Download size={14} />
-                </button>
-                <button onClick={() => onDownload(c.id, 'xlsx')} title="Descargar XLSX"
-                  className="p-2 bg-slate-50 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all">
-                  <FileSpreadsheet size={14} />
-                </button>
-                <button onClick={() => onDownload(c.id, 'pdf')} title="Descargar PDF"
-                  className="p-2 bg-slate-50 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all">
-                  <FileText size={14} />
-                </button>
-                {!isReadOnlyViewer && c.status === 'closed' && (
-                  <button onClick={() => onReopenRequest(c)} title="Reabrir"
-                    className="p-2 bg-slate-50 text-slate-500 hover:text-amber-600 hover:bg-amber-50 rounded-xl transition-all">
-                    <Unlock size={14} />
-                  </button>
-                )}
-              </div>
-              {expandedId === c.id && (
-                <div className="px-6 pb-4 bg-slate-50/50">
-                  {detailLoading ? (
-                    <div className="py-6 flex items-center justify-center"><Loader2 size={18} className="animate-spin text-brand" /></div>
-                  ) : detail && detail.id === c.id ? (
-                    <div className="overflow-x-auto rounded-xl border border-slate-100 bg-white mt-2">
-                      <table className="w-full text-left border-collapse whitespace-nowrap">
-                        <thead className="bg-slate-50 border-b border-slate-100">
-                          <tr>
-                            <th className="py-2 px-3 text-[9px] font-black text-slate-500 uppercase tracking-widest">Serie</th>
-                            <th className="py-2 px-3 text-[9px] font-black text-slate-500 uppercase tracking-widest">Modelo</th>
-                            <th className="py-2 px-3 text-[9px] font-black text-slate-500 uppercase tracking-widest">Monitor</th>
-                            <th className="py-2 px-3 text-[9px] font-black text-slate-500 uppercase tracking-widest">Delta</th>
-                            <th className="py-2 px-3 text-[9px] font-black text-slate-500 uppercase tracking-widest">Fuente</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-50">
-                          {detail.lines.map((l) => (
-                            <tr key={l.id}>
-                              <td className="py-1.5 px-3 text-[10px] font-mono text-slate-600">{l.device_serial ?? '—'}</td>
-                              <td className="py-1.5 px-3 text-[10px] text-slate-700 font-bold">{l.device_model ?? '—'}</td>
-                              <td className="py-1.5 px-3 text-[10px] text-slate-500">{l.agent_name ?? '—'}</td>
-                              <td className="py-1.5 px-3 text-[10px] font-black text-[#1a2333]">{Number(l.delta_total).toLocaleString()}</td>
-                              <td className="py-1.5 px-3 text-[10px] text-slate-400 uppercase">{l.source ?? '—'}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  ) : null}
-                </div>
-              )}
-            </div>
+            <ClosureRow key={c.id} c={c} active={c.period.startsWith(activePeriod)} isReadOnlyViewer={isReadOnlyViewer}
+              onSelectPeriod={onSelectPeriod} onDownload={onDownload} onReopenRequest={onReopenRequest} />
           ))}
         </div>
       )}

@@ -12,6 +12,8 @@ export interface ClosureTotals {
   totalPages: number;
   totalMono: number;
   totalColor: number;
+  /** Suma de `delta_other` de todas las líneas — por construcción, `totalPages = totalMono + totalColor + totalOther` siempre. */
+  totalOther: number;
 }
 
 export interface ReportClosure extends ClosureTotals {
@@ -26,6 +28,9 @@ export interface ReportClosure extends ClosureTotals {
   reopenedBy: string | null;
   reopenReason: string | null;
   supersededBy: string | null;
+  /** Congelados al cerrar — cuántos equipos entraron y cuántos tuvieron `had_counter_reset`. */
+  deviceCount: number;
+  anomaliesCount: number;
 }
 
 export interface ReportClosureLine {
@@ -48,6 +53,8 @@ export interface ReportClosureLine {
   deltaTotal: number;
   deltaMono: number;
   deltaColor: number;
+  deltaOther: number;
+  deltaEstimated: number | null;
   /** `devices.poll_method` congelado al cerrar. */
   source: string | null;
   hadCounterReset: boolean;

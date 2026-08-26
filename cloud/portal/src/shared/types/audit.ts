@@ -26,3 +26,14 @@ export type AuditLogsResponse = {
 };
 
 export type AuditActionOption = { action: string; label: string; category: AuditCategory; count: number };
+
+export type AuditSummary = {
+  total: number;
+  per_day: number;
+  by_category: Array<{ category: AuditCategory; label: string; count: number }>;
+  distinct_users: number;
+  top_operator: { user_id: string; username: string; count: number } | null;
+  device_registrations: number;
+  device_decommissions: number;
+  config_changes: number;
+};

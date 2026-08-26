@@ -24,5 +24,9 @@ export interface PeriodUsageLine {
   delta_total: number;
   delta_mono: number;
   delta_color: number;
+  /** `delta_total - delta_mono - delta_color` — residuo explícito, ver migración `report_closures_delta_other_and_estimate`. */
+  delta_other: number;
+  /** Sólo si `had_counter_reset` — estimación a partir del histórico diario, informativa (no reemplaza `delta_total`). */
+  delta_estimated: number | null;
   had_counter_reset: boolean;
 }

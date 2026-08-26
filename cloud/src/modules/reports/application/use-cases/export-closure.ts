@@ -35,6 +35,7 @@ export function toExportLine(l: ReportClosureLine): ExportLine {
     first_total_pages: l.firstTotalPages, first_reading_at: l.firstReadingAt,
     last_total_pages: l.lastTotalPages, last_reading_at: l.lastReadingAt,
     delta_total: l.deltaTotal, delta_mono: l.deltaMono, delta_color: l.deltaColor,
+    delta_other: l.deltaOther, delta_estimated: l.deltaEstimated,
     source: l.source, had_counter_reset: l.hadCounterReset,
   };
 }

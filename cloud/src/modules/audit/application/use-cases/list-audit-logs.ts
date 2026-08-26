@@ -22,7 +22,7 @@ function resolveCategoryActionsFilter(category: string | undefined): string[] | 
   return matching.length ? matching : ["__none__"];
 }
 
-function toFilter(input: ListAuditLogsInput): AuditLogFilter {
+export function toFilter(input: ListAuditLogsInput): AuditLogFilter {
   return {
     fromDate: input.from ? new Date(input.from) : new Date(Date.now() - THIRTY_DAYS_MS),
     toDate: input.to ? new Date(input.to) : undefined,
@@ -31,6 +31,7 @@ function toFilter(input: ListAuditLogsInput): AuditLogFilter {
     clientId: input.clientId,
     targetId: input.targetId,
     userId: input.userId,
+    excludeUserId: input.excludeUserId,
     limit: Math.min(Number(input.limit) || 50, 200),
     offset: Math.max(Number(input.offset) || 0, 0),
   };

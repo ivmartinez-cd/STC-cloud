@@ -21,6 +21,8 @@ export interface PreviewLine {
   delta_total: number;
   delta_mono: number;
   delta_color: number;
+  delta_other: number;
+  delta_estimated: number | null;
   had_counter_reset: boolean;
 }
 
@@ -45,6 +47,9 @@ export interface Closure {
   total_pages: number;
   total_mono: number;
   total_color: number;
+  total_other: number;
+  device_count: number;
+  anomalies_count: number;
 }
 
 /** Línea persistida de un cierre — misma forma que `PreviewLine` pero con nombres de columna congelados. */
@@ -68,6 +73,8 @@ export interface ClosureLine {
   delta_total: number;
   delta_mono: number;
   delta_color: number;
+  delta_other: number;
+  delta_estimated: number | null;
   source: string | null;
   had_counter_reset: boolean;
 }

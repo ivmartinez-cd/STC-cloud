@@ -40,3 +40,12 @@ export const FREQ_LABELS: Record<ScheduleFreq, string> = {
 };
 
 export const DOW_LABELS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+
+export interface ReportTemplate {
+  report_type: ScheduledReportType;
+  label: string;
+  description: string;
+  default_format: 'csv' | 'xlsx';
+  default_params: Record<string, unknown>;
+  suggested_frequency: ScheduleFreq;
+}

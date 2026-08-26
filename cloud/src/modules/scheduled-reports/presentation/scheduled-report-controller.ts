@@ -2,7 +2,8 @@ import type { FastifyReply, FastifyRequest } from "fastify";
 import type { ScheduledReportRepository } from "../domain/repositories/scheduled-report-repository";
 import type { ReportRenderer } from "../application/ports/report-renderer";
 import type { ReportMailer } from "../application/ports/report-mailer";
-import { toViewDto, type ScheduledReportInputDto } from "../application/dtos/scheduled-report-dtos";
+import { toViewDto, toTemplateView, type ScheduledReportInputDto } from "../application/dtos/scheduled-report-dtos";
+import { REPORT_TEMPLATES } from "../domain/entities/report-templates";
 import {
   createScheduledReport,
   ScheduledReportValidationError,
@@ -108,9 +109,14 @@ function buildDownload(deps: Deps): Handler {
   };
 }
 
+function templates(): Handler {
+  return async (_request, reply) => reply.send(REPORT_TEMPLATES.map(toTemplateView));
+}
+
 export function createScheduledReportController(deps: Deps) {
   return {
     list: buildList(deps),
+    templates: templates(),
     create: buildCreate(deps),
     update: buildUpdate(deps),
     remove: buildRemove(deps),

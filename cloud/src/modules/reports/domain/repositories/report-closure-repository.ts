@@ -6,6 +6,8 @@ export interface NewClosure extends ClosureTotals {
   /** Primer día del mes. */
   periodStart: Date;
   closedBy: string | null;
+  deviceCount: number;
+  anomaliesCount: number;
 }
 
 export interface ReopenClosureInput {

@@ -17,6 +17,8 @@ export interface AuditLogFilter {
   clientId?: string;
   targetId?: string;
   userId?: string;
+  /** "OTROS OPERADORES" del handoff hifi #3, fase 5 — todo lo que NO sea de este usuario. */
+  excludeUserId?: string;
   limit: number;
   offset: number;
 }
@@ -44,7 +46,18 @@ export interface AuditActionCount {
   count: number;
 }
 
+export interface AuditUserCount {
+  userId: string | null;
+  username: string | null;
+  count: number;
+}
+
 export interface AuditLogRepository {
   findPage(filter: AuditLogFilter): Promise<{ rows: RawAuditLogRow[]; total: number }>;
   countActionsSince(sinceDate: Date): Promise<AuditActionCount[]>;
+  /** `byAction`/`byUser` respetando LOS MISMOS filtros que `findPage` — a
+   * diferencia de `countActionsSince` (ventana fija de 90 días, ignora todo
+   * lo demás), esto es lo que necesita un resumen server-side que coincida
+   * con lo que el usuario está viendo filtrado. */
+  summarize(filter: AuditLogFilter): Promise<{ total: number; byAction: AuditActionCount[]; byUser: AuditUserCount[] }>;
 }

@@ -18,6 +18,8 @@ export interface ExportLine {
   delta_total: number;
   delta_mono: number;
   delta_color: number;
+  delta_other: number;
+  delta_estimated: number | null;
   source: string | null;
   had_counter_reset: boolean;
 }
@@ -31,7 +33,8 @@ export interface ExportClosure {
 export const EXPORT_COLUMNS = [
   "SERIE", "MODELO", "MARCA", "MONITOR",
   "LECTURA_INICIAL", "FECHA_INICIAL", "LECTURA_FINAL", "FECHA_FINAL",
-  "DELTA_TOTAL", "DELTA_MONO", "DELTA_COLOR", "FUENTE", "RESET_CONTADOR",
+  "DELTA_TOTAL", "DELTA_MONO", "DELTA_COLOR", "DELTA_OTRO", "DELTA_ESTIMADO",
+  "FUENTE", "RESET_CONTADOR",
 ] as const;
 
 export function exportRowValues(l: ExportLine): (string | number)[] {
@@ -47,6 +50,8 @@ export function exportRowValues(l: ExportLine): (string | number)[] {
     l.delta_total,
     l.delta_mono,
     l.delta_color,
+    l.delta_other,
+    l.delta_estimated ?? "N/A",
     l.source ?? "N/A",
     l.had_counter_reset ? "SI" : "NO",
   ];

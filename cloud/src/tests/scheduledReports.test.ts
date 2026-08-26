@@ -181,4 +181,18 @@ describe('Informes programados e2e', () => {
     assert.equal(gone.status, 404);
     await req('DELETE', `/scheduled-reports/${scheduledId}`, {}, token);
   });
+
+  // Handoff hifi #3, fase 5, 26/08/2026 — catálogo real de los 5 REPORT_TYPES,
+  // no los 6 nombres del mockup (2 de ellos no tienen ReportType detrás).
+  test('GET /scheduled-reports/templates trae las 5 plantillas reales, cada una con report_type creable', async () => {
+    const r = await req('GET', '/scheduled-reports/templates', {}, token);
+    assert.equal(r.status, 200);
+    assert.equal(r.data.length, 5);
+    for (const t of r.data) {
+      assert.ok(t.report_type && t.label && t.description, `plantilla incompleta: ${JSON.stringify(t)}`);
+      assert.ok(['csv', 'xlsx'].includes(t.default_format));
+    }
+    const types = r.data.map((t: any) => t.report_type).sort();
+    assert.deepEqual(types, ['alert_history', 'asset_list', 'consumable_levels', 'non_contactable', 'usage']);
+  });
 });

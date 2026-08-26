@@ -25,6 +25,7 @@ export function registerScheduledReportRoutes(fastify: FastifyInstance, db: Knex
 
   const base = "/api/v1/scheduled-reports";
   fastify.get(base, { preHandler: portalAuth, handler: ctrl.list });
+  fastify.get(`${base}/templates`, { preHandler: portalAuth, handler: ctrl.templates });
   fastify.post(base, { preHandler: portalAuth, schema: createScheduledReportSchema, handler: ctrl.create });
   fastify.put(`${base}/:id`, { preHandler: portalAuth, schema: updateScheduledReportSchema, handler: ctrl.update });
   fastify.delete(`${base}/:id`, { preHandler: portalAuth, schema: idParamSchema, handler: ctrl.remove });

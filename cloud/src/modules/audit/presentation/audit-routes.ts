@@ -3,6 +3,7 @@ import type { Knex } from "knex";
 import type { AuthHook } from "../../../api/middlewares/authMiddleware";
 import { ListAuditActionsUseCase } from "../application/use-cases/list-audit-actions";
 import { ListAuditLogsUseCase } from "../application/use-cases/list-audit-logs";
+import { GetAuditSummaryUseCase } from "../application/use-cases/get-audit-summary";
 import { KnexAuditLogRepository } from "../infrastructure/database/knex-audit-log-repository";
 import { createAuditController } from "./audit-controller";
 
@@ -11,6 +12,7 @@ function buildUseCases(db: Knex) {
   return {
     listLogs: new ListAuditLogsUseCase(auditLogRepository),
     listActions: new ListAuditActionsUseCase(auditLogRepository),
+    getSummary: new GetAuditSummaryUseCase(auditLogRepository),
   };
 }
 
@@ -26,4 +28,5 @@ export function registerAuditRoutes(fastify: FastifyInstance, db: Knex, portalAu
 
   fastify.get("/api/v1/audit-logs", { preHandler: portalAuth, handler: ctrl.getAuditLogs });
   fastify.get("/api/v1/audit-logs/actions", { preHandler: portalAuth, handler: ctrl.getAuditActions });
+  fastify.get("/api/v1/audit-logs/summary", { preHandler: portalAuth, handler: ctrl.getAuditSummary });
 }

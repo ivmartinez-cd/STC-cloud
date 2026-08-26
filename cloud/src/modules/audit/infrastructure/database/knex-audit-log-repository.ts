@@ -3,6 +3,7 @@ import type {
   AuditActionCount,
   AuditLogFilter,
   AuditLogRepository,
+  AuditUserCount,
   RawAuditLogRow,
 } from "../../domain/repositories/audit-log-repository";
 
@@ -36,6 +37,7 @@ export class KnexAuditLogRepository implements AuditLogRepository {
     if (filter.clientId) q.andWhere("a.client_id", filter.clientId);
     if (filter.targetId) q.andWhere("a.target_id", filter.targetId);
     if (filter.userId) q.andWhere("a.user_id", filter.userId);
+    if (filter.excludeUserId) q.andWhereNot("a.user_id", filter.excludeUserId);
 
     return q;
   }
@@ -80,6 +82,24 @@ export class KnexAuditLogRepository implements AuditLogRepository {
     }));
 
     return { rows: mapped, total: Number(count) };
+  }
+
+  /** `GET /audit-logs/summary` (handoff hifi #3, fase 5, 26/08/2026) — 3
+   * queries en paralelo reusando `buildBaseQuery(filter)`, la misma base que
+   * `findPage`: el resumen queda exactamente sobre lo que el filtro activo
+   * está mostrando, no una ventana fija aparte. */
+  async summarize(filter: AuditLogFilter): Promise<{ total: number; byAction: AuditActionCount[]; byUser: AuditUserCount[] }> {
+    const [[{ count }], byActionRows, byUserRows] = await Promise.all([
+      this.buildBaseQuery(filter).count("a.id as count"),
+      this.buildBaseQuery(filter).select("a.action").count("a.id as count").groupBy("a.action"),
+      this.buildBaseQuery(filter).select("a.user_id", "u.username").count("a.id as count").groupBy("a.user_id", "u.username"),
+    ]);
+    return {
+      total: Number(count),
+      byAction: (byActionRows as Array<{ action: string; count: string }>).map((r) => ({ action: r.action, count: Number(r.count) })),
+      byUser: (byUserRows as Array<{ user_id: string | null; username: string | null; count: string }>)
+        .map((r) => ({ userId: r.user_id, username: r.username, count: Number(r.count) })),
+    };
   }
 
   async countActionsSince(sinceDate: Date): Promise<AuditActionCount[]> {

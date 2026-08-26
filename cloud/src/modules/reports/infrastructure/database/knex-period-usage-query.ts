@@ -91,6 +91,12 @@ const PERIOD_USAGE_SQL = `
       COALESCE(ds.delta_total, 0) AS delta_total,
       COALESCE(ds.delta_mono,  0) AS delta_mono,
       COALESCE(ds.delta_color, 0) AS delta_color,
+      -- Residuo explícito (bug real, fase 5 del handoff hifi #3): las tres
+      -- SUM(GREATEST(x,0)) de arriba son independientes, nada garantiza que
+      -- total = mono + color. Esta resta hace que la igualdad cierre SIEMPRE,
+      -- por construcción, en vez de asumir un invariante que el dato crudo
+      -- no respeta.
+      (COALESCE(ds.delta_total, 0) - COALESCE(ds.delta_mono, 0) - COALESCE(ds.delta_color, 0)) AS delta_other,
       (res.device_id IS NOT NULL) AS had_counter_reset
     FROM scoped_devices sd
     LEFT JOIN first_reading fr ON fr.device_id = sd.device_id
@@ -98,6 +104,25 @@ const PERIOD_USAGE_SQL = `
     LEFT JOIN deltas_sum    ds ON ds.device_id = sd.device_id
     LEFT JOIN resets       res ON res.device_id = sd.device_id
     ORDER BY sd.serial_number NULLS LAST
+`;
+
+// Ventana de historia "limpia" para estimar — 90 días antes del período,
+// nunca DENTRO de él (esos son justo los datos que el reset volvió
+// inconfiables). Promedio de deltas diarios POSITIVOS (mismo criterio
+// GREATEST-y-descartar-negativos que el resto del módulo) extrapolado a los
+// días del período — es una estimación honesta, no una reconstrucción
+// exacta: si no hay historia previa suficiente, da 0, nunca un número
+// inventado.
+const RESET_ESTIMATE_HISTORY_DAYS = 90;
+
+const RESET_ESTIMATE_SQL = `
+  SELECT COALESCE(AVG(daily_delta), 0) AS avg_daily
+  FROM (
+    SELECT total_pages - LAG(total_pages) OVER (ORDER BY day) AS daily_delta
+    FROM readings_daily_agg
+    WHERE device_id = ? AND day >= ?::date - (? || ' days')::interval AND day < ?::date
+  ) d
+  WHERE daily_delta >= 0
 `;
 
 export class KnexPeriodUsageQuery implements PeriodUsageQuery {
@@ -108,6 +133,20 @@ export class KnexPeriodUsageQuery implements PeriodUsageQuery {
     const result = await this.db.raw(PERIOD_USAGE_SQL, [
       clientId, periodStart, periodStart, periodEnd, periodStart, periodEnd, periodStart, periodEnd,
     ]);
-    return result.rows as PeriodUsageLine[];
+    const lines = result.rows as PeriodUsageLine[];
+    const days = Math.round((periodEnd.getTime() - periodStart.getTime()) / 86_400_000);
+    await Promise.all(
+      lines.filter((l) => l.had_counter_reset).map(async (l) => {
+        l.delta_estimated = await this.estimateResetDelta(l.device_id, periodStart, days);
+      })
+    );
+    for (const l of lines) if (l.delta_estimated === undefined) l.delta_estimated = null;
+    return lines;
+  }
+
+  private async estimateResetDelta(deviceId: string, periodStart: Date, days: number): Promise<number> {
+    const { rows } = await this.db.raw(RESET_ESTIMATE_SQL, [deviceId, periodStart, RESET_ESTIMATE_HISTORY_DAYS, periodStart]);
+    const avgDaily = Number(rows[0]?.avg_daily ?? 0);
+    return Math.round(avgDaily * days);
   }
 }
