@@ -60,6 +60,33 @@ describe('sumUsageTotals — invariante total = mono + color + other', () => {
   });
 });
 
+describe('sumUsageTotals — delta_estimated se aplica sola al total oficial (cierre de gap post-verificación, 26/08/2026)', () => {
+  test('con reset de contador y estimación calculada, el total oficial usa la estimación, no el delta crudo', () => {
+    const lines = [
+      line({ delta_total: 0, delta_mono: 0, delta_color: 0, delta_other: 0, had_counter_reset: true, delta_estimated: 340 }),
+      line({ delta_total: 50, delta_mono: 30, delta_color: 20, delta_other: 0, had_counter_reset: false }),
+    ];
+    const totals = sumUsageTotals(lines);
+    assert.equal(totals.totalPages, 390, 'la línea con reset debe aportar 340 (estimado), no 0 (crudo)');
+    assert.equal(totals.totalPages, totals.totalMono + totals.totalColor + totals.totalOther, 'la igualdad sigue valiendo con la estimación aplicada');
+  });
+
+  test('sin reset de contador, delta_estimated (si viniera seteado) se ignora — el crudo manda', () => {
+    const lines = [line({ delta_total: 80, delta_mono: 80, delta_color: 0, delta_other: 0, had_counter_reset: false, delta_estimated: 500 })];
+    const totals = sumUsageTotals(lines);
+    assert.equal(totals.totalPages, 80);
+  });
+
+  test('reset pero estimación en 0 o null (histórico insuficiente) → se usa el crudo, nunca negativo escondido', () => {
+    const lines = [
+      line({ delta_total: 0, delta_mono: 0, delta_color: 0, delta_other: 0, had_counter_reset: true, delta_estimated: null }),
+      line({ delta_total: 0, delta_mono: 0, delta_color: 0, delta_other: 0, had_counter_reset: true, delta_estimated: 0 }),
+    ];
+    const totals = sumUsageTotals(lines);
+    assert.equal(totals.totalPages, 0);
+  });
+});
+
 describe('closureMeta — deviceCount/anomaliesCount congelados del header', () => {
   test('cuenta líneas totales y sólo las que tuvieron reset de contador', () => {
     const lines = [

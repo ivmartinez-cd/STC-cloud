@@ -26,7 +26,9 @@ export interface PeriodUsageLine {
   delta_color: number;
   /** `delta_total - delta_mono - delta_color` — residuo explícito, ver migración `report_closures_delta_other_and_estimate`. */
   delta_other: number;
-  /** Sólo si `had_counter_reset` — estimación a partir del histórico diario, informativa (no reemplaza `delta_total`). */
+  /** Sólo si `had_counter_reset` — estimación a partir del histórico diario.
+   * No pisa este campo (`delta_total` queda crudo, para auditoría), pero sí
+   * se aplica sola al TOTAL OFICIAL del cierre — ver `sumUsageTotals`. */
   delta_estimated: number | null;
   had_counter_reset: boolean;
 }
