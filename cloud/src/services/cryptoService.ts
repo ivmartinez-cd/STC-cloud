@@ -32,6 +32,7 @@ const HKDF_SALT = "stc-snmp-cred-v1";
 const PURPOSE_INFO: Record<string, string> = {
   snmp: "stc-snmp-cred-encryption-key", // valor original — NO tocar, ya hay datos cifrados con esto
   sftp: "stc-sftp-cred-encryption-key",
+  smtp: "stc-smtp-cred-encryption-key", // contraseña SMTP de `system_settings` (handoff hifi #3, fase 2)
 };
 
 export class MissingEncryptionKeyError extends Error {

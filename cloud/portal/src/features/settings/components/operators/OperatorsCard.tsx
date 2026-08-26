@@ -1,187 +1,148 @@
-import { useState, useEffect, useCallback } from 'react';
-import { User, UserPlus, Shield } from 'lucide-react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../../../../store/AuthContext';
+import { useDebounce } from '../../../../shared/hooks/useDebounce';
 import { api } from '../../../../shared/lib/api';
+import { operatorsBreakdown } from '../../lib/settingsPresentation';
 import type { DBUser, DBClient } from '../../types/settings';
-import UserTable from './UserTable';
+import OperatorsHeader from './OperatorsHeader';
+import OperatorsFilterBar, { type OperatorFilter } from './OperatorsFilterBar';
+import OperatorsTable from './OperatorsTable';
+import OperatorDetailModal from './OperatorDetailModal';
+import RolePermissionsModal from './RolePermissionsModal';
 import CreateUserModal from './CreateUserModal';
 import ResetPasswordModal from './ResetPasswordModal';
 import RoleChangeModal from './RoleChangeModal';
 
+function useOperatorsState() {
+  const [users, setUsers] = useState<DBUser[]>([]);
+  const [clients, setClients] = useState<DBClient[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  return { users, setUsers, clients, setClients, loading, setLoading, error, setError };
+}
+
+/** Separado de `useOperators` por el límite de 20 líneas/función. */
+function useFetchUsers(isAdmin: boolean, st: ReturnType<typeof useOperatorsState>) {
+  return useCallback(async () => {
+    if (!isAdmin) return;
+    st.setLoading(true);
+    st.setError(null);
+    try {
+      st.setUsers(await api.get<DBUser[]>('/portal/users'));
+    } catch (err: unknown) {
+      st.setError((err as Error).message || 'Error al obtener usuarios');
+    } finally {
+      st.setLoading(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAdmin]);
+}
+
+function useOperators(isAdmin: boolean) {
+  const st = useOperatorsState();
+  const fetchUsers = useFetchUsers(isAdmin, st);
+
+  useEffect(() => {
+    void fetchUsers();
+    if (isAdmin) api.get<DBClient[]>('/clients').then(st.setClients).catch(() => { /* comodidad: modal sin selector */ });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fetchUsers, isAdmin]);
+
+  return { ...st, fetchUsers };
+}
+
+function filterUsers(users: DBUser[], query: string, filter: OperatorFilter): DBUser[] {
+  let rows = users;
+  if (filter === 'administradores') rows = rows.filter((u) => u.role === 'admin');
+  if (filter === 'suspendidos') rows = rows.filter((u) => !u.active);
+  if (query.trim().length >= 2) {
+    const q = query.trim().toLowerCase();
+    rows = rows.filter((u) => u.username.toLowerCase().includes(q));
+  }
+  return rows;
+}
+
+/** Handoff hifi #3, fase 2, 26/08/2026 — reemplaza el `OperatorsCard.tsx`
+ * anterior: header + filtro + tabla densa + panel de detalle en vez de
+ * controles sueltos por celda. CRUD sin cambios de comportamiento, sólo de
+ * presentación (ver `OperatorDetailModal.tsx` sobre qué modales de acción no
+ * se tocaron en esta fase). */
 export default function OperatorsCard() {
   const { role: currentUserRole, userId: currentUserId } = useAuth();
   const isAdmin = currentUserRole === 'admin';
+  const { users, clients, loading, error, fetchUsers } = useOperators(isAdmin);
 
-  const [users, setUsers] = useState<DBUser[]>([]);
-  const [loadingUsers, setLoadingUsers] = useState(false);
-  const [userError, setUserError] = useState<string | null>(null);
-  const [clients, setClients] = useState<DBClient[]>([]);
+  const [rawQuery, setRawQuery] = useState('');
+  const query = useDebounce(rawQuery, 250);
+  const [filter, setFilter] = useState<OperatorFilter>('todos');
+  const filtered = useMemo(() => filterUsers(users, query, filter), [users, query, filter]);
 
+  const [detailUser, setDetailUser] = useState<DBUser | null>(null);
+  const [showPermissions, setShowPermissions] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [resettingUser, setResettingUser] = useState<DBUser | null>(null);
   const [roleChangeUser, setRoleChangeUser] = useState<DBUser | null>(null);
 
-  const fetchUsers = useCallback(async () => {
-    if (!isAdmin) return;
-    setLoadingUsers(true);
-    setUserError(null);
-    try {
-      const data = await api.get<DBUser[]>('/portal/users');
-      setUsers(data);
-    } catch (err: unknown) {
-      setUserError((err as { response?: { data?: { error?: string } } })?.response?.data?.error || (err as Error).message || 'Error al obtener usuarios');
-    } finally {
-      setLoadingUsers(false);
-    }
-  }, [isAdmin]);
-
-  // Lista de clientes para asignar a un client_viewer — el admin ya ve todos los
-  // clientes por `GET /clients` sin scoping, no hace falta un endpoint aparte.
-  const fetchClients = useCallback(async () => {
-    if (!isAdmin) return;
-    try {
-      const data = await api.get<DBClient[]>('/clients');
-      setClients(data);
-    } catch (err: unknown) {
-      console.error('Error al obtener clientes', err);
-    }
-  }, [isAdmin]);
-
-  useEffect(() => {
-    const init = async () => {
-      await fetchUsers();
-      await fetchClients();
-    };
-    void init();
-  }, [fetchUsers, fetchClients]);
-
   const toggleUserActive = async (user: DBUser) => {
-    if (user.id === currentUserId) {
-      alert("No puedes desactivar tu propio usuario.");
-      return;
-    }
-    try {
-      await api.put(`/portal/users/${user.id}`, { active: !user.active });
-      fetchUsers();
-    } catch (err: unknown) {
-      alert((err as { response?: { data?: { error?: string } } })?.response?.data?.error || (err as Error).message || 'Error al actualizar estado del usuario');
-    }
+    if (user.id === currentUserId) return;
+    await api.put(`/portal/users/${user.id}`, { active: !user.active });
+    void fetchUsers();
   };
 
-  // Cambiar rol de usuario. `client_viewer` necesita un client_id — la CHECK de
-  // la base lo exige, así que en vez de mandar la request y mostrar el 400 de
-  // vuelta, se abre un mini-modal a elegir cliente ANTES de confirmar.
   const handleRoleChange = async (user: DBUser, role: string, clientId?: string) => {
-    if (user.id === currentUserId) {
-      alert("No puedes cambiar tu propio rol.");
-      return;
-    }
-    if (role === 'client_viewer' && !clientId) {
-      setRoleChangeUser(user);
-      return;
-    }
-    try {
-      await api.put(`/portal/users/${user.id}`, { role, ...(clientId ? { client_id: clientId } : {}) });
-      fetchUsers();
-    } catch (err: unknown) {
-      alert((err as { response?: { data?: { error?: string } } })?.response?.data?.error || (err as Error).message || 'Error al actualizar rol');
-    }
+    if (user.id === currentUserId) return;
+    if (role === 'client_viewer' && !clientId) { setDetailUser(null); setRoleChangeUser(user); return; }
+    await api.put(`/portal/users/${user.id}`, { role, ...(clientId ? { client_id: clientId } : {}) });
+    void fetchUsers();
+    setDetailUser(null);
   };
 
   const handleDeleteUser = async (user: DBUser) => {
-    if (user.id === currentUserId) {
-      alert("No puedes eliminar tu propio usuario.");
-      return;
-    }
-    if (!window.confirm(`¿Estás seguro de que deseas eliminar permanentemente al operador '${user.username}'?`)) {
-      return;
-    }
-    try {
-      await api.delete(`/portal/users/${user.id}`);
-      fetchUsers();
-    } catch (err: unknown) {
-      alert((err as { response?: { data?: { error?: string } } })?.response?.data?.error || (err as Error).message || 'Error al eliminar usuario');
-    }
+    if (user.id === currentUserId) return;
+    if (!window.confirm(`¿Eliminar permanentemente al operador '${user.username}'?`)) return;
+    await api.delete(`/portal/users/${user.id}`);
+    void fetchUsers();
+    setDetailUser(null);
   };
 
-  return (
-    <div className="cd-panel p-8">
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center gap-4">
-          <div className="p-3 bg-brand/10 text-brand rounded-2xl">
-            <User size={24} />
-          </div>
-          <div>
-            <h3 className="text-lg font-extrabold text-[#1a2333]">Gestión de Operadores</h3>
-            <p className="text-xs text-slate-500 font-medium">Control de accesos y administración de técnicos del portal.</p>
-          </div>
-        </div>
+  if (!isAdmin) return null; // la tarjeta entera es admin-only — mismo criterio que antes, sin panel de "acceso denegado"
 
-        {isAdmin && (
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="flex items-center gap-2 bg-brand hover:bg-brand-hover text-white px-5 py-2.5 rounded-2xl text-xs font-extrabold shadow-md hover:shadow-lg transition-all"
-          >
-            <UserPlus size={16} />
-            Registrar Operador
-          </button>
+  return (
+    <>
+      <OperatorsHeader count={users.length} isAdmin={isAdmin} onViewPermissions={() => setShowPermissions(true)} onAddOperator={() => setShowCreateModal(true)} />
+      <div className="rounded-[5px] border border-line-100 bg-white">
+        <OperatorsFilterBar query={rawQuery} onQueryChange={setRawQuery} filter={filter} onFilterChange={setFilter} />
+        {error ? (
+          <div className="px-5 py-8 text-center font-sans text-[12.5px] text-ink-900">{error}</div>
+        ) : (
+          <OperatorsTable users={filtered} currentUserId={currentUserId} loading={loading} onOpen={setDetailUser} />
+        )}
+        {!loading && !error && (
+          <div className="flex flex-wrap items-center justify-between gap-2.5 px-5 py-3.5">
+            <span className="font-sans text-[12px] text-ink-300">{operatorsBreakdown(users)}</span>
+            <Link to="/activity" className="font-montserrat text-[10px] font-semibold uppercase tracking-[.08em] text-brand-accent hover:underline">VER REGISTRO DE ACCESOS →</Link>
+          </div>
         )}
       </div>
 
-      {!isAdmin ? (
-        <div className="p-6 bg-amber-50/50 border border-amber-100 rounded-3xl flex items-start gap-3">
-          <Shield size={20} className="text-amber-500 mt-0.5 shrink-0" />
-          <div>
-            <h4 className="text-xs font-bold text-amber-800">Privilegios de Administrador Requeridos</h4>
-            <p className="text-[11px] text-amber-700/80 leading-relaxed mt-1 font-medium">
-              La creación, modificación y desactivación de operadores en STC Cloud está estrictamente restringida a usuarios con rol <code className="bg-amber-100/50 px-1 py-0.5 rounded text-amber-900 font-bold uppercase tracking-tight">admin</code>. Contacta al administrador principal si necesitas agregar un nuevo operador.
-            </p>
-          </div>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {userError && (
-            <div className="p-4 bg-rose-50 border border-rose-100 text-rose-600 rounded-2xl text-xs font-medium">
-              {userError}
-            </div>
-          )}
-
-          {loadingUsers ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand"></div>
-            </div>
-          ) : (
-            <UserTable
-              users={users}
-              currentUserId={currentUserId}
-              onRoleChange={handleRoleChange}
-              onToggleActive={toggleUserActive}
-              onResetPasswordClick={setResettingUser}
-              onDeleteClick={handleDeleteUser}
-            />
-          )}
-        </div>
-      )}
-
-      {showCreateModal && (
-        <CreateUserModal clients={clients} onClose={() => setShowCreateModal(false)} onCreated={fetchUsers} />
-      )}
-
-      {resettingUser && (
-        <ResetPasswordModal user={resettingUser} onClose={() => setResettingUser(null)} />
-      )}
-
-      {roleChangeUser && (
-        <RoleChangeModal
-          user={roleChangeUser}
-          clients={clients}
-          onClose={() => setRoleChangeUser(null)}
-          onConfirm={(clientId) => {
-            handleRoleChange(roleChangeUser, 'client_viewer', clientId);
-            setRoleChangeUser(null);
-          }}
+      {detailUser && (
+        <OperatorDetailModal
+          user={detailUser} isSelf={detailUser.id === currentUserId} onClose={() => setDetailUser(null)}
+          onRoleChange={handleRoleChange} onToggleActive={(u) => { void toggleUserActive(u); setDetailUser(null); }}
+          onResetPassword={(u) => { setDetailUser(null); setResettingUser(u); }}
+          onDelete={(u) => { void handleDeleteUser(u); }}
         />
       )}
-    </div>
+      <RolePermissionsModal isOpen={showPermissions} onClose={() => setShowPermissions(false)} />
+      {showCreateModal && <CreateUserModal clients={clients} onClose={() => setShowCreateModal(false)} onCreated={fetchUsers} />}
+      {resettingUser && <ResetPasswordModal user={resettingUser} onClose={() => setResettingUser(null)} />}
+      {roleChangeUser && (
+        <RoleChangeModal
+          user={roleChangeUser} clients={clients} onClose={() => setRoleChangeUser(null)}
+          onConfirm={(clientId) => { void handleRoleChange(roleChangeUser, 'client_viewer', clientId); setRoleChangeUser(null); }}
+        />
+      )}
+    </>
   );
 }

@@ -1,6 +1,7 @@
 import nodemailer from "nodemailer";
 import type { Knex } from "knex";
 import { recordEmailAttempt } from "../../modules/email-log";
+import { KnexSystemSettingsRepository } from "../../modules/system-settings/infrastructure/database/knex-system-settings-repository";
 
 /** Contexto de auditoría que los workers adjuntan al enviar (Fase 4.4). */
 export interface EmailAuditContext {
@@ -10,26 +11,63 @@ export interface EmailAuditContext {
   metadata?: Record<string, unknown>;
 }
 
-let transporter: ReturnType<typeof nodemailer.createTransport> | null = null;
-let transporterInitialized = false;
+export interface ResolvedSmtpConfig {
+  host: string;
+  port: number;
+  secure: boolean;
+  user?: string;
+  password?: string;
+  from: string;
+}
 
-/**
- * `null` si `SMTP_HOST` no está seteado — el envío de mail queda "opcional" de
- * verdad, en vez de fallar en cada intento cuando no hay relay configurado.
- */
-function getTransporter(): ReturnType<typeof nodemailer.createTransport> | null {
-  if (transporterInitialized) return transporter;
-  transporterInitialized = true;
+const SETTINGS_TTL_MS = 60_000;
+let cachedConfig: { value: ResolvedSmtpConfig | null; fetchedAt: number } | null = null;
+
+function fromEnv(): ResolvedSmtpConfig | null {
   if (!process.env.SMTP_HOST) return null;
-  transporter = nodemailer.createTransport({
+  return {
     host: process.env.SMTP_HOST,
     port: Number(process.env.SMTP_PORT) || 587,
     secure: Number(process.env.SMTP_PORT) === 465,
-    auth: process.env.SMTP_USER
-      ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASSWORD }
-      : undefined,
+    user: process.env.SMTP_USER,
+    password: process.env.SMTP_PASSWORD,
+    from: process.env.SMTP_FROM || "STC Cloud <notificaciones@stc-cloud.local>",
+  };
+}
+
+/**
+ * `system_settings` (handoff hifi #3, fase 2, 26/08/2026) gana sobre las env
+ * vars cuando `smtp_host` está seteado en base — así el admin puede
+ * configurar SMTP desde Configuración sin redeploy. Sin fila en base o sin
+ * `smtp_host`, cae a env (comportamiento histórico, no rompe despliegues que
+ * ya lo tenían por env). Cacheado 60s — igual criterio que `/audit-logs/actions`.
+ */
+export async function resolveSmtpConfig(db: Knex | undefined): Promise<ResolvedSmtpConfig | null> {
+  if (!db) return fromEnv();
+  if (cachedConfig && Date.now() - cachedConfig.fetchedAt < SETTINGS_TTL_MS) return cachedConfig.value;
+  const repo = new KnexSystemSettingsRepository(db);
+  const settings = await repo.get();
+  const value = settings.smtpHost
+    ? {
+        host: settings.smtpHost, port: settings.smtpPort ?? 587, secure: settings.smtpEncryption === "tls",
+        user: settings.smtpUser ?? undefined, password: (await repo.getSmtpPasswordPlaintext()) ?? undefined,
+        from: settings.smtpFrom || "STC Cloud <notificaciones@stc-cloud.local>",
+      }
+    : fromEnv();
+  cachedConfig = { value, fetchedAt: Date.now() };
+  return value;
+}
+
+/** Sólo para tests: fuerza a re-resolver la próxima vez (los settings pueden cambiar entre tests). */
+export function _resetSmtpConfigCacheForTests(): void {
+  cachedConfig = null;
+}
+
+export function buildTransporter(config: ResolvedSmtpConfig): ReturnType<typeof nodemailer.createTransport> {
+  return nodemailer.createTransport({
+    host: config.host, port: config.port, secure: config.secure,
+    auth: config.user ? { user: config.user, pass: config.password } : undefined,
   });
-  return transporter;
 }
 
 export interface MailAttachment {
@@ -45,7 +83,8 @@ export interface SendMailOptions {
   text: string;
   attachments?: MailAttachment[];
   /** Contexto de auditoría de correo (Fase 4.4): si viene, cada intento —
-   * incluso los no enviados — deja una fila en `email_log` (best-effort). */
+   * incluso los no enviados — deja una fila en `email_log` (best-effort). También
+   * es la fuente del `db` para resolver SMTP desde `system_settings`. */
   audit?: EmailAuditContext;
 }
 
@@ -78,14 +117,14 @@ export async function sendMail(opts: SendMailOptions): Promise<void> {
     await auditAttempt(opts, "skipped_no_recipient");
     return;
   }
-  const mailer = getTransporter();
-  if (!mailer) {
+  const config = await resolveSmtpConfig(opts.audit?.db);
+  if (!config) {
     await auditAttempt(opts, "skipped_no_transport");
     return;
   }
   try {
-    await mailer.sendMail({
-      from: process.env.SMTP_FROM || "STC Cloud <notificaciones@stc-cloud.local>",
+    await buildTransporter(config).sendMail({
+      from: config.from,
       to: opts.to || opts.bcc, // nodemailer requiere al menos un destinatario en "to"
       bcc: opts.to ? opts.bcc : undefined,
       subject: opts.subject,

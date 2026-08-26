@@ -6,6 +6,7 @@ interface Props {
   accent?: 'brand' | 'severe';
   unit?: string;
   helpText: string;
+  disabled?: boolean;
   onChange: (v: number) => void;
 }
 
@@ -15,7 +16,7 @@ interface Props {
  * el handoff pide reemplazando los inputs pelados ("Con el valor actual, 875
  * de 876 monitores quedan marcados sin señal") — lo arma el caller con datos
  * reales del endpoint de impacto, este componente no calcula nada. */
-export default function ThresholdSlider({ label, value, min, max, accent = 'brand', unit = '%', helpText, onChange }: Props) {
+export default function ThresholdSlider({ label, value, min, max, accent = 'brand', unit = '%', helpText, disabled, onChange }: Props) {
   const valueClass = accent === 'severe' ? 'text-brand-severe' : 'text-brand-accent';
   const trackAccent = accent === 'severe' ? 'accent-brand-severe' : 'accent-brand';
   return (
@@ -25,9 +26,9 @@ export default function ThresholdSlider({ label, value, min, max, accent = 'bran
         <span className={`font-montserrat text-[12.5px] font-semibold tabular-nums ${valueClass}`}>{value}{unit}</span>
       </div>
       <input
-        type="range" min={min} max={max} value={value}
+        type="range" min={min} max={max} value={value} disabled={disabled}
         onChange={(e) => onChange(parseInt(e.target.value, 10))}
-        className={`h-1.5 w-full cursor-pointer appearance-none rounded-[3px] bg-surface-track ${trackAccent}`}
+        className={`h-1.5 w-full cursor-pointer appearance-none rounded-[3px] bg-surface-track disabled:cursor-not-allowed disabled:opacity-50 ${trackAccent}`}
       />
       <p className="mt-1.5 font-sans text-[11.5px] leading-[1.5] text-ink-300">{helpText}</p>
     </div>

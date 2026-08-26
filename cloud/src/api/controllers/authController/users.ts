@@ -28,6 +28,7 @@ async function listUsers(db: Knex, request: FastifyRequest, reply: FastifyReply)
       "users.active",
       "users.client_id",
       "clients.name as client_name",
+      "users.totp_required",
       "users.created_at",
       "users.updated_at"
     )

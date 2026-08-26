@@ -126,3 +126,89 @@ describe('system-settings — e2e /settings/system', () => {
     assert.ok(status === 200 || status === 204, `status ${status}`);
   });
 });
+
+describe('system-settings — SMTP y umbrales de consumible (handoff hifi #3, fase 2)', () => {
+  const ctx = { adminToken: '' };
+
+  test('setup: login admin', async () => {
+    const login = await req('POST', '/portal/login', { username: USER, password: PASS });
+    assert.equal(login.status, 200);
+    ctx.adminToken = login.data.token;
+  });
+
+  test('PUT SMTP: la contraseña nunca vuelve en texto plano — sólo smtp_password_set', async () => {
+    const put = await req('PUT', '/settings/system', {
+      smtp_host: 'smtp.test.local', smtp_port: 587, smtp_user: 'bot@test.local',
+      smtp_password: 'super-secreto-123', smtp_from: 'STC Cloud <bot@test.local>', smtp_encryption: 'starttls',
+    }, ctx.adminToken);
+    assert.equal(put.status, 200, JSON.stringify(put.data));
+    assert.equal(put.data.smtp_host, 'smtp.test.local');
+    assert.equal(put.data.smtp_password_set, true);
+    assert.equal('smtp_password' in put.data, false, 'la contraseña no debe salir en ningún campo del GET/PUT');
+
+    const get = await req('GET', '/settings/system', undefined, ctx.adminToken);
+    assert.equal(get.data.smtp_host, 'smtp.test.local');
+    assert.equal(get.data.smtp_password_set, true);
+  });
+
+  test('PUT smtp_password null borra la contraseña guardada (smtp_password_set vuelve a false)', async () => {
+    const put = await req('PUT', '/settings/system', { smtp_password: null }, ctx.adminToken);
+    assert.equal(put.status, 200, JSON.stringify(put.data));
+    assert.equal(put.data.smtp_password_set, false);
+    assert.equal(put.data.smtp_host, 'smtp.test.local', 'borrar la contraseña no debe tocar el resto de los campos SMTP');
+  });
+
+  test('PUT smtp_encryption inválido → 400', async () => {
+    const { status } = await req('PUT', '/settings/system', { smtp_encryption: 'ssl-invalido' }, ctx.adminToken);
+    assert.equal(status, 400);
+  });
+
+  test('POST /settings/system/smtp/test sin servidor real configurado falla con 400 (no hay SMTP de test en CI)', async () => {
+    const { status, data } = await req('POST', '/settings/system/smtp/test', {}, ctx.adminToken);
+    // `smtp.test.local` no resuelve/no acepta conexión — el intento de verify() debe fallar limpio, nunca 200.
+    assert.equal(status, 400);
+    assert.ok(data.error);
+  });
+
+  test('PUT umbrales de consumible fuera de rango (0, 100) → 400', async () => {
+    for (const bad of [0, 100]) {
+      const w = await req('PUT', '/settings/system', { supply_threshold_warning_pct: bad }, ctx.adminToken);
+      assert.equal(w.status, 400, String(bad));
+    }
+  });
+
+  test('PUT umbrales de consumible + revisión manual, se reflejan en el GET', async () => {
+    const put = await req('PUT', '/settings/system', {
+      supply_threshold_warning_pct: 25, supply_threshold_critical_pct: 9, supply_manual_review_required: true,
+    }, ctx.adminToken);
+    assert.equal(put.status, 200, JSON.stringify(put.data));
+    assert.equal(put.data.supply_threshold_warning_pct, 25);
+    assert.equal(put.data.supply_threshold_critical_pct, 9);
+    assert.equal(put.data.supply_manual_review_required, true);
+  });
+
+  test('GET /settings/system/impact devuelve conteos numéricos coherentes (afectado ≤ total)', async () => {
+    const { status, data } = await req(
+      'GET',
+      '/settings/system/impact?agent_offline_threshold_minutes=5&device_offline_threshold_minutes=300&supply_threshold_warning_pct=25&supply_threshold_critical_pct=9',
+      undefined, ctx.adminToken
+    );
+    assert.equal(status, 200);
+    assert.ok(data.agentOffline.affected <= data.agentOffline.total);
+    assert.ok(data.deviceOffline.affected <= data.deviceOffline.total);
+    assert.equal(typeof data.supplyWarning.affected, 'number');
+    assert.equal(typeof data.supplyCritical.affected, 'number');
+    // El umbral crítico (9%) es más estricto que el de advertencia (25%) — nunca puede afectar a más ítems.
+    assert.ok(data.supplyCritical.affected <= data.supplyWarning.affected);
+  });
+
+  test('cleanup: restaurar SMTP y umbrales a "sin configurar" / defaults', async () => {
+    const restore = await req('PUT', '/settings/system', {
+      smtp_host: null, smtp_port: null, smtp_user: null, smtp_password: null, smtp_from: null, smtp_encryption: 'starttls',
+      supply_threshold_warning_pct: 20, supply_threshold_critical_pct: 8, supply_manual_review_required: false,
+    }, ctx.adminToken);
+    assert.equal(restore.status, 200, JSON.stringify(restore.data));
+    assert.equal(restore.data.smtp_host, null);
+    assert.equal(restore.data.smtp_password_set, false);
+  });
+});
