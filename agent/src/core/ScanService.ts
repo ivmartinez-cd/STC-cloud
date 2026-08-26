@@ -12,10 +12,18 @@ interface ScanServiceDeps {
   getConfig: () => AgentConfig;
 }
 
-/** Scopes por loop (alineado a HP SDS: Identity/Discovery, Meter, Consumables+Alert+Tray). */
+/**
+ * Scopes por loop (alineado a HP SDS: Identity/Discovery, Meter, Consumables+Tray,
+ * Alert). `alerts` salió de `SUPPLIES_SCOPES` en la Fase 11 del gap analysis — antes
+ * refrescaba cada 60/240 min mezclado con consumibles, ahora tiene loop propio 3/15
+ * (`ALERT_SCOPES`/`runAlertTask`), sin duplicar el walk de `prtAlertTable` dos veces
+ * por ciclo. `DISCOVERY_SCOPES` sigue trayendo todo — es el barrido completo de un
+ * equipo recién visto o poco visitado.
+ */
 const DISCOVERY_SCOPES: readonly CaptureScope[] = ['identity', 'meters', 'supplies', 'alerts', 'trays'];
 const METER_SCOPES:     readonly CaptureScope[] = ['meters'];
-const SUPPLIES_SCOPES:  readonly CaptureScope[] = ['supplies', 'alerts', 'trays'];
+const SUPPLIES_SCOPES:  readonly CaptureScope[] = ['supplies', 'trays'];
+const ALERT_SCOPES:     readonly CaptureScope[] = ['alerts'];
 const CONCURRENCY_LIMIT = 10;
 /**
  * Tope de seguridad TOTAL (a través de todos los rangos de un mismo ciclo de
@@ -66,10 +74,11 @@ export function credentialsForRange(pool: SnmpCredential[], credentialIds: strin
 }
 
 /**
- * Orquesta los tres loops de red del agente usando el motor de captura:
+ * Orquesta los cuatro loops de red del agente usando el motor de captura:
  *  - scan()             : discovery sobre los rangos IP (identidad + todo), registra equipos nuevos.
  *  - runMeterTask()     : contadores de equipos conocidos (ruta rápida: driver persistido).
- *  - runSuppliesTask()  : insumos, alertas y bandejas de equipos conocidos.
+ *  - runSuppliesTask()  : insumos y bandejas de equipos conocidos.
+ *  - runAlertTask()     : alertas de equipos conocidos — loop propio 3/15 (Fase 11).
  */
 export class ScanService {
   private deps: ScanServiceDeps;
@@ -207,7 +216,15 @@ export class ScanService {
 
   async runSuppliesTask(): Promise<void> {
     // 'reports_only': ese equipo sólo debe reportar contadores, no insumos.
-    await this.runKnownDevicesTask('SupplyTask', SUPPLIES_SCOPES, (r) => `K=${r.toner_black ?? '-'} C=${r.toner_cyan ?? '-'} M=${r.toner_magenta ?? '-'} Y=${r.toner_yellow ?? '-'} alerts=${r.supplies_details?.alerts?.length ?? 0}`, ['reports_only', 'disabled', 'ignored']);
+    await this.runKnownDevicesTask('SupplyTask', SUPPLIES_SCOPES, (r) => `K=${r.toner_black ?? '-'} C=${r.toner_cyan ?? '-'} M=${r.toner_magenta ?? '-'} Y=${r.toner_yellow ?? '-'}`, ['reports_only', 'disabled', 'ignored']);
+  }
+
+  /** Fase 11 del gap analysis vs HP SDS — loop dedicado de alertas (3/15 min),
+   *  separado de consumibles (60/240). Mismos criterios de policy que
+   *  `runSuppliesTask` (las alertas son parte de "reportar insumos/estado"
+   *  a nivel negocio, un equipo `reports_only` no debe generarlas). */
+  async runAlertTask(): Promise<void> {
+    await this.runKnownDevicesTask('AlertTask', ALERT_SCOPES, (r) => `alerts=${r.supplies_details?.alerts?.length ?? 0}`, ['reports_only', 'disabled', 'ignored']);
   }
 
   private async runKnownDevicesTask(label: string, scopes: readonly CaptureScope[], summarize: (r: DeviceReading) => string, skipStates: readonly DevicePolicyState[]): Promise<void> {

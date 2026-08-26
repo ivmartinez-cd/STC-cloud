@@ -68,11 +68,14 @@ decisión de negocio, no una obligación de compliance.
   agente** (`agent/src/core/TaskScheduler.ts`) — las alertas del agente (EWS/
   `prtAlertTable`) siguen refrescando en el loop de supplies (60/240 min), lo que
   cambió es que el *servidor* ahora abre/resuelve/notifica bien lo que le llega,
-  no la frecuencia con la que el agente lo recolecta; el **digest diario** de
-  notificaciones (resumen batch, no implementado); el **modelo unificado de
+  no la frecuencia con la que el agente lo recolecta ✅ (26/08/2026, ver Fase 12);
+  el **digest diario** de
+  notificaciones (resumen batch, no implementado) ✅ (25/08/2026, ver roadmap
+  Fase 1 más abajo); el **modelo unificado de
   umbrales** cliente→agente→dispositivo (siguen 3 umbrales de "offline"
   distintos: 5 min agente, 30 min dispositivo, más uno en `localStorage` del
-  portal); y la normalización de `prtAlertTable` más allá de lo que ya llegaba
+  portal) ✅ (26/08/2026, ver Fase 11 — el valor de dispositivo ya estaba en 5h,
+  no 30 min, desde una pasada previa); y la normalización de `prtAlertTable` más allá de lo que ya llegaba
   (el agente ya decodifica esa tabla y la manda como `AlertItem[]` — lo que
   faltaba era el lado servidor, que es lo que se cerró acá).
 
@@ -1863,6 +1866,84 @@ se tocó a propósito: es un gradiente de frescura de 3-4 niveles con
 granularidad fija por spec del handoff hifi, no el mismo concepto binario
 online/offline que el resto.
 
+### Fase 12 — Loop dedicado de alertas 3/15 en el agente (26/08/2026) — completa
+
+Origen: único pendiente explícito de §2.1 ("Falta Alert loop 3/15... hoy
+alertas cada 60 min en horario y 240 fuera") que sobrevivió intacto desde
+la Fase 1 (24/08/2026) — el resto de esa fila ya se había cerrado del lado
+servidor (ciclo de vida, ack/resolve, clasificación), pero el agente seguía
+refrescando las alertas EWS/`prtAlertTable` mezcladas en el loop de
+consumibles (60/240 min), nunca con loop propio.
+
+✅ **`INTERVALS.alert` nuevo** (`BusinessHours.ts`): 3 min en horario
+laboral / 15 min fuera — valores EXACTOS de la fila "Alert 3/15" de la
+comparativa, a diferencia de discovery/meter/supplies (que sí caen a 4h
+fuera de horario): una alerta real (atasco, papel agotado) no debería
+tardar horas en aparecer aunque sea de noche.
+
+✅ **`ScanService.runAlertTask()`** — scope `['alerts']` sobre
+`runKnownDevicesTask` (el mismo helper genérico que ya usan meter/supplies,
+sin duplicar lógica de concurrencia/policy/dedupe). `alerts` SALIÓ de
+`SUPPLIES_SCOPES` (antes `['supplies','alerts','trays']`, ahora
+`['supplies','trays']`) — el walk de `prtAlertTable` ya no se hace dos
+veces por ciclo con dos cadencias distintas, ahora sólo lo pide el loop
+nuevo. `DISCOVERY_SCOPES` no se tocó — el barrido completo de un equipo
+recién visto sigue trayendo todo de una vez.
+
+✅ **`TaskScheduler`** gana el 4to reloj (`lastAlertTime`), con PRIORIDAD
+sobre discovery/meter/supplies en el `if/else if` de cada tick de 5s — el
+loop más frecuente no debía quedar postergado un tick tras otro si varios
+vencen a la vez (discovery/meter/supplies sí pueden esperar unos segundos
+extra, corren cada varios minutos). El resto de la clase se factorizó a un
+`runTask()` chico (antes 4 bloques try/set/finally casi idénticos).
+
+✅ **Bug real encontrado y corregido — el mismo mecanismo de dedupe que
+hacía falta para no inundar de filas iba a silenciar el loop nuevo por
+completo**: `readingSnapshotKey()` (`sync/database.ts`, Fase 2 del gap
+analysis original) sólo comparaba `total_pages`/`toner_*` — una lectura de
+`AlertTask` (sólo scope `alerts`, esos campos SIEMPRE en `null` porque no
+se capturaron) producía la MISMA huella en todos los ciclos sin importar
+qué alertas trajera. Con `shouldEnqueueReading()` cayendo al criterio "sin
+cambios, no manda hasta la ventana de dedupe" (4h), una alerta nueva podía
+tardar hasta 4 horas en llegar al cloud aunque el loop la detectara cada 3
+minutos — exactamente el problema que este loop se suponía que resolvía.
+Se agregó `alertsSnapshotKey()` a la huella: lista de alertas serializada
+por `code|description|severity` (nunca `time`, que puede ticar sin que la
+alerta cambie de verdad), ordenada para no depender del orden del walk
+SNMP. Efecto colateral BENÉFICO en meter/supplies (no buscado): hoy esas
+lecturas también detectan un cambio de alertas que antes se perdía si los
+contadores/tóner se mantenían iguales.
+
+Verificado: 4 tests nuevos en `dedupeReadings.test.ts` (alertas cambian sin
+tocar contadores → se manda; mismo set de alertas, orden distinto → NO se
+manda, walk SNMP no garantiza orden; alerta resuelta → se manda; regresión
+meter/supplies sin alertas sigue deduplicando igual) + `taskScheduler.test.ts`
+nuevo (5 tests: valores exactos de `INTERVALS.alert`; sólo alertas vencidas
+corre; alertas gana la prioridad si discovery también venció; nada vencido
+→ ningún loop corre; supplies sigue funcionando con alertas al día) —
+manipulando los relojes privados del scheduler para simular vencimiento
+sin esperar minutos reales. Suite completa del agente 209/209 verde (200
+previos + 9 nuevos). `tsc`/`build`/`build-sea.js` (bundle esbuild REAL, no
+el pipeline huérfano de `pkg`) limpios.
+
+**Release**: `agent/src/core/version.ts` → 1.3.0, sincronizado en
+`agent/package.json`, `installer/STC-Monitor.iss` y
+`monitor-ui/STC.Monitor.UI.csproj`. **Sin firmar ni publicar** (mismo
+límite que la Fase 7): firmar el bundle y correr el instalador Inno Setup
+real requieren Windows y las claves de firma, no verificables en este
+entorno Linux — código y tests quedan completos y verdes, falta el paso
+operativo a cargo de quien tenga acceso a esas claves.
+
+**Lo que NO se hizo de este ítem**: el "modelo unificado de umbrales"
+cliente→agente→dispositivo (Fase 11) sigue siendo un umbral GLOBAL, no
+por-cliente — el intervalo del loop de alertas (3/15) tampoco es
+configurable por cliente/agente, son los valores fijos de SDS; auto-tuning
+("si un loop tarda más que su intervalo, el siguiente arranca de
+inmediato", §2.1 P2) sigue sin implementarse — el tick de 5s + reloj por
+tarea ya evita el caso extremo (una tarea larga no bloquea indefinidamente
+a las demás, sólo hasta el próximo tick), pero no mide duración ni se
+autoajusta por carga.
+
 ### Otros puntos de §3 (riesgos) que siguen abiertos y no forman parte de ningún ítem de arriba
 - ✅ **R4 (parcial, 23/08/2026)**: el WS del portal ya NO acepta el JWT de
   sesión por query string. Investigado antes de tocarlo: no era vestigial —
@@ -1940,7 +2021,7 @@ Leyenda de prioridad: **P0** bloquea facturación/seguridad · **P1** paridad op
 ### 2.1 Loops de monitoreo
 | | HP SDS | STC hoy | Gap | Prio |
 |---|---|---|---|---|
-| Loops | 5 independientes: Alert 3/15, Identity 10/60, Meter 20/240, Consumables 60/240, Tray 480 | 3: Discovery 10/60, Meter 20/240, Supplies(+alerts+trays) 60/240 (`TaskScheduler.ts:53-79`) | Falta **Alert loop 3/15** (hoy alertas cada 60 min en horario y 240 fuera) y Tray separado | P1 |
+| Loops | 5 independientes: Alert 3/15, Identity 10/60, Meter 20/240, Consumables 60/240, Tray 480 | ✅ (26/08/2026) 4: **Alert 3/15** (loop propio, ver Fase 12), Discovery 10/60, Meter 20/240, Supplies(+trays) 60/240 | Sigue sin Tray como loop separado (vive dentro de discovery/supplies) — bajo impacto, las bandejas cambian poco | P2 |
 | Horario laboral | 08‑18 L‑V configurable | Hardcodeado 08‑18 L‑V **America/Argentina/Buenos_Aires** (`BusinessHours.ts:14,26-28`) | Configurable por agente + TZ del cliente | P1 |
 | Auto‑optimización | "Si un loop tarda más que su intervalo, el siguiente arranca de inmediato"; se autoajusta por carga | Tick cada 5 s, una tarea por tick (`if/else if`), sin medir duración ni adaptar | Métrica de duración por loop + adaptación | P2 |
 | Envío de contadores | Lee cada 20 min, sube 1×/día + botón "Get Latest Counts" | Sube todo cada 5 min | **Ventaja STC** en frescura, pero genera ~72 filas/día/equipo sin dedupe (§3 R3) | — |
@@ -2351,7 +2432,7 @@ que este hallazgo nombraba explícitamente.
 ¹ `/portal/me` y la respuesta de login siguen devolviendo el token también en el body (fallback para el WS cuando no hay cookie entre orígenes) — es una decisión consciente, no un pendiente.
 
 ### Fase 1 — Paridad operativa con SDS (≈ 1 mes) — completa: 9 de 9 ítems cerrados
-- ✅ **Alert loop** — lifecycle server-side completo: alertas `agent_offline`, `device_offline`, `counter_reset` (ya de Fase 0), normalización de las alertas EWS que ya llegaban del agente; **ack/resolve** y filtros; **notificaciones** email + webhook. ✅ (25/08/2026) **digest diario de alertas por email**: opt-in por cliente vía `notification_events` (`alert.digest`, reusa el mecanismo de Fase 4.3, no un boolean paralelo), envío único diario a las 07:00 hora local del cliente (`America/Argentina/Buenos_Aires`), con conteo de críticas/advertencias abiertas + top de clases de alerta de las últimas 24h; idempotente vía `clients.last_alert_digest_sent_at` (`jobs/alertDigestJob.ts`). ⬜ El loop *dedicado 3/15 min del lado agente* no se tocó (las alertas del agente siguen en el loop de supplies, 60/240 min).
+- ✅ **Alert loop** — lifecycle server-side completo: alertas `agent_offline`, `device_offline`, `counter_reset` (ya de Fase 0), normalización de las alertas EWS que ya llegaban del agente; **ack/resolve** y filtros; **notificaciones** email + webhook. ✅ (25/08/2026) **digest diario de alertas por email**: opt-in por cliente vía `notification_events` (`alert.digest`, reusa el mecanismo de Fase 4.3, no un boolean paralelo), envío único diario a las 07:00 hora local del cliente (`America/Argentina/Buenos_Aires`), con conteo de críticas/advertencias abiertas + top de clases de alerta de las últimas 24h; idempotente vía `clients.last_alert_digest_sent_at` (`jobs/alertDigestJob.ts`). ✅ (26/08/2026) El loop *dedicado 3/15 min del lado agente* — ver Fase 12, agente v1.3.0.
 - ✅ **Reportes por cliente**: selector de período, cierre mensual inmutable (lectura inicial/final, delta, fuente), export CSV/XLSX, y **entrega automática** (email/webhook) para reemplazar el flujo FTP/mail del STC legado. ⬜ Export a PDF y entrega por SFTP no se hicieron (quedó CSV/XLSX + email/webhook).
 - ✅ **RBAC por cliente**: rol `client_viewer`, scoping por `client_id` en todos los controladores. ✅ (25/08/2026) Paginación server-side real en el primer listado (`GET /devices` + `Devices.tsx`, ver R9). ✅ (26/08/2026) Resto del portal — ver Fase 10: la mayoría ya la tenía, se cerraron los 2 huecos reales (`EmailLog`/`SupplyRequests`) y se borró un cluster de código muerto (`Monitors.tsx`). Sólo `Alerts.tsx` (paginación "ciega", funcional pero sin total) y `ScheduledReports.tsx` (sin paginar, bajo riesgo) quedan como decisión de alcance, no pendiente.
 - ✅ **SNMPv3 y lista de credenciales** (v1/v2c/v3) por agente, hasta 8 credenciales probadas en orden, secretos cifrados at-rest, fail-fast para no multiplicar timeouts contra un host muerto.

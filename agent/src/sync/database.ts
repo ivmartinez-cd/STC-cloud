@@ -135,12 +135,34 @@ export function openQueue(): void {
   }
 }
 
+/**
+ * Huella estable de las alertas activas — para `AlertTask` (Fase 11), cuyas
+ * lecturas NO traen contadores/tóner (`total_pages`/`toner_*` quedan `null`
+ * siempre, sólo se capturó el scope `alerts`): sin esto, dos ciclos
+ * consecutivos con alertas DISTINTAS producían la misma huella (todo
+ * `null`) y `shouldEnqueueReading` los trataba como "sin cambios" — el loop
+ * 3/15 nunca hubiera detectado una alerta nueva antes de la ventana de
+ * dedupe de 4h, exactamente el problema que el loop rápido buscaba
+ * resolver. `time` se excluye a propósito (no es parte de la IDENTIDAD de
+ * la alerta, algunos firmwares lo hacen ticar aunque nada más cambie); se
+ * ordena por `code` para no depender del orden del walk SNMP.
+ */
+function alertsSnapshotKey(r: DeviceReading): string {
+  const alerts = r.supplies_details?.alerts;
+  if (!alerts?.length) return '';
+  return alerts
+    .map((a) => `${a.code ?? ''}|${a.description ?? ''}|${a.severity ?? ''}`)
+    .sort()
+    .join(';');
+}
+
 /** Subconjunto de `DeviceReading` relevante para decidir si "cambió" — ignora metadata (firmware, hostname, etc.) que no importa para dedupe. */
 function readingSnapshotKey(r: DeviceReading): string {
   return JSON.stringify({
     total_pages: r.total_pages, mono_pages: r.mono_pages, color_pages: r.color_pages,
     toner_black: r.toner_black ?? null, toner_cyan: r.toner_cyan ?? null,
     toner_magenta: r.toner_magenta ?? null, toner_yellow: r.toner_yellow ?? null,
+    alerts: alertsSnapshotKey(r),
   });
 }
 

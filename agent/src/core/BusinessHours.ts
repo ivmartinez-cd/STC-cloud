@@ -8,6 +8,13 @@ export const INTERVALS = {
   discovery: { biz: 10 * 60_000,       off: 60 * 60_000 },
   meter:     { biz: 20 * 60_000,       off: 4 * 60 * 60_000 },
   supplies:  { biz: 60 * 60_000,       off: 4 * 60 * 60_000 },
+  // Fase 11 del gap analysis vs HP SDS ("loop dedicado 3/15") — valores
+  // EXACTOS de la comparativa (§2.1: "Alert loop 3/15"), mucho más rápido
+  // que el loop de consumibles (60/240) donde vivían mezcladas hasta ahora.
+  // A diferencia de discovery/meter/supplies, acá el fuera-de-horario NO
+  // cae a 4h — 15 min sigue siendo el número de SDS, una alerta de "atasco"
+  // real no debería tardar horas en aparecer aunque sea de noche.
+  alert:     { biz: 3 * 60_000,        off: 15 * 60_000 },
 } as const;
 
 export interface BusinessHoursConfig {
