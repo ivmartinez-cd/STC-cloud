@@ -1,6 +1,5 @@
 {
   "files": {
-    "src/tests/e2e.test.ts": 521,
     "src/tests/rbac.test.ts": 765
   },
   "functions": {
@@ -201,7 +200,7 @@
     "src/jobs/reportDeliveryWorker.ts": [
       {
         "name": "processReportDelivery",
-        "length": 60
+        "length": 74
       }
     ],
     "src/jobs/retentionJob.ts": [
@@ -912,6 +911,12 @@
         "length": 61
       }
     ],
+    "portal/src/features/clients/components/SftpDestinationCard.tsx": [
+      {
+        "name": "SftpDestinationCard",
+        "length": 159
+      }
+    ],
     "portal/src/features/clients/components/SupplyRequestSettingsCard.tsx": [
       {
         "name": "SupplyRequestSettingsCard",
@@ -1435,7 +1440,7 @@
     "portal/src/features/reports/components/ReportsClosuresHistory.tsx": [
       {
         "name": "ReportsClosuresHistory",
-        "length": 85
+        "length": 89
       }
     ],
     "portal/src/features/reports/components/ReportsPreviewTable.tsx": [

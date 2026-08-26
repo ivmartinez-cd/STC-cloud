@@ -9,6 +9,8 @@ import { spawn } from "node:child_process";
 // real, es la ventana de rate-limit pisándose entre archivos).
 const TEST_FILES = [
   "src/tests/e2e.test.ts",
+  "src/tests/e2eDeviceSync.test.ts",
+  "src/tests/e2eSecurityAndTokens.test.ts",
   "src/tests/rbac.test.ts",
   // clientDirectory.test.ts/clientDeviceDirectory.test.ts faltaban acá (sólo
   // corrían via `npm test` local) — mismo criterio que el resto de este archivo,
