@@ -1,12 +1,14 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
-import { X, Bug, Sparkles, Send, CheckCircle, ImagePlus, Loader2, XCircle } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { X, Send, Loader2, XCircle } from 'lucide-react';
 import { api } from '../lib/api';
+import FeedbackTypeSelector, { type FeedbackType } from './FeedbackTypeSelector';
+import FeedbackSuccessState from './FeedbackSuccessState';
+import FeedbackImageDropzone from './FeedbackImageDropzone';
 
 interface Props {
   onClose: () => void;
 }
 
-type FeedbackType = 'bug' | 'enhancement';
 type Stage = 'form' | 'submitting' | 'success';
 
 export default function FeedbackModal({ onClose }: Props) {
@@ -14,11 +16,9 @@ export default function FeedbackModal({ onClose }: Props) {
   const [title, setTitle]             = useState('');
   const [description, setDescription] = useState('');
   const [imageUrl, setImageUrl]       = useState('');
-  const [isDragOver, setIsDragOver]   = useState(false);
   const [stage, setStage]             = useState<Stage>('form');
   const [error, setError]             = useState<string | null>(null);
   const textareaRef                   = useRef<HTMLTextAreaElement>(null);
-  const dropRef                       = useRef<HTMLDivElement>(null);
 
   // Auto-resize textarea
   useEffect(() => {
@@ -34,13 +34,6 @@ export default function FeedbackModal({ onClose }: Props) {
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, [onClose]);
-
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragOver(false);
-    const url = e.dataTransfer.getData('text/uri-list') || e.dataTransfer.getData('text/plain');
-    if (url.startsWith('http')) setImageUrl(url);
-  }, []);
 
   const handleSubmit = async () => {
     setError(null);
@@ -119,20 +112,7 @@ export default function FeedbackModal({ onClose }: Props) {
 
           {/* ── Success State ── */}
           {stage === 'success' && (
-            <div className="px-7 pb-10 flex flex-col items-center gap-4 animate-fade-in">
-              <div className="relative">
-                <div className={`absolute inset-0 rounded-full blur-2xl opacity-60 bg-gradient-to-br ${accentFrom} ${accentTo}`} />
-                <div className={`relative w-20 h-20 rounded-full bg-gradient-to-br ${accentFrom} ${accentTo} flex items-center justify-center shadow-xl ${accentGlow}`}>
-                  <CheckCircle size={40} className="text-white animate-scale-in" strokeWidth={2.5} />
-                </div>
-              </div>
-              <p className="text-white/70 text-sm text-center max-w-[280px] leading-relaxed">
-                Tu reporte fue registrado. El equipo de soporte lo revisará pronto.
-              </p>
-              <div className="w-full bg-white/5 rounded-2xl h-1 overflow-hidden mt-2">
-                <div className={`h-full bg-gradient-to-r ${accentFrom} ${accentTo} animate-progress-bar`} />
-              </div>
-            </div>
+            <FeedbackSuccessState accentFrom={accentFrom} accentTo={accentTo} accentGlow={accentGlow} />
           )}
 
           {/* ── Form State ── */}
@@ -140,40 +120,7 @@ export default function FeedbackModal({ onClose }: Props) {
             <div className="px-7 pb-7 space-y-5">
 
               {/* Type Selector */}
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 mb-2.5">
-                  Tipo de reporte
-                </p>
-                <div className="grid grid-cols-2 gap-3">
-                  {([ ['bug', 'Problema', Bug, 'from-rose-500 to-orange-500', 'ring-rose-400/50'],
-                       ['enhancement', 'Mejora', Sparkles, 'from-brand-charcoal to-brand-gray', 'ring-brand-gray/50'],
-                  ] as const).map(([val, label, Icon, grad, ring]) => (
-                    <button
-                      key={val}
-                      onClick={() => setType(val)}
-                      className={`
-                        relative flex flex-col items-center gap-2.5 py-4 px-3 rounded-2xl
-                        border transition-all duration-300 group overflow-hidden
-                        ${type === val
-                          ? `border-white/30 bg-gradient-to-br ${grad} shadow-lg ring-2 ${ring}`
-                          : 'border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20'}
-                      `}
-                    >
-                      <div className={`absolute inset-0 bg-gradient-to-br ${grad} opacity-0 transition-opacity duration-300 ${type === val ? 'opacity-20' : 'group-hover:opacity-10'}`} />
-                      <Icon
-                        size={22}
-                        className={`transition-all duration-300 ${type === val ? 'text-white scale-110' : 'text-white/40 group-hover:text-white/70'}`}
-                        strokeWidth={2}
-                      />
-                      <span className={`text-[11px] font-black uppercase tracking-widest transition-colors duration-300 ${type === val ? 'text-white' : 'text-white/40 group-hover:text-white/70'}`}>
-                        {label}
-                      </span>
-                      {val === 'bug' && <span className="text-[18px] leading-none">🐞</span>}
-                      {val === 'enhancement' && <span className="text-[18px] leading-none">✨</span>}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              <FeedbackTypeSelector value={type} onChange={setType} />
 
               {/* Title */}
               <div>
@@ -219,58 +166,7 @@ export default function FeedbackModal({ onClose }: Props) {
               </div>
 
               {/* Image URL / Drag Drop */}
-              <div>
-                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 block mb-2">
-                  Captura de pantalla <span className="normal-case tracking-normal font-medium opacity-60">(opcional)</span>
-                </label>
-                <div
-                  ref={dropRef}
-                  onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
-                  onDragLeave={() => setIsDragOver(false)}
-                  onDrop={handleDrop}
-                  className={`
-                    relative rounded-2xl border-2 border-dashed p-4 transition-all duration-200 cursor-default
-                    ${isDragOver
-                      ? 'border-white/50 bg-white/10 scale-[1.01]'
-                      : 'border-white/10 hover:border-white/20 bg-white/5'}
-                  `}
-                >
-                  {imageUrl ? (
-                    <div className="flex items-center gap-3">
-                      <img
-                        src={imageUrl}
-                        alt="preview"
-                        className="w-12 h-12 rounded-xl object-cover border border-white/20"
-                        onError={() => setImageUrl('')}
-                      />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs text-white/70 truncate">{imageUrl}</p>
-                        <p className="text-[10px] text-white/40 mt-0.5">Imagen adjunta</p>
-                      </div>
-                      <button
-                        onClick={() => setImageUrl('')}
-                        className="p-1.5 rounded-xl hover:bg-white/10 text-white/30 hover:text-white/70 transition-all"
-                      >
-                        <XCircle size={16} />
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center gap-2 py-2">
-                      <ImagePlus size={20} className="text-white/25" />
-                      <p className="text-[11px] text-white/30 text-center">
-                        Arrastra una imagen aquí o pega una URL
-                      </p>
-                      <input
-                        type="text"
-                        value={imageUrl}
-                        onChange={(e) => setImageUrl(e.target.value)}
-                        placeholder="https://..."
-                        className="mt-1 w-full bg-transparent border-0 text-xs text-white/50 placeholder-white/20 text-center focus:outline-none"
-                      />
-                    </div>
-                  )}
-                </div>
-              </div>
+              <FeedbackImageDropzone imageUrl={imageUrl} onChange={setImageUrl} />
 
               {/* Error */}
               {error && (
