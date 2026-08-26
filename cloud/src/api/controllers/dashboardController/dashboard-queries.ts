@@ -235,6 +235,17 @@ export function queryDevicesReportingCount(db: Knex, cid: string | null, twentyF
     .first();
 }
 
+// Badge "Incidentes" del sidebar (handoff hifi "Sidebar", 26/08/2026) — query
+// propia y aislada (no reusa `getIncidentStats` de `services/incidentService`)
+// para no depender de una función bajo desarrollo activo en paralelo.
+export function queryIncidentsOpenCount(db: Knex, cid: string | null) {
+  return db("incidents")
+    .whereIn("status", ["open", "in_progress", "on_hold"])
+    .modify((q) => { if (cid) q.where("client_id", cid); })
+    .count("* as c")
+    .first();
+}
+
 // Badge "Pedidos" del sidebar (handoff hifi "Sidebar", 26/08/2026) — mismos
 // estados que la propia feature de pedidos considera abiertos (`OPEN_STATUSES`),
 // no sólo `pending`, para no desalinearse si esa lista cambia.

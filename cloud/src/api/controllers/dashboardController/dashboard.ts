@@ -5,13 +5,12 @@ import type { AgentService } from "../../../modules/agents";
 import { getScope } from "../../utils/scope";
 import { ALERT_CLASS_LABELS, countOpenAlertsByClass, type AlertClass } from "../../../modules/alerts";
 import { getPublishedAgentVersion } from "../../../services/agentVersionService";
-import { getIncidentStats } from "../../../services/incidentService";
 import {
   queryDevicesCount, queryAgentsStats, queryClientsCount, queryMonthlyVolume, queryTopClients,
   queryBrandStats, queryOfflineAgents, queryNewDevicesCount, queryReadings24hCount, queryLastReadingInfo,
   queryClientsWithAlertsCount, queryDevicesUnmanagedCount, queryAgentsReportingCount, queryAgentVersionRows,
   queryDiscoveredTodayCount, queryDiscoveredYesterdayCount, queryPendingDevicesTotalCount,
-  queryDevicesReportingCount, queryMovementsCounts, querySupplyRequestsPendingCount,
+  queryDevicesReportingCount, queryMovementsCounts, querySupplyRequestsPendingCount, queryIncidentsOpenCount,
 } from "./dashboard-queries";
 
 function computeDeviceTrend(devicesCount: { c?: string | number } | undefined, newDevicesCount: { c?: string | number } | undefined) {
@@ -44,7 +43,7 @@ async function getDashboard(db: Knex, redis: Redis, request: FastifyRequest) {
     newDevicesCount, readings24hCount, lastReadingInfo, clientsWithAlertsCount, devicesUnmanagedCount,
     agentsReportingCount, agentVersionRows, alertsByClassRows, discoveredTodayCount, discoveredYesterdayCount,
     pendingDevicesTotalCount, publishedAgentVersion, devicesReportingCount, movementsCounts,
-    incidentStats, supplyRequestsPendingCount,
+    incidentsOpenCount, supplyRequestsPendingCount,
   ] = await Promise.all([
     queryDevicesCount(db, cid),
     queryAgentsStats(db, cid, fiveMinsAgo),
@@ -67,7 +66,7 @@ async function getDashboard(db: Knex, redis: Redis, request: FastifyRequest) {
     getPublishedAgentVersion(redis),
     queryDevicesReportingCount(db, cid, twentyFourHoursAgo),
     queryMovementsCounts(db, cid, startOfYesterday),
-    getIncidentStats(db, { clientId: cid }),
+    queryIncidentsOpenCount(db, cid),
     querySupplyRequestsPendingCount(db, cid),
   ]);
 
@@ -107,7 +106,7 @@ async function getDashboard(db: Knex, redis: Redis, request: FastifyRequest) {
       total: Number(movementsCounts?.total || 0),
     },
     incidents: {
-      openTotal: Number((incidentStats as { openTotal?: number }).openTotal || 0),
+      openTotal: Number(incidentsOpenCount?.c || 0),
     },
     supplyRequests: {
       pending: Number(supplyRequestsPendingCount?.c || 0),
