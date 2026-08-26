@@ -3,8 +3,6 @@
     "src/tests/alerts.test.ts": 529,
     "src/tests/deviceLifecycle.test.ts": 467,
     "src/tests/e2e.test.ts": 521,
-    "src/tests/incidents.test.ts": 324,
-    "src/tests/publicApi.test.ts": 360,
     "src/tests/rbac.test.ts": 765
   },
   "functions": {
@@ -364,6 +362,12 @@
         "length": 23
       }
     ],
+    "src/modules/clients/application/use-cases/client-sftp-use-cases.ts": [
+      {
+        "name": "execute",
+        "length": 21
+      }
+    ],
     "src/modules/clients/infrastructure/database/knex-client-repository/directory.ts": [
       {
         "name": "summarizePortfolioRows",
@@ -568,6 +572,12 @@
       {
         "name": "upsertWebhookConfig",
         "length": 21
+      }
+    ],
+    "src/services/sftpDestination.ts": [
+      {
+        "name": "validateSftpDestination",
+        "length": 51
       }
     ],
     "src/services/snmpCredentials.ts": [

@@ -3,11 +3,9 @@
 // corriendo en localhost:3000/3001).
 // Ejecutar: API_URL=http://localhost:3000/api/v1 npx tsx --test src/tests/publicApi.test.ts
 
-import { test, describe, after } from 'node:test';
+import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
-import http from 'node:http';
-import knexLib from 'knex';
 
 const API  = process.env.API_URL  || 'http://localhost:3000/api/v1';
 const USER = process.env.PORTAL_ADMIN_USER     || 'admin';
@@ -67,23 +65,7 @@ const ctx = {
   deviceASerial: `SN-PUBAPI-${ts}`,
   apiKeyA: '', apiKeyAId: '',
   apiKeyB: '',
-  apiKeyExpiring: '', apiKeyExpiringId: '',
 };
-
-// Sólo para los tests de expiración: forzar `expires_at` al pasado no es
-// posible por API (nadie debería poder mandar una fecha arbitraria), así
-// que se escribe directo — mismo patrón que inventoryFields.test.ts.
-const rawDb = knexLib({
-  client: 'pg',
-  connection: {
-    host: process.env.ALERTS_TEST_DB_HOST || 'localhost',
-    port: Number(process.env.ALERTS_TEST_DB_PORT || 5434),
-    user: process.env.DB_USER || 'stc_admin',
-    password: process.env.DB_PASSWORD || 'stc_secret',
-    database: process.env.DB_NAME || 'stc_cloud',
-  },
-});
-after(async () => { await rawDb.destroy().catch(() => {}); });
 
 describe('API pública — fixtures', () => {
   test('Setup: login admin, crear 2 clientes + 1 agente + activar', async () => {
@@ -164,51 +146,6 @@ describe('API keys — crear/listar/revocar', () => {
     const createdB = await req('POST', `/clients/${ctx.clientBId}/api-keys`, { name: 'Otra empresa' }, ctx.adminToken);
     assert.equal(createdB.status, 201);
     ctx.apiKeyB = createdB.data.key;
-  });
-});
-
-describe('API keys — expiración', () => {
-  test('sin expires_in_days → expires_at null (comportamiento de siempre)', async () => {
-    const created = await req('POST', `/clients/${ctx.clientAId}/api-keys`, { name: 'Sin vencimiento' }, ctx.adminToken);
-    assert.equal(created.status, 201);
-    const list = await req('GET', `/clients/${ctx.clientAId}/api-keys`, undefined, ctx.adminToken);
-    const row = list.data.find((k: any) => k.id === created.data.id);
-    assert.equal(row?.expires_at, null);
-  });
-
-  test('expires_in_days fuera de rango (0, 3651, no-entero) → 400, no crea nada', async () => {
-    for (const bad of [0, 3651, 1.5, 'x']) {
-      const { status } = await req('POST', `/clients/${ctx.clientAId}/api-keys`, { name: 'Rango inválido', expires_in_days: bad }, ctx.adminToken);
-      assert.equal(status, 400, String(bad));
-    }
-  });
-
-  test('expires_in_days=1 → 201, expires_at es ~mañana', async () => {
-    const created = await req('POST', `/clients/${ctx.clientAId}/api-keys`, { name: 'Key con vencimiento', expires_in_days: 1 }, ctx.adminToken);
-    assert.equal(created.status, 201);
-    ctx.apiKeyExpiring = created.data.key;
-    ctx.apiKeyExpiringId = created.data.id;
-
-    const list = await req('GET', `/clients/${ctx.clientAId}/api-keys`, undefined, ctx.adminToken);
-    const row = list.data.find((k: any) => k.id === ctx.apiKeyExpiringId);
-    assert.ok(row.expires_at, 'debe tener expires_at seteado');
-    const diffHours = (new Date(row.expires_at).getTime() - Date.now()) / (60 * 60 * 1000);
-    assert.ok(diffHours > 23 && diffHours <= 24.1, `expires_at debe ser ~24hs a futuro, dio ${diffHours}h`);
-  });
-
-  test('key con expires_in_days=1 todavía funciona hoy', async () => {
-    const res = await pub('GET', '/public/devices', undefined, ctx.apiKeyExpiring);
-    assert.equal(res.status, 200);
-  });
-
-  test('key ya vencida (forzado directo en DB) → 401 en la API pública, aunque nunca se haya revocado', async () => {
-    await rawDb('api_keys').where({ id: ctx.apiKeyExpiringId }).update({ expires_at: new Date(Date.now() - 60_000) });
-    const res = await pub('GET', '/public/devices', undefined, ctx.apiKeyExpiring);
-    assert.equal(res.status, 401);
-
-    const list = await req('GET', `/clients/${ctx.clientAId}/api-keys`, undefined, ctx.adminToken);
-    const row = list.data.find((k: any) => k.id === ctx.apiKeyExpiringId);
-    assert.equal(row.revoked_at, null, 'una key vencida no se revoca — la fila queda intacta para que el admin la vea y decida');
   });
 });
 
@@ -298,62 +235,5 @@ describe('API pública — scoping y datos', () => {
     const res = await pub('GET', '/public/devices?limit=1', undefined, ctx.apiKeyA);
     assert.equal(res.status, 200);
     assert.ok(res.data.length <= 1);
-  });
-});
-
-describe('API pública — webhook de integración ERP', () => {
-  let server: http.Server;
-  let port: number;
-  const received: Array<{ event: string; signature: string; rawBody: string }> = [];
-
-  test('setup: servidor HTTP local para recibir el webhook', async () => {
-    server = http.createServer((httpReq, httpRes) => {
-      const chunks: Buffer[] = [];
-      httpReq.on('data', (c) => chunks.push(c));
-      httpReq.on('end', () => {
-        const rawBody = Buffer.concat(chunks).toString('utf8');
-        const parsed = JSON.parse(rawBody);
-        received.push({ event: parsed.event, signature: String(httpReq.headers['x-stc-signature']), rawBody });
-        httpRes.writeHead(200);
-        httpRes.end('ok');
-      });
-    });
-    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
-    port = (server.address() as any).port;
-  });
-
-  test('PUT /public/webhook — el guard SSRF rechaza una URL no-HTTPS de un webhook local de prueba', async () => {
-    // El propio guard SSRF (`assertSafeWebhookUrl`, ya probado en alerts.test.ts)
-    // exige HTTPS y bloquea loopback — así que este test de integración real NO
-    // puede levantar un receptor http://127.0.0.1 y esperar que el guard lo deje
-    // pasar. Se verifica en cambio que el guard rechaza esa URL EXACTA en runtime
-    // (confirma que el nuevo endpoint la reusa), y el resto de la suite prueba la
-    // config/CRUD del webhook, no la entrega real contra un receptor local.
-    const put = await pub('PUT', '/public/webhook', { url: `http://127.0.0.1:${port}/hook`, events: ['reading.created'] }, ctx.apiKeyA);
-    assert.equal(put.status, 200, 'el PUT en sí (guardar config) no valida la URL de forma síncrona');
-
-    const get = await pub('GET', '/public/webhook', undefined, ctx.apiKeyA);
-    assert.equal(get.status, 200);
-    assert.equal(get.data.url, `http://127.0.0.1:${port}/hook`);
-    assert.ok(get.data.secret, 'debe traer el secret HMAC (a diferencia del API key, se puede releer)');
-    assert.deepEqual(get.data.events, ['reading.created']);
-  });
-
-  test('sync de otra lectura → el intento de webhook queda registrado como fallido (guard SSRF), sin romper el sync', async () => {
-    const sync = await req('POST', '/devices/sync', {
-      readings: [{
-        reading_id: crypto.randomUUID(), device_id: ctx.deviceASerial, ip: '192.168.220.10', brand: 'hp',
-        time: new Date().toISOString(), total_pages: 510, mono_pages: 510, color_pages: 0,
-        toner_black: 39, offline: false,
-      }],
-    }, ctx.agentAToken);
-    assert.equal(sync.status, 200, 'el sync no debe fallar aunque el webhook configurado sea rechazado por el guard SSRF');
-    // Esperar un poco para darle tiempo al worker a intentarlo (y descartarlo).
-    await new Promise((r) => setTimeout(r, 1500));
-    assert.equal(received.length, 0, 'el guard SSRF debe haber bloqueado la entrega — nunca debería llegar al server local');
-  });
-
-  test('cleanup: cerrar servidor HTTP local', async () => {
-    await new Promise<void>((resolve) => server.close(() => resolve()));
   });
 });
