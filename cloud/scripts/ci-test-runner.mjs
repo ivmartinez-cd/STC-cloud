@@ -12,6 +12,9 @@ const TEST_FILES = [
   "src/tests/e2eDeviceSync.test.ts",
   "src/tests/e2eSecurityAndTokens.test.ts",
   "src/tests/rbac.test.ts",
+  "src/tests/rbacDevicesSearch.test.ts",
+  "src/tests/rbacMutationsDenied1.test.ts",
+  "src/tests/rbacMutationsDenied2.test.ts",
   // clientDirectory.test.ts/clientDeviceDirectory.test.ts faltaban acá (sólo
   // corrían via `npm test` local) — mismo criterio que el resto de este archivo,
   // se agregan para que CI también las ejecute.
