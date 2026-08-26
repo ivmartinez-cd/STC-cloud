@@ -155,7 +155,14 @@ describe('Reglas de auto-creación — habilitadas por cliente', () => {
     const autoIncidents = found.data.items.filter((i: any) => i.origin === 'auto');
     assert.equal(autoIncidents.length, 1, 'las 2 alertas de la misma clase/equipo deben agruparse en UN solo incidente');
 
-    const detail = await req('GET', `/incidents/${autoIncidents[0].id}`, undefined, ctx.adminToken);
+    // El incidente ya existe apenas se linkea la PRIMERA alerta (mismo tick,
+    // pero `processRule` procesa el arreglo de a una con awaits reales entre
+    // medio) — pollear el detalle hasta que las 2 estén linkeadas, no una
+    // sola lectura, para no perseguir una carrera contra el propio tick.
+    const detail = await pollUntil(
+      () => req('GET', `/incidents/${autoIncidents[0].id}`, undefined, ctx.adminToken),
+      (r) => r.data.alerts.length >= 2,
+    );
     const linkedTypes = detail.data.alerts.map((a: any) => a.type);
     assert.ok(linkedTypes.includes('toner_yellow_critical'));
     assert.ok(linkedTypes.includes('toner_magenta_critical'));

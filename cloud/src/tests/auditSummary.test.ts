@@ -6,6 +6,7 @@
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
+import crypto from 'node:crypto';
 
 const API  = process.env.API_URL  || 'http://localhost:3000/api/v1';
 const USER = process.env.PORTAL_ADMIN_USER     || 'admin';
@@ -61,7 +62,11 @@ describe('GET /audit-logs/summary — agregados respetan filtros', () => {
   });
 
   test('un target_id inexistente da total=0 y byCategory vacío (no un error)', async () => {
-    const res = await req('GET', '/audit-logs/summary?target_id=00000000-0000-0000-0000-000000000000', undefined, ctx.adminToken);
+    // random, no el UUID nulo (00000000-...): este entorno compartido tiene
+    // filas reales de auditoría con target_id = nil-uuid como sentinel
+    // (ej. CLIENT_SFTP_DESTINATION_*), así que ese valor no sirve como "id
+    // que seguro no existe" acá.
+    const res = await req('GET', `/audit-logs/summary?target_id=${crypto.randomUUID()}`, undefined, ctx.adminToken);
     assert.equal(res.status, 200);
     assert.equal(res.data.total, 0);
     assert.deepEqual(res.data.by_category, []);
