@@ -19,7 +19,15 @@ export interface SupplyRequest {
   opened_at: string;
   closed_at: string | null;
   notes: string | null;
+  possible_duplicate_of: string | null;
 }
+
+export interface SupplyRequestStatsWindow {
+  completed: number;
+  autoCount: number;
+  manualCount: number;
+}
+export type SupplyRequestStats = Record<SupplyRequestStatus, number> & { window: SupplyRequestStatsWindow };
 
 export interface SupplyRequestEvent {
   id: string;

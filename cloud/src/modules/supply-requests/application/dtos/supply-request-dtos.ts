@@ -20,6 +20,7 @@ export interface SupplyRequestViewDto {
   opened_at: string;
   closed_at: string | null;
   notes: string | null;
+  possible_duplicate_of: string | null;
 }
 
 const iso = (d: Date | null): string | null => (d ? new Date(d).toISOString() : null);
@@ -36,6 +37,7 @@ function identityView(r: SupplyRequest) {
     opened_at: new Date(r.openedAt).toISOString(),
     closed_at: iso(r.closedAt),
     notes: r.notes,
+    possible_duplicate_of: r.possibleDuplicateOf,
   };
 }
 

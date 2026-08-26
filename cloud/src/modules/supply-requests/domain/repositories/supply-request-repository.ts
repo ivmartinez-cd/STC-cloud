@@ -46,6 +46,8 @@ export interface EventWrite {
 export interface SupplyRequestRepository {
   list(params: ListParams): Promise<{ items: SupplyRequest[]; total: number }>;
   stats(clientId?: string): Promise<Record<string, number>>;
+  /** Ventana temporal sobre `closed_at` — completadas + desglose por origen, para el % de automatización. */
+  statsWindow(clientId: string | undefined, from: Date, to: Date): Promise<{ completed: number; autoCount: number; manualCount: number }>;
   findById(id: string): Promise<SupplyRequest | null>;
   eventsOf(id: string): Promise<SupplyRequestEvent[]>;
   /** Devuelve null si chocó con el índice único parcial (pedido auto abierto ya existente). */

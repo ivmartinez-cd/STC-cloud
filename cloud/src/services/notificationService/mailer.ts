@@ -1,7 +1,7 @@
 import nodemailer from "nodemailer";
 import type { Knex } from "knex";
 import { recordEmailAttempt } from "../../modules/email-log";
-import { KnexSystemSettingsRepository } from "../../modules/system-settings/infrastructure/database/knex-system-settings-repository";
+import { readSmtpPasswordPlaintext, readSystemSettings } from "../../modules/system-settings";
 
 /** Contexto de auditoría que los workers adjuntan al enviar (Fase 4.4). */
 export interface EmailAuditContext {
@@ -45,12 +45,11 @@ function fromEnv(): ResolvedSmtpConfig | null {
 export async function resolveSmtpConfig(db: Knex | undefined): Promise<ResolvedSmtpConfig | null> {
   if (!db) return fromEnv();
   if (cachedConfig && Date.now() - cachedConfig.fetchedAt < SETTINGS_TTL_MS) return cachedConfig.value;
-  const repo = new KnexSystemSettingsRepository(db);
-  const settings = await repo.get();
+  const settings = await readSystemSettings(db);
   const value = settings.smtpHost
     ? {
         host: settings.smtpHost, port: settings.smtpPort ?? 587, secure: settings.smtpEncryption === "tls",
-        user: settings.smtpUser ?? undefined, password: (await repo.getSmtpPasswordPlaintext()) ?? undefined,
+        user: settings.smtpUser ?? undefined, password: (await readSmtpPasswordPlaintext(db)) ?? undefined,
         from: settings.smtpFrom || "STC Cloud <notificaciones@stc-cloud.local>",
       }
     : fromEnv();

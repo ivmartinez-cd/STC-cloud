@@ -21,6 +21,8 @@ export interface SupplyRow {
   lastUseDate: string | null;
 }
 
+export type SupplyUrgency = 'critico' | 'bajo' | 'normal' | 'sin_lectura';
+
 export interface FleetSupplyRow extends SupplyRow {
   device_id: string;
   device_serial: string | null;
@@ -30,6 +32,7 @@ export interface FleetSupplyRow extends SupplyRow {
   client_name: string | null;
   agent_name: string | null;
   last_seen: string | null;
+  urgency: SupplyUrgency;
 }
 
 export interface UsageRate {
@@ -41,4 +44,6 @@ export interface UsageRate {
 
 export type DeviceSuppliesResponse = { rate: UsageRate; rows: SupplyRow[] };
 export type FleetSuppliesResponse = { items: FleetSupplyRow[]; total: number };
-export type SuppliesSummaryResponse = { criticalCount: number; lowCount: number; top: FleetSupplyRow[] };
+export type SuppliesSummaryResponse = {
+  total: number; criticalCount: number; lowCount: number; noReadingCount: number; openOrders: number; top: FleetSupplyRow[];
+};

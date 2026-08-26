@@ -1,7 +1,7 @@
 import { FastifyRequest } from "fastify";
 import { Knex } from "knex";
 import { getScope } from "../utils/scope";
-import { fleetSupplies, suppliesSummary, type SupplyKind } from "../../services/suppliesService";
+import { fleetSupplies, suppliesSummary, type SupplyKind, type SupplyUrgency } from "../../services/suppliesService";
 
 interface SuppliesQuery {
   client_id?: string;
@@ -9,6 +9,8 @@ interface SuppliesQuery {
   kind?: SupplyKind;
   max_percentage?: string;
   max_days?: string;
+  q?: string;
+  urgency?: SupplyUrgency;
   limit?: string;
   offset?: string;
 }
@@ -30,7 +32,7 @@ export function createSuppliesController(db: Knex) {
   return {
     listSupplies: async (request: FastifyRequest) => {
       const scope = getScope(request);
-      const { client_id, agent_id, kind, max_percentage, max_days, limit, offset } = request.query as SuppliesQuery;
+      const { client_id, agent_id, kind, max_percentage, max_days, q, urgency, limit, offset } = request.query as SuppliesQuery;
       const clientId = scope.kind === "client" ? scope.id : (client_id || null);
       return fleetSupplies(db, {
         clientId,
@@ -38,6 +40,8 @@ export function createSuppliesController(db: Knex) {
         kind: kind || null,
         maxPercentage: max_percentage !== undefined ? Number(max_percentage) : null,
         maxDays: max_days !== undefined ? Number(max_days) : null,
+        query: q || null,
+        urgency: urgency || null,
         limit: limit ? Number(limit) : undefined,
         offset: offset ? Number(offset) : undefined,
       });

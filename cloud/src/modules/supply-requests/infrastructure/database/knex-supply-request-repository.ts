@@ -41,8 +41,8 @@ function supplyOf(row: any) {
   };
 }
 
-function toEntity(row: any): SupplyRequest {
-  return { ...identityOf(row), ...supplyOf(row) };
+function toEntity(row: any, possibleDuplicateOf: string | null = null): SupplyRequest {
+  return { ...identityOf(row), ...supplyOf(row), possibleDuplicateOf };
 }
 
 function toEventEntity(row: any): SupplyRequestEvent {
@@ -87,14 +87,34 @@ function applyFilters(q: Knex.QueryBuilder, params: ListParams): Knex.QueryBuild
 export class KnexSupplyRequestRepository implements SupplyRequestRepository {
   constructor(private readonly db: Knex) {}
 
+  /** id → id del OTRO pedido abierto con el mismo (device_id, supply_key) —
+   * ver docblock de `possibleDuplicateOf` en la entidad. Sólo entre pedidos
+   * ABIERTOS: uno ya cerrado no es "un duplicado activo". */
+  private async duplicateSiblingIds(clientId?: string): Promise<Map<string, string>> {
+    const rows = await this.db(TABLE)
+      .whereIn("status", [...OPEN_STATUSES]).whereNotNull("device_id")
+      .modify((q) => { if (clientId) q.where("client_id", clientId); })
+      .select("id", "device_id", "supply_key");
+    const groups = new Map<string, string[]>();
+    for (const r of rows) {
+      const key = `${r.device_id}:${r.supply_key}`;
+      groups.set(key, [...(groups.get(key) ?? []), r.id]);
+    }
+    const dup = new Map<string, string>();
+    for (const ids of groups.values()) {
+      if (ids.length > 1) for (const id of ids) dup.set(id, ids.find((x) => x !== id)!);
+    }
+    return dup;
+  }
+
   async list(params: ListParams): Promise<{ items: SupplyRequest[]; total: number }> {
     const base = applyFilters(this.db(TABLE), params);
-    const [{ count }] = await base.clone().count("* as count");
-    const rows = await base.clone()
-      .orderBy("opened_at", "desc")
-      .limit(Math.min(params.limit, 200))
-      .offset(params.offset);
-    return { items: rows.map(toEntity), total: Number(count) };
+    const [{ count }, rows, dup] = await Promise.all([
+      base.clone().count("* as count"),
+      base.clone().orderBy("opened_at", "desc").limit(Math.min(params.limit, 200)).offset(params.offset),
+      this.duplicateSiblingIds(params.clientId),
+    ]);
+    return { items: rows.map((r: any) => toEntity(r, dup.get(r.id) ?? null)), total: Number(count) };
   }
 
   async stats(clientId?: string): Promise<Record<string, number>> {
@@ -102,6 +122,18 @@ export class KnexSupplyRequestRepository implements SupplyRequestRepository {
     if (clientId) q.where("client_id", clientId);
     const rows = await q;
     return Object.fromEntries(rows.map((r: any) => [r.status, Number(r.count)]));
+  }
+
+  /** "Completadas en agosto (30) · automatización 91% (30 de 33 sin
+   * intervención)" (handoff hifi #3, fase 3, 26/08/2026) — ventana temporal
+   * sobre `closed_at`, a diferencia de `stats()` (backlog actual, sin ventana). */
+  async statsWindow(clientId: string | undefined, from: Date, to: Date): Promise<{ completed: number; autoCount: number; manualCount: number }> {
+    const rows = await this.db(TABLE)
+      .where("status", "completed").whereBetween("closed_at", [from, to])
+      .modify((q) => { if (clientId) q.where("client_id", clientId); })
+      .select("origin");
+    const autoCount = rows.filter((r: any) => r.origin === "auto").length;
+    return { completed: rows.length, autoCount, manualCount: rows.length - autoCount };
   }
 
   async findById(id: string): Promise<SupplyRequest | null> {
@@ -147,6 +179,6 @@ export class KnexSupplyRequestRepository implements SupplyRequestRepository {
     const rows = await this.db(TABLE)
       .whereIn("status", [...OPEN_STATUSES])
       .whereNotNull("device_id");
-    return rows.map(toEntity);
+    return rows.map((r: any) => toEntity(r));
   }
 }

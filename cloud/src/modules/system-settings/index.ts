@@ -14,3 +14,9 @@ export { registerSystemSettingsRoutes } from "./presentation/system-settings-rou
 export function readSystemSettings(db: Knex): Promise<SystemSettings> {
   return new KnexSystemSettingsRepository(db).get();
 }
+
+/** Contraseña SMTP en texto plano — sólo para `notificationService/mailer.ts`
+ * al momento de enviar/probar (handoff hifi #3, fase 2). Nunca sale por HTTP. */
+export function readSmtpPasswordPlaintext(db: Knex): Promise<string | null> {
+  return new KnexSystemSettingsRepository(db).getSmtpPasswordPlaintext();
+}

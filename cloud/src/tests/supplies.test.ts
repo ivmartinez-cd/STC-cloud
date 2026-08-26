@@ -208,3 +208,31 @@ describe('Consumibles — RBAC', () => {
     assert.equal(detail.status, 200);
   });
 });
+
+describe('GET /supplies — urgencia y buscador (handoff hifi #3, fase 3, 26/08/2026)', () => {
+  test('toner_black=50% (por encima de 35%) queda urgency=normal, nunca "sin_lectura"', async () => {
+    const res = await req('GET', `/supplies?client_id=${ctx.clientId}`, undefined, ctx.adminToken);
+    const black = res.data.items.find((r: any) => r.device_id === ctx.deviceId && r.key === 'toner-black');
+    assert.ok(black);
+    assert.equal(black.urgency, 'normal');
+  });
+
+  test('urgency=critico no trae el tóner al 50% (no es crítico)', async () => {
+    const res = await req('GET', `/supplies?client_id=${ctx.clientId}&urgency=critico`, undefined, ctx.adminToken);
+    assert.equal(res.data.items.some((r: any) => r.device_id === ctx.deviceId), false);
+  });
+
+  test('q= busca por serie del equipo', async () => {
+    const res = await req('GET', `/supplies?client_id=${ctx.clientId}&q=${ctx.deviceSerial}`, undefined, ctx.adminToken);
+    assert.ok(res.data.items.some((r: any) => r.device_id === ctx.deviceId));
+  });
+
+  test('GET /supplies/summary trae total/críticos/nivel bajo/sin lectura/pedidos abiertos, coherentes', async () => {
+    const res = await req('GET', `/supplies/summary?client_id=${ctx.clientId}`, undefined, ctx.adminToken);
+    assert.equal(res.status, 200);
+    assert.equal(typeof res.data.total, 'number');
+    assert.equal(typeof res.data.noReadingCount, 'number');
+    assert.equal(typeof res.data.openOrders, 'number');
+    assert.ok(res.data.total >= res.data.criticalCount + res.data.lowCount);
+  });
+});

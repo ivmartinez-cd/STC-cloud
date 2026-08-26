@@ -5,7 +5,7 @@ import type { PortalUser } from "../../../api/middlewares/authMiddleware";
 import { getClientIp } from "../../../api/utils/ip";
 import { writeAudit } from "../../../services/auditService";
 import { _resetSmtpConfigCacheForTests, buildTransporter, resolveSmtpConfig } from "../../../services/notificationService/mailer";
-import { getSettingsImpact } from "../application/get-settings-impact";
+import { getSettingsImpact } from "../infrastructure/database/get-settings-impact";
 import {
   DEFAULT_SYSTEM_SETTINGS, SMTP_ENCRYPTIONS, validateOfflineThresholdMinutes, validateSmtpPort, validateSupplyThresholdPct,
   type SystemSettings, type SystemSettingsPatch,

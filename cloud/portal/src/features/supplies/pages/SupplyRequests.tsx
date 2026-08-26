@@ -1,138 +1,51 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Loader2, PackageSearch } from 'lucide-react';
-import { api } from '../../../shared/lib/api';
-import { useAuth } from '../../../store/AuthContext';
-import SimplePagination from '../../../shared/components/SimplePagination';
+import PageHeader from '../../../shared/components/PageHeader';
+import HifiPagination from '../../../shared/components/HifiPagination';
+import { useSupplyRequestsPage } from '../hooks/useSupplyRequestsPage';
+import { PAGE_SIZE } from '../lib/supplyRequestsPresentation';
+import SupplyRequestsMetricsStrip from '../components/SupplyRequestsMetricsStrip';
+import SupplyRequestsTabs from '../components/SupplyRequestsTabs';
+import SupplyRequestsTable from '../components/SupplyRequestsTable';
+import SupplyRequestsDuplicateBanner from '../components/SupplyRequestsDuplicateBanner';
 import SupplyRequestDetailModal from '../components/SupplyRequestDetailModal';
-import {
-  SUPPLY_REQUEST_STATUS_COLORS, SUPPLY_REQUEST_STATUS_LABELS,
-  type SupplyRequest, type SupplyRequestStatus,
-} from '../types/supplyRequests';
-import { APP_LOCALE } from '../../../shared/lib/formatters';
 
-interface ClientOption { id: string; name: string; }
-
-const TABS: (SupplyRequestStatus | 'all')[] = ['pending', 'reviewed', 'processed', 'completed', 'ignored', 'all'];
-const PAGE_SIZE = 50;
-
-function fmtDate(v: string): string {
-  return new Date(v).toLocaleString(APP_LOCALE, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
-}
-
-/**
- * Cola de pedidos de consumibles (Fase 4.2 del gap analysis vs HP SDS —
- * equivalente de las "Solicitudes de consumibles" del SDS, con los estados
- * como pestañas de filtro en vez de 6 subsecciones de menú).
- */
+/** Pedidos (handoff hifi #3, fase 3, 26/08/2026) — se abren solos al cruzar
+ * el umbral y se completan solos al detectar el reemplazo; el header lo
+ * explica en vez de dejarlo implícito. "+ NUEVO PEDIDO" del mockup no tiene
+ * flujo de creación manual sin equipo en esta pantalla — crear pedidos
+ * puntuales ya vive en Consumibles (fila → GENERAR PEDIDO) y en el detalle
+ * de equipo; no se duplica el flujo acá. */
 export default function SupplyRequests() {
-  const { role, clientId: ownClientId } = useAuth();
-  const canManage = role === 'admin' || role === 'operator';
-  const [items, setItems] = useState<SupplyRequest[]>([]);
-  const [total, setTotal] = useState(0);
-  const [stats, setStats] = useState<Record<string, number>>({});
-  const [clients, setClients] = useState<ClientOption[]>([]);
-  const [clientFilter, setClientFilter] = useState(ownClientId ?? '');
-  const [tab, setTab] = useState<SupplyRequestStatus | 'all'>('pending');
-  const [page, setPage] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [detailId, setDetailId] = useState<string | null>(null);
-
-  const load = useCallback(() => {
-    setLoading(true);
-    const params = new URLSearchParams();
-    if (tab !== 'all') params.set('status', tab);
-    if (clientFilter) params.set('client_id', clientFilter);
-    params.set('limit', String(PAGE_SIZE));
-    params.set('offset', String(page * PAGE_SIZE));
-    Promise.all([
-      api.get<{ items: SupplyRequest[]; total: number }>(`/supply-requests?${params}`),
-      api.get<Record<string, number>>(`/supply-requests/stats${clientFilter ? `?client_id=${clientFilter}` : ''}`),
-    ])
-      .then(([list, s]) => { setItems(list.items); setTotal(list.total); setStats(s); })
-      .catch(() => { setItems([]); setTotal(0); })
-      .finally(() => setLoading(false));
-  }, [tab, clientFilter, page]);
-
-  useEffect(() => { load(); }, [load]);
-  useEffect(() => { setPage(0); }, [tab, clientFilter]);
-  useEffect(() => {
-    if (canManage) api.get<ClientOption[]>('/clients').then(setClients).catch(() => setClients([]));
-  }, [canManage]);
-
-  const countOf = (t: SupplyRequestStatus | 'all') =>
-    t === 'all' ? Object.values(stats).reduce((a, b) => a + b, 0) : stats[t] ?? 0;
+  const s = useSupplyRequestsPage();
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
-      <header className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-extrabold text-[#1a2333] tracking-tight flex items-center gap-3">
-            <PackageSearch size={28} className="text-brand" /> Pedidos
-          </h1>
-          <p className="text-sm text-slate-500 font-medium mt-1">
-            Solicitudes de consumibles — se abren solas al cruzar el umbral y se completan solas al detectar el reemplazo.
-          </p>
-        </div>
-        {canManage && (
-          <select value={clientFilter} onChange={(e) => setClientFilter(e.target.value)}
-            className="bg-white text-slate-700 text-sm font-bold px-4 py-2.5 rounded-2xl border border-slate-200 outline-none focus:border-brand cursor-pointer">
+    <div className="-m-4 flex min-w-0 flex-col bg-surface-page px-[34px] pb-9 pt-[30px] md:-m-10">
+      <PageHeader
+        eyebrow="SOLICITUDES DE CONSUMIBLES" title="Pedidos"
+        subtitle="Se abren solos al cruzar el umbral configurado y se completan solos al detectar el reemplazo del consumible. Los pedidos manuales requieren confirmación de un operador."
+        actions={s.canManage && (
+          <select value={s.filters.clientId} onChange={(e) => s.filters.setClientId(e.target.value)}
+            className="min-w-[190px] rounded-[3px] border border-line-100 bg-white px-3 py-[11px] font-sans text-[12px] font-semibold text-ink-600 outline-none focus:border-brand">
             <option value="">Todos los clientes</option>
-            {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            {s.clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
         )}
-      </header>
+      />
 
-      <div className="flex gap-2 flex-wrap">
-        {TABS.map((t) => (
-          <button key={t} onClick={() => setTab(t)}
-            className={`px-4 py-2 rounded-2xl text-[11px] font-black uppercase tracking-wider transition-all ${
-              tab === t ? 'bg-[#1a2333] text-white' : 'bg-white text-slate-500 border border-slate-200 hover:border-slate-300'
-            }`}>
-            {t === 'all' ? 'Todas' : SUPPLY_REQUEST_STATUS_LABELS[t]} · {countOf(t)}
-          </button>
-        ))}
+      <SupplyRequestsMetricsStrip stats={s.stats} loading={s.loading && !s.stats} />
+
+      <div className="rounded-[5px] border border-line-100 bg-white">
+        <SupplyRequestsTabs active={s.filters.tab} onChange={s.filters.setTab} countOf={s.countOf} />
+        <SupplyRequestsTable items={s.items} clientName={s.clientName} loading={s.loading} onOpen={s.setDetailId} />
+        <HifiPagination page={s.filters.page} totalPages={s.totalPages} total={s.total} pageSize={PAGE_SIZE} itemLabel="pedidos" onPageChange={s.filters.setPage} />
       </div>
 
-      {loading ? (
-        <div className="py-16 flex justify-center"><Loader2 size={28} className="text-brand animate-spin" /></div>
-      ) : items.length === 0 ? (
-        <div className="bg-white rounded-3xl border border-slate-100 p-12 text-center text-sm text-slate-400 font-medium">
-          Sin pedidos en este estado.
-        </div>
-      ) : (
-        <div className="bg-white rounded-3xl border border-slate-100 overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-slate-50 border-b border-slate-100">
-              <tr>
-                {['Equipo', 'Consumible', 'SKU', 'Nivel', 'Origen', 'Estado', 'Apertura', 'Cierre'].map((h) => (
-                  <th key={h} className="py-3 px-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-50">
-              {items.map((r) => (
-                <tr key={r.id} onClick={() => setDetailId(r.id)} className="hover:bg-slate-50/50 cursor-pointer">
-                  <td className="py-3 px-4 font-bold text-slate-700">{r.device_serial ?? '—'}</td>
-                  <td className="py-3 px-4 text-slate-600 font-medium">{r.description ?? `${r.supply_kind} ${r.supply_color ?? ''}`}</td>
-                  <td className="py-3 px-4 text-slate-500 font-mono text-[11px]">{r.sku ?? '—'}</td>
-                  <td className="py-3 px-4 text-slate-500 font-medium">{r.level_pct != null ? `${r.level_pct}%` : '—'}</td>
-                  <td className="py-3 px-4 text-slate-500 font-bold uppercase text-[10px]">{r.origin === 'auto' ? 'Automático' : 'Manual'}</td>
-                  <td className="py-3 px-4">
-                    <span className={`px-2.5 py-1 rounded-full text-[9px] font-extrabold uppercase tracking-wider ${SUPPLY_REQUEST_STATUS_COLORS[r.status]}`}>
-                      {SUPPLY_REQUEST_STATUS_LABELS[r.status]}
-                    </span>
-                  </td>
-                  <td className="py-3 px-4 text-slate-500 font-medium">{fmtDate(r.opened_at)}</td>
-                  <td className="py-3 px-4 text-slate-500 font-medium">{r.closed_at ? fmtDate(r.closed_at) : '—'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          <SimplePagination page={page} pageSize={PAGE_SIZE} total={total} onPageChange={setPage} />
+      {s.duplicatePair && (
+        <div className="mt-4">
+          <SupplyRequestsDuplicateBanner request={s.duplicatePair} sibling={s.duplicateSibling} onReview={s.setDetailId} />
         </div>
       )}
 
-      <SupplyRequestDetailModal requestId={detailId} onClose={() => setDetailId(null)} onChanged={load} canManage={canManage} />
+      <SupplyRequestDetailModal requestId={s.detailId} onClose={() => s.setDetailId(null)} onChanged={s.reload} canManage={s.canManage} />
     </div>
   );
 }

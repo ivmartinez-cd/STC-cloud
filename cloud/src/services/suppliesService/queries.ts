@@ -1,7 +1,22 @@
 import { Knex } from "knex";
 import { alertableDevices } from "../../api/utils/deviceFilters";
+import { OPEN_STATUSES } from "../../modules/supply-requests";
 import { buildSupplyRows, parseSuppliesDetails } from "./row-builder";
-import { EMPTY_RATE, type FleetSupplyRow, type SupplyKind, type SupplyRow, type UsageRate } from "./types";
+import { EMPTY_RATE, type FleetSupplyRow, type SupplyKind, type SupplyRow, type SupplyUrgency, type UsageRate } from "./types";
+
+/** Umbrales del handoff hifi #3 (26/08/2026) — antes 10%/20%, alineados acá a
+ * 15%/35% para que coincidan con la tira de métricas y la barra de NIVEL
+ * RESTANTE de la pantalla de Consumibles. Único lugar donde viven: la vista
+ * de Consumibles y su resumen los consumen de acá, nunca los redefinen. */
+const CRITICAL_PCT = 15;
+const LOW_PCT = 35;
+
+function urgencyOf(pct: number | null): SupplyUrgency {
+  if (pct == null) return "sin_lectura";
+  if (pct <= CRITICAL_PCT) return "critico";
+  if (pct <= LOW_PCT) return "bajo";
+  return "normal";
+}
 
 /**
  * Ritmo de impresión de los últimos 30 días — reusa `device_usage_30d`
@@ -72,6 +87,7 @@ function toFleetRow(row: SupplyRow, d: Record<string, any>): FleetSupplyRow {
     client_name: d.client_name ?? null,
     agent_name: d.agent_name ?? null,
     last_seen: d.last_seen ?? null,
+    urgency: urgencyOf(row.percentage),
   };
 }
 
@@ -97,15 +113,31 @@ export interface FleetSuppliesParams {
   kind?: SupplyKind | null;
   maxPercentage?: number | null;
   maxDays?: number | null;
+  /** Buscador (handoff hifi #3, fase 3, 26/08/2026) — SKU, serie, modelo o cliente. */
+  query?: string | null;
+  urgency?: SupplyUrgency | null;
   limit?: number;
   offset?: number;
 }
 
+function applyFleetFilters(rows: FleetSupplyRow[], params: FleetSuppliesParams): FleetSupplyRow[] {
+  let out = rows;
+  if (params.kind) out = out.filter((r) => r.kind === params.kind);
+  if (params.maxPercentage != null) out = out.filter((r) => r.percentage != null && r.percentage <= params.maxPercentage!);
+  if (params.maxDays != null) out = out.filter((r) => r.remainingDays != null && r.remainingDays <= params.maxDays!);
+  if (params.urgency) out = out.filter((r) => r.urgency === params.urgency);
+  if (params.query) {
+    const q = params.query.trim().toLowerCase();
+    out = out.filter((r) =>
+      (r.code ?? '').toLowerCase().includes(q) || (r.device_serial ?? '').toLowerCase().includes(q) ||
+      (r.device_model ?? '').toLowerCase().includes(q) || (r.client_name ?? '').toLowerCase().includes(q)
+    );
+  }
+  return out;
+}
+
 export async function fleetSupplies(db: Knex, params: FleetSuppliesParams): Promise<{ items: FleetSupplyRow[]; total: number }> {
-  let rows = await buildFleetRows(db, params);
-  if (params.kind) rows = rows.filter((r) => r.kind === params.kind);
-  if (params.maxPercentage != null) rows = rows.filter((r) => r.percentage != null && r.percentage <= params.maxPercentage!);
-  if (params.maxDays != null) rows = rows.filter((r) => r.remainingDays != null && r.remainingDays <= params.maxDays!);
+  const rows = applyFleetFilters(await buildFleetRows(db, params), params);
   // Más urgente primero — sin dato de restantes al final, no arriba (no es "urgente", es "desconocido").
   rows.sort((a, b) => (a.remainingDays ?? Infinity) - (b.remainingDays ?? Infinity));
 
@@ -118,27 +150,47 @@ export async function fleetSupplies(db: Knex, params: FleetSuppliesParams): Prom
 /** Cuántos ítems de TODA la flota caen a partir de `pct%` — usado por el
  * endpoint de impacto de Configuración (handoff hifi #3, fase 2, 26/08/2026)
  * para mostrar "esto afecta a N ítems" mientras el admin mueve el slider,
- * ANTES de guardar. Deliberadamente no reusa `CRITICAL_PCT`/`LOW_PCT` de acá
- * abajo — son los umbrales fijos de la vista de Consumibles, un concepto
- * distinto del umbral global configurable. */
+ * ANTES de guardar. Deliberadamente no reusa `CRITICAL_PCT`/`LOW_PCT` —
+ * son los umbrales fijos de la vista de Consumibles, un concepto distinto
+ * del umbral global configurable. */
 export async function suppliesCountBelowThreshold(db: Knex, pct: number): Promise<number> {
   const rows = await buildFleetRows(db, {});
   return rows.filter((r) => r.percentage != null && r.percentage <= pct).length;
 }
 
-const CRITICAL_PCT = 10;
-const LOW_PCT = 20;
+async function openSupplyRequestsCount(db: Knex, params: { clientId?: string | null; agentId?: string | null }): Promise<number> {
+  const [{ n }] = await db("supply_requests")
+    .whereIn("status", OPEN_STATUSES as readonly string[])
+    .modify((q) => {
+      if (params.clientId) q.where("client_id", params.clientId);
+      if (params.agentId) q.where("agent_id", params.agentId);
+    })
+    .count("* as n");
+  return Number(n);
+}
 
-export async function suppliesSummary(db: Knex, params: { clientId?: string | null; agentId?: string | null }): Promise<{
-  criticalCount: number; lowCount: number; top: FleetSupplyRow[];
-}> {
-  const rows = await buildFleetRows(db, params);
-  const withPct = rows.filter((r) => r.percentage != null);
-  const criticalCount = withPct.filter((r) => r.percentage! <= CRITICAL_PCT).length;
-  const lowCount = withPct.filter((r) => r.percentage! > CRITICAL_PCT && r.percentage! <= LOW_PCT).length;
+export interface SuppliesSummary {
+  total: number;
+  criticalCount: number;
+  lowCount: number;
+  noReadingCount: number;
+  openOrders: number;
+  top: FleetSupplyRow[];
+}
+
+/** Tira de 5 métricas de Consumibles (handoff hifi #3, fase 3, 26/08/2026):
+ * ítems monitoreados, críticos, nivel bajo, sin lectura SNMP y pedidos
+ * abiertos — todo calculado en servidor sobre la misma pasada de filas que
+ * ya recorría `criticalCount`/`lowCount`, para que la tira y la tabla nunca
+ * muestren números distintos. */
+export async function suppliesSummary(db: Knex, params: { clientId?: string | null; agentId?: string | null }): Promise<SuppliesSummary> {
+  const [rows, openOrders] = await Promise.all([buildFleetRows(db, params), openSupplyRequestsCount(db, params)]);
+  const criticalCount = rows.filter((r) => r.urgency === "critico").length;
+  const lowCount = rows.filter((r) => r.urgency === "bajo").length;
+  const noReadingCount = rows.filter((r) => r.urgency === "sin_lectura").length;
   const top = [...rows]
     .filter((r) => r.percentage != null && r.percentage <= LOW_PCT)
     .sort((a, b) => (a.remainingDays ?? Infinity) - (b.remainingDays ?? Infinity))
     .slice(0, 5);
-  return { criticalCount, lowCount, top };
+  return { total: rows.length, criticalCount, lowCount, noReadingCount, openOrders, top };
 }

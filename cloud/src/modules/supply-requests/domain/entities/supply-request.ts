@@ -33,6 +33,12 @@ export interface SupplyRequest {
   notes: string | null;
   createdBy: string | null;
   updatedAt: Date;
+  /** Handoff hifi #3, fase 3, 26/08/2026 — id de OTRO pedido abierto para el
+   * mismo (deviceId, supplyKey). El índice único parcial sólo bloquea dos
+   * pedidos `origin='auto'` simultáneos; uno manual + uno auto para el mismo
+   * consumible SÍ pueden coexistir, y son el "probable duplicado" real que
+   * el banner de Pedidos señala. Se computa en `list()` (no persiste). */
+  possibleDuplicateOf: string | null;
 }
 
 /**

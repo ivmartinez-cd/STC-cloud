@@ -15,9 +15,10 @@
  * original exportaba; ningún import externo cambia.
  */
 export type {
-  SuppliesItem, SupplyKind, SupplyColor, SupplyRow, FleetSupplyRow, UsageRate,
+  SuppliesItem, SupplyKind, SupplyColor, SupplyRow, FleetSupplyRow, SupplyUrgency, UsageRate,
 } from "./types";
 export { parseSuppliesDetails, buildSupplyRows } from "./row-builder";
 export {
-  usageRatesFor, deviceSupplies, fleetSupplies, suppliesSummary, type FleetSuppliesParams,
+  usageRatesFor, deviceSupplies, fleetSupplies, suppliesSummary, suppliesCountBelowThreshold,
+  type FleetSuppliesParams, type SuppliesSummary,
 } from "./queries";

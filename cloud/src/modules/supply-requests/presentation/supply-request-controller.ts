@@ -58,10 +58,19 @@ function buildList(deps: Deps): Handler {
   };
 }
 
+const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+
+/** Mismo criterio de ventana por defecto que `/audit-logs` y `/email-log/summary`
+ * (últimos 30 días) — antes `/supply-requests/stats` no tenía ventana, así
+ * que "completadas este mes" era imposible de pedir. */
 function buildStats(deps: Deps): Handler {
   return async (request, reply) => {
     const q = request.query as Record<string, any>;
-    return reply.send(await deps.repo.stats(scopedClientId(request, q.client_id)));
+    const clientId = scopedClientId(request, q.client_id);
+    const from = q.from ? new Date(q.from) : new Date(Date.now() - THIRTY_DAYS_MS);
+    const to = q.to ? new Date(q.to) : new Date();
+    const [byStatus, window] = await Promise.all([deps.repo.stats(clientId), deps.repo.statsWindow(clientId, from, to)]);
+    return reply.send({ ...byStatus, window });
   };
 }
 
