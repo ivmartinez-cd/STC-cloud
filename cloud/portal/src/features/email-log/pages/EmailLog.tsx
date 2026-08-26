@@ -1,6 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Loader2, MailCheck } from 'lucide-react';
 import { api } from '../../../shared/lib/api';
+import SimplePagination from '../../../shared/components/SimplePagination';
+
+const PAGE_SIZE = 50;
 
 interface EmailLogRow {
   id: string;
@@ -55,6 +58,7 @@ export default function EmailLog() {
   const [clientFilter, setClientFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [q, setQ] = useState('');
+  const [page, setPage] = useState(0);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(() => {
@@ -63,14 +67,16 @@ export default function EmailLog() {
     if (clientFilter) params.set('client_id', clientFilter);
     if (statusFilter) params.set('status', statusFilter);
     if (q.trim()) params.set('q', q.trim());
-    params.set('limit', '100');
+    params.set('limit', String(PAGE_SIZE));
+    params.set('offset', String(page * PAGE_SIZE));
     api.get<{ items: EmailLogRow[]; total: number }>(`/email-log?${params}`)
       .then((d) => { setItems(d.items); setTotal(d.total); })
       .catch(() => { setItems([]); setTotal(0); })
       .finally(() => setLoading(false));
-  }, [clientFilter, statusFilter, q]);
+  }, [clientFilter, statusFilter, q, page]);
 
   useEffect(() => { load(); }, [load]);
+  useEffect(() => { setPage(0); }, [clientFilter, statusFilter, q]);
   useEffect(() => {
     api.get<ClientOption[]>('/clients').then(setClients).catch(() => setClients([]));
   }, []);
@@ -134,9 +140,7 @@ export default function EmailLog() {
               ))}
             </tbody>
           </table>
-          {total > items.length && (
-            <p className="p-3 text-[10px] text-slate-400 font-bold text-center">Mostrando {items.length} de {total}</p>
-          )}
+          <SimplePagination page={page} pageSize={PAGE_SIZE} total={total} onPageChange={setPage} />
         </div>
       )}
     </div>

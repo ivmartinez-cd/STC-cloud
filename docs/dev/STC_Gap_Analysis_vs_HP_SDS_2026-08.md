@@ -1683,6 +1683,80 @@ nueva que mantener ni superficie nueva sin auth que exponer. Colección
 Postman/Insomnia generada a partir del spec (no pedida, generable después
 con cualquier importador de OpenAPI si hace falta).
 
+### Fase 10 — Paginación server-side, resto del portal (26/08/2026) — completa
+
+Origen: R9 (§3) dejó `/devices` como "primer listado" con paginación real
+(25/08/2026); quedaba mapear el resto del portal para saber qué faltaba de
+verdad. Barrido completo (agente dedicado, sólo lectura) de todas las
+pantallas de listado contra su backend real, no contra lo que este
+documento asumía.
+
+**Resultado del barrido — la mayoría ya estaba resuelta.** Devices,
+PendingDevices, Clients, Agents (`/agents/directory`, la pantalla nueva
+"Salud de nodos"), RemoteActions, Incidents y Activity/audit-logs YA tenían
+paginación server-side real (`limit`/`offset` SQL + `{items,total}` +
+controles prev/next) de pasadas anteriores — sólo no estaba anotado acá.
+
+✅ **Hallazgo real: `Monitors.tsx` es código muerto**, no un caso de
+paginación pendiente. La tabla del gap original lo tenía listado desde la
+Fase 1 (§2.6 "dead code: `pages/Devices.tsx`, `pages/Monitors.tsx`,
+`EditMonitorModal.tsx`") pero nunca se limpió — a diferencia de
+`Devices.tsx` (que sí se rescató y conectó en R9 porque cumplía una función
+real sin duplicado), `Monitors.tsx` quedó totalmente reemplazado por
+`Agents.tsx` (registrar → `CreateMonitorModal.tsx` desde `ClientDetail`,
+revocar/configurar → `Agents.tsx`, eliminar → `useClientDetail.ts`) — cero
+importers, inalcanzable desde el router (nunca se agregó a `App.tsx`) y sin
+ningún ítem de nav. Se borró el clúster completo (`Monitors.tsx`,
+`MonitorsTable.tsx`, `RegisterMonitorPanel.tsx`, `MonitorConfigModal.tsx`,
+`types/monitorsPage.ts` — los 5 archivos sólo se importaban entre sí, isla
+aislada confirmada antes de borrar). `GET /agents` (el endpoint viejo, cap
+`.limit(2000)`) se deja intacto: sigue vivo como selector chico en
+`CreateBatchModal.tsx` (acciones remotas), mismo criterio ya usado en R9
+para `/clients/:id/devices` — un `<select>`, no una tabla, no justifica
+paginación real.
+
+✅ **`EmailLog.tsx` y `SupplyRequests.tsx` — bug real, no sólo pulido**: en
+ambos casos el backend YA tenía `limit`(≤200)/`offset`/`{items,total}`
+completo y probado (Fases 4.4 y 4.2), pero el frontend pedía siempre
+`limit=100&offset=0` fijo — cualquier fila más allá de la primera tanda de
+100 era **literalmente inalcanzable** desde la UI, sin ningún control para
+pedir la siguiente página (sólo un texto "Mostrando 100 de N" que
+informaba el problema sin resolverlo). Se agregó estado de página +
+`offset` real en ambos, y un componente nuevo compartido
+`shared/components/SimplePagination.tsx` (prev/next + "X–Y de N" + "Página
+A de B", estilo Tailwind clásico de esas dos pantallas — deliberadamente
+NO el sistema hifi ink-*/Montserrat de `DeviceInventoryPagination`/
+`AgentsPagination`, que pertenece a una familia visual distinta de
+pantallas ya migradas; mezclar los dos sistemas en una pantalla sin
+rediseñar hubiera sido peor que mantener el estilo existente). Verificado
+con Playwright real contra el stack Docker: Correo con 432 filas reales →
+"1–50 DE 432" / "PÁGINA 1 DE 9", clic en "siguiente" trae filas distintas
+(confirmado comparando la primera fila antes/después); Pedidos con 27
+filas (bajo el `pageSize` de 50) oculta el control de paginación
+correctamente, sin control redundante cuando no hace falta. `tsc --noEmit`
+y `npm run build` del portal limpios; suite dirigida
+(`emailLog.test.ts`/`supplyRequests.test.ts`, el segundo con ticks reales
+de worker de 2 min, ~171s) verde sin regresiones — no se tocó nada del
+backend de estos dos endpoints.
+
+**Decisiones de alcance, no pendientes olvidados**:
+- **`Alerts.tsx` sigue con paginación "ciega"** (sin total, sólo
+  prev/next con el heurístico "¿la página vino completa?" — que es
+  correcto, sólo menos rico). Arreglarlo del todo requiere cambiar el
+  contrato de `GET /alerts` de array plano a `{items,total}` — el mismo
+  patrón que Devices/Incidents/etc. ya usan, pero acá el endpoint lo
+  consumen 6 archivos de test distintos con ~28 aserciones sobre `.data`
+  como array (`alerts.test.ts`, `e2e.test.ts`, `monitorState.test.ts`,
+  `supplyOrigin.test.ts`, `incidents.test.ts`, `rbac.test.ts`) más
+  `useDeviceDetail.ts` en el portal — blast radius desproporcionado para
+  una mejora de UX menor (el prev/next YA funciona bien). Queda anotado
+  para si alguna vez se toca `GET /alerts` por otro motivo.
+- **`ScheduledReports.tsx` sigue sin ningún límite ni paginación** — tabla
+  de configuración de admin, tamaño acotado por diseño (los informes se
+  crean a mano, no por ingesta), riesgo bajo. No se tocó.
+- **`GET /agents` (2000 cap) no se convirtió a paginación real** —
+  alimenta sólo un `<select>` chico, no una tabla (ver arriba).
+
 ### Otros puntos de §3 (riesgos) que siguen abiertos y no forman parte de ningún ítem de arriba
 - ✅ **R4 (parcial, 23/08/2026)**: el WS del portal ya NO acepta el JWT de
   sesión por query string. Investigado antes de tocarlo: no era vestigial —
@@ -2172,7 +2246,7 @@ que este hallazgo nombraba explícitamente.
 ### Fase 1 — Paridad operativa con SDS (≈ 1 mes) — completa: 9 de 9 ítems cerrados
 - ✅ **Alert loop** — lifecycle server-side completo: alertas `agent_offline`, `device_offline`, `counter_reset` (ya de Fase 0), normalización de las alertas EWS que ya llegaban del agente; **ack/resolve** y filtros; **notificaciones** email + webhook. ✅ (25/08/2026) **digest diario de alertas por email**: opt-in por cliente vía `notification_events` (`alert.digest`, reusa el mecanismo de Fase 4.3, no un boolean paralelo), envío único diario a las 07:00 hora local del cliente (`America/Argentina/Buenos_Aires`), con conteo de críticas/advertencias abiertas + top de clases de alerta de las últimas 24h; idempotente vía `clients.last_alert_digest_sent_at` (`jobs/alertDigestJob.ts`). ⬜ El loop *dedicado 3/15 min del lado agente* no se tocó (las alertas del agente siguen en el loop de supplies, 60/240 min).
 - ✅ **Reportes por cliente**: selector de período, cierre mensual inmutable (lectura inicial/final, delta, fuente), export CSV/XLSX, y **entrega automática** (email/webhook) para reemplazar el flujo FTP/mail del STC legado. ⬜ Export a PDF y entrega por SFTP no se hicieron (quedó CSV/XLSX + email/webhook).
-- ✅ **RBAC por cliente**: rol `client_viewer`, scoping por `client_id` en todos los controladores. ✅ (25/08/2026) Paginación server-side real en el primer listado (`GET /devices` + `Devices.tsx`, ver R9) — el resto de las tablas del portal la siguen sin tener.
+- ✅ **RBAC por cliente**: rol `client_viewer`, scoping por `client_id` en todos los controladores. ✅ (25/08/2026) Paginación server-side real en el primer listado (`GET /devices` + `Devices.tsx`, ver R9). ✅ (26/08/2026) Resto del portal — ver Fase 10: la mayoría ya la tenía, se cerraron los 2 huecos reales (`EmailLog`/`SupplyRequests`) y se borró un cluster de código muerto (`Monitors.tsx`). Sólo `Alerts.tsx` (paginación "ciega", funcional pero sin total) y `ScheduledReports.tsx` (sin paginar, bajo riesgo) quedan como decisión de alcance, no pendiente.
 - ✅ **SNMPv3 y lista de credenciales** (v1/v2c/v3) por agente, hasta 8 credenciales probadas en orden, secretos cifrados at-rest, fail-fast para no multiplicar timeouts contra un host muerto.
 - ✅ **CIDR + tope de rango + exclusiones**: `ip_ranges` acepta CIDR y exclusión de IPs individuales, compilado del lado cloud a pares planos (cero cambios en el agente); tope de 2000 IPs declaradas por agente, validado en cloud y reforzado en el agente. ⬜ Exclusión de sub-rangos/CIDR anidados e IPv6 quedan fuera.
 - ✅ **Horario laboral y TZ configurables** por agente: `agents.business_hours` (jsonb, default = comportamiento hardcodeado de siempre), enviado en heartbeat config; de paso corrige el offset `-03:00` hardcodeado al ingerir logs/lecturas naive de agentes viejos, usando el TZ real del agente. ⬜ Cosmética de locale del portal (`es-AR`) queda para una pasada de polish aparte.

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Loader2, PackageSearch } from 'lucide-react';
 import { api } from '../../../shared/lib/api';
 import { useAuth } from '../../../store/AuthContext';
+import SimplePagination from '../../../shared/components/SimplePagination';
 import SupplyRequestDetailModal from '../components/SupplyRequestDetailModal';
 import {
   SUPPLY_REQUEST_STATUS_COLORS, SUPPLY_REQUEST_STATUS_LABELS,
@@ -11,6 +12,7 @@ import {
 interface ClientOption { id: string; name: string; }
 
 const TABS: (SupplyRequestStatus | 'all')[] = ['pending', 'reviewed', 'processed', 'completed', 'ignored', 'all'];
+const PAGE_SIZE = 50;
 
 function fmtDate(v: string): string {
   return new Date(v).toLocaleString('es-AR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
@@ -30,6 +32,7 @@ export default function SupplyRequests() {
   const [clients, setClients] = useState<ClientOption[]>([]);
   const [clientFilter, setClientFilter] = useState(ownClientId ?? '');
   const [tab, setTab] = useState<SupplyRequestStatus | 'all'>('pending');
+  const [page, setPage] = useState(0);
   const [loading, setLoading] = useState(true);
   const [detailId, setDetailId] = useState<string | null>(null);
 
@@ -38,7 +41,8 @@ export default function SupplyRequests() {
     const params = new URLSearchParams();
     if (tab !== 'all') params.set('status', tab);
     if (clientFilter) params.set('client_id', clientFilter);
-    params.set('limit', '100');
+    params.set('limit', String(PAGE_SIZE));
+    params.set('offset', String(page * PAGE_SIZE));
     Promise.all([
       api.get<{ items: SupplyRequest[]; total: number }>(`/supply-requests?${params}`),
       api.get<Record<string, number>>(`/supply-requests/stats${clientFilter ? `?client_id=${clientFilter}` : ''}`),
@@ -46,9 +50,10 @@ export default function SupplyRequests() {
       .then(([list, s]) => { setItems(list.items); setTotal(list.total); setStats(s); })
       .catch(() => { setItems([]); setTotal(0); })
       .finally(() => setLoading(false));
-  }, [tab, clientFilter]);
+  }, [tab, clientFilter, page]);
 
   useEffect(() => { load(); }, [load]);
+  useEffect(() => { setPage(0); }, [tab, clientFilter]);
   useEffect(() => {
     if (canManage) api.get<ClientOption[]>('/clients').then(setClients).catch(() => setClients([]));
   }, [canManage]);
@@ -122,9 +127,7 @@ export default function SupplyRequests() {
               ))}
             </tbody>
           </table>
-          {total > items.length && (
-            <p className="p-3 text-[10px] text-slate-400 font-bold text-center">Mostrando {items.length} de {total}</p>
-          )}
+          <SimplePagination page={page} pageSize={PAGE_SIZE} total={total} onPageChange={setPage} />
         </div>
       )}
 
