@@ -1877,6 +1877,58 @@ tipos (`types/monitor.ts`, etc.) deberían derivar de los DTOs que expongan los 
 
 ---
 
+## Deuda de sizes-baseline — tanda 2026-08-26
+
+Ivan pidió auditar cumplimiento con la guía y corregir todo sin consultar. Con
+Fase 0-5 ya cerradas (ver arriba), lo único que quedaba abierto era la deuda
+congelada en `sizes-baseline.json` (19 archivos >300L). Antes de tocar nada se
+confirmó con `ListAgents` que había 3 sesiones activas: `helpdesk-manager-5f`/
+`helpdesk-manager-52` (otro repo, sin superposición) y
+`dashboard-screens-implementation` (mismo repo, Fase 15 del gap analysis —
+relay Redis multi-réplica del proxy EWS remoto sobre `cloud/src/modules/agents/`
+y `cloud/src/ws/`) — se evitaron esos dos paths hasta que confirmó "listo"
+(commit `a3dc576`).
+
+Divididos (mismo patrón carpeta+barrel para servicios de funciones sueltas,
+mismo patrón tabs/cards para páginas de portal, todos movimiento verbatim):
+`services/notificationService.ts` (383→8 archivos), `services/incidentService.ts`
+(362→6 archivos), `DeviceInventoryTable.tsx` (436→291, +4 archivos),
+`FeedbackModal.tsx` (334→230, +3), `SnmpCredentialsPanel.tsx` (352→194, +3),
+`Reports.tsx` (366→214, +3), `ApiKeysCard.tsx` (377→138, +4). Deuda de archivo
+baja de 19 a 13. Validado en el entorno efímero aislado de siempre (pg 55440 /
+redis 56379, puertos distintos a los de la sesión hermana para no chocar) —
+777 tests, 0 fallas atribuibles a este cambio; los únicos rojos fueron los 2
+flakies externos ya conocidos (`observability`, `twoFactor` 6.3) y 3 pruebas de
+`ewsProxyRelay.test.ts` (feature nueva del par) que dependen del nombre de
+contenedor `stc_redis` del `docker-compose.yml` real — no reproducible en un
+stack efímero con nombres de contenedor distintos, confirmado con el par, no es
+un bug real.
+
+**Gotcha nuevo:** dos test files (`clientDirectory.test.ts`,
+`clientDeviceDirectory.test.ts`) abren su propia conexión pg cruda y sólo leen
+el puerto no-estándar via `CLIENT_DIRECTORY_TEST_DB_PORT` (default 5434, el
+puerto del docker-compose local) — mismo patrón que `RBAC_TEST_DB_PORT`/
+`ALERTS_TEST_DB_PORT` ya documentado más arriba, pero esta env var no estaba
+anotada acá todavía. Sin ella, ambos archivos fallan enteros ("test did not
+finish before its parent and was cancelled") porque el `before` no puede
+conectar — no es un bug de código, hay que sumar esta var a la receta de
+validación junto con las otras dos.
+
+**Deuda de archivo restante (13, ver `scripts/sizes-baseline.json` para la
+lista viva):** 7 test files grandes
+(`rbac`, `alerts`, `e2e`, `deviceLifecycle`, `ipRangeSpec`, `publicApi`,
+`incidents` — deliberadamente no tocados en esta tanda, requieren su propio
+criterio de partición sin romper `ci-test-runner.mjs`), `knex-agent-portal-
+repository.ts` y `src/ws/index.ts` (de `agents`/`ws`, recién liberados por el
+par), `knex-client-repository.ts` (clase con ~15 métodos, no un módulo de
+funciones sueltas — necesita el patrón facade+sub-funciones de
+`agentService.ts`/Fase 2, no el de carpeta+barrel simple), `src/api/server.ts`
+(entry point compartido, alto riesgo), y `portal/src/shared/types/monitor.ts`
+(grab-bag de tipos — el plan ya documentó que derivarlo de los DTOs del backend
+es un cambio de contrato de wire, fuera de esta pasada; una carpeta+barrel
+puramente mecánica sin renombrar ningún export sigue siendo una opción a
+evaluar, no descartada de plano).
+
 ## Cómo retomar este plan
 
 Cada fase es independiente y puede ejecutarse como una tarea separada. Antes de
