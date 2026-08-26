@@ -125,6 +125,26 @@ const RESET_ESTIMATE_SQL = `
   WHERE daily_delta >= 0
 `;
 
+function nOrNull(v: unknown): number | null {
+  return v == null ? null : Number(v);
+}
+
+// Postgres devuelve `bigint`/`numeric` como STRING vía el driver `pg` — las
+// columnas de lecturas/deltas de acá arriba son todas bigint. Sin este cast,
+// el tipo TS de `PeriodUsageLine` (`number`) le miente a cualquier consumidor
+// y una suma hace concatenación de strings en vez de aritmética (bug real
+// encontrado navegando Reportes de facturación con Playwright, handoff hifi
+// #3, verificación post-fase-5).
+function normalizeRow(r: Record<string, unknown>): PeriodUsageLine {
+  return {
+    ...r,
+    first_total: nOrNull(r.first_total), first_mono: nOrNull(r.first_mono), first_color: nOrNull(r.first_color),
+    last_total: nOrNull(r.last_total), last_mono: nOrNull(r.last_mono), last_color: nOrNull(r.last_color),
+    delta_total: nOrNull(r.delta_total) ?? 0, delta_mono: nOrNull(r.delta_mono) ?? 0, delta_color: nOrNull(r.delta_color) ?? 0,
+    delta_other: nOrNull(r.delta_other) ?? 0,
+  } as PeriodUsageLine;
+}
+
 export class KnexPeriodUsageQuery implements PeriodUsageQuery {
   constructor(private readonly db: Knex | Knex.Transaction) {}
 
@@ -133,7 +153,7 @@ export class KnexPeriodUsageQuery implements PeriodUsageQuery {
     const result = await this.db.raw(PERIOD_USAGE_SQL, [
       clientId, periodStart, periodStart, periodEnd, periodStart, periodEnd, periodStart, periodEnd,
     ]);
-    const lines = result.rows as PeriodUsageLine[];
+    const lines = (result.rows as Record<string, unknown>[]).map(normalizeRow);
     const days = Math.round((periodEnd.getTime() - periodStart.getTime()) / 86_400_000);
     await Promise.all(
       lines.filter((l) => l.had_counter_reset).map(async (l) => {

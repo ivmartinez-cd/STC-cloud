@@ -22,11 +22,25 @@ export interface ReportRow {
   source: string | null;
 }
 
+// Postgres/Knex serializan `bigint` como STRING en el JSON de wire (evita
+// pérdida de precisión sobre Number.MAX_SAFE_INTEGER) — `delta_total`/
+// `delta_mono`/`delta_color`/`first_total`/`last_total` son todas `bigint`
+// en el schema aunque el tipo TS de arriba diga `number`. Sin este cast acá,
+// `rows.reduce((a,r) => a + r.deltaMono, 0)` hace CONCATENACIÓN de strings
+// (`0 + "250"` → `"0250"`), no suma — bug real encontrado navegando la
+// pantalla con Playwright (handoff hifi #3, verificación post-fase-5).
+function num(v: number | string | null): number {
+  return v == null ? 0 : Number(v);
+}
+function numOrNull(v: number | string | null): number | null {
+  return v == null ? null : Number(v);
+}
+
 export function rowFromPreview(l: PreviewLine): ReportRow {
   return {
     key: l.device_id, deviceId: l.device_id, serial: l.serial_number, model: l.model,
-    firstTotal: l.first_total, firstAt: l.first_reading_at, lastTotal: l.last_total, lastAt: l.last_reading_at,
-    deltaTotal: l.delta_total, deltaMono: l.delta_mono, deltaColor: l.delta_color, deltaEstimated: l.delta_estimated,
+    firstTotal: numOrNull(l.first_total), firstAt: l.first_reading_at, lastTotal: numOrNull(l.last_total), lastAt: l.last_reading_at,
+    deltaTotal: num(l.delta_total), deltaMono: num(l.delta_mono), deltaColor: num(l.delta_color), deltaEstimated: numOrNull(l.delta_estimated),
     hadCounterReset: l.had_counter_reset, source: l.source,
   };
 }
@@ -34,8 +48,8 @@ export function rowFromPreview(l: PreviewLine): ReportRow {
 export function rowFromClosureLine(l: ClosureLine): ReportRow {
   return {
     key: l.id, deviceId: l.device_id, serial: l.device_serial, model: l.device_model,
-    firstTotal: l.first_total_pages, firstAt: l.first_reading_at, lastTotal: l.last_total_pages, lastAt: l.last_reading_at,
-    deltaTotal: l.delta_total, deltaMono: l.delta_mono, deltaColor: l.delta_color, deltaEstimated: l.delta_estimated,
+    firstTotal: numOrNull(l.first_total_pages), firstAt: l.first_reading_at, lastTotal: numOrNull(l.last_total_pages), lastAt: l.last_reading_at,
+    deltaTotal: num(l.delta_total), deltaMono: num(l.delta_mono), deltaColor: num(l.delta_color), deltaEstimated: numOrNull(l.delta_estimated),
     hadCounterReset: l.had_counter_reset, source: l.source,
   };
 }

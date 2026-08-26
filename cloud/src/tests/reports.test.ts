@@ -130,6 +130,24 @@ describe('Reportes — preview (no persiste nada)', () => {
     assert.equal(Number(line.delta_estimated), 0, 'sin histórico previo, la estimación es 0, no null ni un valor inventado');
   });
 
+  // Bug real encontrado navegando la pantalla con Playwright (handoff hifi
+  // #3, verificación post-fase-5): estas columnas son `bigint` en Postgres,
+  // que el driver `pg` devuelve como STRING — sin castear, el portal sumaba
+  // "0" + "250" (concatenación) en vez de 0 + 250, mostrando un número
+  // gigante concatenado en la tira de KPIs. A diferencia de los `assert.
+  // equal(Number(x), ...)` de arriba (que esconden el bug casteando en el
+  // test), este chequea el TIPO crudo tal como llega por wire.
+  test('delta_total/mono/color llegan como number en el JSON, no como string (bigint de Postgres)', async () => {
+    const { data } = await req('GET', `/clients/${ctx.clientId}/reports/preview?period=${period}`, undefined, ctx.adminToken);
+    const line = data.lines.find((l: any) => l.device_id === ctx.deviceId);
+    assert.equal(typeof line.delta_total, 'number');
+    assert.equal(typeof line.delta_mono, 'number');
+    assert.equal(typeof line.delta_color, 'number');
+    assert.equal(typeof line.delta_other, 'number');
+    assert.equal(typeof line.first_total, 'number');
+    assert.equal(typeof line.last_total, 'number');
+  });
+
   test('preview con period inválido → 400', async () => {
     const { status } = await req('GET', `/clients/${ctx.clientId}/reports/preview?period=2026-13`, undefined, ctx.adminToken);
     assert.equal(status, 400);
@@ -159,6 +177,11 @@ describe('Reportes — cierre inmutable', () => {
     assert.equal(Number(line.delta_total), 50);
     assert.equal(line.had_counter_reset, true);
     assert.equal(line.device_serial, ctx.deviceSerial, 'La identidad del equipo queda denormalizada en la línea');
+    // Mismo bug que en preview, pero re-leyendo de `report_closures`
+    // (`total_pages` es bigint) — la fila persistida también debe volver
+    // como number, no como string, en el header Y en la línea.
+    assert.equal(typeof data.total_pages, 'number');
+    assert.equal(typeof line.delta_total, 'number');
   });
 
   test('cerrar el mismo período de nuevo → 409 (un cierre existente nunca se sobreescribe)', async () => {

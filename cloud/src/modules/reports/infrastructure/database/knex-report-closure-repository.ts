@@ -10,13 +10,29 @@ const CLOSURE_COLUMNS = [
   "device_count", "anomalies_count",
 ];
 
+// Postgres devuelve `bigint` como STRING vía el driver `pg` (evita perder
+// precisión sobre Number.MAX_SAFE_INTEGER) — todas las columnas de deltas/
+// totales/lecturas son `bigint`. Sin este cast, `toClosure`/`toLine` le
+// mienten al tipo TS (`number`) y cualquier suma río abajo (PDF, tira de
+// KPIs del portal) hace concatenación de strings en vez de aritmética. Bug
+// real encontrado navegando Reportes de facturación con Playwright
+// (handoff hifi #3, verificación post-fase-5) — `sumUsageTotals` ya
+// casteaba con `Number()` al ESCRIBIR el cierre, pero re-leerlo de la base
+// después volvía a traer strings.
+function n(v: unknown): number {
+  return v == null ? 0 : Number(v);
+}
+function nOrNull(v: unknown): number | null {
+  return v == null ? null : Number(v);
+}
+
 function toClosure(r: any): ReportClosure {
   return {
     id: r.id, clientId: r.client_id, period: r.period, status: r.status,
     closedAt: r.closed_at, closedBy: r.closed_by, reopenedAt: r.reopened_at, reopenedBy: r.reopened_by,
     reopenReason: r.reopen_reason, supersededBy: r.superseded_by,
-    totalPages: r.total_pages, totalMono: r.total_mono, totalColor: r.total_color, totalOther: r.total_other,
-    deviceCount: r.device_count, anomaliesCount: r.anomalies_count,
+    totalPages: n(r.total_pages), totalMono: n(r.total_mono), totalColor: n(r.total_color), totalOther: n(r.total_other),
+    deviceCount: n(r.device_count), anomaliesCount: n(r.anomalies_count),
   };
 }
 
@@ -24,12 +40,12 @@ function toLine(r: any): ReportClosureLine {
   return {
     id: r.id, closureId: r.closure_id, deviceId: r.device_id, deviceSerial: r.device_serial,
     deviceModel: r.device_model, deviceBrand: r.device_brand, agentId: r.agent_id, agentName: r.agent_name,
-    firstReadingAt: r.first_reading_at, firstTotalPages: r.first_total_pages,
-    firstMonoPages: r.first_mono_pages, firstColorPages: r.first_color_pages,
-    lastReadingAt: r.last_reading_at, lastTotalPages: r.last_total_pages,
-    lastMonoPages: r.last_mono_pages, lastColorPages: r.last_color_pages,
-    deltaTotal: r.delta_total, deltaMono: r.delta_mono, deltaColor: r.delta_color,
-    deltaOther: r.delta_other, deltaEstimated: r.delta_estimated,
+    firstReadingAt: r.first_reading_at, firstTotalPages: nOrNull(r.first_total_pages),
+    firstMonoPages: nOrNull(r.first_mono_pages), firstColorPages: nOrNull(r.first_color_pages),
+    lastReadingAt: r.last_reading_at, lastTotalPages: nOrNull(r.last_total_pages),
+    lastMonoPages: nOrNull(r.last_mono_pages), lastColorPages: nOrNull(r.last_color_pages),
+    deltaTotal: n(r.delta_total), deltaMono: n(r.delta_mono), deltaColor: n(r.delta_color),
+    deltaOther: n(r.delta_other), deltaEstimated: nOrNull(r.delta_estimated),
     source: r.source, hadCounterReset: r.had_counter_reset,
   };
 }

@@ -1,19 +1,18 @@
-import type { ReportTemplate } from '../types/scheduledReports';
+import { FREQ_LABELS, type ReportTemplate } from '../types/scheduledReports';
 
 function TemplateCardHeader({ t }: { t: ReportTemplate }) {
-  const freq = t.suggested_frequency !== 'none' ? t.suggested_frequency.toUpperCase() : 'MANUAL';
   return (
     <div className="flex items-center justify-between gap-3 border-b border-line-150 px-5 py-[14px]">
       <span className="font-montserrat text-[9px] font-bold uppercase tracking-[.15em] text-ink-600">{t.label}</span>
       <span className="inline-flex items-center gap-[7px] whitespace-nowrap rounded-[2px] bg-surface-avatar px-[9px] py-1 font-montserrat text-[9.5px] font-semibold uppercase tracking-[.08em] text-ink-650">
-        <span className="block h-1.5 w-1.5 rounded-full bg-brand" />{freq}
+        <span className="block h-1.5 w-1.5 rounded-full bg-brand" />{FREQ_LABELS[t.suggested_frequency]}
       </span>
     </div>
   );
 }
 
 function TemplateCard({ t, onUse }: { t: ReportTemplate; onUse: (t: ReportTemplate) => void }) {
-  const tags = [t.default_format.toUpperCase(), t.suggested_frequency !== 'none' ? t.suggested_frequency.toUpperCase() : 'MANUAL'];
+  const tags = [t.default_format.toUpperCase(), FREQ_LABELS[t.suggested_frequency]];
   return (
     <div className="flex flex-col rounded-[5px] border border-line-100 bg-white">
       <TemplateCardHeader t={t} />

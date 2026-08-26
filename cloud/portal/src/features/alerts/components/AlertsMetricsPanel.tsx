@@ -37,7 +37,7 @@ interface Props {
  * `shared/components/MetricsStrip.tsx` (breakpoints de VIEWPORT para ocupar todo
  * el ancho), esta tarjeta vive en la mitad izquierda de un grid de 2 columnas
  * junto a `AlertsByCodePanel` (`Alertas.dc.html:37-38`): el mockup usa
- * `auto-fit,minmax(160px,1fr)` — el 2×2 sale solo del ancho del CONTENEDOR, no
+ * `auto-fit,minmax(140px,1fr)` — el 2×2 sale solo del ancho del CONTENEDOR, no
  * del viewport. Por eso no reutiliza `MetricsStrip` (forzaría 4 columnas fijas
  * incluso a mitad de pantalla). */
 export default function AlertsMetricsPanel({ summary, loading, error, onRetry }: Props) {
@@ -50,7 +50,7 @@ export default function AlertsMetricsPanel({ summary, loading, error, onRetry }:
     );
   }
   return (
-    <div className="grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] gap-px overflow-hidden rounded-[5px] border border-line-100 bg-line-400">
+    <div className="grid grid-cols-[repeat(auto-fit,minmax(140px,1fr))] gap-px overflow-hidden rounded-[5px] border border-line-100 bg-line-400">
       {buildCells(summary).map((c) => <MetricCell key={c.label} cell={c} loading={loading} />)}
     </div>
   );

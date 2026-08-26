@@ -45,7 +45,7 @@ export default function IncidentsMetricsPanel({ stats, loading, error, onRetry }
     );
   }
   return (
-    <div className="grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] gap-px overflow-hidden rounded-[5px] border border-line-100 bg-line-400">
+    <div className="grid grid-cols-[repeat(auto-fit,minmax(140px,1fr))] gap-px overflow-hidden rounded-[5px] border border-line-100 bg-line-400">
       {buildCells(stats).map((c) => <MetricCell key={c.label} cell={c} loading={loading} />)}
     </div>
   );

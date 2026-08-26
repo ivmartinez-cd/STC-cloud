@@ -201,9 +201,13 @@ describe('Auto-creación y auto-completado (ticks reales del worker, 2 min)', ()
     const s = await sync(ctx.agentToken, ctx.deviceSerial, '192.168.245.10', { toner_black: 90 });
     assert.equal(s.status, 200);
 
+    // `completeIfReplaced` escribe el status y el evento en 2 awaits
+    // secuenciales, no en una transacción — pollear sólo por status podía
+    // ganarle al insert del evento (mismo patrón de carrera que
+    // incidentAutoRules.test.ts). Pollear por el evento en sí, no sólo el status.
     const done = await pollUntil(
       () => req('GET', `/supply-requests/${autoId}`, undefined, ctx.adminToken),
-      (r) => r.data.status === 'completed',
+      (r) => r.data.status === 'completed' && r.data.events.some((e: any) => e.kind === 'auto_complete'),
     );
     assert.equal(done.data.status, 'completed');
     assert.ok(done.data.closed_at);

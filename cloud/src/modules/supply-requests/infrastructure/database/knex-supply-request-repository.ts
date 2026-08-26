@@ -109,7 +109,7 @@ export class KnexSupplyRequestRepository implements SupplyRequestRepository {
 
   async list(params: ListParams): Promise<{ items: SupplyRequest[]; total: number }> {
     const base = applyFilters(this.db(TABLE), params);
-    const [{ count }, rows, dup] = await Promise.all([
+    const [[{ count }], rows, dup] = await Promise.all([
       base.clone().count("* as count"),
       base.clone().orderBy("opened_at", "desc").limit(Math.min(params.limit, 200)).offset(params.offset),
       this.duplicateSiblingIds(params.clientId),
