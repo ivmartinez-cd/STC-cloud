@@ -1929,6 +1929,46 @@ es un cambio de contrato de wire, fuera de esta pasada; una carpeta+barrel
 puramente mecánica sin renombrar ningún export sigue siendo una opción a
 evaluar, no descartada de plano).
 
+**Actualización (mismo día, cierre de la tanda) — deuda de archivo de producción en 0.**
+Se sumaron 4 splits más, los de mayor riesgo de esta tanda: `api/server.ts`
+(384→145L, el entry point del proceso — bootstrap.ts/plugins.ts/health.ts/
+routes.ts, mismo orden de registro preservado exactamente), `KnexClientRepository`
+(444→7 archivos, patrón facade+funciones-sueltas con `db: Knex` como primer
+parámetro, igual que `agentService.ts` en su momento), `shared/types/monitor.ts`
+(365→7 archivos, carpeta+barrel puramente mecánica — al final SÍ se hizo, es
+sólo reorganización de tipos sin tocar ningún nombre exportado, no el cambio de
+contrato de wire que sigue pendiente) y `KnexAgentPortalRepository`/`ws/index.ts`
+(534L y 381L, coordinados explícitamente con `dashboard-screens-implementation`
+por ser el módulo donde acababa de aterrizar su relay multi-réplica — confirmó
+qué invariantes cuidar: state.ts/redis-channels.ts quedan como ÚNICOS dueños de
+los Maps/Sets/conexiones Redis, nadie los duplica; los exports consumidos desde
+afuera no cambian de path).
+
+Con esto, **la deuda de archivo (`sizes-baseline.json`) queda en 0 para todo
+código de producción** — de los 19 archivos >300 líneas que había al empezar
+esta tanda (2026-08-26), sólo quedan los 7 test files (`rbac`, `alerts`, `e2e`,
+`deviceLifecycle`, `ipRangeSpec`, `publicApi`, `incidents`), deliberadamente
+fuera de esta pasada: cada archivo de test corre en su PROPIO proceso
+(`ci-test-runner.mjs`), así que dividirlos implica duplicar fixtures de setup
+(login/cliente/agente) entre archivos, no es un mecánico mover-y-listo como el
+resto — queda para una pasada dedicada que evalúe caso por caso qué `describe`
+blocks son genuinamente separables sin ese costo.
+
+Validación de cierre: suite completa (~850 tests) corrida 3 veces contra un
+stack efímero propio (pg/redis en puertos alternativos a los de la sesión
+hermana) a medida que se acumulaban los splits — última corrida con el build
+final (todos los 12 splits de esta tanda incluidos) sin ninguna falla
+atribuible; los únicos 8 rojos son los ya conocidos (2FA 6.3 rate-limit ×4,
+`observability`/`ewsProxyRelay` por el nombre de contenedor `stc_redis` que
+asume el docker-compose real, no reproducible con nombres de contenedor
+distintos — confirmado explícitamente por el dueño de esa suite). **Gotcha
+nuevo de la corrida:** `clientDirectory.test.ts`/`clientDeviceDirectory.test.ts`
+necesitan `CLIENT_DIRECTORY_TEST_DB_PORT` además de `RBAC_TEST_DB_PORT`/
+`ALERTS_TEST_DB_PORT` — sin ella el `before` no conecta y el archivo entero
+cancela sus tests ("test did not finish before its parent and was cancelled"),
+fácil de confundir con un bug real del código si no se sabe que es sólo la
+env var faltante.
+
 ## Cómo retomar este plan
 
 Cada fase es independiente y puede ejecutarse como una tarea separada. Antes de
