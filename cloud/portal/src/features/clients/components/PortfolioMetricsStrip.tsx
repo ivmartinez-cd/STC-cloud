@@ -1,4 +1,4 @@
-import { fmt, fmtPct, pctOf } from '../../../shared/lib/formatters';
+import { fmt, fmtPct, pctOf, APP_LOCALE } from '../../../shared/lib/formatters';
 import type { ClientPortfolioSummary } from '../types/clientsDirectory';
 
 /** Tira de 5 métricas de cartera (handoff hifi "Clientes", 25/08/2026) — endpoint
@@ -42,7 +42,7 @@ export default function PortfolioMetricsStrip({
     },
     {
       label: 'Concentración top 5',
-      value: summary ? `${summary.top5_device_share_pct.toLocaleString('es-AR', { maximumFractionDigits: 1 })}%` : '—',
+      value: summary ? `${summary.top5_device_share_pct.toLocaleString(APP_LOCALE, { maximumFractionDigits: 1 })}%` : '—',
       note: summary ? `${fmt(summary.top5_device_count)} de ${fmt(summary.devices_total)} equipos` : undefined,
     },
   ];

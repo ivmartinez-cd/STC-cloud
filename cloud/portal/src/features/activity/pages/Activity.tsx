@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { History, ChevronDown, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { api } from '../../../shared/lib/api';
 import type { AuditLogItem, AuditLogsResponse, AuditActionOption, AuditCategory } from '../../../shared/types/audit';
+import { APP_LOCALE } from '../../../shared/lib/formatters';
 
 interface ClientOption { id: string; name: string; }
 
@@ -25,7 +26,7 @@ const CATEGORY_COLOR: Record<AuditCategory, string> = {
 };
 
 function fmtDate(v: string): string {
-  return new Date(v).toLocaleString('es-AR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  return new Date(v).toLocaleString(APP_LOCALE, { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' });
 }
 
 function todayIso(daysAgo = 0): string {

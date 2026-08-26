@@ -4,6 +4,23 @@ import { DATA_DIR } from './config';
 import { LogTailer } from './LogTailer';
 import { getConfiguredTimezone } from './TimeZoneUtils';
 
+/**
+ * Locale del timestamp de cada línea (pasada de polish de locale,
+ * 26/08/2026) — antes `'es-AR'` fijo. Verificado con Node real (no
+ * asumido): para el mismo formato numérico DD/MM/YYYY, `es-CL` usa "-"
+ * como separador en vez de "/" (`es-AR`/`es-MX` sí coinciden en "/") — no
+ * era un cambio inerte como parecía a primera vista. Toma el locale
+ * resuelto por el propio Node (ICU, heredado del SO del equipo donde
+ * corre el agente) y sólo lo usa si es alguna variante de español —
+ * mismo criterio que `APP_LOCALE` del portal (`shared/lib/formatters.ts`):
+ * este archivo es un log de texto plano para soporte, no vale la pena
+ * arriesgar mezclar idiomas si el Node embebido resolviera a otra cosa.
+ */
+const LOG_LOCALE = (() => {
+  const resolved = Intl.DateTimeFormat().resolvedOptions().locale;
+  return resolved?.toLowerCase().startsWith('es') ? resolved : 'es-AR';
+})();
+
 const LOG_MAX_BYTES = 10 * 1024 * 1024;
 // Antes: un solo nivel de rotación (`.1` se pisaba en cada corte, sin
 // retención real más allá del archivo activo + uno). Ahora rota en cadena
@@ -36,8 +53,8 @@ export type LogFn = (level: LogLevel, msg: string) => void;
 export function log(level: LogLevel, msg: string): void {
   const now = new Date();
   const tz = getConfiguredTimezone();
-  const date = now.toLocaleDateString('es-AR', { timeZone: tz, day: '2-digit', month: '2-digit', year: 'numeric' });
-  const time = now.toLocaleTimeString('es-AR', { timeZone: tz, hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+  const date = now.toLocaleDateString(LOG_LOCALE, { timeZone: tz, day: '2-digit', month: '2-digit', year: 'numeric' });
+  const time = now.toLocaleTimeString(LOG_LOCALE, { timeZone: tz, hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
   const timestamp = `${date} ${time}`;
 
   const levelPadded = level.padEnd(8);

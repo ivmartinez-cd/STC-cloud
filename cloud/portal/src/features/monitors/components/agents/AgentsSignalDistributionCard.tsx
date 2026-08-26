@@ -1,4 +1,4 @@
-import { fmt } from '../../../../shared/lib/formatters';
+import { fmt, APP_LOCALE } from '../../../../shared/lib/formatters';
 import SegmentedBar from '../../../../shared/components/SegmentedBar';
 import type { AgentSignalBucketsResponse } from '../../types/agentsDirectory';
 
@@ -17,7 +17,7 @@ function BucketRow({ bucketKey, label, count, pct }: { bucketKey: string; label:
       <span className="block h-[9px] w-[9px] rounded-full" style={{ background: BUCKET_COLORS[bucketKey] }} />
       <span className="truncate font-sans text-[12.5px] text-ink-700">{label}</span>
       <span className="text-right font-montserrat text-[12.5px] font-semibold tabular-nums text-ink-900">{fmt(count)}</span>
-      <span className="text-right font-sans text-[11.5px] tabular-nums text-ink-300">{pct.toLocaleString('es-AR', { maximumFractionDigits: 1 })}%</span>
+      <span className="text-right font-sans text-[11.5px] tabular-nums text-ink-300">{pct.toLocaleString(APP_LOCALE, { maximumFractionDigits: 1 })}%</span>
     </div>
   );
 }

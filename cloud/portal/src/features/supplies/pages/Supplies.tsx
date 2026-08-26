@@ -7,6 +7,7 @@ import { fmtDate, fmtInt } from '../../../shared/lib/supplies';
 import { useRowSelection } from '../../../shared/hooks/useRowSelection';
 import BulkActionBar from '../../../shared/components/BulkActionBar';
 import type { FleetSupplyRow, FleetSuppliesResponse, SupplyKind } from '../../../shared/types/supplies';
+import { APP_LOCALE } from '../../../shared/lib/formatters';
 
 interface ClientOption { id: string; name: string; }
 
@@ -21,7 +22,7 @@ function levelBadge(pct: number | null): string {
 }
 
 function exportSuppliesCSV(rows: FleetSupplyRow[]) {
-  const today = new Date().toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  const today = new Date().toLocaleDateString(APP_LOCALE, { day: '2-digit', month: '2-digit', year: 'numeric' });
   const header = ['CLIENTE', 'MONITOR', 'SERIE', 'MODELO', 'TIPO', 'COLOR', 'DESCRIPCION', 'CODIGO', 'NIVEL_%', 'PAGINAS_RESTANTES', 'DIAS_RESTANTES', 'ULTIMA_LECTURA'].join(';');
   const rows_ = rows.map((r) => [
     r.client_name ?? '', r.agent_name ?? '', r.device_serial ?? '', r.device_model ?? '', r.kind, r.color,

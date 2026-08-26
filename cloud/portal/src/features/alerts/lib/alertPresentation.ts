@@ -1,4 +1,5 @@
 import type { AlertClass } from '../../../shared/types/alerts';
+import { APP_LOCALE } from '../../../shared/lib/formatters';
 
 export const PAGE_SIZE = 50;
 
@@ -31,7 +32,7 @@ export const SEVERITY_COLOR = (severity: string) =>
 
 export function fmtDate(v: string | null): string {
   if (!v) return '—';
-  return new Date(v).toLocaleString('es-AR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  return new Date(v).toLocaleString(APP_LOCALE, { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
 export const SELECT_CLASS =

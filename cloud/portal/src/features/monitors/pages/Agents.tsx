@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { api } from '../../../shared/lib/api';
 import { useToast } from '../../../store/ToastContext';
 import ConfirmModal from '../../../shared/components/ConfirmModal';
-import { fmt } from '../../../shared/lib/formatters';
+import { fmt, APP_LOCALE } from '../../../shared/lib/formatters';
 import { useAgentsDirectory } from '../hooks/useAgentsDirectory';
 import { exportAgentsCsv } from '../lib/exportAgentsCsv';
 import type { AgentDirectoryRow } from '../types/agentsDirectory';
@@ -15,7 +15,7 @@ import ConfigAgentModal from '../components/agents/ConfigAgentModal';
 import RegenKeyModal from '../components/agents/RegenKeyModal';
 
 function formatSyncTime(d: Date): string {
-  return d.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false });
+  return d.toLocaleTimeString(APP_LOCALE, { hour: '2-digit', minute: '2-digit', hour12: false });
 }
 
 /** Rediseño hifi "Salud de nodos" (handoff 25/08/2026): reemplaza `AgentTable.tsx`

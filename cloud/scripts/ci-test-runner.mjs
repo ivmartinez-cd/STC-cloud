@@ -47,6 +47,7 @@ const TEST_FILES = [
   "src/tests/customFieldRules.test.ts",
   "src/tests/feedbackUseCases.test.ts",
   "src/tests/systemSettings.test.ts",
+  "src/tests/agentLogsReport.test.ts",
 ];
 
 function runFile(file) {

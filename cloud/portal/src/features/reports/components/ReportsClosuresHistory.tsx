@@ -1,9 +1,10 @@
 import { Download, FileSpreadsheet, Unlock, ChevronDown, ChevronUp, CheckCircle2, Loader2 } from 'lucide-react';
 import type { Closure, ClosureDetail } from '../types/reports';
+import { APP_LOCALE } from '../../../shared/lib/formatters';
 
 function fmtDate(v: string | null): string {
   if (!v) return '—';
-  return new Date(v).toLocaleString('es-AR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  return new Date(v).toLocaleString(APP_LOCALE, { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
 interface Props {

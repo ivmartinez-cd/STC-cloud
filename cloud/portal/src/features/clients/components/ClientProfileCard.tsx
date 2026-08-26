@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import type { Client, Monitor } from '../../../shared/types/monitor';
 import { CLIENT_ESTADO_LABEL, deriveClientEstado, type ClientEstado } from '../lib/clientEstado';
 import EditClientModal from './EditClientModal';
+import { APP_LOCALE } from '../../../shared/lib/formatters';
 
 function initialsOf(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -42,7 +43,7 @@ export default function ClientProfileCard({
   const [editing, setEditing] = useState(false);
   const estado = deriveClientEstado(client, monitors);
   const location = [client.country, client.address].filter(Boolean).join(' · ');
-  const altaDate = new Date(client.created_at).toLocaleDateString('es-AR');
+  const altaDate = new Date(client.created_at).toLocaleDateString(APP_LOCALE);
   const shortId = client.id.replace(/-/g, '').slice(0, 13).toUpperCase();
 
   return (

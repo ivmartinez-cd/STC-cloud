@@ -1,5 +1,23 @@
 import { DEVICE_OFFLINE_THRESHOLD_MS } from './constants';
 
+/**
+ * Locale de todo el portal (pasada de polish de locale, 26/08/2026): antes
+ * `'es-AR'` fijo en más de 30 archivos — un cliente en Chile/México veía
+ * fechas y separadores de miles al estilo argentino en vez del propio
+ * (`es-MX` en particular usa "," de miles/"." decimal, al revés que
+ * `es-AR`). Preferimos el idioma del navegador SOLO si ya es español: el
+ * resto de la copy de este portal está fija en castellano, así que dejar
+ * que el navegador elija un locale no-español (ej. `en-US`) mostraría
+ * fechas/números en inglés en medio de una UI toda en español — peor que
+ * el default anterior. Sin `navigator` (SSR/tests) o sin variante español
+ * detectada, cae al mismo default histórico.
+ */
+export const APP_LOCALE: string = (() => {
+  if (typeof navigator === 'undefined') return 'es-AR';
+  const preferred = navigator.languages?.find((l) => l.toLowerCase().startsWith('es')) ?? navigator.language;
+  return preferred?.toLowerCase().startsWith('es') ? preferred : 'es-AR';
+})();
+
 export function formatRelativeTime(ts: string | null, now = Date.now()): string {
   if (!ts) return 'Nunca';
   const min = Math.floor((now - new Date(ts).getTime()) / 60_000);
@@ -7,17 +25,17 @@ export function formatRelativeTime(ts: string | null, now = Date.now()): string 
   if (min < 60) return `Hace ${min} min`;
   const hrs = Math.floor(min / 60);
   if (hrs < 24) return `Hace ${hrs}h`;
-  return new Date(ts).toLocaleString('es-AR');
+  return new Date(ts).toLocaleString(APP_LOCALE);
 }
 
 export function formatDate(ts: string | null | undefined): string {
   if (!ts) return '—';
-  return new Date(ts).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' });
+  return new Date(ts).toLocaleDateString(APP_LOCALE, { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
 export function formatDateTime(ts: string | null | undefined): string {
   if (!ts) return '—';
-  return new Date(ts).toLocaleString('es-AR', { dateStyle: 'medium', timeStyle: 'short' });
+  return new Date(ts).toLocaleString(APP_LOCALE, { dateStyle: 'medium', timeStyle: 'short' });
 }
 
 const SHORT_MONTHS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
@@ -84,7 +102,7 @@ export function getDeviceStatusInfo(
     };
   }
 
-  const dateFormatted = lastSeen.toLocaleString('es-AR', {
+  const dateFormatted = lastSeen.toLocaleString(APP_LOCALE, {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
@@ -125,11 +143,15 @@ export function pctOf(part: number, total: number): number {
 }
 
 export function fmtPct(part: number, total: number): string {
-  return `${pctOf(part, total).toLocaleString('es-AR', { maximumFractionDigits: 1 })}%`;
+  return `${pctOf(part, total).toLocaleString(APP_LOCALE, { maximumFractionDigits: 1 })}%`;
 }
 
-/** Formateo `es-AR` (punto de miles) — helper reusado por todo el Panel de
- * Control hifi (README: "Números: locale es-AR... usar en toda cifra"). */
+/** Formateo con separador de miles del locale activo (`APP_LOCALE`, ver
+ * arriba) — helper reusado por todo el Panel de Control hifi. La cita al
+ * README ("Números: locale es-AR... usar en toda cifra") que tenía este
+ * docblock ya no existe en `portal/README.md` — no se encontró en ningún
+ * doc vivo del repo, así que se trataba de una nota histórica desactualizada,
+ * no un mandato de producto vigente. */
 export function fmt(n: number): string {
-  return n.toLocaleString('es-AR');
+  return n.toLocaleString(APP_LOCALE);
 }

@@ -9,10 +9,11 @@ import { useAuth } from '../../../store/AuthContext';
 import { useToast } from '../../../store/ToastContext';
 import type { IncidentDetail as IncidentDetailType } from '../../../shared/types/incidents';
 import { INCIDENT_STATUS_LABELS, INCIDENT_STATUS_COLORS, type IncidentStatus } from '../../../shared/lib/constants';
+import { APP_LOCALE } from '../../../shared/lib/formatters';
 
 function fmtDate(v: string | null): string {
   if (!v) return '—';
-  return new Date(v).toLocaleString('es-AR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  return new Date(v).toLocaleString(APP_LOCALE, { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
 const EVENT_LABELS: Record<string, string> = {

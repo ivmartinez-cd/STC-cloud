@@ -1,4 +1,5 @@
 import type { AgentActivityEvent, AgentActivityKind } from '../types/monitorDetail';
+import { APP_LOCALE } from '../../../shared/lib/formatters';
 
 const KIND_COLOR: Record<AgentActivityKind, string> = {
   barrido: 'bg-brand', incidencia: 'bg-brand-severe', administrativo: 'bg-brand-gray',
@@ -12,7 +13,7 @@ function formatAge(iso: string): string {
   if (hrs < 24) return `hace ${hrs} h`;
   const days = Math.round(hrs / 24);
   if (days < 3) return `hace ${days} d`;
-  return new Date(iso).toLocaleDateString('es-AR');
+  return new Date(iso).toLocaleDateString(APP_LOCALE);
 }
 
 /** "Actividad reciente" (handoff hifi "Monitor — detalle", 25/08/2026) — timeline

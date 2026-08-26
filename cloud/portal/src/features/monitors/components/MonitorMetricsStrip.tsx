@@ -1,4 +1,4 @@
-import { fmt, fmtPct } from '../../../shared/lib/formatters';
+import { fmt, fmtPct, APP_LOCALE } from '../../../shared/lib/formatters';
 import type { AgentStats } from '../types/monitorDetail';
 
 interface Cell { label: string; value: string; note?: string; accent?: boolean; }
@@ -13,7 +13,7 @@ function formatDowntime(minutes: number): string {
 
 function formatSweepTime(iso: string | null): string {
   if (!iso) return 'sin barridos aún';
-  return new Date(iso).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+  return new Date(iso).toLocaleTimeString(APP_LOCALE, { hour: '2-digit', minute: '2-digit' });
 }
 
 function Metric({ cell, first }: { cell: Cell; first: boolean }) {
@@ -60,7 +60,7 @@ export default function MonitorMetricsStrip({ stats, loading, error, onRetry }: 
     { label: 'Volumen del mes', value: fmt(stats?.volume_month ?? 0), note: 'páginas del sitio' },
     {
       label: 'Disponibilidad 30 d',
-      value: stats ? `${stats.uptime_30d_pct.toLocaleString('es-AR', { maximumFractionDigits: 1 })}%` : '—',
+      value: stats ? `${stats.uptime_30d_pct.toLocaleString(APP_LOCALE, { maximumFractionDigits: 1 })}%` : '—',
       note: stats ? `${fmt(stats.outages_30d)} cortes · ${formatDowntime(stats.downtime_30d_minutes)}` : undefined,
     },
     {

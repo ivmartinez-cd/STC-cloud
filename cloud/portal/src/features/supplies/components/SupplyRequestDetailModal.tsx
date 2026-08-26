@@ -7,6 +7,7 @@ import {
   NEXT_STATUSES, SUPPLY_REQUEST_STATUS_COLORS, SUPPLY_REQUEST_STATUS_LABELS,
   type SupplyRequestDetail, type SupplyRequestStatus,
 } from '../types/supplyRequests';
+import { APP_LOCALE } from '../../../shared/lib/formatters';
 
 interface Props {
   requestId: string | null;
@@ -23,7 +24,7 @@ const EVENT_LABELS: Record<string, string> = {
 
 function fmtDate(v: string | null): string {
   if (!v) return '—';
-  return new Date(v).toLocaleString('es-AR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+  return new Date(v).toLocaleString(APP_LOCALE, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
 }
 
 /** Detalle + timeline + acciones de un pedido (Fase 4.2 gap analysis vs HP SDS). */

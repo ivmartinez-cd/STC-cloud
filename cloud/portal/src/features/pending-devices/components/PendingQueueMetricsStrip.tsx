@@ -1,4 +1,4 @@
-import { fmt } from '../../../shared/lib/formatters';
+import { fmt, APP_LOCALE } from '../../../shared/lib/formatters';
 import type { PendingQueueSummary } from '../types/pendingDevices';
 
 interface Cell { label: string; value: string; note?: string; accent?: boolean }
@@ -7,7 +7,7 @@ interface Cell { label: string; value: string; note?: string; accent?: boolean }
  * se diseñó en agosto, pero el label es dinámico (no queremos que en septiembre
  * siga diciendo "agosto"). */
 function currentMonthLabel(): string {
-  const name = new Date().toLocaleDateString('es-AR', { month: 'long' });
+  const name = new Date().toLocaleDateString(APP_LOCALE, { month: 'long' });
   return name.toUpperCase();
 }
 

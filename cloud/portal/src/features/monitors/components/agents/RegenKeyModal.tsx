@@ -1,6 +1,7 @@
 import { useState } from 'react'; // v1.0.1-ui-fix
 import { X, Key, Clock, Copy, Check } from 'lucide-react';
 import { useToast } from '../../../../store/ToastContext';
+import { APP_LOCALE } from '../../../../shared/lib/formatters';
 
 interface Props {
   modal: { agentName: string; key: string; expiresAt: string } | null;
@@ -37,7 +38,7 @@ export default function RegenKeyModal({ modal, onClose }: Props) {
             <div>
               <p className="text-sm font-black text-amber-800">Llave válida por 24 horas</p>
               <p className="text-xs text-amber-600 mt-1 font-medium">
-                Expira: {new Date(modal.expiresAt).toLocaleString('es-AR', { dateStyle: 'medium', timeStyle: 'short' })}
+                Expira: {new Date(modal.expiresAt).toLocaleString(APP_LOCALE, { dateStyle: 'medium', timeStyle: 'short' })}
               </p>
             </div>
           </div>

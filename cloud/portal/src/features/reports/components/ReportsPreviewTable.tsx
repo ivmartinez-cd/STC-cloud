@@ -1,10 +1,11 @@
 import { Link } from 'react-router-dom';
 import { AlertTriangle, Loader2 } from 'lucide-react';
 import type { PreviewLine } from '../types/reports';
+import { APP_LOCALE } from '../../../shared/lib/formatters';
 
 function fmtDate(v: string | null): string {
   if (!v) return '—';
-  return new Date(v).toLocaleString('es-AR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  return new Date(v).toLocaleString(APP_LOCALE, { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
 interface Props {

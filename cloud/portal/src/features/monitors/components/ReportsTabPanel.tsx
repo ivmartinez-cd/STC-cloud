@@ -5,7 +5,7 @@ import {
   Tooltip, ResponsiveContainer, Legend,
 } from 'recharts';
 import type { Device, MonitorData } from '../../../shared/types/monitor';
-import { fmt } from '../../../shared/lib/formatters';
+import { fmt, APP_LOCALE } from '../../../shared/lib/formatters';
 import ZoneLabel from '../../../shared/components/ZoneLabel';
 import { BrandModal } from '../../../shared/components/BrandModal';
 
@@ -15,8 +15,8 @@ interface Props {
 }
 
 function exportReportCSV(devices: Device[], monitorName: string) {
-  const today = new Date().toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-  const month = new Date().toLocaleDateString('es-AR', { month: 'long', year: 'numeric' });
+  const today = new Date().toLocaleDateString(APP_LOCALE, { day: '2-digit', month: '2-digit', year: 'numeric' });
+  const month = new Date().toLocaleDateString(APP_LOCALE, { month: 'long', year: 'numeric' });
   const lines = [
     `REPORTE EJECUTIVO — ${monitorName}`,
     `Generado: ${today} | Período: ${month}`,

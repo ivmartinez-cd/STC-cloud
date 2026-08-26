@@ -8,12 +8,13 @@ import ScheduledReportModal from '../components/ScheduledReportModal';
 import {
   FREQ_LABELS, REPORT_TYPE_LABELS, type ScheduledReport,
 } from '../types/scheduledReports';
+import { APP_LOCALE } from '../../../shared/lib/formatters';
 
 interface ClientOption { id: string; name: string; }
 
 function fmtDate(v: string | null): string {
   if (!v) return '—';
-  return new Date(v).toLocaleString('es-AR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+  return new Date(v).toLocaleString(APP_LOCALE, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
 }
 
 /**

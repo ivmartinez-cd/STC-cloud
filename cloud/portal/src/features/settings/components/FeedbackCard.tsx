@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { MessageSquare, ChevronDown, ChevronUp, Image as ImageIcon } from 'lucide-react';
 import { api } from '../../../shared/lib/api';
 import type { DBFeedback } from '../types/settings';
+import { APP_LOCALE } from '../../../shared/lib/formatters';
 
 export default function FeedbackCard() {
   const [feedbacks, setFeedbacks] = useState<DBFeedback[]>([]);
@@ -68,7 +69,7 @@ export default function FeedbackCard() {
                         <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Por {fb.username}</span>
                       </div>
                       <div className="text-xs font-medium text-slate-500 mt-0.5">
-                        {new Date(fb.created_at).toLocaleString('es-AR', { dateStyle: 'medium', timeStyle: 'short' })}
+                        {new Date(fb.created_at).toLocaleString(APP_LOCALE, { dateStyle: 'medium', timeStyle: 'short' })}
                       </div>
                     </div>
                   </div>

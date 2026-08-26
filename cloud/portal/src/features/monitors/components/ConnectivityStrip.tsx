@@ -1,15 +1,16 @@
 import type { ConnectivityDay } from '../types/monitorDetail';
+import { APP_LOCALE } from '../../../shared/lib/formatters';
 
 const STATUS_HEIGHT: Record<ConnectivityDay['status'], number> = { online: 60, parcial: 38, sin_contacto: 20 };
 const STATUS_COLOR: Record<ConnectivityDay['status'], string> = { online: 'bg-brand-gray', parcial: 'bg-brand', sin_contacto: 'bg-brand-severe' };
 
 function formatAxisDate(iso: string): string {
   const d = new Date(`${iso}T00:00:00Z`);
-  return d.toLocaleDateString('es-AR', { day: '2-digit', month: 'short', timeZone: 'UTC' }).replace('.', '').toUpperCase();
+  return d.toLocaleDateString(APP_LOCALE, { day: '2-digit', month: 'short', timeZone: 'UTC' }).replace('.', '').toUpperCase();
 }
 
 function tooltipFor(day: ConnectivityDay): string {
-  const fecha = new Date(`${day.date}T00:00:00Z`).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' });
+  const fecha = new Date(`${day.date}T00:00:00Z`).toLocaleDateString(APP_LOCALE, { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' });
   const minutos = day.downtime_minutes > 0 ? `${day.downtime_minutes} min sin contacto` : 'sin cortes';
   const reconexiones = day.reconnects > 0 ? ` · ${day.reconnects} reconexión(es)` : '';
   return `${fecha} · ${minutos}${reconexiones}`;
@@ -34,7 +35,7 @@ export default function ConnectivityStrip({ days, loading, error, onRetry, uptim
         <span className="font-montserrat text-[9px] font-bold uppercase tracking-[.15em] text-ink-600">Conectividad · últimos 30 días</span>
         {uptimePct != null && outages != null && !loading && !error && (
           <span className="font-sans text-[11.5px] text-ink-300">
-            {uptimePct.toLocaleString('es-AR', { maximumFractionDigits: 1 })}% en línea · {outages} corte{outages === 1 ? '' : 's'}
+            {uptimePct.toLocaleString(APP_LOCALE, { maximumFractionDigits: 1 })}% en línea · {outages} corte{outages === 1 ? '' : 's'}
           </span>
         )}
       </div>

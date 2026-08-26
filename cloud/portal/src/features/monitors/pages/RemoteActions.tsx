@@ -13,6 +13,7 @@ import RemoteActionsPagination from '../components/remote-actions/RemoteActionsP
 import CreateBatchModal from '../components/remote-actions/CreateBatchModal';
 import BatchDetailModal from '../components/remote-actions/BatchDetailModal';
 import type { RemoteActionBatchDetail, RemoteActionBatchRow } from '../types/remoteActions';
+import { APP_LOCALE } from '../../../shared/lib/formatters';
 
 /**
  * Rediseño hifi "Acciones remotas en bloque" (handoff "4 pantallas",
@@ -67,7 +68,7 @@ export default function RemoteActions() {
           </h1>
           {insights.summary && (
             <p className="mt-2.5 font-sans text-[12.5px] text-ink-400">
-              {insights.summary.total_all_time.toLocaleString('es-AR')} lotes ejecutados · programadas y con seguimiento por lote
+              {insights.summary.total_all_time.toLocaleString(APP_LOCALE)} lotes ejecutados · programadas y con seguimiento por lote
             </p>
           )}
         </div>

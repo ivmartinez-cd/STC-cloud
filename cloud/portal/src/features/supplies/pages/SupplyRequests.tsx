@@ -8,6 +8,7 @@ import {
   SUPPLY_REQUEST_STATUS_COLORS, SUPPLY_REQUEST_STATUS_LABELS,
   type SupplyRequest, type SupplyRequestStatus,
 } from '../types/supplyRequests';
+import { APP_LOCALE } from '../../../shared/lib/formatters';
 
 interface ClientOption { id: string; name: string; }
 
@@ -15,7 +16,7 @@ const TABS: (SupplyRequestStatus | 'all')[] = ['pending', 'reviewed', 'processed
 const PAGE_SIZE = 50;
 
 function fmtDate(v: string): string {
-  return new Date(v).toLocaleString('es-AR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+  return new Date(v).toLocaleString(APP_LOCALE, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
 }
 
 /**

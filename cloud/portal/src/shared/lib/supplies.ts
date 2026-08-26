@@ -7,6 +7,7 @@
  *  - Días restantes: páginas restantes / ritmo de impresión observado en el historial de lecturas.
  */
 import type { Device, SuppliesDetails, SuppliesItem } from '../types/monitor';
+import { APP_LOCALE } from './formatters';
 
 export interface ReadingPoint {
   time: string;
@@ -163,9 +164,9 @@ export function fmtDate(v: string | null | undefined): string {
   const m = v.match(/^(\d{4})(\d{2})(\d{2})$/);
   if (m) return `${m[3]}/${m[2]}/${m[1]}`;
   const d = new Date(v);
-  return Number.isNaN(d.getTime()) ? v : d.toLocaleDateString('es-AR');
+  return Number.isNaN(d.getTime()) ? v : d.toLocaleDateString(APP_LOCALE);
 }
 
 export function fmtInt(v: number | null | undefined): string {
-  return v === null || v === undefined ? '—' : Math.round(v).toLocaleString('es-AR');
+  return v === null || v === undefined ? '—' : Math.round(v).toLocaleString(APP_LOCALE);
 }

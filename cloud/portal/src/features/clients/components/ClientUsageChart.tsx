@@ -1,8 +1,7 @@
 import ErrorBoundary from '../../../shared/components/ErrorBoundary';
 import type { UsageMonth } from '../../../shared/types/monitor';
 import { currentMonthDelta, padTo12Months } from '../lib/usageMonths';
-import { fmt } from '../../../shared/lib/formatters';
-
+import { fmt, APP_LOCALE } from '../../../shared/lib/formatters';
 interface Props { usage: UsageMonth[]; }
 
 /**
@@ -36,7 +35,7 @@ function ChartContent({ usage }: Props) {
           <span className="font-montserrat text-[30px] font-extrabold leading-none tracking-[-.02em] tabular-nums text-ink-900">{fmt(total)}</span>
           {deltaPct !== null && (
             <span className="rounded-[2px] bg-brand-soft px-2 py-1 font-montserrat text-[10.5px] font-semibold text-brand-accent">
-              {deltaPct >= 0 ? '+' : ''}{deltaPct.toLocaleString('es-AR', { maximumFractionDigits: 1 })}%
+              {deltaPct >= 0 ? '+' : ''}{deltaPct.toLocaleString(APP_LOCALE, { maximumFractionDigits: 1 })}%
             </span>
           )}
         </div>

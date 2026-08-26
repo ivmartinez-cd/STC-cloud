@@ -10,8 +10,7 @@ import AgentVersionsCard from '../components/AgentVersionsCard';
 import MonitorPresenceCard from '../components/MonitorPresenceCard';
 import BrandDistributionCard from '../components/BrandDistributionCard';
 import TopClientsCard from '../components/TopClientsCard';
-import { fmt } from '../../../shared/lib/formatters';
-
+import { fmt, APP_LOCALE } from '../../../shared/lib/formatters';
 /** Rediseño hifi "Panel de Control" (handoff 25/08/2026): tres preguntas en
  * orden — ¿qué está roto ahora? (titulares) → ¿cuál es el estado global del
  * parque? (tira de KPIs) → ¿qué colas tengo que atender hoy? (alertas +
@@ -19,7 +18,7 @@ import { fmt } from '../../../shared/lib/formatters';
  * son de `app/layout/` y no se tocan acá. */
 
 function headerDate(d: Date): string {
-  const s = d.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  const s = d.toLocaleDateString(APP_LOCALE, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
@@ -47,7 +46,7 @@ const Dashboard = () => {
   const synced = !!lastSyncAt && !error;
   const syncLabel = lastSyncAt
     ? (synced
-      ? lastSyncAt.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false })
+      ? lastSyncAt.toLocaleTimeString(APP_LOCALE, { hour: '2-digit', minute: '2-digit', hour12: false })
       : `hace ${minutesAgo(lastSyncAt, Date.now())}m`)
     : '';
 

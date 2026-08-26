@@ -135,9 +135,12 @@ decisión de negocio, no una obligación de compliance.
   (resuelto una vez por request en `agentAuth`, sin queries extra), anclado
   al propio timestamp parseado (no a "ahora", evita un error de 1h cerca de
   una transición de DST con backlog). §2.1/§3 R7 queda resuelto.
-  **Lo que NO se hizo**: cosmética de locale en el portal (`es-AR`,
-  `formatDateAR` de reportes) — es un problema de visualización, no de
-  corrección de datos, se deja para una pasada de polish aparte.
+  **Lo que NO se hizo en esta pasada**: cosmética de locale en el portal
+  (`es-AR`, `formatDateAR` de reportes) — es un problema de visualización,
+  no de corrección de datos, se dejó para una pasada de polish aparte. ✅
+  (26/08/2026) Ver Fase 18 — `formatDateAR` en particular resultó tener un
+  bug real además de lo cosmético (TZ de Buenos Aires hardcodeada, no la
+  del agente).
 - ✅ **`scan_schedule` eliminado** (esta pasada, como remoción de código
   muerto — no como feature nueva): la columna (migración
   `20260823020000`), la interfaz `ScanSchedule`, y todo su manejo en
@@ -2321,6 +2324,96 @@ por el mismo argumento de red interna que ya usa el propio endpoint,
 documentado como comentario en `prometheus.yml` para quien lo active);
 Grafana Alerting nativo (decisión explícita, ver arriba, no un pendiente).
 
+### Fase 18 — Polish de locale: portal, agente y un bug real en el camino (26/08/2026) — completa
+
+Origen: último de los ítems reales que quedaban del backlog corto (junto a
+export PDF/SFTP de reportes, ya descartado por requerir decisiones de
+producto sobre credenciales/entrega que no correspondía asumir solo, y la
+UI de `credential_ids` — investigada primero, resultó ya estar cerrada
+desde el 25/08/2026, sólo una referencia cruzada de este mismo documento
+había quedado sin actualizar, corregida aparte sin abrir una fase). El
+propio R7/Fase 1 de este documento ya traía el hallazgo anotado como
+"cosmético, no un bug" — verificado antes de tocar nada, y **una de las
+dos partes SÍ resultó ser un bug real**, no sólo estético.
+
+✅ **Bug real encontrado, no buscado**: `formatDateAR`
+(`cloud/src/modules/agents/domain/services/agent-logs.ts`), usada por el
+reporte de auditoría de texto plano (`GET /agents/:id/logs/export`), tenía
+`timeZone: "America/Argentina/Buenos_Aires"` hardcodeado sin importar la
+TZ real configurada del agente (`business_hours.timezone`, Fase 1). Un
+cliente en Chile/México que descargara este reporte veía TODOS sus
+horarios corridos a hora argentina — no era cosmético, era el mismo tipo
+de defecto de datos que ya se había cerrado para ingesta (`agentService.ts`
+Fase 1) pero nunca se replicó a este endpoint de exportación. Threading:
+`AgentLogRepository` gana `findTimezone(agentId)` (lee
+`business_hours->>'timezone'` de `agents`, `null` si no está configurada);
+`AgentLogsUseCase.exportReport` la resuelve y la pasa a `buildLogsReport`/
+`formatDateAR` (ahora reciben `timezone` como parámetro en vez de asumirla),
+con fail-open a `DEFAULT_BUSINESS_HOURS.timezone` si el agente no tiene una
+seteada — mismo criterio de fail-open que el resto del módulo. 4 tests
+nuevos (`agentLogsReport.test.ts`, puros, sin DB): mismo instante formateado
+en dos TZ da horas distintas (verificado con Node real contra
+`America/Santiago` vs `America/Argentina/Buenos_Aires` — no asumido), TZ
+inválida no tira, timestamp de fila inválido no rompe el resto del reporte.
+
+✅ **Portal — sweep de `'es-AR'` fijo** (35 archivos + `formatters.ts`):
+nuevo `APP_LOCALE` exportado de `shared/lib/formatters.ts` — usa el idioma
+del navegador SI ya es alguna variante de español (`navigator.languages`,
+primer match que empiece con "es"), si no cae al `'es-AR'` de siempre.
+Deliberadamente NO deja que el navegador elija cualquier locale: el resto
+de la copy de este portal está fija en castellano, así que un operador con
+el SO en inglés viendo fechas en inglés en medio de una UI toda en español
+sería peor que el problema original. Verificado con Node real, no asumido
+— la premisa "es sólo cosmético entre variantes de español" no era del
+todo cierta: `es-CL` separa fecha con "-" en vez de "/" (`es-AR`/`es-MX`
+sí coinciden en "/"), y `es-MX` invierte el separador de miles/decimales
+respecto de `es-AR` en números. Sweep mecánico (script Python,
+`re`-based) sobre los 52 call-sites de `.toLocale{String,DateString,
+TimeString}('es-AR', ...)`: reemplazo del literal por `APP_LOCALE` +
+import agregado (mergeado en un import existente de `formatters.ts` si ya
+había uno, si no insertado nuevo). **Falla real del propio script,
+corregida a mano**: en 4 archivos que ya tenían un `import {\n ... \n}
+from '...'` multilínea (`IncidentDetail.tsx`, `ScheduledReports.tsx`,
+`SupplyRequestDetailModal.tsx`, `SupplyRequests.tsx`), la heurística de
+"insertar después del último import" sólo reconocía imports de una sola
+línea y partió el bloque multilínea a la mitad, rompiendo la sintaxis —
+detectado por `tsc`, no en silencio, corregido moviendo el import nuevo al
+lugar correcto en los 4. Verificado: `tsc --noEmit -p tsconfig.app.json`
+limpio, `npm run check` (icon-check + tsc + eslint) sin errores nuevos (los
+2 errores/2 warnings que quedan son de 2 archivos que esta pasada nunca
+tocó — confirmado con `git diff --stat`, preexistentes), `npm run build`
+completo sin errores.
+
+**Hallazgo menor en el camino**: el docblock de `fmt()` en `formatters.ts`
+citaba una convención del `portal/README.md` ("Números: locale es-AR...
+usar en toda cifra") que ya no existe en ese archivo ni en ningún doc vivo
+del repo — nota histórica desactualizada, no un mandato de producto
+vigente que este cambio estuviera contradiciendo. Corregida la cita.
+
+✅ **Agente — `Logger.ts`**: mismo criterio (`LOG_LOCALE`, resuelto con
+`Intl.DateTimeFormat().resolvedOptions().locale` — el locale que Node
+heredó del SO real donde corre el agente — con el mismo fallback a
+`'es-AR'` si no es español). Verificado con Node real que el cambio NO era
+inerte como parecía a primera vista (formato puramente numérico DD/MM/YYYY
+sin nombres de mes/día): `es-CL` sí cambia el separador a "-". 209/209
+tests de agente verdes tras el cambio (`logger.test.ts` no asume un
+formato de fecha exacto, no hubo que tocarlo).
+
+Verificado de punta a punta contra el stack Docker real (rebuild de
+`stc_api`, no sólo tests unitarios): `agentLogsReport.test.ts` 4/4,
+`tsc --noEmit` de `cloud` limpio.
+
+**Lo que NO se hizo**: un campo de "locale preferido" explícito por
+cliente/usuario (se optó por derivar del navegador en vez de agregar un
+concepto de datos nuevo — más simple y resuelve el mismo caso real: IT
+staff de un cliente en su país ya tiene el SO configurado en su propio
+locale); back-fill de reportes YA exportados/guardados con la TZ vieja
+(no hay tabla de reportes de logs guardados, se genera on-demand en cada
+`GET /logs/export`, no aplica); locale de `console.log`/pino del lado
+servidor (nunca fue `es-AR`, ya usa timestamps ISO — fuera del alcance de
+este hallazgo, que era específicamente sobre texto pensado para un
+lector humano).
+
 ### Otros puntos de §3 (riesgos) que siguen abiertos y no forman parte de ningún ítem de arriba
 - ✅ **R4 (parcial, 23/08/2026)**: el WS del portal ya NO acepta el JWT de
   sesión por query string. Investigado antes de tocarlo: no era vestigial —
@@ -2552,7 +2645,7 @@ Deploy limpio con `migrate:latest` crea `readings` con `id uuid PK`, sin hyperta
   activación/historial al reinstalar/desinstalar) — cerrado en la Fase 2
   ("mantener datos al desinstalar").
 
-### R7 · Zona horaria y multi‑país — **P1** — cerrado (funcional; queda cosmético)
+### R7 · Zona horaria y multi‑país — **P1** — cerrado
 ✅ Ya no hay TZ fija en ninguno de los 3 puntos citados por el hallazgo
 original — verificado contra el código, no sólo el doc (desactualizado
 acá también): `BusinessHours.ts` toma un `timezone` IANA por config (con
@@ -2568,10 +2661,13 @@ configurables por agente") — el hallazgo de R7 en esta sección nunca se
 había marcado como resuelto ahí, quedó como el único punto realmente
 pendiente: **cosmética de locale** (`es-AR` fijo en `Logger.ts` — formato
 de fecha, no la TZ real — y en el portal), que ya estaba explícitamente
-diferida en esa misma Fase 1 para una pasada de polish aparte (no es un
-bug funcional: un cliente en Chile/México ya tiene horario laboral y
-cierres mensuales correctos con su propia TZ, sólo ve fechas con formato
-argentino en vez del local).
+diferida en esa misma Fase 1 para una pasada de polish aparte (no era un
+bug funcional: un cliente en Chile/México ya tenía horario laboral y
+cierres mensuales correctos con su propia TZ, sólo veía fechas con formato
+argentino en vez del local). ✅ (26/08/2026) Ver Fase 18 — cerrado del
+todo, incluido un bug real que apareció en el camino (`formatDateAR` del
+reporte de logs exportado sí tenía la TZ de Buenos Aires hardcodeada, no
+cosmético).
 
 ### R8 · Cobertura de marcas — **P1**
 Familias reales sólo HP/Samsung/Lexmark (18 perfiles). Ricoh/Brother/Xerox → `generic.ews` + OIDs parciales (`BROTHER_OIDS.totalPages` vacío; Xerox mono=color). Canon, Kyocera, Konica Minolta, Epson, Sharp, Toshiba, OKI, Pantum ni siquiera son `Brand` → caen a `generic` (Printer‑MIB sirve para total/insumos, pero sin desglose color ni alertas ricas). En un MPS multimarca esto limita la promesa comercial.
@@ -2814,7 +2910,7 @@ que este hallazgo nombraba explícitamente.
 - ✅ **RBAC por cliente**: rol `client_viewer`, scoping por `client_id` en todos los controladores. ✅ (25/08/2026) Paginación server-side real en el primer listado (`GET /devices` + `Devices.tsx`, ver R9). ✅ (26/08/2026) Resto del portal — ver Fase 10: la mayoría ya la tenía, se cerraron los 2 huecos reales (`EmailLog`/`SupplyRequests`) y se borró un cluster de código muerto (`Monitors.tsx`). Sólo `Alerts.tsx` (paginación "ciega", funcional pero sin total) y `ScheduledReports.tsx` (sin paginar, bajo riesgo) quedan como decisión de alcance, no pendiente.
 - ✅ **SNMPv3 y lista de credenciales** (v1/v2c/v3) por agente, hasta 8 credenciales probadas en orden, secretos cifrados at-rest, fail-fast para no multiplicar timeouts contra un host muerto.
 - ✅ **CIDR + tope de rango + exclusiones**: `ip_ranges` acepta CIDR y exclusión de IPs individuales, compilado del lado cloud a pares planos (cero cambios en el agente); tope de 2000 IPs declaradas por agente, validado en cloud y reforzado en el agente. ⬜ Exclusión de sub-rangos/CIDR anidados e IPv6 quedan fuera.
-- ✅ **Horario laboral y TZ configurables** por agente: `agents.business_hours` (jsonb, default = comportamiento hardcodeado de siempre), enviado en heartbeat config; de paso corrige el offset `-03:00` hardcodeado al ingerir logs/lecturas naive de agentes viejos, usando el TZ real del agente. ⬜ Cosmética de locale del portal (`es-AR`) queda para una pasada de polish aparte.
+- ✅ **Horario laboral y TZ configurables** por agente: `agents.business_hours` (jsonb, default = comportamiento hardcodeado de siempre), enviado en heartbeat config; de paso corrige el offset `-03:00` hardcodeado al ingerir logs/lecturas naive de agentes viejos, usando el TZ real del agente. ✅ Cosmética de locale del portal (`es-AR`) — cerrada 26/08/2026, ver Fase 18.
 - ✅ `scan_schedule`: eliminado como código muerto (columna, tipo, y todo su manejo en cloud) — se había implementado y reemplazado deliberadamente por el modelo de 3 loops + horario laboral 4 días después, en mayo; el backend nunca se limpió hasta ahora. No se reimplementó: sin spec vigente que pida un scheduler tipo cron conviviendo con horario laboral.
 - ✅ **Resolución de hostname (point lookup) + credenciales SNMP por rango**: `ip_ranges` acepta un tercer tipo de entrada `{hostname}` resuelto por el agente en cada ciclo (el cloud no tiene visibilidad de la DNS interna del cliente); cada entrada admite `credential_ids?` para restringir qué credenciales se prueban en ESE rango durante discovery, con fail-open ante ids colgantes y warnings no bloqueantes (rangos superpuestos con credenciales distintas, borrado de una credencial referenciada). ✅ UI de asignación de `credential_ids` en el portal — nota desactualizada, ya cerrada 25/08/2026 (ver "Estado de implementación" arriba, `CredentialIdsSelect.tsx`); restricción por rango en meter/supplies no se hizo (`known_devices` no tiene vínculo a rango, y no aporta valor real ahí).
 - ✅ Identidad `(client_id, serial)` + MAC secundaria + merge de duplicados; decommission/mover/editar dispositivo.

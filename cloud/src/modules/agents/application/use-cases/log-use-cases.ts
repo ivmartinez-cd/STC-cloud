@@ -22,10 +22,13 @@ export class AgentLogsUseCase {
     return this.logs.listRecent(agentId, limit);
   }
 
-  /** Últimos 1000 en orden cronológico, como reporte de texto plano. */
+  /** Últimos 1000 en orden cronológico, como reporte de texto plano — en la TZ real del agente, no una fija. */
   async exportReport(agentId: string): Promise<string> {
-    const logs = await this.logs.listRecent(agentId, 1000);
+    const [logs, timezone] = await Promise.all([
+      this.logs.listRecent(agentId, 1000),
+      this.logs.findTimezone(agentId),
+    ]);
     logs.reverse();
-    return buildLogsReport(agentId, logs);
+    return buildLogsReport(agentId, logs, timezone ?? DEFAULT_BUSINESS_HOURS.timezone);
   }
 }

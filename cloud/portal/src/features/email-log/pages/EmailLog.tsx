@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Loader2, MailCheck } from 'lucide-react';
 import { api } from '../../../shared/lib/api';
 import SimplePagination from '../../../shared/components/SimplePagination';
+import { APP_LOCALE } from '../../../shared/lib/formatters';
 
 const PAGE_SIZE = 50;
 
@@ -42,7 +43,7 @@ const EVENT_LABELS: Record<string, string> = {
 };
 
 function fmtDate(v: string): string {
-  return new Date(v).toLocaleString('es-AR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+  return new Date(v).toLocaleString(APP_LOCALE, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
 }
 
 const selectCls = 'bg-white text-slate-700 text-sm font-bold px-4 py-2.5 rounded-2xl border border-slate-200 outline-none focus:border-brand cursor-pointer';

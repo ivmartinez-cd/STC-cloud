@@ -6,6 +6,7 @@ import ConfigCardShell from './ConfigCardShell';
 import EstadoChip from '../../../shared/components/EstadoChip';
 import type { IncidentRule } from '../../../shared/types/incidents';
 import type { AlertClassOption } from '../../../shared/types/alerts';
+import { APP_LOCALE } from '../../../shared/lib/formatters';
 
 /**
  * Reglas de auto-creación de incidentes por cliente (Fase 11 del gap
@@ -66,7 +67,7 @@ export default function IncidentRulesCard({ clientId, canEdit }: { clientId: str
     <ConfigCardShell
       title="Reglas de incidentes automáticos"
       status={{ label: activeCount > 0 ? `${activeCount} activas` : 'SIN CONFIGURAR', active: activeCount > 0 }}
-      meta={lastEdited ? `Última edición ${new Date(lastEdited).toLocaleDateString('es-AR')}` : 'Sin ediciones'}
+      meta={lastEdited ? `Última edición ${new Date(lastEdited).toLocaleDateString(APP_LOCALE)}` : 'Sin ediciones'}
       cta={{ label: saving ? 'Guardando…' : 'Administrar', onClick: save }}
     >
       <p className="mb-4 font-sans text-[12.5px] text-ink-400">

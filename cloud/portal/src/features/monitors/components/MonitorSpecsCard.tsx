@@ -1,4 +1,4 @@
-import { formatRelativeTime } from '../../../shared/lib/formatters';
+import { formatRelativeTime, APP_LOCALE } from '../../../shared/lib/formatters';
 import type { MonitorData } from '../../../shared/types/monitor';
 import type { AgentStats } from '../types/monitorDetail';
 
@@ -29,8 +29,8 @@ function formatSweep(iso: string | null, newCount: number): string {
   const d = new Date(iso);
   const today = new Date();
   const isToday = d.toDateString() === today.toDateString();
-  const time = d.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
-  const base = isToday ? `Hoy ${time}` : `${d.toLocaleDateString('es-AR')} ${time}`;
+  const time = d.toLocaleTimeString(APP_LOCALE, { hour: '2-digit', minute: '2-digit' });
+  const base = isToday ? `Hoy ${time}` : `${d.toLocaleDateString(APP_LOCALE)} ${time}`;
   return newCount > 0 ? `${base} · ${newCount} nuevo${newCount === 1 ? '' : 's'}` : base;
 }
 

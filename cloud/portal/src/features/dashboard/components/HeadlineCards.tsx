@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import type { DashboardData } from '../../../shared/types/monitor';
-import { fmt, pctOf } from '../../../shared/lib/formatters';
+import { fmt, pctOf, APP_LOCALE } from '../../../shared/lib/formatters';
 import CardError from '../../../shared/components/CardError';
 import MiniBar from './MiniBar';
 import SkeletonBlock from './Skeleton';
@@ -59,7 +59,7 @@ function AlertsCard({ alertsByClass, loading, error, onRetry }: Pick<HeadlinePro
 
   return (
     <Shell accent="var(--color-brand)">
-      <Header label="Alertas activas" delta={!loading && !error && top1 ? `${pct1.toLocaleString('es-AR')}% ${top1.label.toLowerCase()}` : undefined} />
+      <Header label="Alertas activas" delta={!loading && !error && top1 ? `${pct1.toLocaleString(APP_LOCALE)}% ${top1.label.toLowerCase()}` : undefined} />
       {error ? (
         <CardError onRetry={onRetry} className="py-6" />
       ) : loading ? (
@@ -94,7 +94,7 @@ function OfflineMonitorsCard({ stats, loading, error, onRetry }: Pick<HeadlinePr
 
   return (
     <Shell accent="var(--color-severity-critical)">
-      <Header label="Monitores sin conexión" delta={!loading && !error ? `${pctOffline.toLocaleString('es-AR', { maximumFractionDigits: 1 })}% del parque` : undefined} />
+      <Header label="Monitores sin conexión" delta={!loading && !error ? `${pctOffline.toLocaleString(APP_LOCALE, { maximumFractionDigits: 1 })}% del parque` : undefined} />
       {error ? (
         <CardError onRetry={onRetry} className="py-6" />
       ) : loading ? (
@@ -145,7 +145,7 @@ function VolumeCard({ stats, loading, error, onRetry }: Pick<HeadlineProps, 'sta
 
   return (
     <Shell accent="var(--color-brand-gray)">
-      <Header label="Volumen mensual" delta={!loading && !error && deltaPct != null ? `${deltaPct > 0 ? '+' : ''}${deltaPct.toLocaleString('es-AR', { maximumFractionDigits: 1 })}% vs mes anterior` : undefined} />
+      <Header label="Volumen mensual" delta={!loading && !error && deltaPct != null ? `${deltaPct > 0 ? '+' : ''}${deltaPct.toLocaleString(APP_LOCALE, { maximumFractionDigits: 1 })}% vs mes anterior` : undefined} />
       {error ? (
         <CardError onRetry={onRetry} className="py-6" />
       ) : loading ? (

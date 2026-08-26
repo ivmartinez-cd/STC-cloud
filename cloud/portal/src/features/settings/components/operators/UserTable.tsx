@@ -1,5 +1,6 @@
 import { Key, Trash2 } from 'lucide-react';
 import type { DBUser } from '../../types/settings';
+import { APP_LOCALE } from '../../../../shared/lib/formatters';
 
 export default function UserTable({
   users,
@@ -72,7 +73,7 @@ export default function UserTable({
                 </button>
               </td>
               <td className="px-6 py-4 text-xs font-medium text-slate-500">
-                {new Date(u.created_at).toLocaleDateString('es-AR', {
+                {new Date(u.created_at).toLocaleDateString(APP_LOCALE, {
                   day: '2-digit',
                   month: '2-digit',
                   year: 'numeric',

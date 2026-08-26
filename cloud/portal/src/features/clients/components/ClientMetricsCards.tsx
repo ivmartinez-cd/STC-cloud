@@ -3,7 +3,7 @@ import type { Client, Monitor, UsageMonth } from '../../../shared/types/monitor'
 import type { ClientDetailStats } from '../types/clientDetail';
 import { currentMonthDelta } from '../lib/usageMonths';
 import { OFFLINE_THRESHOLD_MS } from '../../../shared/lib/constants';
-import { fmt } from '../../../shared/lib/formatters';
+import { fmt, APP_LOCALE } from '../../../shared/lib/formatters';
 import { useAuth } from '../../../store/AuthContext';
 import { useDuplicateDevices } from '../hooks/useDuplicateDevices';
 
@@ -75,7 +75,7 @@ export default function ClientMetricsCards({
     {
       label: 'Volumen del mes', value: fmt(volumeMonth),
       note: deltaPct !== null && previousMonthLabel
-        ? `páginas · ${deltaPct >= 0 ? '+' : ''}${deltaPct.toLocaleString('es-AR', { maximumFractionDigits: 1 })}% vs ${previousMonthLabel}`
+        ? `páginas · ${deltaPct >= 0 ? '+' : ''}${deltaPct.toLocaleString(APP_LOCALE, { maximumFractionDigits: 1 })}% vs ${previousMonthLabel}`
         : 'páginas',
     },
     {

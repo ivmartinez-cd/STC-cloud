@@ -1,6 +1,7 @@
 import { Trash2 } from 'lucide-react';
 import type { ApiKeyRecord } from '../../../shared/types/monitor';
 import { isExpired } from './apiKeysHelpers';
+import { APP_LOCALE } from '../../../shared/lib/formatters';
 
 export default function ApiKeyRow({ k, canEdit, onRevoke }: { k: ApiKeyRecord; canEdit: boolean; onRevoke: (k: ApiKeyRecord) => void }) {
   const expired = isExpired(k);
@@ -14,8 +15,8 @@ export default function ApiKeyRow({ k, canEdit, onRevoke }: { k: ApiKeyRecord; c
           )}
         </p>
         <p className="font-mono text-[10.5px] text-ink-300">
-          {k.key_prefix}… {k.last_used_at ? `· usada ${new Date(k.last_used_at).toLocaleDateString('es-AR')}` : '· nunca usada'}
-          {k.expires_at && ` · ${expired ? 'venció' : 'vence'} ${new Date(k.expires_at).toLocaleDateString('es-AR')}`}
+          {k.key_prefix}… {k.last_used_at ? `· usada ${new Date(k.last_used_at).toLocaleDateString(APP_LOCALE)}` : '· nunca usada'}
+          {k.expires_at && ` · ${expired ? 'venció' : 'vence'} ${new Date(k.expires_at).toLocaleDateString(APP_LOCALE)}`}
         </p>
       </div>
       {canEdit && (

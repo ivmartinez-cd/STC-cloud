@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Check, Copy } from 'lucide-react';
-import { fmt } from '../../../shared/lib/formatters';
+import { fmt, APP_LOCALE } from '../../../shared/lib/formatters';
 import type { MonitorData } from '../../../shared/types/monitor';
 import type { AgentLicense } from '../types/monitorDetail';
 
@@ -134,11 +134,11 @@ export default function LicenseCard({ monitor, license, loading, error, onRetry,
 
           <div className="flex items-center justify-between border-b border-line-200 py-2">
             <span className="font-sans text-[12.5px] text-ink-700">Emitida</span>
-            <span className="font-sans text-[12.5px] font-semibold text-ink-900">{new Date(license.emitida_at).toLocaleDateString('es-AR')}</span>
+            <span className="font-sans text-[12.5px] font-semibold text-ink-900">{new Date(license.emitida_at).toLocaleDateString(APP_LOCALE)}</span>
           </div>
           <div className="flex items-center justify-between py-2">
             <span className="font-sans text-[12.5px] text-ink-700">Próxima rotación</span>
-            <span className="font-sans text-[12.5px] font-semibold text-ink-900">{new Date(license.proxima_rotacion_at).toLocaleDateString('es-AR')}</span>
+            <span className="font-sans text-[12.5px] font-semibold text-ink-900">{new Date(license.proxima_rotacion_at).toLocaleDateString(APP_LOCALE)}</span>
           </div>
         </div>
       )}

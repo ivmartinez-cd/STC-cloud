@@ -1,5 +1,6 @@
 import type { Device } from '../../../shared/types/monitor';
 import type { AgentDeviceDirectoryRow, AgentDeviceSegment, AgentDeviceSortField } from '../types/monitorDetail';
+import { APP_LOCALE } from '../../../shared/lib/formatters';
 
 // La casilla de selección es una columna propia (28px) — antes compartía la
 // pista ancha con "equipo" (el header nunca reservaba un track para ella),
@@ -56,7 +57,7 @@ export function pageWindow(current: number, totalPages: number): Array<number | 
 }
 
 export function exportCountersCSV(devices: Device[], monitorName: string, discriminate: boolean) {
-  const today = new Date().toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  const today = new Date().toLocaleDateString(APP_LOCALE, { day: '2-digit', month: '2-digit', year: 'numeric' });
   const rows = ['SERIE;FECHA;TIPO;CLASE;CONTADOR;CLASE;CONTADOR;MOTIVO;OBSERVACIONES;NUMERO_ACTIVO;NUMERO_ETIQUETA;USO_30D;CICLO_TRABAJO'];
 
   for (const d of devices) {

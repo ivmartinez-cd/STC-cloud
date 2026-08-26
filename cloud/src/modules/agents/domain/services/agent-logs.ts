@@ -22,11 +22,20 @@ export function buildAgentLogRows(agentId: string, logs: IncomingLogEntry[], tim
   });
 }
 
-export function formatDateAR(date: Date): string {
+/**
+ * `timezone`: hallazgo de la pasada de locale (26/08/2026) — antes tenía
+ * `America/Argentina/Buenos_Aires` hardcodeado acá, así que un cliente en
+ * Chile/México descargando este reporte veía sus propios horarios
+ * desplazados a hora argentina. Ahora recibe la TZ real del agente
+ * (`business_hours.timezone`, resuelta en `AgentLogsUseCase.exportReport`),
+ * mismo criterio que ya usa `buildAgentLogRows` para interpretar timestamps
+ * naive al ingerir.
+ */
+export function formatDateAR(date: Date, timezone: string): string {
   try {
     const formatter = new Intl.DateTimeFormat("es-AR", {
       day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit",
-      hour12: false, timeZone: "America/Argentina/Buenos_Aires",
+      hour12: false, timeZone: timezone,
     });
     const parts = formatter.formatToParts(date);
     const get = (type: string) => parts.find((p) => p.type === type)?.value;
@@ -37,15 +46,15 @@ export function formatDateAR(date: Date): string {
 }
 
 /** Reporte de auditoría en texto plano para `GET /agents/:id/logs/export`. */
-export function buildLogsReport(id: string, logs: Array<{ timestamp?: string; level?: string; message: string }>): string {
+export function buildLogsReport(id: string, logs: Array<{ timestamp?: string; level?: string; message: string }>, timezone: string): string {
   const rule = "--------------------------------------------------------------------------------\n";
   const double = "================================================================================\n";
   let report = `${double}STC CLOUD - REPORTE DE AUDITORÍA DE AGENTE\n${double}`;
-  report += `Agente ID: ${id}\nGenerado:  ${formatDateAR(new Date())}\n${rule}\n`;
+  report += `Agente ID: ${id}\nGenerado:  ${formatDateAR(new Date(), timezone)}\n${rule}\n`;
   report += `[ FECHA Y HORA ]        [ NIVEL ]   [ MENSAJE ]\n${rule}`;
   logs.forEach((l) => {
     const dateObj = new Date(l.timestamp ?? 0);
-    const time = isNaN(dateObj.getTime()) ? "---" : formatDateAR(dateObj);
+    const time = isNaN(dateObj.getTime()) ? "---" : formatDateAR(dateObj, timezone);
     report += `${time.padEnd(23)} ${(l.level || "INFO").padEnd(8)} ${l.message}\n`;
   });
   return report + `\n${rule}Fin del reporte - STC Cloud Monitor\n`;

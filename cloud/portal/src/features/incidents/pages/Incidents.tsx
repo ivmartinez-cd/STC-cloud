@@ -7,6 +7,7 @@ import type { Incident, IncidentListResponse } from '../../../shared/types/incid
 import type { AlertClassOption } from '../../../shared/types/alerts';
 import { INCIDENT_STATUS_LABELS, INCIDENT_STATUS_COLORS, type IncidentStatus } from '../../../shared/lib/constants';
 import CreateIncidentModal from '../../../shared/components/CreateIncidentModal';
+import { APP_LOCALE } from '../../../shared/lib/formatters';
 
 interface ClientOption { id: string; name: string; }
 
@@ -14,7 +15,7 @@ const PAGE_SIZE = 50;
 
 function fmtDate(v: string | null): string {
   if (!v) return '—';
-  return new Date(v).toLocaleString('es-AR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  return new Date(v).toLocaleString(APP_LOCALE, { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
 function fmtAging(seconds: number | string): string {
