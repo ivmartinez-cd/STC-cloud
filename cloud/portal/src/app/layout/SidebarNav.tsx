@@ -95,11 +95,7 @@ export default function SidebarNav({
     <>
       {sections.map((section) => {
         const headingId = `nav-section-${section.title}`;
-        const hasActive = section.items.some((i) => isPathActive(i.path, pathname));
-        // La sección que contiene la ruta activa nunca queda oculta, aunque el
-        // usuario la haya colapsado — si no, navegar (por buscador, URL directa)
-        // podría dejar el ítem activo invisible sin aviso.
-        const open = hasActive || !closedSections[section.title];
+        const open = !closedSections[section.title];
 
         return (
           <div key={section.title} className="pt-3.5">
