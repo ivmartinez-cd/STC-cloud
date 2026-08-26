@@ -10,7 +10,7 @@ interface AuthContextType {
   clientId: string | null;
   checking: boolean;
   totpEnrollmentRequired: boolean;
-  login: (username: string, password: string, totpCode?: string) => Promise<void>;
+  login: (username: string, password: string, totpCode?: string, remember?: boolean) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -45,12 +45,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .finally(() => setChecking(false));
   }, []);
 
-  const login = useCallback(async (username: string, password: string, totpCode?: string) => {
+  const login = useCallback(async (username: string, password: string, totpCode?: string, remember?: boolean) => {
     const res = await fetch('/api/v1/portal/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
-      body: JSON.stringify({ username, password, ...(totpCode ? { totp_code: totpCode } : {}) }),
+      body: JSON.stringify({ username, password, ...(totpCode ? { totp_code: totpCode } : {}), ...(remember ? { remember: true } : {}) }),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {

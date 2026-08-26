@@ -34,6 +34,7 @@ const portalLoginSchema = {
     properties: {
       username: { type: "string" },
       password: { type: "string" },
+      remember: { type: "boolean" },
     },
   },
 };
@@ -89,6 +90,14 @@ export function registerAuthRoutes(
     schema: portalLoginSchema,
     config: { rateLimit: { max: 10, timeWindow: "1 minute" } },
     handler: ctrl.portalLogin,
+  });
+
+  // Público (sin `preHandler`): la tira de métricas del panel de marca en /login
+  // se ve antes de autenticar. Cacheado en Redis (ver login-stats.ts) para que
+  // quedar expuesto sin sesión no habilite pegarle a la DB en cada carga.
+  fastify.get("/api/v1/portal/login-stats", {
+    config: { rateLimit: { max: 30, timeWindow: "1 minute" } },
+    handler: ctrl.loginStats,
   });
 
   fastify.post("/api/v1/portal/logout", { handler: ctrl.portalLogout });

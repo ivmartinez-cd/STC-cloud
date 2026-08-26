@@ -10,7 +10,7 @@ import { verifyPassword } from "../../utils/password";
 import { getClientIp } from "../../utils/ip";
 import type { PortalUser } from "../../middlewares/authMiddleware";
 import type { LoginBody } from "./shared";
-import { JWT_PORTAL_TTL } from "./shared";
+import { JWT_PORTAL_TTL, JWT_PORTAL_REMEMBER_TTL } from "./shared";
 
 /**
  * R5 del gap analysis vs HP SDS ("Audit logs ausentes para: ... logins"):
@@ -30,7 +30,7 @@ async function auditLoginFailure(db: Knex, request: FastifyRequest, username: st
 }
 
 async function portalLogin(fastify: FastifyInstance, db: Knex, request: FastifyRequest, reply: FastifyReply) {
-  const { username, password } = request.body as LoginBody;
+  const { username, password, remember } = request.body as LoginBody;
 
   if (!username || !password) {
     return reply.status(400).send({ error: "Usuario y contraseña son requeridos" });
@@ -92,14 +92,14 @@ async function portalLogin(fastify: FastifyInstance, db: Knex, request: FastifyR
 
   const token = fastify.jwt.sign(
     { role: "portal", userId: user.id },
-    { expiresIn: JWT_PORTAL_TTL }
+    { expiresIn: remember ? JWT_PORTAL_REMEMBER_TTL : JWT_PORTAL_TTL }
   );
   const isProd = process.env.NODE_ENV === "production";
   const cookieOpts = {
     secure: isProd,
     sameSite: (isProd ? "none" : "lax") as "none" | "lax",
     path: "/",
-    maxAge: 8 * 60 * 60,
+    maxAge: remember ? 30 * 24 * 60 * 60 : 8 * 60 * 60,
   };
   reply.setCookie("stc_session", token, { ...cookieOpts, httpOnly: true });
 

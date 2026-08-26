@@ -6,6 +6,7 @@ import { createAuthSessionHandlers } from "./session";
 import { createAuthUserHandlers } from "./users";
 import { createAuthAgentHandlers } from "./agent-auth";
 import { createAuthAgentVersionHandlers } from "./agent-version";
+import { createLoginStatsHandler } from "./login-stats";
 
 /**
  * Controller de autenticación (portal + agentes) y usuarios (Fase 2 de
@@ -19,5 +20,6 @@ export function createAuthController(fastify: FastifyInstance, db: Knex, redis: 
     ...createAuthUserHandlers(db),
     ...createAuthAgentHandlers(fastify, agentService),
     ...createAuthAgentVersionHandlers(fastify, redis),
+    ...createLoginStatsHandler(db, redis),
   };
 }

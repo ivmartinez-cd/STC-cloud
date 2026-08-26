@@ -155,3 +155,9 @@ export function fmtPct(part: number, total: number): string {
 export function fmt(n: number): string {
   return n.toLocaleString(APP_LOCALE);
 }
+
+/** Compacto tipo "5,3 M" (handoff hifi "Login", 26/08/2026) — sólo para la tira de
+ * métricas de marca, donde el ancho de columna (148px) no da para el número completo. */
+export function fmtCompact(n: number): string {
+  return n.toLocaleString(APP_LOCALE, { notation: 'compact', compactDisplay: 'short', maximumFractionDigits: 1 });
+}

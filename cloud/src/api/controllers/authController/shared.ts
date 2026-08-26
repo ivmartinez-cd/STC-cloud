@@ -1,5 +1,7 @@
-/** Cuerpo de login del portal. */
-export interface LoginBody { username: string; password: string; }
+/** Cuerpo de login del portal. `remember` (handoff hifi "Login", 26/08/2026):
+ * "Mantener la sesión abierta en este equipo" — extiende el TTL de la cookie
+ * de `JWT_PORTAL_TTL` (8h) a `JWT_PORTAL_REMEMBER_TTL` (30d). */
+export interface LoginBody { username: string; password: string; remember?: boolean; }
 
 /** Cuerpo de creación de usuario. */
 export interface CreateUserBody { username: string; password: string; role?: string; client_id?: string; }
@@ -21,3 +23,4 @@ export interface IdParams { id: string; }
 
 export const JWT_AGENT_TTL = "30d";
 export const JWT_PORTAL_TTL = "8h";
+export const JWT_PORTAL_REMEMBER_TTL = "30d";
