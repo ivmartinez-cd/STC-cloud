@@ -4,7 +4,6 @@
     "src/tests/deviceLifecycle.test.ts": 467,
     "src/tests/e2e.test.ts": 521,
     "src/tests/incidents.test.ts": 324,
-    "src/tests/ipRangeSpec.test.ts": 361,
     "src/tests/publicApi.test.ts": 360,
     "src/tests/rbac.test.ts": 765
   },
