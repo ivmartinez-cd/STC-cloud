@@ -1,7 +1,6 @@
 {
   "files": {
     "src/tests/alerts.test.ts": 529,
-    "src/tests/deviceLifecycle.test.ts": 467,
     "src/tests/e2e.test.ts": 521,
     "src/tests/rbac.test.ts": 765
   },
@@ -362,22 +361,22 @@
         "length": 23
       }
     ],
-    "src/modules/clients/application/use-cases/client-sftp-use-cases.ts": [
-      {
-        "name": "execute",
-        "length": 21
-      }
-    ],
     "src/modules/clients/infrastructure/database/knex-client-repository/directory.ts": [
       {
         "name": "summarizePortfolioRows",
         "length": 24
       }
     ],
+    "src/modules/clients/presentation/client-controller.ts": [
+      {
+        "name": "integrationHandlers",
+        "length": 27
+      }
+    ],
     "src/modules/clients/presentation/client-routes.ts": [
       {
         "name": "registerClientRoutes",
-        "length": 43
+        "length": 50
       }
     ],
     "src/modules/devices/application/use-cases/bulk-lifecycle-use-cases.ts": [
