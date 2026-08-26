@@ -72,6 +72,44 @@ function NewKeyModal({ name, apiKey, onClose }: { name: string; apiKey: string; 
 
 const ALL_EVENTS: PublicApiEvent[] = ['reading.created', 'alert.created', 'report.closed'];
 
+/** '' = sin vencimiento (comportamiento de siempre). */
+const EXPIRY_OPTIONS: Array<{ value: string; label: string }> = [
+  { value: '', label: 'Sin vencimiento' },
+  { value: '30', label: '30 días' },
+  { value: '90', label: '90 días' },
+  { value: '365', label: '1 año' },
+];
+
+function isExpired(k: ApiKeyRecord): boolean {
+  return !!k.expires_at && new Date(k.expires_at).getTime() <= Date.now();
+}
+
+function ApiKeyRow({ k, canEdit, onRevoke }: { k: ApiKeyRecord; canEdit: boolean; onRevoke: (k: ApiKeyRecord) => void }) {
+  const expired = isExpired(k);
+  return (
+    <div className="group flex items-center justify-between gap-3 py-2">
+      <div className="min-w-0">
+        <p className="truncate font-sans text-[13px] font-semibold text-ink-900">
+          {k.name}
+          {expired && (
+            <span className="ml-2 rounded-[2px] bg-brand-soft px-1.5 py-0.5 font-montserrat text-[8.5px] font-bold uppercase tracking-[.08em] text-brand-severe">Vencida</span>
+          )}
+        </p>
+        <p className="font-mono text-[10.5px] text-ink-300">
+          {k.key_prefix}… {k.last_used_at ? `· usada ${new Date(k.last_used_at).toLocaleDateString('es-AR')}` : '· nunca usada'}
+          {k.expires_at && ` · ${expired ? 'venció' : 'vence'} ${new Date(k.expires_at).toLocaleDateString('es-AR')}`}
+        </p>
+      </div>
+      {canEdit && (
+        <button onClick={() => onRevoke(k)}
+          className="shrink-0 rounded-[3px] p-2 text-ink-200 opacity-0 transition-colors duration-150 ease-in-out hover:bg-brand-soft hover:text-brand-severe group-hover:opacity-100">
+          <Trash2 size={15} />
+        </button>
+      )}
+    </div>
+  );
+}
+
 function WebhookSection({ clientId, canEdit }: { clientId: string; canEdit: boolean }) {
   const { showToast } = useToast();
   const [config, setConfig] = useState<WebhookConfig | null>(null);
@@ -220,6 +258,7 @@ export default function ApiKeysCard({ clientId, canEdit }: { clientId: string; c
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState('');
+  const [newExpiry, setNewExpiry] = useState('');
   const [busy, setBusy] = useState(false);
   const [newKeyModal, setNewKeyModal] = useState<{ name: string; key: string } | null>(null);
   const [keyToRevoke, setKeyToRevoke] = useState<ApiKeyRecord | null>(null);
@@ -238,9 +277,13 @@ export default function ApiKeysCard({ clientId, canEdit }: { clientId: string; c
     if (!newName.trim()) return;
     setBusy(true);
     try {
-      const created = await api.post<{ id: string; key: string; name: string }>(`/clients/${clientId}/api-keys`, { name: newName.trim() });
+      const created = await api.post<{ id: string; key: string; name: string }>(`/clients/${clientId}/api-keys`, {
+        name: newName.trim(),
+        ...(newExpiry ? { expires_in_days: Number(newExpiry) } : {}),
+      });
       setNewKeyModal({ name: created.name, key: created.key });
       setNewName('');
+      setNewExpiry('');
       setCreating(false);
       load();
     } catch (err: unknown) {
@@ -265,13 +308,16 @@ export default function ApiKeysCard({ clientId, canEdit }: { clientId: string; c
     }
   };
 
-  const activeKeys = keys.filter((k) => !k.revoked_at);
+  // "Activa" de verdad: ni revocada ni vencida. Una vencida sigue LISTADA
+  // (el admin necesita verla para renovarla) pero no cuenta para el header.
+  const visibleKeys = keys.filter((k) => !k.revoked_at);
+  const activeCount = visibleKeys.filter((k) => !isExpired(k)).length;
 
   return (
     <ConfigCardShell
       title="API pública / integración ERP"
-      status={{ label: activeKeys.length > 0 ? `${activeKeys.length} activa${activeKeys.length === 1 ? '' : 's'}` : 'SIN CONFIGURAR', active: activeKeys.length > 0 }}
-      meta={activeKeys.length > 0 ? `${activeKeys.length} clave(s) activa(s)` : 'Sin claves activas'}
+      status={{ label: activeCount > 0 ? `${activeCount} activa${activeCount === 1 ? '' : 's'}` : 'SIN CONFIGURAR', active: activeCount > 0 }}
+      meta={activeCount > 0 ? `${activeCount} clave(s) activa(s)` : 'Sin claves activas'}
       cta={{ label: 'Generar token', onClick: () => setCreating(true) }}
     >
       <p className="mb-3.5 font-sans text-[12.5px] leading-[1.55] text-ink-100">
@@ -283,11 +329,15 @@ export default function ApiKeysCard({ clientId, canEdit }: { clientId: string; c
           <input type="text" value={newName} onChange={(e) => setNewName(e.target.value)}
             placeholder="Nombre (ej. Integración SAP)"
             className="flex-1 rounded-[3px] border border-line-300 bg-white px-3 py-2.5 font-sans text-[13px] text-ink-900 outline-none focus:border-brand" />
+          <select value={newExpiry} onChange={(e) => setNewExpiry(e.target.value)}
+            className="shrink-0 rounded-[3px] border border-line-300 bg-white px-2.5 py-2.5 font-sans text-[12.5px] text-ink-900 outline-none focus:border-brand">
+            {EXPIRY_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
           <button onClick={handleCreate} disabled={busy || !newName.trim()}
             className="rounded-[3px] bg-brand px-4 py-2.5 font-montserrat text-[10.5px] font-semibold uppercase tracking-[.08em] text-white transition-colors duration-150 ease-in-out hover:bg-brand-severe disabled:opacity-60">
             {busy ? <Loader2 size={14} className="animate-spin" /> : 'Crear'}
           </button>
-          <button onClick={() => { setCreating(false); setNewName(''); }} className="rounded-[3px] p-2.5 text-ink-300 transition-colors duration-150 ease-in-out hover:bg-surface-btn-hover hover:text-ink-600">
+          <button onClick={() => { setCreating(false); setNewName(''); setNewExpiry(''); }} className="rounded-[3px] p-2.5 text-ink-300 transition-colors duration-150 ease-in-out hover:bg-surface-btn-hover hover:text-ink-600">
             <X size={16} />
           </button>
         </div>
@@ -295,25 +345,12 @@ export default function ApiKeysCard({ clientId, canEdit }: { clientId: string; c
 
       {loading ? (
         <p className="font-sans text-[12.5px] text-ink-300">Cargando…</p>
-      ) : activeKeys.length === 0 ? (
+      ) : visibleKeys.length === 0 ? (
         <p className="font-sans text-[13px] italic text-ink-200">Sin API keys activas</p>
       ) : (
         <div className="space-y-2">
-          {activeKeys.map((k) => (
-            <div key={k.id} className="group flex items-center justify-between gap-3 py-2">
-              <div className="min-w-0">
-                <p className="truncate font-sans text-[13px] font-semibold text-ink-900">{k.name}</p>
-                <p className="font-mono text-[10.5px] text-ink-300">
-                  {k.key_prefix}… {k.last_used_at ? `· usada ${new Date(k.last_used_at).toLocaleDateString('es-AR')}` : '· nunca usada'}
-                </p>
-              </div>
-              {canEdit && (
-                <button onClick={() => setKeyToRevoke(k)}
-                  className="shrink-0 rounded-[3px] p-2 text-ink-200 opacity-0 transition-colors duration-150 ease-in-out hover:bg-brand-soft hover:text-brand-severe group-hover:opacity-100">
-                  <Trash2 size={15} />
-                </button>
-              )}
-            </div>
+          {visibleKeys.map((k) => (
+            <ApiKeyRow key={k.id} k={k} canEdit={canEdit} onRevoke={setKeyToRevoke} />
           ))}
         </div>
       )}

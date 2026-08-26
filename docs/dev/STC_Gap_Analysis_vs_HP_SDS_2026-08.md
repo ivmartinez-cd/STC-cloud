@@ -205,7 +205,8 @@ API key ya existente (huevo y gallina para un cliente nuevo). Verificado
 con Playwright real contra el stack Docker (login, crear key, ver el
 secret, configurar webhook) — capturas revisadas antes de commitear.
 
-**Lo que NO se hizo**: expiración automática de keys (retry con backoff
+**Lo que NO se hizo**: expiración automática de keys (✅ 26/08/2026, ver
+Fase 14; retry con backoff
 para webhooks fallidos ✅ 25/08/2026, ver Fase 8; documentación pública tipo
 OpenAPI/Swagger ✅ 26/08/2026, ver Fase 9 — `docs/api/openapi.yaml`).
 
@@ -1985,6 +1986,66 @@ Verificado contra el stack Docker real (rebuild de `api`).
 **Lo que NO se hizo de este ítem**: ningún otro hallazgo — era exactamente
 la lista de dos que dejó la Fase 6, ambos cerrados acá. Con esto, R5 (§3)
 queda sin ningún punto suelto conocido.
+
+### Fase 14 — Expiración automática de API keys (26/08/2026) — completa
+
+Origen: único pendiente explícito que dejó la Fase 2 sobre la API pública
+("Lo que NO se hizo: expiración automática de keys"), señalado de nuevo en
+§2.7.
+
+✅ **`api_keys.expires_at`** (migración `20260826010000_...`, nullable —
+`NULL` = sin vencimiento, cero cambio de comportamiento para las keys ya
+emitidas). `POST /clients/:id/api-keys` acepta `expires_in_days` opcional
+(1-3650, validado en el schema Ajv de la ruta Y de nuevo en
+`CreateApiKeyUseCase` — nunca confiar sólo en el schema); ausente = sin
+vencimiento. `resolveApiKey()` (la resolución de `X-Api-Key` en
+`authMiddleware`, compartida por toda la API pública) suma la condición
+`expires_at IS NULL OR expires_at > NOW()` — una key vencida deja de
+autenticar de inmediato, sin necesidad de un job que la revoque: la fila
+queda intacta (nunca se le toca `revoked_at`) para que el admin la vea con
+su fecha de vencimiento y decida si renovarla.
+
+✅ **UI**: `ApiKeysCard.tsx` gana un selector al crear (Sin vencimiento/30
+días/90 días/1 año) y cada fila muestra "vence DD/MM" o, si ya pasó, un
+badge "Vencida" + "venció DD/MM" — sin ocultar la fila (a diferencia de una
+revocada, que si se saca del listado: una key vencida necesita quedar
+visible para que se decida renovarla). El contador del header ("N activa")
+sólo cuenta las realmente vigentes (ni revocadas ni vencidas). Extraído
+`ApiKeyRow` como subcomponente (mismo criterio ya usado para
+`ThresholdField`/`SimplePagination` en fases anteriores — JSX nuevo de este
+tamaño se acepta vía `--write-baseline`, no se fragmenta de más).
+
+Verificado: 5 tests nuevos en `publicApi.test.ts` (sin `expires_in_days` →
+`expires_at` null; rango inválido → 400 en los 4 casos, no crea nada;
+`expires_in_days=1` → `expires_at` ~24h a futuro; la key sigue funcionando
+antes de vencer; forzado el vencimiento directo en la base — mismo patrón
+que `inventoryFields.test.ts`, no hay forma de simular "pasó un día" por
+API — la key da 401 en la API pública SIN que se le haya tocado
+`revoked_at`) — suite dirigida completa (`publicApi.test.ts` 29/29,
+`rbac.test.ts`/`clientDirectory.test.ts` sin regresiones, 135 tests en
+conjunto) verde. `tsc --noEmit` (cloud y portal) y `check:arch`
+(sizes/guards/routes) limpios. Verificado con Playwright real contra el
+stack Docker: crear una key con vencimiento a 30 días, el modal "mostrar
+una sola vez", y la fila resultante mostrando "vence 25/9/2026" con el
+contador de cabecera actualizado a "2 activas".
+
+**Hallazgo de UI no relacionado, anotado pero no corregido**: el grid de 3
+columnas de la pestaña "Configuración" de `ClientDetail.tsx` tiene un
+problema de stacking/pointer-events preexistente — cuando una tarjeta (ej.
+"API pública") crece más alta que sus vecinas, el botón de acción del pie
+puede quedar interceptado por la tarjeta de al lado para clics
+"estrictos" (confirmado con Playwright: `element intercepts pointer
+events`, resuelto sólo forzando el click vía `evaluate`). No es un bug
+introducido por este ítem — el layout ya tenía esta forma antes, sólo se
+hizo más visible porque la tarjeta de API keys ahora es un poco más alta.
+Queda para una pasada de CSS aparte, no se tocó `ConfigCardShell.tsx` ni el
+grid que lo contiene.
+
+**Lo que NO se hizo de este ítem**: recordatorio automático antes de que
+una key venza (ni email ni notificación — el admin tiene que fijarse en el
+badge); renovación de un click (hoy renovar = crear una key nueva y migrar
+el ERP, no hay "extender vencimiento" sobre la misma key, mismo criterio
+que un secret de webhook que tampoco se "extiende").
 
 ### Otros puntos de §3 (riesgos) que siguen abiertos y no forman parte de ningún ítem de arriba
 - ✅ **R4 (parcial, 23/08/2026)**: el WS del portal ya NO acepta el JWT de

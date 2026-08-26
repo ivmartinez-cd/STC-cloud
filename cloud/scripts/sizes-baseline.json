@@ -1,8 +1,8 @@
 {
   "files": {
     "src/api/server.ts": 384,
-    "src/modules/agents/infrastructure/database/knex-agent-portal-repository.ts": 536,
-    "src/modules/clients/infrastructure/database/knex-client-repository.ts": 446,
+    "src/modules/agents/infrastructure/database/knex-agent-portal-repository.ts": 534,
+    "src/modules/clients/infrastructure/database/knex-client-repository.ts": 444,
     "src/services/incidentService.ts": 363,
     "src/services/notificationService.ts": 383,
     "src/tests/alerts.test.ts": 529,
@@ -10,14 +10,15 @@
     "src/tests/e2e.test.ts": 521,
     "src/tests/incidents.test.ts": 324,
     "src/tests/ipRangeSpec.test.ts": 361,
+    "src/tests/publicApi.test.ts": 360,
     "src/tests/rbac.test.ts": 765,
     "src/ws/index.ts": 310,
-    "portal/src/features/clients/components/ApiKeysCard.tsx": 340,
+    "portal/src/features/clients/components/ApiKeysCard.tsx": 377,
     "portal/src/features/monitors/components/DeviceInventoryTable.tsx": 436,
     "portal/src/features/monitors/components/SnmpCredentialsPanel.tsx": 352,
     "portal/src/features/reports/pages/Reports.tsx": 367,
     "portal/src/shared/components/FeedbackModal.tsx": 335,
-    "portal/src/shared/types/monitor.ts": 364
+    "portal/src/shared/types/monitor.ts": 365
   },
   "functions": {
     "src/api/controllers/authController/agent-auth.ts": [
@@ -698,12 +699,16 @@
         "length": 56
       },
       {
+        "name": "ApiKeyRow",
+        "length": 25
+      },
+      {
         "name": "WebhookSection",
         "length": 137
       },
       {
         "name": "ApiKeysCard",
-        "length": 123
+        "length": 122
       }
     ],
     "portal/src/features/clients/components/ClientAttentionZone.tsx": [

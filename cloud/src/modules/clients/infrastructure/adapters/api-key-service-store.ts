@@ -10,8 +10,8 @@ export class ApiKeyServiceStore implements ApiKeyStore {
     return apiKeyService.listApiKeys(this.db, clientId);
   }
 
-  create(clientId: string, name: string): Promise<{ id: string; key: string }> {
-    return apiKeyService.createApiKey(this.db, clientId, name);
+  create(clientId: string, name: string, expiresInDays?: number | null): Promise<{ id: string; key: string }> {
+    return apiKeyService.createApiKey(this.db, clientId, name, expiresInDays);
   }
 
   revoke(clientId: string, keyId: string): Promise<number> {

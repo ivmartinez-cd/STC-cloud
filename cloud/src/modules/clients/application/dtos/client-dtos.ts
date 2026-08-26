@@ -63,6 +63,8 @@ export interface ClientDevicesInput {
 export interface CreateApiKeyInput {
   clientId: string;
   name?: string;
+  /** Ausente/`null` = sin vencimiento (comportamiento de siempre). */
+  expiresInDays?: number | null;
 }
 
 export interface RevokeApiKeyInput {

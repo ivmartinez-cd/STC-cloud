@@ -19,6 +19,7 @@ export interface ApiKeyRecord {
   name: string;
   key_prefix: string;
   revoked_at: string | null;
+  expires_at: string | null;
   last_used_at: string | null;
   created_at: string;
 }
@@ -27,19 +28,27 @@ function hashKey(rawKey: string): string {
   return crypto.createHash("sha256").update(rawKey).digest("hex");
 }
 
-/** Crea una key nueva. El valor en claro sólo se devuelve acá — no se puede recuperar después. */
+/**
+ * Crea una key nueva. El valor en claro sólo se devuelve acá — no se puede
+ * recuperar después. `expiresInDays` ausente/`null` = sin vencimiento (una
+ * key emitida hoy sin fecha se comporta exactamente como antes de esta
+ * pasada).
+ */
 export async function createApiKey(
   db: Knex,
   clientId: string,
-  name: string
+  name: string,
+  expiresInDays?: number | null
 ): Promise<{ id: string; key: string }> {
   const rawKey = crypto.randomBytes(32).toString("hex");
+  const expiresAt = expiresInDays ? new Date(Date.now() + expiresInDays * 24 * 60 * 60 * 1000) : null;
   const [row] = await db("api_keys")
     .insert({
       client_id: clientId,
       name,
       key_hash: hashKey(rawKey),
       key_prefix: rawKey.slice(0, KEY_PREFIX_LEN),
+      expires_at: expiresAt,
     })
     .returning("id");
   return { id: row.id, key: rawKey };
@@ -48,7 +57,7 @@ export async function createApiKey(
 export async function listApiKeys(db: Knex, clientId: string): Promise<ApiKeyRecord[]> {
   return db("api_keys")
     .where({ client_id: clientId })
-    .select("id", "client_id", "name", "key_prefix", "revoked_at", "last_used_at", "created_at")
+    .select("id", "client_id", "name", "key_prefix", "revoked_at", "expires_at", "last_used_at", "created_at")
     .orderBy("created_at", "desc");
 }
 
@@ -60,7 +69,18 @@ export async function revokeApiKey(db: Knex, clientId: string, keyId: string): P
     .update({ revoked_at: db.fn.now() });
 }
 
-/** Resuelve una key cruda (header `X-Api-Key`) a su cliente, o `null` si no existe/está revocada. */
+/**
+ * Resuelve una key cruda (header `X-Api-Key`) a su cliente, o `null` si no
+ * existe/está revocada/venció. Una key vencida no se toca (no hay job de
+ * limpieza): sólo deja de autenticar, la fila queda para que el admin vea
+ * cuándo venció y la renueve si hace falta.
+ */
+/** Fire-and-forget housekeeping — nunca debe bloquear la request de auth. */
+function touchLastUsedIfStale(db: Knex, id: string, lastUsedAt: string | null): void {
+  const stale = !lastUsedAt || Date.now() - new Date(lastUsedAt).getTime() > LAST_USED_THROTTLE_MS;
+  if (stale) db("api_keys").where({ id }).update({ last_used_at: db.fn.now() }).catch(() => {});
+}
+
 export async function resolveApiKey(
   db: Knex,
   rawKey: string
@@ -68,16 +88,11 @@ export async function resolveApiKey(
   const row = await db("api_keys")
     .where({ key_hash: hashKey(rawKey) })
     .whereNull("revoked_at")
+    .andWhere((b) => b.whereNull("expires_at").orWhere("expires_at", ">", db.fn.now()))
     .select("id", "client_id", "last_used_at")
     .first();
   if (!row) return null;
 
-  const stale =
-    !row.last_used_at || Date.now() - new Date(row.last_used_at).getTime() > LAST_USED_THROTTLE_MS;
-  if (stale) {
-    // Fire-and-forget: no bloquear la request por esta escritura de housekeeping.
-    db("api_keys").where({ id: row.id }).update({ last_used_at: db.fn.now() }).catch(() => {});
-  }
-
+  touchLastUsedIfStale(db, row.id, row.last_used_at);
   return { apiKeyId: row.id, clientId: row.client_id };
 }

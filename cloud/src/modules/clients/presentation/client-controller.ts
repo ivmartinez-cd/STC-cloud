@@ -94,7 +94,8 @@ function integrationHandlers(uc: ClientUseCases) {
     listApiKeys: (request: FastifyRequest) => uc.listApiKeys.execute(idOf(request)),
     createApiKey: (request: FastifyRequest, reply: FastifyReply) =>
       replyingClientErrors(reply, async () => {
-        const created = await uc.createApiKey.execute({ clientId: idOf(request), name: (request.body as { name?: string }).name });
+        const body = request.body as { name?: string; expires_in_days?: number };
+        const created = await uc.createApiKey.execute({ clientId: idOf(request), name: body.name, expiresInDays: body.expires_in_days });
         return reply.status(201).send(created);
       }),
     revokeApiKey: (request: FastifyRequest, reply: FastifyReply) =>

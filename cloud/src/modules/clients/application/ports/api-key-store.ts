@@ -10,14 +10,16 @@ export interface ApiKeyRecord {
   name: string;
   key_prefix: string;
   revoked_at: string | null;
+  expires_at: string | null;
   last_used_at: string | null;
   created_at: string;
 }
 
 export interface ApiKeyStore {
   list(clientId: string): Promise<ApiKeyRecord[]>;
-  /** El valor en claro se devuelve UNA sola vez — no se puede recuperar después. */
-  create(clientId: string, name: string): Promise<{ id: string; key: string }>;
+  /** El valor en claro se devuelve UNA sola vez — no se puede recuperar después.
+   *  `expiresInDays` ausente/`null` = sin vencimiento. */
+  create(clientId: string, name: string, expiresInDays?: number | null): Promise<{ id: string; key: string }>;
   /** Tombstone; devuelve filas tocadas (0 = no existe o ya revocada). */
   revoke(clientId: string, keyId: string): Promise<number>;
 }

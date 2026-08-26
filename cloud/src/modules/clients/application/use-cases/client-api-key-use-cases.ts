@@ -9,13 +9,25 @@ export class ListApiKeysUseCase {
   }
 }
 
+const MAX_EXPIRES_IN_DAYS = 3650;
+
 /** El valor en claro se devuelve UNA sola vez acá — no se puede recuperar después. */
 export class CreateApiKeyUseCase {
   constructor(private readonly keys: ApiKeyStore) {}
   execute(input: CreateApiKeyInput): Promise<{ id: string; key: string }> {
     const name = input.name?.trim();
     if (!name) throw new ClientValidationError("name es requerido");
-    return this.keys.create(input.clientId, name);
+    const expiresInDays = this.validatedExpiresInDays(input.expiresInDays);
+    return this.keys.create(input.clientId, name, expiresInDays);
+  }
+
+  /** Mismo rango que el schema Ajv de la ruta — nunca confiar sólo en el schema para el mensaje de error. */
+  private validatedExpiresInDays(value: number | null | undefined): number | null | undefined {
+    if (value === undefined || value === null) return value;
+    if (!Number.isInteger(value) || value < 1 || value > MAX_EXPIRES_IN_DAYS) {
+      throw new ClientValidationError(`expiresInDays debe ser un entero entre 1 y ${MAX_EXPIRES_IN_DAYS}`);
+    }
+    return value;
   }
 }
 

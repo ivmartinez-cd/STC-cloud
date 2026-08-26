@@ -320,6 +320,7 @@ export interface ApiKeyRecord {
   name: string;
   key_prefix: string;
   revoked_at: string | null;
+  expires_at: string | null;
   last_used_at: string | null;
   created_at: string;
 }

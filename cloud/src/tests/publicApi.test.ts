@@ -7,6 +7,7 @@ import { test, describe, after } from 'node:test';
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import http from 'node:http';
+import knexLib from 'knex';
 
 const API  = process.env.API_URL  || 'http://localhost:3000/api/v1';
 const USER = process.env.PORTAL_ADMIN_USER     || 'admin';
@@ -66,7 +67,23 @@ const ctx = {
   deviceASerial: `SN-PUBAPI-${ts}`,
   apiKeyA: '', apiKeyAId: '',
   apiKeyB: '',
+  apiKeyExpiring: '', apiKeyExpiringId: '',
 };
+
+// Sólo para los tests de expiración: forzar `expires_at` al pasado no es
+// posible por API (nadie debería poder mandar una fecha arbitraria), así
+// que se escribe directo — mismo patrón que inventoryFields.test.ts.
+const rawDb = knexLib({
+  client: 'pg',
+  connection: {
+    host: process.env.ALERTS_TEST_DB_HOST || 'localhost',
+    port: Number(process.env.ALERTS_TEST_DB_PORT || 5434),
+    user: process.env.DB_USER || 'stc_admin',
+    password: process.env.DB_PASSWORD || 'stc_secret',
+    database: process.env.DB_NAME || 'stc_cloud',
+  },
+});
+after(async () => { await rawDb.destroy().catch(() => {}); });
 
 describe('API pública — fixtures', () => {
   test('Setup: login admin, crear 2 clientes + 1 agente + activar', async () => {
@@ -147,6 +164,51 @@ describe('API keys — crear/listar/revocar', () => {
     const createdB = await req('POST', `/clients/${ctx.clientBId}/api-keys`, { name: 'Otra empresa' }, ctx.adminToken);
     assert.equal(createdB.status, 201);
     ctx.apiKeyB = createdB.data.key;
+  });
+});
+
+describe('API keys — expiración', () => {
+  test('sin expires_in_days → expires_at null (comportamiento de siempre)', async () => {
+    const created = await req('POST', `/clients/${ctx.clientAId}/api-keys`, { name: 'Sin vencimiento' }, ctx.adminToken);
+    assert.equal(created.status, 201);
+    const list = await req('GET', `/clients/${ctx.clientAId}/api-keys`, undefined, ctx.adminToken);
+    const row = list.data.find((k: any) => k.id === created.data.id);
+    assert.equal(row?.expires_at, null);
+  });
+
+  test('expires_in_days fuera de rango (0, 3651, no-entero) → 400, no crea nada', async () => {
+    for (const bad of [0, 3651, 1.5, 'x']) {
+      const { status } = await req('POST', `/clients/${ctx.clientAId}/api-keys`, { name: 'Rango inválido', expires_in_days: bad }, ctx.adminToken);
+      assert.equal(status, 400, String(bad));
+    }
+  });
+
+  test('expires_in_days=1 → 201, expires_at es ~mañana', async () => {
+    const created = await req('POST', `/clients/${ctx.clientAId}/api-keys`, { name: 'Key con vencimiento', expires_in_days: 1 }, ctx.adminToken);
+    assert.equal(created.status, 201);
+    ctx.apiKeyExpiring = created.data.key;
+    ctx.apiKeyExpiringId = created.data.id;
+
+    const list = await req('GET', `/clients/${ctx.clientAId}/api-keys`, undefined, ctx.adminToken);
+    const row = list.data.find((k: any) => k.id === ctx.apiKeyExpiringId);
+    assert.ok(row.expires_at, 'debe tener expires_at seteado');
+    const diffHours = (new Date(row.expires_at).getTime() - Date.now()) / (60 * 60 * 1000);
+    assert.ok(diffHours > 23 && diffHours <= 24.1, `expires_at debe ser ~24hs a futuro, dio ${diffHours}h`);
+  });
+
+  test('key con expires_in_days=1 todavía funciona hoy', async () => {
+    const res = await pub('GET', '/public/devices', undefined, ctx.apiKeyExpiring);
+    assert.equal(res.status, 200);
+  });
+
+  test('key ya vencida (forzado directo en DB) → 401 en la API pública, aunque nunca se haya revocado', async () => {
+    await rawDb('api_keys').where({ id: ctx.apiKeyExpiringId }).update({ expires_at: new Date(Date.now() - 60_000) });
+    const res = await pub('GET', '/public/devices', undefined, ctx.apiKeyExpiring);
+    assert.equal(res.status, 401);
+
+    const list = await req('GET', `/clients/${ctx.clientAId}/api-keys`, undefined, ctx.adminToken);
+    const row = list.data.find((k: any) => k.id === ctx.apiKeyExpiringId);
+    assert.equal(row.revoked_at, null, 'una key vencida no se revoca — la fila queda intacta para que el admin la vea y decida');
   });
 });
 

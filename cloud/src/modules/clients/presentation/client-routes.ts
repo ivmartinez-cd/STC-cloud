@@ -86,7 +86,16 @@ const pendingDevicesIgnoreSchema = {
 };
 
 const createApiKeySchema = {
-  body: { type: "object", required: ["name"], properties: { name: { type: "string", minLength: 1, maxLength: 100 } } },
+  body: {
+    type: "object",
+    required: ["name"],
+    properties: {
+      name: { type: "string", minLength: 1, maxLength: 100 },
+      // Ausente = sin vencimiento (comportamiento de siempre). Rango validado
+      // de nuevo en CreateApiKeyUseCase — nunca confiar sólo en el schema.
+      expires_in_days: { type: "integer", minimum: 1, maximum: 3650 },
+    },
+  },
 };
 
 const putWebhookSchema = {
