@@ -8,31 +8,49 @@ import SidebarBrand from './SidebarBrand';
 import SidebarUser from './SidebarUser';
 import GlobalSearch from './GlobalSearch';
 import FeedbackFab from './FeedbackFab';
-import { filterNavTreeByRole } from './navTree';
-import { NAV_TREE } from './navItems';
+import { filterNavByRole } from './navTree';
+import { NAV_SECTIONS } from './navItems';
 import { useGlobalSearch } from './useGlobalSearch';
-import { usePendingBadge } from './usePendingBadge';
+import { useNavBadges } from './useNavBadges';
+import { useSidebarCollapse } from './useSidebarCollapse';
 
-interface SidebarProps { isHovered: boolean; isMobileMenuOpen: boolean; onHover: (v: boolean) => void; onCloseMobile: () => void; }
+interface SidebarProps {
+  collapsed: boolean; onToggleCollapse: () => void; isMobileMenuOpen: boolean; onCloseMobile: () => void;
+}
 
-/** Barra lateral "riel + expansión": 5rem colapsada, 18rem al hover; en móvil se abre como drawer. */
-const Sidebar = ({ isHovered, isMobileMenuOpen, onHover, onCloseMobile }: SidebarProps) => {
+/** Tira de 5 colores de marca — remate inferior a todo el ancho, igual que el Login. */
+const BrandStripe = () => (
+  <div className="grid shrink-0 grid-cols-5">
+    <div className="h-1 bg-brand-severe" />
+    <div className="h-1 bg-brand" />
+    <div className="h-1 bg-brand-light" />
+    <div className="h-1 bg-ink-500" />
+    <div className="h-1 bg-brand-gray" />
+  </div>
+);
+
+/** Barra lateral (handoff hifi "Sidebar", 26/08/2026): panel de marca #2E3033,
+ * 248px expandida / 64px colapsada por control explícito (persiste por
+ * usuario, no hover — ver `useSidebarCollapse`). En mobile es un drawer sobre
+ * overlay, siempre expandido mientras está abierto. */
+const Sidebar = ({ collapsed, onToggleCollapse, isMobileMenuOpen, onCloseMobile }: SidebarProps) => {
   const { userEmail: email, role, logout } = useAuth();
-  const pendingCount = usePendingBadge(role);
+  const badges = useNavBadges(role);
+  const sections = filterNavByRole(NAV_SECTIONS, role);
+  const visualCollapsed = isMobileMenuOpen ? false : collapsed;
+
   return (
-    <aside onMouseEnter={() => onHover(true)} onMouseLeave={() => onHover(false)}
-      className={`fixed inset-y-0 left-0 bg-white border-r border-slate-200 text-slate-700 flex flex-col z-[70] transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] overflow-hidden
-        ${isHovered ? 'w-72 shadow-[20px_0_50px_rgba(0,0,0,0.05)]' : 'md:w-20 w-0 -translate-x-full md:translate-x-0'}
-        ${isMobileMenuOpen ? 'w-72 translate-x-0 shadow-2xl' : ''}`}>
-      <div className="absolute top-0 left-0 w-full h-64 bg-orange-500/5 blur-[100px] pointer-events-none" />
-      <SidebarBrand isHovered={isHovered} isMobileMenuOpen={isMobileMenuOpen} onNavigate={onCloseMobile} onCloseMobile={onCloseMobile} />
-      <nav className="flex-1 px-3 py-6 space-y-2 overflow-y-auto relative custom-scrollbar overflow-x-hidden">
-        <div className={`font-montserrat text-[10px] text-slate-500 font-bold uppercase tracking-[0.2em] mb-6 px-5 transition-opacity duration-300 ${isHovered ? 'opacity-100' : 'opacity-0'}`}>
-          Navegación
-        </div>
-        <SidebarNav entries={filterNavTreeByRole(NAV_TREE, role)} isHovered={isHovered} pendingCount={pendingCount} onNavigate={onCloseMobile} />
+    <aside
+      className={`fixed inset-y-0 left-0 z-[70] flex w-[248px] flex-col overflow-hidden bg-panel-dark transition-all duration-300 ease-in-out
+        ${collapsed ? 'md:w-16' : 'md:w-[248px]'}
+        ${isMobileMenuOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full md:translate-x-0'}`}
+    >
+      <SidebarBrand collapsed={visualCollapsed} isMobileMenuOpen={isMobileMenuOpen} onNavigate={onCloseMobile} onCloseMobile={onCloseMobile} />
+      <nav aria-label="Navegación principal" className="custom-scrollbar flex-1 overflow-y-auto overflow-x-hidden pb-4">
+        <SidebarNav sections={sections} badges={badges} collapsed={visualCollapsed} onNavigate={onCloseMobile} />
       </nav>
-      <SidebarUser isHovered={isHovered} email={email} role={role} onLogout={logout} />
+      <SidebarUser collapsed={visualCollapsed} email={email} role={role} onLogout={logout} onToggleCollapse={onToggleCollapse} />
+      <BrandStripe />
     </aside>
   );
 };
@@ -76,8 +94,8 @@ const TotpBanner = () => (
 const Layout = () => {
   const { totpEnrollmentRequired } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isHovered, setIsHovered] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
+  const { collapsed, toggle: toggleCollapse } = useSidebarCollapse();
   const closeMobile = () => setIsMobileMenuOpen(false);
 
   // `<main>` es el contenedor que scrollea (no `window` — el layout es
@@ -96,8 +114,8 @@ const Layout = () => {
   return (
     <div className="h-screen overflow-hidden bg-[#f8fafc] text-[#1a2333] font-sans flex">
       {isMobileMenuOpen && <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[60] md:hidden" onClick={closeMobile} />}
-      <Sidebar isHovered={isHovered} isMobileMenuOpen={isMobileMenuOpen} onHover={setIsHovered} onCloseMobile={closeMobile} />
-      <div className={`flex flex-col flex-1 min-w-0 h-screen min-h-0 transition-all duration-500 ease-in-out md:pl-20 ${isHovered ? 'md:pl-72' : ''}`}>
+      <Sidebar collapsed={collapsed} onToggleCollapse={toggleCollapse} isMobileMenuOpen={isMobileMenuOpen} onCloseMobile={closeMobile} />
+      <div className={`flex flex-col flex-1 min-w-0 h-screen min-h-0 transition-all duration-300 ease-in-out ${collapsed ? 'md:pl-16' : 'md:pl-[248px]'}`}>
         <TopHeader onToggleMobile={() => setIsMobileMenuOpen((v) => !v)} />
         <main ref={mainRef} className="flex-1 min-h-0 overflow-y-auto animate-fade-in bg-[#f8fafc] [overflow-anchor:none]">
           <div className="max-w-[1400px] mx-auto p-4 md:p-10 xl:h-full xl:flex xl:flex-col">

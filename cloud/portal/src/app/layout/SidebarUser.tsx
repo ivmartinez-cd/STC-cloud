@@ -1,47 +1,50 @@
-import { LogOut } from 'lucide-react';
+import { ChevronLeft, ChevronRight, LogOut } from 'lucide-react';
 import { ROLE_LABELS } from './navItems';
 
-interface Props { isHovered: boolean; email: string | null; role: string; onLogout: () => void; }
+interface Props { collapsed: boolean; email: string | null; role: string; onLogout: () => void; onToggleCollapse: () => void; }
 
-const Avatar = ({ isHovered, initial }: { isHovered: boolean; initial: string }) => (
-  <div className={`flex items-center justify-center shrink-0 transition-all duration-500 ${isHovered ? 'w-11 h-11' : 'w-full'}`}>
-    <div className="relative group/avatar">
-      <div className={`bg-gradient-to-tr from-orange-500 to-amber-400 flex items-center justify-center text-white font-black transition-all duration-500 ring-offset-2 ring-offset-white ${
-        isHovered ? 'w-11 h-11 shadow-[0_10px_20px_rgba(245,158,11,0.25)] rounded-2xl ring-0' : 'w-8 h-8 text-[10px] shadow-none rounded-xl ring-1 ring-slate-200'}`}>
-        {initial}
-      </div>
-      <div className={`absolute bg-emerald-500 border border-white rounded-full transition-all duration-500 shadow-[0_0_8px_rgba(16,185,129,0.4)] ${
-        isHovered ? 'w-3 h-3 -bottom-1 -right-1' : 'w-2 h-2 -bottom-0.5 -right-0.5'}`} />
-    </div>
+const Avatar = ({ collapsed, initial }: { collapsed: boolean; initial: string }) => (
+  <div className={`flex flex-none items-center justify-center rounded-[3px] bg-brand font-montserrat font-bold text-panel-dark ${
+    collapsed ? 'h-[30px] w-[30px] text-[11px]' : 'h-8 w-8 text-xs'}`}>
+    {initial}
   </div>
 );
 
-const LogoutButton = ({ isHovered, onLogout }: Pick<Props, 'isHovered' | 'onLogout'>) => (
-  <button onClick={onLogout} title="Cerrar Sesión"
-    className={`flex items-center justify-center gap-2 rounded-xl bg-slate-100 hover:bg-rose-50 hover:text-rose-600 font-montserrat text-[11px] font-black uppercase tracking-widest text-slate-500 transition-all duration-300 border border-slate-200 ${
-      isHovered ? 'w-full py-2.5 px-4' : 'absolute inset-0 opacity-0 group-hover:opacity-100 bg-white/95 backdrop-blur-sm border border-slate-200 rounded-2xl'}`}>
-    <LogOut size={isHovered ? 14 : 18} />
-    {isHovered && 'Salir'}
+const CollapseToggle = ({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => void }) => (
+  <button
+    type="button" onClick={onToggle} title={collapsed ? 'Expandir menú' : 'Colapsar menú'}
+    aria-label={collapsed ? 'Expandir menú' : 'Colapsar menú'}
+    className={`flex flex-none items-center justify-center rounded-[3px] border border-panel-dark-line text-panel-dark-label transition-colors hover:border-white/20 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-[-2px] ${
+      collapsed ? 'h-[26px] w-[26px]' : 'h-[22px] w-[22px]'}`}
+  >
+    {collapsed ? <ChevronRight size={13} /> : <ChevronLeft size={13} />}
   </button>
 );
 
-/** Tarjeta de usuario al pie de la barra: avatar + nombre/rol expandidos, botón de salir. */
-const SidebarUser = ({ isHovered, email, role, onLogout }: Props) => (
-  <div className="px-3 py-6 relative transition-all duration-500">
-    <div className={`relative overflow-hidden group transition-all duration-500 ${
-      isHovered ? 'bg-slate-50 border border-slate-200/60 p-5 rounded-[2rem]' : 'h-12 w-full flex items-center justify-center rounded-2xl hover:bg-slate-100/50'}`}>
-      <div className={`flex items-center gap-4 relative z-10 w-full ${isHovered ? 'mb-4 md:justify-start' : 'justify-center'}`}>
-        <Avatar isHovered={isHovered} initial={(email || 'A')[0].toUpperCase()} />
-        <div className={`flex flex-col min-w-0 transition-all duration-500 ${isHovered ? 'opacity-100' : 'opacity-0 w-0 h-0 overflow-hidden'}`}>
-          <span className="font-sans text-sm font-bold text-slate-800 truncate">{email?.split('@')[0] || 'admin'}</span>
-          <span className="font-montserrat text-[10px] text-slate-500 font-bold uppercase tracking-wider">{ROLE_LABELS[role] ?? role}</span>
+/** Pie del sidebar (handoff hifi "Sidebar", 26/08/2026) — avatar + usuario + rol
+ * (el rol importa en un producto con RBAC), control de colapso y salir. Sin
+ * punto verde de "en línea": no informa nada sobre el propio usuario. */
+const SidebarUser = ({ collapsed, email, role, onLogout, onToggleCollapse }: Props) => (
+  <div className={`shrink-0 border-t border-panel-dark-line ${collapsed ? 'px-0 py-3.5' : 'px-[18px] py-3.5'}`}>
+    <div className={`flex items-center ${collapsed ? 'flex-col gap-2.5' : 'mb-3 gap-[11px]'}`}>
+      <Avatar collapsed={collapsed} initial={(email || 'A')[0].toUpperCase()} />
+      {!collapsed && (
+        <div className="min-w-0 flex-1">
+          <div className="truncate font-sans text-[12.5px] font-semibold leading-[1.3] text-white">{email?.split('@')[0] || 'admin'}</div>
+          <div className="mt-0.5 font-montserrat text-[7.5px] font-bold leading-[1.4] tracking-[.13em] text-panel-dark-label">{(ROLE_LABELS[role] ?? role).toUpperCase()}</div>
         </div>
-      </div>
-      <LogoutButton isHovered={isHovered} onLogout={onLogout} />
-      {!isHovered && (
-        <div className="absolute left-0 top-3 bottom-3 w-1 bg-orange-500 rounded-r-full opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-[0_0_10px_rgba(245,158,11,0.5)]" />
       )}
+      <CollapseToggle collapsed={collapsed} onToggle={onToggleCollapse} />
     </div>
+    {!collapsed && (
+      <button
+        type="button" onClick={onLogout}
+        className="flex w-full items-center justify-center gap-2 rounded-[3px] border border-panel-dark-line px-3 py-[9px] font-montserrat text-[10px] font-semibold uppercase tracking-[.1em] text-panel-dark-text transition-colors hover:border-white/20 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-[-2px]"
+      >
+        <LogOut size={13} />
+        Cerrar sesión
+      </button>
+    )}
   </div>
 );
 

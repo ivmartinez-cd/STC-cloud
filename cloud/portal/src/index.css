@@ -90,6 +90,10 @@
   --color-panel-dark-label: #8a9096;  /* labels de la tira de métricas del panel oscuro */
   --color-line-checkbox: #c4c9ca;     /* borde del checkbox "mantener sesión abierta" */
 
+  /* Token que faltaba del handoff hifi "Sidebar" (26/08/2026) — mismo panel oscuro
+     que el Login, sólo se suma el que ese rediseño no necesitó. */
+  --color-panel-dark-item: #c9cdd0;   /* texto de ítem de navegación inactivo sobre el panel oscuro */
+
   /* Tipografía de "Manual de marca.pdf": Montserrat (Título) + Source Sans Pro (Cuerpo). */
   --font-sans: 'Source Sans 3', 'Source Sans Pro', system-ui, -apple-system, sans-serif;
   --font-heading: 'Montserrat', sans-serif;

@@ -46,7 +46,7 @@
     "src/api/controllers/dashboardController/dashboard.ts": [
       {
         "name": "getDashboard",
-        "length": 82
+        "length": 92
       }
     ],
     "src/api/controllers/incidentController.ts": [
@@ -108,7 +108,7 @@
     "src/api/routes/authRoutes.ts": [
       {
         "name": "registerAuthRoutes",
-        "length": 75
+        "length": 83
       }
     ],
     "src/api/routes/incidentRoutes.ts": [
@@ -326,7 +326,7 @@
     "src/modules/alerts/presentation/alert-routes.ts": [
       {
         "name": "registerAlertRoutes",
-        "length": 22
+        "length": 25
       }
     ],
     "src/modules/alerts/presentation/alert-view.ts": [
@@ -515,16 +515,6 @@
         "length": 29
       }
     ],
-    "src/modules/system-settings/presentation/system-settings-routes.ts": [
-      {
-        "name": "buildUpdate",
-        "length": 34
-      },
-      {
-        "name": "anonymous",
-        "length": 32
-      }
-    ],
     "src/services/agentVersionService.ts": [
       {
         "name": "getPublishedAgentVersion",
@@ -693,22 +683,42 @@
     ],
     "portal/src/app/layout/Layout.tsx": [
       {
+        "name": "Sidebar",
+        "length": 21
+      },
+      {
         "name": "Layout",
         "length": 40
       }
     ],
     "portal/src/app/layout/SidebarNav.tsx": [
       {
-        "name": "LeafRow",
-        "length": 62
+        "name": "ItemRow",
+        "length": 38
       },
       {
         "name": "SidebarNav",
-        "length": 92
+        "length": 37
       },
       {
         "name": "anonymous",
-        "length": 68
+        "length": 25
+      }
+    ],
+    "portal/src/app/layout/useNavBadges.ts": [
+      {
+        "name": "useNavBadges",
+        "length": 28
+      },
+      {
+        "name": "useEffect",
+        "length": 22
+      }
+    ],
+    "portal/src/app/layout/useSidebarCollapse.ts": [
+      {
+        "name": "useSidebarCollapse",
+        "length": 24
       }
     ],
     "portal/src/features/activity/pages/Activity.tsx": [
@@ -728,13 +738,17 @@
     "portal/src/features/alerts/pages/Alerts.tsx": [
       {
         "name": "Alerts",
-        "length": 23
+        "length": 48
       }
     ],
     "portal/src/features/auth/pages/Login.tsx": [
       {
         "name": "Login",
-        "length": 167
+        "length": 211
+      },
+      {
+        "name": "handleSubmit",
+        "length": 30
       }
     ],
     "portal/src/features/clients/components/ApiKeyRow.tsx": [
@@ -1158,7 +1172,7 @@
     "portal/src/features/email-log/pages/EmailLog.tsx": [
       {
         "name": "EmailLog",
-        "length": 95
+        "length": 37
       }
     ],
     "portal/src/features/incidents/pages/IncidentDetail.tsx": [
@@ -1485,22 +1499,6 @@
         "length": 96
       }
     ],
-    "portal/src/features/settings/components/MonitorThresholdCard.tsx": [
-      {
-        "name": "ThresholdField",
-        "length": 29
-      },
-      {
-        "name": "MonitorThresholdCard",
-        "length": 34
-      }
-    ],
-    "portal/src/features/settings/components/SmtpInfoCard.tsx": [
-      {
-        "name": "SmtpInfoCard",
-        "length": 52
-      }
-    ],
     "portal/src/features/settings/components/TwoFactorCard.tsx": [
       {
         "name": "TwoFactorCard",
@@ -1520,7 +1518,7 @@
     "portal/src/features/settings/components/operators/OperatorsCard.tsx": [
       {
         "name": "OperatorsCard",
-        "length": 177
+        "length": 78
       }
     ],
     "portal/src/features/settings/components/operators/ResetPasswordModal.tsx": [
@@ -1535,16 +1533,10 @@
         "length": 64
       }
     ],
-    "portal/src/features/settings/components/operators/UserTable.tsx": [
-      {
-        "name": "UserTable",
-        "length": 105
-      }
-    ],
     "portal/src/features/settings/pages/Settings.tsx": [
       {
         "name": "Settings",
-        "length": 80
+        "length": 44
       }
     ],
     "portal/src/features/supplies/components/SupplyRequestDetailModal.tsx": [

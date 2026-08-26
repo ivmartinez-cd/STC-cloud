@@ -1,161 +1,102 @@
-import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { ChevronDown, ChevronRight } from 'lucide-react';
-import { isNavGroup, type NavEntry, type NavLeaf } from './navTree';
+import type { NavItem, NavSection } from './navTree';
+import type { NavBadges } from './useNavBadges';
 
 function isPathActive(path: string, pathname: string): boolean {
   return path === '/' ? pathname === '/' : pathname.startsWith(path);
 }
 
-function LeafRow({ leaf, active, isHovered, badge, indented, onClick }: {
-  leaf: NavLeaf;
-  active: boolean;
-  isHovered: boolean;
-  badge: number;
-  indented: boolean;
-  onClick: () => void;
-}) {
-  const Icon = leaf.icon;
+function formatBadge(n: number): string {
+  return n > 999 ? `${(n / 1000).toFixed(1).replace('.0', '')}k` : String(n);
+}
+
+// Badges "urgentes" (requieren acción) vs "informativos" — handoff hifi "Sidebar".
+const URGENT_BADGE_KEYS = new Set(['alerts', 'incidents', 'pending', 'agentsOffline']);
+
+function Badge({ value, urgent, collapsed }: { value: number; urgent: boolean; collapsed: boolean }) {
+  // "Un contador en 0 no se muestra, no se pinta gris" — README, punto 3.
+  if (value <= 0) return null;
+  if (collapsed) {
+    return <span aria-hidden="true" className={`absolute right-[13px] top-2 block h-1.5 w-1.5 rounded-full ${urgent ? 'bg-brand-severe' : 'bg-brand'}`} />;
+  }
   return (
-    <Link
-      to={leaf.path}
-      onClick={onClick}
-      className={`
-        flex items-center group relative h-11 rounded-2xl transition-all duration-300
-        ${active ? 'text-brand' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100/60'}
-      `}
-    >
-      {active && isHovered && (
-        <div className="absolute inset-0 bg-brand/10 rounded-2xl border border-brand/10 shadow-[0_4px_12px_rgba(0,0,0,0.1)]" />
-      )}
+    <span className={`flex-none rounded-[2px] px-[7px] py-[3px] font-montserrat text-[9.5px] font-bold leading-none tabular-nums ${
+      urgent ? 'bg-brand-severe text-white' : 'bg-panel-dark-line text-panel-dark-item'}`}>
+      {formatBadge(value)}
+    </span>
+  );
+}
 
-      <div className={`flex items-center gap-4 relative z-10 w-full justify-center md:justify-start ${indented && isHovered ? 'pl-4' : ''}`}>
-        <div className={`
-          relative flex items-center justify-center shrink-0 transition-all duration-300
-          ${isHovered ? 'w-5 ml-2' : 'w-20'}
-        `}>
-          <Icon
-            size={isHovered ? (indented ? 16 : 19) : 24}
-            strokeWidth={active ? 2.5 : 2}
-            className={active ? 'text-brand drop-shadow-[0_0_8px_rgba(247,148,29,0.4)]' : 'text-slate-500 group-hover:text-slate-300 transition-colors duration-300'}
-          />
-          {badge > 0 && (
-            <span className="absolute -top-1.5 -right-1 min-w-[16px] h-4 px-1 flex items-center justify-center rounded-full bg-amber-500 text-white text-[9px] font-black leading-none">
-              {badge > 99 ? '99+' : badge}
-            </span>
-          )}
-        </div>
+function ItemRow({ item, active, collapsed, badgeValue, onClick }: {
+  item: NavItem; active: boolean; collapsed: boolean; badgeValue: number | undefined; onClick: () => void;
+}) {
+  const Icon = item.icon;
+  const urgent = item.badgeKey != null && URGENT_BADGE_KEYS.has(item.badgeKey);
+  const value = badgeValue ?? 0;
+  const label = value > 0 ? `${item.name}: ${formatBadge(value)}` : item.name;
 
-        <span className={`
-          font-montserrat text-[13px] font-bold whitespace-nowrap transition-all duration-500
-          ${isHovered ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4 pointer-events-none w-0'}
-          ${active ? 'text-brand' : 'text-slate-500'}
-        `}>
-          {leaf.name}
+  const rowClasses = `group relative flex min-h-[40px] items-center gap-3 border-l-[3px] py-[9px] transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-[-2px] ${
+    collapsed ? 'justify-center px-0' : 'pl-[15px] pr-[18px]'
+  } ${active ? 'border-brand bg-brand/[0.13]' : 'border-transparent hover:bg-white/5'}`;
+
+  const content = (
+    <>
+      <Icon size={collapsed ? 18 : 17} strokeWidth={1.6} className={`flex-none ${active ? 'text-brand' : 'text-panel-dark-label group-hover:text-white'}`} />
+      {!collapsed && (
+        <span className={`min-w-0 flex-1 truncate font-sans text-[13px] leading-[1.3] ${active ? 'font-semibold text-white' : 'font-normal text-panel-dark-item group-hover:text-white'}`}>
+          {item.name}
         </span>
-
-        {badge > 0 && isHovered && (
-          <span className="text-[10px] font-black text-amber-500 bg-amber-500/10 px-1.5 py-0.5 rounded-full">{badge}</span>
-        )}
-        {active && isHovered && <ChevronRight size={14} className="ml-auto mr-4 text-brand/50" />}
-      </div>
-
-      {active && (
-        <div className={`
-          absolute left-0 bg-brand rounded-r-full transition-all duration-500 shadow-[0_0_15px_rgba(247,148,29,0.4)]
-          ${isHovered ? 'w-1.5 top-2.5 bottom-2.5' : 'w-2 top-3.5 bottom-3.5'}
-        `} />
       )}
+      <Badge value={value} urgent={urgent} collapsed={collapsed} />
+    </>
+  );
+
+  if (item.disabled) {
+    return (
+      <div title={`${item.name} (próximamente)`} aria-label={`${item.name}, próximamente`} className={`${rowClasses} cursor-not-allowed opacity-40`}>
+        {content}
+      </div>
+    );
+  }
+
+  return (
+    <Link to={item.path} onClick={onClick} title={item.name} aria-label={label} aria-current={active ? 'page' : undefined} className={rowClasses}>
+      {content}
     </Link>
   );
 }
 
 export default function SidebarNav({
-  entries, isHovered, pendingCount, onNavigate,
+  sections, badges, collapsed, onNavigate,
 }: {
-  entries: NavEntry[];
-  isHovered: boolean;
-  pendingCount: number;
-  onNavigate: () => void;
+  sections: NavSection[]; badges: NavBadges; collapsed: boolean; onNavigate: () => void;
 }) {
   const { pathname } = useLocation();
-  // Un grupo con la ruta activa arranca expandido; el resto colapsado por
-  // defecto. `undefined` = "usar el default derivado de la ruta actual", así
-  // que cambiar de página resincroniza automáticamente qué grupo se ve
-  // expandido, salvo que el usuario ya haya tocado el acordeón a mano.
-  const [expandedOverride, setExpandedOverride] = useState<Record<string, boolean>>({});
-
-  useEffect(() => { setExpandedOverride({}); }, [pathname]);
-
-  const badgeFor = (leaf: NavLeaf) => (leaf.badgeKey === 'pending' ? pendingCount : 0);
 
   return (
     <>
-      {entries.map((entry) => {
-        if (!isNavGroup(entry)) {
-          return (
-            <LeafRow
-              key={entry.path}
-              leaf={entry}
-              active={isPathActive(entry.path, pathname)}
-              isHovered={isHovered}
-              badge={badgeFor(entry)}
-              indented={false}
-              onClick={onNavigate}
-            />
-          );
-        }
-
-        const groupActive = entry.children.some((c) => isPathActive(c.path, pathname));
-        const expanded = expandedOverride[entry.name] ?? groupActive;
-        const GroupIcon = entry.icon;
-
+      {sections.map((section) => {
+        const headingId = `nav-section-${section.title}`;
         return (
-          <div key={entry.name}>
-            <button
-              type="button"
-              onClick={() => setExpandedOverride((prev) => ({ ...prev, [entry.name]: !expanded }))}
-              className={`
-                flex items-center w-full h-11 rounded-2xl transition-all duration-300
-                ${groupActive ? 'text-brand' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100/60'}
-              `}
-            >
-              <div className="flex items-center gap-4 relative z-10 w-full justify-center md:justify-start">
-                <div className={`relative flex items-center justify-center shrink-0 transition-all duration-300 ${isHovered ? 'w-5 ml-2' : 'w-20'}`}>
-                  <GroupIcon
-                    size={isHovered ? 19 : 24}
-                    strokeWidth={groupActive ? 2.5 : 2}
-                    className={groupActive ? 'text-brand drop-shadow-[0_0_8px_rgba(247,148,29,0.4)]' : 'text-slate-500'}
-                  />
-                </div>
-                <span className={`
-                  flex-1 text-left font-montserrat text-[13px] font-bold whitespace-nowrap transition-all duration-500
-                  ${isHovered ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4 pointer-events-none w-0'}
-                  ${groupActive ? 'text-brand' : 'text-slate-500'}
-                `}>
-                  {entry.name}
-                </span>
-                {isHovered && (
-                  <ChevronDown size={14} className={`mr-4 text-slate-500 transition-transform duration-300 ${expanded ? 'rotate-0' : '-rotate-90'}`} />
-                )}
-              </div>
-            </button>
-
-            {isHovered && expanded && (
-              <div className="mt-1 space-y-1 animate-in fade-in slide-in-from-top-1 duration-200">
-                {entry.children.map((leaf) => (
-                  <LeafRow
-                    key={leaf.path}
-                    leaf={leaf}
-                    active={isPathActive(leaf.path, pathname)}
-                    isHovered={isHovered}
-                    badge={badgeFor(leaf)}
-                    indented
-                    onClick={onNavigate}
-                  />
-                ))}
+          <div key={section.title} className="pt-3.5">
+            {!collapsed && (
+              <div id={headingId} className="px-[18px] pb-[9px] font-montserrat text-[7.5px] font-bold uppercase leading-none tracking-[.17em] text-panel-dark-label">
+                {section.title}
               </div>
             )}
+            <ul aria-labelledby={collapsed ? undefined : headingId} aria-label={collapsed ? section.title : undefined}>
+              {section.items.map((item) => (
+                <li key={item.path}>
+                  <ItemRow
+                    item={item}
+                    active={isPathActive(item.path, pathname)}
+                    collapsed={collapsed}
+                    badgeValue={item.badgeKey ? badges[item.badgeKey] : undefined}
+                    onClick={onNavigate}
+                  />
+                </li>
+              ))}
+            </ul>
           </div>
         );
       })}

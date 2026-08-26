@@ -1,6 +1,7 @@
 import type { Knex } from "knex";
 import { deviceIdsOf } from "../../utils/scope";
 import { onlyLiveDevices, notMerged } from "../../utils/deviceFilters";
+import { OPEN_STATUSES } from "../../../modules/supply-requests";
 
 export function queryDevicesCount(db: Knex, cid: string | null) {
   return db("devices")
@@ -230,6 +231,17 @@ export function queryDevicesReportingCount(db: Knex, cid: string | null, twentyF
     .modify((q) => onlyLiveDevices(q, "devices"))
     .modify((q) => { if (cid) q.where("client_id", cid); })
     .where("last_seen", ">=", twentyFourHoursAgo)
+    .count("* as c")
+    .first();
+}
+
+// Badge "Pedidos" del sidebar (handoff hifi "Sidebar", 26/08/2026) — mismos
+// estados que la propia feature de pedidos considera abiertos (`OPEN_STATUSES`),
+// no sólo `pending`, para no desalinearse si esa lista cambia.
+export function querySupplyRequestsPendingCount(db: Knex, cid: string | null) {
+  return db("supply_requests")
+    .whereIn("status", OPEN_STATUSES as string[])
+    .modify((q) => { if (cid) q.where("client_id", cid); })
     .count("* as c")
     .first();
 }

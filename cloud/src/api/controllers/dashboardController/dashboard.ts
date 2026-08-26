@@ -5,12 +5,13 @@ import type { AgentService } from "../../../modules/agents";
 import { getScope } from "../../utils/scope";
 import { ALERT_CLASS_LABELS, countOpenAlertsByClass, type AlertClass } from "../../../modules/alerts";
 import { getPublishedAgentVersion } from "../../../services/agentVersionService";
+import { getIncidentStats } from "../../../services/incidentService";
 import {
   queryDevicesCount, queryAgentsStats, queryClientsCount, queryMonthlyVolume, queryTopClients,
   queryBrandStats, queryOfflineAgents, queryNewDevicesCount, queryReadings24hCount, queryLastReadingInfo,
   queryClientsWithAlertsCount, queryDevicesUnmanagedCount, queryAgentsReportingCount, queryAgentVersionRows,
   queryDiscoveredTodayCount, queryDiscoveredYesterdayCount, queryPendingDevicesTotalCount,
-  queryDevicesReportingCount, queryMovementsCounts,
+  queryDevicesReportingCount, queryMovementsCounts, querySupplyRequestsPendingCount,
 } from "./dashboard-queries";
 
 function computeDeviceTrend(devicesCount: { c?: string | number } | undefined, newDevicesCount: { c?: string | number } | undefined) {
@@ -43,6 +44,7 @@ async function getDashboard(db: Knex, redis: Redis, request: FastifyRequest) {
     newDevicesCount, readings24hCount, lastReadingInfo, clientsWithAlertsCount, devicesUnmanagedCount,
     agentsReportingCount, agentVersionRows, alertsByClassRows, discoveredTodayCount, discoveredYesterdayCount,
     pendingDevicesTotalCount, publishedAgentVersion, devicesReportingCount, movementsCounts,
+    incidentStats, supplyRequestsPendingCount,
   ] = await Promise.all([
     queryDevicesCount(db, cid),
     queryAgentsStats(db, cid, fiveMinsAgo),
@@ -65,6 +67,8 @@ async function getDashboard(db: Knex, redis: Redis, request: FastifyRequest) {
     getPublishedAgentVersion(redis),
     queryDevicesReportingCount(db, cid, twentyFourHoursAgo),
     queryMovementsCounts(db, cid, startOfYesterday),
+    getIncidentStats(db, { clientId: cid }),
+    querySupplyRequestsPendingCount(db, cid),
   ]);
 
   const { total, deviceTrend } = computeDeviceTrend(devicesCount, newDevicesCount);
@@ -92,6 +96,7 @@ async function getDashboard(db: Knex, redis: Redis, request: FastifyRequest) {
     agentVersions: (agentVersionRows as Array<{ version: string; count: string | number }>).map((v) => ({ version: v.version, count: Number(v.count) })),
     currentAgentVersion: publishedAgentVersion,
     alertsByClass,
+    alertsOpenTotal: alertsByClass.reduce((sum, a) => sum + a.count, 0),
     discovered: {
       today: Number(discoveredTodayCount?.c || 0),
       yesterday: Number(discoveredYesterdayCount?.c || 0),
@@ -100,6 +105,12 @@ async function getDashboard(db: Knex, redis: Redis, request: FastifyRequest) {
     movements: {
       recent: Number(movementsCounts?.recent || 0),
       total: Number(movementsCounts?.total || 0),
+    },
+    incidents: {
+      openTotal: Number((incidentStats as { openTotal?: number }).openTotal || 0),
+    },
+    supplyRequests: {
+      pending: Number(supplyRequestsPendingCount?.c || 0),
     },
     systemHealth: {
       status: "healthy",
