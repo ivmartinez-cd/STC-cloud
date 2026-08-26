@@ -81,7 +81,7 @@ const ts = Date.now();
 const ctx = {
   adminToken: '', clientId: '', otherClientId: '', agentToken: '',
   deviceId: '', deviceSerial: `SN-SUPREQ-${ts}`,
-  viewerToken: '',
+  viewerToken: '', globalThresholdPctAtCreation: -1,
 };
 
 describe('Pedidos — fixtures', () => {
@@ -89,6 +89,12 @@ describe('Pedidos — fixtures', () => {
     const login = await req('POST', '/portal/login', { username: USER, password: PASS });
     assert.equal(login.status, 200);
     ctx.adminToken = login.data.token;
+
+    // Capturado ACÁ, en el momento del alta — no después, para no depender de
+    // que nada más (otro test, otra sesión) haya tocado el ajuste global
+    // entretanto (ver `describe('Configuración por cliente (opt-in)')`).
+    const settings = await req('GET', '/settings/system', undefined, ctx.adminToken);
+    ctx.globalThresholdPctAtCreation = settings.data.supply_threshold_critical_pct;
 
     const client = await req('POST', '/clients', { name: `SupplyReq Test Client ${ts}` }, ctx.adminToken);
     ctx.clientId = client.data.id;
@@ -107,11 +113,16 @@ describe('Pedidos — fixtures', () => {
 });
 
 describe('Configuración por cliente (opt-in)', () => {
-  test('default: deshabilitado con umbral 10', async () => {
+  // El umbral default ya NO es un 10 hardcodeado: desde el cierre de gap
+  // post-verificación del handoff hifi #3 (26/08/2026), `CreateClientUseCase`
+  // lo copia del umbral global de Configuración del sistema al momento del
+  // alta (`supply_threshold_critical_pct`) — se lee dinámicamente en vez de
+  // asumir un valor fijo, porque otra sesión/test puede haberlo cambiado.
+  test('default: deshabilitado, con el umbral GLOBAL vigente al momento del alta', async () => {
     const res = await req('GET', `/clients/${ctx.clientId}/supply-request-settings`, undefined, ctx.adminToken);
     assert.equal(res.status, 200);
     assert.equal(res.data.enabled, false);
-    assert.equal(res.data.threshold_pct, 10);
+    assert.equal(res.data.threshold_pct, ctx.globalThresholdPctAtCreation);
   });
 
   test('habilitar con umbral 15', async () => {
