@@ -15,6 +15,13 @@ const connection: Knex.PgConnectionConfig | string = process.env.DATABASE_URL
     }
   : {
       host: process.env.DB_HOST || "localhost",
+      // Sin esto, `pg` cae a su default (5432) sin importar `DB_PORT` — adentro
+      // de Docker da lo mismo (Postgres escucha en 5432 ahí), pero corriendo
+      // tests desde el host contra el puerto expuesto (5434 en docker-compose)
+      // hacía que cualquier test que importara un módulo real de la app (con
+      // su propio pool de Knex, ej. jobs/alertDigestJob.ts) fallara al conectar
+      // — encontrado corriendo la suite completa fuera de un contenedor.
+      port: Number(process.env.DB_PORT) || 5432,
       user: process.env.DB_USER || "stc_admin",
       password: process.env.DB_PASSWORD || "stc_secret",
       database: process.env.DB_NAME || "stc_cloud",
