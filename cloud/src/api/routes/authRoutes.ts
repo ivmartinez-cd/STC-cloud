@@ -5,6 +5,16 @@ import { AgentService } from "../../modules/agents";
 import { createAuthController } from "../controllers/authController";
 import type { AuthHook } from "../middlewares/authMiddleware";
 
+// Techos de fuerza bruta en login/activate — deliberadamente INDEPENDIENTES
+// de RATE_LIMIT_MAX (ese es el límite general por IP; éstos protegen contra
+// probar contraseñas/keys). Configurables por env con el mismo criterio que
+// RATE_LIMIT_MAX (ver .env): el default seguro de producción no cambia, pero
+// la suite e2e completa (53 archivos, cada uno con su propio login/activate
+// de fixture, todos desde la misma IP) los agotaba sin que RATE_LIMIT_MAX
+// pudiera compensarlo — encontrado 26/08/2026 corriendo `npm test` completo.
+const LOGIN_RATE_LIMIT_MAX = Number(process.env.LOGIN_RATE_LIMIT_MAX) || 10;
+const AGENT_ACTIVATE_RATE_LIMIT_MAX = Number(process.env.AGENT_ACTIVATE_RATE_LIMIT_MAX) || 5;
+
 const activateSchema = {
   body: {
     type: "object",
@@ -88,7 +98,7 @@ export function registerAuthRoutes(
 
   fastify.post("/api/v1/portal/login", {
     schema: portalLoginSchema,
-    config: { rateLimit: { max: 10, timeWindow: "1 minute" } },
+    config: { rateLimit: { max: LOGIN_RATE_LIMIT_MAX, timeWindow: "1 minute" } },
     handler: ctrl.portalLogin,
   });
 
@@ -139,7 +149,7 @@ export function registerAuthRoutes(
 
   fastify.post("/api/v1/agents/activate", {
     schema: activateSchema,
-    config: { rateLimit: { max: 5, timeWindow: "1 minute" } },
+    config: { rateLimit: { max: AGENT_ACTIVATE_RATE_LIMIT_MAX, timeWindow: "1 minute" } },
     handler: ctrl.agentActivate,
   });
 
