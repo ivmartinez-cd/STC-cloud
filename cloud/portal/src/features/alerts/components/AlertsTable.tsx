@@ -1,139 +1,155 @@
 import { Link } from 'react-router-dom';
-import { Check, CheckCircle2, CheckSquare, Square, AlertOctagon } from 'lucide-react';
-import type { Alert, AlertClassOption, ResponderOption } from '../../../shared/types/alerts';
+import { CheckSquare, Square } from 'lucide-react';
+import type { Alert } from '../../../shared/types/alerts';
 import type { AlertPatch } from '../hooks/useAlertsPage';
-import { CLASS_COLOR, SEVERITY_COLOR, SEVERITY_LABELS, TH_CLASS, fmtDate } from '../lib/alertPresentation';
+import { codeOf } from '../hooks/useAlertsPage';
+import { SEVERITY_LABELS, classDot, fmtDate, severityDot } from '../lib/alertPresentation';
+import { GRID_COLS } from './alertsGrid';
+import EstadoChip from '../../../shared/components/EstadoChip';
+import { TableEmptyState, TableErrorState, TableSkeletonRow } from '../../../shared/components/TableStates';
 
 type Selection = { selected: Set<number>; allSelected: boolean; toggle: (id: number) => void; toggleAll: () => void };
 
 interface Props {
   alerts: Alert[];
-  classOptions: AlertClassOption[];
-  responderOptions: ResponderOption[];
+  classLabels: Record<string, string>;
   readOnly: boolean;
   selection: Selection;
   pendingId: number | null;
+  groupByCode: boolean;
+  loading: boolean;
+  error: string;
+  onRetry: () => void;
   onUpdate: (id: number, patch: AlertPatch) => void;
   onCreateIncident: (alert: Alert) => void;
 }
 
-const COLUMNS = ['Severidad', 'Cliente', 'Monitor / Equipo', 'Código', 'Motivo', 'Clase', 'Acción', 'Fecha', 'Estado'];
+const HEAD_LABELS = ['SEVERIDAD', 'CLIENTE', 'MONITOR / EQUIPO', 'CÓDIGO Y MOTIVO', 'CLASE'];
 
-const Badge = ({ className, children }: { className: string; children: React.ReactNode }) => (
-  <span className={`inline-flex px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider ${className}`}>{children}</span>
-);
+function TargetCell({ a }: { a: Alert }) {
+  if (a.device_id) return <Link to={`/devices/${a.device_id}`} className="truncate font-sans text-[12.5px] text-ink-900 hover:text-brand-accent hover:underline">{a.device_name || a.serial || 'Dispositivo'}</Link>;
+  if (a.agent_id) return <Link to={`/monitors/${a.agent_id}`} className="truncate font-sans text-[12.5px] text-ink-900 hover:text-brand-accent hover:underline">{a.agent_name || 'Monitor'}</Link>;
+  return <span className="truncate font-sans text-[12.5px] text-ink-200">Equipo sin identificar</span>;
+}
 
-const TargetLink = ({ a }: { a: Alert }) => {
-  if (a.device_id) {
-    return <Link to={`/devices/${a.device_id}`} className="hover:text-brand hover:underline">{a.device_name || a.serial || 'Dispositivo'}</Link>;
+function CodeAndReasonCell({ a }: { a: Alert }) {
+  return (
+    <div className="min-w-0">
+      <div className="truncate font-mono text-[11.5px] text-ink-700">{a.type}</div>
+      <div className="truncate font-sans text-[11px] text-ink-300">{a.alert_reason || a.message}</div>
+    </div>
+  );
+}
+
+function StatusChip({ a }: { a: Alert }) {
+  if (a.resolved) return <EstadoChip label="RESUELTA" variant="neutral" />;
+  if (a.acknowledged) return <EstadoChip label="RECONOCIDA" variant="neutral" />;
+  return <EstadoChip label="SIN RECONOCER" variant="attention" />;
+}
+
+function RowCta({ a, pendingId, onUpdate, onCreateIncident }: Pick<Props, 'pendingId' | 'onUpdate' | 'onCreateIncident'> & { a: Alert }) {
+  if (a.incident_id) {
+    return <Link to={`/incidents/${a.incident_id}`} className="justify-self-end font-montserrat text-[10px] font-semibold uppercase tracking-[.08em] text-brand-accent hover:underline">VER INCIDENTE →</Link>;
   }
-  if (a.agent_id) {
-    return <Link to={`/monitors/${a.agent_id}`} className="hover:text-brand hover:underline">{a.agent_name || 'Monitor'}</Link>;
+  if (!a.acknowledged) {
+    return (
+      <button type="button" disabled={pendingId === a.id} onClick={() => onUpdate(a.id, { acknowledged: true })} className="justify-self-end font-montserrat text-[10px] font-semibold uppercase tracking-[.08em] text-brand-accent hover:underline disabled:opacity-50">
+        RECONOCER →
+      </button>
+    );
   }
-  return <>—</>;
-};
-
-const StatusCell = ({ a }: { a: Alert }) => (
-  <div className="flex flex-col gap-1">
-    <span className={`text-[9px] font-bold uppercase tracking-wider ${a.resolved ? 'text-emerald-600' : 'text-slate-400'}`}>
-      {a.resolved ? 'Resuelta' : 'Activa'}
-    </span>
-    {a.acknowledged && <span className="text-[9px] font-bold uppercase tracking-wider text-brand-gray">Reconocida</span>}
-  </div>
-);
-
-type ActionsProps = Pick<Props, 'pendingId' | 'onUpdate' | 'onCreateIncident'> & { a: Alert };
-
-const IncidentAction = ({ a, onCreateIncident }: Pick<ActionsProps, 'a' | 'onCreateIncident'>) =>
-  a.incident_id ? (
-    <Link to={`/incidents/${a.incident_id}`} onClick={(ev) => ev.stopPropagation()} title={`Incidente #${a.incident_number}`}
-      className="p-2 bg-brand/10 text-brand rounded-xl hover:bg-brand/20 transition-all">
-      <AlertOctagon size={14} />
-    </Link>
-  ) : (
-    <button onClick={() => onCreateIncident(a)} title="Crear incidente"
-      className="p-2 bg-slate-100 text-slate-500 rounded-xl hover:bg-slate-200 transition-all">
-      <AlertOctagon size={14} />
+  return (
+    <button type="button" onClick={() => onCreateIncident(a)} className="justify-self-end font-montserrat text-[10px] font-semibold uppercase tracking-[.08em] text-brand-accent hover:underline">
+      ABRIR INCIDENTE →
     </button>
   );
+}
 
-const RowActions = ({ a, pendingId, onUpdate, onCreateIncident }: ActionsProps) => (
-  <div className="flex items-center justify-end gap-2">
-    {!a.acknowledged && (
-      <button disabled={pendingId === a.id} onClick={() => onUpdate(a.id, { acknowledged: true })} title="Reconocer"
-        className="p-2 bg-brand/10 text-brand rounded-xl hover:bg-brand/20 transition-all disabled:opacity-50">
-        <Check size={14} />
-      </button>
-    )}
-    {!a.resolved && (
-      <button disabled={pendingId === a.id} onClick={() => onUpdate(a.id, { resolved: true })} title="Resolver"
-        className="p-2 bg-emerald-50 text-emerald-600 rounded-xl hover:bg-emerald-100 transition-all disabled:opacity-50">
-        <CheckCircle2 size={14} />
-      </button>
-    )}
-    <IncidentAction a={a} onCreateIncident={onCreateIncident} />
-  </div>
-);
+type RowProps = Pick<Props, 'classLabels' | 'readOnly' | 'selection' | 'pendingId' | 'onUpdate' | 'onCreateIncident'> & { a: Alert };
 
-type RowProps = Omit<Props, 'alerts'> & { a: Alert };
-
-const AlertRow = ({ a, classOptions, responderOptions, readOnly, selection, pendingId, onUpdate, onCreateIncident }: RowProps) => (
-  <tr className="hover:bg-slate-50/50 transition-colors">
-    {!readOnly && (
-      <td className="py-2.5 px-4">
-        <button onClick={() => selection.toggle(a.id)} className="text-slate-300 hover:text-brand">
-          {selection.selected.has(a.id) ? <CheckSquare size={16} className="text-brand" /> : <Square size={16} />}
+function AlertRow({ a, classLabels, readOnly, selection, pendingId, onUpdate, onCreateIncident }: RowProps) {
+  return (
+    <div className={`grid ${GRID_COLS} min-h-[54px] items-center gap-x-[14px] border-b border-line-200 px-5 py-[11px] transition-colors duration-150 ease-in-out hover:bg-surface-hover`}>
+      {readOnly ? <span /> : (
+        <button type="button" onClick={() => selection.toggle(a.id)} className="justify-self-start text-ink-300 hover:text-ink-100" title="Seleccionar">
+          {selection.selected.has(a.id) ? <CheckSquare size={15} className="text-brand" /> : <Square size={15} />}
         </button>
-      </td>
-    )}
-    <td className="py-2.5 px-4"><Badge className={SEVERITY_COLOR(a.severity)}>{SEVERITY_LABELS[a.severity] ?? a.severity}</Badge></td>
-    <td className="py-2.5 px-4 text-[11px] text-slate-700 font-bold">{a.client_name || '—'}</td>
-    <td className="py-2.5 px-4 text-[11px] text-slate-600"><TargetLink a={a} /></td>
-    <td className="py-2.5 px-4 text-[10px] font-mono text-slate-500" title={a.type}>{a.type}</td>
-    <td className="py-2.5 px-4 text-[11px] text-slate-600 max-w-[280px] truncate" title={a.message}>{a.alert_reason || a.message}</td>
-    <td className="py-2.5 px-4">
-      {a.alert_class
-        ? <Badge className={CLASS_COLOR[a.alert_class]}>{classOptions.find((c) => c.id === a.alert_class)?.label ?? a.alert_class}</Badge>
-        : '—'}
-    </td>
-    <td className="py-2.5 px-4 text-[10px] font-bold text-slate-500">
-      {a.responder ? (responderOptions.find((r) => r.id === a.responder)?.label ?? a.responder) : '—'}
-    </td>
-    <td className="py-2.5 px-4 text-[10px] text-slate-500 font-medium">{fmtDate(a.created_at)}</td>
-    <td className="py-2.5 px-4"><StatusCell a={a} /></td>
-    {!readOnly && (
-      <td className="py-2.5 px-4 text-right">
-        <RowActions a={a} pendingId={pendingId} onUpdate={onUpdate} onCreateIncident={onCreateIncident} />
-      </td>
-    )}
-  </tr>
-);
-
-const TableHead = ({ readOnly, selection }: Pick<Props, 'readOnly' | 'selection'>) => (
-  <thead className="bg-slate-50 border-b border-slate-100">
-    <tr>
-      {!readOnly && (
-        <th className="py-3 px-4 w-8">
-          <button onClick={selection.toggleAll} className="text-slate-400 hover:text-brand" title="Seleccionar todos">
-            {selection.allSelected ? <CheckSquare size={16} /> : <Square size={16} />}
-          </button>
-        </th>
       )}
-      {COLUMNS.map((c) => <th key={c} className={TH_CLASS}>{c}</th>)}
-      {!readOnly && <th className={`${TH_CLASS} text-right`}>Acciones</th>}
-    </tr>
-  </thead>
-);
+      <span className="justify-self-start"><EstadoChip label={SEVERITY_LABELS[a.severity] ?? a.severity} variant="attention" dotClassName={severityDot(a.severity)} /></span>
+      <span className="truncate font-sans text-[12.5px] font-semibold text-ink-900">{a.client_name || '—'}</span>
+      <TargetCell a={a} />
+      <CodeAndReasonCell a={a} />
+      <span className="justify-self-start"><EstadoChip label={a.alert_class ? (classLabels[a.alert_class] ?? a.alert_class) : 'Otro'} variant="neutral" dotClassName={classDot(a.alert_class)} /></span>
+      <span className="text-right font-sans text-[12px] text-ink-600">{fmtDate(a.created_at)}</span>
+      <span className="justify-self-start"><StatusChip a={a} /></span>
+      {readOnly ? <span /> : <RowCta a={a} pendingId={pendingId} onUpdate={onUpdate} onCreateIncident={onCreateIncident} />}
+    </div>
+  );
+}
 
-const AlertsTable = (props: Props) => (
-  <div className="w-full overflow-x-auto rounded-3xl border border-slate-100 bg-white">
-    <table className="w-full text-left border-collapse whitespace-nowrap">
-      <TableHead readOnly={props.readOnly} selection={props.selection} />
-      <tbody className="divide-y divide-slate-50">
-        {props.alerts.map((a) => <AlertRow key={a.id} a={a} {...props} />)}
-      </tbody>
-    </table>
-  </div>
-);
+function HeaderRow({ readOnly, selection }: Pick<Props, 'readOnly' | 'selection'>) {
+  return (
+    <div className={`grid ${GRID_COLS} items-center gap-x-[14px] border-b border-line-100 bg-surface-table-head px-5 py-3`}>
+      {readOnly ? <span /> : (
+        <button type="button" onClick={selection.toggleAll} className="justify-self-start text-ink-300 hover:text-ink-100" title="Seleccionar todos">
+          {selection.allSelected ? <CheckSquare size={14} /> : <Square size={14} />}
+        </button>
+      )}
+      {HEAD_LABELS.map((l) => <div key={l} className="font-montserrat text-[8.5px] font-bold uppercase tracking-[.14em] text-ink-300">{l}</div>)}
+      <div className="text-right font-montserrat text-[8.5px] font-bold uppercase tracking-[.14em] text-ink-300">DETECTADA</div>
+      <div className="font-montserrat text-[8.5px] font-bold uppercase tracking-[.14em] text-ink-300">ESTADO</div>
+      <div />
+    </div>
+  );
+}
 
-export default AlertsTable;
+function GroupHeader({ label, count }: { label: string; count: number }) {
+  return (
+    <div className="border-b border-line-200 bg-surface-table-head px-5 py-2 font-montserrat text-[9px] font-bold uppercase tracking-[.1em] text-ink-600">
+      {label} · {count}
+    </div>
+  );
+}
+
+function GroupedRows(props: Omit<Props, 'groupByCode' | 'loading' | 'error' | 'onRetry'>) {
+  const groups = new Map<string, Alert[]>();
+  for (const a of props.alerts) {
+    const code = codeOf(a);
+    groups.set(code, [...(groups.get(code) ?? []), a]);
+  }
+  const sorted = Array.from(groups.entries()).sort((x, y) => y[1].length - x[1].length);
+  return (
+    <>
+      {sorted.map(([code, rows]) => (
+        <div key={code}>
+          <GroupHeader label={props.classLabels[code] ?? code} count={rows.length} />
+          {rows.map((a) => <AlertRow key={a.id} a={a} {...props} />)}
+        </div>
+      ))}
+    </>
+  );
+}
+
+const SKELETON_WIDTHS = ['', 'w-3/5', 'w-2/5', 'w-1/2', 'w-3/5', 'w-2/5', 'w-2/5', 'w-2/5', ''];
+
+function Body(props: Props) {
+  if (props.error) return <TableErrorState message="No se pudo cargar" onRetry={props.onRetry} />;
+  if (props.loading) return <>{Array.from({ length: 8 }, (_, i) => <TableSkeletonRow key={i} gridCols={GRID_COLS} widths={SKELETON_WIDTHS} />)}</>;
+  if (props.alerts.length === 0) return <TableEmptyState message="Ningún resultado con los filtros actuales" />;
+  return props.groupByCode ? <GroupedRows {...props} /> : <>{props.alerts.map((a) => <AlertRow key={a.id} a={a} {...props} />)}</>;
+}
+
+/** Tabla de Alertas (handoff hifi #3, 26/08/2026): checkbox + severidad + cliente +
+ * equipo + código y motivo (fusionados) + clase + detectada + estado + CTA única
+ * por fila. `ACCIÓN` (responder) se elimina — "Con formación" repetido no informaba
+ * nada; `groupByCode` reagrupa la página visible sin pedir datos nuevos. */
+export default function AlertsTable(props: Props) {
+  return (
+    <div className="overflow-x-auto">
+      <div className="min-w-[1320px]" role="table" aria-label="Alertas">
+        <HeaderRow readOnly={props.readOnly} selection={props.selection} />
+        <Body {...props} />
+      </div>
+    </div>
+  );
+}

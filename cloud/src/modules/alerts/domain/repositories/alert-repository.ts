@@ -20,6 +20,11 @@ export interface AlertQueryFilters {
   /** `"true"` | `"false"` | otro (sin filtro) — semántica exacta del query param original. */
   resolved?: string;
   acknowledged?: string;
+  /** Chip de filtro `+24 H` (handoff hifi #3, 26/08/2026) — el use-case calcula el
+   * corte a partir de `?max_age_hours=`; el repositorio sólo filtra por fecha. */
+  createdAfter?: Date;
+  /** Buscador (handoff hifi #3, 26/08/2026) — código, cliente o equipo. */
+  q?: string;
 }
 
 export interface AlertPage {
@@ -85,8 +90,14 @@ export interface AlertRepository {
   /** Resuelve las de `origin='device'` abiertas del equipo cuyo type no está en `currentTypes`. */
   resolveStaleDeviceAlerts(deviceId: string, currentTypes: string[]): Promise<number>;
   findPage(scope: AlertScope, filters: AlertQueryFilters, page: AlertPage): Promise<RawAlertListRow[]>;
+  /** Total real para la paginación (handoff hifi #3, 26/08/2026) — mismos filtros que
+   * `findPage`, sin `limit`/`offset`. Antes `GET /alerts` paginaba "a ciegas". */
+  countMatching(scope: AlertScope, filters: AlertQueryFilters): Promise<number>;
   countByClass(scope: AlertScope, filters: AlertQueryFilters): Promise<Array<{ alertClass: AlertClass | null; count: number }>>;
   countBySeverity(scope: AlertScope, filters: AlertQueryFilters): Promise<Array<{ severity: string; count: number }>>;
+  /** Agrupado por `type` dentro de `availability`, por `alert_class` en el resto — ver `AlertCodeCount`. */
+  countByCode(scope: AlertScope, filters: AlertQueryFilters): Promise<Array<{ code: string | null; count: number }>>;
+  countDistinctClients(scope: AlertScope, filters: AlertQueryFilters): Promise<number>;
   /** De `ids`, los que existen Y pertenecen al scope (defensa en profundidad, además del RBAC por ruta). */
   findOwnedIds(scope: AlertScope, ids: number[]): Promise<number[]>;
   updateOne(id: number, updates: AlertLifecycleUpdates): Promise<AlertLifecycleState>;

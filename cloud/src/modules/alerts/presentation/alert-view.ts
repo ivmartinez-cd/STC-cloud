@@ -47,8 +47,10 @@ export function toAlertClassesView() {
 export function toAlertSummaryView(s: AlertSummary) {
   return {
     byClass: s.byClass.map((c) => ({ alert_class: c.alertClass, label: c.label, count: c.count })),
+    byCode: s.byCode.map((c) => ({ code: c.code, label: c.label, count: c.count })),
     bySeverity: s.bySeverity,
     total: s.total,
+    clients_affected: s.clientsAffected,
   };
 }
 

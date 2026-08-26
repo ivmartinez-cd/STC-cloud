@@ -62,6 +62,10 @@ export type AlertClassesResponse = {
 
 export type AlertSummary = {
   byClass: Array<{ alert_class: AlertClass; label: string; count: number }>;
+  /** "Sin resolver por código" (handoff hifi #3, 26/08/2026) — `device_offline`/
+   * `agent_offline` desagregados de `availability`; el resto es 1:1 con su clase. */
+  byCode: Array<{ code: string; label: string; count: number }>;
   bySeverity: { critical: number; warning: number };
   total: number;
+  clients_affected: number;
 };

@@ -3,137 +3,162 @@ import { useSearchParams } from 'react-router-dom';
 import { api } from '../../../shared/lib/api';
 import { useAuth } from '../../../store/AuthContext';
 import { useToast } from '../../../store/ToastContext';
+import { useDebounce } from '../../../shared/hooks/useDebounce';
 import { useRowSelection } from '../../../shared/hooks/useRowSelection';
-import type { Alert, AlertClassOption, ResponderOption, AlertSummary } from '../../../shared/types/alerts';
+import type { Alert, AlertSummary } from '../../../shared/types/alerts';
 import { PAGE_SIZE } from '../lib/alertPresentation';
 
-export interface ClientOption { id: string; name: string; }
-export type ResolvedFilter = 'false' | 'true' | '';
-export type AcknowledgedFilter = '' | 'true' | 'false';
+export type ClientOption = { id: string; name: string };
 export type AlertPatch = { acknowledged?: boolean; resolved?: boolean };
 
 export interface AlertFiltersState {
-  severity: string; setSeverity: (v: string) => void;
-  alertClass: string; setAlertClass: (v: string) => void;
-  resolved: ResolvedFilter; setResolved: (v: ResolvedFilter) => void;
-  acknowledged: AcknowledgedFilter; setAcknowledged: (v: AcknowledgedFilter) => void;
-  clientId: string; setClientId: (v: string) => void;
+  q: string; setQ: (v: string) => void;
+  unresolved: boolean; setUnresolved: (v: boolean) => void;
+  critical: boolean; setCritical: (v: boolean) => void;
+  unacknowledged: boolean; setUnacknowledged: (v: boolean) => void;
+  availability: boolean; setAvailability: (v: boolean) => void;
+  last24h: boolean; setLast24h: (v: boolean) => void;
+  /** Deep-link únicamente (`/alerts?client_id=` desde Cliente Detalle) — sin chip propio. */
+  clientId: string;
 }
 
-/**
- * `class` y `resolved` viven también en la URL (`/alerts?class=jam&resolved=false`):
- * es lo que hacen clicables los contadores del dashboard y permite compartir el link.
- * La mitad "leer al montar" está en los useState iniciales de useAlertFilters.
- */
-function useUrlSync(alertClass: string, resolved: ResolvedFilter) {
+/** `class`/`resolved`/`client_id` en la URL: lo que hace clicables los contadores
+ * del dashboard/detalle de cliente y permite compartir el link. */
+function useUrlSync(unresolved: boolean, availability: boolean) {
   const [searchParams, setSearchParams] = useSearchParams();
   useEffect(() => {
     const next = new URLSearchParams(searchParams);
-    if (alertClass) next.set('class', alertClass); else next.delete('class');
-    if (resolved) next.set('resolved', resolved); else next.delete('resolved');
+    if (!unresolved) next.set('resolved', ''); else next.delete('resolved');
+    if (availability) next.set('class', 'availability'); else next.delete('class');
     setSearchParams(next, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [alertClass, resolved]);
-  return searchParams;
-}
-
-function initialResolved(params: URLSearchParams): ResolvedFilter {
-  const fromUrl = params.get('resolved');
-  return fromUrl === 'true' || fromUrl === 'false' ? fromUrl : 'false';
+  }, [unresolved, availability]);
 }
 
 function useAlertFilters(): AlertFiltersState {
   const [initial] = useSearchParams();
-  const [severity, setSeverity] = useState('');
-  const [alertClass, setAlertClass] = useState(() => initial.get('class') ?? '');
-  const [resolved, setResolved] = useState<ResolvedFilter>(() => initialResolved(initial));
-  const [acknowledged, setAcknowledged] = useState<AcknowledgedFilter>('');
-  // Lee `client_id` de la URL al montar (mismo criterio que `alertClass`/`resolved`
-  // arriba) — habilita el deep-link real `/alerts?client_id=` desde la tab
-  // "Alertas" del detalle de cliente (handoff hifi "Cliente — detalle", 25/08/2026).
-  const [clientId, setClientId] = useState(() => initial.get('client_id') ?? '');
-  useUrlSync(alertClass, resolved);
-  return { severity, setSeverity, alertClass, setAlertClass, resolved, setResolved, acknowledged, setAcknowledged, clientId, setClientId };
+  const [q, setQ] = useState('');
+  const [unresolved, setUnresolved] = useState(() => initial.get('resolved') !== '');
+  const [critical, setCritical] = useState(false);
+  const [unacknowledged, setUnacknowledged] = useState(false);
+  const [availability, setAvailability] = useState(() => initial.get('class') === 'availability');
+  const [last24h, setLast24h] = useState(false);
+  const [clientId] = useState(() => initial.get('client_id') ?? '');
+  useUrlSync(unresolved, availability);
+  return { q, setQ, unresolved, setUnresolved, critical, setCritical, unacknowledged, setUnacknowledged, availability, setAvailability, last24h, setLast24h, clientId };
 }
 
-/** Catálogos de apoyo. Best-effort: si fallan, la tabla igual funciona. */
+/** Catálogos de apoyo: clases (etiqueta de la columna CLASE) y clientes (sólo
+ * para el selector DENTRO de `CreateIncidentModal` — la barra de filtros
+ * rediseñada ya no tiene selector manual de cliente). Best-effort. */
 function useAlertCatalogs(canFilterByClient: boolean) {
+  const [classLabels, setClassLabels] = useState<Record<string, string>>({});
   const [clients, setClients] = useState<ClientOption[]>([]);
-  const [classOptions, setClassOptions] = useState<AlertClassOption[]>([]);
-  const [responderOptions, setResponderOptions] = useState<ResponderOption[]>([]);
-
+  useEffect(() => {
+    api.get<{ classes: Array<{ id: string; label: string }> }>('/alerts/classes')
+      .then((d) => setClassLabels(Object.fromEntries(d.classes.map((c) => [c.id, c.label]))))
+      .catch(() => { /* comodidad: se ve sin etiqueta de clase */ });
+  }, []);
   useEffect(() => {
     if (!canFilterByClient) return;
-    api.get<ClientOption[]>('/clients').then(setClients).catch(() => { /* comodidad: sin filtro de cliente */ });
+    api.get<ClientOption[]>('/clients').then(setClients).catch(() => { /* comodidad: modal sin selector de cliente */ });
   }, [canFilterByClient]);
-
-  useEffect(() => {
-    api.get<{ classes: AlertClassOption[]; responders: ResponderOption[] }>('/alerts/classes')
-      .then((d) => { setClassOptions(d.classes); setResponderOptions(d.responders); })
-      .catch(() => { /* comodidad: se ve sin etiquetas de clase */ });
-  }, []);
-
-  return { clients, classOptions, responderOptions };
+  return { classLabels, clients };
 }
 
-function buildListParams(f: AlertFiltersState, page: number): URLSearchParams {
+export function buildAlertsQueryParams(f: AlertFiltersState, page: number): URLSearchParams {
   const params = new URLSearchParams();
-  if (f.severity) params.set('severity', f.severity);
-  if (f.alertClass) params.set('alert_class', f.alertClass);
-  if (f.resolved) params.set('resolved', f.resolved);
-  if (f.acknowledged) params.set('acknowledged', f.acknowledged);
+  if (f.q.trim().length >= 2) params.set('q', f.q.trim());
+  if (f.unresolved) params.set('resolved', 'false');
+  if (f.critical) params.set('severity', 'critical');
+  if (f.unacknowledged) params.set('acknowledged', 'false');
+  if (f.availability) params.set('alert_class', 'availability');
+  if (f.last24h) params.set('max_age_hours', '24');
   if (f.clientId) params.set('client_id', f.clientId);
   params.set('limit', String(PAGE_SIZE));
   params.set('offset', String(page * PAGE_SIZE));
   return params;
 }
 
-/** Contador de cabecera (informativo: si falla, la tabla igual funciona). */
-function useAlertSummary(resolved: ResolvedFilter, clientId: string) {
-  const [summary, setSummary] = useState<AlertSummary | null>(null);
-  const fetchSummary = useCallback(async () => {
-    const params = new URLSearchParams();
-    if (resolved) params.set('resolved', resolved);
-    if (clientId) params.set('client_id', clientId);
-    try {
-      setSummary(await api.get<AlertSummary>(`/alerts/summary?${params.toString()}`));
-    } catch { /* informativo */ }
-  }, [resolved, clientId]);
-  useEffect(() => { void fetchSummary(); }, [fetchSummary]);
-  return { summary, fetchSummary };
+function requestAlertSummary(unresolved: boolean, clientId: string): Promise<AlertSummary> {
+  const params = new URLSearchParams();
+  params.set('resolved', unresolved ? 'false' : '');
+  if (clientId) params.set('client_id', clientId);
+  return api.get<AlertSummary>(`/alerts/summary?${params.toString()}`);
 }
 
-/** Página actual del listado, reactiva a filtros y página. */
-function useAlertRows(filters: AlertFiltersState, page: number) {
+/** Tira de 4 métricas: independiente de los chips de la tabla — sólo reacciona
+ * a `resolved`/`client_id`, mismo criterio que el resto de los summaries del portal. */
+function useAlertSummary(unresolved: boolean, clientId: string) {
+  const [summary, setSummary] = useState<AlertSummary | null>(null);
+  const [summaryLoading, setSummaryLoading] = useState(true);
+  const [summaryError, setSummaryError] = useState(false);
+  const fetchSummary = useCallback(async () => {
+    setSummaryLoading(true);
+    setSummaryError(false);
+    try { setSummary(await requestAlertSummary(unresolved, clientId)); }
+    catch { setSummaryError(true); }
+    finally { setSummaryLoading(false); }
+  }, [unresolved, clientId]);
+  useEffect(() => { void fetchSummary(); }, [fetchSummary]);
+  return { summary, summaryLoading, summaryError, fetchSummary };
+}
+
+/** Página actual + total real (`/alerts` + `/alerts/count`, handoff hifi #3 — antes "ciega"). */
+async function requestAlertPage(filters: AlertFiltersState, page: number): Promise<{ items: Alert[]; total: number }> {
+  const qs = buildAlertsQueryParams(filters, page).toString();
+  const [items, count] = await Promise.all([
+    api.get<Alert[]>(`/alerts?${qs}`),
+    api.get<{ total: number }>(`/alerts/count?${qs}`),
+  ]);
+  return { items, total: count.total };
+}
+
+/** Sólo el `useState` — separado de `useAlertRows` por el límite de 20 líneas/función. */
+function useAlertRowsState() {
   const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const { severity, alertClass, resolved, acknowledged, clientId } = filters;
+  return { alerts, setAlerts, total, setTotal, loading, setLoading, error, setError };
+}
+
+function useAlertRows(filters: AlertFiltersState, page: number, debouncedQ: string) {
+  const st = useAlertRowsState();
+  const effective = { ...filters, q: debouncedQ };
   const fetchAlerts = useCallback(async () => {
-    setLoading(true);
-    setError('');
+    st.setLoading(true);
+    st.setError('');
     try {
-      setAlerts(await api.get<Alert[]>(`/alerts?${buildListParams(filters, page).toString()}`));
+      const { items, total: t } = await requestAlertPage(effective, page);
+      st.setAlerts(items);
+      st.setTotal(t);
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      st.setError(e instanceof Error ? e.message : String(e));
     } finally {
-      setLoading(false);
+      st.setLoading(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [severity, alertClass, resolved, acknowledged, clientId, page]);
+  }, [debouncedQ, filters.unresolved, filters.critical, filters.unacknowledged, filters.availability, filters.last24h, filters.clientId, page]);
   useEffect(() => { void fetchAlerts(); }, [fetchAlerts]);
-  return { alerts, setAlerts, loading, error, fetchAlerts };
+  return { ...st, totalPages: Math.max(1, Math.ceil(st.total / PAGE_SIZE)), fetchAlerts };
 }
 
 function useAlertList(filters: AlertFiltersState) {
   const [page, setPage] = useState(0);
-  const { severity, alertClass, resolved, acknowledged, clientId } = filters;
-  // Primera página al cambiar cualquier filtro (evita quedar en una página vacía).
-  useEffect(() => { setPage(0); }, [severity, alertClass, resolved, acknowledged, clientId]);
-  return { page, setPage, ...useAlertRows(filters, page), ...useAlertSummary(resolved, clientId) };
+  const debouncedQ = useDebounce(filters.q, 300);
+  useEffect(() => { setPage(0); }, [debouncedQ, filters.unresolved, filters.critical, filters.unacknowledged, filters.availability, filters.last24h, filters.clientId]);
+  return { page, setPage, ...useAlertRows(filters, page, debouncedQ), ...useAlertSummary(filters.unresolved, filters.clientId) };
 }
 
 type AlertList = ReturnType<typeof useAlertList>;
+
+/** "Agrupar por código" (handoff hifi #3, 26/08/2026) — toggle de vista sobre la
+ * página visible, no una consulta nueva: agrupa lo ya traído por el mismo
+ * derivador de código que usa el backend en `/alerts/summary#byCode`. */
+export function codeOf(a: Pick<Alert, 'alert_class' | 'type'>): string {
+  return a.alert_class === 'availability' ? a.type : (a.alert_class ?? 'other');
+}
 
 function useUpdateAlert(list: AlertList) {
   const { showToast } = useToast();
@@ -159,26 +184,53 @@ async function postBulk(ids: number[], patch: AlertPatch): Promise<number> {
   return result.count;
 }
 
-/** Selección múltiple sólo sobre la página visible: nunca se reconoce/resuelve lo que no se vio. */
+/** Cliente/equipo/clase pre-cargados en `CreateIncidentModal` sólo si son
+ * uniformes en la selección — mezclar clientes/equipos distintos bajo un
+ * mismo valor precargado sería silenciosamente incorrecto. */
+export function deriveIncidentContext(alerts: Alert[]): { clientId?: string; deviceId?: string; alertClass?: string } {
+  const clientIds = new Set(alerts.map((a) => a.client_id).filter(Boolean));
+  const deviceIds = new Set(alerts.map((a) => a.device_id).filter(Boolean));
+  const classes = new Set(alerts.map((a) => a.alert_class).filter(Boolean));
+  return {
+    clientId: clientIds.size === 1 ? (alerts[0].client_id ?? undefined) : undefined,
+    deviceId: deviceIds.size === 1 ? (alerts[0].device_id ?? undefined) : undefined,
+    alertClass: classes.size === 1 ? (alerts[0].alert_class ?? undefined) : undefined,
+  };
+}
+
+/** Selección múltiple sólo sobre la página visible: nunca se reconoce lo que no se vio. */
+type Toast = (msg: string, kind: 'success' | 'error') => void;
+
+/** Reconocer en bloque, compartido por la barra de selección y por "RECONOCER
+ * TODAS" del header — mismo request, mismo manejo de error/refetch. */
+async function acknowledgeIds(ids: number[], showToast: Toast, list: AlertList, setBulkBusy: (v: boolean) => void, onDone?: () => void): Promise<void> {
+  if (ids.length === 0) return;
+  setBulkBusy(true);
+  try {
+    const count = await postBulk(ids, { acknowledged: true });
+    showToast(`${count} alerta(s) reconocidas`, count > 0 ? 'success' : 'error');
+    onDone?.();
+    void Promise.all([list.fetchAlerts(), list.fetchSummary()]);
+  } catch (e) {
+    showToast(e instanceof Error ? e.message : 'Error al reconocer en bloque', 'error');
+  } finally {
+    setBulkBusy(false);
+  }
+}
+
 function useBulkUpdate(list: AlertList) {
   const { showToast } = useToast();
   const [bulkBusy, setBulkBusy] = useState(false);
+  const [groupByCode, setGroupByCode] = useState(false);
   const rowSelection = useRowSelection(list.alerts.map((a) => a.id));
   useEffect(() => { rowSelection.clear(); }, [list.alerts]); // eslint-disable-line react-hooks/exhaustive-deps
-  const bulkUpdate = async (patch: AlertPatch) => {
-    setBulkBusy(true);
-    try {
-      const count = await postBulk(Array.from(rowSelection.selected), patch);
-      showToast(`${count} alerta(s) actualizadas`, count > 0 ? 'success' : 'error');
-      rowSelection.clear();
-      void Promise.all([list.fetchAlerts(), list.fetchSummary()]);
-    } catch (e) {
-      showToast(e instanceof Error ? e.message : 'Error al actualizar en bloque', 'error');
-    } finally {
-      setBulkBusy(false);
-    }
-  };
-  return { bulkBusy, rowSelection, bulkUpdate };
+  const bulkAcknowledge = () => acknowledgeIds(Array.from(rowSelection.selected), showToast, list, setBulkBusy, rowSelection.clear);
+  // "Todas" es la página actual, no las 2.249 del total sin paginar — el backend
+  // rechaza a propósito "todo lo que matchea el filtro" en `/alerts/bulk`
+  // (`bulk-update-alerts.ts`) para no reconocer a ciegas algo nunca listado.
+  const acknowledgeAllVisible = () => acknowledgeIds(list.alerts.filter((a) => !a.acknowledged).map((a) => a.id), showToast, list, setBulkBusy);
+  const selectedAlerts = () => list.alerts.filter((a) => rowSelection.selected.has(a.id));
+  return { bulkBusy, rowSelection, bulkAcknowledge, groupByCode, setGroupByCode, selectedAlerts, acknowledgeAllVisible };
 }
 
 export function useAlertsPage() {
@@ -190,10 +242,9 @@ export function useAlertsPage() {
   const filters = useAlertFilters();
   const catalogs = useAlertCatalogs(canFilterByClient);
   const list = useAlertList(filters);
-  const [incidentModalAlert, setIncidentModalAlert] = useState<Alert | null>(null);
   return {
     isReadOnlyViewer, canFilterByClient, filters, ...catalogs, ...list,
-    ...useUpdateAlert(list), ...useBulkUpdate(list), incidentModalAlert, setIncidentModalAlert,
+    ...useUpdateAlert(list), ...useBulkUpdate(list),
   };
 }
 

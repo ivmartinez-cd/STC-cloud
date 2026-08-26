@@ -111,8 +111,34 @@ export interface AlertClassCount {
   count: number;
 }
 
+/**
+ * "Sin resolver por código" (handoff hifi #3, 26/08/2026) — agregado más fino
+ * que `byClass`: dentro de la clase `availability`, `device_offline` y
+ * `agent_offline` son problemas distintos (equipo vs. agente) pero hoy
+ * `alert_class` los fusiona. `code` es el `type` crudo para `availability`
+ * (única clase con más de un `type` relevante) y el nombre de la clase para
+ * el resto — ver `DIAGNOSTIC_CODE_LABELS` y `KnexAlertRepository.countByCode`.
+ */
+export interface AlertCodeCount {
+  code: string;
+  label: string;
+  count: number;
+}
+
+/** Etiquetas de los códigos de diagnóstico más frecuentes — el resto cae a
+ * `ALERT_CLASS_LABELS[code]` (el código ES el nombre de la clase en ese caso). */
+export const DIAGNOSTIC_CODE_LABELS: Record<string, string> = {
+  device_offline: "Equipo sin señal",
+  agent_offline: "Agente sin señal",
+  counter_reset: "Reinicio de contador",
+  consumable_low: "Consumible bajo",
+};
+
 export interface AlertSummary {
   byClass: AlertClassCount[];
+  byCode: AlertCodeCount[];
   bySeverity: { critical: number; warning: number };
   total: number;
+  /** Clientes distintos con al menos una alerta que matchea el filtro actual. */
+  clientsAffected: number;
 }

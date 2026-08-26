@@ -1,14 +1,15 @@
-// Alertas EWS (auto-resolución), filtro server-side, regresión de
-// auto-resolución indebida y LEFT JOIN agent-scoped. Separado de
+// Alertas EWS (auto-resolución), filtro server-side, /alerts/summary
+// (byClass/byCode/clients_affected) y /alerts?max_age_hours=. Separado de
 // alerts.test.ts (deuda de sizes-baseline, 2026-08-26) sólo por tamaño de
 // archivo; fixture propia (cliente + agente + dispositivo) porque corre en
-// su propio proceso.
+// su propio proceso. La regresión de auto-resolución indebida y el LEFT JOIN
+// agent-scoped viven en alertsRegressionAndScope.test.ts (mismo motivo,
+// 26/08/2026, al sumar los tests del handoff hifi #3).
 // Ejecutar: API_URL=http://localhost:3000/api/v1 npx tsx --test src/tests/alertsEwsRegression.test.ts
 
-import { test, describe, after } from 'node:test';
+import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
-import knexLib from 'knex';
 
 const API  = process.env.API_URL  || 'http://localhost:3000/api/v1';
 const USER = process.env.PORTAL_ADMIN_USER     || 'admin';
@@ -42,24 +43,6 @@ async function pollUntil<T>(fn: () => Promise<T>, predicate: (v: T) => boolean, 
   } while (Date.now() < deadline);
   return last;
 }
-
-// Conexión directa a Postgres SOLO para insertar una alerta agent-scoped sintética
-// (no hay generador real de `agent_offline` todavía) y así probar el LEFT JOIN de
-// `getAlerts` sin depender de esa fase — mismo criterio que alerts.test.ts.
-const rawDb = knexLib({
-  client: 'pg',
-  connection: {
-    host: process.env.ALERTS_TEST_DB_HOST || 'localhost',
-    port: Number(process.env.ALERTS_TEST_DB_PORT || 5434),
-    user: process.env.DB_USER || 'stc_admin',
-    password: process.env.DB_PASSWORD || 'stc_secret',
-    database: process.env.DB_NAME || 'stc_cloud',
-  },
-});
-
-after(async () => {
-  await rawDb.destroy().catch(() => {});
-});
 
 const ts = Date.now();
 const ctx = {
@@ -182,99 +165,35 @@ describe('Alertas — filtro server-side por alert_class y /alerts/summary', () 
     const sumByClass = summary.data.byClass.reduce((acc: number, r: any) => acc + r.count, 0);
     assert.equal(sumByClass, list.data.length);
   });
-});
 
-describe('Alertas — bug de auto-resolución indebida (device_still_reporting no debe cerrarse por un sync EWS de otro tipo)', () => {
-  const regressionSerial = `SN-ALERTS-REGRESSION-${ts}`;
-  const regressionCtx = { deviceId: '' };
-
-  test('crear un segundo equipo y darlo de baja', async () => {
-    const sync = await req('POST', '/devices/sync', {
-      readings: [{
-        reading_id: crypto.randomUUID(), device_id: regressionSerial, ip: '192.168.211.20', brand: 'hp',
-        time: new Date().toISOString(), total_pages: 5, offline: false,
-      }],
-    }, ctx.agentToken);
-    assert.equal(sync.status, 200);
-
-    const found = await pollUntil(
-      () => req('GET', `/clients/${ctx.clientId}/devices`, undefined, ctx.adminToken),
-      (r) => r.data.some((d: any) => d.serial_number === regressionSerial),
-    );
-    regressionCtx.deviceId = found.data.find((d: any) => d.serial_number === regressionSerial).id;
-
-    const decomm = await req('POST', `/devices/${regressionCtx.deviceId}/decommission`, { reason: 'Prueba de regresión' }, ctx.adminToken);
-    assert.equal(decomm.status, 200);
-  });
-
-  test('un sync tras la baja abre device_still_reporting con origin=cloud, y una alerta EWS aparte con origin=device', async () => {
-    const sync = await req('POST', '/devices/sync', {
-      readings: [{
-        reading_id: crypto.randomUUID(), device_id: regressionSerial, ip: '192.168.211.20', brand: 'hp',
-        time: new Date(Date.now() + 1000).toISOString(), total_pages: 6, offline: false,
-        supplies_details: { alerts: [{ code: 'HR-0', description: 'Low paper', severity: 'WARNING' }] },
-      }],
-    }, ctx.agentToken);
-    assert.equal(sync.status, 200);
-
-    const stillReporting = await pollUntil(
-      () => req('GET', `/alerts?device_id=${regressionCtx.deviceId}&type=device_still_reporting`, undefined, ctx.adminToken),
-      (r) => r.data.length > 0,
-    );
-    assert.equal(stillReporting.data[0].resolved, false);
-    assert.equal(stillReporting.data[0].origin, 'cloud');
-
-    const ewsAlert = await req('GET', `/alerts?device_id=${regressionCtx.deviceId}&type=HR-0`, undefined, ctx.adminToken);
-    assert.equal(ewsAlert.data[0].origin, 'device');
-  });
-
-  test('un sync posterior con una lista EWS DISTINTA no cierra device_still_reporting (bug real, pre-fix), pero sí resuelve la alerta EWS vieja', async () => {
-    const sync = await req('POST', '/devices/sync', {
-      readings: [{
-        reading_id: crypto.randomUUID(), device_id: regressionSerial, ip: '192.168.211.20', brand: 'hp',
-        time: new Date(Date.now() + 2000).toISOString(), total_pages: 7, offline: false,
-        supplies_details: { alerts: [{ code: 'HR-1', description: 'No paper', severity: 'WARNING' }] },
-      }],
-    }, ctx.agentToken);
-    assert.equal(sync.status, 200);
-
-    const oldEwsResolved = await pollUntil(
-      () => req('GET', `/alerts?device_id=${regressionCtx.deviceId}&type=HR-0`, undefined, ctx.adminToken),
-      (r) => r.data[0]?.resolved === true,
-    );
-    assert.equal(oldEwsResolved.data[0].resolved, true, 'la alerta EWS vieja (HR-0, origin=device) sí debe auto-resolverse');
-
-    const stillReporting = await req('GET', `/alerts?device_id=${regressionCtx.deviceId}&type=device_still_reporting`, undefined, ctx.adminToken);
-    assert.equal(
-      stillReporting.data[0].resolved, false,
-      'device_still_reporting (origin=cloud) NO debe auto-resolverse por un sync EWS de otro tipo — este era el bug real'
-    );
-  });
-});
-
-describe('Alertas agent-scoped — LEFT JOIN de getAlerts', () => {
-  test('una alerta con agent_id (sin device_id) resuelve client_name/agent_name y respeta el filtro resolved', async () => {
-    // No hay generador real de `agent_offline` todavía (Fase 2) — se inserta
-    // directo para probar el join sin esperar esa fase.
-    const [{ id: syntheticId }] = await rawDb('alerts').insert({
-      agent_id: ctx.agentId,
-      type: 'agent_offline',
-      severity: 'critical',
-      message: 'Monitor sin señal (prueba)',
-      resolved: false,
-    }).returning('id');
-
-    const { status, data } = await req('GET', `/alerts?type=agent_offline`, undefined, ctx.adminToken);
+  test('GET /alerts/summary — byCode cuadra con el total y distingue device_offline de agent_offline', async () => {
+    const { status, data } = await req('GET', `/alerts/summary?client_id=${ctx.clientId}&resolved=false`, undefined, ctx.adminToken);
     assert.equal(status, 200);
-    const found = data.find((a: any) => a.id === syntheticId);
-    assert.ok(found, 'La alerta agent-scoped debe aparecer (antes era invisible: join sobre devices era INNER)');
-    assert.equal(found.client_name, `Alerts EWS Test Client ${ts}`);
-    assert.equal(found.agent_name, 'Alerts EWS Test Agent');
-    assert.equal(found.device_id, null);
+    const sumByCode = data.byCode.reduce((acc: number, r: any) => acc + r.count, 0);
+    assert.equal(sumByCode, data.total);
+    // `subunit_out` (C2-1411, seteado en el describe anterior) no es `availability`
+    // → su código de diagnóstico es el nombre de la clase, no un `type` crudo.
+    const subunitOut = data.byCode.find((r: any) => r.code === 'subunit_out');
+    assert.ok(subunitOut && subunitOut.count >= 1);
+    assert.ok(data.byCode.every((r: any) => r.code !== 'availability'), 'availability nunca debe aparecer como código — se desagrega en device_offline/agent_offline');
+    assert.ok(typeof data.clients_affected === 'number' && data.clients_affected >= 1);
+  });
 
-    const resolvedFalse = await req('GET', '/alerts?resolved=false&type=agent_offline', undefined, ctx.adminToken);
-    assert.ok(resolvedFalse.data.some((a: any) => a.id === syntheticId));
+  test('GET /alerts?max_age_hours=24 incluye la alerta recién creada; max_age_hours=0 (inválido) no filtra', async () => {
+    const recent = await req('GET', `/alerts?device_id=${ctx.deviceId}&max_age_hours=24`, undefined, ctx.adminToken);
+    assert.equal(recent.status, 200);
+    assert.ok(recent.data.length >= 1);
+    const noFilter = await req('GET', `/alerts?device_id=${ctx.deviceId}&max_age_hours=0`, undefined, ctx.adminToken);
+    assert.equal(noFilter.data.length, (await req('GET', `/alerts?device_id=${ctx.deviceId}`, undefined, ctx.adminToken)).data.length);
+  });
 
-    await rawDb('alerts').where({ id: syntheticId }).delete();
+  test('GET /alerts?q= busca por código, cliente y equipo; /alerts/count cuadra con la longitud de la página', async () => {
+    const byCode = await req('GET', `/alerts?device_id=${ctx.deviceId}&q=C2-1411`, undefined, ctx.adminToken);
+    assert.ok(byCode.data.length >= 1);
+    const byDevice = await req('GET', `/alerts?device_id=${ctx.deviceId}&q=${encodeURIComponent('Alerts EWS Test Device')}`, undefined, ctx.adminToken);
+    assert.ok(byDevice.data.length >= 1);
+    const countRes = await req('GET', `/alerts/count?device_id=${ctx.deviceId}&q=C2-1411`, undefined, ctx.adminToken);
+    assert.equal(countRes.status, 200);
+    assert.equal(countRes.data.total, byCode.data.length);
   });
 });

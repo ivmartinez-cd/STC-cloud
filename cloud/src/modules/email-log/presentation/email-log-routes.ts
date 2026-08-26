@@ -19,6 +19,30 @@ const listQuerySchema = {
   },
 };
 
+const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+
+const summaryQuerySchema = {
+  querystring: {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      client_id: { type: "string", format: "uuid" },
+      from: { type: "string", format: "date-time" },
+      to: { type: "string", format: "date-time" },
+    },
+  },
+};
+
+/** Mismo criterio de ventana por defecto que `/audit-logs` (últimos 30 días). */
+function buildSummaryHandler(repo: KnexEmailLogRepository) {
+  return async (request: FastifyRequest) => {
+    const q = request.query as { client_id?: string; from?: string; to?: string };
+    const from = q.from ? new Date(q.from) : new Date(Date.now() - THIRTY_DAYS_MS);
+    const to = q.to ? new Date(q.to) : new Date();
+    return repo.summary(from, to, q.client_id);
+  };
+}
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 function buildListHandler(repo: KnexEmailLogRepository) {
   return async (request: FastifyRequest, reply: FastifyReply) => {
@@ -47,5 +71,10 @@ export function registerEmailLogRoutes(fastify: FastifyInstance, db: Knex, porta
   const repo = new KnexEmailLogRepository(db);
   fastify.get("/api/v1/email-log", {
     preHandler: portalAuth, schema: listQuerySchema, handler: buildListHandler(repo),
+  });
+  // Antes de `/email-log/:id` si alguna vez se agrega — acá no hay ruta con
+  // parámetro que pueda confundir a Fastify con el literal `summary`.
+  fastify.get("/api/v1/email-log/summary", {
+    preHandler: portalAuth, schema: summaryQuerySchema, handler: buildSummaryHandler(repo),
   });
 }

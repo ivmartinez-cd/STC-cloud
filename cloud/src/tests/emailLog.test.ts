@@ -100,4 +100,23 @@ describe('Auditoría de correo — e2e', () => {
     const res = await req('GET', '/email-log?status=no_existe', undefined, ctx.adminToken);
     assert.equal(res.status, 400);
   });
+
+  test('GET /email-log/summary — sinSmtp cuadra con el intento auditado, reintentos es siempre 0', async () => {
+    const res = await req('GET', `/email-log/summary?client_id=${ctx.clientId}`, undefined, ctx.adminToken);
+    assert.equal(res.status, 200);
+    assert.equal(res.data.sinSmtp, 1, 'el único intento de este cliente en la ventana quedó skipped_no_transport');
+    assert.equal(res.data.entregados, 0);
+    assert.equal(res.data.sinDestinatario, 0, 'el cliente sí tiene notification_email configurado');
+    assert.equal(res.data.reintentos, 0, 'no existe cola de reintentos — el número real es 0, no un placeholder');
+    assert.equal(res.data.intentos, res.data.entregados + res.data.sinDestinatario + res.data.sinSmtp);
+  });
+
+  test('GET /email-log/summary — clientesSinContacto cuenta contra la cartera global, no la ventana', async () => {
+    const sinContacto = await req('POST', '/clients', { name: `EmailLog SinContacto ${ts}` }, ctx.adminToken);
+    const res = await req('GET', '/email-log/summary', undefined, ctx.adminToken);
+    assert.equal(res.status, 200);
+    assert.ok(res.data.clientesSinContacto >= 1, 'el cliente recién creado sin notification_email debe contar');
+    assert.ok(res.data.clientesTotal >= res.data.clientesSinContacto);
+    void sinContacto;
+  });
 });

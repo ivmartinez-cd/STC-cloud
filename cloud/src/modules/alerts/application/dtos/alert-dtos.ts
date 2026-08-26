@@ -42,6 +42,10 @@ export interface ListAlertsInput {
   alertClass?: string;
   responder?: string;
   acknowledged?: string;
+  /** Chip `+24 H` — horas hacia atrás desde ahora; el use-case lo convierte a fecha de corte. */
+  maxAgeHours?: string;
+  /** Buscador — código, cliente o equipo. */
+  q?: string;
   limit?: string;
   offset?: string;
 }

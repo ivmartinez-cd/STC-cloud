@@ -41,6 +41,14 @@ function applyFilters(query: Knex.QueryBuilder, f: AlertQueryFilters) {
   else if (f.resolved === "false") query.where("alerts.resolved", false);
   if (f.acknowledged === "true") query.where("alerts.acknowledged", true);
   else if (f.acknowledged === "false") query.where("alerts.acknowledged", false);
+  if (f.createdAfter) query.where("alerts.created_at", ">=", f.createdAfter);
+  if (f.q) {
+    const term = `%${f.q}%`;
+    query.andWhere((b) => {
+      b.whereILike("alerts.type", term).orWhereILike("alerts.alert_reason", term)
+        .orWhereILike("devices.name", term).orWhereILike("clients.name", term).orWhereILike("agents.name", term);
+    });
+  }
 }
 
 function toLifecycleUpdateRow(u: AlertLifecycleUpdates): Record<string, unknown> {
@@ -145,6 +153,27 @@ export class KnexAlertRepository implements AlertRepository {
     const rows: Array<{ severity: string; count: string }> = await this.scopedQuery(scope, filters)
       .select("alerts.severity").count("alerts.id as count").groupBy("alerts.severity");
     return rows.map((r) => ({ severity: r.severity, count: Number(r.count) }));
+  }
+
+  /** `availability` es la única clase con más de un `type` que importa distinguir
+   * (equipo vs. agente sin señal) — el resto agrupa por clase, que ya es 1:1 con
+   * su(s) `type`(s) desde el punto de vista del diagnóstico ("por qué"). */
+  async countByCode(scope: AlertScope, filters: AlertQueryFilters) {
+    const codeExpr = this.db.raw("CASE WHEN alerts.alert_class = 'availability' THEN alerts.type ELSE alerts.alert_class END as code");
+    const rows: Array<{ code: string | null; count: string }> = await this.scopedQuery(scope, filters)
+      .select(codeExpr).count("alerts.id as count").groupByRaw("1");
+    return rows.map((r) => ({ code: r.code, count: Number(r.count) }));
+  }
+
+  /** `COUNT(DISTINCT ...)` ignora los NULL de por sí — cubre las agent-scoped sin cliente resuelto. */
+  async countDistinctClients(scope: AlertScope, filters: AlertQueryFilters): Promise<number> {
+    const [{ count }] = await this.scopedQuery(scope, filters).countDistinct("clients.id as count");
+    return Number(count);
+  }
+
+  async countMatching(scope: AlertScope, filters: AlertQueryFilters): Promise<number> {
+    const [{ count }] = await this.scopedQuery(scope, filters).count("alerts.id as count");
+    return Number(count);
   }
 
   async findOwnedIds(scope: AlertScope, ids: number[]): Promise<number[]> {

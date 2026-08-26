@@ -76,6 +76,19 @@
      sistema, sólo se suman los que las vistas anteriores no necesitaron. */
   --color-brand-warn-hover: #fbebd8;  /* hover de botón de advertencia (REGENERAR LLAVE) */
   --color-brand-warn-text: #8a6033;   /* texto de detalle sobre fondo naranja suave (aviso ENLACE CIFRADO) */
+  --color-brand-warn-border: #e0a76b; /* borde cálido de banner de diagnóstico — antes literal `border-[#E0A76B]`
+                                          en DiagnosticBanner.tsx, promovido a token al mover ese componente a shared/ */
+
+  /* Tokens que faltaban del handoff hifi "Login" (26/08/2026) — panel oscuro de
+     marca a pantalla completa, único lugar del portal con fondo casi negro. Alias
+     nuevos (no reusar `--color-ink-900`, mismo hex que `panel-dark` por
+     coincidencia): ese token documenta "texto sobre fondo claro", acá es al revés
+     (fondo detrás de texto claro) — mismo valor, intención distinta. */
+  --color-panel-dark: #2e3033;        /* fondo del panel de marca */
+  --color-panel-dark-line: #3e4144;   /* divisorias dentro del panel oscuro */
+  --color-panel-dark-text: #a9aeb0;   /* texto secundario sobre panel oscuro (6.1:1) */
+  --color-panel-dark-label: #8a9096;  /* labels de la tira de métricas del panel oscuro */
+  --color-line-checkbox: #c4c9ca;     /* borde del checkbox "mantener sesión abierta" */
 
   /* Tipografía de "Manual de marca.pdf": Montserrat (Título) + Source Sans Pro (Cuerpo). */
   --font-sans: 'Source Sans 3', 'Source Sans Pro', system-ui, -apple-system, sans-serif;
@@ -266,3 +279,15 @@ body {
    diferencia de .custom-scrollbar (casi invisible a propósito en otros
    lugares), acá el scroll tiene que LEERSE como "hay más, scrolleá" y no
    como contenido cortado/roto — thumb visible + fade en el borde inferior. */
+
+/* Handoff hifi "Login" (26/08/2026) — el autofill de Chrome/Safari pinta el
+   input de celeste (`#e8f0fe` aprox.) sin importar el `background` del CSS;
+   es justamente el celeste que el handoff pide erradicar de esta pantalla.
+   `-webkit-box-shadow` inset es el único override real (Firefox no lo
+   necesita: no tiñe el fondo). */
+.institutional-input:-webkit-autofill,
+.institutional-input:-webkit-autofill:hover,
+.institutional-input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 60px #fafbfb inset;
+  -webkit-text-fill-color: #2e3033;
+}

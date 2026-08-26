@@ -1,149 +1,54 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Loader2, MailCheck } from 'lucide-react';
-import { api } from '../../../shared/lib/api';
-import SimplePagination from '../../../shared/components/SimplePagination';
-import { APP_LOCALE } from '../../../shared/lib/formatters';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import PageHeader from '../../../shared/components/PageHeader';
+import HifiPagination from '../../../shared/components/HifiPagination';
+import { BTN_PRIMARY_LG, BTN_SECONDARY_LG } from '../../../shared/lib/buttons';
+import { useEmailLogPage } from '../hooks/useEmailLogPage';
+import { PAGE_SIZE } from '../lib/emailLogPresentation';
+import { exportEmailLogCsv } from '../lib/exportEmailLogCsv';
+import EmailLogBanner from '../components/EmailLogBanner';
+import EmailLogMetricsStrip from '../components/EmailLogMetricsStrip';
+import EmailLogFilterBar from '../components/EmailLogFilterBar';
+import EmailLogTable from '../components/EmailLogTable';
 
-const PAGE_SIZE = 50;
-
-interface EmailLogRow {
-  id: string;
-  client_id: string | null;
-  event: string;
-  recipient: string | null;
-  subject: string;
-  status: string;
-  error: string | null;
-  created_at: string;
-}
-
-interface ClientOption { id: string; name: string; }
-
-const STATUS_LABELS: Record<string, string> = {
-  sent: 'Enviado',
-  error: 'Error',
-  skipped_no_transport: 'Sin SMTP',
-  skipped_no_recipient: 'Sin destinatario',
-};
-
-const STATUS_COLORS: Record<string, string> = {
-  sent: 'bg-emerald-50 text-emerald-600',
-  error: 'bg-rose-50 text-rose-600',
-  skipped_no_transport: 'bg-amber-50 text-amber-600',
-  skipped_no_recipient: 'bg-slate-100 text-slate-500',
-};
-
-const EVENT_LABELS: Record<string, string> = {
-  'alert.created': 'Alerta',
-  'incident.created': 'Incidente',
-  'supply_request.created': 'Pedido nuevo',
-  'supply_request.completed': 'Pedido completado',
-  'report.closed': 'Cierre mensual',
-  scheduled_report: 'Informe programado',
-};
-
-function fmtDate(v: string): string {
-  return new Date(v).toLocaleString(APP_LOCALE, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
-}
-
-const selectCls = 'bg-white text-slate-700 text-sm font-bold px-4 py-2.5 rounded-2xl border border-slate-200 outline-none focus:border-brand cursor-pointer';
-
-/**
- * Registro de auditoría de correo (Fase 4.4 del gap analysis vs HP SDS).
- * Cada intento de envío queda acá, incluso los que no salieron.
- */
+/** Auditoría de correo (handoff hifi #3, 26/08/2026) — registra correctamente
+ * que ningún email se entrega, pero antes lo presentaba como 1.284 filas
+ * sueltas sin decir por qué. El banner + la tira de métricas son el
+ * diagnóstico; la tabla queda para el detalle fila por fila. */
 export default function EmailLog() {
-  const [items, setItems] = useState<EmailLogRow[]>([]);
-  const [total, setTotal] = useState(0);
-  const [clients, setClients] = useState<ClientOption[]>([]);
-  const [clientFilter, setClientFilter] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
-  const [q, setQ] = useState('');
-  const [page, setPage] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const s = useEmailLogPage();
+  const navigate = useNavigate();
+  const [exporting, setExporting] = useState(false);
 
-  const load = useCallback(() => {
-    setLoading(true);
-    const params = new URLSearchParams();
-    if (clientFilter) params.set('client_id', clientFilter);
-    if (statusFilter) params.set('status', statusFilter);
-    if (q.trim()) params.set('q', q.trim());
-    params.set('limit', String(PAGE_SIZE));
-    params.set('offset', String(page * PAGE_SIZE));
-    api.get<{ items: EmailLogRow[]; total: number }>(`/email-log?${params}`)
-      .then((d) => { setItems(d.items); setTotal(d.total); })
-      .catch(() => { setItems([]); setTotal(0); })
-      .finally(() => setLoading(false));
-  }, [clientFilter, statusFilter, q, page]);
-
-  useEffect(() => { load(); }, [load]);
-  useEffect(() => { setPage(0); }, [clientFilter, statusFilter, q]);
-  useEffect(() => {
-    api.get<ClientOption[]>('/clients').then(setClients).catch(() => setClients([]));
-  }, []);
-
-  const clientName = (id: string | null) => (id ? clients.find((c) => c.id === id)?.name ?? '…' : '—');
+  const handleExport = async () => {
+    setExporting(true);
+    try { await exportEmailLogCsv(s.filters.query, s.filters.status, s.nameOf); } finally { setExporting(false); }
+  };
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
-      <header>
-        <h1 className="text-3xl font-extrabold text-[#1a2333] tracking-tight flex items-center gap-3">
-          <MailCheck size={28} className="text-brand" /> Correo
-        </h1>
-        <p className="text-sm text-slate-500 font-medium mt-1">
-          Auditoría de emails de notificación — cada intento queda registrado, se haya enviado o no.
-        </p>
-      </header>
+    <div className="-m-4 flex min-w-0 flex-col bg-surface-page px-[34px] pb-9 pt-[30px] md:-m-10">
+      <PageHeader
+        eyebrow="AUDITORÍA DE EMAILS DE NOTIFICACIÓN" title="Correo"
+        subtitle="Cada intento queda registrado, se haya enviado o no. Si un aviso no llegó, acá está el motivo exacto."
+        actions={
+          <>
+            <button type="button" onClick={handleExport} disabled={exporting} className={BTN_SECONDARY_LG}>{exporting ? 'EXPORTANDO…' : 'EXPORTAR'}</button>
+            <button type="button" onClick={() => navigate('/settings')} className={BTN_PRIMARY_LG}>CONFIGURAR SMTP</button>
+          </>
+        }
+      />
 
-      <div className="flex gap-3 flex-wrap">
-        <select value={clientFilter} onChange={(e) => setClientFilter(e.target.value)} className={selectCls}>
-          <option value="">Todos los clientes</option>
-          {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-        </select>
-        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className={selectCls}>
-          <option value="">Todo estado</option>
-          {Object.entries(STATUS_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-        </select>
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar destinatario o asunto…"
-          className="flex-1 min-w-[220px] bg-white text-slate-700 text-sm font-medium px-4 py-2.5 rounded-2xl border border-slate-200 outline-none focus:border-brand" />
+      <EmailLogBanner summary={s.summary} />
+      <EmailLogMetricsStrip summary={s.summary} loading={s.summaryLoading} error={s.summaryError} onRetry={s.fetchSummary} />
+
+      <div className="rounded-[5px] border border-line-100 bg-white">
+        <EmailLogFilterBar
+          query={s.filters.rawQuery} onQueryChange={s.filters.setRawQuery}
+          status={s.filters.status} onStatusChange={s.filters.setStatus}
+        />
+        <EmailLogTable items={s.items} clientName={s.nameOf} loading={s.loading} error={s.error} onRetry={s.fetchRows} />
+        <HifiPagination page={s.filters.page} totalPages={s.totalPages} total={s.total} pageSize={PAGE_SIZE} itemLabel="intentos" onPageChange={s.filters.setPage} />
       </div>
-
-      {loading ? (
-        <div className="py-16 flex justify-center"><Loader2 size={28} className="text-brand animate-spin" /></div>
-      ) : items.length === 0 ? (
-        <div className="bg-white rounded-3xl border border-slate-100 p-12 text-center text-sm text-slate-400 font-medium">
-          Sin registros de correo con estos filtros.
-        </div>
-      ) : (
-        <div className="bg-white rounded-3xl border border-slate-100 overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-slate-50 border-b border-slate-100">
-              <tr>
-                {['Fecha', 'Cliente', 'Evento', 'Destinatario', 'Asunto', 'Estado'].map((h) => (
-                  <th key={h} className="py-3 px-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-50">
-              {items.map((r) => (
-                <tr key={r.id} className="hover:bg-slate-50/50" title={r.error ?? undefined}>
-                  <td className="py-3 px-4 text-slate-500 font-medium whitespace-nowrap">{fmtDate(r.created_at)}</td>
-                  <td className="py-3 px-4 font-bold text-slate-700">{clientName(r.client_id)}</td>
-                  <td className="py-3 px-4 text-slate-500 font-bold text-[10px] uppercase">{EVENT_LABELS[r.event] ?? r.event}</td>
-                  <td className="py-3 px-4 text-slate-600 font-medium">{r.recipient ?? '—'}</td>
-                  <td className="py-3 px-4 text-slate-600 font-medium max-w-[320px] truncate" title={r.subject}>{r.subject}</td>
-                  <td className="py-3 px-4">
-                    <span className={`px-2.5 py-1 rounded-full text-[9px] font-extrabold uppercase tracking-wider ${STATUS_COLORS[r.status] ?? 'bg-slate-100 text-slate-500'}`}>
-                      {STATUS_LABELS[r.status] ?? r.status}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          <SimplePagination page={page} pageSize={PAGE_SIZE} total={total} onPageChange={setPage} />
-        </div>
-      )}
     </div>
   );
 }

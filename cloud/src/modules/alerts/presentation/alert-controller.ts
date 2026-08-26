@@ -3,6 +3,7 @@ import { getClientIp } from "../../../api/utils/ip";
 import { getPortalUser, getScope } from "../../../api/utils/scope";
 import { AlertError } from "../domain/errors/alert-error";
 import type { BulkUpdateAlertsUseCase } from "../application/use-cases/bulk-update-alerts";
+import type { CountAlertsUseCase } from "../application/use-cases/count-alerts";
 import type { GetAlertSummaryUseCase } from "../application/use-cases/get-alert-summary";
 import type { ListAlertsUseCase } from "../application/use-cases/list-alerts";
 import type { UpdateAlertUseCase } from "../application/use-cases/update-alert";
@@ -11,12 +12,14 @@ import { toAlertClassesView, toAlertLifecycleView, toAlertListView, toAlertSumma
 interface ListAlertsQuery {
   resolved?: string; device_id?: string; client_id?: string; severity?: string; type?: string;
   alert_class?: string; responder?: string; acknowledged?: string; limit?: string; offset?: string;
+  max_age_hours?: string; q?: string;
 }
 
 interface LifecycleBody { acknowledged?: boolean; resolved?: boolean }
 
 export interface AlertUseCases {
   list: ListAlertsUseCase;
+  count: CountAlertsUseCase;
   summary: GetAlertSummaryUseCase;
   update: UpdateAlertUseCase;
   bulkUpdate: BulkUpdateAlertsUseCase;
@@ -32,17 +35,24 @@ async function replyingAlertErrors<T>(reply: FastifyReply, fn: () => Promise<T>)
   }
 }
 
+function toListAlertsInput(request: FastifyRequest): Parameters<ListAlertsUseCase["execute"]>[0] {
+  const q = request.query as ListAlertsQuery;
+  return {
+    scope: getScope(request), resolved: q.resolved, deviceId: q.device_id, clientId: q.client_id,
+    severity: q.severity, type: q.type, alertClass: q.alert_class, responder: q.responder,
+    acknowledged: q.acknowledged, limit: q.limit, offset: q.offset, maxAgeHours: q.max_age_hours, q: q.q,
+  };
+}
+
 function buildGetAlertsHandler(useCase: ListAlertsUseCase) {
   return (request: FastifyRequest, reply: FastifyReply) =>
-    replyingAlertErrors(reply, async () => {
-      const q = request.query as ListAlertsQuery;
-      const items = await useCase.execute({
-        scope: getScope(request), resolved: q.resolved, deviceId: q.device_id, clientId: q.client_id,
-        severity: q.severity, type: q.type, alertClass: q.alert_class, responder: q.responder,
-        acknowledged: q.acknowledged, limit: q.limit, offset: q.offset,
-      });
-      return toAlertListView(items);
-    });
+    replyingAlertErrors(reply, async () => toAlertListView(await useCase.execute(toListAlertsInput(request))));
+}
+
+/** `GET /alerts/count` — mismos filtros que `GET /alerts`, sin paginar (handoff hifi #3). */
+function buildGetAlertsCountHandler(useCase: CountAlertsUseCase) {
+  return (request: FastifyRequest, reply: FastifyReply) =>
+    replyingAlertErrors(reply, async () => ({ total: await useCase.execute(toListAlertsInput(request)) }));
 }
 
 function buildGetAlertSummaryHandler(useCase: GetAlertSummaryUseCase) {
@@ -79,6 +89,7 @@ function buildBulkUpdateAlertsHandler(useCase: BulkUpdateAlertsUseCase) {
 export function createAlertController(useCases: AlertUseCases) {
   return {
     getAlerts: buildGetAlertsHandler(useCases.list),
+    getAlertsCount: buildGetAlertsCountHandler(useCases.count),
     getAlertClasses: async () => toAlertClassesView(),
     getAlertSummary: buildGetAlertSummaryHandler(useCases.summary),
     updateAlert: buildUpdateAlertHandler(useCases.update),

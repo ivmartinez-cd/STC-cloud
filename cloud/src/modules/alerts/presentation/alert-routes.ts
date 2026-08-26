@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import type { Knex } from "knex";
 import type { AuthHook } from "../../../api/middlewares/authMiddleware";
 import { BulkUpdateAlertsUseCase } from "../application/use-cases/bulk-update-alerts";
+import { CountAlertsUseCase } from "../application/use-cases/count-alerts";
 import { GetAlertSummaryUseCase } from "../application/use-cases/get-alert-summary";
 import { ListAlertsUseCase } from "../application/use-cases/list-alerts";
 import { UpdateAlertUseCase } from "../application/use-cases/update-alert";
@@ -44,6 +45,7 @@ function buildUseCases(db: Knex): AlertUseCases {
   const alerts = new KnexAlertRepository(db);
   return {
     list: new ListAlertsUseCase(alerts),
+    count: new CountAlertsUseCase(alerts),
     summary: new GetAlertSummaryUseCase(alerts),
     update: new UpdateAlertUseCase(alerts, new KnexAuditLogWriter(db)),
     bulkUpdate: new BulkUpdateAlertsUseCase(alerts, new KnexAlertUnitOfWork(db)),
@@ -54,6 +56,9 @@ export function registerAlertRoutes(fastify: FastifyInstance, db: Knex, portalAu
   const ctrl = createAlertController(buildUseCases(db));
 
   fastify.get("/api/v1/alerts", { preHandler: portalAuth, handler: ctrl.getAlerts });
+  // Antes de cualquier ruta con `:id` — evita que Fastify intente matchear
+  // "count" como un id de alerta.
+  fastify.get("/api/v1/alerts/count", { preHandler: portalAuth, handler: ctrl.getAlertsCount });
 
   // Catálogo estático de clases/responders (Fase 1 del gap analysis vs HP SDS) y
   // resumen agregado — ambas en CLIENT_VIEWER_ROUTES (rolePolicy.ts): un
