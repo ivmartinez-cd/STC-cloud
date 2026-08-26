@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { ChevronDown } from 'lucide-react';
 import type { NavItem, NavSection } from './navTree';
 import type { NavBadges } from './useNavBadges';
 
@@ -66,37 +68,57 @@ function ItemRow({ item, active, collapsed, badgeValue, onClick }: {
   );
 }
 
+function SectionHeader({ id, title, open, onToggle }: { id: string; title: string; open: boolean; onToggle: () => void }) {
+  return (
+    <button
+      type="button" id={id} onClick={onToggle} aria-expanded={open}
+      className="flex w-full items-center gap-1.5 px-[18px] pb-[9px] font-montserrat text-[7.5px] font-bold uppercase leading-none tracking-[.17em] text-panel-dark-label transition-colors hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-[-2px]"
+    >
+      <span className="flex-1 truncate text-left">{title}</span>
+      <ChevronDown size={11} strokeWidth={2} className={`flex-none transition-transform duration-150 ${open ? '' : '-rotate-90'}`} />
+    </button>
+  );
+}
+
 export default function SidebarNav({
   sections, badges, collapsed, onNavigate,
 }: {
   sections: NavSection[]; badges: NavBadges; collapsed: boolean; onNavigate: () => void;
 }) {
   const { pathname } = useLocation();
+  // Colapsado por sección — no persiste entre recargas, sólo dura la sesión de
+  // navegación (el colapso del riel completo sí persiste, ver `useSidebarCollapse`).
+  const [closedSections, setClosedSections] = useState<Record<string, boolean>>({});
+  const toggleSection = (title: string) => setClosedSections((prev) => ({ ...prev, [title]: !prev[title] }));
 
   return (
     <>
       {sections.map((section) => {
         const headingId = `nav-section-${section.title}`;
+        const hasActive = section.items.some((i) => isPathActive(i.path, pathname));
+        // La sección que contiene la ruta activa nunca queda oculta, aunque el
+        // usuario la haya colapsado — si no, navegar (por buscador, URL directa)
+        // podría dejar el ítem activo invisible sin aviso.
+        const open = hasActive || !closedSections[section.title];
+
         return (
           <div key={section.title} className="pt-3.5">
-            {!collapsed && (
-              <div id={headingId} className="px-[18px] pb-[9px] font-montserrat text-[7.5px] font-bold uppercase leading-none tracking-[.17em] text-panel-dark-label">
-                {section.title}
-              </div>
+            {!collapsed && <SectionHeader id={headingId} title={section.title} open={open} onToggle={() => toggleSection(section.title)} />}
+            {(collapsed || open) && (
+              <ul aria-labelledby={collapsed ? undefined : headingId} aria-label={collapsed ? section.title : undefined}>
+                {section.items.map((item) => (
+                  <li key={item.path}>
+                    <ItemRow
+                      item={item}
+                      active={isPathActive(item.path, pathname)}
+                      collapsed={collapsed}
+                      badgeValue={item.badgeKey ? badges[item.badgeKey] : undefined}
+                      onClick={onNavigate}
+                    />
+                  </li>
+                ))}
+              </ul>
             )}
-            <ul aria-labelledby={collapsed ? undefined : headingId} aria-label={collapsed ? section.title : undefined}>
-              {section.items.map((item) => (
-                <li key={item.path}>
-                  <ItemRow
-                    item={item}
-                    active={isPathActive(item.path, pathname)}
-                    collapsed={collapsed}
-                    badgeValue={item.badgeKey ? badges[item.badgeKey] : undefined}
-                    onClick={onNavigate}
-                  />
-                </li>
-              ))}
-            </ul>
           </div>
         );
       })}
