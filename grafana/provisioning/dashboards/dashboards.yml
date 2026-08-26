@@ -1,0 +1,17 @@
+# Provider de dashboards por archivo (Fase 17 del gap analysis, 26/08/2026).
+# `editable: true`: cambios desde la UI de Grafana se guardan en la base
+# interna de Grafana, no pisan el JSON del repo — para que el JSON vuelva a
+# ganar hay que reprovisionar (restart del contenedor).
+
+apiVersion: 1
+
+providers:
+  - name: STC Cloud
+    orgId: 1
+    folder: STC Cloud
+    type: file
+    disableDeletion: false
+    editable: true
+    updateIntervalSeconds: 30
+    options:
+      path: /etc/grafana/dashboards

@@ -1,0 +1,14 @@
+# Datasource Prometheus auto-provisionado (Fase 17 del gap analysis,
+# 26/08/2026). `isDefault: true` porque es el único datasource de este
+# despliegue.
+
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    uid: prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: false

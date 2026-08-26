@@ -1387,11 +1387,13 @@ nuevas `prom-client` y `@sentry/node` (con el lockfile standalone de
 lo toca, gotcha documentado acá). Suite CI completa de regresión corrida
 tras el despliegue.
 
-**Lo que NO se hizo**: habilitar multi-réplica real en los compose (los
-locks y el pub/sub dejan el backend listo; el paso operativo — `deploy:
-replicas` + LB — es decisión de infraestructura aparte), dashboards de
-Grafana/alerting sobre las métricas (solo el endpoint). ✅ (26/08/2026) El
-relay request/reply para afinidad de socket del proxy EWS — ver Fase 15.
+**Lo que NO se hizo en esta fase original**: habilitar multi-réplica real en
+los compose (los locks y el pub/sub dejan el backend listo; el paso
+operativo — `deploy: replicas` + LB — es decisión de infraestructura
+aparte) — ✅ (26/08/2026) ver Fase 16; dashboards de Grafana/alerting sobre
+las métricas (solo el endpoint) — ✅ (26/08/2026) ver Fase 17. ✅
+(26/08/2026) El relay request/reply para afinidad de socket del proxy EWS —
+ver Fase 15.
 
 ### Fase 6 — Seguridad (24/08/2026) — completa: 4 de 4 ítems cerrados
 
@@ -2190,14 +2192,134 @@ Knex; la suma no debe superar `max_connections` de Postgres).
 
 **Lo que NO se hizo**: subir `API_REPLICAS` en el `.env.production` real de
 Ivan (queda en 1 — encender la escala de verdad es una decisión operativa
-suya, no de esta pasada); dashboards de Grafana/alerting sobre las métricas
-de la Fase 5; balanceo estrictamente por request (necesitaría un LB
-consciente de réplicas — Traefik/Consul — en vez de DNS de Docker; no se
-justifica para el volumen real de este sistema); `depends_on: api:
+suya, no de esta pasada); balanceo estrictamente por request (necesitaría
+un LB consciente de réplicas — Traefik/Consul — en vez de DNS de Docker; no
+se justifica para el volumen real de este sistema); `depends_on: api:
 condition: service_healthy` de `nginx` no se auditó a fondo contra la
 semántica exacta de Compose para servicios escalados (si espera a TODAS las
 réplicas sanas o sólo a una) — no bloqueante, nginx ya tolera una réplica
-lenta al arrancar vía el mismo mecanismo de re-resolución.
+lenta al arrancar vía el mismo mecanismo de re-resolución. ✅ (26/08/2026)
+Dashboards de Grafana/alerting sobre las métricas de la Fase 5 — ver Fase 17.
+
+### Fase 17 — Dashboards Grafana + alerting (26/08/2026) — completa
+
+Origen: último de los 3 pendientes reales de multi-réplica que quedaron
+listados en la Fase 15 (relay EWS, habilitar N réplicas — Fase 16 —, y
+esto). Sobre métricas que ya existían íntegras desde la Fase 5
+(`modules/metrics/registry.ts`) — cero instrumentación nueva, sólo
+consumo: scrape, reglas de alerta, paneles.
+
+✅ **Prometheus** (`prometheus/prometheus.yml`, perfil opcional
+`observability` de `docker-compose.prod.yml` — no arranca con un `docker
+compose up -d` normal). `dns_sd_configs` en vez de `static_configs`: con
+`API_REPLICAS` > 1 (Fase 16), el DNS embebido de Docker devuelve TODOS los
+A records de `api` en una sola consulta y Prometheus scrapea cada uno como
+target propio — a diferencia del truco de nginx (Fase 16), que sólo
+necesita UNA réplica sana a la vez y le alcanza con re-resolver, acá hace
+falta ver a TODAS o un job muerto en una sola réplica pasaría
+desapercibido. `honor_labels: true` — hallazgo real en el camino, no
+buscado: `stc_job_ticks_total`/`stc_job_last_success_timestamp_seconds`
+usan la etiqueta `job` para el nombre del job de NEGOCIO
+(`heartbeat-monitor`, `retention`, ...), y sin `honor_labels` Prometheus por
+default renombra esa etiqueta a `exported_job` y pisa `job` con el nombre
+del scrape config (`stc-api`) — hubiera roto silenciosamente cualquier
+alerta o panel que filtrara por job de negocio. Confirmado que `up{job=
+"stc-api"}` (metric sintética, no viene del payload scrapeado) no se ve
+afectada por ese `honor_labels`.
+
+✅ **Reglas de alerta** (`prometheus/alerts.yml`): `STCAPIDown` (`up == 0`),
+`STCHighHTTPErrorRate` (5xx > 5% sostenido 5 min sobre
+`stc_http_request_duration_seconds_count`), `STCQueueBacklog`
+(`stc_queue_waiting_jobs` > 500 sostenido 10 min — umbral de partida sin
+tráfico real de referencia, a ajustar), y **6 `STCJobStale`** — una por
+cada job `setInterval` guardado por `runGuardedTick` (`heartbeat-monitor`,
+`incidents`, `supply-requests`, `scheduled-reports`, `remote-actions`,
+`retention`; los workers BullMQ no emiten esta métrica, ya son
+replica-safe por cola desde la Fase 5). Umbrales NO copiados del docblock
+ni del log de arranque — leídos del código fuente real (`INTERVAL_MINUTES`/
+`INTERVAL_MS`/`INTERVAL_HOURS` de cada `jobs/*.ts`) y calculados a ~5x el
+intervalo real de cada uno (15 min para los de 2 min, 10 min para los de
+60s, 24h para retention que corre cada 6h) — un umbral único para los 6
+hubiera sido o demasiado ruidoso (retention "muerto" cada pocas horas) o
+demasiado tarde para avisar de los rápidos.
+
+✅ **Alertmanager** (`alertmanager/alertmanager.yml`, perfil
+`observability`): ruteo por defecto a un receiver `null` — Alertmanager
+arranca sano y las alertas quedan visibles en su propia API aunque nadie
+haya configurado todavía un destino. Receiver `default` (email) con
+placeholders `CAMBIAR_*` para copiar a mano el mismo SMTP que ya usa la app
+para reportes/alertas de negocio — no lee `.env.production`, Alertmanager
+no soporta interpolación de variables de entorno en su YAML (mismo
+criterio que el dominio placeholder de `nginx.conf`: se commitea con
+`CAMBIAR_*`, nunca con un secreto real).
+
+✅ **Grafana** (`grafana/`, perfil `observability`): datasource Prometheus
+y un dashboard (`STC Cloud — Overview`) auto-provisionados por archivo —
+HTTP (requests/seg y p95 por ruta, tasa de 5xx), jobs (ticks por
+resultado, segundos desde el último éxito por job — la métrica cruda
+detrás de `STCJobStale`), WS vivas por tipo, profundidad de colas BullMQ,
+memoria/CPU de proceso. Expuesto en `/grafana/` **detrás del mismo nginx/
+TLS** que portal y API — nunca un puerto nuevo (mismo principio de "un
+solo puerto 443" que este documento ya lista como ventaja de STC sobre
+SDS, §5). Prometheus/Alertmanager NO se exponen ni por puerto ni por
+nginx — mismo nivel de confianza ya documentado para `/metrics` (red
+interna de `stc-network`, sin publicar puerto); acceso sólo vía `docker
+compose exec` o un túnel SSH si hace falta la UI de alguno.
+
+**Verificado empíricamente contra un stack descartable real** (Prometheus
++ Alertmanager + Grafana con los archivos reales del repo,
+`/tmp/.../grafana-check/`, no en el repo — imágenes `:latest` reales, no
+mocks): `promtool check config`/`check rules` limpios sobre
+`prometheus.yml`/`alerts.yml`; `amtool check-config` limpio sobre
+`alertmanager.yml`; Prometheus arriba con los 9 reglas cargadas y
+Alertmanager descubierto activo (`/api/v1/alertmanagers`); `dns_sd_configs`
+resolviendo un target real vía DNS de Docker (confirmado con
+`/api/v1/targets`, sólo "connection refused" esperable — el target era un
+placeholder sin nada real escuchando en :3000, no un fallo del mecanismo de
+descubrimiento). Grafana: datasource y dashboard SÍ provisionados
+(confirmado por `/api/search` y `/api/datasources`) — **hallazgo real en el
+camino**: el primer boot tiró un error interno de Grafana (`grafana/
+grafana-oss:latest`, versión con "unified storage" para dashboards) al
+crear la carpeta de provisioning ("transaction has already been committed
+or rolled back") — reproducido una vez, NO reprodujo en un boot limpio
+posterior desde cero (parece una race transitoria del propio Grafana en su
+init, no algo determinístico atado a este `dashboards.yml`) — anotado por
+las dudas para quien lo vea reaparecer en producción, no se investigó más a
+fondo el código de Grafana. `docker compose config` (con y sin `--profile
+observability`, contra una copia local descartable de
+`.env.production.example` — nunca commiteada) confirma que `GF_SERVER_ROOT_URL`
+resuelve bien contra `DOMAIN`, `replicas` de `api` sigue en 1 por default, y
+los 3 servicios nuevos quedan correctamente detrás del perfil (invisibles
+en un `docker compose ps` normal). `nginx -t` limpio con la location
+`/grafana/` nueva.
+
+✅ **`grafana/provisioning/{plugins,alerting}/`**: creados vacíos (con
+`.gitkeep`) — sin esto Grafana logueaba un error (inofensivo pero
+ruidoso) buscando esos directorios de provisioning que nunca se usan acá
+(no hay plugins de terceros que instalar por archivo, y el alerting real
+lo maneja Alertmanager, no las alert rules nativas de Grafana).
+
+**Decisión de diseño explícita**: alerting evaluado y ruteado por
+Prometheus + Alertmanager, NO por el alerting nativo de Grafana (que
+podría haber ahorrado un contenedor). Motivo: el formato de reglas de
+Prometheus es estable y se pudo validar de punta a punta con `promtool`
+sin necesitar un Grafana corriendo; el alerting nativo de Grafana define
+las reglas con un esquema de "queries + expresiones" más parecido a su UI
+que a PromQL plano, más propenso a romper entre versiones, y sin una
+herramienta de validación offline equivalente — priorizando "verificado,
+no asumido" (criterio explícito de todo este documento) sobre ahorrar un
+contenedor de 128 MB.
+
+**Lo que NO se hizo**: enviar alertas de verdad (el receiver `default` de
+Alertmanager queda con placeholders SMTP sin completar — activarlo es
+copiar los mismos `SMTP_*` que ya usa la app y cambiar `route.receiver` de
+`null` a `default`); dashboards adicionales por área (sólo un overview
+general, no uno dedicado a facturación/reportes o a capture de agentes,
+que no tienen métricas Prometheus propias todavía); autenticación
+`METRICS_TOKEN` desde Prometheus (scrapea sin token, aceptable por ahora
+por el mismo argumento de red interna que ya usa el propio endpoint,
+documentado como comentario en `prometheus.yml` para quien lo active);
+Grafana Alerting nativo (decisión explícita, ver arriba, no un pendiente).
 
 ### Otros puntos de §3 (riesgos) que siguen abiertos y no forman parte de ningún ítem de arriba
 - ✅ **R4 (parcial, 23/08/2026)**: el WS del portal ya NO acepta el JWT de

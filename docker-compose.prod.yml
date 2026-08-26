@@ -183,12 +183,87 @@ services:
           memory: 256m
           cpus: "0.5"
 
+  # ─── Observabilidad (Fase 17 del gap analysis, 26/08/2026) — OPCIONAL ─────
+  # Perfil `observability`: no arranca con `docker compose up -d` normal.
+  # Levantar con:
+  #   docker compose -f docker-compose.prod.yml --env-file .env.production \
+  #     --profile observability up -d
+  # Prometheus/Alertmanager quedan SIN puerto publicado ni location de
+  # nginx a propósito — mismo criterio de confianza que ya documentaba
+  # `metrics/http-metrics.ts` para `/metrics` (red interna de
+  # `stc-network`, sin exposición externa). Grafana SÍ se expone, pero
+  # detrás del mismo nginx/TLS que portal y API (`/grafana/`, ver
+  # `nginx.conf`) — nunca un puerto nuevo — y tiene su propio login.
+  prometheus:
+    image: prom/prometheus:latest
+    restart: unless-stopped
+    profiles: ["observability"]
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=15d
+    networks:
+      - stc-network
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+          cpus: "0.5"
+
+  alertmanager:
+    image: prom/alertmanager:latest
+    restart: unless-stopped
+    profiles: ["observability"]
+    volumes:
+      - ./alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager-data:/alertmanager
+    networks:
+      - stc-network
+    deploy:
+      resources:
+        limits:
+          memory: 128m
+          cpus: "0.25"
+
+  grafana:
+    image: grafana/grafana-oss:latest
+    restart: unless-stopped
+    profiles: ["observability"]
+    environment:
+      # CAMBIAR en .env.production — mismo criterio que el resto de este
+      # archivo (PORTAL_ADMIN_PASSWORD, DB_PASSWORD): se commitea con un
+      # default obvio, nunca con un secreto real.
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-CAMBIAR_POR_CONTRASENA_SEGURA}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      # Servido bajo /grafana/ en el mismo dominio — ver nginx.conf.
+      GF_SERVER_ROOT_URL: "https://${DOMAIN}/grafana/"
+      GF_SERVER_SERVE_FROM_SUB_PATH: "true"
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/etc/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    networks:
+      - stc-network
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+          cpus: "0.5"
+
 volumes:
   pgdata:
   redisdata:
   certbot-certs:
   certbot-www:
   backups:
+  prometheus-data:
+  alertmanager-data:
+  grafana-data:
 
 networks:
   stc-network:

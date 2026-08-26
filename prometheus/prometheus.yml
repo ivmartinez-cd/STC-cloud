@@ -1,0 +1,47 @@
+# Prometheus — scrape de `api` (Fase 17 del gap analysis, 26/08/2026).
+# Perfil opt-in `observability` de docker-compose.prod.yml — no arranca con
+# un `docker compose up -d` normal.
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - /etc/prometheus/alerts.yml
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ["alertmanager:9093"]
+
+scrape_configs:
+  - job_name: stc-api
+    # `dns_sd_configs` (no `static_configs`): con `API_REPLICAS` > 1, el DNS
+    # embebido de Docker (`api` → todas las IPs de réplica) devuelve TODOS
+    # los A records en una sola consulta, y Prometheus scrapea CADA uno como
+    # target propio — a diferencia del truco de nginx (Fase 16), que sólo
+    # necesita UNA réplica sana a la vez para servir una request y por eso
+    # le alcanza con re-resolver cada 10s, acá si no se scrapean todas las
+    # réplicas un job "vivo" en la réplica B pero muerto en la A pasaría
+    # desapercibido.
+    dns_sd_configs:
+      - names: ["api"]
+        type: A
+        port: 3000
+        refresh_interval: 15s
+    metrics_path: /metrics
+    # `stc_job_ticks_total{job=...}` etc. usan `job` para el NOMBRE DEL JOB
+    # de negocio (heartbeat-monitor, retention, ...) — sin `honor_labels`,
+    # Prometheus por default renombra esa etiqueta a `exported_job` y pisa
+    # `job` con el nombre de este scrape config ("stc-api"), rompiendo toda
+    # query que filtre por job de negocio. `honor_labels: true` deja ganar
+    # la etiqueta propia de la métrica; no afecta a `up`/`scrape_*` (esas
+    # las genera Prometheus, no vienen del payload scrapeado) así que
+    # `up{job="stc-api"}` (ver alerts.yml) sigue funcionando igual.
+    honor_labels: true
+    # Sin `authorization:` acá a propósito: mismo criterio ya documentado en
+    # `metrics/http-metrics.ts` — Prometheus vive en la red interna de
+    # `stc-network`, sin puerto publicado, mismo nivel de confianza que la
+    # API misma. Si en algún despliegue se define `METRICS_TOKEN`, agregar acá:
+    #   authorization:
+    #     credentials: <el mismo valor de METRICS_TOKEN>

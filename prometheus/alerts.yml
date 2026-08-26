@@ -1,0 +1,95 @@
+# Reglas de alerta (Fase 17 del gap analysis, 26/08/2026) — todas sobre
+# métricas que YA existían desde la Fase 5 (`modules/metrics/registry.ts`),
+# ninguna instrumentación nueva. Umbrales calculados contra los intervalos
+# REALES de cada job `setInterval` guardado (leídos del código, no
+# supuestos) — ver comentario de cada regla.
+
+groups:
+  - name: stc-api
+    rules:
+      - alert: STCAPIDown
+        expr: up{job="stc-api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Una réplica de stc-api dejó de responder a /metrics"
+          description: "instance {{ $labels.instance }} — up == 0 hace más de 1 minuto."
+
+      - alert: STCHighHTTPErrorRate
+        expr: >
+          sum(rate(stc_http_request_duration_seconds_count{status=~"5.."}[5m]))
+          /
+          sum(rate(stc_http_request_duration_seconds_count[5m]))
+          > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Más del 5% de las requests HTTP devuelven 5xx"
+          description: "Sostenido 5 minutos. Revisar logs (pino) de las réplicas de api."
+
+  # `stc_job_last_success_timestamp_seconds{job=...}` sólo existe para los 6
+  # jobs `setInterval` guardados por `runGuardedTick` (heartbeat-monitor,
+  # retention, incidents, supply-requests, scheduled-reports,
+  # remote-actions) — los workers BullMQ (alertas, notificaciones, reportes,
+  # webhooks públicos) ya son replica-safe por naturaleza de cola y no
+  # emiten esta métrica. Umbral = ~5x el intervalo real del job (código
+  # fuente, no el docblock/log de arranque) + margen de ruido.
+  - name: stc-jobs
+    rules:
+      - alert: STCJobStale
+        expr: time() - stc_job_last_success_timestamp_seconds{job="heartbeat-monitor"} > 900
+        for: 2m
+        labels: {severity: critical, stc_job: heartbeat-monitor}
+        annotations:
+          summary: "heartbeat-monitor sin tick exitoso hace más de 15 minutos"
+          description: "Corre cada 2 min (heartbeatMonitor.ts) — detecta agentes/equipos offline. Si está muerto, esas alertas no se disparan."
+
+      - alert: STCJobStale
+        expr: time() - stc_job_last_success_timestamp_seconds{job="incidents"} > 900
+        for: 2m
+        labels: {severity: critical, stc_job: incidents}
+        annotations:
+          summary: "incidents (incidentWorker) sin tick exitoso hace más de 15 minutos"
+          description: "Corre cada 2 min (incidentWorker.ts, opt-in por incident_rules.enabled)."
+
+      - alert: STCJobStale
+        expr: time() - stc_job_last_success_timestamp_seconds{job="supply-requests"} > 900
+        for: 2m
+        labels: {severity: warning, stc_job: supply-requests}
+        annotations:
+          summary: "supply-requests sin tick exitoso hace más de 15 minutos"
+          description: "Corre cada 2 min (supplyRequestWorker.ts)."
+
+      - alert: STCJobStale
+        expr: time() - stc_job_last_success_timestamp_seconds{job="scheduled-reports"} > 600
+        for: 2m
+        labels: {severity: warning, stc_job: scheduled-reports}
+        annotations:
+          summary: "scheduled-reports sin tick exitoso hace más de 10 minutos"
+          description: "Corre cada 60s (scheduledReportsWorker.ts) — reportes programados pueden salir tarde."
+
+      - alert: STCJobStale
+        expr: time() - stc_job_last_success_timestamp_seconds{job="remote-actions"} > 600
+        for: 2m
+        labels: {severity: warning, stc_job: remote-actions}
+        annotations:
+          summary: "remote-actions sin tick exitoso hace más de 10 minutos"
+          description: "Corre cada 60s (remoteActionWorker.ts) — lotes de acciones remotas (reinicio de impresora, etc.) quedan sin procesar."
+
+      - alert: STCJobStale
+        expr: time() - stc_job_last_success_timestamp_seconds{job="retention"} > 86400
+        for: 10m
+        labels: {severity: warning, stc_job: retention}
+        annotations:
+          summary: "retention sin tick exitoso hace más de 24 horas"
+          description: "Corre cada 6h (retentionJob.ts) — purga agent_logs/alerts resueltas. No es urgente en horas, sí en días (crecimiento de tablas)."
+
+      - alert: STCQueueBacklog
+        expr: stc_queue_waiting_jobs > 500
+        for: 10m
+        labels: {severity: warning}
+        annotations:
+          summary: 'Cola BullMQ "{{ $labels.queue }}" con más de 500 jobs en espera'
+          description: "Sostenido 10 minutos. Umbral de partida sin tráfico real de referencia — ajustar con datos de producción reales."

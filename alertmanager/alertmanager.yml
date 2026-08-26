@@ -1,0 +1,44 @@
+# Alertmanager (Fase 17 del gap analysis, 26/08/2026). Perfil opt-in
+# `observability` de docker-compose.prod.yml.
+#
+# Ruteo por defecto: receiver "null" (no hace nada) — Alertmanager arranca
+# sano y las alertas quedan visibles en su propia UI/API aunque nadie haya
+# configurado todavía a dónde mandarlas. Para recibir alertas por email,
+# reemplazar el receiver "default" de abajo con los datos SMTP reales
+# (mismo criterio que `nginx.conf`/`.env.production.example`: se
+# commitea con placeholders `CAMBIAR_*`, nunca con secretos reales) y
+# apuntar `route.receiver` a "default" en vez de "null".
+
+global:
+  # Reusar el mismo SMTP que ya usa la app para reportes/alertas de negocio
+  # (`SMTP_HOST`/`SMTP_PORT`/`SMTP_USER`/`SMTP_PASSWORD` en
+  # `.env.production`) — no se lee `.env.production` acá (Alertmanager no
+  # soporta interpolación de variables de entorno en su YAML), así que hay
+  # que copiar los mismos valores a mano si se activa este receiver.
+  smtp_smarthost: 'CAMBIAR_SMTP_HOST:587'
+  smtp_from: 'alertas-stc@CAMBIAR_TU_DOMINIO'
+  smtp_auth_username: 'CAMBIAR_SMTP_USER'
+  smtp_auth_password: 'CAMBIAR_SMTP_PASSWORD'
+  smtp_require_tls: true
+
+route:
+  receiver: 'null'
+  group_by: ['alertname', 'stc_job']
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+  routes:
+    # Ejemplo de sub-ruta para separar severidad — activar junto con el
+    # receiver "default" de abajo cuando haya un destino real configurado.
+    - match:
+        severity: critical
+      receiver: 'null'
+      continue: false
+
+receivers:
+  - name: 'null'
+
+  - name: 'default'
+    email_configs:
+      - to: 'CAMBIAR_admin@tu-empresa.com'
+        send_resolved: true
