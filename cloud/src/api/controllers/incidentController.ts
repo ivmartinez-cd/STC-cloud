@@ -18,11 +18,13 @@ export function createIncidentController(db: Knex) {
         client_id?: string; status?: string; class?: string; severity?: string;
         device_id?: string; assigned_to?: string; q?: string; limit?: string; offset?: string;
         order?: "opened_at_desc" | "opened_at_asc" | "aging_desc";
+        no_device?: string; min_age_hours?: string;
       };
       const clientId = scope.kind === "client" ? scope.id : (q.client_id || null);
       return incidentService.listIncidents(db, {
         clientId, status: q.status, klass: q.class, severity: q.severity,
         deviceId: q.device_id, assignedTo: q.assigned_to, q: q.q,
+        noDevice: q.no_device === "true", minAgeHours: q.min_age_hours ? Number(q.min_age_hours) : undefined,
         limit: q.limit ? Number(q.limit) : undefined, offset: q.offset ? Number(q.offset) : undefined,
         order: q.order,
       });

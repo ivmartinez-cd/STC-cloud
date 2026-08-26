@@ -21,6 +21,7 @@ export type Incident = {
   device_serial: string | null;
   device_label: string | null;
   class: string;
+  rule_id: string | null;
   title: string;
   description: string | null;
   severity: IncidentSeverity;
@@ -56,9 +57,19 @@ export type IncidentDetail = Incident & { alerts: Alert[]; events: IncidentEvent
 
 export type IncidentListResponse = { items: Incident[]; total: number };
 
+export type IncidentClassAging = { class: string; count: number; avgAgingSeconds: number };
+export type IncidentInstantClosure = { class: string; count: number; ruleId: string | null; sampleClientId: string };
+
 export type IncidentStats = {
   byStatus: Record<IncidentStatus, number>;
   openTotal: number;
+  byClass: IncidentClassAging[];
+  avgAgingSeconds: number;
+  maxAgingSeconds: number;
+  instantClosures: IncidentInstantClosure[];
+  unassignedOpenCount: number;
+  recentClosedCount: number;
+  byOrigin: { manual: number; auto: number };
 };
 
 export type IncidentRule = {

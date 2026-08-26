@@ -159,6 +159,10 @@ describe('Reglas de auto-creación — habilitadas por cliente', () => {
     const linkedTypes = detail.data.alerts.map((a: any) => a.type);
     assert.ok(linkedTypes.includes('toner_yellow_critical'));
     assert.ok(linkedTypes.includes('toner_magenta_critical'));
+    // `rule_id` (handoff hifi #3, fase 4, 26/08/2026): el worker lo completa
+    // desde acá en adelante — la regla que se acaba de habilitar es la que
+    // abrió el incidente.
+    assert.equal(detail.data.rule_id, put.data[0].id);
 
     autoIncidentId = autoIncidents[0].id;
   });

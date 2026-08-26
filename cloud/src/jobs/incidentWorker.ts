@@ -106,6 +106,7 @@ async function openOrLinkIncident(rule: Rule, alert: EligibleAlert): Promise<{ i
       device_serial: alert.serial_number,
       device_label: label,
       class: rule.class,
+      rule_id: rule.id,
       title,
       severity: alert.severity === 'critical' ? 'critical' : 'warning',
       origin: 'auto',
