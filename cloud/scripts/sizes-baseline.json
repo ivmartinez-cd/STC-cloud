@@ -1,20 +1,20 @@
 {
   "files": {
-    "src/api/server.ts": 384,
-    "src/modules/agents/infrastructure/database/knex-agent-portal-repository.ts": 534,
-    "src/modules/clients/infrastructure/database/knex-client-repository.ts": 444,
     "src/tests/alerts.test.ts": 529,
     "src/tests/deviceLifecycle.test.ts": 467,
     "src/tests/e2e.test.ts": 521,
     "src/tests/incidents.test.ts": 324,
     "src/tests/ipRangeSpec.test.ts": 361,
     "src/tests/publicApi.test.ts": 360,
-    "src/tests/rbac.test.ts": 765,
-    "src/ws/index.ts": 381,
-    "portal/src/features/clients/components/ApiKeysCard.tsx": 377,
-    "portal/src/shared/types/monitor.ts": 365
+    "src/tests/rbac.test.ts": 765
   },
   "functions": {
+    "src/api/bootstrap.ts": [
+      {
+        "name": "bootstrapDefaultAdmin",
+        "length": 23
+      }
+    ],
     "src/api/controllers/authController/agent-auth.ts": [
       {
         "name": "agentActivate",
@@ -83,6 +83,16 @@
         "length": 30
       }
     ],
+    "src/api/health.ts": [
+      {
+        "name": "registerHealthRoutes",
+        "length": 37
+      },
+      {
+        "name": "healthHandler",
+        "length": 24
+      }
+    ],
     "src/api/middlewares/authMiddleware.ts": [
       {
         "name": "createAuthMiddleware",
@@ -95,6 +105,12 @@
       {
         "name": "portalAuth",
         "length": 146
+      }
+    ],
+    "src/api/plugins.ts": [
+      {
+        "name": "registerBasePlugins",
+        "length": 32
       }
     ],
     "src/api/routes/authRoutes.ts": [
@@ -115,14 +131,16 @@
         "length": 53
       }
     ],
+    "src/api/routes.ts": [
+      {
+        "name": "registerAllRoutes",
+        "length": 48
+      }
+    ],
     "src/api/server.ts": [
       {
         "name": "start",
-        "length": 258
-      },
-      {
-        "name": "healthHandler",
-        "length": 24
+        "length": 49
       }
     ],
     "src/api/utils/scope.ts": [
@@ -241,26 +259,32 @@
         "length": 35
       }
     ],
-    "src/modules/agents/infrastructure/database/knex-agent-portal-repository.ts": [
+    "src/modules/agents/infrastructure/database/knex-agent-portal-repository/activity.ts": [
       {
-        "name": "listDevices",
-        "length": 23
-      },
+        "name": "getAgentRecentActivity",
+        "length": 71
+      }
+    ],
+    "src/modules/agents/infrastructure/database/knex-agent-portal-repository/devices.ts": [
+      {
+        "name": "listAgentDevices",
+        "length": 22
+      }
+    ],
+    "src/modules/agents/infrastructure/database/knex-agent-portal-repository/license.ts": [
+      {
+        "name": "getAgentLicense",
+        "length": 39
+      }
+    ],
+    "src/modules/agents/infrastructure/database/knex-agent-portal-repository/stats.ts": [
       {
         "name": "computeConnectivityWindow",
         "length": 32
       },
       {
-        "name": "getStats",
+        "name": "getAgentStats",
         "length": 39
-      },
-      {
-        "name": "getRecentActivity",
-        "length": 72
-      },
-      {
-        "name": "getLicense",
-        "length": 40
       }
     ],
     "src/modules/agents/presentation/agent-controller.ts": [
@@ -341,7 +365,7 @@
         "length": 23
       }
     ],
-    "src/modules/clients/infrastructure/database/knex-client-repository.ts": [
+    "src/modules/clients/infrastructure/database/knex-client-repository/directory.ts": [
       {
         "name": "summarizePortfolioRows",
         "length": 24
@@ -627,7 +651,7 @@
         "length": 52
       }
     ],
-    "src/ws/index.ts": [
+    "src/ws/handshake.ts": [
       {
         "name": "registerWebSocket",
         "length": 190
@@ -693,19 +717,13 @@
         "length": 167
       }
     ],
-    "portal/src/features/clients/components/ApiKeysCard.tsx": [
-      {
-        "name": "NewKeyModal",
-        "length": 56
-      },
+    "portal/src/features/clients/components/ApiKeyRow.tsx": [
       {
         "name": "ApiKeyRow",
         "length": 25
-      },
-      {
-        "name": "WebhookSection",
-        "length": 137
-      },
+      }
+    ],
+    "portal/src/features/clients/components/ApiKeysCard.tsx": [
       {
         "name": "ApiKeysCard",
         "length": 122
@@ -841,6 +859,12 @@
         "length": 111
       }
     ],
+    "portal/src/features/clients/components/NewKeyModal.tsx": [
+      {
+        "name": "NewKeyModal",
+        "length": 56
+      }
+    ],
     "portal/src/features/clients/components/NotificationEventsCard.tsx": [
       {
         "name": "NotificationEventsCard",
@@ -869,6 +893,12 @@
       {
         "name": "SupplyRequestSettingsCard",
         "length": 58
+      }
+    ],
+    "portal/src/features/clients/components/WebhookSection.tsx": [
+      {
+        "name": "WebhookSection",
+        "length": 137
       }
     ],
     "portal/src/features/clients/hooks/useClientDetail.ts": [
