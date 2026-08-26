@@ -3,8 +3,6 @@
     "src/api/server.ts": 384,
     "src/modules/agents/infrastructure/database/knex-agent-portal-repository.ts": 534,
     "src/modules/clients/infrastructure/database/knex-client-repository.ts": 444,
-    "src/services/incidentService.ts": 363,
-    "src/services/notificationService.ts": 383,
     "src/tests/alerts.test.ts": 529,
     "src/tests/deviceLifecycle.test.ts": 467,
     "src/tests/e2e.test.ts": 521,
@@ -12,12 +10,8 @@
     "src/tests/ipRangeSpec.test.ts": 361,
     "src/tests/publicApi.test.ts": 360,
     "src/tests/rbac.test.ts": 765,
-    "src/ws/index.ts": 310,
+    "src/ws/index.ts": 381,
     "portal/src/features/clients/components/ApiKeysCard.tsx": 377,
-    "portal/src/features/monitors/components/DeviceInventoryTable.tsx": 436,
-    "portal/src/features/monitors/components/SnmpCredentialsPanel.tsx": 352,
-    "portal/src/features/reports/pages/Reports.tsx": 367,
-    "portal/src/shared/components/FeedbackModal.tsx": 335,
     "portal/src/shared/types/monitor.ts": 365
   },
   "functions": {
@@ -230,7 +224,7 @@
     "src/modules/agents/application/use-cases/remote-use-cases.ts": [
       {
         "name": "execute",
-        "length": 24
+        "length": 27
       }
     ],
     "src/modules/agents/domain/services/device-row-builders.ts": [
@@ -505,15 +499,7 @@
         "length": 22
       }
     ],
-    "src/services/incidentService.ts": [
-      {
-        "name": "listIncidents",
-        "length": 46
-      },
-      {
-        "name": "getIncident",
-        "length": 29
-      },
+    "src/services/incidentService/mutations.ts": [
       {
         "name": "createIncident",
         "length": 35
@@ -525,17 +511,31 @@
       {
         "name": "reopenIncident",
         "length": 25
+      }
+    ],
+    "src/services/incidentService/reads.ts": [
+      {
+        "name": "listIncidents",
+        "length": 46
       },
+      {
+        "name": "getIncident",
+        "length": 29
+      }
+    ],
+    "src/services/incidentService/rules.ts": [
       {
         "name": "upsertIncidentRule",
         "length": 23
       }
     ],
-    "src/services/notificationService.ts": [
+    "src/services/notificationService/mailer.ts": [
       {
         "name": "sendMail",
         "length": 25
-      },
+      }
+    ],
+    "src/services/notificationService/webhook.ts": [
       {
         "name": "assertSafeWebhookUrl",
         "length": 29
@@ -630,15 +630,15 @@
     "src/ws/index.ts": [
       {
         "name": "registerWebSocket",
-        "length": 179
+        "length": 190
       },
       {
         "name": "anonymous",
-        "length": 171
+        "length": 182
       },
       {
         "name": "anonymous",
-        "length": 39
+        "length": 44
       }
     ],
     "portal/src/App.tsx": [
@@ -1129,14 +1129,22 @@
         "length": 61
       }
     ],
+    "portal/src/features/monitors/components/CredentialChip.tsx": [
+      {
+        "name": "CredentialChip",
+        "length": 24
+      }
+    ],
+    "portal/src/features/monitors/components/DeviceInventoryPagination.tsx": [
+      {
+        "name": "DeviceInventoryPagination",
+        "length": 31
+      }
+    ],
     "portal/src/features/monitors/components/DeviceInventoryTable.tsx": [
       {
-        "name": "exportCountersCSV",
-        "length": 31
-      },
-      {
         "name": "DeviceInventoryTable",
-        "length": 289
+        "length": 249
       },
       {
         "name": "handleApproveDiscovered",
@@ -1213,6 +1221,12 @@
         "length": 137
       }
     ],
+    "portal/src/features/monitors/components/SnmpCredentialDraftForm.tsx": [
+      {
+        "name": "SnmpCredentialDraftForm",
+        "length": 84
+      }
+    ],
     "portal/src/features/monitors/components/SnmpCredentialsPanel.tsx": [
       {
         "name": "SnmpCredentialsPanel",
@@ -1221,14 +1235,6 @@
       {
         "name": "buildPayload",
         "length": 26
-      },
-      {
-        "name": "CredentialChip",
-        "length": 24
-      },
-      {
-        "name": "DraftForm",
-        "length": 84
       }
     ],
     "portal/src/features/monitors/components/Terminal.tsx": [
@@ -1311,6 +1317,12 @@
         "length": 71
       }
     ],
+    "portal/src/features/monitors/components/deviceInventoryHelpers.ts": [
+      {
+        "name": "exportCountersCSV",
+        "length": 31
+      }
+    ],
     "portal/src/features/monitors/hooks/useAgentsDirectory.ts": [
       {
         "name": "useDirectoryRows",
@@ -1361,6 +1373,24 @@
         "length": 72
       }
     ],
+    "portal/src/features/reports/components/ReopenClosureModal.tsx": [
+      {
+        "name": "ReopenClosureModal",
+        "length": 28
+      }
+    ],
+    "portal/src/features/reports/components/ReportsClosuresHistory.tsx": [
+      {
+        "name": "ReportsClosuresHistory",
+        "length": 85
+      }
+    ],
+    "portal/src/features/reports/components/ReportsPreviewTable.tsx": [
+      {
+        "name": "ReportsPreviewTable",
+        "length": 64
+      }
+    ],
     "portal/src/features/reports/components/ScheduledReportModal.tsx": [
       {
         "name": "ScheduledReportModal",
@@ -1374,7 +1404,7 @@
     "portal/src/features/reports/pages/Reports.tsx": [
       {
         "name": "Reports",
-        "length": 341
+        "length": 195
       }
     ],
     "portal/src/features/reports/pages/ScheduledReports.tsx": [
@@ -1571,14 +1601,26 @@
         "length": 30
       }
     ],
+    "portal/src/shared/components/FeedbackImageDropzone.tsx": [
+      {
+        "name": "FeedbackImageDropzone",
+        "length": 66
+      }
+    ],
     "portal/src/shared/components/FeedbackModal.tsx": [
       {
         "name": "FeedbackModal",
-        "length": 323
+        "length": 217
       },
       {
         "name": "handleSubmit",
         "length": 21
+      }
+    ],
+    "portal/src/shared/components/FeedbackTypeSelector.tsx": [
+      {
+        "name": "FeedbackTypeSelector",
+        "length": 38
       }
     ],
     "portal/src/shared/components/SimplePagination.tsx": [
