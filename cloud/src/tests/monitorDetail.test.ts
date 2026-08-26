@@ -83,10 +83,16 @@ before(async () => {
 
   // Episodio agent_offline resuelto "ayer" (dentro de la ventana de 30 días):
   // 90 minutos de corte parcial, para poder afirmar downtime/reconexión del día.
-  const yesterday = new Date(Date.now() - DAY);
+  // Anclado al mediodía UTC de ayer (no a `Date.now() - DAY`): con eso, si la
+  // suite corre entre 22:30 y 00:00 UTC, `resolved_at` (+90min) caía después
+  // de medianoche — DENTRO de "hoy" en vez de "ayer" — partiendo el episodio
+  // entre dos días y rompiendo ambas aserciones de abajo. Bug real encontrado
+  // corriendo la suite completa en ese horario, 26/08/2026.
+  const todayUtcMidnight = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate()));
+  const yesterdayNoonUtc = new Date(todayUtcMidnight.getTime() - DAY + 12 * HOUR);
   await rawDb('alerts').insert({
     agent_id: agentId, type: 'agent_offline', severity: 'critical', message: 'fixture de test',
-    resolved: true, created_at: yesterday, resolved_at: new Date(yesterday.getTime() + 90 * 60 * 1000),
+    resolved: true, created_at: yesterdayNoonUtc, resolved_at: new Date(yesterdayNoonUtc.getTime() + 90 * 60 * 1000),
   });
 
   // Comando de barrido exitoso — alimenta `last_sweep_at`/`last_sweep_new_count`.

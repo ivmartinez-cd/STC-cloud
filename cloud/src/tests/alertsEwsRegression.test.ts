@@ -131,6 +131,28 @@ describe('Alertas EWS — auto-resolución cuando el equipo deja de reportarlas'
 });
 
 describe('Alertas — filtro server-side por alert_class y /alerts/summary', () => {
+  // El describe anterior resuelve la alerta C2-1411 A PROPÓSITO (es la prueba
+  // de auto-resolución) — sin reabrirla acá, "byCode cuadra..." de abajo
+  // filtra `resolved=false` y nunca la encuentra: `subunitOut` da `undefined`
+  // (bug real encontrado corriendo la suite completa, 26/08/2026 — la
+  // aserción asumía "seteada en el describe anterior" sin contar con que
+  // ese mismo describe la deja resuelta al terminar).
+  test('setup: reabrir la alerta EWS subunit_out (el describe anterior la resolvió a propósito)', async () => {
+    const reopened = await req('POST', '/devices/sync', {
+      readings: [{
+        reading_id: crypto.randomUUID(), device_id: ctx.deviceSerial, ip: '192.168.211.10', brand: 'hp',
+        time: new Date(Date.now() + 2000).toISOString(), total_pages: 10, offline: false,
+        supplies_details: { alerts: [{ code: 'C2-1411', description: 'Bandeja de salida llena', severity: 'WARNING' }] },
+      }],
+    }, ctx.agentToken);
+    assert.equal(reopened.status, 200);
+    const open = await pollUntil(
+      () => req('GET', `/alerts?device_id=${ctx.deviceId}&type=C2-1411`, undefined, ctx.adminToken),
+      (r) => r.data[0]?.resolved === false,
+    );
+    assert.equal(open.data[0]?.resolved, false, 'debe volver a quedar abierta para los tests de este describe');
+  });
+
   test('GET /alerts?alert_class=subunit_out devuelve la alerta C2-1411 (server-side, no post-paginación)', async () => {
     const { status, data } = await req('GET', `/alerts?device_id=${ctx.deviceId}&alert_class=subunit_out`, undefined, ctx.adminToken);
     assert.equal(status, 200);
