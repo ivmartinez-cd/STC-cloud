@@ -32,6 +32,10 @@ describe('system-settings — dominio (unitario puro)', () => {
     assert.equal(validateOfflineThresholdMinutes(5), 5);
     assert.equal(validateOfflineThresholdMinutes('1440'), 1440);
     assert.equal(DEFAULT_SYSTEM_SETTINGS.agentOfflineThresholdMinutes, 5);
+    // "Modelo unificado de umbrales" (26/08/2026): el default del umbral de
+    // EQUIPO es 300 min (5h) — mismo valor que tenía hardcodeado
+    // `heartbeatMonitor.ts`/`constants.ts` antes de esta pasada.
+    assert.equal(DEFAULT_SYSTEM_SETTINGS.deviceOfflineThresholdMinutes, 300);
   });
 
   test('rechaza 0, decimales, fuera de rango y no numéricos', () => {
@@ -42,7 +46,7 @@ describe('system-settings — dominio (unitario puro)', () => {
 });
 
 describe('system-settings — e2e /settings/system', () => {
-  const ctx = { adminToken: '', operatorToken: '', operatorId: '', initial: 0 };
+  const ctx = { adminToken: '', operatorToken: '', operatorId: '', initialAgent: 0, initialDevice: 0 };
   const opUser = `op_settings_${Date.now()}`;
 
   test('setup: login admin, crear operator y loguearlo', async () => {
@@ -58,11 +62,13 @@ describe('system-settings — e2e /settings/system', () => {
     ctx.operatorToken = opLogin.data.token;
   });
 
-  test('GET devuelve el umbral vigente (cualquier rol autenticado)', async () => {
+  test('GET devuelve los DOS umbrales vigentes (cualquier rol autenticado)', async () => {
     const admin = await req('GET', '/settings/system', undefined, ctx.adminToken);
     assert.equal(admin.status, 200);
     assert.equal(typeof admin.data.agent_offline_threshold_minutes, 'number');
-    ctx.initial = admin.data.agent_offline_threshold_minutes;
+    assert.equal(typeof admin.data.device_offline_threshold_minutes, 'number');
+    ctx.initialAgent = admin.data.agent_offline_threshold_minutes;
+    ctx.initialDevice = admin.data.device_offline_threshold_minutes;
     const op = await req('GET', '/settings/system', undefined, ctx.operatorToken);
     assert.equal(op.status, 200);
   });
@@ -72,25 +78,47 @@ describe('system-settings — e2e /settings/system', () => {
     assert.equal(status, 403);
   });
 
-  test('PUT fuera de rango → 400 (schema) sin tocar el valor', async () => {
-    for (const bad of [0, 1441, 'x']) {
-      const { status } = await req('PUT', '/settings/system', { agent_offline_threshold_minutes: bad }, ctx.adminToken);
-      assert.equal(status, 400, String(bad));
-    }
-    const { data } = await req('GET', '/settings/system', undefined, ctx.adminToken);
-    assert.equal(data.agent_offline_threshold_minutes, ctx.initial);
+  test('PUT sin ningún campo → 400 (nada para actualizar)', async () => {
+    const { status } = await req('PUT', '/settings/system', {}, ctx.adminToken);
+    assert.equal(status, 400);
   });
 
-  test('PUT como admin persiste y GET lo refleja; se restaura el valor inicial', async () => {
-    const target = ctx.initial === 15 ? 20 : 15;
-    const put = await req('PUT', '/settings/system', { agent_offline_threshold_minutes: target }, ctx.adminToken);
-    assert.equal(put.status, 200, JSON.stringify(put.data));
-    assert.equal(put.data.agent_offline_threshold_minutes, target);
-    const get = await req('GET', '/settings/system', undefined, ctx.adminToken);
-    assert.equal(get.data.agent_offline_threshold_minutes, target);
+  test('PUT fuera de rango (cualquiera de los dos campos) → 400 sin tocar ningún valor', async () => {
+    for (const bad of [0, 1441, 'x']) {
+      const a = await req('PUT', '/settings/system', { agent_offline_threshold_minutes: bad }, ctx.adminToken);
+      assert.equal(a.status, 400, String(bad));
+      const d = await req('PUT', '/settings/system', { device_offline_threshold_minutes: bad }, ctx.adminToken);
+      assert.equal(d.status, 400, String(bad));
+    }
+    const { data } = await req('GET', '/settings/system', undefined, ctx.adminToken);
+    assert.equal(data.agent_offline_threshold_minutes, ctx.initialAgent);
+    assert.equal(data.device_offline_threshold_minutes, ctx.initialDevice);
+  });
 
-    const restore = await req('PUT', '/settings/system', { agent_offline_threshold_minutes: ctx.initial }, ctx.adminToken);
+  test('PUT parcial (sólo un campo) deja el otro intacto', async () => {
+    const targetAgent = ctx.initialAgent === 15 ? 20 : 15;
+    const putAgent = await req('PUT', '/settings/system', { agent_offline_threshold_minutes: targetAgent }, ctx.adminToken);
+    assert.equal(putAgent.status, 200, JSON.stringify(putAgent.data));
+    assert.equal(putAgent.data.agent_offline_threshold_minutes, targetAgent);
+    assert.equal(putAgent.data.device_offline_threshold_minutes, ctx.initialDevice, 'el umbral de equipo no debe moverse al patchear sólo el de agente');
+
+    const targetDevice = ctx.initialDevice === 60 ? 90 : 60;
+    const putDevice = await req('PUT', '/settings/system', { device_offline_threshold_minutes: targetDevice }, ctx.adminToken);
+    assert.equal(putDevice.status, 200, JSON.stringify(putDevice.data));
+    assert.equal(putDevice.data.device_offline_threshold_minutes, targetDevice);
+    assert.equal(putDevice.data.agent_offline_threshold_minutes, targetAgent, 'el umbral de agente no debe moverse al patchear sólo el de equipo');
+
+    const get = await req('GET', '/settings/system', undefined, ctx.adminToken);
+    assert.equal(get.data.agent_offline_threshold_minutes, targetAgent);
+    assert.equal(get.data.device_offline_threshold_minutes, targetDevice);
+
+    const restore = await req('PUT', '/settings/system', {
+      agent_offline_threshold_minutes: ctx.initialAgent,
+      device_offline_threshold_minutes: ctx.initialDevice,
+    }, ctx.adminToken);
     assert.equal(restore.status, 200);
+    assert.equal(restore.data.agent_offline_threshold_minutes, ctx.initialAgent);
+    assert.equal(restore.data.device_offline_threshold_minutes, ctx.initialDevice);
   });
 
   test('cleanup: borrar el operator de prueba', async () => {

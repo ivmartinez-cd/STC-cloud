@@ -1,4 +1,5 @@
 import type { Knex } from "knex";
+import { readSystemSettings } from "../../../system-settings";
 import { onlyLiveDevices } from "../../../../api/utils/deviceFilters";
 import type { DeviceScope } from "../../domain/entities/device";
 import type { DeviceDirectoryGroup, DeviceDirectoryRow, DeviceDirectorySegment, DeviceDirectoryResponse, DeviceDirectorySortField, SortDir } from "../../domain/entities/device-directory";
@@ -13,13 +14,15 @@ const SUPPLY_LOW_THRESHOLD = 35;
 const CONSUMIBLE_PCT_SQL = "LEAST(devices.toner_black, devices.toner_cyan, devices.toner_magenta, devices.toner_yellow)";
 
 /** Sólo 2 estados en vivo — a diferencia de `clients`, esta pantalla no distingue
- * "sin reporte" de "sin conexión", ambos son SIN CONTACTO acá. Umbral de 5 hs,
- * igual que `heartbeatMonitor.ts::DEVICE_OFFLINE_THRESHOLD_MINUTES`. */
+ * "sin reporte" de "sin conexión", ambos son SIN CONTACTO acá. Umbral del
+ * "modelo unificado" (`system_settings.device_offline_threshold_minutes`,
+ * 26/08/2026) — mismo cutoff que `heartbeatMonitor.ts`/`DEVICE_ESTADO_SQL`,
+ * bind param `?`, nunca un `INTERVAL` hardcodeado. */
 const DEVICE_DIRECTORY_ESTADO_SQL = `
   CASE
     WHEN devices.decommissioned_at IS NOT NULL THEN 'dado_de_baja'
     WHEN devices.last_seen IS NULL THEN 'sin_contacto'
-    WHEN devices.last_seen < NOW() - INTERVAL '5 hours' THEN 'sin_contacto'
+    WHEN devices.last_seen < ? THEN 'sin_contacto'
     ELSE 'en_linea'
   END
 `;
@@ -60,7 +63,7 @@ function applyDirectorySegment(q: Knex.QueryBuilder, segment?: DeviceDirectorySe
   else if (segment === "sin_agente") q.whereNull("agent_id");
 }
 
-function directorySelectColumns(db: Knex) {
+function directorySelectColumns(db: Knex, offlineCutoff: Date) {
   return [
     "devices.id", "devices.client_id", "clients.name as client_name", "devices.name",
     "devices.brand", "devices.model", "devices.serial_number",
@@ -69,7 +72,7 @@ function directorySelectColumns(db: Knex) {
     // `device-sql.ts`/`knex-device-identity-resolver.ts`).
     db.raw("host(devices.ip_address) as ip_address"),
     "agents.id as agent_id", "agents.name as agent_name",
-    db.raw(`(${DEVICE_DIRECTORY_ESTADO_SQL}) as estado`),
+    db.raw(`(${DEVICE_DIRECTORY_ESTADO_SQL}) as estado`, [offlineCutoff]),
     "devices.toner_black", "devices.toner_cyan", "devices.toner_magenta", "devices.toner_yellow",
     db.raw(`${CONSUMIBLE_PCT_SQL} as consumible_pct`),
     "devices.last_seen", "devices.decommissioned_at",
@@ -79,7 +82,7 @@ function directorySelectColumns(db: Knex) {
 
 /** Join base + columnas derivadas, SIN filtrar por `q`/`segment` todavía —
  * Postgres no deja filtrar por un alias del mismo nivel (ver `directoryRowsFiltered`). */
-function directoryRowsBase(db: Knex, query: ListDeviceDirectoryQuery) {
+function directoryRowsBase(db: Knex, query: ListDeviceDirectoryQuery, offlineCutoff: Date) {
   return db("devices")
     .join("clients", "devices.client_id", "clients.id")
     .leftJoin("agents", "devices.agent_id", "agents.id")
@@ -89,11 +92,11 @@ function directoryRowsBase(db: Knex, query: ListDeviceDirectoryQuery) {
       else q.whereNull("devices.merged_into");
       whereScope(q, query.scope);
     })
-    .select(directorySelectColumns(db));
+    .select(directorySelectColumns(db, offlineCutoff));
 }
 
-function directoryRowsFiltered(db: Knex, query: ListDeviceDirectoryQuery) {
-  const rows = directoryRowsBase(db, query).as("rows");
+function directoryRowsFiltered(db: Knex, query: ListDeviceDirectoryQuery, offlineCutoff: Date) {
+  const rows = directoryRowsBase(db, query, offlineCutoff).as("rows");
   return db.select("rows.*").from(rows).modify((q) => {
     if (query.q) applyDirectorySearch(q, query.q);
     applyDirectorySegment(q, query.segment);
@@ -137,8 +140,8 @@ async function clientDeviceTotals(db: Knex, clientIds: string[], includeDecommis
 }
 
 /** Equipos del cliente que matchean el filtro/búsqueda actual, SIN paginar — "N en esta vista". */
-async function clientInViewCounts(db: Knex, query: ListDeviceDirectoryQuery, clientIds: string[]): Promise<Map<string, number>> {
-  const filtered = directoryRowsFiltered(db, query).as("f");
+async function clientInViewCounts(db: Knex, query: ListDeviceDirectoryQuery, clientIds: string[], offlineCutoff: Date): Promise<Map<string, number>> {
+  const filtered = directoryRowsFiltered(db, query, offlineCutoff).as("f");
   const rows: Array<{ client_id: string; count: number }> = await db.select("f.client_id", db.raw("COUNT(*)::int as count"))
     .from(filtered).whereIn("f.client_id", clientIds).groupBy("f.client_id");
   return new Map(rows.map((r) => [r.client_id, Number(r.count)]));
@@ -168,13 +171,13 @@ function attachCounts(
   }));
 }
 
-async function buildGroups(db: Knex, rows: DeviceDirectoryRow[], query: ListDeviceDirectoryQuery): Promise<DeviceDirectoryGroup[]> {
+async function buildGroups(db: Knex, rows: DeviceDirectoryRow[], query: ListDeviceDirectoryQuery, offlineCutoff: Date): Promise<DeviceDirectoryGroup[]> {
   const clusters = clusterByClient(rows);
   if (clusters.length === 0) return [];
   const clientIds = clusters.map((c) => c.id);
   const [totals, inView, alerts] = await Promise.all([
     clientDeviceTotals(db, clientIds, !!query.includeDecommissioned),
-    clientInViewCounts(db, query, clientIds),
+    clientInViewCounts(db, query, clientIds, offlineCutoff),
     clientOpenAlertsCounts(db, clientIds),
   ]);
   return attachCounts(clusters, totals, inView, alerts);
@@ -189,12 +192,15 @@ export async function listDeviceDirectory(db: Knex, query: ListDeviceDirectoryQu
   const offset = Math.max(query.offset ?? 0, 0);
   const sortField = query.sortField ?? "last_seen";
   const sortDir: SortDir = query.sortDir === "asc" ? "asc" : "desc";
+  // Umbral unificado (26/08/2026) — ver `DEVICE_DIRECTORY_ESTADO_SQL`.
+  const { deviceOfflineThresholdMinutes } = await readSystemSettings(db);
+  const offlineCutoff = new Date(Date.now() - deviceOfflineThresholdMinutes * 60 * 1000);
 
   const [rows, [{ count }]] = await Promise.all([
-    directoryRowsFiltered(db, query).modify((q) => applyDirectorySort(q, sortField, sortDir)).limit(limit).offset(offset),
-    directoryRowsFiltered(db, query).clearSelect().count("* as count"),
+    directoryRowsFiltered(db, query, offlineCutoff).modify((q) => applyDirectorySort(q, sortField, sortDir)).limit(limit).offset(offset),
+    directoryRowsFiltered(db, query, offlineCutoff).clearSelect().count("* as count"),
   ]);
 
-  const groups = await buildGroups(db, rows as DeviceDirectoryRow[], query);
+  const groups = await buildGroups(db, rows as DeviceDirectoryRow[], query, offlineCutoff);
   return { groups, total: Number(count) };
 }

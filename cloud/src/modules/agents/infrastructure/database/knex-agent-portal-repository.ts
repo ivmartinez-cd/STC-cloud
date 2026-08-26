@@ -1,4 +1,5 @@
 import type { Knex } from "knex";
+import { readSystemSettings } from "../../../system-settings";
 import { onlyLiveDevices } from "../../../../api/utils/deviceFilters";
 import { auditActionMeta } from "../../../../shared/domain/audit-action-catalog";
 import type { AgentScope } from "../../domain/entities/agent";
@@ -30,11 +31,14 @@ const CONFIG_COLUMNS = ["agents.ip_ranges", "agents.snmp_community", "agents.ton
  * `DEVICE_ESTADO_SQL` en `knex-client-repository.ts`, acá SÍ hay un 3er estado
  * (`sin_aprobar`) porque esta tabla, a propósito, no usa `onlyLiveDevices()`
  * (que excluye `pending`) — el hifi pide ver los descubiertos sin aprobar en
- * la misma tabla, con su propio chip. Mismo umbral de 5 h que `heartbeatMonitor.ts`. */
+ * la misma tabla, con su propio chip. Umbral del "modelo unificado"
+ * (`system_settings.device_offline_threshold_minutes`, 26/08/2026), mismo
+ * cutoff que `heartbeatMonitor.ts`/`DEVICE_ESTADO_SQL` — bind param `?`,
+ * nunca un `INTERVAL` hardcodeado. */
 const AGENT_DEVICE_ESTADO_SQL = `
   CASE
     WHEN devices.registration_state = 'pending' THEN 'sin_aprobar'
-    WHEN devices.last_seen IS NULL OR devices.last_seen < NOW() - INTERVAL '5 hours' THEN 'sin_conexion'
+    WHEN devices.last_seen IS NULL OR devices.last_seen < ? THEN 'sin_conexion'
     ELSE 'en_linea'
   END
 `;
@@ -180,7 +184,7 @@ export class KnexAgentPortalRepository implements AgentPortalRepository {
       .select("alerts.device_id as device_id", this.db.raw("COUNT(*)::int as alerts_count"));
   }
 
-  private agentDeviceBase(agentId: string) {
+  private agentDeviceBase(agentId: string, offlineCutoff: Date) {
     return this.db("devices")
       .where("devices.agent_id", agentId)
       .modify((q) => notDecommissionedNotMergedNotIgnored(q, "devices"))
@@ -192,14 +196,14 @@ export class KnexAgentPortalRepository implements AgentPortalRepository {
         // mini-barra por color en equipos color (handoff no lo cubre, pero es
         // funcionalidad real que ya existía antes del rediseño hifi).
         "devices.toner_black", "devices.toner_cyan", "devices.toner_magenta", "devices.toner_yellow",
-        this.db.raw(`(${AGENT_DEVICE_ESTADO_SQL}) as estado`),
+        this.db.raw(`(${AGENT_DEVICE_ESTADO_SQL}) as estado`, [offlineCutoff]),
         this.db.raw(`${AGENT_CONSUMIBLE_PCT_SQL} as consumible_pct`),
         this.db.raw("COALESCE(alerts_agg.alerts_count, 0)::int as alerts_count")
       );
   }
 
-  private agentDeviceFiltered(query: AgentDeviceDirectoryQuery) {
-    const rows = this.agentDeviceBase(query.agentId).as("rows");
+  private agentDeviceFiltered(query: AgentDeviceDirectoryQuery, offlineCutoff: Date) {
+    const rows = this.agentDeviceBase(query.agentId, offlineCutoff).as("rows");
     return this.db.select("rows.*").from(rows).modify((q) => {
       if (query.q) {
         const term = query.q;
@@ -232,10 +236,13 @@ export class KnexAgentPortalRepository implements AgentPortalRepository {
     const offset = Math.max(query.offset ?? 0, 0);
     const sortColumn = AGENT_DEVICE_DIRECTORY_SORT_COLUMNS[query.sortField ?? "alerts_count"];
     const sortDir: "asc" | "desc" = query.sortDir === "asc" ? "asc" : "desc";
+    // Umbral unificado (26/08/2026) — ver `AGENT_DEVICE_ESTADO_SQL`.
+    const { deviceOfflineThresholdMinutes } = await readSystemSettings(this.db);
+    const offlineCutoff = new Date(Date.now() - deviceOfflineThresholdMinutes * 60 * 1000);
 
     const [items, [{ count }]] = await Promise.all([
-      this.agentDeviceFiltered(query).modify((q) => this.applyAgentDeviceSort(q, sortColumn, sortDir)).limit(limit).offset(offset),
-      this.agentDeviceFiltered(query).clearSelect().count("* as count"),
+      this.agentDeviceFiltered(query, offlineCutoff).modify((q) => this.applyAgentDeviceSort(q, sortColumn, sortDir)).limit(limit).offset(offset),
+      this.agentDeviceFiltered(query, offlineCutoff).clearSelect().count("* as count"),
     ]);
     return { items, total: Number(count) };
   }
@@ -257,15 +264,17 @@ export class KnexAgentPortalRepository implements AgentPortalRepository {
   }
 
   /** Equipos GESTIONADOS (`onlyLiveDevices` ya excluye `pending`) de este agente,
-   * activos vs. offline por el mismo umbral de 5 h que el resto del sistema. */
-  private managedDeviceCountsForAgent(agentId: string) {
+   * activos vs. offline por el umbral unificado (`system_settings.
+   * device_offline_threshold_minutes`, 26/08/2026) — mismo cutoff que
+   * `AGENT_DEVICE_ESTADO_SQL`, bind param `?`. */
+  private managedDeviceCountsForAgent(agentId: string, offlineCutoff: Date) {
     const db = this.db;
     return db("devices")
       .where("devices.agent_id", agentId)
       .modify((q) => onlyLiveDevices(q, "devices"))
       .select(
         db.raw("COUNT(*)::int as total"),
-        db.raw("COUNT(*) FILTER (WHERE devices.last_seen IS NOT NULL AND devices.last_seen >= NOW() - INTERVAL '5 hours')::int as active")
+        db.raw("COUNT(*) FILTER (WHERE devices.last_seen IS NOT NULL AND devices.last_seen >= ?)::int as active", [offlineCutoff])
       )
       .first();
   }
@@ -365,8 +374,10 @@ export class KnexAgentPortalRepository implements AgentPortalRepository {
   }
 
   async getStats(agentId: string): Promise<AgentStats> {
+    const { deviceOfflineThresholdMinutes } = await readSystemSettings(this.db);
+    const offlineCutoff = new Date(Date.now() - deviceOfflineThresholdMinutes * 60 * 1000);
     const [managed, alertsSummary, pending, volumeMonth, lastSweep, connectivity] = await Promise.all([
-      this.managedDeviceCountsForAgent(agentId),
+      this.managedDeviceCountsForAgent(agentId, offlineCutoff),
       this.openAlertsSummaryForAgent(agentId),
       this.pendingDeviceCountForAgent(agentId),
       this.monthlyVolumeForAgent(agentId),

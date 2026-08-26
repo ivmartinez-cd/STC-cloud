@@ -1,4 +1,5 @@
 import type { Knex } from "knex";
+import { readSystemSettings } from "../../../system-settings";
 import { notMerged, onlyLiveDevices } from "../../../../api/utils/deviceFilters";
 import type {
   ClientDetailStats, ClientDeviceDirectoryQuery, ClientDeviceDirectoryRow, ClientDeviceRow, ClientDirectoryRow,
@@ -55,14 +56,15 @@ const USAGE_BY_MONTH_SQL = `
     ORDER BY month_date ASC
 `;
 
-/** `estado` de UN dispositivo — ver docblock de `ClientDeviceEstado`. Umbral de 5 hs,
- * igual que `heartbeatMonitor.ts::DEVICE_OFFLINE_THRESHOLD_MINUTES` (no reinventa un
- * tercer umbral de "offline", ver nota en `formatters.ts` del portal sobre ese
- * mismo problema ya resuelto para agentes). */
+/** `estado` de UN dispositivo — ver docblock de `ClientDeviceEstado`. Umbral
+ * de "modelo unificado" (`system_settings.device_offline_threshold_minutes`,
+ * 26/08/2026) — mismo cutoff que `heartbeatMonitor.ts`/
+ * `AGENT_DEVICE_ESTADO_SQL`, nunca un `INTERVAL` hardcodeado acá. `cutoff` se
+ * pasa como bind param (`?`), nunca interpolado en el string SQL. */
 const DEVICE_ESTADO_SQL = `
   CASE
     WHEN devices.last_seen IS NULL THEN 'sin_reporte'
-    WHEN devices.last_seen < NOW() - INTERVAL '5 hours' THEN 'sin_conexion'
+    WHEN devices.last_seen < ? THEN 'sin_conexion'
     ELSE 'en_linea'
   END
 `;
@@ -346,7 +348,7 @@ export class KnexClientRepository implements ClientRepository {
    * (uno es por-fila sobre columnas base, el otro es un LEFT JOIN 1:1 por dispositivo),
    * así que un solo nivel de wrap (en `clientDeviceFiltered`) alcanza para poder
    * filtrar/ordenar por ellos. */
-  private clientDeviceBase(clientId: string) {
+  private clientDeviceBase(clientId: string, offlineCutoff: Date) {
     return this.db("devices")
       .where("devices.client_id", clientId)
       .modify((q) => onlyLiveDevices(q, "devices"))
@@ -358,14 +360,14 @@ export class KnexClientRepository implements ClientRepository {
         // mini-barra por color en equipos color (funcionalidad real que ya
         // existía antes del rediseño hifi).
         "devices.toner_black", "devices.toner_cyan", "devices.toner_magenta", "devices.toner_yellow",
-        this.db.raw(`(${DEVICE_ESTADO_SQL}) as estado`),
+        this.db.raw(`(${DEVICE_ESTADO_SQL}) as estado`, [offlineCutoff]),
         this.db.raw(`${CONSUMIBLE_PCT_SQL} as consumible_pct`),
         this.db.raw("COALESCE(alerts_agg.alerts_count, 0)::int as alerts_count")
       );
   }
 
-  private clientDeviceFiltered(query: ClientDeviceDirectoryQuery) {
-    const rows = this.clientDeviceBase(query.clientId).as("rows");
+  private clientDeviceFiltered(query: ClientDeviceDirectoryQuery, offlineCutoff: Date) {
+    const rows = this.clientDeviceBase(query.clientId, offlineCutoff).as("rows");
     return this.db.select("rows.*").from(rows).modify((q) => {
       if (query.q) applyClientDeviceSearch(q, query.q);
       if (query.segment === "sin_conexion") q.where("estado", "sin_conexion");
@@ -390,10 +392,14 @@ export class KnexClientRepository implements ClientRepository {
     const offset = Math.max(query.offset ?? 0, 0);
     const sortColumn = DEVICE_DIRECTORY_SORT_COLUMNS[query.sortField ?? "alerts_count"];
     const sortDir: "asc" | "desc" = query.sortDir === "asc" ? "asc" : "desc";
+    // Umbral unificado (26/08/2026) — mismo `system_settings` que
+    // `heartbeatMonitor.ts`/`AGENT_DEVICE_ESTADO_SQL`, nunca un `INTERVAL` propio.
+    const { deviceOfflineThresholdMinutes } = await readSystemSettings(this.db);
+    const offlineCutoff = new Date(Date.now() - deviceOfflineThresholdMinutes * 60 * 1000);
 
     const [items, [{ count }]] = await Promise.all([
-      this.clientDeviceFiltered(query).modify((q) => this.applyClientDeviceSort(q, sortColumn, sortDir)).limit(limit).offset(offset),
-      this.clientDeviceFiltered(query).clearSelect().count("* as count"),
+      this.clientDeviceFiltered(query, offlineCutoff).modify((q) => this.applyClientDeviceSort(q, sortColumn, sortDir)).limit(limit).offset(offset),
+      this.clientDeviceFiltered(query, offlineCutoff).clearSelect().count("* as count"),
     ]);
     return { items, total: Number(count) };
   }

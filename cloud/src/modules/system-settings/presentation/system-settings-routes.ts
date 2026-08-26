@@ -4,16 +4,16 @@ import type { AuthHook } from "../../../api/middlewares/authMiddleware";
 import type { PortalUser } from "../../../api/middlewares/authMiddleware";
 import { getClientIp } from "../../../api/utils/ip";
 import { writeAudit } from "../../../services/auditService";
-import { validateOfflineThresholdMinutes } from "../domain/system-settings";
+import { validateOfflineThresholdMinutes, type SystemSettings } from "../domain/system-settings";
 import { KnexSystemSettingsRepository } from "../infrastructure/database/knex-system-settings-repository";
 
 const updateSchema = {
   body: {
     type: "object",
-    required: ["agent_offline_threshold_minutes"],
     additionalProperties: false,
     properties: {
       agent_offline_threshold_minutes: { type: "integer", minimum: 1, maximum: 1440 },
+      device_offline_threshold_minutes: { type: "integer", minimum: 1, maximum: 1440 },
     },
   },
 };
@@ -22,8 +22,11 @@ function userOf(request: FastifyRequest): PortalUser {
   return (request as FastifyRequest & { user: PortalUser }).user;
 }
 
-function toView(s: { agentOfflineThresholdMinutes: number }) {
-  return { agent_offline_threshold_minutes: s.agentOfflineThresholdMinutes };
+function toView(s: SystemSettings) {
+  return {
+    agent_offline_threshold_minutes: s.agentOfflineThresholdMinutes,
+    device_offline_threshold_minutes: s.deviceOfflineThresholdMinutes,
+  };
 }
 
 function buildGet(repo: KnexSystemSettingsRepository) {
@@ -38,20 +41,29 @@ function buildUpdate(db: Knex, repo: KnexSystemSettingsRepository) {
       return reply.status(403).send({ error: "Se requiere rol admin para modificar ajustes del sistema" });
     }
 
-    const body = request.body as { agent_offline_threshold_minutes: number };
-    let minutes: number;
+    const body = request.body as { agent_offline_threshold_minutes?: number; device_offline_threshold_minutes?: number };
+    if (body.agent_offline_threshold_minutes === undefined && body.device_offline_threshold_minutes === undefined) {
+      return reply.status(400).send({ error: "Nada para actualizar" });
+    }
+
+    const patch: Partial<SystemSettings> = {};
     try {
-      minutes = validateOfflineThresholdMinutes(body.agent_offline_threshold_minutes);
+      if (body.agent_offline_threshold_minutes !== undefined) {
+        patch.agentOfflineThresholdMinutes = validateOfflineThresholdMinutes(body.agent_offline_threshold_minutes);
+      }
+      if (body.device_offline_threshold_minutes !== undefined) {
+        patch.deviceOfflineThresholdMinutes = validateOfflineThresholdMinutes(body.device_offline_threshold_minutes);
+      }
     } catch (e) {
       return reply.status(400).send({ error: (e as Error).message });
     }
 
-    const updated = await repo.setAgentOfflineThresholdMinutes(minutes, user.userId);
+    const updated = await repo.update(patch, user.userId);
     await writeAudit(db, {
       action: "SYSTEM_SETTINGS_UPDATED",
       userId: user.userId,
       ip: getClientIp(request),
-      metadata: { agent_offline_threshold_minutes: minutes },
+      metadata: toView(updated),
     });
     return toView(updated);
   };

@@ -7,29 +7,23 @@ import { logger } from '../logger';
 
 const db = knex(knexConfig.development);
 
-// Default de arranque / fail-open si `system_settings` no responde por
+// Defaults de arranque / fail-open si `system_settings` no responde por
 // algún motivo — nunca debe tumbar el tick completo por un umbral no
-// disponible. El valor real, configurable por el admin desde
-// `Settings.tsx` (R9 del gap analysis vs HP SDS), se lee de nuevo en
+// disponible. Los valores reales, configurables por el admin desde
+// `Settings.tsx` (R9 del gap analysis vs HP SDS), se leen de nuevo en
 // CADA tick (ver `runChecks()`) — así un cambio del admin aplica dentro
 // de los 2 minutos del próximo ciclo, sin reiniciar el proceso.
 const DEFAULT_OFFLINE_THRESHOLD_MINUTES = 5;
 /**
- * Bug real (23/08/2026): estaba en 30 min. El agente reduce su propia
- * frecuencia fuera del horario laboral configurado (`agents.business_hours`,
- * default Mon-Fri 08-18) — los loops de meter/supplies pasan de 20/60 min a
- * **4 horas** fuera de esa ventana (`INTERVALS.meter.off`/`supplies.off` en
- * `agent/src/core/BusinessHours.ts`). Con 30 min, cualquier equipo de un
- * agente real (no sólo de prueba) abría `device_offline` la mayor parte de
- * cada franja fuera de horario aunque estuviera reportando con normalidad —
- * confirmado en el stack de desarrollo con un agente con lecturas reales cada
- * ~40 min. Subido a 5 horas (4h del peor caso + 1h de margen) — debe
- * coincidir con `DEVICE_OFFLINE_THRESHOLD_MS` de
- * `cloud/portal/src/lib/constants.ts` (mismo criterio, no unificado en un
- * solo lugar todavía — "modelo unificado de umbrales" sigue pendiente en el
- * gap analysis).
+ * "Modelo unificado de umbrales" (26/08/2026): este default (5h = 4h peor
+ * caso del agente fuera de horario laboral + 1h de margen, mismo origen que
+ * el bug real del 23/08/2026 documentado en el gap analysis) ahora vive en
+ * `system_settings.device_offline_threshold_minutes` — único lugar
+ * configurable, del que también leen `DEVICE_ESTADO_SQL`/
+ * `AGENT_DEVICE_ESTADO_SQL` (backend) y `constants.ts`/`formatters.ts`
+ * (portal). Este número sólo sirve de fail-open si la tabla no responde.
  */
-const DEVICE_OFFLINE_THRESHOLD_MINUTES = 5 * 60;
+const DEFAULT_DEVICE_OFFLINE_THRESHOLD_MINUTES = 300;
 
 /**
  * Se queda como `setInterval` a propósito — NO se convierte a un BullMQ repeatable
@@ -107,9 +101,9 @@ async function checkOfflineAgents(thresholdMinutes: number) {
  * su propia alerta `agent_offline`; una fila `device_offline` por cada impresora
  * del sitio sería puro ruido redundante.
  */
-async function checkOfflineDevices() {
+async function checkOfflineDevices(thresholdMinutes: number) {
   try {
-    const cutoff = new Date(Date.now() - DEVICE_OFFLINE_THRESHOLD_MINUTES * 60 * 1000);
+    const cutoff = new Date(Date.now() - thresholdMinutes * 60 * 1000);
 
     // Un equipo dado de baja tiene `last_seen` viejo por definición: sin este
     // filtro calificaría en CADA corrida (cada 2 min) y su `device_offline`
@@ -134,12 +128,12 @@ async function checkOfflineDevices() {
         deviceId: device.id,
         type: 'device_offline',
         severity: 'warning',
-        message: `Equipo sin señal (sin lecturas hace más de ${DEVICE_OFFLINE_THRESHOLD_MINUTES} min)`,
+        message: `Equipo sin señal (sin lecturas hace más de ${thresholdMinutes} min)`,
       });
       if (created) opened++;
     }
     if (opened > 0) {
-      logger.info(`[HeartbeatMonitor] ${opened} equipo(s) marcados sin señal (> ${DEVICE_OFFLINE_THRESHOLD_MINUTES} min)`);
+      logger.info(`[HeartbeatMonitor] ${opened} equipo(s) marcados sin señal (> ${thresholdMinutes} min)`);
     }
 
     // Resolver device_offline de equipos que volvieron a reportar.
@@ -164,24 +158,28 @@ async function checkOfflineDevices() {
   }
 }
 
+// Leído de nuevo en CADA tick (no cacheado a nivel de módulo) — así un
+// cambio del admin en Settings.tsx aplica sin reiniciar el proceso.
+// Fail-open a los defaults si la tabla no responde: un umbral no
+// disponible nunca debe tumbar el tick completo.
+async function readThresholdsWithFailOpen(): Promise<{ agentThresholdMinutes: number; deviceThresholdMinutes: number }> {
+  try {
+    const settings = await readSystemSettings(db);
+    return { agentThresholdMinutes: settings.agentOfflineThresholdMinutes, deviceThresholdMinutes: settings.deviceOfflineThresholdMinutes };
+  } catch (err: unknown) {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    logger.error({ err: errMsg }, `[HeartbeatMonitor] No se pudo leer system_settings, usando defaults (agente ${DEFAULT_OFFLINE_THRESHOLD_MINUTES} min, equipo ${DEFAULT_DEVICE_OFFLINE_THRESHOLD_MINUTES} min)`);
+    return { agentThresholdMinutes: DEFAULT_OFFLINE_THRESHOLD_MINUTES, deviceThresholdMinutes: DEFAULT_DEVICE_OFFLINE_THRESHOLD_MINUTES };
+  }
+}
+
 async function runChecks() {
   // Lock multi-réplica + métricas + Sentry (Fase 5.3) — implementa el advisory
   // lock que el docblock de arriba dejó prescripto para multi-réplica.
   await runGuardedTick(db, "heartbeat-monitor", async () => {
-    // Leído de nuevo en CADA tick (no cacheado a nivel de módulo) — así un
-    // cambio del admin en Settings.tsx aplica sin reiniciar el proceso.
-    // Fail-open al default si la tabla no responde: un umbral no
-    // disponible nunca debe tumbar el tick completo.
-    let thresholdMinutes = DEFAULT_OFFLINE_THRESHOLD_MINUTES;
-    try {
-      thresholdMinutes = (await readSystemSettings(db)).agentOfflineThresholdMinutes;
-    } catch (err: unknown) {
-      const errMsg = err instanceof Error ? err.message : String(err);
-      logger.error({ err: errMsg }, `[HeartbeatMonitor] No se pudo leer system_settings, usando default (${DEFAULT_OFFLINE_THRESHOLD_MINUTES} min)`);
-    }
-
-    await checkOfflineAgents(thresholdMinutes);
-    await checkOfflineDevices();
+    const { agentThresholdMinutes, deviceThresholdMinutes } = await readThresholdsWithFailOpen();
+    await checkOfflineAgents(agentThresholdMinutes);
+    await checkOfflineDevices(deviceThresholdMinutes);
   });
 }
 
@@ -190,4 +188,4 @@ runChecks();
 const intervalMs = 2 * 60 * 1000;
 setInterval(runChecks, intervalMs);
 
-logger.info(`[HeartbeatMonitor] Iniciado — umbral agente: configurable desde Settings (default ${DEFAULT_OFFLINE_THRESHOLD_MINUTES} min), umbral equipo: ${DEVICE_OFFLINE_THRESHOLD_MINUTES} min`);
+logger.info(`[HeartbeatMonitor] Iniciado — umbral agente y umbral equipo configurables desde Settings (defaults ${DEFAULT_OFFLINE_THRESHOLD_MINUTES} min / ${DEFAULT_DEVICE_OFFLINE_THRESHOLD_MINUTES} min)`);

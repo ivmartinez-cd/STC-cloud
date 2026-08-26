@@ -46,7 +46,17 @@ export interface DeviceStatusInfo {
 
 export const DEVICE_CRITICAL_OFFLINE_THRESHOLD_MS = 72 * 60 * 60 * 1000; // 72 horas
 
-export function getDeviceStatusInfo(lastSeenStr: string | null | undefined, now = Date.now()): DeviceStatusInfo {
+/**
+ * "Modelo unificado de umbrales" (26/08/2026): `offlineThresholdMs` es
+ * opcional (default = fallback estático de `constants.ts`) para no romper
+ * a ningún caller existente, pero el caller real (`DeviceProfileCard.tsx`)
+ * pasa el valor LIVE de `useSystemSettings()`.
+ */
+export function getDeviceStatusInfo(
+  lastSeenStr: string | null | undefined,
+  now = Date.now(),
+  offlineThresholdMs = DEVICE_OFFLINE_THRESHOLD_MS
+): DeviceStatusInfo {
   if (!lastSeenStr) {
     return {
       status: 'critical',
@@ -62,14 +72,7 @@ export function getDeviceStatusInfo(lastSeenStr: string | null | undefined, now 
   const lastSeen = new Date(lastSeenStr);
   const diffMs = Math.abs(now - lastSeen.getTime());
 
-  // Bug real (23/08/2026): tenía su PROPIO umbral hardcodeado de 30 min,
-  // independiente de `DEVICE_OFFLINE_THRESHOLD_MS` (constants.ts) — un
-  // tercer umbral de "offline" además del de `constants.ts` y el de
-  // `cloud/src/jobs/heartbeatMonitor.ts`, exactamente el problema que
-  // documenta el gap analysis ("modelo unificado de umbrales"). Es el que
-  // realmente pinta "SIN CONTACTO" en `DeviceInventoryTable.tsx` — unificado acá
-  // al mismo valor que los otros dos (ver comentario en `constants.ts`).
-  if (diffMs <= DEVICE_OFFLINE_THRESHOLD_MS) {
+  if (diffMs <= offlineThresholdMs) {
     return {
       status: 'online',
       label: 'En Línea',

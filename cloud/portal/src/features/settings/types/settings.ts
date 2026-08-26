@@ -1,5 +1,6 @@
 export interface Thresholds {
   monitorOfflineMinutes: number;
+  deviceOfflineMinutes: number;
 }
 
 export interface DBUser {

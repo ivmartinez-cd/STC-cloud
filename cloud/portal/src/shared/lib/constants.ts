@@ -1,3 +1,12 @@
+/**
+ * "Modelo unificado de umbrales" (26/08/2026): estos dos valores ahora son
+ * sólo el FALLBACK antes de que resuelva `useSystemSettings()`
+ * (`shared/hooks/useSystemSettings.ts`) — la fuente real es
+ * `system_settings` (`GET/PUT /api/v1/settings/system`), configurable desde
+ * `Settings.tsx`. Se mantienen acá con el mismo valor que el default del
+ * backend (`DEFAULT_SYSTEM_SETTINGS`) para que la pantalla no cambie de
+ * opinión visualmente en el primer render.
+ */
 export const OFFLINE_THRESHOLD_MS   = 5 * 60 * 1000;   // 5 min sin heartbeat → agente offline
 /**
  * Bug real (23/08/2026): estaba en 30 min, pero el agente reduce su propia
@@ -7,11 +16,7 @@ export const OFFLINE_THRESHOLD_MS   = 5 * 60 * 1000;   // 5 min sin heartbeat �
  * `agent/src/core/BusinessHours.ts`). Con 30 min de umbral, CUALQUIER equipo
  * de un agente real aparecía "SIN CONTACTO" la mayor parte de cada franja
  * fuera de horario, aunque estuviera reportando con total normalidad. Subido
- * a 5 horas (4h del peor caso + 1h de margen por red/reinicio del agente) —
- * debe coincidir con `DEVICE_OFFLINE_THRESHOLD_MINUTES` de
- * `cloud/src/jobs/heartbeatMonitor.ts` (mismo criterio, no unificado en un
- * solo lugar todavía — ver "modelo unificado de umbrales" en el gap analysis,
- * pendiente de una pasada aparte).
+ * a 5 horas (4h del peor caso + 1h de margen por red/reinicio del agente).
  */
 export const DEVICE_OFFLINE_THRESHOLD_MS = 5 * 60 * 60 * 1000;
 export const DASHBOARD_POLL_MS      = 60_000;           // intervalo de refresco del dashboard

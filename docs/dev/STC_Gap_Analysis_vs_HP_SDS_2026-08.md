@@ -490,7 +490,8 @@ abiertas; en el portal, un monitor de prueba pasó de mostrar 16/16 equipos
 "sin contacto" a sólo los 4 que de verdad llevaban ~2 días sin reportar. Sigue
 pendiente el "modelo unificado de umbrales cliente→agente→dispositivo" más
 amplio ya señalado en Fase 1 de este roadmap — este fix sólo corrige el valor,
-no unifica los tres lugares en uno solo.
+no unifica los tres lugares en uno solo. ✅ (26/08/2026) Unificado —
+resultaron ser 6 lugares, no 3; ver Fase 11.
 
 ✅ **Campos de inventario manuales y derivados** (23/08/2026): migración
 `20260824030000_devices_inventory_fields.ts` — `asset_number` sigue el mismo
@@ -1757,6 +1758,111 @@ backend de estos dos endpoints.
 - **`GET /agents` (2000 cap) no se convirtió a paginación real** —
   alimenta sólo un `<select>` chico, no una tabla (ver arriba).
 
+### Fase 11 — Modelo unificado de umbrales offline (26/08/2026) — completa
+
+Origen: pendiente explícito desde la Fase 1 ("un solo modelo de umbrales:
+cliente → agente → dispositivo") y repetido en R9/Fase 3 — el umbral de
+"equipo sin señal" (corregido a 5h el 23/08/2026 para no confundir el
+horario laboral reducido del agente con una caída real) vivía en copias
+independientes que alguien podía cambiar sin querer decir lo mismo. El de
+"agente sin señal" ya se conectó a `system_settings` en R9 (25/08/2026);
+esta fase agrega el segundo umbral al mismo mecanismo y termina de unificar
+TODOS los lugares que hoy calculan "¿este equipo sigue reportando?".
+
+**Barrido completo, no sólo los 3 lugares que el gap analysis ya tenía
+anotados.** Se encontraron 6 copias independientes del mismo número (300
+min = 5h), 3 más de las esperadas:
+1. `jobs/heartbeatMonitor.ts` — abre/resuelve `device_offline`.
+2. `modules/clients/.../knex-client-repository.ts` — `DEVICE_ESTADO_SQL`
+   (tabla "Infraestructura de monitoreo" de `ClientDetail.tsx`).
+3. `modules/agents/.../knex-agent-portal-repository.ts` —
+   `AGENT_DEVICE_ESTADO_SQL` (tabla de equipos de `MonitorDetail.tsx`).
+4. **Nuevo, no documentado**: `modules/devices/.../knex-device-directory-
+   queries.ts` — `DEVICE_DIRECTORY_ESTADO_SQL` (el listado global
+   `/devices`, `Devices.tsx`, resucitado en R9 el 25/08).
+5. **Nuevo**: la misma `knex-agent-portal-repository.ts`,
+   `managedDeviceCountsForAgent()` — un segundo `INTERVAL '5 hours'`
+   independiente del de arriba, alimentando `devices_active`/`devices_total`
+   de la tira de 6 métricas de `MonitorDetail.tsx` (`getStats`).
+6. Portal: `constants.ts`/`formatters.ts` (`DEVICE_OFFLINE_THRESHOLD_MS`,
+   `getDeviceStatusInfo`) — badge de `DeviceProfileCard.tsx`.
+
+✅ **Backend — `system_settings` gana `device_offline_threshold_minutes`**
+(migración `20260826000000_...`, mismo CHECK 1-1440 min, default 300 = valor
+histórico, cero cambio de comportamiento sin tocar Settings). Dominio
+(`SystemSettings`), repositorio (`KnexSystemSettingsRepository.update()`,
+reemplaza el setter de un solo campo por un patch parcial — cualquiera de
+los dos campos, o ambos) y `PUT /settings/system` extendidos (ambos campos
+opcionales, 400 si no viene ninguno). Los 6 lugares de arriba ahora leen
+`readSystemSettings(db).deviceOfflineThresholdMinutes` — los 3 repos con
+SQL crudo (`DEVICE_ESTADO_SQL`/`AGENT_DEVICE_ESTADO_SQL`/
+`DEVICE_DIRECTORY_ESTADO_SQL`) siguen siendo constantes `UPPER_SNAKE`
+(exigido por `check:guards`/`sql-interpolation` — envolverlas en una
+función de cero argumentos las saca de ese patrón sin ganar nada, revertido
+tras el primer intento) con el cutoff pasado como **bind param `?`**, nunca
+un `INTERVAL` interpolado — cada entrypoint (`listDevicesDirectory`,
+`getStats`) calcula el `Date` de corte UNA vez y lo enhebra por los métodos
+privados en vez de que cada uno relea `system_settings` por separado.
+
+✅ **Portal**: `Settings.tsx`/`MonitorThresholdCard.tsx` ganan un segundo
+campo ("Equipo sin señal (minutos)", con su propio ícono/ayuda) al lado del
+de agente, mismo patrón de guardado. Nuevo `shared/hooks/useSystemSettings.ts`
+(sobre `usePolledResource`, ya existente) para que `DeviceProfileCard.tsx`
+lea el umbral LIVE en vez del constante hardcodeado —
+`getDeviceStatusInfo()` gana un 3er parámetro opcional (default = el
+fallback estático, por si aparece otro caller no auditado). Los `constants.ts`
+del portal quedan como fallback pre-fetch, no como fuente de verdad.
+
+**Bug real encontrado y corregido al aplicar el `check:guards`/`check:sizes`
+ratchet**: el primer intento de parametrizar las 3 expresiones SQL las
+convirtió en funciones `camelCase()` para poder pasarles el bind param —
+`check:guards` las marcó como `sql-interpolation` (el regex sólo permite
+`${CONST_UPPER_SNAKE}` dentro de un `.raw()`, no `${fn()}`, aunque el
+riesgo real sea idéntico o menor con bind params). Revertido a constantes
+`UPPER_SNAKE` con el `?` ya adentro del string estático — el bind param se
+pasa aparte, sin necesidad de una función. `check:sizes` también pidió
+`--write-baseline` (2 archivos crecieron por enhebrar el parámetro nuevo,
+más 2 componentes de la Fase 10 —`SimplePagination`/`MonitorThresholdCard`—
+que nunca se habían corrido contra este check porque el commit anterior sólo
+verificó `npm run check`/`build` del portal, no `check:arch` de `cloud/`,
+que también escanea `portal/src`).
+
+Verificado contra el stack Docker real (rebuild de `api` y `portal`,
+migración aplicada limpia): `PUT /settings/system` con los dos campos
+juntos y por separado (parcial deja el otro intacto), Playwright en vivo
+(los dos inputs de `Settings.tsx` cargan el valor real, guardan, sobreviven
+un reload), `GET /devices/directory?segment=sin_contacto` sigue filtrando
+correcto con el cutoff parametrizado. Suite dirigida verde (`systemSettings.test.ts`
+extendido con el segundo campo, `clientDeviceDirectory.test.ts`,
+`monitorDetail.test.ts`, `rbac.test.ts`, `e2e.test.ts`, `observability.test.ts`,
+`alertDigest.test.ts` — 236/236 tests en conjunto) — corrida también la
+suite completa de 34 archivos vía `ci-test-runner.mjs`: 32/34 archivos
+verdes sin tocar nada relacionado a esta fase; los 2 restantes fueron
+artefactos de esta sesión de trabajo, no regresiones — `alertDigest.test.ts`
+necesitaba las variables de conexión directa a Postgres del runner local
+(confirmado 8/8 verde corriéndolo con ellas) y `e2e.test.ts` falló por un
+cliente semilla del entorno de desarrollo que acumuló 833 dispositivos de
+tests repetidos a lo largo de esta sesión — supera el techo preexistente de
+500 filas de `KnexClientRepository.listDevices()` (`orderBy(brand)`, no por
+fecha, no tocado por esta fase), confirmado corriendo el mismo archivo en
+37/37 minutos antes de que el conteo cruzara ese techo. `tsc --noEmit`
+(cloud y portal) y `check:arch` (sizes/guards/routes) limpios.
+
+**Lo que NO se hizo de este ítem**: jerarquía completa "cliente → agente →
+dispositivo" del pendiente original — quedó en un solo valor GLOBAL (mismo
+alcance que ya tenía el umbral de agente desde R9), no por cliente ni por
+agente; sería la próxima capa si hace falta en el futuro, ahora que el
+mecanismo de lectura ya está centralizado en un solo lugar
+(`readSystemSettings`) para extenderlo sin volver a tocar 6 archivos. El
+tercer nivel de `getDeviceStatusInfo()` (`DEVICE_CRITICAL_OFFLINE_THRESHOLD_MS`,
+72h, la escalada warning→critical del badge) sigue hardcodeado — es un
+matiz sólo visual, no un segundo umbral de negocio como el que sí se
+unificó. El "3er estado" (chip REPORTANDO/SIN SEÑAL/INACTIVO de "Salud de
+nodos", `AGENT_ESTADO_SQL` en `knex-agent-directory-repository.ts`) tampoco
+se tocó a propósito: es un gradiente de frescura de 3-4 niveles con
+granularidad fija por spec del handoff hifi, no el mismo concepto binario
+online/offline que el resto.
+
 ### Otros puntos de §3 (riesgos) que siguen abiertos y no forman parte de ningún ítem de arriba
 - ✅ **R4 (parcial, 23/08/2026)**: el WS del portal ya NO acepta el JWT de
   sesión por query string. Investigado antes de tocarlo: no era vestigial —
@@ -2052,6 +2158,7 @@ lado cliente) — unificar TODAS las copias del mismo concepto es el
 "modelo unificado de umbrales" que este documento ya marcaba como una
 pasada aparte; éste era el único umbral que ya tenía un control de UI
 prometiendo hacer algo que no hacía, así que fue el único que se conectó.
+✅ (26/08/2026) El resto — ver Fase 11: resultaron ser 6 copias, no 2.
 
 Verificado de punta a punta contra el stack Docker real (no sólo tests):
 `GET`/`PUT` por curl (valor por defecto, actualización, rango inválido →

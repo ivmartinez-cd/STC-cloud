@@ -106,10 +106,10 @@ export interface ClientDetailStats {
 }
 
 /** Estado operativo de UN dispositivo (no confundir con `ClientEstado`, que es del
- * CLIENTE) — derivado de `last_seen` con el mismo umbral que
- * `heartbeatMonitor.ts::DEVICE_OFFLINE_THRESHOLD_MINUTES` (5 hs), no de
- * `devices.active` (columna histórica que ningún código escribe nunca a `false`,
- * ver knex-client-repository.ts). */
+ * CLIENTE) — derivado de `last_seen` con el umbral unificado
+ * (`system_settings.device_offline_threshold_minutes`, 26/08/2026, mismo que
+ * `heartbeatMonitor.ts`), no de `devices.active` (columna histórica que
+ * ningún código escribe nunca a `false`, ver knex-client-repository.ts). */
 export type ClientDeviceEstado = "en_linea" | "sin_conexion" | "sin_reporte";
 export type ClientDeviceSegment = "sin_conexion" | "con_alertas" | "consumible_bajo";
 export type ClientDeviceSortField = "alerts_count" | "consumible_pct" | "last_seen";

@@ -1,8 +1,8 @@
 {
   "files": {
     "src/api/server.ts": 384,
-    "src/modules/agents/infrastructure/database/knex-agent-portal-repository.ts": 523,
-    "src/modules/clients/infrastructure/database/knex-client-repository.ts": 438,
+    "src/modules/agents/infrastructure/database/knex-agent-portal-repository.ts": 536,
+    "src/modules/clients/infrastructure/database/knex-client-repository.ts": 446,
     "src/services/incidentService.ts": 363,
     "src/services/notificationService.ts": 383,
     "src/tests/alerts.test.ts": 529,
@@ -257,7 +257,7 @@
       },
       {
         "name": "getStats",
-        "length": 37
+        "length": 39
       },
       {
         "name": "getRecentActivity",
@@ -485,11 +485,11 @@
     "src/modules/system-settings/presentation/system-settings-routes.ts": [
       {
         "name": "buildUpdate",
-        "length": 25
+        "length": 34
       },
       {
         "name": "anonymous",
-        "length": 23
+        "length": 32
       }
     ],
     "src/services/agentVersionService.ts": [
@@ -1037,7 +1037,7 @@
       },
       {
         "name": "DeviceProfileCard",
-        "length": 53
+        "length": 54
       }
     ],
     "portal/src/features/devices/components/detail/DeviceStatusBanners.tsx": [
@@ -1097,7 +1097,7 @@
     "portal/src/features/email-log/pages/EmailLog.tsx": [
       {
         "name": "EmailLog",
-        "length": 94
+        "length": 95
       }
     ],
     "portal/src/features/incidents/pages/IncidentDetail.tsx": [
@@ -1164,16 +1164,6 @@
         "length": 118
       }
     ],
-    "portal/src/features/monitors/components/MonitorConfigModal.tsx": [
-      {
-        "name": "MonitorConfigModal",
-        "length": 159
-      },
-      {
-        "name": "saveConfig",
-        "length": 21
-      }
-    ],
     "portal/src/features/monitors/components/MonitorMetricsStrip.tsx": [
       {
         "name": "MonitorMetricsStrip",
@@ -1198,26 +1188,10 @@
         "length": 43
       }
     ],
-    "portal/src/features/monitors/components/MonitorsTable.tsx": [
-      {
-        "name": "MonitorsTable",
-        "length": 131
-      }
-    ],
     "portal/src/features/monitors/components/RecentActivityCard.tsx": [
       {
         "name": "RecentActivityCard",
         "length": 60
-      }
-    ],
-    "portal/src/features/monitors/components/RegisterMonitorPanel.tsx": [
-      {
-        "name": "RegisterMonitorPanel",
-        "length": 159
-      },
-      {
-        "name": "generateKey",
-        "length": 24
       }
     ],
     "portal/src/features/monitors/components/ReportsTabPanel.tsx": [
@@ -1370,12 +1344,6 @@
         "length": 209
       }
     ],
-    "portal/src/features/monitors/pages/Monitors.tsx": [
-      {
-        "name": "Monitors",
-        "length": 150
-      }
-    ],
     "portal/src/features/monitors/pages/RemoteActions.tsx": [
       {
         "name": "RemoteActions",
@@ -1428,8 +1396,12 @@
     ],
     "portal/src/features/settings/components/MonitorThresholdCard.tsx": [
       {
+        "name": "ThresholdField",
+        "length": 29
+      },
+      {
         "name": "MonitorThresholdCard",
-        "length": 41
+        "length": 34
       }
     ],
     "portal/src/features/settings/components/SmtpInfoCard.tsx": [
@@ -1481,7 +1453,7 @@
     "portal/src/features/settings/pages/Settings.tsx": [
       {
         "name": "Settings",
-        "length": 74
+        "length": 80
       }
     ],
     "portal/src/features/supplies/components/SupplyRequestDetailModal.tsx": [
@@ -1499,7 +1471,7 @@
     "portal/src/features/supplies/pages/SupplyRequests.tsx": [
       {
         "name": "SupplyRequests",
-        "length": 111
+        "length": 112
       }
     ],
     "portal/src/shared/components/BrandModal.tsx": [
@@ -1604,6 +1576,12 @@
         "length": 21
       }
     ],
+    "portal/src/shared/components/SimplePagination.tsx": [
+      {
+        "name": "SimplePagination",
+        "length": 24
+      }
+    ],
     "portal/src/shared/hooks/useRowSelection.ts": [
       {
         "name": "useRowSelection",
@@ -1619,7 +1597,7 @@
     "portal/src/shared/lib/formatters.ts": [
       {
         "name": "getDeviceStatusInfo",
-        "length": 69
+        "length": 66
       }
     ],
     "portal/src/shared/lib/supplies.ts": [

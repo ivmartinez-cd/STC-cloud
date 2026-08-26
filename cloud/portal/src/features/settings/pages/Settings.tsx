@@ -15,11 +15,14 @@ const Settings = () => {
   const { role: currentUserRole } = useAuth();
   const { showToast } = useToast();
 
-  // R9 del gap analysis vs HP SDS: este umbral controla de verdad
+  // R9 del gap analysis vs HP SDS: estos umbrales controlan de verdad
   // `jobs/heartbeatMonitor.ts` (antes sólo se guardaba en localStorage, sin
-  // que nada lo leyera) — se lee/escribe contra `GET/PUT
-  // /api/v1/settings/system`, único para toda la instancia.
-  const [thresholds, setThresholds] = useState<Thresholds>({ monitorOfflineMinutes: 5 });
+  // que nada lo leyera) — se leen/escriben contra `GET/PUT
+  // /api/v1/settings/system`, únicos para toda la instancia. "Modelo
+  // unificado de umbrales" (26/08/2026): se sumó `deviceOfflineMinutes`,
+  // que además alimenta `DEVICE_ESTADO_SQL`/`AGENT_DEVICE_ESTADO_SQL`
+  // (backend) y `useSystemSettings()` (portal) — un solo valor configurable.
+  const [thresholds, setThresholds] = useState<Thresholds>({ monitorOfflineMinutes: 5, deviceOfflineMinutes: 300 });
   const [smtp, setSmtp] = useState<SmtpFields>({ host: '', port: '587', user: '', pass: '', from: '' });
   const [savedOk, setSavedOk] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -27,9 +30,9 @@ const Settings = () => {
   const isAdmin = currentUserRole === 'admin';
 
   useEffect(() => {
-    api.get<{ agent_offline_threshold_minutes: number }>('/settings/system')
-      .then((s) => setThresholds({ monitorOfflineMinutes: s.agent_offline_threshold_minutes }))
-      .catch((e: unknown) => showToast('No se pudo cargar el umbral de inactividad: ' + (e as Error).message, 'error'));
+    api.get<{ agent_offline_threshold_minutes: number; device_offline_threshold_minutes: number }>('/settings/system')
+      .then((s) => setThresholds({ monitorOfflineMinutes: s.agent_offline_threshold_minutes, deviceOfflineMinutes: s.device_offline_threshold_minutes }))
+      .catch((e: unknown) => showToast('No se pudo cargar los umbrales de inactividad: ' + (e as Error).message, 'error'));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -37,7 +40,10 @@ const Settings = () => {
     if (!isAdmin) return;
     setSaving(true);
     try {
-      await api.put('/settings/system', { agent_offline_threshold_minutes: thresholds.monitorOfflineMinutes });
+      await api.put('/settings/system', {
+        agent_offline_threshold_minutes: thresholds.monitorOfflineMinutes,
+        device_offline_threshold_minutes: thresholds.deviceOfflineMinutes,
+      });
       setSavedOk(true);
       setTimeout(() => setSavedOk(false), 3000);
     } catch (e: unknown) {

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { MoreHorizontal } from 'lucide-react';
 import { formatRelativeTime, getDeviceStatusInfo } from '../../../../shared/lib/formatters';
 import { MONITOR_STATE_LABELS, type MonitorState } from '../../../../shared/lib/constants';
+import { useSystemSettings } from '../../../../shared/hooks/useSystemSettings';
 import EstadoChip from '../../../../shared/components/EstadoChip';
 import type { DeviceDetailData } from '../../types/deviceDetailPage';
 
@@ -71,7 +72,8 @@ export default function DeviceProfileCard({
   changingMonitorState, recommissioning, onSync, onRequestSupply, onOpenHistory, onMove,
   onEdit, onMerge, onRecommission, onDecommission, onDelete, onMonitorStateChange,
 }: Props) {
-  const status = getDeviceStatusInfo(device.last_seen, now);
+  const { deviceOfflineThresholdMs } = useSystemSettings();
+  const status = getDeviceStatusInfo(device.last_seen, now, deviceOfflineThresholdMs);
   const metaParts = [
     device.serial_number ? `Serie ${device.serial_number}` : null,
     device.ip_address,
