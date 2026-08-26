@@ -1,5 +1,6 @@
 export type ScheduledReportType =
-  | 'usage' | 'non_contactable' | 'consumable_levels' | 'asset_list' | 'alert_history';
+  | 'usage' | 'non_contactable' | 'consumable_levels' | 'asset_list' | 'alert_history'
+  | 'billing_closure' | 'audit_export';
 
 export type ScheduleFreq = 'none' | 'daily' | 'weekdays' | 'weekly' | 'monthly';
 
@@ -29,6 +30,8 @@ export const REPORT_TYPE_LABELS: Record<ScheduledReportType, string> = {
   consumable_levels: 'Niveles de consumibles',
   asset_list: 'Lista de activos',
   alert_history: 'Historial de alertas',
+  billing_closure: 'Cierre de facturación',
+  audit_export: 'Auditoría de accesos',
 };
 
 export const FREQ_LABELS: Record<ScheduleFreq, string> = {

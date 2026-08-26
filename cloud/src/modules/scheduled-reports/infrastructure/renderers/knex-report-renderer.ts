@@ -12,6 +12,8 @@ import {
   consumableLevelsTable,
   usageTable,
 } from "./usage-supplies-alerts-tables";
+import { billingClosureTable } from "./billing-closure-table";
+import { auditExportTable } from "./audit-export-table";
 
 function num(v: unknown, fallback: number): number {
   const n = Number(v);
@@ -44,6 +46,8 @@ const BUILDERS: Record<ReportType, TableBuilder> = {
       title, clientId, days: num(f.days, 7),
       alertClass: typeof f.alert_class === "string" ? f.alert_class : undefined,
     }),
+  billing_closure: (db, { title, clientId }) => billingClosureTable(db, { title, clientId }),
+  audit_export: (db, { title, clientId, f }) => auditExportTable(db, { title, clientId, days: num(f.days, 30) }),
 };
 
 /** Implementación del puerto ReportRenderer: despacha por tipo y codifica. */

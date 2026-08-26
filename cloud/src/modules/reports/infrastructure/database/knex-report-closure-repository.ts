@@ -100,6 +100,13 @@ export class KnexReportClosureRepository implements ReportClosureRepository {
     return rows.map(toClosure);
   }
 
+  async findLatestClosed(clientId: string): Promise<ReportClosure | null> {
+    const row = await this.db("report_closures")
+      .where({ client_id: clientId, status: "closed" }).whereNull("superseded_by")
+      .orderBy("period", "desc").first();
+    return row ? toClosure(row) : null;
+  }
+
   async findOwned(closureId: string, clientId: string): Promise<ReportClosure | null> {
     const row = await this.db("report_closures").where({ id: closureId, client_id: clientId }).first();
     return row ? toClosure(row) : null;

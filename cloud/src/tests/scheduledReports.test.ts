@@ -5,6 +5,7 @@
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
+import crypto from 'node:crypto';
 import { computeNextRunAt } from '../modules/scheduled-reports/domain/entities/scheduled-report';
 
 const API  = process.env.API_URL  || 'http://localhost:3000/api/v1';
@@ -205,17 +206,91 @@ describe('Informes programados e2e', () => {
     await req('DELETE', `/scheduled-reports/${scheduledId}`, {}, token);
   });
 
-  // Handoff hifi #3, fase 5, 26/08/2026 — catálogo real de los 5 REPORT_TYPES,
-  // no los 6 nombres del mockup (2 de ellos no tienen ReportType detrás).
-  test('GET /scheduled-reports/templates trae las 5 plantillas reales, cada una con report_type creable', async () => {
+  // Handoff hifi #3, fase 5, 26/08/2026 — catálogo real de 5 REPORT_TYPES.
+  // Cierre de gap post-verificación (mismo día): "Cierre de facturación" y
+  // "Auditoría de accesos" pasan a tener un ReportType real detrás (antes
+  // eran 2 de los 6 nombres del mockup sin respaldo) → 7 plantillas.
+  test('GET /scheduled-reports/templates trae las 7 plantillas reales, cada una con report_type creable', async () => {
     const r = await req('GET', '/scheduled-reports/templates', {}, token);
     assert.equal(r.status, 200);
-    assert.equal(r.data.length, 5);
+    assert.equal(r.data.length, 7);
     for (const t of r.data) {
       assert.ok(t.report_type && t.label && t.description, `plantilla incompleta: ${JSON.stringify(t)}`);
       assert.ok(['csv', 'xlsx'].includes(t.default_format));
     }
     const types = r.data.map((t: any) => t.report_type).sort();
-    assert.deepEqual(types, ['alert_history', 'asset_list', 'consumable_levels', 'non_contactable', 'usage']);
+    assert.deepEqual(types, ['alert_history', 'asset_list', 'audit_export', 'billing_closure', 'consumable_levels', 'non_contactable', 'usage']);
+  });
+
+  // Cierre de gap post-verificación del handoff hifi #3 (26/08/2026): las 2
+  // plantillas "fantasma" del mockup ahora generan de verdad.
+  test('billing_closure: sin cierres todavía → download igual da 200 con tabla vacía (no error)', async () => {
+    const clientNoClosures = await req('POST', '/clients', { name: `Sin Cierres Test ${Date.now()}` }, token);
+    assert.equal(clientNoClosures.status, 200);
+    const created = await req('POST', '/scheduled-reports', {
+      name: 'Cierre sin datos', report_type: 'billing_closure', client_id: clientNoClosures.data.id, format: 'csv',
+    }, token);
+    assert.equal(created.status, 201);
+    const dl = await req('GET', `/scheduled-reports/${created.data.id}/download`, {}, token);
+    assert.equal(dl.status, 200);
+    assert.ok(dl.raw!.toString('utf8').includes('Serie'), 'trae el encabezado aunque no haya filas');
+    await req('DELETE', `/scheduled-reports/${created.data.id}`, {}, token);
+  });
+
+  test('billing_closure: con un cierre real → download trae la línea del equipo con su delta', async () => {
+    const bts = Date.now();
+    const client = await req('POST', '/clients', { name: `Billing Closure Real Test ${bts}` }, token);
+    assert.equal(client.status, 200);
+    const agent = await req('POST', '/agents', { clientId: client.data.id, name: 'Agente Billing Closure' }, token);
+    assert.equal(agent.status, 200);
+    const activate = await req('POST', '/agents/activate', { key: agent.data.key, hardwareId: `HW-BC-${bts}` });
+    assert.equal(activate.status, 200);
+    const agentToken = activate.data.token;
+    const serial = `SN-BC-${bts}`;
+    const registered = await req('POST', '/devices/register', {
+      devices: [{ ip: '192.168.232.9', mac: null, serial, brand: 'hp', model: 'HP LaserJet BC', name: 'BC Device' }],
+    }, agentToken);
+    assert.equal(registered.status, 200);
+    const sync = await req('POST', '/devices/sync', {
+      readings: [{ reading_id: crypto.randomUUID(), device_id: serial, ip: '192.168.232.9', brand: 'hp', time: new Date().toISOString(), total_pages: 300, mono_pages: 300, color_pages: 0, offline: false }],
+    }, agentToken);
+    assert.equal(sync.status, 200);
+
+    const now = new Date();
+    const period = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`;
+    const close = await req('POST', `/clients/${client.data.id}/reports/close`, { period }, token);
+    assert.equal(close.status, 200, JSON.stringify(close.data));
+
+    const created = await req('POST', '/scheduled-reports', {
+      name: 'Cierre con datos', report_type: 'billing_closure', client_id: client.data.id, format: 'csv',
+    }, token);
+    assert.equal(created.status, 201);
+    const dl = await req('GET', `/scheduled-reports/${created.data.id}/download`, {}, token);
+    assert.equal(dl.status, 200);
+    assert.ok(dl.raw!.toString('utf8').includes(serial), 'debe traer la línea del equipo del cierre recién hecho');
+    await req('DELETE', `/scheduled-reports/${created.data.id}`, {}, token);
+  });
+
+  test('billing_closure sin cliente → download 400 con mensaje claro', async () => {
+    const created = await req('POST', '/scheduled-reports', { name: 'Cierre sin cliente', report_type: 'billing_closure' }, token);
+    assert.equal(created.status, 201);
+    const dl = await req('GET', `/scheduled-reports/${created.data.id}/download`, {}, token);
+    assert.equal(dl.status, 400);
+    await req('DELETE', `/scheduled-reports/${created.data.id}`, {}, token);
+  });
+
+  test('audit_export: genera CSV real con el encabezado de accesos (sin cliente = toda la red)', async () => {
+    const created = await req('POST', '/scheduled-reports', {
+      name: 'Accesos test', report_type: 'audit_export', params: { days: 90 }, format: 'csv',
+    }, token);
+    assert.equal(created.status, 201);
+    const dl = await req('GET', `/scheduled-reports/${created.data.id}/download`, {}, token);
+    assert.equal(dl.status, 200);
+    const text = dl.raw!.toString('utf8');
+    assert.ok(text.includes('Acción'), JSON.stringify({ contentType: dl.contentType, sample: text.slice(0, 200) }));
+    // El login de "setup: login admin" de este mismo describe ya generó un
+    // USER_LOGIN_SUCCESS dentro de la ventana de 90 días.
+    assert.ok(text.includes('Inicio de sesión'), text.slice(0, 300));
+    await req('DELETE', `/scheduled-reports/${created.data.id}`, {}, token);
   });
 });

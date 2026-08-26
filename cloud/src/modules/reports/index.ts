@@ -1,6 +1,8 @@
 import type { Knex } from "knex";
 import type { PeriodUsageLine } from "./domain/entities/period-usage-line";
+import type { ReportClosure, ReportClosureLine } from "./domain/entities/report-closure";
 import { KnexPeriodUsageQuery } from "./infrastructure/database/knex-period-usage-query";
+import { KnexReportClosureRepository } from "./infrastructure/database/knex-report-closure-repository";
 
 /**
  * Fachada del módulo para los consumidores que viven fuera de él — mismas
@@ -20,6 +22,7 @@ export { buildClosureXlsx } from "./infrastructure/export/closure-xlsx-renderer"
 export { PdfkitClosureRenderer } from "./infrastructure/export/closure-pdf-renderer";
 export type { ExportClosurePdfContext } from "./application/use-cases/export-closure";
 export type { PeriodUsageLine } from "./domain/entities/period-usage-line";
+export type { ReportClosure, ReportClosureLine } from "./domain/entities/report-closure";
 export { ClosurePeriodConflictError } from "./domain/errors/report-error";
 
 export function computePeriodUsage(
@@ -27,4 +30,17 @@ export function computePeriodUsage(
   params: { clientId: string; period: string }
 ): Promise<PeriodUsageLine[]> {
   return new KnexPeriodUsageQuery(db).compute(params.clientId, params.period);
+}
+
+/** Para el informe programado "Cierre de facturación" (`modules/scheduled-
+ * reports`): el ÚLTIMO cierre oficial de un cliente + sus líneas, o `null`
+ * si nunca cerró ninguno. */
+export async function findLatestClosedPeriod(
+  db: Knex | Knex.Transaction,
+  clientId: string
+): Promise<{ closure: ReportClosure; lines: ReportClosureLine[] } | null> {
+  const repo = new KnexReportClosureRepository(db);
+  const closure = await repo.findLatestClosed(clientId);
+  if (!closure) return null;
+  return { closure, lines: await repo.findLines(closure.id) };
 }

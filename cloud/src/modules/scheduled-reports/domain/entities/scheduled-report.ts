@@ -10,6 +10,8 @@ export const REPORT_TYPES = [
   "consumable_levels",
   "asset_list",
   "alert_history",
+  "billing_closure",
+  "audit_export",
 ] as const;
 export type ReportType = (typeof REPORT_TYPES)[number];
 

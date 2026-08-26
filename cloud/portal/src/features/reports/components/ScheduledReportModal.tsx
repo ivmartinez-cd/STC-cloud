@@ -105,8 +105,8 @@ export default function ScheduledReportModal({ isOpen, onClose, onSaved, clients
               <option value="">Todos los clientes</option>
               {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
-            {reportType === 'usage' && !clientId && (
-              <p className="font-sans text-[10.5px] font-semibold text-brand-accent mt-1">El informe de uso requiere un cliente.</p>
+            {(reportType === 'usage' || reportType === 'billing_closure') && !clientId && (
+              <p className="font-sans text-[10.5px] font-semibold text-brand-accent mt-1">Este informe requiere un cliente.</p>
             )}
           </div>
         </div>
@@ -156,7 +156,7 @@ export default function ScheduledReportModal({ isOpen, onClose, onSaved, clients
           <label className={labelCls}>Filtros avanzados (JSON, opcional)</label>
           <input className={inputCls} value={paramsText} onChange={(e) => setParamsText(e.target.value)} placeholder='{"offline_days": 3}' />
           <p className="font-sans text-[10.5px] text-ink-300 mt-1">
-            usage: period · non_contactable: offline_days · consumable_levels: max_percentage, max_days · alert_history: days, alert_class
+            usage: period · non_contactable: offline_days · consumable_levels: max_percentage, max_days · alert_history: days, alert_class · audit_export: days · billing_closure: (ninguno, siempre el último cierre)
           </p>
         </div>
         <div className="flex justify-end gap-2 pt-2">

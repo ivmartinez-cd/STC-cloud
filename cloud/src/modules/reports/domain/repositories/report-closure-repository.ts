@@ -25,6 +25,10 @@ export interface ReportClosureRepository {
   insertLines(closureId: string, lines: PeriodUsageLine[]): Promise<void>;
   markSuperseded(oldClosureId: string, newClosureId: string): Promise<void>;
   listByClient(clientId: string): Promise<ReportClosure[]>;
+  /** El cierre `closed` más reciente (sin superseder) — para el informe
+   * programado "Cierre de facturación", que muestra el ÚLTIMO oficial, no
+   * un período puntual. `null` si el cliente nunca cerró ninguno. */
+  findLatestClosed(clientId: string): Promise<ReportClosure | null>;
   /** Cierre por id, sólo si pertenece al cliente (ownership del `:id` de la ruta). */
   findOwned(closureId: string, clientId: string): Promise<ReportClosure | null>;
   findLines(closureId: string): Promise<ReportClosureLine[]>;

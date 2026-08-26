@@ -1,15 +1,13 @@
 import type { ReportFormat, ReportType, ScheduleFreq } from "./scheduled-report";
 
 /**
- * Catálogo de los 5 `REPORT_TYPES` reales (handoff hifi #3, fase 5,
- * 26/08/2026) — `GET /scheduled-reports/templates`. El mockup del handoff
- * (`Informes.dc.html`) muestra 6 plantillas con nombres de producto propios
- * ("CIERRE DE FACTURACIÓN", "AUDITORÍA DE ACCESOS") que no tienen un
- * `ReportType` real detrás — esas dos, en particular, son de otros módulos
- * (`reports`/cierres y `audit-logs`), no de `scheduled-reports`. Servir acá
- * sólo lo que `POST /scheduled-reports` puede realmente crear, con
- * descripciones fieles a lo que cada `TableBuilder` de
- * `knex-report-renderer.ts` arma — no los 6 nombres del mockup.
+ * Catálogo de los 7 `REPORT_TYPES` reales — `GET /scheduled-reports/templates`.
+ * Las 2 últimas ("Cierre de facturación", "Auditoría de accesos") fueron el
+ * gap real del mockup del handoff hifi #3 (fase 5, 26/08/2026: sólo servía
+ * 5, sin `ReportType` detrás de esas 2) — cerrado post-verificación con
+ * `billingClosureTable`/`auditExportTable` en `knex-report-renderer.ts`,
+ * que sí las respaldan de verdad. Descripciones fieles a lo que cada
+ * `TableBuilder` arma.
  */
 export interface ReportTemplate {
   reportType: ReportType;
@@ -60,5 +58,21 @@ export const REPORT_TEMPLATES: ReportTemplate[] = [
     defaultFormat: "csv",
     defaultParams: { days: 7 },
     suggestedFrequency: "daily",
+  },
+  {
+    reportType: "billing_closure",
+    label: "Cierre de facturación",
+    description: "El último cierre mensual OFICIAL del cliente, con el detalle por equipo tal como quedó facturado.",
+    defaultFormat: "xlsx",
+    defaultParams: {},
+    suggestedFrequency: "monthly",
+  },
+  {
+    reportType: "audit_export",
+    label: "Auditoría de accesos",
+    description: "Inicios de sesión (exitosos y fallidos) y eventos de 2FA en una ventana de días.",
+    defaultFormat: "csv",
+    defaultParams: { days: 30 },
+    suggestedFrequency: "weekly",
   },
 ];
