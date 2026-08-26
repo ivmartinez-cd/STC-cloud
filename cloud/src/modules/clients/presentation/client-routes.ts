@@ -94,7 +94,10 @@ const putWebhookSchema = {
     type: "object",
     properties: {
       url: { type: "string", maxLength: 500 },
-      events: { type: "array", items: { type: "string" }, maxItems: 3 },
+      // 7 = cantidad de PORTAL_WEBHOOK_EVENTS (client-rules.ts) — quedó en 3
+      // (el conteo original) tras sumar incidentes/pedidos de consumibles,
+      // rechazando con 400 de Ajv ANTES de llegar a la validación real.
+      events: { type: "array", items: { type: "string" }, maxItems: 7 },
       active: { type: "boolean" },
       regenerate_secret: { type: "boolean" },
     },

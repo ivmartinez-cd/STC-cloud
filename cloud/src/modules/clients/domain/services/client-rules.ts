@@ -40,8 +40,24 @@ export function buildClientUpdates(body: ClientUpdateBody): Record<string, unkno
   return updates;
 }
 
-/** Eventos que el portal puede suscribir en el webhook de la API pública desde `/clients/:id/webhook`. */
-export const PORTAL_WEBHOOK_EVENTS = ["reading.created", "alert.created", "report.closed"] as const;
+/**
+ * Eventos que el portal puede suscribir en el webhook de la API pública
+ * desde `/clients/:id/webhook` — debe reflejar TODOS los eventos que
+ * `sendPublicApiWebhook` (`services/publicWebhookService.ts`) realmente
+ * dispara (gemelo de `VALID_EVENTS` en `publicApiController.ts`, duplicado
+ * porque domain no depende de infra). Quedó desactualizada tras sumar
+ * incidentes/pedidos de consumibles: un cliente no podía suscribirse a esos
+ * 4 eventos por ninguna de las dos vías aunque el sistema ya los mandaba.
+ */
+export const PORTAL_WEBHOOK_EVENTS = [
+  "reading.created",
+  "alert.created",
+  "report.closed",
+  "incident.created",
+  "incident.closed",
+  "supply_request.created",
+  "supply_request.completed",
+] as const;
 export type PortalWebhookEvent = (typeof PORTAL_WEBHOOK_EVENTS)[number];
 
 export function assertPortalWebhookEvents(events: string[] | undefined): asserts events is PortalWebhookEvent[] | undefined {

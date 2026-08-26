@@ -1,0 +1,620 @@
+openapi: 3.1.0
+info:
+  title: STC Cloud — API Pública (Integración ERP)
+  version: "1.0.0"
+  description: |
+    API de sólo lectura (más configuración de webhook) pensada para que un
+    ERP/sistema de facturación externo consulte la flota, los cierres
+    mensuales y las alertas de UN cliente, y reciba eventos por webhook sin
+    tener que hacer polling.
+
+    Alcance deliberado: esto NO es la API que usa el portal (esa es
+    `/api/v1/...` autenticada por cookie de sesión JWT, para uso interno del
+    equipo de operaciones) ni la que usa el agente de monitoreo. Es un actor
+    estructuralmente distinto — scope SIEMPRE fijo al cliente dueño de la
+    API key, nunca "todos los clientes".
+
+    ## Autenticación
+    Cada request lleva el header `X-Api-Key` con el valor plano de una key
+    generada desde el portal (`Configuración del cliente → API Keys`). El
+    valor sólo se muestra una vez al crearla — si se pierde, hay que revocar
+    y crear una nueva. No es un JWT: no expira por tiempo, sólo por
+    revocación explícita.
+
+    ## Rate limiting
+    60 requests/minuto por API key (no por IP — dos keys distintas desde la
+    misma red del ERP no comparten cupo). Al superarlo, `429 Too Many
+    Requests`.
+
+    ## Paginación
+    Los listados aceptan `limit`/`offset` como query params. `limit` tiene
+    un techo por endpoint (ver cada operación); pedir más del techo lo
+    trunca silenciosamente al máximo, nunca da error.
+
+    ## Webhooks salientes
+    Además de consultar por polling, un cliente puede configurar una URL de
+    webhook (`GET`/`PUT /webhook`) para recibir eventos push. Ver la sección
+    `webhooks` de este documento para el payload y la firma de cada evento.
+externalDocs:
+  description: Estado de paridad vs HP SDS Manager (contexto de por qué existe esta API)
+  url: ../dev/STC_Gap_Analysis_vs_HP_SDS_2026-08.md
+
+servers:
+  - url: /api/v1/public
+    description: Base path relativo al host donde esté desplegado STC Cloud (self-hosted, sin dominio fijo).
+
+security:
+  - ApiKeyAuth: []
+
+tags:
+  - name: Dispositivos
+    description: Inventario y lecturas de contadores del cliente dueño de la key.
+  - name: Alertas
+    description: Alertas técnicas (consumibles, errores, offline) del cliente.
+  - name: Reportes
+    description: Cierres mensuales inmutables (facturación).
+  - name: Webhook
+    description: Configuración de la suscripción a eventos push.
+
+paths:
+  /devices:
+    get:
+      tags: [Dispositivos]
+      summary: Listar dispositivos activos del cliente
+      operationId: listDevices
+      description: |
+        Sólo equipos "vivos" (no dados de baja, no fusionados en otro, y con
+        `registration_state = 'registered'` — un equipo en la cola de
+        aprobación pendiente no aparece acá).
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Device'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /devices/{id}/readings:
+    get:
+      tags: [Dispositivos]
+      summary: Histórico de lecturas de contadores de un dispositivo
+      operationId: getDeviceReadings
+      parameters:
+        - $ref: '#/components/parameters/DeviceId'
+        - name: from
+          in: query
+          description: Fecha/hora ISO 8601 mínima (inclusive).
+          schema: { type: string, format: date-time }
+        - name: to
+          in: query
+          description: Fecha/hora ISO 8601 máxima (inclusive).
+          schema: { type: string, format: date-time }
+        - name: limit
+          in: query
+          description: Techo 5000, default 500.
+          schema: { type: integer, minimum: 1, maximum: 5000, default: 500 }
+      responses:
+        '200':
+          description: OK — más recientes primero.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Reading'
+        '400':
+          description: Id con formato inválido (no es un UUID).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: El dispositivo no existe o no pertenece al cliente de la key.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /alerts:
+    get:
+      tags: [Alertas]
+      summary: Listar alertas del cliente
+      operationId: listAlerts
+      parameters:
+        - name: resolved
+          in: query
+          description: Filtra por estado. Sin este parámetro devuelve activas y resueltas mezcladas.
+          schema: { type: boolean }
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+      responses:
+        '200':
+          description: OK — más recientes primero.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Alert'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /reports/closures:
+    get:
+      tags: [Reportes]
+      summary: Listar cierres mensuales del cliente
+      operationId: listReportClosures
+      description: |
+        Un cierre es inmutable una vez creado (`status: closed`). Reabrirlo
+        (`status: reopened`) libera el período para uno nuevo — el cierre
+        viejo queda con `superseded_by` apuntando al que lo reemplazó, nunca
+        se borra.
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+      responses:
+        '200':
+          description: OK — período más reciente primero.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ReportClosureSummary'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /reports/closures/{id}:
+    get:
+      tags: [Reportes]
+      summary: Detalle de un cierre — desglose por equipo
+      operationId: getReportClosure
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportClosureDetail'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: El cierre no existe o no pertenece al cliente de la key.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /webhook:
+    get:
+      tags: [Webhook]
+      summary: Ver la configuración de webhook vigente
+      operationId: getWebhook
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WebhookConfig' }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: El cliente todavía no configuró ningún webhook.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+    put:
+      tags: [Webhook]
+      summary: Crear o actualizar la configuración de webhook
+      operationId: putWebhook
+      description: |
+        Upsert parcial: sólo los campos presentes en el body se actualizan,
+        el resto conserva su valor anterior (o el default, en la primera
+        configuración). `url` es requerida la primera vez.
+
+        El `secret` HMAC no se puede elegir — el servidor lo genera. No hace
+        falta mostrarlo una sola vez como una API key (sólo sirve para
+        VERIFICAR firmas entrantes, no da acceso a nada), así que se puede
+        releer con `GET` o regenerar en cualquier momento con
+        `regenerate_secret: true`.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                url:
+                  type: string
+                  maxLength: 500
+                  description: Endpoint HTTPS del ERP que va a recibir los eventos.
+                events:
+                  type: array
+                  maxItems: 7
+                  items:
+                    $ref: '#/components/schemas/WebhookEvent'
+                  description: Subconjunto de eventos a suscribir. Default en la primera configuración — `reading.created`, `alert.created`, `report.closed`.
+                active:
+                  type: boolean
+                regenerate_secret:
+                  type: boolean
+                  description: Si es `true`, invalida el secret anterior — las firmas verificadas con el viejo dejan de coincidir.
+      responses:
+        '200':
+          description: Configuración resultante (incluye el secret vigente).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WebhookConfig' }
+        '400':
+          description: Algún valor de `events` no es un evento válido.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+webhooks:
+  readingCreated:
+    post:
+      summary: "Evento: reading.created"
+      operationId: readingCreatedEvent
+      description: Se dispara una vez por lote de sincronización de un agente (no una vez por lectura individual), agrupando las lecturas nuevas del cliente en ese lote.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/WebhookEnvelope'
+                - type: object
+                  properties:
+                    event: { const: reading.created }
+                    data:
+                      type: object
+                      properties:
+                        readings:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              device_id: { type: string, format: uuid }
+                              time: { type: string, format: date-time }
+                              total_pages: { type: [integer, "null"] }
+                              mono_pages: { type: [integer, "null"] }
+                              color_pages: { type: [integer, "null"] }
+      responses:
+        '200':
+          description: Cualquier respuesta 2xx se considera entrega exitosa. Una respuesta que no sea 2xx (o un error de red) dispara reintento con backoff exponencial, hasta 3 intentos.
+
+  alertCreated:
+    post:
+      summary: "Evento: alert.created"
+      operationId: alertCreatedEvent
+      requestBody:
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/WebhookEnvelope'
+                - type: object
+                  properties:
+                    event: { const: alert.created }
+                    data:
+                      type: object
+                      properties:
+                        id: { type: string, format: uuid }
+                        type: { type: string, description: "Código interno del tipo de alerta, ej. toner_black_critical." }
+                        severity: { $ref: '#/components/schemas/AlertSeverity' }
+                        message: { type: [string, "null"] }
+                        device_name: { type: [string, "null"] }
+                        agent_name: { type: [string, "null"] }
+      responses:
+        '200':
+          description: Ídem reading.created.
+
+  reportClosed:
+    post:
+      summary: "Evento: report.closed"
+      operationId: reportClosedEvent
+      requestBody:
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/WebhookEnvelope'
+                - type: object
+                  properties:
+                    event: { const: report.closed }
+                    data:
+                      type: object
+                      properties:
+                        closure_id: { type: string, format: uuid }
+                        period: { type: string, description: "AAAA-MM." }
+                        total_pages: { type: number }
+      responses:
+        '200':
+          description: Ídem reading.created.
+
+  incidentCreated:
+    post:
+      summary: "Evento: incident.created"
+      operationId: incidentCreatedEvent
+      requestBody:
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/WebhookEnvelope'
+                - type: object
+                  properties:
+                    event: { const: incident.created }
+                    data:
+                      type: object
+                      properties:
+                        id: { type: string, format: uuid }
+                        number: { type: integer, description: "Número legible tipo ticket, arranca en 100000." }
+                        class: { type: string }
+                        title: { type: string }
+                        severity: { $ref: '#/components/schemas/AlertSeverity' }
+      responses:
+        '200':
+          description: Ídem reading.created.
+
+  incidentClosed:
+    post:
+      summary: "Evento: incident.closed"
+      operationId: incidentClosedEvent
+      requestBody:
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/WebhookEnvelope'
+                - type: object
+                  properties:
+                    event: { const: incident.closed }
+                    data:
+                      type: object
+                      properties:
+                        id: { type: string, format: uuid }
+                        number: { type: integer }
+                        class: { type: string }
+                        title: { type: string }
+                        severity: { $ref: '#/components/schemas/AlertSeverity' }
+      responses:
+        '200':
+          description: Ídem reading.created.
+
+  supplyRequestCreated:
+    post:
+      summary: "Evento: supply_request.created"
+      operationId: supplyRequestCreatedEvent
+      description: Pedido automático de reposición abierto porque un consumible cruzó el umbral configurado del cliente.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/WebhookEnvelope'
+                - type: object
+                  properties:
+                    event: { const: supply_request.created }
+                    data: { $ref: '#/components/schemas/SupplyRequestEventData' }
+      responses:
+        '200':
+          description: Ídem reading.created.
+
+  supplyRequestCompleted:
+    post:
+      summary: "Evento: supply_request.completed"
+      operationId: supplyRequestCompletedEvent
+      description: El pedido se auto-completó porque el nivel del consumible subió ≥30 puntos desde la apertura (señal de reemplazo real).
+      requestBody:
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/WebhookEnvelope'
+                - type: object
+                  properties:
+                    event: { const: supply_request.completed }
+                    data: { $ref: '#/components/schemas/SupplyRequestEventData' }
+      responses:
+        '200':
+          description: Ídem reading.created.
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-Api-Key
+      description: Key de 64 caracteres hexadecimales generada desde el portal. Se valida por su hash SHA-256 — el valor en claro no se puede recuperar después de crearla.
+
+  parameters:
+    Limit:
+      name: limit
+      in: query
+      description: Techo 500, default 100.
+      schema: { type: integer, minimum: 1, maximum: 500, default: 100 }
+    Offset:
+      name: offset
+      in: query
+      schema: { type: integer, minimum: 0, default: 0 }
+    DeviceId:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+
+  responses:
+    Unauthorized:
+      description: Falta el header `X-Api-Key`, o la key es inválida/fue revocada.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    TooManyRequests:
+      description: Se superó el límite de 60 requests/minuto de esta key.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        error: { type: string }
+
+    AlertSeverity:
+      type: string
+      enum: [warning, critical]
+
+    WebhookEvent:
+      type: string
+      enum:
+        - reading.created
+        - alert.created
+        - report.closed
+        - incident.created
+        - incident.closed
+        - supply_request.created
+        - supply_request.completed
+
+    Device:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: [string, "null"] }
+        serial_number: { type: [string, "null"] }
+        ip_address: { type: [string, "null"] }
+        hostname: { type: [string, "null"] }
+        location: { type: [string, "null"] }
+        sku: { type: [string, "null"] }
+        active: { type: boolean }
+        last_seen: { type: [string, "null"], format: date-time }
+
+    Reading:
+      type: object
+      properties:
+        time: { type: string, format: date-time }
+        total_pages: { type: [integer, "null"] }
+        mono_pages: { type: [integer, "null"] }
+        color_pages: { type: [integer, "null"] }
+        offline: { type: boolean }
+
+    Alert:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        type: { type: string }
+        severity: { $ref: '#/components/schemas/AlertSeverity' }
+        message: { type: [string, "null"] }
+        resolved: { type: boolean }
+        created_at: { type: string, format: date-time }
+        device_id: { type: [string, "null"], format: uuid }
+        device_name: { type: [string, "null"] }
+
+    ReportClosureSummary:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        period: { type: string, description: "AAAA-MM." }
+        status: { type: string, enum: [closed, reopened] }
+        closed_at: { type: string, format: date-time }
+        reopened_at: { type: [string, "null"], format: date-time }
+        superseded_by: { type: [string, "null"], format: uuid }
+        total_pages: { type: number }
+        total_mono: { type: number }
+        total_color: { type: number }
+
+    ReportClosureLine:
+      type: object
+      description: Delta del período para UN equipo, con snapshot de su identidad al momento del cierre (sobrevive a que el equipo se renombre o se dé de baja después).
+      properties:
+        device_id: { type: [string, "null"], format: uuid }
+        device_serial: { type: [string, "null"] }
+        device_model: { type: [string, "null"] }
+        device_brand: { type: [string, "null"] }
+        first_reading_at: { type: [string, "null"], format: date-time }
+        first_total_pages: { type: [integer, "null"] }
+        first_mono_pages: { type: [integer, "null"] }
+        first_color_pages: { type: [integer, "null"] }
+        last_reading_at: { type: [string, "null"], format: date-time }
+        last_total_pages: { type: [integer, "null"] }
+        last_mono_pages: { type: [integer, "null"] }
+        last_color_pages: { type: [integer, "null"] }
+        delta_total: { type: number }
+        delta_mono: { type: number }
+        delta_color: { type: number }
+        had_counter_reset:
+          type: boolean
+          description: "true si se detectó un reset de contador dentro del período — el delta se calculó sumando incrementos positivos, no restando MAX-MIN."
+
+    ReportClosureDetail:
+      allOf:
+        - $ref: '#/components/schemas/ReportClosureSummary'
+        - type: object
+          properties:
+            lines:
+              type: array
+              items: { $ref: '#/components/schemas/ReportClosureLine' }
+
+    WebhookConfig:
+      type: object
+      properties:
+        url: { type: string }
+        events:
+          type: array
+          items: { $ref: '#/components/schemas/WebhookEvent' }
+        secret:
+          type: string
+          description: Secret HMAC vigente, en claro (releíble, a diferencia de una API key).
+        active: { type: boolean }
+
+    WebhookEnvelope:
+      type: object
+      description: |
+        Forma común de TODO webhook saliente. La firma `X-STC-Signature` es
+        el HMAC-SHA256 (hex) de este objeto completo, serializado con
+        `JSON.stringify` — para verificarla, calcular el HMAC sobre el BODY
+        crudo recibido (no reserializar el JSON parseado: el orden de claves
+        debe coincidir byte a byte).
+      properties:
+        event: { $ref: '#/components/schemas/WebhookEvent' }
+        timestamp: { type: string, format: date-time }
+        data: { type: object }
+      required: [event, timestamp, data]
+
+    SupplyRequestEventData:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        device_serial: { type: [string, "null"] }
+        supply_kind: { type: string }
+        supply_color: { type: [string, "null"] }
+        description: { type: [string, "null"] }
+        sku: { type: [string, "null"] }
+        level_pct: { type: [number, "null"] }

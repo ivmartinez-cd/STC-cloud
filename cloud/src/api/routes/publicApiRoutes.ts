@@ -9,7 +9,9 @@ const putWebhookSchema = {
     type: "object",
     properties: {
       url: { type: "string", maxLength: 500 },
-      events: { type: "array", items: { type: "string" }, maxItems: 3 },
+      // 7 = cantidad de VALID_EVENTS (publicApiController.ts) — mismo bug y
+      // mismo fix que el gemelo de client-routes.ts.
+      events: { type: "array", items: { type: "string" }, maxItems: 7 },
       active: { type: "boolean" },
       regenerate_secret: { type: "boolean" },
     },

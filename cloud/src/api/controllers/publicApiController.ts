@@ -5,7 +5,17 @@ import { onlyLiveDevices } from "../utils/deviceFilters";
 import { getWebhookConfig, upsertWebhookConfig, type PublicApiEvent } from "../../services/publicWebhookService";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const VALID_EVENTS: PublicApiEvent[] = ["reading.created", "alert.created", "report.closed"];
+// Gemelo de `PORTAL_WEBHOOK_EVENTS` (`modules/clients/domain/services/client-rules.ts`)
+// — debe reflejar TODOS los eventos que `sendPublicApiWebhook` dispara.
+const VALID_EVENTS: PublicApiEvent[] = [
+  "reading.created",
+  "alert.created",
+  "report.closed",
+  "incident.created",
+  "incident.closed",
+  "supply_request.created",
+  "supply_request.completed",
+];
 
 function clientIdOf(request: FastifyRequest): string {
   return (request as FastifyRequest & { apiKeyClient: ApiKeyClient }).apiKeyClient.clientId;

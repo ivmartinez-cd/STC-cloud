@@ -202,8 +202,9 @@ API key ya existente (huevo y gallina para un cliente nuevo). Verificado
 con Playwright real contra el stack Docker (login, crear key, ver el
 secret, configurar webhook) — capturas revisadas antes de commitear.
 
-**Lo que NO se hizo**: expiración automática de keys, retry con backoff
-para webhooks fallidos, documentación pública tipo OpenAPI/Swagger.
+**Lo que NO se hizo**: expiración automática de keys (retry con backoff
+para webhooks fallidos ✅ 25/08/2026, ver Fase 8; documentación pública tipo
+OpenAPI/Swagger ✅ 26/08/2026, ver Fase 9 — `docs/api/openapi.yaml`).
 
 ✅ **Mejoras de agente** (23/08/2026), 5 de 6 ítems del roadmap, verificados
 con tests reales salvo el marcado (c):
@@ -1616,6 +1617,72 @@ volumen actual; dead-letter queue o alerta al operador cuando un job agota
 sus 3 intentos (hoy sólo queda en el log de `stc_api`) — quedó anotado
 como posible mejora futura, no bloqueante.
 
+### Fase 9 — Documentación OpenAPI/Swagger de la API pública (26/08/2026) — completa
+
+Origen: único pendiente explícito de la Fase 2 ("API pública con API keys...
+falta documentación OpenAPI/Swagger"), señalado también en §2.7 de la
+comparativa.
+
+✅ **`docs/api/openapi.yaml`** — spec OpenAPI **3.1.0** completo de los 8
+endpoints de `/api/v1/public/*` (devices, devices/:id/readings, alerts,
+reports/closures, reports/closures/:id, GET/PUT webhook): auth por
+`X-Api-Key` (`securitySchemes`), rate-limit de 60/min documentado en la
+descripción, límites de paginación reales por endpoint (`limit`/`offset`,
+techos de 500/5000 según el caso — verificados contra
+`pageParams()`/`getDeviceReadings` en `publicApiController.ts`, no
+inventados), y todos los schemas de respuesta con los campos reales de cada
+tabla (incluido `had_counter_reset` en las líneas de cierre). Se usó 3.1 en
+vez de 3.0 específicamente para poder documentar los webhooks SALIENTES con
+la sección nativa `webhooks:` (payload + envelope + firma HMAC de cada uno
+de los 7 eventos) — 3.0 no tiene esa sección, hubiera quedado como texto
+libre sin schema. Validado con `@redocly/cli lint`: 0 errores (JSON Schema
+de 3.1 exige `type: [T, "null"]` en vez de `nullable: true` de 3.0 — todas
+las 33 ocurrencias corregidas) y 0 warnings salvo `info-license` (deliberado:
+API privada, no un producto con licencia pública).
+
+**Bug real encontrado y corregido al documentar** (no buscado — apareció al
+listar los 7 eventos de `PublicApiEvent` para la sección `webhooks:` y
+notar que la validación de `PUT /webhook` sólo aceptaba 3): `VALID_EVENTS`
+(`publicApiController.ts`) y su gemelo `PORTAL_WEBHOOK_EVENTS`
+(`modules/clients/domain/services/client-rules.ts`) seguían con los 3
+eventos originales de la Fase 2 (`reading.created`/`alert.created`/
+`report.closed`) — nunca se actualizaron cuando `incidentWorker`/
+`supplyRequestWorker` (Fases 3/4) empezaron a llamar
+`sendPublicApiWebhook` con los 4 eventos nuevos
+(`incident.created`/`.closed`, `supply_request.created`/`.completed`). Un
+cliente no podía suscribirse a esos 4 eventos por NINGUNA de las dos vías
+(portal o API pública) aunque el sistema ya los disparaba de verdad — el
+cuerpo de la solicitud volvía siempre `400 events debe ser subconjunto de
+reading.created, alert.created, report.closed`. **Segundo hallazgo, más
+profundo**: el `400` real en ambos endpoints no lo tiraba esa validación de
+dominio — lo tiraba ANTES el propio schema Ajv de Fastify
+(`putWebhookSchema` en `publicApiRoutes.ts` **y** `client-routes.ts`, cada
+uno con su copia de `maxItems: 3` hardcodeado) con
+`FST_ERR_VALIDATION: body/events must NOT have more than 3 items` — un
+tercer lugar con el mismo número mágico desactualizado, encontrado sólo al
+verificar el fix en vivo contra el stack real (los tests existentes nunca
+mandaban más de 2 eventos a la vez, así que nunca lo ejercitaban). Los 4
+lugares (2 listas de validación de dominio + 2 `maxItems` de schema) quedan
+en 7, con comentario cruzado a su gemelo para que la próxima vez que se
+sume un evento no se actualice sólo uno de los cuatro.
+
+Verificado de punta a punta contra el stack Docker real (rebuild de la
+imagen `api`, no sólo `tsc`): `PUT /clients/:id/webhook` (portal) y
+`PUT /api/v1/public/webhook` (API key) aceptando los 7 eventos completos,
+`events` inválido sigue devolviendo 400 con el mensaje correcto. Suite
+dirigida (130/130: `publicApi.test.ts`, `rbac.test.ts`,
+`clientDirectory.test.ts`) verde sin regresiones — no se corrió la suite
+completa de 34 archivos por alcance (cambio acotado a webhooks de API
+pública, sin tocar ningún otro dominio); `tsc --noEmit` y `check:sizes`
+limpios.
+
+**Lo que NO se hizo de este ítem**: Swagger UI servido en vivo desde la API
+(`@fastify/swagger`/`@fastify/swagger-ui`) — el spec queda como archivo
+versionado en el repo, no una ruta `/docs` navegable; no hay dependencia
+nueva que mantener ni superficie nueva sin auth que exponer. Colección
+Postman/Insomnia generada a partir del spec (no pedida, generable después
+con cualquier importador de OpenAPI si hace falta).
+
 ### Otros puntos de §3 (riesgos) que siguen abiertos y no forman parte de ningún ítem de arriba
 - ✅ **R4 (parcial, 23/08/2026)**: el WS del portal ya NO acepta el JWT de
   sesión por query string. Investigado antes de tocarlo: no era vestigial —
@@ -1745,7 +1812,7 @@ Leyenda de prioridad: **P0** bloquea facturación/seguridad · **P1** paridad op
 | Esquema | — | Migraciones ≠ prod (hypertable comentada en `20260506000000:55-58`; `readings.supplies_details` y drop de `readings.id` sólo en prod) | Migración de reconciliación | P0 |
 | Índices | — | Sólo `readings(time)`; falta `(device_id,time)`, `alerts(device_id,resolved)`, `audit_logs`, `agents(client_id)` | Índices | P0 |
 | Certificaciones | ISO 27001/27017, SOC 2, NIST CSF | Ninguna (decisión consciente) | Al menos: política de retención, DPA, inventario de datos actualizado | P2 |
-| API pública / ISV | SDS API para MPS | ✅ (23/08/2026) API keys por cliente (`api_keys`, hash SHA-256) + webhooks de integración ERP (`api_webhooks`, firma HMAC) para lecturas/alertas/cierres, endpoints `/api/v1/public/*` | UI de portal para keys/webhooks ya hecha (23/08/2026); falta documentación OpenAPI | P1 |
+| API pública / ISV | SDS API para MPS | ✅ (23/08/2026) API keys por cliente (`api_keys`, hash SHA-256) + webhooks de integración ERP (`api_webhooks`, firma HMAC) para lecturas/alertas/cierres, endpoints `/api/v1/public/*`; ✅ (26/08/2026) spec OpenAPI 3.1 completo, `docs/api/openapi.yaml` | UI de portal para keys/webhooks ya hecha (23/08/2026) | — |
 | Remote EWS | Sí (túnel, whitelist, expira) | No | Túnel HTTP sobre el WSS existente, con allowlist y TTL | P2 |
 | Firmware push / reboot remoto | Sí | No | — (fuera de scope declarado) | — |
 | Equipos USB | SDA (agente en PC) | No; el STC legado usaba HP FleetAdminPro SnmpAgent | Documentar el camino (mismo truco: SNMP agent local) | P2 |
@@ -2114,7 +2181,7 @@ que este hallazgo nombraba explícitamente.
 - ✅ Identidad `(client_id, serial)` + MAC secundaria + merge de duplicados; decommission/mover/editar dispositivo.
 
 ### Fase 2 — Diferenciación (2–3 meses) — arrancada: 5 de 7 ítems cerrados
-- ✅ (23/08/2026) API pública con API keys por cliente + webhooks (lecturas, alertas, cierres) → integración ERP. UI de portal ya hecha (23/08/2026). ✅ (25/08/2026) Retry/expiración automáticos — ver Fase 8 en "Estado de implementación".
+- ✅ (23/08/2026) API pública con API keys por cliente + webhooks (lecturas, alertas, cierres) → integración ERP. UI de portal ya hecha (23/08/2026). ✅ (25/08/2026) Retry/expiración automáticos — ver Fase 8 en "Estado de implementación". ✅ (26/08/2026) Documentación OpenAPI/Swagger — ver Fase 9.
 - ✅ (23/08/2026) Remote EWS por túnel sobre el WSS existente (allowlist en dos capas, staleness, audit) — sólo el acceso EWS en sí, sin paridad IMIL completa (MIB walk remoto, deshabilitar monitoreo, reenviar lecturas, descubrir IP puntual quedan pendientes). Ver "Estado de implementación".
 - Backend multi‑réplica: pub/sub Redis para WS, jobs BullMQ repetibles (heartbeat monitor), métricas Prometheus, Sentry. ✅ (23/08/2026) **Sub-ítem cerrado**: logs estructurados con pino en vez de `console.log` (`cloud/src/logger.ts`), sin dependencia de ninguna decisión de arquitectura pendiente — ver "Estado de implementación". El resto (pub/sub Redis, BullMQ repeatable, Prometheus, Sentry) sigue sin tocar.
 - ✅ (23/08/2026) Agregados continuos (diario/mensual por equipo, `readings_daily_agg`/`readings_monthly_agg`) — sólo backend/endpoint, sin dashboard de portal todavía. Ver "Estado de implementación".
