@@ -1498,9 +1498,10 @@ metadata; usuario inexistente audita `unknown_user` con `target_id` null)
 + regresión completa de la suite de audit feed (16/16) y del CI completo.
 
 Con esto se cierra el corte de seguridad planificado del bloque 6.
-**Pendiente para más adelante**: `triggerScan` sin auditar, auditoría de
-cambio de versión de agente, y R6-R9 del doc (versionado disperso, TZ
-fija, cobertura de marcas, portal sin paginación).
+**Pendiente para más adelante**: ✅ (26/08/2026) `triggerScan` sin auditar y
+auditoría de cambio de versión de agente — ver Fase 13. R6-R9 del doc
+(versionado disperso, TZ fija, cobertura de marcas, portal sin paginación)
+también cerrados en pasadas posteriores (ver §3 más abajo y Fase 10).
 
 ### Fase 7 — Agente v1.2.0 (24/08/2026) — completa: reinicio remoto de impresora
 
@@ -1943,6 +1944,47 @@ inmediato", §2.1 P2) sigue sin implementarse — el tick de 5s + reloj por
 tarea ya evita el caso extremo (una tarea larga no bloquea indefinidamente
 a las demás, sólo hasta el próximo tick), pero no mide duración ni se
 autoajusta por carga.
+
+### Fase 13 — Auditoría: RESCAN puntual y cambio de versión de agente (26/08/2026) — completa
+
+Origen: los dos únicos hallazgos menores que la Fase 6 (seguridad, R5) dejó
+explícitamente señalados sin cerrar el 24/08/2026: `triggerScan` (RESCAN
+disparado desde el detalle de un agente puntual, no desde un lote) sin
+auditar, y `agents.version` pisado en cada heartbeat sin registrar el
+cambio.
+
+✅ **`TriggerScanUseCase` audita** (`AGENT_COMMAND`, mismo catálogo que
+`SendAgentCommandUseCase` — un RESCAN es el mismo tipo de evento de negocio
+sin importar si entró por el endpoint dedicado o el genérico
+`/agents/:id/command`; unificar la acción, no inventar una nueva, para que
+filtrar por acción encuentre ambos entry points). Ganó `audit:
+AuditLogWriter` en el constructor y `actor: Actor` en `execute()`, cableado
+desde `agent-wiring.ts`/`portal-agent-controller.ts` (ya tenían `audit`/
+`actorOf()` disponibles, sólo faltaba pasarlos a este caso de uso puntual).
+
+✅ **`HeartbeatUseCase` audita cambios reales de versión** (`AGENT_VERSION_CHANGED`,
+nueva en el catálogo) — lee la versión ANTERIOR (`AgentRepository.getVersion()`,
+método nuevo, un `SELECT version` de una sola columna) ANTES de que
+`heartbeat()` la sobreescriba, y sólo audita si cambió de verdad. Dos
+guardas explícitas para no generar ruido: nunca en el primer latido de un
+agente (no hay versión previa con qué comparar) ni en latidos repetidos con
+la misma versión (que es el caso normal, la versión no cambia seguido).
+`ipAddress` se enhebró de punta a punta (`AgentService.heartbeat()` →
+`HeartbeatUseCase.execute()`) usando el mismo `getClientIp()` que ya usan
+`agent-routes.ts`/`portal-agent-controller.ts` en este módulo.
+
+Verificado: 4 tests nuevos en `auditFeed.test.ts` (RESCAN puntual →
+`AGENT_COMMAND` con `metadata.type=RESCAN`; primer heartbeat con versión →
+NO audita; misma versión repetida → sigue sin auditar; versión distinta →
+`AGENT_VERSION_CHANGED` con `from`/`to`, una sola fila pese a 3 heartbeats
+en la secuencia) — suite dirigida completa (`auditFeed.test.ts` 20/20,
+`e2e.test.ts` sección Heartbeat 3/3, `rbac.test.ts` 89/89) verde sin
+regresiones. `tsc --noEmit` y `check:arch` (sizes/guards/routes) limpios.
+Verificado contra el stack Docker real (rebuild de `api`).
+
+**Lo que NO se hizo de este ítem**: ningún otro hallazgo — era exactamente
+la lista de dos que dejó la Fase 6, ambos cerrados acá. Con esto, R5 (§3)
+queda sin ningún punto suelto conocido.
 
 ### Otros puntos de §3 (riesgos) que siguen abiertos y no forman parte de ningún ítem de arriba
 - ✅ **R4 (parcial, 23/08/2026)**: el WS del portal ya NO acepta el JWT de

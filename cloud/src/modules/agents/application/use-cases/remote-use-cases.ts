@@ -22,13 +22,21 @@ export class SendAgentCommandUseCase {
   }
 }
 
-/** RESCAN: WSS al instante si está conectado; siempre queda encolado para el próximo latido. */
+/**
+ * RESCAN: WSS al instante si está conectado; siempre queda encolado para el
+ * próximo latido. Fase 6 (R5) señalaba esto como el único hallazgo menor sin
+ * auditar de la pasada de seguridad — reusa la misma acción `AGENT_COMMAND`
+ * que `SendAgentCommandUseCase` (mismo tipo de evento de negocio, sólo un
+ * endpoint dedicado en vez de pasar por el genérico `/agents/:id/command`),
+ * para que filtrar por acción encuentre ambos entry points sin distinción.
+ */
 export class TriggerScanUseCase {
-  constructor(private readonly commands: AgentCommandsUseCase, private readonly link: AgentLink) {}
+  constructor(private readonly commands: AgentCommandsUseCase, private readonly link: AgentLink, private readonly audit: AuditLogWriter) {}
 
-  async execute(agentId: string): Promise<{ status: "success"; message: string }> {
+  async execute(agentId: string, actor: Actor): Promise<{ status: "success"; message: string }> {
     const sentInstant = this.link.pushCommand(agentId, "RESCAN");
     await this.commands.add(agentId, "RESCAN");
+    await this.audit.write({ action: "AGENT_COMMAND", targetId: agentId, userId: actor.userId, ipAddress: actor.ipAddress, metadata: { type: "RESCAN", payload: {} } });
     return { status: "success", message: sentInstant ? "Comando enviado instantáneamente vía WSS" : "Agente offline. Comando encolado para próximo latido." };
   }
 }

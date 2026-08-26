@@ -1,4 +1,5 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
+import { getClientIp } from "../../../api/utils/ip";
 import type { IncomingDevice, IncomingLogEntry, IncomingReading, RedisClient, SystemInfoPayload } from "../domain/entities/agent";
 import type { AgentService } from "../index";
 
@@ -18,7 +19,7 @@ export function createAgentController(fastify: FastifyInstance, redis: RedisClie
     heartbeat: async (request: FastifyRequest) => {
       const { id } = request.params as AgentIdParams;
       const { logs, commandResults, system_info } = request.body as HeartbeatBody;
-      await agentService.heartbeat(id, system_info);
+      await agentService.heartbeat(id, system_info, getClientIp(request));
       if (logs && Array.isArray(logs)) await agentService.ingestLogs(id, logs, timezoneOf(request));
       if (commandResults && Array.isArray(commandResults)) {
         for (const res of commandResults) {

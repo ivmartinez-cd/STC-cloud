@@ -149,7 +149,7 @@ function remoteHandlers(fastify: FastifyInstance, uc: AgentUseCases) {
       }),
     setRemoteEwsEnabled: (request: Req, reply: FastifyReply) =>
       replyingAgentErrors(reply, () => uc.setRemoteEws.execute(idOf(request), (request.body as { enabled: boolean }).enabled, actorOf(request))),
-    triggerScan: (request: Req) => uc.triggerScan.execute(idOf(request)),
+    triggerScan: (request: Req) => uc.triggerScan.execute(idOf(request), actorOf(request)),
   };
 }
 

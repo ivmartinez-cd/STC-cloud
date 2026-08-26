@@ -41,6 +41,9 @@ export interface AgentRepository {
   /** `client_id` + `device_approval_required` del cliente en un solo join. */
   clientContext(agentId: string): Promise<{ clientId: string | null; approvalRequired: boolean }>;
   heartbeat(id: string, systemInfo?: SystemInfoPayload): Promise<void>;
+  /** `null` si el agente no existe o nunca reportó versión — lectura previa
+   *  para que `HeartbeatUseCase` audite un cambio real, no cada latido. */
+  getVersion(id: string): Promise<string | null>;
   /** `last_seen`+`active` al recibir lecturas; nunca falla si el agente fue eliminado. */
   touchOnSync(id: string): Promise<void>;
 }

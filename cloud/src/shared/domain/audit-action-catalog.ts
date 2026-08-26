@@ -63,6 +63,7 @@ const AUDIT_ACTION_META: Record<string, AuditActionMeta> = {
   AGENT_ACTIVATED: { label: "Agente activado", category: "agent" },
   AGENT_DELETED: { label: "Agente eliminado", category: "agent" },
   AGENT_COMMAND: { label: "Comando enviado al agente", category: "agent" },
+  AGENT_VERSION_CHANGED: { label: "Versión del agente actualizada", category: "agent" },
   AGENT_SNMP_CREDENTIALS_UPDATED: { label: "Credenciales SNMP actualizadas", category: "agent" },
   UPDATE_CONFIG: { label: "Configuración del agente actualizada", category: "agent" },
   REGENERATE_KEY: { label: "Llave de activación regenerada", category: "agent" },

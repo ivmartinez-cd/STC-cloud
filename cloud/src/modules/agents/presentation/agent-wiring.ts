@@ -42,7 +42,7 @@ export function buildAgentUseCases(db: Knex, redis?: RedisClient) {
   const commands = new AgentCommandsUseCase(new KnexAgentCommandRepository(db));
   const logs = new AgentLogsUseCase(new KnexAgentLogRepository(db));
   const link = new WsAgentLink();
-  const heartbeat = new HeartbeatUseCase(agents);
+  const heartbeat = new HeartbeatUseCase(agents, audit);
   const recordFailure = (agentId: string, message: string, timezone: string) => logs.recordSyncFailure(agentId, message, timezone);
   const processReading = new ProcessReadingUseCase(
     ingestDevices, new DevicesModuleIdentityResolver(db), new AlertsModuleNotifier(db), new DevicesModuleMerger(db), recordFailure
@@ -76,7 +76,7 @@ export function buildAgentUseCases(db: Knex, redis?: RedisClient) {
     listAgentDeviceDirectory: new ListAgentDeviceDirectoryUseCase(portal),
     deleteAgent: new DeleteAgentUseCase(new KnexAgentUnitOfWork(db)),
     sendCommand: new SendAgentCommandUseCase(commands, link, audit),
-    triggerScan: new TriggerScanUseCase(commands, link),
+    triggerScan: new TriggerScanUseCase(commands, link, audit),
     setRemoteEws: new SetRemoteEwsEnabledUseCase(portal, audit),
     ewsProxy: new EwsProxyUseCase(portal, commands, link, new EwsProxyServiceGateway(), audit),
     link,

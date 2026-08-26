@@ -52,7 +52,7 @@ export class AgentService {
   // --- Telemetría (lecturas, logs, heartbeat) ---
   ingestLogs(agentId: string, logs: IncomingLogEntry[], timezone: string = DEFAULT_BUSINESS_HOURS.timezone) { return this.useCases.logs.ingest(agentId, logs, timezone); }
   getLogs(agentId: string, limit = 50) { return this.useCases.logs.list(agentId, limit); }
-  heartbeat(agentId: string, systemInfo?: SystemInfoPayload) { return this.useCases.heartbeat.execute(agentId, systemInfo); }
+  heartbeat(agentId: string, systemInfo?: SystemInfoPayload, ipAddress?: string) { return this.useCases.heartbeat.execute(agentId, systemInfo, ipAddress); }
   /** `redis` es un parámetro muerto pre-existente (se usa la conexión del constructor) — firma conservada. */
   syncReadings(_redis: RedisClient, readings: IncomingReading[], agentId: string, timezone: string = DEFAULT_BUSINESS_HOURS.timezone) {
     return this.useCases.syncReadings.execute(readings, agentId, timezone);

@@ -159,6 +159,55 @@ describe('Audit feed — filtros', () => {
   });
 });
 
+// Fase 6 (R5) del gap analysis vs HP SDS señalaba dos hallazgos menores sin
+// auditar: RESCAN puntual (triggerScan, no el de un lote) y el cambio de
+// versión de agente en heartbeat.
+describe('Audit feed — RESCAN puntual y cambio de versión de agente', () => {
+  test('POST /agents/:id/scan → AGENT_COMMAND auditado con type=RESCAN', async () => {
+    const before = await req('GET', `/audit-logs?target_id=${ctx.agentA2Id}&action=AGENT_COMMAND`, undefined, ctx.adminToken);
+    const beforeCount = before.data.total;
+
+    const { status } = await req('POST', `/agents/${ctx.agentA2Id}/scan`, {}, ctx.adminToken);
+    assert.equal(status, 200);
+
+    const after = await pollUntil(
+      () => req('GET', `/audit-logs?target_id=${ctx.agentA2Id}&action=AGENT_COMMAND`, undefined, ctx.adminToken),
+      (r) => r.data.total > beforeCount,
+    );
+    const row = after.data.items[0];
+    assert.equal(row.metadata.type, 'RESCAN');
+  });
+
+  test('primer heartbeat con versión → NO audita (no hay versión previa con qué comparar)', async () => {
+    const hb = await req('POST', `/agents/${ctx.agentA1Id}/heartbeat`, { system_info: { version: '1.3.0-test-a' } }, ctx.agentA1Token);
+    assert.equal(hb.status, 200);
+
+    const { data } = await req('GET', `/audit-logs?target_id=${ctx.agentA1Id}&action=AGENT_VERSION_CHANGED`, undefined, ctx.adminToken);
+    assert.equal(data.total, 0);
+  });
+
+  test('heartbeat con la MISMA versión otra vez → sigue sin auditar', async () => {
+    const hb = await req('POST', `/agents/${ctx.agentA1Id}/heartbeat`, { system_info: { version: '1.3.0-test-a' } }, ctx.agentA1Token);
+    assert.equal(hb.status, 200);
+
+    const { data } = await req('GET', `/audit-logs?target_id=${ctx.agentA1Id}&action=AGENT_VERSION_CHANGED`, undefined, ctx.adminToken);
+    assert.equal(data.total, 0, 'sin cambio real, no debe generar ruido en cada latido');
+  });
+
+  test('heartbeat con versión DISTINTA → AGENT_VERSION_CHANGED con from/to', async () => {
+    const hb = await req('POST', `/agents/${ctx.agentA1Id}/heartbeat`, { system_info: { version: '1.3.0-test-b' } }, ctx.agentA1Token);
+    assert.equal(hb.status, 200);
+
+    const { data } = await pollUntil(
+      () => req('GET', `/audit-logs?target_id=${ctx.agentA1Id}&action=AGENT_VERSION_CHANGED`, undefined, ctx.adminToken),
+      (r) => r.data.total > 0,
+    );
+    assert.equal(data.total, 1, 'una sola fila — el latido anterior con la misma versión no generó una de más');
+    assert.equal(data.items[0].metadata.from, '1.3.0-test-a');
+    assert.equal(data.items[0].metadata.to, '1.3.0-test-b');
+  });
+});
+
 async function drainLoginRateLimit(): Promise<void> {
   const { execSync } = await import('node:child_process');
   try {

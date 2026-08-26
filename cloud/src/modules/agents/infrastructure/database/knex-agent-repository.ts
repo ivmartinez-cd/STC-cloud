@@ -82,6 +82,11 @@ export class KnexAgentRepository implements AgentRepository {
     return { clientId: row?.client_id ?? null, approvalRequired: row?.device_approval_required ?? false };
   }
 
+  async getVersion(id: string): Promise<string | null> {
+    const row = await this.db("agents").where({ id }).select("version").first();
+    return row?.version ?? null;
+  }
+
   async heartbeat(id: string, systemInfo?: SystemInfoPayload): Promise<void> {
     const updateData: Record<string, unknown> = { last_seen: new Date() };
     if (systemInfo) {
