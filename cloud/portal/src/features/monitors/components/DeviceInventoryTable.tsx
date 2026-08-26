@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, ChevronRight, CheckSquare, Square, Trash2, RotateCcw, ArrowRightLeft, Radio, X, Download } from 'lucide-react';
+import { Search, ChevronRight, CheckSquare, Square, Trash2, RotateCcw, ArrowRightLeft, Radio, Download } from 'lucide-react';
 import type { Device } from '../../../shared/types/monitor';
-import type { AgentDeviceDirectoryRow, AgentDeviceSegment, AgentDeviceSortField, SortDir } from '../types/monitorDetail';
 import { api } from '../../../shared/lib/api';
 import { fmt } from '../../../shared/lib/formatters';
 import { useRowSelection } from '../../../shared/hooks/useRowSelection';
@@ -15,6 +14,10 @@ import {
   BulkDecommissionModal, BulkRecommissionModal, BulkMoveDevicesModal, BulkMonitorStateModal,
   type BulkActionResult,
 } from '../../../shared/components/DeviceLifecycleModals';
+import { GRID_COLS, SEGMENT_OPTIONS, SORTABLE_HEADERS, SORT_LABELS, ESTADO_LABEL, brandBadge, formatLastReport, exportCountersCSV } from './deviceInventoryHelpers';
+import { AlertsCell, SortableHeader } from './DeviceInventoryTableCells';
+import ExportCountersModal from './ExportCountersModal';
+import DeviceInventoryPagination from './DeviceInventoryPagination';
 
 interface Props {
   /** Lista COMPLETA (sin paginar) — sólo para exportar CSV de contadores y previsualizar
@@ -28,113 +31,6 @@ interface Props {
   active: boolean;
   onRefresh?: () => void;
   isReadOnlyViewer?: boolean;
-}
-
-// La casilla de selección es una columna propia (28px) — antes compartía la
-// pista ancha con "equipo" (el header nunca reservaba un track para ella),
-// así que la fila (8 elementos) quedaba corrida una posición contra el
-// header (7 elementos): "equipo" invadía la pista de ESTADO, ESTADO la de
-// DIRECCIÓN IP, etc. Ahora header y fila usan siempre las mismas 8 pistas.
-const GRID_COLS = 'grid-cols-[28px_minmax(220px,1fr)_132px_130px_128px_90px_96px_40px]';
-
-const SEGMENT_OPTIONS: Array<{ value: AgentDeviceSegment; label: string }> = [
-  { value: 'todos', label: 'TODOS' },
-  { value: 'sin_conexion', label: 'OFFLINE' },
-  { value: 'con_alertas', label: 'CON ALERTAS' },
-  { value: 'sin_aprobar', label: 'SIN APROBAR' },
-];
-
-const SORTABLE_HEADERS: Array<{ field: AgentDeviceSortField; label: string }> = [
-  { field: 'consumible_pct', label: 'CONSUMIBLES' },
-  { field: 'alerts_count', label: 'ALERTAS' },
-  { field: 'last_seen', label: 'ÚLT. REPORTE' },
-];
-
-const SORT_LABELS: Record<AgentDeviceSortField, string> = { alerts_count: 'alertas', consumible_pct: 'consumibles', last_seen: 'último reporte' };
-
-function brandBadge(brand: string | null): string {
-  return brand ? brand.replace(/[^A-Za-z]/g, '').slice(0, 2).toUpperCase() || '—' : '—';
-}
-
-function formatLastReport(iso: string | null): string {
-  if (!iso) return 'sin reporte';
-  const min = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60_000));
-  if (min < 1) return 'hace un momento';
-  if (min < 60) return `hace ${min} min`;
-  const hrs = Math.round(min / 60);
-  if (hrs < 24) return `hace ${hrs} h`;
-  return `hace ${Math.round(hrs / 24)} d`;
-}
-
-const ESTADO_LABEL: Record<AgentDeviceDirectoryRow['estado'], string> = {
-  en_linea: 'EN LÍNEA', sin_conexion: 'SIN CONEXIÓN', sin_aprobar: 'SIN APROBAR',
-};
-
-function AlertsCell({ count }: { count: number }) {
-  if (count === 0) return <div className="text-right font-montserrat text-[12.5px] font-semibold text-ink-200">—</div>;
-  const cls = count >= 5 ? 'text-brand-severe' : 'text-ink-600';
-  return <div className={`text-right font-montserrat text-[12.5px] font-semibold tabular-nums ${cls}`}>{fmt(count)}</div>;
-}
-
-function SortableHeader({ label, field, active, dir, onToggle }: {
-  label: string; field: AgentDeviceSortField; active: boolean; dir: SortDir; onToggle: (f: AgentDeviceSortField) => void;
-}) {
-  return (
-    <div role="columnheader" aria-sort={active ? (dir === 'asc' ? 'ascending' : 'descending') : 'none'} className="text-right">
-      <button
-        type="button" onClick={() => onToggle(field)}
-        className={`font-montserrat text-[8.5px] font-bold uppercase tracking-[.14em] transition-colors duration-150 ease-in-out ${active ? 'text-ink-600' : 'text-ink-300 hover:text-ink-100'}`}
-      >
-        {label}{active ? (dir === 'desc' ? ' ↓' : ' ↑') : ''}
-      </button>
-    </div>
-  );
-}
-
-function pageWindow(current: number, totalPages: number): Array<number | 'ellipsis'> {
-  const withEnds = new Set<number>([0, totalPages - 1]);
-  for (let i = Math.max(0, current - 1); i <= Math.min(totalPages - 1, current + 1); i++) withEnds.add(i);
-  const sorted = Array.from(withEnds).sort((a, b) => a - b);
-  const result: Array<number | 'ellipsis'> = [];
-  let prev: number | null = null;
-  for (const p of sorted) {
-    if (prev !== null && p - prev > 1) result.push('ellipsis');
-    result.push(p);
-    prev = p;
-  }
-  return result;
-}
-
-function exportCountersCSV(devices: Device[], monitorName: string, discriminate: boolean) {
-  const today = new Date().toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-  const rows = ['SERIE;FECHA;TIPO;CLASE;CONTADOR;CLASE;CONTADOR;MOTIVO;OBSERVACIONES;NUMERO_ACTIVO;NUMERO_ETIQUETA;USO_30D;CICLO_TRABAJO'];
-
-  for (const d of devices) {
-    const serie = d.serial_number ?? 'S/N';
-    const mono = d.mono_pages ?? 0;
-    const color = d.color_pages ?? 0;
-    const total = d.total_pages ?? (mono + color);
-    const isColor = color > 0;
-    const inventoryCols = `${d.asset_number ?? ''};${d.asset_tag ?? ''};${d.pages_30d ?? ''};${d.duty_cycle_effective ?? ''}`;
-
-    let row: string;
-    if (isColor) {
-      row = discriminate
-        ? `${serie};${today};7;10;${mono};20;${color};;;${inventoryCols}`
-        : `${serie};${today};7;20;${total};;;;;${inventoryCols}`;
-    } else {
-      row = `${serie};${today};7;10;${mono};;;;;${inventoryCols}`;
-    }
-    rows.push(row);
-  }
-
-  const blob = new Blob(['﻿' + rows.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `contadores_${monitorName.replace(/\s+/g, '_')}_${today.replace(/\//g, '-')}.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
 }
 
 /** "Equipos detectados por este monitor" (handoff hifi "Monitor — detalle", 25/08/2026)
@@ -376,52 +272,12 @@ const DeviceInventoryTable = ({ devices, monitorName, agentId, clientId, pending
         </div>
 
         {total > 0 && (
-          <div className="flex flex-wrap items-center justify-between gap-2.5 px-5 py-3.5">
-            <div className="font-sans text-xs text-ink-400">{fmt(from)}–{fmt(to)} de {fmt(total)} equipos</div>
-            <div className="flex flex-wrap items-center gap-1.5">
-              <button
-                type="button" disabled={page === 0} onClick={() => setPage(page - 1)}
-                className="rounded-[3px] border border-line-avatar px-[11px] py-[7px] font-montserrat text-[10.5px] font-semibold uppercase tracking-[.05em] text-ink-200 disabled:cursor-default enabled:border-line-300 enabled:text-ink-600 enabled:hover:bg-surface-btn-hover"
-              >
-                ANTERIOR
-              </button>
-              {pageWindow(page, totalPages).map((p, i) => p === 'ellipsis' ? (
-                <span key={`e${i}`} className="px-1 font-sans text-xs text-ink-200">…</span>
-              ) : (
-                <button
-                  key={p} type="button" onClick={() => setPage(p)} aria-current={p === page ? 'page' : undefined}
-                  className={`rounded-[3px] px-[11px] py-[7px] font-montserrat text-[10.5px] ${p === page ? 'bg-brand-soft font-bold text-brand-accent' : 'font-semibold text-ink-100 hover:bg-surface-btn-hover'}`}
-                >
-                  {p + 1}
-                </button>
-              ))}
-              <button
-                type="button" disabled={page >= totalPages - 1} onClick={() => setPage(page + 1)}
-                className="rounded-[3px] border border-line-300 px-[11px] py-[7px] font-montserrat text-[10.5px] font-semibold uppercase tracking-[.05em] text-ink-600 hover:bg-surface-btn-hover disabled:cursor-default disabled:border-line-avatar disabled:text-ink-200 disabled:hover:bg-transparent"
-              >
-                SIGUIENTE
-              </button>
-            </div>
-          </div>
+          <DeviceInventoryPagination page={page} totalPages={totalPages} total={total} from={from} to={to} onPageChange={setPage} />
         )}
       </div>
 
       {showExportModal && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4" style={{ background: 'rgba(20,20,20,.55)' }} onClick={() => setShowExportModal(false)}>
-          <div className="w-full max-w-sm rounded-[5px] bg-white p-6" style={{ boxShadow: '0 20px 60px rgba(0,0,0,.25)' }} onClick={(e) => e.stopPropagation()}>
-            <div className="mb-5">
-              <h3 className="font-montserrat text-[15px] font-extrabold text-ink-900">Exportar contadores</h3>
-              <p className="mt-1 font-sans text-[12.5px] text-ink-300">¿Discriminar mono / color?</p>
-            </div>
-            <div className="mb-4 flex flex-col gap-2.5">
-              <button onClick={() => handleExport(true)} className="w-full rounded-[3px] bg-brand py-3 font-montserrat text-[11px] font-semibold uppercase tracking-[.08em] text-white transition-colors duration-150 ease-in-out hover:bg-brand-severe">Sí, discriminar</button>
-              <button onClick={() => handleExport(false)} className="w-full rounded-[3px] border border-line-300 bg-white py-3 font-montserrat text-[11px] font-semibold uppercase tracking-[.08em] text-ink-600 transition-colors duration-150 ease-in-out hover:bg-surface-btn-hover">No</button>
-            </div>
-            <button onClick={() => setShowExportModal(false)} className="flex w-full items-center justify-center gap-2 rounded-[3px] py-2 font-montserrat text-[10.5px] font-semibold uppercase tracking-[.08em] text-ink-300 transition-colors duration-150 ease-in-out hover:text-ink-600">
-              <X size={13} /> Cancelar
-            </button>
-          </div>
-        </div>
+        <ExportCountersModal onExport={handleExport} onClose={() => setShowExportModal(false)} />
       )}
 
       <BulkDecommissionModal isOpen={bulkModal === 'decommission'} onClose={() => setBulkModal(null)} onDone={handleBulkDone} deviceIds={selectedIds} />
