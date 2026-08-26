@@ -1,13 +1,20 @@
 import type { Knex } from "knex";
+import { REMOTE_ACTIONS } from "../../domain/entities/remote-action-batch";
 import type {
   BatchItemState,
   BatchStatus,
   RemoteAction,
   RemoteActionBatch,
+  RemoteActionSegment,
 } from "../../domain/entities/remote-action-batch";
+import { REMOTE_ACTION_CATALOG } from "../../domain/entities/remote-action-catalog";
+import type { RemoteActionSummary, RemoteActionTypeBreakdown } from "../../domain/entities/remote-action-insights";
+import { summarizeStatusCounts, summarizeTypeBreakdown } from "../../domain/services/remote-action-insights";
 
 const BATCHES = "remote_action_batches";
 const ITEMS = "remote_action_items";
+const WINDOW_DAYS = 7;
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 export interface BatchTarget {
   agentId: string;
@@ -50,12 +57,73 @@ export class KnexRemoteActionRepository {
     });
   }
 
-  async list(limit: number, offset: number): Promise<{ items: (RemoteActionBatch & { total_items: number })[]; total: number }> {
-    const [{ count }] = await this.db(BATCHES).count("* as count");
-    const rows = await this.db(BATCHES)
+  /** `q`/`segment` filtran; `dir` ordena por `scheduled_at` (única columna
+   * ordenable de la tabla — handoff hifi "Acciones remotas"). `q` matchea
+   * nº de lote, nombre, el enum de acción, o la ETIQUETA humana de la
+   * acción (vía `REMOTE_ACTION_CATALOG`, para que "reiniciar" encuentre
+   * RESTART_PRINTER aunque el usuario no escriba el enum). */
+  async list(params: {
+    limit: number; offset: number; q?: string; segment?: RemoteActionSegment; dir?: "asc" | "desc";
+  }): Promise<{ items: (RemoteActionBatch & { total_items: number })[]; total: number }> {
+    const { limit, offset, q, segment, dir } = params;
+    const filtered = this.db(BATCHES);
+    if (segment && segment !== "todos") this.applySegment(filtered, segment);
+    const term = q?.trim();
+    if (term) this.applySearch(filtered, term);
+
+    const [{ count }] = await filtered.clone().count("* as count");
+    const rows = await filtered
       .select(`${BATCHES}.*`, this.db(ITEMS).count("*").whereRaw(`${ITEMS}.batch_id = ${BATCHES}.id`).as("total_items"))
-      .orderBy("created_at", "desc").limit(Math.min(limit, 200)).offset(offset);
+      .orderBy("scheduled_at", dir === "asc" ? "asc" : "desc")
+      .limit(Math.min(limit, 200)).offset(offset);
     return { items: rows.map((r: any) => ({ ...toEntity(r), total_items: Number(r.total_items) })), total: Number(count) };
+  }
+
+  private applySegment(b: Knex.QueryBuilder, segment: Exclude<RemoteActionSegment, "todos">): void {
+    if (segment === "con_errores") b.where("status", "completed_with_errors");
+    else if (segment === "en_curso") b.whereIn("status", ["sent", "scheduled"]);
+    else if (segment === "cancelados") b.where("status", "cancelled");
+    else if (segment === "hoy") b.whereRaw("scheduled_at::date = CURRENT_DATE");
+  }
+
+  private applySearch(b: Knex.QueryBuilder, term: string): void {
+    const lower = term.toLowerCase();
+    const matchingActions = REMOTE_ACTIONS.filter((a) => REMOTE_ACTION_CATALOG[a].label.toLowerCase().includes(lower));
+    b.where((w) => {
+      w.whereRaw(`${BATCHES}.number::text ILIKE ?`, [`%${term}%`])
+        .orWhereRaw(`${BATCHES}.name ILIKE ?`, [`%${term}%`])
+        .orWhereRaw(`${BATCHES}.action ILIKE ?`, [`%${term}%`]);
+      if (matchingActions.length) w.orWhereIn(`${BATCHES}.action`, matchingActions as unknown as string[]);
+    });
+  }
+
+  private countsByStatus(rows: { status: string; count: string | number }[]): Record<string, number> {
+    const out: Record<string, number> = {};
+    for (const r of rows) out[r.status] = Number(r.count);
+    return out;
+  }
+
+  /** Tira de métricas de "Acciones remotas" — ventana de 7 días + acumulado histórico. */
+  async getSummary(now: Date, windowDays = WINDOW_DAYS): Promise<RemoteActionSummary> {
+    const since = new Date(now.getTime() - windowDays * MS_PER_DAY);
+    const [{ count: totalAllTime }] = await this.db(BATCHES).count("* as count");
+    const rows = await this.db(BATCHES).where("created_at", ">=", since).select("status").count("* as count").groupBy("status");
+    return summarizeStatusCounts(this.countsByStatus(rows as any[]), Number(totalAllTime), windowDays);
+  }
+
+  /** Resultado por tipo de acción — genérico sobre los tipos con datos en la
+   * ventana (5 tipos reales; sólo los que tengan algún lote entran acá). */
+  async getByTypeBreakdown(now: Date, windowDays = WINDOW_DAYS): Promise<RemoteActionTypeBreakdown[]> {
+    const since = new Date(now.getTime() - windowDays * MS_PER_DAY);
+    const rows = await this.db(BATCHES).where("created_at", ">=", since)
+      .select("action", "status").count("* as count").groupBy("action", "status");
+    const byAction = new Map<string, { status: string; count: string | number }[]>();
+    for (const r of rows as any[]) {
+      const list = byAction.get(r.action) ?? [];
+      list.push({ status: r.status, count: r.count });
+      byAction.set(r.action, list);
+    }
+    return [...byAction.entries()].map(([action, list]) => summarizeTypeBreakdown(action as RemoteAction, this.countsByStatus(list)));
   }
 
   async findById(id: string): Promise<RemoteActionBatch | null> {

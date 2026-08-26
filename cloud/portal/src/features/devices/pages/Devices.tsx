@@ -1,287 +1,42 @@
-import { useEffect, useState, useCallback } from 'react';
-import { Link } from 'react-router-dom';
-import { api } from '../../../shared/lib/api';
-import { ChevronRight, ChevronLeft, WifiOff, RefreshCw, Search, Printer } from 'lucide-react';
-import { useDebounce } from '../../../shared/hooks/useDebounce';
+import { useMemo } from 'react';
+import { useRowSelection } from '../../../shared/hooks/useRowSelection';
+import { useDeviceDirectory } from '../hooks/useDeviceDirectory';
+import DeviceInventoryHeader from '../components/DeviceInventoryHeader';
+import DeviceInventoryMetricsStrip from '../components/DeviceInventoryMetricsStrip';
+import DeviceInventoryFilterBar from '../components/DeviceInventoryFilterBar';
+import DeviceInventoryBulkBar from '../components/DeviceInventoryBulkBar';
+import DeviceDirectoryTable from '../components/DeviceDirectoryTable';
+import DeviceInventoryPagination from '../components/DeviceInventoryPagination';
 
-import { DEVICE_OFFLINE_THRESHOLD_MS } from '../../../shared/lib/constants';
-
-const PAGE_SIZE = 50;
-
-interface Device {
-  id: string;
-  ip_address: string;
-  serial_number: string | null;
-  brand: string;
-  model: string;
-  name: string;
-  active: boolean;
-  last_seen?: string | null;
-  monitor_name: string;
-  client_name: string;
-  decommissioned_at?: string | null;
-  toner_black?:   number | null;
-  toner_cyan?:    number | null;
-  toner_magenta?: number | null;
-  toner_yellow?:  number | null;
-}
-
-/** IP/serial/marca/modelo/nombre/cliente/monitor — mismo criterio de búsqueda que el backend (`applyDeviceSearch`, `knex-device-repository.ts`), ahora corrido server-side. */
-async function fetchDevices(q: string, includeDecommissioned: boolean, page: number): Promise<{ items: Device[]; total: number }> {
-  const params = new URLSearchParams({ limit: String(PAGE_SIZE), offset: String((page - 1) * PAGE_SIZE) });
-  if (q.trim()) params.set('q', q.trim());
-  if (includeDecommissioned) params.set('include', 'decommissioned');
-  return api.get<{ items: Device[]; total: number }>(`/devices?${params}`);
-}
-
-/** Sólo agrupa la página actual (el orden `clients.name` ya viene del servidor) — no es un agrupado global. */
-function groupByClient(devices: Device[]): Record<string, { clientName: string; devices: Device[] }> {
-  return devices.reduce<Record<string, { clientName: string; devices: Device[] }>>((acc, d) => {
-    const key = d.client_name || 'Sin cliente';
-    if (!acc[key]) acc[key] = { clientName: key, devices: [] };
-    acc[key].devices.push(d);
-    return acc;
-  }, {});
-}
-
+/** Rediseño hifi "Inventario de dispositivos" (handoff 25/08/2026): listado global
+ * paginado/filtrado/ordenado server-side, agrupado por cliente (`GET /devices/directory`)
+ * + tira de métricas del inventario aparte (`GET /devices/summary`) — mismo patrón que
+ * `Clients.tsx`. Área de contenido únicamente — sidebar/topbar son de `app/layout/`. */
 const Devices = () => {
-  const [devices, setDevices] = useState<Device[]>([]);
-  const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
-  const [loading, setLoading] = useState(true);
-  const [error, setError]     = useState('');
-  const [search, setSearch]   = useState('');
-  const debouncedSearch = useDebounce(search, 300);
-  const [includeDecommissioned, setIncludeDecommissioned] = useState(false);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const data = await fetchDevices(debouncedSearch, includeDecommissioned, page);
-      setDevices(data.items ?? []);
-      setTotal(data.total ?? 0);
-    } catch (e: unknown) {
-      setError((e as Error).message);
-    } finally {
-      setLoading(false);
-    }
-  }, [debouncedSearch, includeDecommissioned, page]);
-
-  useEffect(() => { void load(); }, [load]);
-  // Volver a la primera página cuando cambia el filtro — si no, se puede quedar
-  // en una página que ya no existe para el nuevo resultado.
-  useEffect(() => { setPage(1); }, [debouncedSearch, includeDecommissioned]);
-
-  const byClient = groupByClient(devices);
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const dir = useDeviceDirectory();
+  const visibleIds = useMemo(() => dir.groups.flatMap((g) => g.rows.map((r) => r.id)), [dir.groups]);
+  const rowSelection = useRowSelection(visibleIds);
+  const hasActiveFilters = dir.effectiveQuery !== '' || dir.segment !== 'todos';
+  const handleRefresh = () => { void dir.refetch(); void dir.refetchSummary(); };
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-extrabold text-[#1a2333] tracking-tight">Inventario de Dispositivos</h1>
-          <p className="text-slate-500 mt-1 font-medium">
-            Control global de impresoras — {total} dispositivo(s)
-          </p>
-        </div>
-        <div className="flex gap-3 items-center">
-          <label className="flex items-center gap-2 text-xs font-bold text-slate-500 select-none">
-            <input type="checkbox" checked={includeDecommissioned} onChange={(e) => setIncludeDecommissioned(e.target.checked)} />
-            Mostrar dados de baja
-          </label>
-          <button onClick={load} disabled={loading}
-            className="p-3 bg-white border border-slate-200 text-slate-400 hover:text-brand hover:border-brand rounded-2xl transition-all shadow-sm active:scale-95 disabled:opacity-40"
-            title="Actualizar">
-            <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
-          </button>
-        </div>
-      </header>
-
-      {/* Search Bar */}
-      <div className="relative group">
-        <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-brand transition-colors" size={20} />
-        <input
-          type="text"
-          placeholder="Filtrar por IP, serial, marca, modelo o cliente..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          className="cd-input w-full !pl-14 !h-14 shadow-sm"
+    <div className="-m-4 min-w-0 flex flex-col bg-surface-page px-[34px] pb-9 pt-[30px] md:-m-10">
+      <DeviceInventoryHeader summary={dir.summary} query={dir.effectiveQuery} segment={dir.segment} sortDir={dir.sortDir} includeDecommissioned={dir.includeDecommissioned} onRefresh={handleRefresh} />
+      <DeviceInventoryMetricsStrip summary={dir.summary} loading={dir.summaryLoading} error={dir.summaryError} onRetry={dir.refetchSummary} />
+      <div className="rounded-[5px] border border-line-100 bg-white">
+        <DeviceInventoryFilterBar query={dir.rawQuery} onQueryChange={dir.setRawQuery} segment={dir.segment} onSegmentChange={dir.setSegment} includeDecommissioned={dir.includeDecommissioned} onIncludeDecommissionedChange={dir.setIncludeDecommissioned} />
+        <DeviceInventoryBulkBar count={rowSelection.count} onClear={rowSelection.clear} />
+        <DeviceDirectoryTable
+          groups={dir.groups} loading={dir.loading} error={dir.error} onRetry={dir.refetch}
+          sortDir={dir.sortDir} onToggleSort={dir.toggleSort} hasActiveFilters={hasActiveFilters} onClearFilters={dir.clearFilters}
+          selected={rowSelection.selected} allSelected={rowSelection.allSelected} onToggleRow={rowSelection.toggle} onToggleAll={rowSelection.toggleAll}
         />
+        {!dir.error && !dir.loading && (
+          <DeviceInventoryPagination page={dir.page} totalPages={dir.totalPages} total={dir.total} clientsInPage={dir.clientCount} clientsTotal={dir.summary?.clients_total ?? null} onPageChange={dir.setPage} />
+        )}
       </div>
-
-      {loading && (
-        <div className="flex flex-col items-center justify-center py-20 animate-pulse">
-          <div className="p-4 bg-brand/10 rounded-full text-brand mb-4">
-            <RefreshCw size={32} className="animate-spin" />
-          </div>
-          <p className="text-slate-500 font-bold uppercase tracking-widest text-xs">Cargando inventario...</p>
-        </div>
-      )}
-
-      {error && (
-        <div className="bg-rose-50 border border-rose-100 rounded-3xl p-8 text-center animate-in zoom-in-95">
-          <div className="w-16 h-16 bg-rose-500 text-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-xl shadow-rose-900/20">
-            <WifiOff size={32} />
-          </div>
-          <h3 className="text-lg font-bold text-rose-900">Error de conexión</h3>
-          <p className="text-rose-600 mt-1 font-medium">{error}</p>
-          <button onClick={load} className="mt-6 px-6 py-2 bg-rose-500 text-white rounded-xl font-bold hover:bg-rose-600 transition-all active:scale-95">
-            Reintentar
-          </button>
-        </div>
-      )}
-
-      {!loading && !error && devices.length === 0 && (
-        <div className="bg-white rounded-[32px] border border-slate-100 p-20 text-center shadow-sm">
-          <div className="w-20 h-20 bg-slate-50 rounded-[24px] flex items-center justify-center mx-auto mb-6 text-slate-300">
-            <Printer size={40} />
-          </div>
-          <h3 className="text-xl font-bold text-[#1a2333]">No se encontraron resultados</h3>
-          <p className="text-slate-500 mt-2 font-medium">{search ? 'Intenta con otros términos de búsqueda.' : 'No hay dispositivos registrados aún.'}</p>
-        </div>
-      )}
-
-      {!loading && !error && Object.values(byClient).map(({ clientName, devices: clientDevices }) => (
-        <div key={clientName} className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
-          <div className="flex items-center gap-4">
-            <h2 className="text-xs font-extrabold text-brand uppercase tracking-[0.2em] whitespace-nowrap">
-              {clientName} <span className="text-slate-400 font-bold ml-2">({clientDevices.length})</span>
-            </h2>
-            <div className="h-px bg-slate-100 flex-1" />
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-            {clientDevices.map(device => {
-              const isDeviceOnline = (device.last_seen != null)
-                ? (Math.abs(Date.now() - new Date(device.last_seen).getTime()) <= DEVICE_OFFLINE_THRESHOLD_MS)
-                : (device.active ?? false);
-
-              return (
-                <Link
-                  key={device.id}
-                  to={`/devices/${device.id}`}
-                  className={`cd-panel p-6 group hover:border-brand/30 transition-all flex flex-col h-full ${device.decommissioned_at ? 'opacity-60' : ''}`}
-                >
-                  <div className="flex items-start justify-between mb-5">
-                    <div className="p-3 bg-brand/10 text-brand rounded-2xl group-hover:bg-brand group-hover:text-white transition-all duration-300">
-                      <Printer size={20} />
-                    </div>
-                    {device.decommissioned_at ? (
-                      <span className="flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-wider text-amber-700 bg-amber-50 px-3 py-1 rounded-full">
-                        Baja
-                      </span>
-                    ) : isDeviceOnline ? (
-                      <span className="flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-wider text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full">
-                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                        Activo
-                      </span>
-                    ) : (
-                      <span className="flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-400 bg-slate-50 px-3 py-1 rounded-full">
-                        <WifiOff size={12} />
-                        Sin Contacto
-                      </span>
-                    )}
-                  </div>
-
-                <div className="flex-1">
-                  <h3 className="font-extrabold text-[#1a2333] group-hover:text-brand transition-colors truncate">
-                    {device.name || device.ip_address}
-                  </h3>
-                  <p className="text-xs font-bold text-slate-400 mt-1 uppercase tracking-wider">
-                    {device.brand?.toUpperCase() || 'Genérico'} — <span className="opacity-70">{device.model || 'S/M'}</span>
-                  </p>
-                </div>
-
-                {device.toner_black != null && (
-                  <div className="mt-4 pt-3 border-t border-slate-50 space-y-2">
-                    <div className="flex justify-between items-center text-[9px] font-extrabold text-slate-400 uppercase tracking-widest">
-                      <span>Consumibles</span>
-                      <span>{device.toner_black}%</span>
-                    </div>
-                    {device.toner_cyan == null ? (
-                      <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden" title={`Negro: ${device.toner_black}%`}>
-                        <div
-                          className="h-full bg-slate-800 rounded-full transition-all duration-500"
-                          style={{ width: `${device.toner_black}%` }}
-                        />
-                      </div>
-                    ) : (
-                      <div className="grid grid-cols-4 gap-1.5">
-                        <div className="h-1 bg-slate-100 rounded-full overflow-hidden" title={`Negro: ${device.toner_black}%`}>
-                          <div className="h-full bg-slate-800" style={{ width: `${device.toner_black}%` }} />
-                        </div>
-                        <div className="h-1 bg-slate-100 rounded-full overflow-hidden" title={`Cian: ${device.toner_cyan}%`}>
-                          <div className="h-full bg-[#00adef]" style={{ width: `${device.toner_cyan ?? 0}%` }} />
-                        </div>
-                        <div className="h-1 bg-slate-100 rounded-full overflow-hidden" title={`Magenta: ${device.toner_magenta}%`}>
-                          <div className="h-full bg-[#ec008c]" style={{ width: `${device.toner_magenta ?? 0}%` }} />
-                        </div>
-                        <div className="h-1 bg-slate-100 rounded-full overflow-hidden" title={`Amarillo: ${device.toner_yellow}%`}>
-                          <div className="h-full bg-[#f5c400]" style={{ width: `${device.toner_yellow ?? 0}%` }} />
-                        </div>
-                      </div>
-                    )}
-                    {(device.toner_black <= 15 ||
-                      (device.toner_cyan != null && device.toner_cyan <= 15) ||
-                      (device.toner_magenta != null && device.toner_magenta <= 15) ||
-                      (device.toner_yellow != null && device.toner_yellow <= 15)) && (
-                      <p className="text-[9px] font-extrabold text-amber-500 uppercase tracking-widest">
-                        ⚠ Tóner bajo — requiere reposición
-                      </p>
-                    )}
-                  </div>
-                )}
-
-                <div className="mt-6 pt-5 border-t border-slate-50 flex items-center justify-between">
-                  <div className="space-y-1">
-                    <div className="text-[11px] font-mono font-bold text-brand bg-brand/10 px-2 py-0.5 rounded-md inline-block">
-                      {device.ip_address}
-                    </div>
-                    <div className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest truncate max-w-[140px]">
-                      {device.monitor_name}
-                    </div>
-                  </div>
-                  <div className="p-2 bg-slate-50 text-slate-400 rounded-xl group-hover:bg-brand/10 group-hover:text-brand transition-all">
-                    <ChevronRight size={16} />
-                  </div>
-                </div>
-
-                {device.serial_number && (
-                  <div className="mt-3 text-[9px] font-bold text-slate-500 uppercase tracking-widest truncate">
-                    S/N: {device.serial_number}
-                  </div>
-                )}
-              </Link>
-            );
-          })}
-          </div>
-        </div>
-      ))}
-
-      {!loading && !error && total > 0 && (
-        <div className="flex items-center justify-center gap-6 pt-4">
-          <button
-            onClick={() => setPage(p => Math.max(1, p - 1))}
-            disabled={page <= 1}
-            className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-slate-500 bg-white border border-slate-200 rounded-xl hover:text-brand hover:border-brand disabled:opacity-40 disabled:hover:text-slate-500 disabled:hover:border-slate-200 transition-all"
-          >
-            <ChevronLeft size={14} /> Anterior
-          </button>
-          <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-            Página {page} de {totalPages}
-          </span>
-          <button
-            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-            disabled={page >= totalPages}
-            className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-slate-500 bg-white border border-slate-200 rounded-xl hover:text-brand hover:border-brand disabled:opacity-40 disabled:hover:text-slate-500 disabled:hover:border-slate-200 transition-all"
-          >
-            Siguiente <ChevronRight size={14} />
-          </button>
-        </div>
-      )}
     </div>
   );
 };
 
 export default Devices;
-

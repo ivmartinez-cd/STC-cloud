@@ -1,6 +1,8 @@
 import type { Knex } from "knex";
 import type { DeviceRow, PendingDeviceRow } from "../../domain/entities/device";
-import type { DeviceRegistrationRepository, PendingQuery, RegistrationRow } from "../../domain/repositories/device-registration-repository";
+import type { PendingQueueResponse, PendingQueueSummary } from "../../domain/entities/pending-queue";
+import type { DeviceRegistrationRepository, ListPendingQueueQuery, PendingQuery, RegistrationRow } from "../../domain/repositories/device-registration-repository";
+import { queryPendingQueue, queryPendingQueueSummary } from "./pending-queue-queries";
 
 export class KnexDeviceRegistrationRepository implements DeviceRegistrationRepository {
   constructor(private readonly db: Knex | Knex.Transaction) {}
@@ -62,5 +64,14 @@ export class KnexDeviceRegistrationRepository implements DeviceRegistrationRepos
     const [row] = await this.db("devices").where({ id })
       .update({ registration_state: "pending", ignored_at: null, ignored_by: null, ignore_reason: null }).returning("*");
     return row;
+  }
+
+  /** Handoff hifi "Dispositivos pendientes" (25/08/2026) — lógica en `pending-queue-queries.ts`. */
+  listPendingQueue(query: ListPendingQueueQuery): Promise<PendingQueueResponse> {
+    return queryPendingQueue(this.db, query);
+  }
+
+  getPendingQueueSummary(): Promise<PendingQueueSummary> {
+    return queryPendingQueueSummary(this.db);
   }
 }

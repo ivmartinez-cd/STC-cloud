@@ -4,6 +4,7 @@ import type Redis from "ioredis";
 import type { AuthHook } from "../../../api/middlewares/authMiddleware";
 import { createDecommissionStaleDevicesHandler } from "../../devices";
 import type { AgentService } from "../index";
+import { createAgentDirectoryController } from "./agent-directory-controller";
 import { createPortalAgentController } from "./portal-agent-controller";
 
 /**
@@ -115,6 +116,15 @@ export function registerPortalAgentRoutes(fastify: FastifyInstance, db: Knex, re
   const ctrl = createPortalAgentController(fastify, redis, agentService.useCases);
   const decommissionStaleDevices = createDecommissionStaleDevicesHandler(db);
   const auth = { preHandler: portalAuth };
+
+  // Listado hifi "Salud de nodos" (handoff 25/08/2026) — endpoints NUEVOS y
+  // aparte de `GET /agents`: ese endpoint ya lo consumen `Monitors.tsx` y
+  // `RemoteActions.tsx` (fuera de este alcance) además de tests de e2e/RBAC,
+  // así que extenderlo en el lugar hubiera arriesgado romper esos contratos.
+  const dirCtrl = createAgentDirectoryController(db, redis);
+  fastify.get("/api/v1/agents/directory", { ...auth, handler: dirCtrl.listAgentDirectory });
+  fastify.get("/api/v1/agents/summary", { ...auth, handler: dirCtrl.getAgentFleetSummary });
+  fastify.get("/api/v1/agents/signal-buckets", { ...auth, handler: dirCtrl.getAgentSignalBuckets });
 
   fastify.get("/api/v1/agents", { ...auth, handler: ctrl.listAgents });
   fastify.get("/api/v1/agents/:id", { ...auth, handler: ctrl.getAgent });

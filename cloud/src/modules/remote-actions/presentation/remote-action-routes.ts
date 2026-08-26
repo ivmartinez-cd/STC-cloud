@@ -1,7 +1,11 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type { Knex } from "knex";
 import type { AuthHook } from "../../../api/middlewares/authMiddleware";
-import { REMOTE_ACTIONS, targetKindOf, type RemoteActionBatch } from "../domain/entities/remote-action-batch";
+import {
+  REMOTE_ACTIONS, REMOTE_ACTION_SEGMENTS, targetKindOf,
+  type RemoteActionBatch, type RemoteActionSegment,
+} from "../domain/entities/remote-action-batch";
+import { detectSystemicFailure } from "../domain/services/remote-action-insights";
 import { KnexRemoteActionRepository, type BatchTarget } from "../infrastructure/database/knex-remote-action-repository";
 
 const createSchema = {
@@ -34,6 +38,9 @@ const listQuerySchema = {
     properties: {
       limit: { type: "integer", minimum: 1, maximum: 200 },
       offset: { type: "integer", minimum: 0 },
+      q: { type: "string", maxLength: 120 },
+      segment: { type: "string", enum: [...REMOTE_ACTION_SEGMENTS] },
+      dir: { type: "string", enum: ["asc", "desc"] },
     },
   },
 };
@@ -109,8 +116,28 @@ function buildCreate(db: Knex, repo: KnexRemoteActionRepository) {
 function buildList(repo: KnexRemoteActionRepository) {
   return async (request: FastifyRequest, reply: FastifyReply) => {
     const q = request.query as Record<string, any>;
-    const { items, total } = await repo.list(q.limit ?? 50, q.offset ?? 0);
+    const { items, total } = await repo.list({
+      limit: q.limit ?? 50, offset: q.offset ?? 0,
+      q: q.q, segment: q.segment as RemoteActionSegment | undefined, dir: q.dir,
+    });
     return reply.send({ items: items.map(toView), total });
+  };
+}
+
+/** Tira de métricas de 7 días (handoff hifi "Acciones remotas") — sin query params. */
+function buildSummary(repo: KnexRemoteActionRepository) {
+  return async (_request: FastifyRequest, reply: FastifyReply) => {
+    return reply.send(await repo.getSummary(new Date()));
+  };
+}
+
+/** Resultado por tipo de acción + banner de diagnóstico (falla sistémica
+ * detectada en el DOMINIO, nunca en el frontend). */
+function buildByType(repo: KnexRemoteActionRepository) {
+  return async (_request: FastifyRequest, reply: FastifyReply) => {
+    const types = await repo.getByTypeBreakdown(new Date());
+    const totalWindow = types.reduce((sum, t) => sum + t.total, 0);
+    return reply.send({ window_days: 7, total_7d: totalWindow, types, diagnostic: detectSystemicFailure(types) });
   };
 }
 
@@ -148,6 +175,8 @@ export function registerRemoteActionRoutes(fastify: FastifyInstance, db: Knex, p
   const repo = new KnexRemoteActionRepository(db);
   const base = "/api/v1/remote-actions";
   fastify.get(base, { preHandler: portalAuth, schema: listQuerySchema, handler: buildList(repo) });
+  fastify.get(`${base}/summary`, { preHandler: portalAuth, handler: buildSummary(repo) });
+  fastify.get(`${base}/by-type`, { preHandler: portalAuth, handler: buildByType(repo) });
   fastify.post(base, { preHandler: portalAuth, schema: createSchema, handler: buildCreate(db, repo) });
   fastify.get(`${base}/:id`, { preHandler: portalAuth, schema: idParamSchema, handler: buildDetail(repo) });
   fastify.post(`${base}/:id/cancel`, { preHandler: portalAuth, schema: idParamSchema, handler: buildCancel(repo) });

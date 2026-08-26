@@ -1,4 +1,7 @@
 import type { AgentRow, DeviceRow, DeviceScope, StaleDeviceRow } from "../entities/device";
+import type {
+  DeviceDirectoryResponse, DeviceDirectorySegment, DeviceDirectorySortField, DeviceInventorySummary, SortDir,
+} from "../entities/device-directory";
 import type { DeviceStats, PrintTrendMonth } from "../entities/device-detail";
 
 export interface ReadingsQuery {
@@ -21,6 +24,19 @@ export interface UsageHistoryQuery {
   limit?: string;
 }
 
+/** Handoff hifi "Inventario de dispositivos" (25/08/2026) — mismo criterio de
+ * `{q, segment, sortField, sortDir, limit, offset}` que `ClientDeviceDirectoryQuery`. */
+export interface ListDeviceDirectoryQuery {
+  scope: DeviceScope;
+  q?: string;
+  segment?: DeviceDirectorySegment;
+  sortField?: DeviceDirectorySortField;
+  sortDir?: SortDir;
+  includeDecommissioned?: boolean;
+  limit?: number;
+  offset?: number;
+}
+
 export interface DecommissionFields {
   by: string | null;
   reason: string;
@@ -34,6 +50,11 @@ export interface DecommissionFields {
 export interface DeviceRepository {
   /** `devices.*` + estado derivado + nombre de monitor/cliente, paginado (R9 gap analysis: "sin paginación ninguna tabla del portal"). */
   list(query: ListDevicesQuery): Promise<{ items: DeviceRow[]; total: number }>;
+  /** Listado global agrupado por cliente (handoff hifi "Inventario de dispositivos") —
+   * paginado por FILA de dispositivo, agrupado server-side para que el front no agrupe nada. */
+  listDirectory(query: ListDeviceDirectoryQuery): Promise<DeviceDirectoryResponse>;
+  /** Tira de 5 métricas del header — mismo scope que `list`/`listDirectory`. */
+  getInventorySummary(scope: DeviceScope): Promise<DeviceInventorySummary>;
   /** Ficha completa (join a modelos, uso 30d, lápida). Acepta uuid, prefijo de uuid, serial o IP. SIN filtro de ciclo de vida a propósito. */
   getDetail(identifier: string, scope: DeviceScope): Promise<DeviceRow | null>;
   /** Resuelve uuid/prefijo/serial/IP a un id dentro del scope (sin filtro de ciclo de vida). `allowIp=false` para usage-history (histórico). */

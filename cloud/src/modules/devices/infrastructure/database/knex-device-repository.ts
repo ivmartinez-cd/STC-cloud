@@ -1,13 +1,18 @@
 import type { Knex } from "knex";
 import { onlyLiveDevices } from "../../../../api/utils/deviceFilters";
 import type { AgentRow, DeviceRow, DeviceScope, StaleDeviceRow } from "../../domain/entities/device";
+import type { DeviceDirectoryResponse, DeviceInventorySummary } from "../../domain/entities/device-directory";
 import type { DeviceStats, PrintTrendMonth } from "../../domain/entities/device-detail";
-import type { DecommissionFields, DeviceRepository, ListDevicesQuery, ReadingsQuery, UsageHistoryQuery } from "../../domain/repositories/device-repository";
+import type {
+  DecommissionFields, DeviceRepository, ListDeviceDirectoryQuery, ListDevicesQuery, ReadingsQuery, UsageHistoryQuery,
+} from "../../domain/repositories/device-repository";
 import { extractTrayLabel } from "../../domain/services/jam-tray";
 import { UUID_RE } from "../../domain/services/device-rules";
 import {
   DEVICE_JAMS_30D_SQL, DEVICE_MONTH_VOLUME_SQL, DUPLICATES_SQL, PRINT_TREND_SQL, SITE_MONTH_VOLUME_SQL, duplicatesBindings,
 } from "./device-sql";
+import { getDeviceInventorySummary } from "./device-inventory-summary";
+import { listDeviceDirectory } from "./knex-device-directory-queries";
 
 const STATUS_SQL = "CASE WHEN devices.active = true THEN 'online' ELSE 'offline' END as status";
 
@@ -64,6 +69,16 @@ export class KnexDeviceRepository implements DeviceRepository {
       this.baseListQuery(query).count("devices.id as count"),
     ]);
     return { items, total: Number(count) };
+  }
+
+  /** Handoff hifi "Inventario de dispositivos" — lógica en `knex-device-directory-queries.ts`
+   * (archivo aparte para no empujar este repo por encima del límite de tamaño). */
+  listDirectory(query: ListDeviceDirectoryQuery): Promise<DeviceDirectoryResponse> {
+    return listDeviceDirectory(this.db, query);
+  }
+
+  getInventorySummary(scope: DeviceScope): Promise<DeviceInventorySummary> {
+    return getDeviceInventorySummary(this.db, scope);
   }
 
   async getDetail(identifier: string, scope: DeviceScope): Promise<DeviceRow | null> {

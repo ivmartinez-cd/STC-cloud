@@ -71,6 +71,10 @@ export const CLIENT_VIEWER_ROUTES: ReadonlySet<string> = new Set([
   "GET /api/v1/agents/:id/license",
   "GET /api/v1/agents/:id/devices/directory",
   "GET /api/v1/devices",
+  // Handoff hifi "Inventario de dispositivos" (25/08/2026) — listado global agrupado
+  // por cliente + tira de métricas, scopeado igual que GET devices (arriba).
+  "GET /api/v1/devices/directory",
+  "GET /api/v1/devices/summary",
   "GET /api/v1/devices/:id",
   "GET /api/v1/devices/:id/readings",
   "GET /api/v1/devices/:id/usage-history",

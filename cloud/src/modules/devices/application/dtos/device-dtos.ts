@@ -121,7 +121,12 @@ export interface ListPendingInput {
 }
 
 export interface RegistrationActionInput {
-  clientId: string;
+  /** `null` = equipo sin cliente sugerido ("sin_cliente", handoff hifi "Dispositivos
+   * pendientes" 25/08/2026) — `ApprovePendingQueueUseCase`/`IgnorePendingQueueUseCase`
+   * agrupan por el `client_id` REAL de cada fila y llaman este mismo caso de uso una
+   * vez por grupo, `null` incluido. `classifyRegistration` compara con `===`, que ya
+   * funciona igual para `null` que para cualquier uuid. */
+  clientId: string | null;
   deviceIds: string[];
   actorId?: string | null;
   ip?: string | null;

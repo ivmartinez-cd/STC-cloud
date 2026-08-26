@@ -1,4 +1,5 @@
 import type { DeviceRow, PendingDeviceRow } from "../entities/device";
+import type { PendingQueueResponse, PendingQueueSegment, PendingQueueSummary, SortDir } from "../entities/pending-queue";
 
 export interface PendingQuery {
   clientId: string;
@@ -14,6 +15,17 @@ export interface RegistrationRow {
   registration_state: string;
 }
 
+/** Handoff hifi "Dispositivos pendientes" (25/08/2026) — cola CROSS-cliente, `clientId`
+ * es un filtro OPCIONAL (a diferencia de `PendingQuery.clientId`, obligatorio). */
+export interface ListPendingQueueQuery {
+  q?: string;
+  clientId?: string;
+  segment?: PendingQueueSegment;
+  sortDir?: SortDir;
+  limit?: number;
+  offset?: number;
+}
+
 /** Cola de registro de dispositivos (Fase 7 del gap analysis vs HP SDS). */
 export interface DeviceRegistrationRepository {
   /** Sólo equipos VIVOS (ni de baja ni fusionados). Techo 200 por página. */
@@ -24,4 +36,7 @@ export interface DeviceRegistrationRepository {
   findById(id: string): Promise<DeviceRow | null>;
   /** `ignored` → `pending`, limpiando los campos de ignorado. */
   unignore(id: string): Promise<DeviceRow>;
+  /** Vista global (todos los clientes) — handoff hifi "Dispositivos pendientes". */
+  listPendingQueue(query: ListPendingQueueQuery): Promise<PendingQueueResponse>;
+  getPendingQueueSummary(): Promise<PendingQueueSummary>;
 }

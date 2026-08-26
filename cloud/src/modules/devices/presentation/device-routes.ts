@@ -94,6 +94,21 @@ const bulkMonitorStateSchema = {
   },
 };
 
+// Handoff hifi "Dispositivos pendientes" (25/08/2026) — cola cross-cliente.
+// `deviceIds` (no `ids`) para calzar con el body de `/clients/:id/pending-devices/*`.
+const pendingQueueIdsField = { type: "array", minItems: 1, maxItems: 500, items: { type: "string", format: "uuid" } };
+
+const approvePendingQueueSchema = {
+  body: { type: "object", additionalProperties: false, required: ["deviceIds"], properties: { deviceIds: pendingQueueIdsField } },
+};
+
+const ignorePendingQueueSchema = {
+  body: {
+    type: "object", additionalProperties: false, required: ["deviceIds", "reason"],
+    properties: { deviceIds: pendingQueueIdsField, reason: { type: "string", minLength: 3, maxLength: 500 } },
+  },
+};
+
 export function registerDeviceRoutes(fastify: FastifyInstance, db: Knex, portalAuth: AuthHook) {
   const ctrl = createDeviceController(buildDeviceUseCases(db));
   const bulk = createDeviceBulkController(buildDeviceBulkUseCases(db));
@@ -102,6 +117,19 @@ export function registerDeviceRoutes(fastify: FastifyInstance, db: Knex, portalA
   fastify.get("/api/v1/devices", { ...auth, handler: ctrl.listDevices });
   // Estático antes que /:id — Fastify (find-my-way) prioriza segmentos estáticos; se declara primero por claridad.
   fastify.get("/api/v1/devices/duplicates", { ...auth, handler: ctrl.listDuplicates });
+  // Handoff hifi "Inventario de dispositivos" (25/08/2026) — listado global agrupado por
+  // cliente + tira de métricas, ambos estáticos antes que "/:id" por el mismo motivo.
+  fastify.get("/api/v1/devices/directory", { ...auth, handler: ctrl.getDeviceDirectory });
+  fastify.get("/api/v1/devices/summary", { ...auth, handler: ctrl.getDeviceInventorySummary });
+  // Handoff hifi "Dispositivos pendientes" (25/08/2026) — cola cross-cliente de
+  // descubrimiento (distinta de "/clients/:id/pending-devices*", que sigue viva
+  // sin cambios para Cliente — Detalle). Deliberadamente NO en CLIENT_VIEWER_ROUTES
+  // (rolePolicy.ts) — mismo criterio que la cola scopeada por cliente: gestión de
+  // altas, no lectura de un client_viewer. Estáticos antes que "/:id".
+  fastify.get("/api/v1/devices/pending/directory", { ...auth, handler: ctrl.getPendingQueue });
+  fastify.get("/api/v1/devices/pending/summary", { ...auth, handler: ctrl.getPendingQueueSummary });
+  fastify.post("/api/v1/devices/pending/approve", { ...auth, schema: approvePendingQueueSchema, handler: ctrl.approvePendingQueue });
+  fastify.post("/api/v1/devices/pending/ignore", { ...auth, schema: ignorePendingQueueSchema, handler: ctrl.ignorePendingQueue });
   fastify.get("/api/v1/devices/:id", { ...auth, handler: ctrl.getDevice });
   fastify.get("/api/v1/devices/:id/readings", { ...auth, handler: ctrl.getDeviceReadings });
   // Historial desde los agregados continuos — ver el caso de uso. Sin UI de portal todavía.

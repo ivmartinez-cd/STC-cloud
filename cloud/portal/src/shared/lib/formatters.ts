@@ -20,6 +20,20 @@ export function formatDateTime(ts: string | null | undefined): string {
   return new Date(ts).toLocaleString('es-AR', { dateStyle: 'medium', timeStyle: 'short' });
 }
 
+const SHORT_MONTHS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+
+/** Formato compacto `25-ago 07:47` (24h) — handoff hifi "4 pantallas"
+ * (Acciones Remotas), en vez de `toLocaleString` que trae AM/PM. */
+export function formatShortDateTime(ts: string | null | undefined): string {
+  if (!ts) return '—';
+  const d = new Date(ts);
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = SHORT_MONTHS[d.getMonth()];
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mm = String(d.getMinutes()).padStart(2, '0');
+  return `${day}-${month} ${hh}:${mm}`;
+}
+
 export interface DeviceStatusInfo {
   status: 'online' | 'warning' | 'critical';
   label: string;

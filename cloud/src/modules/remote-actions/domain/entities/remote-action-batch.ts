@@ -21,6 +21,11 @@ export const BATCH_STATUSES = [
 ] as const;
 export type BatchStatus = (typeof BATCH_STATUSES)[number];
 
+/** Chips de filtro del listado "Acciones remotas" (handoff hifi "4 pantallas",
+ * 25/08/2026) — `todos` es la ausencia de filtro, no un valor de `status`. */
+export const REMOTE_ACTION_SEGMENTS = ["todos", "con_errores", "en_curso", "cancelados", "hoy"] as const;
+export type RemoteActionSegment = (typeof REMOTE_ACTION_SEGMENTS)[number];
+
 export interface RemoteActionBatch {
   id: string;
   number: number;
