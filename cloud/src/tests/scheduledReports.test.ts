@@ -133,6 +133,29 @@ describe('Informes programados e2e', () => {
     assert.equal(r.data.format, 'csv');
   });
 
+  // "Duplicar informe" — cierre de gap post-verificación del handoff hifi #3
+  // (26/08/2026). Clona server-side, nunca copia activo/programado sin que
+  // el operador lo revise.
+  test('duplicar: clona con "(copia)" en el nombre, mismo tipo/formato, pausado', async () => {
+    const r = await req('POST', `/scheduled-reports/${savedId}/duplicate`, {}, token);
+    assert.equal(r.status, 201, JSON.stringify(r.data));
+    assert.equal(r.data.name, 'Lista de activos renombrada (copia)');
+    assert.equal(r.data.report_type, 'asset_list');
+    assert.equal(r.data.format, 'csv');
+    assert.equal(r.data.enabled, false, 'la copia arranca pausada, aunque el original esté activo');
+    assert.notEqual(r.data.id, savedId);
+
+    const list = await req('GET', '/scheduled-reports', {}, token);
+    const ids = list.data.map((x: any) => x.id);
+    assert.ok(ids.includes(savedId) && ids.includes(r.data.id), 'original y copia coexisten');
+    await req('DELETE', `/scheduled-reports/${r.data.id}`, {}, token);
+  });
+
+  test('duplicar un id inexistente → 404', async () => {
+    const r = await req('POST', '/scheduled-reports/00000000-0000-0000-0000-000000000000/duplicate', {}, token);
+    assert.equal(r.status, 404);
+  });
+
   test('download genera CSV con cabecera', async () => {
     const r = await req('GET', `/scheduled-reports/${savedId}/download`, {}, token);
     assert.equal(r.status, 200);

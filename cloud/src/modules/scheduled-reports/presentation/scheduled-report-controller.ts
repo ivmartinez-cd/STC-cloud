@@ -6,6 +6,7 @@ import { toViewDto, toTemplateView, type ScheduledReportInputDto } from "../appl
 import { REPORT_TEMPLATES } from "../domain/entities/report-templates";
 import {
   createScheduledReport,
+  duplicateScheduledReport,
   ScheduledReportValidationError,
   updateScheduledReport,
 } from "../application/use-cases/save-scheduled-report";
@@ -74,6 +75,14 @@ function buildUpdate(deps: Deps): Handler {
   };
 }
 
+function buildDuplicate(deps: Deps): Handler {
+  return async (request, reply) => {
+    const duplicated = await duplicateScheduledReport(deps.repo, idOf(request), userIdOf(request));
+    if (!duplicated) return reply.status(404).send(NOT_FOUND);
+    return reply.status(201).send(toViewDto(duplicated));
+  };
+}
+
 function buildRemove(deps: Deps): Handler {
   return async (request, reply) => {
     const deleted = await deps.repo.delete(idOf(request));
@@ -118,6 +127,7 @@ export function createScheduledReportController(deps: Deps) {
     list: buildList(deps),
     templates: templates(),
     create: buildCreate(deps),
+    duplicate: buildDuplicate(deps),
     update: buildUpdate(deps),
     remove: buildRemove(deps),
     runNow: buildRunNow(deps),

@@ -1,4 +1,4 @@
-import { Download, Loader2, Pause, Pencil, Play, Trash2 } from 'lucide-react';
+import { Copy, Download, Loader2, Pause, Pencil, Play, Trash2 } from 'lucide-react';
 import EstadoChip from '../../../shared/components/EstadoChip';
 import { FREQ_LABELS, REPORT_TYPE_LABELS, type ScheduledReport } from '../types/scheduledReports';
 import { fmtClosedAt } from '../lib/reportsPresentation';
@@ -13,9 +13,9 @@ function statusChip(r: ScheduledReport): { label: string; variant: 'neutral' | '
   return { label: 'ACTIVO', variant: 'neutral' };
 }
 
-function RowActions({ r, busy, onRun, onTogglePause, onEdit, onRemove }: {
+function RowActions({ r, busy, onRun, onTogglePause, onEdit, onRemove, onDuplicate }: {
   r: ScheduledReport; busy: boolean;
-  onRun: () => void; onTogglePause: () => void; onEdit: () => void; onRemove: () => void;
+  onRun: () => void; onTogglePause: () => void; onEdit: () => void; onRemove: () => void; onDuplicate: () => void;
 }) {
   return (
     <div className="flex items-center justify-end gap-1">
@@ -26,6 +26,7 @@ function RowActions({ r, busy, onRun, onTogglePause, onEdit, onRemove }: {
       <button type="button" onClick={onTogglePause} title={r.enabled ? 'Pausar' : 'Reanudar'} className="rounded-[3px] p-1.5 text-ink-300 hover:bg-surface-btn-hover hover:text-brand-accent">
         {r.enabled ? <Pause size={14} /> : <Play size={14} />}
       </button>
+      <button type="button" onClick={onDuplicate} title="Duplicar informe" className="rounded-[3px] p-1.5 text-ink-300 hover:bg-surface-btn-hover hover:text-brand-accent"><Copy size={14} /></button>
       <button type="button" onClick={onEdit} title="Editar" className="rounded-[3px] p-1.5 text-ink-300 hover:bg-surface-btn-hover hover:text-brand-accent"><Pencil size={14} /></button>
       <button type="button" onClick={onRemove} title="Eliminar" className="rounded-[3px] p-1.5 text-ink-300 hover:bg-surface-btn-hover hover:text-brand-accent"><Trash2 size={14} /></button>
     </div>
@@ -41,9 +42,9 @@ function NameCell({ r }: { r: ScheduledReport }) {
   );
 }
 
-function Row({ r, clientName, busy, onRun, onTogglePause, onEdit, onRemove }: {
+function Row({ r, clientName, busy, onRun, onTogglePause, onEdit, onRemove, onDuplicate }: {
   r: ScheduledReport; clientName: (id: string | null) => string; busy: boolean;
-  onRun: () => void; onTogglePause: () => void; onEdit: () => void; onRemove: () => void;
+  onRun: () => void; onTogglePause: () => void; onEdit: () => void; onRemove: () => void; onDuplicate: () => void;
 }) {
   const chip = statusChip(r);
   return (
@@ -55,7 +56,7 @@ function Row({ r, clientName, busy, onRun, onTogglePause, onEdit, onRemove }: {
       <span className="font-sans text-[12px] text-ink-500">{fmtClosedAt(r.next_run_at ?? '') || '—'}</span>
       <div className="flex items-center justify-between gap-2">
         <EstadoChip label={chip.label} variant={chip.variant} />
-        <RowActions r={r} busy={busy} onRun={onRun} onTogglePause={onTogglePause} onEdit={onEdit} onRemove={onRemove} />
+        <RowActions r={r} busy={busy} onRun={onRun} onTogglePause={onTogglePause} onEdit={onEdit} onRemove={onRemove} onDuplicate={onDuplicate} />
       </div>
     </div>
   );
@@ -70,6 +71,7 @@ interface Props {
   onTogglePause: (r: ScheduledReport) => void;
   onEdit: (r: ScheduledReport) => void;
   onRemove: (r: ScheduledReport) => void;
+  onDuplicate: (r: ScheduledReport) => void;
   onCreate: () => void;
 }
 
@@ -89,7 +91,7 @@ function EmptyBody({ onCreate }: { onCreate: () => void }) {
 
 /** "Tus informes" (handoff hifi #3, fase 5) — encabezado real + empty state
  * DENTRO de la tabla (no una tarjeta aparte), tal como pide el mockup. */
-export default function ScheduledReportsTable({ items, loading, clientName, busyId, onRun, onTogglePause, onEdit, onRemove, onCreate }: Props) {
+export default function ScheduledReportsTable({ items, loading, clientName, busyId, onRun, onTogglePause, onEdit, onRemove, onDuplicate, onCreate }: Props) {
   return (
     <div className="rounded-[5px] border border-line-100 bg-white">
       <div className={`grid ${GRID_COLS} items-center gap-x-[14px] border-b border-line-100 bg-surface-avatar px-5 py-3`}>
@@ -102,7 +104,7 @@ export default function ScheduledReportsTable({ items, loading, clientName, busy
       ) : (
         items.map((r) => (
           <Row key={r.id} r={r} clientName={clientName} busy={busyId === r.id}
-            onRun={() => onRun(r)} onTogglePause={() => onTogglePause(r)} onEdit={() => onEdit(r)} onRemove={() => onRemove(r)} />
+            onRun={() => onRun(r)} onTogglePause={() => onTogglePause(r)} onEdit={() => onEdit(r)} onRemove={() => onRemove(r)} onDuplicate={() => onDuplicate(r)} />
         ))
       )}
     </div>

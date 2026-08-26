@@ -48,9 +48,27 @@ function useRunNow(load: () => void) {
   return { busyId, runNow };
 }
 
+function useRemoveDuplicate(load: () => void) {
+  const { showToast } = useToast();
+
+  const remove = async (r: ScheduledReport) => {
+    if (!window.confirm(`¿Eliminar el informe "${r.name}"?`)) return;
+    try { await api.delete(`/scheduled-reports/${r.id}`); showToast('Informe eliminado', 'success'); load(); }
+    catch (err) { showToast(err instanceof Error ? err.message : 'Error al eliminar', 'error'); }
+  };
+
+  const duplicate = async (r: ScheduledReport) => {
+    try { await api.post(`/scheduled-reports/${r.id}/duplicate`); showToast('Informe duplicado — la copia arranca pausada', 'success'); load(); }
+    catch (err) { showToast(err instanceof Error ? err.message : 'Error al duplicar', 'error'); }
+  };
+
+  return { remove, duplicate };
+}
+
 function useReportActions(load: () => void) {
   const { showToast } = useToast();
   const { busyId, runNow } = useRunNow(load);
+  const { remove, duplicate } = useRemoveDuplicate(load);
 
   const togglePause = async (r: ScheduledReport) => {
     try {
@@ -60,13 +78,7 @@ function useReportActions(load: () => void) {
     } catch (err) { showToast(err instanceof Error ? err.message : 'Error al actualizar', 'error'); }
   };
 
-  const remove = async (r: ScheduledReport) => {
-    if (!window.confirm(`¿Eliminar el informe "${r.name}"?`)) return;
-    try { await api.delete(`/scheduled-reports/${r.id}`); showToast('Informe eliminado', 'success'); load(); }
-    catch (err) { showToast(err instanceof Error ? err.message : 'Error al eliminar', 'error'); }
-  };
-
-  return { busyId, runNow, togglePause, remove };
+  return { busyId, runNow, togglePause, remove, duplicate };
 }
 
 /**
@@ -115,7 +127,7 @@ export default function ScheduledReports() {
       </div>
       <ScheduledReportsTable
         items={data.items} loading={data.loading} clientName={data.clientName} busyId={actions.busyId}
-        onRun={actions.runNow} onTogglePause={actions.togglePause} onEdit={openEdit} onRemove={actions.remove} onCreate={openCreate}
+        onRun={actions.runNow} onTogglePause={actions.togglePause} onEdit={openEdit} onRemove={actions.remove} onDuplicate={actions.duplicate} onCreate={openCreate}
       />
 
       <ScheduledReportModal isOpen={modalOpen} onClose={() => setModalOpen(false)} onSaved={data.load} clients={data.clients} editing={editing} initialTemplate={template} />

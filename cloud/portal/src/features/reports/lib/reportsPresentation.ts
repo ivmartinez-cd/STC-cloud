@@ -70,6 +70,12 @@ export function fmtDate(v: string | null): string {
   return new Date(v).toLocaleString(APP_LOCALE, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
 }
 
+/** Bug real encontrado verificando "Duplicar informe" (handoff hifi #3,
+ * cierre de gaps, 26/08/2026): `''` (informe sin programar, `next_run_at`
+ * null) daba `new Date('').toLocaleString()` → literalmente "Invalid Date"
+ * en la tabla, no un string vacío — el `|| '—'` de los callers nunca
+ * disparaba porque esa string es truthy. */
 export function fmtClosedAt(v: string): string {
+  if (!v) return '';
   return new Date(v).toLocaleString(APP_LOCALE, { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }

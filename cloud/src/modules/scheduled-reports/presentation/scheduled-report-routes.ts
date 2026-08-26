@@ -29,6 +29,7 @@ export function registerScheduledReportRoutes(fastify: FastifyInstance, db: Knex
   fastify.post(base, { preHandler: portalAuth, schema: createScheduledReportSchema, handler: ctrl.create });
   fastify.put(`${base}/:id`, { preHandler: portalAuth, schema: updateScheduledReportSchema, handler: ctrl.update });
   fastify.delete(`${base}/:id`, { preHandler: portalAuth, schema: idParamSchema, handler: ctrl.remove });
+  fastify.post(`${base}/:id/duplicate`, { preHandler: portalAuth, schema: idParamSchema, handler: ctrl.duplicate });
   fastify.post(`${base}/:id/run`, { preHandler: portalAuth, schema: idParamSchema, handler: ctrl.runNow });
   fastify.get(`${base}/:id/download`, { preHandler: portalAuth, schema: idParamSchema, handler: ctrl.download });
 }
