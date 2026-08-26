@@ -2121,10 +2121,83 @@ request espera el timeout de 15s en vez de fallar en 503 al instante),
 no se agregó TTL ni expiración porque el caso normal (restart ordenado,
 `docker compose down`) sí dispara el handler; afinidad de socket para
 comandos push genéricos (RESCAN/RESTART/FORCE_UPDATE/STC_CONSOLE) sigue sin
-relay — ya tienen su fallback de heartbeat, alcance deliberado; habilitar N
-réplicas de verdad en los compose (`deploy: replicas` + load balancer) y
-dashboards de Grafana/alerting sobre las métricas de la Fase 5 siguen
-pendientes, quedaron fuera de esta pasada por elección explícita de Ivan.
+relay — ya tienen su fallback de heartbeat, alcance deliberado. ✅
+(26/08/2026) Habilitar N réplicas de verdad en los compose — ver Fase 16.
+Dashboards de Grafana/alerting sobre las métricas de la Fase 5 siguen
+pendientes.
+
+### Fase 16 — Réplicas reales de `api` en el compose de producción (26/08/2026) — completa
+
+Origen: continuación directa de la Fase 15 — con el relay EWS resuelto, el
+único bloqueante *funcional* real para correr `api` en N réplicas ya no
+existía; quedaba el paso operativo que la Fase 5 había dejado
+explícitamente afuera ("el paso operativo — `deploy: replicas` + LB — es
+decisión de infraestructura aparte").
+
+✅ **`docker-compose.prod.yml`**: `api.deploy.replicas: ${API_REPLICAS:-1}`
+— default 1, cero cambio de comportamiento para quien no toque
+`.env.production`. Sin `container_name` en este archivo (a diferencia del
+compose de dev), que es justo lo que hace que `replicas > 1` sea válido acá
+sin tocar nada más de ese servicio.
+
+✅ **`nginx.conf` — DNS dinámico** (el hallazgo real de esta pasada, no
+buscado): los 4 `proxy_pass` (portal, API REST, auth con rate-limit, WS)
+usaban un hostname literal (`http://api:3000`) — nginx resuelve eso UNA
+sola vez al arrancar y fija esa IP para el resto de la vida del proceso:
+con 1 réplica nunca se notaba, pero con >1 réplica esto significa 0% de
+reparto real (todo el tráfico a una sola réplica, la que ganó la
+resolución inicial) y, además —
+pre-existente, no depende de escalar — un restart de `api` o `portal`
+(IP nueva) dejaba nginx devolviendo 502 hasta un `nginx -s reload` manual.
+Agregado `resolver 127.0.0.11 valid=10s;` (el DNS embebido de Docker) +
+`set $api_upstream api:3000; proxy_pass http://$api_upstream;` en cada
+location (mismo truco en las 4) — fuerza a nginx a re-resolver cada 10s en
+vez de una vez al boot.
+
+**Verificado empíricamente, no sólo por lectura de la doc de nginx**:
+`nginx -t` contra el archivo real (con un certificado autofirmado
+descartable, ya que el real depende de un dominio que no existe en este
+entorno) — sintaxis y semántica OK, sólo el warning esperado de OCSP
+stapling contra un cert de prueba. Además, un stack descartable aparte
+(`traefik/whoami` × 2 réplicas + nginx con el mismo patrón `resolver` +
+`set` de acá, en `/tmp/.../nginx-relay-check/`, no en el repo) confirmó
+que **sí reparte entre contenedores reales** — 10 requests seguidas
+devolvieron 2 hostnames de contenedor distintos. Precisión importante para
+no sobre-prometer: **no es round-robin estricto por request** — Docker
+responde una IP distinta cada vez que el resolver de nginx vuelve a
+consultar (cada `valid=10s`), así que el reparto ocurre en ventanas de
+~10s, no request a request. Para WS (conexiones largas) esto es
+exactamente el comportamiento deseado — cada handshake nuevo puede caer en
+una réplica distinta sin necesitar sticky sessions (innecesarias además
+gracias al relay de la Fase 15).
+
+**Investigado y confirmado seguro, no asumido**: `db.migrate.latest()`
+corre en el boot de CADA réplica (`server.ts`) — Knex serializa esto con su
+propia tabla `knex_migrations_lock`, así que N réplicas booteando en
+simultáneo contra la misma base no es una condición de carrera nueva que
+introduzca esta pasada. El bootstrap del admin por defecto (`usersCount ===
+0` → insertar) SÍ tiene una ventana de carrera real en un primer deploy con
+N réplicas arrancando a la vez contra una base vacía — pero `users.username`
+tiene `UNIQUE` (migración `20260519000000`), así que el peor caso es un
+error de constraint logueado por las réplicas que pierden la carrera (ya
+atrapado por el `try/catch` existente), nunca una fila duplicada ni
+corrupción. No se agregó un advisory lock ahí: el caso (primer deploy
+alguna vez, no cada boot) no lo justifica.
+
+**`.env.production.example`**: documentada `API_REPLICAS` con la
+advertencia cruzada a `DB_POOL_MAX` (cada réplica abre su propio pool de
+Knex; la suma no debe superar `max_connections` de Postgres).
+
+**Lo que NO se hizo**: subir `API_REPLICAS` en el `.env.production` real de
+Ivan (queda en 1 — encender la escala de verdad es una decisión operativa
+suya, no de esta pasada); dashboards de Grafana/alerting sobre las métricas
+de la Fase 5; balanceo estrictamente por request (necesitaría un LB
+consciente de réplicas — Traefik/Consul — en vez de DNS de Docker; no se
+justifica para el volumen real de este sistema); `depends_on: api:
+condition: service_healthy` de `nginx` no se auditó a fondo contra la
+semántica exacta de Compose para servicios escalados (si espera a TODAS las
+réplicas sanas o sólo a una) — no bloqueante, nginx ya tolera una réplica
+lenta al arrancar vía el mismo mecanismo de re-resolución.
 
 ### Otros puntos de §3 (riesgos) que siguen abiertos y no forman parte de ningún ítem de arriba
 - ✅ **R4 (parcial, 23/08/2026)**: el WS del portal ya NO acepta el JWT de

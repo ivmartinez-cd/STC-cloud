@@ -22,6 +22,19 @@ services:
         max-size: "10m"
         max-file: "3"
     deploy:
+      # Réplicas reales (Fase 16 del gap analysis, 26/08/2026) — default 1,
+      # cero cambio de comportamiento hasta que se suba `API_REPLICAS` en
+      # `.env.production`. Seguro para escalar recién desde la Fase 15: sin
+      # el relay Redis del proxy EWS, una réplica que no tuviera el socket
+      # WSS del agente fallaba 503 aunque el agente estuviera conectado a
+      # otra; el resto (WS de portal, jobs `setInterval`) ya era
+      # replica-safe desde la Fase 5 (advisory locks + pub/sub). Sin
+      # `container_name` en este archivo (a diferencia del compose de
+      # dev/`docker-compose.yml`) — es lo que permite `replicas > 1` acá.
+      # Antes de subir `API_REPLICAS`, revisar `DB_POOL_MAX` en
+      # `.env.production`: cada réplica abre su propio pool de Knex contra
+      # el mismo Postgres, y la suma no debe superar `max_connections`.
+      replicas: ${API_REPLICAS:-1}
       resources:
         limits:
           memory: 512m
