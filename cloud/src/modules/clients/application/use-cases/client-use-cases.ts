@@ -8,6 +8,7 @@ import type {
 } from "../../domain/repositories/client-repository";
 import { buildClientCreateData, buildClientUpdates } from "../../domain/services/client-rules";
 import type { AuditLogWriter } from "../ports/audit-log-writer";
+import type { SystemSettingsReader } from "../ports/system-settings-reader";
 import type {
   ClientDevicesInput, ClientMonitorsInput, CreateClientInput, ListClientDeviceDirectoryInput, ListClientDirectoryInput,
   ListClientsInput, PortfolioSummaryInput, UpdateClientInput,
@@ -38,10 +39,23 @@ function normalizeDeviceSortField(sortField?: string): ClientDeviceSortField {
 /** Casos de uso chicos agrupados por agregado (mismo criterio que `modules/inventory`). */
 
 export class CreateClientUseCase {
-  constructor(private readonly clients: ClientRepository, private readonly audit: AuditLogWriter) {}
+  constructor(
+    private readonly clients: ClientRepository,
+    private readonly audit: AuditLogWriter,
+    private readonly settings: SystemSettingsReader
+  ) {}
 
   async execute(input: CreateClientInput): Promise<ClientRecord> {
-    const client = await this.clients.insert(buildClientCreateData(input.body));
+    // Umbral global de consumible (Configuración del sistema, handoff hifi
+    // #3) como default de `supply_request_threshold_pct` — antes el umbral
+    // global se guardaba y se veía en la UI pero no conectaba con nada real;
+    // esto lo hace efectivo para clientes NUEVOS (uno ya existente conserva
+    // el valor que tenga, esto no es retroactivo).
+    const supplyThresholdPct = await this.settings.getSupplyThresholdCriticalPct();
+    const client = await this.clients.insert({
+      ...buildClientCreateData(input.body),
+      supply_request_threshold_pct: supplyThresholdPct,
+    });
     await this.audit.write({
       action: "CLIENT_CREATED", targetId: String(client.id), userId: input.userId,
       ipAddress: input.ipAddress, metadata: { name: client.name },

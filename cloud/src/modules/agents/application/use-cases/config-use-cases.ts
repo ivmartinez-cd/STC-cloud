@@ -21,9 +21,11 @@ export class UpdateAgentConfigUseCase {
   async execute(agentId: string, newConfig: AgentConfigUpdate, audit?: AuditContext): Promise<UpdateConfigResult> {
     const { updates, warnings } = buildConfigUpdates(newConfig);
     if (Object.keys(updates).length > 0) await this.agents.updateColumns(agentId, updates);
+    const agent = await this.agents.findById(agentId);
     // Redactado: sólo los nombres de campo tocados, nunca `snmp_community` en claro.
     await this.audit.write({
-      action: "UPDATE_CONFIG", targetId: agentId, userId: audit?.userId ?? null, ipAddress: audit?.ip ?? null,
+      action: "UPDATE_CONFIG", targetId: agentId, clientId: agent?.client_id ?? null,
+      userId: audit?.userId ?? null, ipAddress: audit?.ip ?? null,
       metadata: { fields: Object.keys(updates) },
     });
     return { status: "success", warnings };
@@ -103,8 +105,10 @@ export class ReplaceSnmpCredentialsUseCase {
     const nextStored = buildStored(validateCredentials(bodyObj.credentials), currentStored);
     const nextRev = currentRev + 1;
     await this.agents.replaceSnmpCredentials(agentId, JSON.stringify(nextStored), nextRev);
+    const agent = await this.agents.findById(agentId);
     await this.audit.write({
-      action: "AGENT_SNMP_CREDENTIALS_UPDATED", targetId: agentId, userId: audit?.userId ?? null, ipAddress: audit?.ip ?? null,
+      action: "AGENT_SNMP_CREDENTIALS_UPDATED", targetId: agentId, clientId: agent?.client_id ?? null,
+      userId: audit?.userId ?? null, ipAddress: audit?.ip ?? null,
       metadata: auditMetadata(nextStored) as Record<string, unknown>,
     });
     return { status: "success", count: nextStored.length, rev: nextRev, warnings: removedCredentialWarnings(currentStored, nextStored, current.ip_ranges) };

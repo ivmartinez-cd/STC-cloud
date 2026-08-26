@@ -75,10 +75,10 @@ export function buildAgentUseCases(db: Knex, redis?: RedisClient) {
     getAgentLicense: new GetAgentLicenseUseCase(portal),
     listAgentDeviceDirectory: new ListAgentDeviceDirectoryUseCase(portal),
     deleteAgent: new DeleteAgentUseCase(new KnexAgentUnitOfWork(db)),
-    sendCommand: new SendAgentCommandUseCase(commands, link, audit),
-    triggerScan: new TriggerScanUseCase(commands, link, audit),
-    setRemoteEws: new SetRemoteEwsEnabledUseCase(portal, audit),
-    ewsProxy: new EwsProxyUseCase(portal, commands, new EwsProxyServiceGateway(), audit),
+    sendCommand: new SendAgentCommandUseCase(commands, link, audit, agents),
+    triggerScan: new TriggerScanUseCase(commands, link, audit, agents),
+    setRemoteEws: new SetRemoteEwsEnabledUseCase(portal, audit, agents),
+    ewsProxy: new EwsProxyUseCase(portal, commands, new EwsProxyServiceGateway(), audit, agents),
     link,
   };
 }

@@ -1,4 +1,5 @@
 import type { AgentPortalRepository } from "../../domain/repositories/agent-portal-repository";
+import type { AgentRepository } from "../../domain/repositories/agent-repository";
 import type { AgentLink } from "../ports/agent-link";
 import type { AuditLogWriter } from "../ports/audit-log-writer";
 import type { EwsProxyGateway } from "../ports/ews-proxy-gateway";
@@ -11,12 +12,19 @@ export class RemoteActionError extends Error {
 
 /** Comando remoto genérico: persiste en `agent_commands`, audita y empuja por WSS si el agente está conectado. */
 export class SendAgentCommandUseCase {
-  constructor(private readonly commands: AgentCommandsUseCase, private readonly link: AgentLink, private readonly audit: AuditLogWriter) {}
+  constructor(
+    private readonly commands: AgentCommandsUseCase, private readonly link: AgentLink,
+    private readonly audit: AuditLogWriter, private readonly agents: AgentRepository
+  ) {}
 
   async execute(input: SendCommandInput): Promise<{ success: true; commandId: string; instant: boolean }> {
     const payload = input.payload || {};
     const command = await this.commands.add(input.agentId, input.type, payload, input.userId ?? undefined);
-    await this.audit.write({ action: "AGENT_COMMAND", targetId: input.agentId, userId: input.userId, ipAddress: input.ipAddress, metadata: { type: input.type, payload } });
+    const agent = await this.agents.findById(input.agentId);
+    await this.audit.write({
+      action: "AGENT_COMMAND", targetId: input.agentId, clientId: agent?.client_id ?? null,
+      userId: input.userId, ipAddress: input.ipAddress, metadata: { type: input.type, payload },
+    });
     const instant = this.link.pushCommand(input.agentId, input.type, payload, command.id);
     return { success: true, commandId: command.id, instant };
   }
@@ -31,23 +39,37 @@ export class SendAgentCommandUseCase {
  * para que filtrar por acción encuentre ambos entry points sin distinción.
  */
 export class TriggerScanUseCase {
-  constructor(private readonly commands: AgentCommandsUseCase, private readonly link: AgentLink, private readonly audit: AuditLogWriter) {}
+  constructor(
+    private readonly commands: AgentCommandsUseCase, private readonly link: AgentLink,
+    private readonly audit: AuditLogWriter, private readonly agents: AgentRepository
+  ) {}
 
   async execute(agentId: string, actor: Actor): Promise<{ status: "success"; message: string }> {
     const sentInstant = this.link.pushCommand(agentId, "RESCAN");
     await this.commands.add(agentId, "RESCAN");
-    await this.audit.write({ action: "AGENT_COMMAND", targetId: agentId, userId: actor.userId, ipAddress: actor.ipAddress, metadata: { type: "RESCAN", payload: {} } });
+    const agent = await this.agents.findById(agentId);
+    await this.audit.write({
+      action: "AGENT_COMMAND", targetId: agentId, clientId: agent?.client_id ?? null,
+      userId: actor.userId, ipAddress: actor.ipAddress, metadata: { type: "RESCAN", payload: {} },
+    });
     return { status: "success", message: sentInstant ? "Comando enviado instantáneamente vía WSS" : "Agente offline. Comando encolado para próximo latido." };
   }
 }
 
 /** Toggle auditado por separado del uso (`REMOTE_EWS_TOGGLE` vs `REMOTE_EWS_ACCESS`). */
 export class SetRemoteEwsEnabledUseCase {
-  constructor(private readonly repo: AgentPortalRepository, private readonly audit: AuditLogWriter) {}
+  constructor(
+    private readonly repo: AgentPortalRepository, private readonly audit: AuditLogWriter,
+    private readonly agents: AgentRepository
+  ) {}
 
   async execute(agentId: string, enabled: boolean, actor: Actor): Promise<{ ok: true; remote_ews_enabled: boolean }> {
     if ((await this.repo.setRemoteEwsEnabled(agentId, enabled)) === 0) throw new RemoteActionError("Agente no encontrado", 404);
-    await this.audit.write({ action: "REMOTE_EWS_TOGGLE", targetId: agentId, userId: actor.userId, ipAddress: actor.ipAddress, metadata: { enabled } });
+    const agent = await this.agents.findById(agentId);
+    await this.audit.write({
+      action: "REMOTE_EWS_TOGGLE", targetId: agentId, clientId: agent?.client_id ?? null,
+      userId: actor.userId, ipAddress: actor.ipAddress, metadata: { enabled },
+    });
     return { ok: true, remote_ews_enabled: enabled };
   }
 }
@@ -64,7 +86,8 @@ export class EwsProxyUseCase {
     private readonly repo: AgentPortalRepository,
     private readonly commands: AgentCommandsUseCase,
     private readonly gateway: EwsProxyGateway,
-    private readonly audit: AuditLogWriter
+    private readonly audit: AuditLogWriter,
+    private readonly agents: AgentRepository
   ) {}
 
   async execute(input: EwsProxyInput): Promise<EwsProxyOutput> {
@@ -95,8 +118,12 @@ export class EwsProxyUseCase {
     }
   }
 
-  private writeAccessAudit(input: EwsProxyInput, metadata: Record<string, unknown>) {
-    return this.audit.write({ action: "REMOTE_EWS_ACCESS", targetId: input.agentId, userId: input.userId, ipAddress: input.ipAddress, metadata });
+  private async writeAccessAudit(input: EwsProxyInput, metadata: Record<string, unknown>) {
+    const agent = await this.agents.findById(input.agentId);
+    return this.audit.write({
+      action: "REMOTE_EWS_ACCESS", targetId: input.agentId, clientId: agent?.client_id ?? null,
+      userId: input.userId, ipAddress: input.ipAddress, metadata,
+    });
   }
 
   private async assertEligibleDevice(agentId: string, deviceId: string) {

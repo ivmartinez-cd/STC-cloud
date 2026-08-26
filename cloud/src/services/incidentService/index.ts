@@ -21,5 +21,5 @@ export {
   linkAlert,
   unlinkAlert,
 } from "./mutations";
-export { listIncidentRules, upsertIncidentRule } from "./rules";
+export { listIncidentRules, upsertIncidentRule, listGlobalIncidentRules, upsertGlobalIncidentRule } from "./rules";
 export { classOfAlert };

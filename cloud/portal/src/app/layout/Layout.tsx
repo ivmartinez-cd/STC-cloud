@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, Suspense } from 'react';
-import { Link, Outlet, useLocation } from 'react-router-dom';
-import { Menu, Settings } from 'lucide-react';
+import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { ArrowLeft, Menu, Settings } from 'lucide-react';
 import { useAuth } from '../../store/AuthContext';
 import FeedbackModal from '../../shared/components/FeedbackModal';
 import SidebarNav from './SidebarNav';
@@ -55,6 +55,40 @@ const Sidebar = ({ collapsed, onToggleCollapse, isMobileMenuOpen, onCloseMobile 
   );
 };
 
+/** Usa el historial del navegador cuando la entrada actual fue empujada
+ * dentro de la app (`history.state.idx > 0`, lo que React Router persiste en
+ * cada push); si se entró por URL directa o refresh no hay historial propio,
+ * así que cae a la ruta padre derivada del path en vez de sacar al usuario
+ * de la app. */
+function useHeaderBackNavigation() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const segments = location.pathname.split('/').filter(Boolean);
+  const parentPath = '/' + segments.slice(0, -1).join('/');
+  const goBack = () => {
+    const idx = (window.history.state as { idx?: number } | null)?.idx ?? 0;
+    if (idx > 0) navigate(-1);
+    else navigate(parentPath);
+  };
+  return { show: segments.length > 1, goBack };
+}
+
+/** Flecha "volver" global de header — se muestra en cualquier ruta de detalle
+ * (más de un segmento, ej. `/clients/:id`). */
+const HeaderBackButton = () => {
+  const { show, goBack } = useHeaderBackNavigation();
+  if (!show) return null;
+  return (
+    <button
+      onClick={goBack}
+      aria-label="Volver"
+      className="p-2 -ml-2 text-slate-500 hover:bg-slate-100 hover:text-slate-800 rounded-xl transition-all"
+    >
+      <ArrowLeft size={20} />
+    </button>
+  );
+};
+
 const TopHeader = ({ onToggleMobile }: { onToggleMobile: () => void }) => {
   const search = useGlobalSearch();
   return (
@@ -63,6 +97,7 @@ const TopHeader = ({ onToggleMobile }: { onToggleMobile: () => void }) => {
         <button onClick={onToggleMobile} className="md:hidden p-2 text-slate-600 hover:bg-slate-100 rounded-xl transition-all">
           <Menu size={20} />
         </button>
+        <HeaderBackButton />
         <div className="hidden md:block">
           <span className="font-montserrat text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Centro de Operaciones</span>
         </div>

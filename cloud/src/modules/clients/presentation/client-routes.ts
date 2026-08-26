@@ -19,6 +19,7 @@ import { DeviceRegistrationServiceGateway } from "../infrastructure/adapters/dev
 import { PublicWebhookConfigStore } from "../infrastructure/adapters/public-webhook-config-store";
 import { KnexAuditLogWriter } from "../infrastructure/database/knex-audit-log-writer";
 import { KnexClientRepository } from "../infrastructure/database/knex-client-repository";
+import { KnexSystemSettingsReader } from "../infrastructure/adapters/system-settings-reader";
 import { createClientController, type ClientUseCases } from "./client-controller";
 
 const createClientSchema = {
@@ -137,14 +138,21 @@ const putSftpDestinationSchema = {
   },
 };
 
-function buildUseCases(db: Knex): ClientUseCases {
-  const clients = new KnexClientRepository(db);
-  const audit = new KnexAuditLogWriter(db);
-  const keys = new ApiKeyServiceStore(db);
-  const webhooks = new PublicWebhookConfigStore(db);
-  const registration = new DeviceRegistrationServiceGateway(db);
+function buildDeps(db: Knex) {
   return {
-    create: new CreateClientUseCase(clients, audit), update: new UpdateClientUseCase(clients, audit),
+    clients: new KnexClientRepository(db),
+    audit: new KnexAuditLogWriter(db),
+    keys: new ApiKeyServiceStore(db),
+    webhooks: new PublicWebhookConfigStore(db),
+    registration: new DeviceRegistrationServiceGateway(db),
+    settings: new KnexSystemSettingsReader(db),
+  };
+}
+
+function buildUseCases(db: Knex): ClientUseCases {
+  const { clients, audit, keys, webhooks, registration, settings } = buildDeps(db);
+  return {
+    create: new CreateClientUseCase(clients, audit, settings), update: new UpdateClientUseCase(clients, audit),
     list: new ListClientsUseCase(clients), get: new GetClientUseCase(clients),
     monitors: new GetClientMonitorsUseCase(clients), usage: new GetClientUsageUseCase(clients), devices: new GetClientDevicesUseCase(clients),
     directory: new ListClientDirectoryUseCase(clients), portfolioSummary: new GetClientPortfolioSummaryUseCase(clients),

@@ -170,6 +170,26 @@ export function createIncidentController(db: Knex) {
       return incidentService.listIncidentRules(db, id);
     },
 
+    // Reglas GLOBALES (client_id NULL) — Configuración del sistema, sólo
+    // admin (mismo criterio que `system-settings-routes.ts::buildUpdate`:
+    // un ajuste que afecta a TODA la red no es cosa de operator).
+    listGlobalIncidentRules: async () => incidentService.listGlobalIncidentRules(db),
+
+    putGlobalIncidentRules: async (request: FastifyRequest, reply: FastifyReply) => {
+      const user = currentUser(request);
+      if (user?.role !== "admin") return reply.status(403).send({ error: "Se requiere rol admin para modificar reglas globales" });
+      const body = request.body as { rules?: Array<{ class: string; enabled?: boolean; min_severity?: string; delay_minutes?: number; sla_hours?: number | null; auto_close_on_alerts_resolved?: boolean }> };
+      if (!Array.isArray(body.rules) || body.rules.length === 0) {
+        return reply.status(400).send({ error: "rules es requerido" });
+      }
+      const results = [];
+      for (const r of body.rules) {
+        if (!r.class) continue;
+        results.push(await incidentService.upsertGlobalIncidentRule(db, r.class, r));
+      }
+      return results;
+    },
+
     putIncidentRules: async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
       const body = request.body as { rules?: Array<{ class: string; enabled?: boolean; min_severity?: string; delay_minutes?: number; sla_hours?: number | null; auto_close_on_alerts_resolved?: boolean }> };

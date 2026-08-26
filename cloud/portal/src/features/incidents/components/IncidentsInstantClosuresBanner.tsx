@@ -10,11 +10,15 @@ interface Props {
 
 /** "N incidentes automáticos se cierran en <1 minuto" (handoff hifi #3, fase 4)
  * — sólo la clase con más ruido, no una lista de todas (sería otro panel, no
- * un banner). "VER REGLA" navega al cliente afectado con más incidentes de
- * esa clase, tab Configuración: ahí vive `IncidentRulesCard`, la única
- * edición de reglas que existe hoy (no hay un editor de la regla GLOBAL
- * como pantalla aparte — un cliente puede overridear la clase puntual desde
- * ahí, que es la acción real disponible). */
+ * un banner). "VER REGLA" navega al editor de reglas GLOBALES en
+ * Configuración del sistema (`GlobalIncidentRulesCard`, cierre de gap
+ * post-verificación 26/08/2026): el ruido de la MISMA clase repartido entre
+ * varios clientes distintos casi siempre viene de la regla global default
+ * heredada por todos, no de un override puntual — es el destino más útil
+ * en la práctica, aunque `ruleId` no siempre resuelva a la fila global
+ * exacta (un cliente con override propio para la misma clase no se
+ * distingue acá; ver la fila de ese cliente en su propia Configuración si
+ * el global no explica el ruido). */
 export default function IncidentsInstantClosuresBanner({ instantClosures, classLabels }: Props) {
   const navigate = useNavigate();
   const top = instantClosures[0];
@@ -24,7 +28,7 @@ export default function IncidentsInstantClosuresBanner({ instantClosures, classL
     <DiagnosticBanner
       headline={`${fmt(top.count)} INCIDENTES AUTOMÁTICOS SE CIERRAN EN MENOS DE 1 MINUTO`}
       body={<>Se abren y cierran casi en el mismo instante. Son ruido de la regla de <strong className="font-semibold">{label}</strong>: revisá su condición de disparo (demora/auto-cierre) para que no genere pares abierto/cerrado.</>}
-      cta={{ label: 'VER REGLA', onClick: () => navigate(`/clients/${top.sampleClientId}?tab=configuracion`) }}
+      cta={{ label: 'VER REGLA', onClick: () => navigate('/settings#global-incident-rules') }}
     />
   );
 }

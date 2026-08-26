@@ -91,7 +91,8 @@ export class DeleteAgentUseCase {
       }
       await tx.portal.deleteCascade(id, deviceIds);
       await tx.audit.write({
-        action: "AGENT_DELETED", targetId: id, userId: actor.userId, ipAddress: actor.ipAddress,
+        action: "AGENT_DELETED", targetId: id, clientId: agent?.client_id ?? null,
+        userId: actor.userId, ipAddress: actor.ipAddress,
         metadata: { name: agent?.name ?? null, client_id: agent?.client_id ?? null, devices_removed: deviceIds.length },
       });
     });

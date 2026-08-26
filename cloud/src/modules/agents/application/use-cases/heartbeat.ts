@@ -20,8 +20,9 @@ export class HeartbeatUseCase {
     if (systemInfo?.version) {
       const previousVersion = await this.agents.getVersion(agentId);
       if (previousVersion && previousVersion !== systemInfo.version) {
+        const agent = await this.agents.findById(agentId);
         await this.audit.write({
-          action: "AGENT_VERSION_CHANGED", targetId: agentId, userId: null, ipAddress,
+          action: "AGENT_VERSION_CHANGED", targetId: agentId, clientId: agent?.client_id ?? null, userId: null, ipAddress,
           metadata: { from: previousVersion, to: systemInfo.version },
         });
       }

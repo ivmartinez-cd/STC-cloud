@@ -29,7 +29,8 @@ export class CreateActivationKeyUseCase {
       businessHours: validatedBusinessHours ? JSON.stringify(validatedBusinessHours) : null,
     });
     await this.audit.write({
-      action: "AGENT_CREATED", targetId: agentId, userId: input.audit?.userId ?? null, ipAddress: input.audit?.ip ?? null,
+      action: "AGENT_CREATED", targetId: agentId, clientId: input.clientId,
+      userId: input.audit?.userId ?? null, ipAddress: input.audit?.ip ?? null,
       metadata: { clientId: input.clientId, name: input.name },
     });
     return { agentId, key, expiresAt };
@@ -46,7 +47,7 @@ export class ActivateAgentUseCase {
 
     const refresh = newRefreshToken();
     await this.agents.activate(agent.id, hardwareId, refresh.hash);
-    await this.audit.write({ action: "AGENT_ACTIVATED", targetId: agent.id, metadata: { hardwareId } });
+    await this.audit.write({ action: "AGENT_ACTIVATED", targetId: agent.id, clientId: agent.client_id, metadata: { hardwareId } });
     return { agentId: agent.id, refreshToken: refresh.token };
   }
 }
@@ -71,11 +72,13 @@ export class RegenerateActivationKeyUseCase {
   constructor(private readonly agents: AgentRepository, private readonly audit: AuditLogWriter) {}
 
   async execute(agentId: string, audit?: AuditContext): Promise<CreateActivationKeyResult> {
-    if (!(await this.agents.findById(agentId))) throw new Error("Agente no encontrado");
+    const existing = await this.agents.findById(agentId);
+    if (!existing) throw new Error("Agente no encontrado");
     const { key, expiresAt } = newActivationKey();
     await this.agents.resetActivation(agentId, key, expiresAt);
     await this.audit.write({
-      action: "REGENERATE_KEY", targetId: agentId, userId: audit?.userId ?? null, ipAddress: audit?.ip ?? null,
+      action: "REGENERATE_KEY", targetId: agentId, clientId: existing.client_id,
+      userId: audit?.userId ?? null, ipAddress: audit?.ip ?? null,
       metadata: { reason: "Manual key regeneration from portal" },
     });
     return { agentId, key, expiresAt };
@@ -87,8 +90,12 @@ export class RevokeTokenUseCase {
   constructor(private readonly agents: AgentRepository, private readonly blacklist: TokenBlacklist, private readonly audit: AuditLogWriter) {}
 
   async execute(agentId: string, ttlSeconds: number, requestIp?: string): Promise<void> {
+    const agent = await this.agents.findById(agentId);
     await this.blacklist.add(agentId, ttlSeconds);
     await this.agents.setStatus(agentId, "revoked");
-    await this.audit.write({ action: "REVOKE_TOKEN", targetId: agentId, ipAddress: requestIp || null, metadata: { reason: "Manual revocation from portal" } });
+    await this.audit.write({
+      action: "REVOKE_TOKEN", targetId: agentId, clientId: agent?.client_id ?? null,
+      ipAddress: requestIp || null, metadata: { reason: "Manual revocation from portal" },
+    });
   }
 }

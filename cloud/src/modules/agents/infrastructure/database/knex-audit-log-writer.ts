@@ -8,7 +8,8 @@ export class KnexAuditLogWriter implements AuditLogWriter {
 
   write(entry: AgentAuditEntry): Promise<void> {
     return writeAudit(this.db, {
-      action: entry.action, targetId: entry.targetId, userId: entry.userId ?? null, ip: entry.ipAddress ?? null, metadata: entry.metadata,
+      action: entry.action, targetId: entry.targetId, clientId: entry.clientId ?? null,
+      userId: entry.userId ?? null, ip: entry.ipAddress ?? null, metadata: entry.metadata,
     });
   }
 }

@@ -139,4 +139,10 @@ export function registerIncidentRoutes(fastify: FastifyInstance, db: Knex, porta
   // `incidentIdParamMatchesScope`, no aplica acá).
   fastify.get("/api/v1/clients/:id/incident-rules", { preHandler: portalAuth, handler: ctrl.listIncidentRules });
   fastify.put("/api/v1/clients/:id/incident-rules", { preHandler: portalAuth, schema: putRulesSchema, handler: ctrl.putIncidentRules });
+
+  // Reglas GLOBALES — Configuración del sistema (handoff hifi #3, cierre de
+  // gaps post-verificación, 26/08/2026). Fuera de /clients/:id a propósito:
+  // client_id es NULL, no hay ownership de cliente que validar.
+  fastify.get("/api/v1/settings/system/incident-rules", { preHandler: portalAuth, handler: ctrl.listGlobalIncidentRules });
+  fastify.put("/api/v1/settings/system/incident-rules", { preHandler: portalAuth, schema: putRulesSchema, handler: ctrl.putGlobalIncidentRules });
 }

@@ -23,16 +23,12 @@ interface Props {
 
 /** "Umbrales globales de consumible" (handoff hifi #3, fase 2, 26/08/2026) —
  * el mockup lo describe como "valor por defecto para clientes sin umbral
- * propio", pero `clients.supply_request_threshold_pct` NO es nullable hoy:
- * cada cliente ya tiene un valor propio desde que se crea (hardcodeado a 10
- * en la migración `20260824110000_supply_requests.ts`), así que no hay
- * cliente "sin umbral propio" al que este ajuste global pueda aplicarle
- * como fallback. Queda guardado y con impacto visible (para dimensionar el
- * cambio antes de decidir), pero **todavía no está conectado** a ningún
- * comportamiento real — ni como default de alta de cliente nuevo ni como
- * fallback. Conectarlo requiere tocar `CreateClientUseCase`
- * (`modules/clients/application/use-cases/client-use-cases.ts`), deliberadamente
- * diferido para no ampliar el radio de esta fase. */
+ * propio", pero `clients.supply_request_threshold_pct` NO es nullable:
+ * cada cliente tiene su propio valor desde que se crea. Este ajuste global
+ * es el DEFAULT que se copia a ese valor al ALTA de un cliente nuevo
+ * (`CreateClientUseCase`, cierre de gap post-verificación, 26/08/2026) —
+ * cambiarlo acá no es retroactivo, sólo afecta a los clientes que se creen
+ * DESPUÉS de guardar. */
 function CardHeader() {
   return (
     <div className="flex items-center justify-between gap-3 border-b border-line-150 px-5 py-[14px]">
