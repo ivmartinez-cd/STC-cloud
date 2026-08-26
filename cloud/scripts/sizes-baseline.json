@@ -1,6 +1,5 @@
 {
   "files": {
-    "src/tests/alerts.test.ts": 529,
     "src/tests/e2e.test.ts": 521,
     "src/tests/rbac.test.ts": 765
   },
@@ -473,6 +472,22 @@
       {
         "name": "runGuardedTick",
         "length": 24
+      }
+    ],
+    "src/modules/reports/application/use-cases/export-closure.ts": [
+      {
+        "name": "execute",
+        "length": 21
+      }
+    ],
+    "src/modules/reports/infrastructure/export/closure-pdf-renderer.ts": [
+      {
+        "name": "buildClosurePdf",
+        "length": 54
+      },
+      {
+        "name": "anonymous",
+        "length": 52
       }
     ],
     "src/modules/reports/presentation/report-view.ts": [

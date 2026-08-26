@@ -17,6 +17,8 @@ const TEST_FILES = [
   "src/tests/clientDeviceDirectory.test.ts",
   "src/tests/alertCatalog.test.ts",
   "src/tests/alerts.test.ts",
+  "src/tests/alertsEwsRegression.test.ts",
+  "src/tests/alertsWebhookGuard.test.ts",
   "src/tests/alertDigest.test.ts",
   "src/tests/reports.test.ts",
   "src/tests/deviceLifecycle.test.ts",
