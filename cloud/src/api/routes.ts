@@ -13,6 +13,7 @@ import { registerDeviceRoutes } from "../modules/devices/presentation/device-rou
 import { registerDashboardRoutes } from "./routes/dashboardRoutes";
 import { registerFeedbackRoutes } from "../modules/feedback/presentation/feedback-routes";
 import { registerScheduledReportRoutes } from "../modules/scheduled-reports/presentation/scheduled-report-routes";
+import { registerActivityViewRoutes } from "../modules/activity-views/presentation/activity-view-routes";
 import { registerSupplyRequestRoutes } from "../modules/supply-requests/presentation/supply-request-routes";
 import { registerMessageTemplateRoutes } from "../modules/message-templates/presentation/template-routes";
 import { registerEmailLogRoutes } from "../modules/email-log/presentation/email-log-routes";
@@ -66,6 +67,7 @@ export function registerAllRoutes(
   registerAlertRoutes(fastify, db, portalAuth);
   registerFeedbackRoutes(fastify, db, portalAuth);
   registerScheduledReportRoutes(fastify, db, portalAuth);
+  registerActivityViewRoutes(fastify, db, portalAuth);
   registerSupplyRequestRoutes(fastify, db, portalAuth);
   registerMessageTemplateRoutes(fastify, db, portalAuth);
   registerEmailLogRoutes(fastify, db, portalAuth);
