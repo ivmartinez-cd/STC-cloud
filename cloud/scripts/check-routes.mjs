@@ -29,9 +29,10 @@ const PUBLIC_ROUTES = new Map([
   ["GET /health", "healthcheck (docker/CI)"],
   ["GET /api/v1/health", "healthcheck versionado"],
   ["GET /api/v1/agents/download-installer", "redirect al instalador público en GitHub"],
-  ["POST /api/v1/portal/login", "login (rate-limit 10/min)"],
+  ["POST /api/v1/portal/login", "login (rate-limit 10/min prod, LOGIN_RATE_LIMIT_MAX)"],
+  ["GET /api/v1/portal/login-stats", "tira de métricas del panel de marca en /login, antes de autenticar (rate-limit 30/min, cacheada en Redis)"],
   ["POST /api/v1/portal/logout", "logout: sólo invalida cookie/blacklist, idempotente"],
-  ["POST /api/v1/agents/activate", "activación de agente con código de un solo uso (rate-limit 5/min)"],
+  ["POST /api/v1/agents/activate", "activación de agente con código de un solo uso (rate-limit 5/min prod, AGENT_ACTIVATE_RATE_LIMIT_MAX)"],
   ["POST /api/v1/agents/refresh", "rotación de token de agente: el refresh token viaja en el body"],
   ["GET /metrics", "Prometheus: exige Bearer METRICS_TOKEN dentro del handler (metricsAuthOk)"],
 ]);

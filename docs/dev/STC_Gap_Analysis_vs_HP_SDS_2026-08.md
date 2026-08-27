@@ -7,7 +7,7 @@
 
 ---
 
-## Estado de implementación (actualizado 26 de agosto de 2026)
+## Estado de implementación (actualizado 27 de agosto de 2026)
 
 Este documento sigue siendo la foto original del 21/08. Esta sección se actualiza a
 medida que se cierran ítems del roadmap de §4, para no tener que releer todo el
@@ -25,6 +25,15 @@ reportes). De lo que quedaba en el backlog corto (§4), sólo siguen abiertos do
 hardware real para fixtures, no completable desde acá) y el **DPA** (documento
 legal, requiere revisión de abogado). Sin pendientes de código conocidos más
 allá de eso.
+
+**Cierre de una ronda aparte (26-27/08/2026), fuera de §4 — ver Fase 20:**
+verificación post-entrega del handoff hifi #3 (rediseño de 9 pantallas, no
+parte de este documento en sí) terminó en un "no quiero ningún gap" de Ivan
+que cerró 7 features reales más 4 bugs de infraestructura de testing
+encontrados en el camino. No cambia nada de §1-§5 de abajo (es trabajo del
+rediseño hifi, no del roadmap de este gap analysis) — se documenta acá nomás
+porque tocó código del mismo repo y vale la pena que quede un registro único
+de "qué se hizo y cuándo".
 
 ### Fase 0 — Parar hemorragias — ✅ **completa**
 Los 7 ítems de §4 Fase 0 están cerrados: cola del agente (no purga lo no
@@ -2553,6 +2562,113 @@ para el PDF (usa `es-AR` fijo para el separador de miles, igual que el
 resto del sistema pre-Fase 18 — no se conectó con `APP_LOCALE` del portal
 porque el PDF se genera en el servidor, sin `navigator`, y no había
 pedido de scoping para eso acá).
+
+### Fase 20 — Cierre de gaps del handoff hifi #3 + 4 bugs de infraestructura de testing (26-27/08/2026) — completa
+
+Origen: distinto de las fases anteriores — no viene de §4, sino de una ronda de
+verificación post-entrega del rediseño hifi #3 (9 pantallas). Tras navegar el
+portal real con Playwright, Ivan preguntó "¿queda algo pendiente?"; la
+respuesta honesta listó 3 limitaciones de alcance deliberadas + botones
+"fantasma" sin backend + 1 gap pre-existente no tocado. Ivan: **"me importa
+arreglar todo, no quiero ningún gap"** — mandato explícito de cerrar TODO lo
+listado, no sólo lo que había preguntado puntualmente. Las 2 decisiones que
+eran de negocio/riesgo (no de implementación pura) se resolvieron con
+`AskUserQuestion` en vez de decidirlas solo.
+
+✅ **Umbral global de consumibles → default de cliente nuevo**: `supply_
+threshold_critical_pct` de Configuración del sistema se guardaba y tenía
+impacto visible desde Fase 2, pero no disparaba nada real — `clients.
+supply_request_threshold_pct` seguía copiando un valor fijo al crear un
+cliente. `CreateClientUseCase` ahora lo lee del ajuste global vía un port
+`SystemSettingsReader` nuevo (evita importar knex en `application/`, guard
+`arch-application`). No retroactivo — sólo afecta a clientes creados después.
+
+✅ **"VER REGLA" → editor real de reglas de incidentes GLOBALES**: no existía
+forma de editar `incident_rules` con `client_id IS NULL` — el botón navegaba a
+un cliente puntual como aproximación honesta. Nuevo `GET/PUT /settings/
+system/incident-rules` (admin-only), tarjeta `GlobalIncidentRulesCard.tsx` en
+Configuración con deep-link `/settings#global-incident-rules`. Bug real en el
+camino: el scroll-to-hash corría antes de que la tarjeta de operadores
+(miles de usuarios de test acumulados) terminara su fetch async, así que
+aterrizaba a mitad de una página que después crecía — arreglado con
+reintentos cortos del `scrollIntoView`.
+
+✅ **Delta estimado se aplica solo al total oficial del cierre**: decisión que
+la Fase 5 del hifi había dejado deliberadamente afuera ("pisar un monto de
+facturación con una estimación heurística sin intervención humana es una
+decisión de negocio que esta fase no está habilitada a tomar sola" — ver
+arriba). Resuelta con Ivan vía `AskUserQuestion`: se incluye automático. El
+campo crudo por línea nunca se pisa (auditoría intacta); el residuo (`delta_
+other`) absorbe la diferencia para que `total = mono+color+other` se
+mantenga por construcción.
+
+✅ **Las 2 plantillas "fantasma" de Informes** (Cierre de facturación,
+Auditoría de accesos) — el ítem más grande. La Fase 5 del hifi había servido
+sólo 5 de los 6 `REPORT_TYPE`s del mockup a propósito ("no fabricar botones
+que no hacen lo que dicen"); resuelto con Ivan vía `AskUserQuestion`:
+construir las 2 de verdad. `billing_closure`: el ÚLTIMO cierre OFICIAL
+(inmutable) del cliente — nuevo `findLatestClosedPeriod` en el facade de
+`reports`. `audit_export`: logins/2FA (categoría `security`) sin el cap de
+200 filas del endpoint paginado — nuevo facade `modules/audit/index.ts`
+(no existía, mismo hueco que `feedback`) para que `scheduled-reports` lo
+consuma cross-module sin violar `arch-cross-module`. El enum de TS no
+alcanzaba solo: la tabla `scheduled_reports` tiene su PROPIO CHECK constraint
+SQL con los 5 tipos viejos — migración nueva para extenderlo.
+
+✅ **Auditoría de agentes sin `client_id`**: cerrados los ~9 call-sites del
+módulo `agents` (los que se le habían mostrado a Ivan como rotos —
+Movimientos mostraba "Sin cliente" en altas/activaciones/comandos aunque el
+agente sí pertenecía a uno). Explícitamente NO se tocaron los otros ~19
+call-sites de otros módulos con el mismo gap, ya documentado aparte en
+`services/auditService.ts` como deuda conocida — fuera de este alcance
+puntual, no un olvido.
+
+✅ **"Guardar vista" real en Movimientos** y **"Duplicar informe" real en
+Informes**: no pedidos explícitamente por Ivan en el `AskUserQuestion` —
+parte de la propia lista de botones fantasma bajo "no quiero ningún gap".
+Módulo nuevo `activity-views` (presets personales de filtros por operador,
+nunca compartidos). Duplicar clona la definición entera server-side, la
+copia arranca `enabled:false` — nunca duplica un envío automático activo sin
+revisión.
+
+✅ **4 bugs de infraestructura de testing, encontrados y arreglados verificando
+contra la suite completa** (no formaban parte del alcance original, pero
+"no quiero ningún gap" se extendió a la propia verificación): `cloud/src/db/
+knexfile.ts` no tenía campo `port` en la conexión — `pg` caía al 5432 por
+default sin importar `DB_PORT`, rompiendo cualquier test que `import()`ara un
+módulo real de la app con su propio pool de Knex (ej. `jobs/
+alertDigestJob.ts`) corriendo desde el host. `/portal/login` (10/min) y
+`/agents/activate` (5/min) tenían su techo antibruteforce HARDCODEADO,
+independiente de `RATE_LIMIT_MAX` — la causa REAL (no el bug de `knexfile`)
+de que la suite completa (53 archivos, cada uno logueando admin en su
+fixture) siguiera fallando ~290 tests en cascada incluso subiendo
+`RATE_LIMIT_MAX` a 20000; un `429` en el login/activate de un fixture deja
+`ctx.adminToken`/`ctx.agentToken` vacíos y cascada en `401` para todo lo
+demás del archivo. `ci-test-runner.mjs` ya evitaba esto en CI corriendo cada
+archivo en un proceso separado con `FLUSHDB` entre uno y otro (nota original
+en ese script, línea 5-9) — pero el `npm test` combinado local no tenía
+ningún workaround. Ambos techos ahora configurables por env (`LOGIN_RATE_
+LIMIT_MAX`/`AGENT_ACTIVATE_RATE_LIMIT_MAX`, mismo criterio que `RATE_LIMIT_
+MAX`, default seguro de producción intacto). Quedaban 2 fallos más,
+diagnosticados y también arreglados: `alertsEwsRegression.test.ts` asumía
+que una alerta seguía abierta "del describe anterior", pero ese describe la
+resuelve A PROPÓSITO (es la prueba de auto-resolución); y `monitorDetail.
+test.ts::getConnectivity30d` anclaba un episodio "de ayer" a `Date.now() -
+24h` + 90 minutos fijos — si la suite corría entre 22:30 y 00:00 UTC esos 90
+minutos cruzaban la medianoche, partiendo el episodio entre dos días.
+
+**Estado final: `npm test` completo (807 tests, 53 archivos) pasa 807/807
+desde el host** (`DB_HOST=localhost DB_PORT=5434 REDIS_URL=redis://
+localhost:6379`, más los 2 rate-limits de arriba altos en `.env` local).
+Commits: `fae4372`, `f8a68fa`, `747db31`, `03cf9a6`, `78b611b`, `7d48fbd`
+(regresión real encontrada en la verificación: `supplyRequests.test.ts`
+asumía el umbral de consumibles hardcodeado en 10%, roto por el primer ítem
+de arriba — el default real es 8%, `DEFAULT_SYSTEM_SETTINGS`), `b8afbdf`,
+`8ab9979`, `bdce855`.
+
+**Lo que NO se hizo**: los otros ~19 call-sites de auditoría sin `client_id`
+fuera del módulo `agents` (deuda ya documentada aparte, ver arriba); paridad
+de convención con nada legado (todo lo de esta fase es funcionalidad nueva).
 
 ### Otros puntos de §3 (riesgos) que siguen abiertos y no forman parte de ningún ítem de arriba
 - ✅ **R4 (parcial, 23/08/2026)**: el WS del portal ya NO acepta el JWT de

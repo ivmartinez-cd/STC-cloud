@@ -10,13 +10,23 @@ cliente) o está en la allowlist explícita de rutas públicas. Dentro del porta
 y sólo llega a `CLIENT_VIEWER_ROUTES` (scopeado a su cliente). Las marcadas `admin`
 además exigen `role === "admin"` en el handler.
 
-Total: 163 rutas · públicas: 9 · client_viewer: 50 · sólo admin: 8
+Total: 191 rutas · públicas: 10 · client_viewer: 53 · sólo admin: 8
+
+## `src/api/health.ts`
+
+| Método | Ruta | Quién puede |
+|---|---|---|
+| GET | `/` | público |
+| GET | `/health` | público |
+| GET | `/api/v1/health` | público |
+| GET | `/api/v1/agents/download-installer` | público |
 
 ## `src/api/routes/authRoutes.ts`
 
 | Método | Ruta | Quién puede |
 |---|---|---|
 | POST | `/api/v1/portal/login` | público |
+| GET | `/api/v1/portal/login-stats` | público |
 | POST | `/api/v1/portal/logout` | público |
 | GET | `/api/v1/portal/me` | admin · operator · client_viewer |
 | POST | `/api/v1/portal/ws-ticket` | admin · operator |
@@ -54,6 +64,8 @@ Total: 163 rutas · públicas: 9 · client_viewer: 50 · sólo admin: 8
 | DELETE | `/api/v1/incidents/:id/alerts/:alertId` | admin · operator |
 | GET | `/api/v1/clients/:id/incident-rules` | admin · operator |
 | PUT | `/api/v1/clients/:id/incident-rules` | admin · operator |
+| GET | `/api/v1/settings/system/incident-rules` | admin · operator |
+| PUT | `/api/v1/settings/system/incident-rules` | admin · operator |
 
 ## `src/api/routes/publicApiRoutes.ts`
 
@@ -74,14 +86,13 @@ Total: 163 rutas · públicas: 9 · client_viewer: 50 · sólo admin: 8
 | GET | `/api/v1/supplies` | admin · operator · client_viewer |
 | GET | `/api/v1/supplies/summary` | admin · operator · client_viewer |
 
-## `src/api/server.ts`
+## `src/modules/activity-views/presentation/activity-view-routes.ts`
 
 | Método | Ruta | Quién puede |
 |---|---|---|
-| GET | `/` | público |
-| GET | `/health` | público |
-| GET | `/api/v1/health` | público |
-| GET | `/api/v1/agents/download-installer` | público |
+| GET | `/api/v1/activity/saved-views` | admin · operator |
+| POST | `/api/v1/activity/saved-views` | admin · operator |
+| DELETE | `/api/v1/activity/saved-views/:id` | admin · operator |
 
 ## `src/modules/agents/presentation/agent-routes.ts`
 
@@ -96,6 +107,9 @@ Total: 163 rutas · públicas: 9 · client_viewer: 50 · sólo admin: 8
 
 | Método | Ruta | Quién puede |
 |---|---|---|
+| GET | `/api/v1/agents/directory` | admin · operator |
+| GET | `/api/v1/agents/summary` | admin · operator |
+| GET | `/api/v1/agents/signal-buckets` | admin · operator |
 | GET | `/api/v1/agents` | admin · operator · client_viewer |
 | GET | `/api/v1/agents/:id` | admin · operator · client_viewer |
 | GET | `/api/v1/agents/:id/devices` | admin · operator · client_viewer |
@@ -125,6 +139,7 @@ Total: 163 rutas · públicas: 9 · client_viewer: 50 · sólo admin: 8
 | Método | Ruta | Quién puede |
 |---|---|---|
 | GET | `/api/v1/alerts` | admin · operator · client_viewer |
+| GET | `/api/v1/alerts/count` | admin · operator · client_viewer |
 | GET | `/api/v1/alerts/classes` | admin · operator · client_viewer |
 | GET | `/api/v1/alerts/summary` | admin · operator · client_viewer |
 | PUT | `/api/v1/alerts/:id` | admin · operator |
@@ -136,6 +151,7 @@ Total: 163 rutas · públicas: 9 · client_viewer: 50 · sólo admin: 8
 |---|---|---|
 | GET | `/api/v1/audit-logs` | admin · operator |
 | GET | `/api/v1/audit-logs/actions` | admin · operator |
+| GET | `/api/v1/audit-logs/summary` | admin · operator |
 
 ## `src/modules/clients/presentation/client-routes.ts`
 
@@ -160,6 +176,9 @@ Total: 163 rutas · públicas: 9 · client_viewer: 50 · sólo admin: 8
 | DELETE | `/api/v1/clients/:id/api-keys/:keyId` | admin · operator |
 | GET | `/api/v1/clients/:id/webhook` | admin · operator |
 | PUT | `/api/v1/clients/:id/webhook` | admin · operator |
+| GET | `/api/v1/clients/:id/sftp-destination` | admin · operator |
+| PUT | `/api/v1/clients/:id/sftp-destination` | admin · operator |
+| DELETE | `/api/v1/clients/:id/sftp-destination` | admin · operator |
 
 ## `src/modules/device-costs/presentation/device-costs-routes.ts`
 
@@ -174,6 +193,12 @@ Total: 163 rutas · públicas: 9 · client_viewer: 50 · sólo admin: 8
 |---|---|---|
 | GET | `/api/v1/devices` | admin · operator · client_viewer |
 | GET | `/api/v1/devices/duplicates` | admin · operator |
+| GET | `/api/v1/devices/directory` | admin · operator · client_viewer |
+| GET | `/api/v1/devices/summary` | admin · operator · client_viewer |
+| GET | `/api/v1/devices/pending/directory` | admin · operator |
+| GET | `/api/v1/devices/pending/summary` | admin · operator |
+| POST | `/api/v1/devices/pending/approve` | admin · operator |
+| POST | `/api/v1/devices/pending/ignore` | admin · operator |
 | GET | `/api/v1/devices/:id` | admin · operator · client_viewer |
 | GET | `/api/v1/devices/:id/readings` | admin · operator · client_viewer |
 | GET | `/api/v1/devices/:id/usage-history` | admin · operator · client_viewer |
@@ -198,6 +223,7 @@ Total: 163 rutas · públicas: 9 · client_viewer: 50 · sólo admin: 8
 | Método | Ruta | Quién puede |
 |---|---|---|
 | GET | `/api/v1/email-log` | admin · operator |
+| GET | `/api/v1/email-log/summary` | admin · operator |
 
 ## `src/modules/feedback/presentation/feedback-routes.ts`
 
@@ -238,6 +264,8 @@ Total: 163 rutas · públicas: 9 · client_viewer: 50 · sólo admin: 8
 | Método | Ruta | Quién puede |
 |---|---|---|
 | GET | `/api/v1/remote-actions` | admin · operator |
+| GET | `/api/v1/remote-actions/summary` | admin · operator |
+| GET | `/api/v1/remote-actions/by-type` | admin · operator |
 | POST | `/api/v1/remote-actions` | admin · operator |
 | GET | `/api/v1/remote-actions/:id` | admin · operator |
 | POST | `/api/v1/remote-actions/:id/cancel` | admin · operator |
@@ -251,6 +279,7 @@ Total: 163 rutas · públicas: 9 · client_viewer: 50 · sólo admin: 8
 | GET | `/api/v1/clients/:id/reports/:closureId` | admin · operator · client_viewer |
 | GET | `/api/v1/clients/:id/reports/:closureId/export.csv` | admin · operator · client_viewer |
 | GET | `/api/v1/clients/:id/reports/:closureId/export.xlsx` | admin · operator · client_viewer |
+| GET | `/api/v1/clients/:id/reports/:closureId/export.pdf` | admin · operator |
 | POST | `/api/v1/clients/:id/reports/close` | admin · operator |
 | POST | `/api/v1/clients/:id/reports/:closureId/reopen` | admin · operator |
 
@@ -259,9 +288,11 @@ Total: 163 rutas · públicas: 9 · client_viewer: 50 · sólo admin: 8
 | Método | Ruta | Quién puede |
 |---|---|---|
 | GET | `/api/v1/scheduled-reports` | admin · operator |
+| GET | `/api/v1/scheduled-reports/templates` | admin · operator |
 | POST | `/api/v1/scheduled-reports` | admin · operator |
 | PUT | `/api/v1/scheduled-reports/:id` | admin · operator |
 | DELETE | `/api/v1/scheduled-reports/:id` | admin · operator |
+| POST | `/api/v1/scheduled-reports/:id/duplicate` | admin · operator |
 | POST | `/api/v1/scheduled-reports/:id/run` | admin · operator |
 | GET | `/api/v1/scheduled-reports/:id/download` | admin · operator |
 
@@ -284,6 +315,8 @@ Total: 163 rutas · públicas: 9 · client_viewer: 50 · sólo admin: 8
 |---|---|---|
 | GET | `/api/v1/settings/system` | admin · operator |
 | PUT | `/api/v1/settings/system` | admin |
+| POST | `/api/v1/settings/system/smtp/test` | admin · operator |
+| GET | `/api/v1/settings/system/impact` | admin · operator |
 
 ## `src/modules/two-factor/presentation/two-factor-routes.ts`
 
