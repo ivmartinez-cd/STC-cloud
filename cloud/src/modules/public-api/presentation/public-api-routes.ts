@@ -1,16 +1,16 @@
 import { FastifyInstance, FastifyRequest } from "fastify";
 import { Knex } from "knex";
-import { createPublicApiController } from "../controllers/publicApiController";
-import type { AuthHook, ApiKeyClient } from "../middlewares/authMiddleware";
-import { getClientIp } from "../utils/ip";
+import { createPublicApiController } from "./public-api-controller";
+import type { AuthHook, ApiKeyClient } from "../../../api/middlewares/authMiddleware";
+import { getClientIp } from "../../../api/utils/ip";
 
 const putWebhookSchema = {
   body: {
     type: "object",
     properties: {
       url: { type: "string", maxLength: 500 },
-      // 7 = cantidad de VALID_EVENTS (publicApiController.ts) — mismo bug y
-      // mismo fix que el gemelo de client-routes.ts.
+      // 7 = cantidad de VALID_PUBLIC_API_EVENTS (public-api-webhook-use-cases.ts)
+      // — mismo bug y mismo fix que el gemelo de client-routes.ts.
       events: { type: "array", items: { type: "string" }, maxItems: 7 },
       active: { type: "boolean" },
       regenerate_secret: { type: "boolean" },
