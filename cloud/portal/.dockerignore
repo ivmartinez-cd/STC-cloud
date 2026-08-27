@@ -1,0 +1,6 @@
+# El contexto de build mandaba ~200 MB de node_modules al daemon en cada build
+# (27/08/2026); el Dockerfile hace npm ci adentro, no necesita nada de esto.
+node_modules
+dist
+.vite
+*.log
