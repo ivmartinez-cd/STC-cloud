@@ -1,5 +1,3 @@
-import type { AlertClass } from "../modules/alerts";
-
 /**
  * Fase 11 del gap analysis vs HP SDS — único punto de acoplamiento entre
  * incidentes y el diccionario de alertas de la Fase 1. Si `alert_class` ya
@@ -7,7 +5,10 @@ import type { AlertClass } from "../modules/alerts";
  * (fila vieja pre-Fase-1, o Fase 1 corriendo en otro entorno), se cae a un
  * mapeo básico sobre `alert.type`. Cuando la Fase 1 esté siempre presente,
  * se edita SÓLO este archivo — nada más del módulo de incidentes conoce el
- * formato de `alerts.type`.
+ * formato de `alerts.type`. Tipo de `alert_class` como `string` (no
+ * `AlertClass` de `modules/alerts`) para no violar la regla de dominio de
+ * no importar otros módulos — el dominio de incidentes no necesita conocer
+ * el diccionario cerrado de clases de alerta, sólo mapear un string.
  */
 
 const TYPE_FALLBACK: Record<string, string> = {
@@ -27,7 +28,7 @@ function fallbackFromType(type: string): string {
 }
 
 /** `alert` trae al menos `type`; `alert_class` es opcional (columna de la Fase 1). */
-export function classOfAlert(alert: { type: string; alert_class?: AlertClass | null }): string {
+export function classOfAlert(alert: { type: string; alert_class?: string | null }): string {
   if (alert.alert_class) return alert.alert_class;
   return fallbackFromType(alert.type);
 }

@@ -1,7 +1,7 @@
 import { FastifyInstance } from "fastify";
 import { Knex } from "knex";
-import { createIncidentController } from "../controllers/incidentController";
-import type { AuthHook } from "../middlewares/authMiddleware";
+import { createIncidentController } from "./incident-controller";
+import type { AuthHook } from "../../../api/middlewares/authMiddleware";
 
 const createIncidentSchema = {
   body: {

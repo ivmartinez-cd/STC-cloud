@@ -1,21 +1,8 @@
 import { Knex } from "knex";
-import { IncidentError } from "./errors";
-import { writeEvent } from "./events";
-
-const STATUSES = ["open", "in_progress", "on_hold", "closed"] as const;
-type IncidentStatus = (typeof STATUSES)[number];
-
-export interface CreateIncidentParams {
-  clientId: string;
-  deviceId?: string | null;
-  klass: string;
-  title?: string | null;
-  description?: string | null;
-  severity?: "warning" | "critical";
-  externalId?: string | null;
-  alertIds?: number[];
-  actorId?: string | null;
-}
+import { IncidentError } from "../../domain/errors/incident-error";
+import { INCIDENT_STATUSES, type IncidentStatus } from "../../domain/entities/incident-status";
+import type { CreateIncidentParams } from "../../domain/repositories/incident-repository";
+import { writeEvent } from "./incident-events";
 
 async function deviceSnapshot(db: Knex | Knex.Transaction, deviceId: string | null | undefined) {
   if (!deviceId) return { agentId: null, serial: null, label: null };
@@ -84,7 +71,7 @@ export async function updateIncident(db: Knex, id: string, patch: Record<string,
 }
 
 export async function setStatus(db: Knex, id: string, status: IncidentStatus, actorId?: string | null): Promise<any | null> {
-  if (!STATUSES.includes(status)) throw new IncidentError(`status inválido: debe ser uno de ${STATUSES.join(", ")}`);
+  if (!INCIDENT_STATUSES.includes(status)) throw new IncidentError(`status inválido: debe ser uno de ${INCIDENT_STATUSES.join(", ")}`);
   const existing = await db("incidents").where({ id }).first();
   if (!existing) return null;
   if (existing.status === "closed") throw new IncidentError("El incidente está cerrado — usá reopen para reabrirlo", 409);
@@ -131,7 +118,7 @@ export async function reopenIncident(db: Knex, id: string, params: { reason?: st
       .first();
     if (conflict) {
       const err = new IncidentError("Ya existe un incidente automático abierto para este equipo y clase", 409);
-      (err as IncidentError & { conflictId?: string }).conflictId = conflict.id;
+      err.conflictId = conflict.id;
       throw err;
     }
   }

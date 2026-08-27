@@ -1,4 +1,5 @@
 import { Knex } from "knex";
+import type { ListIncidentsParams } from "../../domain/repositories/incident-repository";
 
 // Aging = EXTRACT(EPOCH FROM COALESCE(closed_at, now()) - opened_at) — NUNCA
 // se guarda una columna, se calcula siempre al leer (mismo criterio que
@@ -12,24 +13,6 @@ function baseSelect(db: Knex) {
     .leftJoin("agents", "agents.id", "incidents.agent_id")
     .leftJoin("users as assignee", "assignee.id", "incidents.assigned_to")
     .leftJoin("users as creator", "creator.id", "incidents.created_by");
-}
-
-export interface ListIncidentsParams {
-  clientId?: string | null;
-  status?: string | null;
-  klass?: string | null;
-  severity?: string | null;
-  deviceId?: string | null;
-  assignedTo?: string | null;
-  q?: string | null;
-  /** `true` → sólo sin equipo asociado ("SIN EQUIPO" del handoff hifi #3, fase 4). */
-  noDevice?: boolean;
-  /** Antigüedad mínima en horas ("+24 H" del handoff) — sobre `aging_seconds`,
-   * recalculado acá porque un alias del SELECT no es visible en el WHERE de Postgres. */
-  minAgeHours?: number | null;
-  limit?: number;
-  offset?: number;
-  order?: "opened_at_desc" | "opened_at_asc" | "aging_desc";
 }
 
 export async function listIncidents(db: Knex, params: ListIncidentsParams): Promise<{ items: any[]; total: number }> {

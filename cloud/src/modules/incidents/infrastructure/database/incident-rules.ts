@@ -1,4 +1,5 @@
 import { Knex } from "knex";
+import type { IncidentRulePatch } from "../../domain/repositories/incident-repository";
 
 // ─── Reglas de auto-creación ────────────────────────────────────────────────
 
@@ -8,9 +9,7 @@ export async function listIncidentRules(db: Knex, clientId: string): Promise<any
     .orderBy("class");
 }
 
-type RulePatch = { enabled?: boolean; min_severity?: string; delay_minutes?: number; sla_hours?: number | null; auto_close_on_alerts_resolved?: boolean };
-
-function ruleValues(clientId: string | null, klass: string, patch: RulePatch, existing: any) {
+function ruleValues(clientId: string | null, klass: string, patch: IncidentRulePatch, existing: any) {
   return {
     client_id: clientId, class: klass,
     enabled: patch.enabled ?? existing?.enabled ?? false,
@@ -28,7 +27,7 @@ function ruleValues(clientId: string | null, klass: string, patch: RulePatch, ex
  * defaults — un segundo camino por Knex `.onConflict(db.raw(...))` no
  * aportaría nada que este branch explícito no tenga ya. Compartido entre el
  * upsert por cliente y el global — sólo cambia el `client_id` del WHERE/valores. */
-async function upsertRuleRow(db: Knex, clientId: string | null, klass: string, patch: RulePatch): Promise<any> {
+async function upsertRuleRow(db: Knex, clientId: string | null, klass: string, patch: IncidentRulePatch): Promise<any> {
   const existing = await db("incident_rules").where({ client_id: clientId, class: klass }).first();
   const values = ruleValues(clientId, klass, patch, existing);
   if (existing) {
@@ -40,7 +39,7 @@ async function upsertRuleRow(db: Knex, clientId: string | null, klass: string, p
 }
 
 /** Sólo permite escribir filas del CLIENTE — nunca las globales (`client_id=NULL`). */
-export function upsertIncidentRule(db: Knex, clientId: string, klass: string, patch: RulePatch): Promise<any> {
+export function upsertIncidentRule(db: Knex, clientId: string, klass: string, patch: IncidentRulePatch): Promise<any> {
   return upsertRuleRow(db, clientId, klass, patch);
 }
 
@@ -56,6 +55,6 @@ export async function listGlobalIncidentRules(db: Knex): Promise<any[]> {
   return db("incident_rules").whereNull("client_id").orderBy("class");
 }
 
-export function upsertGlobalIncidentRule(db: Knex, klass: string, patch: RulePatch): Promise<any> {
+export function upsertGlobalIncidentRule(db: Knex, klass: string, patch: IncidentRulePatch): Promise<any> {
   return upsertRuleRow(db, null, klass, patch);
 }

@@ -1,16 +1,47 @@
 import { FastifyReply, FastifyRequest } from "fastify";
 import { Knex } from "knex";
-import type { PortalUser } from "../middlewares/authMiddleware";
-import { getScope } from "../utils/scope";
-import * as incidentService from "../../services/incidentService";
-import { IncidentError } from "../../services/incidentService";
+import type { PortalUser } from "../../../api/middlewares/authMiddleware";
+import { getScope } from "../../../api/utils/scope";
+import { IncidentError } from "../domain/errors/incident-error";
+import { KnexIncidentRepository } from "../infrastructure/database/knex-incident-repository";
+import { ListIncidentsUseCase, GetIncidentStatsUseCase, GetIncidentUseCase } from "../application/use-cases/incident-read-use-cases";
+import {
+  CreateIncidentUseCase, UpdateIncidentUseCase, SetIncidentStatusUseCase, CloseIncidentUseCase, ReopenIncidentUseCase,
+} from "../application/use-cases/incident-lifecycle-use-cases";
+import {
+  AddIncidentCommentUseCase, AssignIncidentUseCase, LinkIncidentAlertUseCase, UnlinkIncidentAlertUseCase,
+} from "../application/use-cases/incident-collaboration-use-cases";
+import {
+  ListIncidentRulesUseCase, UpsertIncidentRuleUseCase, ListGlobalIncidentRulesUseCase, UpsertGlobalIncidentRuleUseCase,
+} from "../application/use-cases/incident-rules-use-cases";
+import type { IncidentStatus } from "../domain/entities/incident-status";
+import type { IncidentRulePatch } from "../domain/repositories/incident-repository";
 
 function currentUser(request: FastifyRequest): PortalUser | undefined {
   return (request as FastifyRequest & { user?: PortalUser }).user;
 }
 
-/** Fase 11 del gap analysis vs HP SDS — controlador de incidentes. */
+/** Fase 11 del gap analysis vs HP SDS — controlador de incidentes. Migrado a
+ * módulo con capas completas en la tanda 2026-08-27. */
 export function createIncidentController(db: Knex) {
+  const repo = new KnexIncidentRepository(db);
+  const listIncidents = new ListIncidentsUseCase(repo);
+  const getIncidentStats = new GetIncidentStatsUseCase(repo);
+  const getIncident = new GetIncidentUseCase(repo);
+  const createIncident = new CreateIncidentUseCase(repo);
+  const updateIncident = new UpdateIncidentUseCase(repo);
+  const setIncidentStatus = new SetIncidentStatusUseCase(repo);
+  const closeIncident = new CloseIncidentUseCase(repo);
+  const reopenIncident = new ReopenIncidentUseCase(repo);
+  const addComment = new AddIncidentCommentUseCase(repo);
+  const assignIncident = new AssignIncidentUseCase(repo);
+  const linkAlert = new LinkIncidentAlertUseCase(repo);
+  const unlinkAlert = new UnlinkIncidentAlertUseCase(repo);
+  const listIncidentRules = new ListIncidentRulesUseCase(repo);
+  const upsertIncidentRule = new UpsertIncidentRuleUseCase(repo);
+  const listGlobalIncidentRules = new ListGlobalIncidentRulesUseCase(repo);
+  const upsertGlobalIncidentRule = new UpsertGlobalIncidentRuleUseCase(repo);
+
   return {
     listIncidents: async (request: FastifyRequest) => {
       const scope = getScope(request);
@@ -21,7 +52,7 @@ export function createIncidentController(db: Knex) {
         no_device?: string; min_age_hours?: string;
       };
       const clientId = scope.kind === "client" ? scope.id : (q.client_id || null);
-      return incidentService.listIncidents(db, {
+      return listIncidents.execute({
         clientId, status: q.status, klass: q.class, severity: q.severity,
         deviceId: q.device_id, assignedTo: q.assigned_to, q: q.q,
         noDevice: q.no_device === "true", minAgeHours: q.min_age_hours ? Number(q.min_age_hours) : undefined,
@@ -34,12 +65,12 @@ export function createIncidentController(db: Knex) {
       const scope = getScope(request);
       const { client_id } = request.query as { client_id?: string };
       const clientId = scope.kind === "client" ? scope.id : (client_id || null);
-      return incidentService.getIncidentStats(db, { clientId });
+      return getIncidentStats.execute({ clientId });
     },
 
     getIncident: async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
-      const item = await incidentService.getIncident(db, id);
+      const item = await getIncident.execute(id);
       if (!item) return reply.status(404).send({ error: "Incidente no encontrado" });
       return item;
     },
@@ -57,7 +88,7 @@ export function createIncidentController(db: Knex) {
 
       const user = currentUser(request);
       try {
-        const row = await incidentService.createIncident(db, {
+        const row = await createIncident.execute({
           clientId, deviceId: body.device_id ?? null, klass: body.class,
           title: body.title, description: body.description, severity: body.severity,
           externalId: body.external_id, alertIds: body.alert_ids, actorId: user?.userId ?? null,
@@ -73,7 +104,7 @@ export function createIncidentController(db: Knex) {
       const { id } = request.params as { id: string };
       const user = currentUser(request);
       try {
-        const row = await incidentService.updateIncident(db, id, request.body as Record<string, unknown>, user?.userId ?? null);
+        const row = await updateIncident.execute(id, request.body as Record<string, unknown>, user?.userId ?? null);
         if (!row) return reply.status(404).send({ error: "Incidente no encontrado" });
         return row;
       } catch (err) {
@@ -88,7 +119,7 @@ export function createIncidentController(db: Knex) {
       if (!status) return reply.status(400).send({ error: "status es requerido" });
       const user = currentUser(request);
       try {
-        const row = await incidentService.setStatus(db, id, status as any, user?.userId ?? null);
+        const row = await setIncidentStatus.execute(id, status as IncidentStatus, user?.userId ?? null);
         if (!row) return reply.status(404).send({ error: "Incidente no encontrado" });
         return row;
       } catch (err) {
@@ -101,7 +132,7 @@ export function createIncidentController(db: Knex) {
       const { id } = request.params as { id: string };
       const { reason } = request.body as { reason?: string };
       const user = currentUser(request);
-      const row = await incidentService.closeIncident(db, id, { reason, actorId: user?.userId ?? null });
+      const row = await closeIncident.execute(id, { reason, actorId: user?.userId ?? null });
       if (!row) return reply.status(404).send({ error: "Incidente no encontrado" });
       return row;
     },
@@ -111,13 +142,12 @@ export function createIncidentController(db: Knex) {
       const { reason } = request.body as { reason?: string };
       const user = currentUser(request);
       try {
-        const row = await incidentService.reopenIncident(db, id, { reason, actorId: user?.userId ?? null });
+        const row = await reopenIncident.execute(id, { reason, actorId: user?.userId ?? null });
         if (!row) return reply.status(404).send({ error: "Incidente no encontrado" });
         return row;
       } catch (err) {
         if (err instanceof IncidentError) {
-          const conflictId = (err as IncidentError & { conflictId?: string }).conflictId;
-          return reply.status(err.statusCode).send({ error: err.message, ...(conflictId ? { conflictId } : {}) });
+          return reply.status(err.statusCode).send({ error: err.message, ...(err.conflictId ? { conflictId: err.conflictId } : {}) });
         }
         throw err;
       }
@@ -128,7 +158,7 @@ export function createIncidentController(db: Knex) {
       const { body } = request.body as { body?: string };
       if (!body || !body.trim()) return reply.status(400).send({ error: "body es requerido" });
       const user = currentUser(request);
-      const result = await incidentService.addComment(db, id, { body: body.trim(), actorId: user?.userId ?? null });
+      const result = await addComment.execute(id, { body: body.trim(), actorId: user?.userId ?? null });
       if (result === null) return reply.status(404).send({ error: "Incidente no encontrado" });
       return { ok: true };
     },
@@ -137,7 +167,7 @@ export function createIncidentController(db: Knex) {
       const { id } = request.params as { id: string };
       const { user_id } = request.body as { user_id?: string | null };
       const user = currentUser(request);
-      const row = await incidentService.assignIncident(db, id, { userId: user_id ?? null, actorId: user?.userId ?? null });
+      const row = await assignIncident.execute(id, { userId: user_id ?? null, actorId: user?.userId ?? null });
       if (!row) return reply.status(404).send({ error: "Incidente no encontrado" });
       return row;
     },
@@ -148,7 +178,7 @@ export function createIncidentController(db: Knex) {
       if (!alert_id) return reply.status(400).send({ error: "alert_id es requerido" });
       const user = currentUser(request);
       try {
-        const ok = await incidentService.linkAlert(db, id, alert_id, user?.userId ?? null);
+        const ok = await linkAlert.execute(id, alert_id, user?.userId ?? null);
         if (!ok) return reply.status(404).send({ error: "Incidente no encontrado" });
         return { ok: true };
       } catch (err) {
@@ -160,46 +190,46 @@ export function createIncidentController(db: Knex) {
     unlinkAlert: async (request: FastifyRequest, reply: FastifyReply) => {
       const { id, alertId } = request.params as { id: string; alertId: string };
       const user = currentUser(request);
-      const ok = await incidentService.unlinkAlert(db, id, Number(alertId), user?.userId ?? null);
+      const ok = await unlinkAlert.execute(id, Number(alertId), user?.userId ?? null);
       if (!ok) return reply.status(404).send({ error: "Vínculo no encontrado" });
       return { ok: true };
     },
 
     listIncidentRules: async (request: FastifyRequest) => {
       const { id } = request.params as { id: string };
-      return incidentService.listIncidentRules(db, id);
+      return listIncidentRules.execute(id);
     },
 
     // Reglas GLOBALES (client_id NULL) — Configuración del sistema, sólo
     // admin (mismo criterio que `system-settings-routes.ts::buildUpdate`:
     // un ajuste que afecta a TODA la red no es cosa de operator).
-    listGlobalIncidentRules: async () => incidentService.listGlobalIncidentRules(db),
+    listGlobalIncidentRules: async () => listGlobalIncidentRules.execute(),
 
     putGlobalIncidentRules: async (request: FastifyRequest, reply: FastifyReply) => {
       const user = currentUser(request);
       if (user?.role !== "admin") return reply.status(403).send({ error: "Se requiere rol admin para modificar reglas globales" });
-      const body = request.body as { rules?: Array<{ class: string; enabled?: boolean; min_severity?: string; delay_minutes?: number; sla_hours?: number | null; auto_close_on_alerts_resolved?: boolean }> };
+      const body = request.body as { rules?: Array<{ class: string } & IncidentRulePatch> };
       if (!Array.isArray(body.rules) || body.rules.length === 0) {
         return reply.status(400).send({ error: "rules es requerido" });
       }
       const results = [];
       for (const r of body.rules) {
         if (!r.class) continue;
-        results.push(await incidentService.upsertGlobalIncidentRule(db, r.class, r));
+        results.push(await upsertGlobalIncidentRule.execute(r.class, r));
       }
       return results;
     },
 
     putIncidentRules: async (request: FastifyRequest, reply: FastifyReply) => {
       const { id } = request.params as { id: string };
-      const body = request.body as { rules?: Array<{ class: string; enabled?: boolean; min_severity?: string; delay_minutes?: number; sla_hours?: number | null; auto_close_on_alerts_resolved?: boolean }> };
+      const body = request.body as { rules?: Array<{ class: string } & IncidentRulePatch> };
       if (!Array.isArray(body.rules) || body.rules.length === 0) {
         return reply.status(400).send({ error: "rules es requerido" });
       }
       const results = [];
       for (const r of body.rules) {
         if (!r.class) continue;
-        results.push(await incidentService.upsertIncidentRule(db, id, r.class, r));
+        results.push(await upsertIncidentRule.execute(id, r.class, r));
       }
       return results;
     },
