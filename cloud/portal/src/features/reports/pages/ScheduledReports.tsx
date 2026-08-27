@@ -1,10 +1,14 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, type ReactNode } from 'react';
 import { api } from '../../../shared/lib/api';
 import { useToast } from '../../../store/ToastContext';
 import PageHeader from '../../../shared/components/PageHeader';
+import HifiPagination from '../../../shared/components/HifiPagination';
+import { useFitRows } from '../../../shared/hooks/useFitRows';
+import { useClientPagination } from '../../../shared/hooks/useClientPagination';
 import { BTN_PRIMARY_LG } from '../../../shared/lib/buttons';
 import ScheduledReportModal from '../components/ScheduledReportModal';
 import ScheduledReportTemplates from '../components/ScheduledReportTemplates';
+import { TemplatesToggle } from '../components/ScheduledReportTemplates';
 import ScheduledReportsTable from '../components/ScheduledReportsTable';
 import type { ReportTemplate, ScheduledReport } from '../types/scheduledReports';
 
@@ -81,6 +85,32 @@ function useReportActions(load: () => void) {
   return { busyId, runNow, togglePause, remove, duplicate };
 }
 
+/** Callout de una sola línea (27/08/2026) — la versión de dos párrafos medía
+ * 136px; título + texto truncado en una línea alcanza y deja alto a la tabla. */
+function TemplateCallout() {
+  return (
+    <div className="mb-4 flex items-center gap-4 rounded-[5px] border border-line-100 bg-white px-5 py-3">
+      <span className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-[3px] border border-brand-chip-border bg-brand-soft font-montserrat text-[14px] font-bold text-brand-accent">+</span>
+      <div className="min-w-0 flex-1 truncate">
+        <h2 className="m-0 inline font-montserrat text-[15px] font-extrabold tracking-[-.01em] text-ink-900">Empezá con una plantilla</h2>
+        <span className="ml-3 font-sans text-[12.5px] text-ink-500">
+          Elegí una de las plantillas de abajo o creá un informe desde cero — alcance, período, formato, frecuencia y destinatarios se pueden editar después.
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function SectionLabel({ text, right }: { text: string; right?: ReactNode }) {
+  return (
+    <div className="mb-3 flex items-center gap-[11px]">
+      <span className="block h-0.5 w-5 bg-ink-500" />
+      <span className="font-montserrat text-[9px] font-bold uppercase tracking-[.19em] text-ink-400">{text}</span>
+      {right && <span className="ml-auto">{right}</span>}
+    </div>
+  );
+}
+
 /**
  * Informes guardados/programados (Fase 4.1 del gap analysis vs HP SDS,
  * hifi #3 fase 5, 26/08/2026) — plantillas reales + tabla "Tus informes".
@@ -89,6 +119,9 @@ function useReportActions(load: () => void) {
 export default function ScheduledReports() {
   const data = useScheduledReportsData();
   const actions = useReportActions(data.load);
+  const fit = useFitRows({ estimate: 54 });
+  const paging = useClientPagination(data.items, fit.rows);
+  const [showAllTemplates, setShowAllTemplates] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<ScheduledReport | null>(null);
   const [template, setTemplate] = useState<ReportTemplate | null>(null);
@@ -98,37 +131,27 @@ export default function ScheduledReports() {
   const openEdit = (r: ScheduledReport) => { setEditing(r); setTemplate(null); setModalOpen(true); };
 
   return (
-    <div className="-m-4 flex min-w-0 flex-col bg-surface-page px-[34px] pb-9 pt-[30px] md:-m-10">
+    <div className="-m-4 flex min-w-0 flex-col bg-surface-page px-[34px] pb-9 pt-[30px] md:-m-10 md:h-full md:min-h-0">
       <PageHeader
         eyebrow="INFORMES GUARDADOS Y PROGRAMADOS" title="Informes"
         subtitle={data.items.length === 0 ? 'Se generan solos según su frecuencia y llegan por email a los destinatarios definidos. Todavía no creaste ninguno.' : 'Se generan solos según su frecuencia y llegan por email a los destinatarios definidos.'}
         actions={<button type="button" onClick={openCreate} className={BTN_PRIMARY_LG}>+ NUEVO INFORME</button>}
       />
 
-      <div className="mb-6 flex items-start gap-4 rounded-[5px] border border-line-100 bg-white p-7">
-        <span className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[3px] border border-brand-chip-border bg-brand-soft font-montserrat text-[15px] font-bold text-brand-accent">+</span>
-        <div>
-          <h2 className="m-0 font-montserrat text-[19px] font-extrabold tracking-[-.01em] text-ink-900">Empezá con una plantilla</h2>
-          <p className="mt-2 max-w-[80ch] font-sans text-[13px] leading-[1.6] text-ink-500">
-            Elegí una de las plantillas de abajo o creá un informe desde cero. Cualquiera de ellas se puede editar después: alcance, período, formato, frecuencia y destinatarios.
-          </p>
+      <TemplateCallout />
+      <SectionLabel text="PLANTILLAS DISPONIBLES" right={<TemplatesToggle total={data.templates.length} showAll={showAllTemplates} onToggle={() => setShowAllTemplates((v) => !v)} />} />
+      <ScheduledReportTemplates templates={data.templates} showAll={showAllTemplates} onUse={openFromTemplate} />
+
+      <SectionLabel text="TUS INFORMES" />
+      <div className="flex min-h-0 flex-1 flex-col rounded-[5px] border border-line-100 bg-white">
+        <div ref={fit.ref} className="min-h-0 flex-1 overflow-hidden">
+          <ScheduledReportsTable
+            items={paging.visible} loading={data.loading} clientName={data.clientName} busyId={actions.busyId} skeletonRows={fit.rows}
+            onRun={actions.runNow} onTogglePause={actions.togglePause} onEdit={openEdit} onRemove={actions.remove} onDuplicate={actions.duplicate} onCreate={openCreate}
+          />
         </div>
+        {!data.loading && <HifiPagination page={paging.page} totalPages={paging.totalPages} total={paging.total} pageSize={paging.pageSize} itemLabel="informes" onPageChange={paging.setPage} />}
       </div>
-
-      <div className="mb-3.5 flex items-center gap-[11px]">
-        <span className="block h-0.5 w-5 bg-ink-500" />
-        <span className="font-montserrat text-[9px] font-bold uppercase tracking-[.19em] text-ink-400">PLANTILLAS DISPONIBLES</span>
-      </div>
-      <ScheduledReportTemplates templates={data.templates} onUse={openFromTemplate} />
-
-      <div className="mb-3.5 flex items-center gap-[11px]">
-        <span className="block h-0.5 w-5 bg-ink-500" />
-        <span className="font-montserrat text-[9px] font-bold uppercase tracking-[.19em] text-ink-400">TUS INFORMES</span>
-      </div>
-      <ScheduledReportsTable
-        items={data.items} loading={data.loading} clientName={data.clientName} busyId={actions.busyId}
-        onRun={actions.runNow} onTogglePause={actions.togglePause} onEdit={openEdit} onRemove={actions.remove} onDuplicate={actions.duplicate} onCreate={openCreate}
-      />
 
       <ScheduledReportModal isOpen={modalOpen} onClose={() => setModalOpen(false)} onSaved={data.load} clients={data.clients} editing={editing} initialTemplate={template} />
     </div>

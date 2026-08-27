@@ -5,8 +5,8 @@ import { useAuth } from '../../../store/AuthContext';
 import { useToast } from '../../../store/ToastContext';
 import { useDebounce } from '../../../shared/hooks/useDebounce';
 import { useRowSelection } from '../../../shared/hooks/useRowSelection';
+import { usePageSizeReset } from '../../../shared/hooks/usePageSizeReset';
 import type { Alert, AlertSummary } from '../../../shared/types/alerts';
-import { PAGE_SIZE } from '../lib/alertPresentation';
 
 export type ClientOption = { id: string; name: string };
 export type AlertPatch = { acknowledged?: boolean; resolved?: boolean };
@@ -66,7 +66,7 @@ function useAlertCatalogs(canFilterByClient: boolean) {
   return { classLabels, clients };
 }
 
-export function buildAlertsQueryParams(f: AlertFiltersState, page: number): URLSearchParams {
+export function buildAlertsQueryParams(f: AlertFiltersState, page: number, pageSize: number): URLSearchParams {
   const params = new URLSearchParams();
   if (f.q.trim().length >= 2) params.set('q', f.q.trim());
   if (f.unresolved) params.set('resolved', 'false');
@@ -75,8 +75,8 @@ export function buildAlertsQueryParams(f: AlertFiltersState, page: number): URLS
   if (f.availability) params.set('alert_class', 'availability');
   if (f.last24h) params.set('max_age_hours', '24');
   if (f.clientId) params.set('client_id', f.clientId);
-  params.set('limit', String(PAGE_SIZE));
-  params.set('offset', String(page * PAGE_SIZE));
+  params.set('limit', String(pageSize));
+  params.set('offset', String(page * pageSize));
   return params;
 }
 
@@ -105,8 +105,8 @@ function useAlertSummary(unresolved: boolean, clientId: string) {
 }
 
 /** Página actual + total real (`/alerts` + `/alerts/count`, handoff hifi #3 — antes "ciega"). */
-async function requestAlertPage(filters: AlertFiltersState, page: number): Promise<{ items: Alert[]; total: number }> {
-  const qs = buildAlertsQueryParams(filters, page).toString();
+async function requestAlertPage(filters: AlertFiltersState, page: number, pageSize: number): Promise<{ items: Alert[]; total: number }> {
+  const qs = buildAlertsQueryParams(filters, page, pageSize).toString();
   const [items, count] = await Promise.all([
     api.get<Alert[]>(`/alerts?${qs}`),
     api.get<{ total: number }>(`/alerts/count?${qs}`),
@@ -123,14 +123,14 @@ function useAlertRowsState() {
   return { alerts, setAlerts, total, setTotal, loading, setLoading, error, setError };
 }
 
-function useAlertRows(filters: AlertFiltersState, page: number, debouncedQ: string) {
+function useAlertRows(filters: AlertFiltersState, page: number, debouncedQ: string, pageSize: number) {
   const st = useAlertRowsState();
   const effective = { ...filters, q: debouncedQ };
   const fetchAlerts = useCallback(async () => {
     st.setLoading(true);
     st.setError('');
     try {
-      const { items, total: t } = await requestAlertPage(effective, page);
+      const { items, total: t } = await requestAlertPage(effective, page, pageSize);
       st.setAlerts(items);
       st.setTotal(t);
     } catch (e) {
@@ -139,16 +139,17 @@ function useAlertRows(filters: AlertFiltersState, page: number, debouncedQ: stri
       st.setLoading(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedQ, filters.unresolved, filters.critical, filters.unacknowledged, filters.availability, filters.last24h, filters.clientId, page]);
+  }, [debouncedQ, filters.unresolved, filters.critical, filters.unacknowledged, filters.availability, filters.last24h, filters.clientId, page, pageSize]);
   useEffect(() => { void fetchAlerts(); }, [fetchAlerts]);
-  return { ...st, totalPages: Math.max(1, Math.ceil(st.total / PAGE_SIZE)), fetchAlerts };
+  return { ...st, pageSize, totalPages: Math.max(1, Math.ceil(st.total / pageSize)), fetchAlerts };
 }
 
-function useAlertList(filters: AlertFiltersState) {
+function useAlertList(filters: AlertFiltersState, pageSize: number) {
   const [page, setPage] = useState(0);
   const debouncedQ = useDebounce(filters.q, 300);
   useEffect(() => { setPage(0); }, [debouncedQ, filters.unresolved, filters.critical, filters.unacknowledged, filters.availability, filters.last24h, filters.clientId]);
-  return { page, setPage, ...useAlertRows(filters, page, debouncedQ), ...useAlertSummary(filters.unresolved, filters.clientId) };
+  usePageSizeReset(pageSize, setPage);
+  return { page, setPage, ...useAlertRows(filters, page, debouncedQ, pageSize), ...useAlertSummary(filters.unresolved, filters.clientId) };
 }
 
 type AlertList = ReturnType<typeof useAlertList>;
@@ -221,7 +222,6 @@ async function acknowledgeIds(ids: number[], showToast: Toast, list: AlertList, 
 function useBulkUpdate(list: AlertList) {
   const { showToast } = useToast();
   const [bulkBusy, setBulkBusy] = useState(false);
-  const [groupByCode, setGroupByCode] = useState(false);
   const rowSelection = useRowSelection(list.alerts.map((a) => a.id));
   useEffect(() => { rowSelection.clear(); }, [list.alerts]); // eslint-disable-line react-hooks/exhaustive-deps
   const bulkAcknowledge = () => acknowledgeIds(Array.from(rowSelection.selected), showToast, list, setBulkBusy, rowSelection.clear);
@@ -230,10 +230,13 @@ function useBulkUpdate(list: AlertList) {
   // (`bulk-update-alerts.ts`) para no reconocer a ciegas algo nunca listado.
   const acknowledgeAllVisible = () => acknowledgeIds(list.alerts.filter((a) => !a.acknowledged).map((a) => a.id), showToast, list, setBulkBusy);
   const selectedAlerts = () => list.alerts.filter((a) => rowSelection.selected.has(a.id));
-  return { bulkBusy, rowSelection, bulkAcknowledge, groupByCode, setGroupByCode, selectedAlerts, acknowledgeAllVisible };
+  return { bulkBusy, rowSelection, bulkAcknowledge, selectedAlerts, acknowledgeAllVisible };
 }
 
-export function useAlertsPage() {
+/** `pageSize` = filas que entran en pantalla (`useFitRows`, 27/08/2026). El
+ * toggle "agrupar por código" vive en la página, no acá: `useFitRows` necesita
+ * saberlo ANTES de calcular `pageSize` (descuenta las cabeceras de grupo). */
+export function useAlertsPage(pageSize: number) {
   const { role } = useAuth();
   // client_viewer ve /alerts pero no reconoce/resuelve (PUT /alerts/:id no está
   // en CLIENT_VIEWER_ROUTES): se ocultan los botones, mismo criterio que MonitorDetail.
@@ -241,7 +244,7 @@ export function useAlertsPage() {
   const canFilterByClient = role === 'admin' || role === 'operator';
   const filters = useAlertFilters();
   const catalogs = useAlertCatalogs(canFilterByClient);
-  const list = useAlertList(filters);
+  const list = useAlertList(filters, pageSize);
   return {
     isReadOnlyViewer, canFilterByClient, filters, ...catalogs, ...list,
     ...useUpdateAlert(list), ...useBulkUpdate(list),

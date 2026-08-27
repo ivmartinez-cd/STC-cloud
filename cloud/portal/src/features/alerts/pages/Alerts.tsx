@@ -4,6 +4,7 @@ import CreateIncidentModal from '../../../shared/components/CreateIncidentModal'
 import { BTN_PRIMARY_LG, BTN_SECONDARY_LG } from '../../../shared/lib/buttons';
 import { fmt } from '../../../shared/lib/formatters';
 import type { Alert } from '../../../shared/types/alerts';
+import { useFitRows } from '../../../shared/hooks/useFitRows';
 import { useAlertsPage, deriveIncidentContext, type AlertsPageState } from '../hooks/useAlertsPage';
 import { exportAlertsCsv } from '../lib/exportAlertsCsv';
 import AlertsMetricsPanel from '../components/AlertsMetricsPanel';
@@ -44,7 +45,11 @@ function useIncidentModal(s: AlertsPageState) {
 }
 
 function Alerts() {
-  const s = useAlertsPage();
+  // "Agrupar por código" intercala cabeceras de grupo: se descuentan 2 filas
+  // del cálculo sólo mientras está activo, si no la lista quedaría corta.
+  const [groupByCode, setGroupByCode] = useState(false);
+  const fit = useFitRows({ estimate: 54, reserveRows: groupByCode ? 2 : 0 });
+  const s = useAlertsPage(fit.rows);
   const [exporting, setExporting] = useState(false);
   const incident = useIncidentModal(s);
 
@@ -54,7 +59,7 @@ function Alerts() {
   };
 
   return (
-    <div className="-m-4 flex min-w-0 flex-col bg-surface-page px-[34px] pb-9 pt-[30px] md:-m-10">
+    <div className="-m-4 flex min-w-0 flex-col bg-surface-page px-[34px] pb-9 pt-[30px] md:-m-10 md:h-full md:min-h-0">
       <PageHeader
         eyebrow="TÓNER · RESETS DE CONTADOR · EQUIPOS SIN SEÑAL" title="Alertas" subtitle={subtitle(s.summary)}
         actions={<HeaderActions s={s} exporting={exporting} onExport={handleExport} />}
@@ -65,21 +70,23 @@ function Alerts() {
         <AlertsByCodePanel byCode={s.summary?.byCode ?? []} total={s.summary?.total ?? 0} loading={s.summaryLoading} error={s.summaryError} onRetry={s.fetchSummary} />
       </div>
 
-      <div className="rounded-[5px] border border-line-100 bg-white">
+      <div className="flex min-h-0 flex-1 flex-col rounded-[5px] border border-line-100 bg-white">
         <AlertsFilterBar filters={s.filters} />
         {!s.isReadOnlyViewer && (
           <AlertsBulkBar
-            count={s.rowSelection.count} busy={s.bulkBusy} groupByCode={s.groupByCode}
+            count={s.rowSelection.count} busy={s.bulkBusy} groupByCode={groupByCode}
             onAcknowledge={s.bulkAcknowledge} onOpenIncident={() => incident.setBulkOpen(true)}
-            onToggleGroupByCode={() => s.setGroupByCode(!s.groupByCode)} onClear={s.rowSelection.clear}
+            onToggleGroupByCode={() => setGroupByCode(!groupByCode)} onClear={s.rowSelection.clear}
           />
         )}
-        <AlertsTable
-          alerts={s.alerts} classLabels={s.classLabels} readOnly={s.isReadOnlyViewer} selection={s.rowSelection}
-          pendingId={s.pendingId} groupByCode={s.groupByCode} loading={s.loading} error={s.error} onRetry={s.fetchAlerts}
-          onUpdate={s.updateAlert} onCreateIncident={incident.setRowAlert}
-        />
-        <AlertsPagination page={s.page} total={s.total} totalPages={s.totalPages} onChange={s.setPage} />
+        <div ref={fit.ref} className="min-h-0 flex-1 overflow-hidden">
+          <AlertsTable
+            alerts={s.alerts} classLabels={s.classLabels} readOnly={s.isReadOnlyViewer} selection={s.rowSelection}
+            pendingId={s.pendingId} groupByCode={groupByCode} loading={s.loading} error={s.error} onRetry={s.fetchAlerts}
+            onUpdate={s.updateAlert} onCreateIncident={incident.setRowAlert} skeletonRows={fit.rows}
+          />
+        </div>
+        <AlertsPagination page={s.page} total={s.total} totalPages={s.totalPages} pageSize={s.pageSize} onChange={s.setPage} />
       </div>
 
       <CreateIncidentModal

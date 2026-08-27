@@ -40,7 +40,7 @@ function RowCta({ row }: { row: EmailLogRow }) {
 function Row({ row, clientName }: { row: EmailLogRow; clientName: (id: string | null) => string }) {
   const chip = statusChipProps(row.status);
   return (
-    <div className={`grid ${GRID_COLS} min-h-[54px] items-center gap-x-[14px] border-b border-line-200 px-5 py-[11px] transition-colors duration-150 ease-in-out hover:bg-surface-hover`}>
+    <div data-fit-row className={`grid ${GRID_COLS} min-h-[54px] items-center gap-x-[14px] border-b border-line-200 px-5 py-[11px] transition-colors duration-150 ease-in-out hover:bg-surface-hover`}>
       <span className="font-sans text-[12px] text-ink-600">{fmtDate(row.created_at)}</span>
       <span className="truncate font-sans text-[12.5px] font-semibold text-ink-900">{clientName(row.client_id)}</span>
       <span className="justify-self-start"><EstadoChip label={EVENT_LABELS[row.event] ?? row.event} variant="neutral" dotClassName={eventDot(row.event)} /></span>
@@ -54,7 +54,7 @@ function Row({ row, clientName }: { row: EmailLogRow; clientName: (id: string | 
 
 function HeaderRow() {
   return (
-    <div className={`grid ${GRID_COLS} items-center gap-x-[14px] border-b border-line-100 bg-surface-table-head px-5 py-3`}>
+    <div data-fit-fixed className={`grid ${GRID_COLS} items-center gap-x-[14px] border-b border-line-100 bg-surface-table-head px-5 py-3`}>
       {HEAD_LABELS.map((l) => <div key={l} className="font-montserrat text-[8.5px] font-bold uppercase tracking-[.14em] text-ink-300">{l}</div>)}
       <div className="text-right font-montserrat text-[8.5px] font-bold uppercase tracking-[.14em] text-ink-300">ACCIÓN</div>
     </div>
@@ -69,11 +69,12 @@ interface Props {
   loading: boolean;
   error: string;
   onRetry: () => void;
+  skeletonRows?: number;
 }
 
 /** Tabla de Correo (handoff hifi #3, 26/08/2026): destinatario y CTA hacen
  * visible cuál de las dos causas explica cada fila, en vez de `—` sin contexto. */
-export default function EmailLogTable({ items, clientName, loading, error, onRetry }: Props) {
+export default function EmailLogTable({ items, clientName, loading, error, onRetry, skeletonRows = 8 }: Props) {
   return (
     <div className="overflow-x-auto">
       <div className="min-w-[1260px]" role="table" aria-label="Registro de correo">
@@ -81,7 +82,7 @@ export default function EmailLogTable({ items, clientName, loading, error, onRet
         {error ? (
           <TableErrorState message="No se pudo cargar" onRetry={onRetry} />
         ) : loading ? (
-          Array.from({ length: 8 }, (_, i) => <TableSkeletonRow key={i} gridCols={GRID_COLS} widths={SKELETON_WIDTHS} />)
+          Array.from({ length: skeletonRows }, (_, i) => <TableSkeletonRow key={i} gridCols={GRID_COLS} widths={SKELETON_WIDTHS} />)
         ) : items.length === 0 ? (
           <TableEmptyState message="Sin registros de correo con estos filtros" />
         ) : (

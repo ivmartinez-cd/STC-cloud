@@ -1,8 +1,6 @@
 import { APP_LOCALE } from '../../../shared/lib/formatters';
 import type { SupplyRequestStatus } from '../types/supplyRequests';
 
-export const PAGE_SIZE = 50;
-
 /** `EstadoChip`: `pending` es la única que requiere acción (attention); el
  * resto —incluida `completed`— es neutro (handoff hifi #3, fase 3, 26/08/2026,
  * reemplaza la paleta rojo/ámbar/azul/verde anterior). */

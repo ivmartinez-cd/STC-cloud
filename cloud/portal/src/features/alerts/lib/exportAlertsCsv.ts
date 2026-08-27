@@ -15,8 +15,7 @@ async function fetchAllMatching(filters: AlertFiltersState): Promise<Alert[]> {
   let offset = 0;
   let all: Alert[] = [];
   for (;;) {
-    const params = buildAlertsQueryParams(filters, 0);
-    params.set('limit', String(limit));
+    const params = buildAlertsQueryParams(filters, 0, limit);
     params.set('offset', String(offset));
     const rows = await api.get<Alert[]>(`/alerts?${params.toString()}`);
     all = all.concat(rows);

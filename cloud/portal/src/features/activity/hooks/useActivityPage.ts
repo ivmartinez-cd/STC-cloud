@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { api } from '../../../shared/lib/api';
+import { usePageSizeReset } from '../../../shared/hooks/usePageSizeReset';
 import type { AuditLogItem, AuditLogsResponse, AuditSummary } from '../../../shared/types/audit';
-import { PAGE_SIZE, todayIso } from '../lib/activityPresentation';
+import { todayIso } from '../lib/activityPresentation';
 
 // Mismos sets que `get-audit-summary.ts` (CONFIG_ACTIONS/DEVICE_DOWN_ACTIONS)
 // — duplicados a propósito, no hay endpoint que los sirva y son sólo 2
@@ -36,7 +37,7 @@ function useFilters(): ActivityFiltersState {
 /** Traduce el segmento activo + `topOperator` (para "OTROS OPERADORES") a
  * los params reales que entiende `/audit-logs` — separado para reusarlo
  * igual en el listado paginado y en el export CSV completo. */
-export function buildActivityQueryParams(f: ActivityFiltersState, topOperatorUserId: string | null, page: number): URLSearchParams {
+export function buildActivityQueryParams(f: ActivityFiltersState, topOperatorUserId: string | null, page: number, pageSize: number): URLSearchParams {
   const params = new URLSearchParams();
   if (f.from) params.set('from', f.from);
   if (f.to) params.set('to', `${f.to}T23:59:59.999Z`);
@@ -45,8 +46,8 @@ export function buildActivityQueryParams(f: ActivityFiltersState, topOperatorUse
   if (f.segment === 'config') params.set('action', CONFIG_ACTIONS);
   if (f.segment === 'down') params.set('action', DEVICE_DOWN_ACTIONS);
   if (f.segment === 'others' && topOperatorUserId) params.set('exclude_user_id', topOperatorUserId);
-  params.set('limit', String(PAGE_SIZE));
-  params.set('offset', String(page * PAGE_SIZE));
+  params.set('limit', String(pageSize));
+  params.set('offset', String(page * pageSize));
   return params;
 }
 
@@ -82,13 +83,13 @@ function useRowsState() {
   return { items, setItems, total, setTotal, loading, setLoading, error, setError };
 }
 
-function useRows(f: ActivityFiltersState, topOperatorUserId: string | null, page: number) {
+function useRows(f: ActivityFiltersState, topOperatorUserId: string | null, page: number, pageSize: number) {
   const st = useRowsState();
   const fetchItems = useCallback(async () => {
     st.setLoading(true);
     st.setError('');
     try {
-      const qs = buildActivityQueryParams(f, topOperatorUserId, page).toString();
+      const qs = buildActivityQueryParams(f, topOperatorUserId, page, pageSize).toString();
       const data = await api.get<AuditLogsResponse>(`/audit-logs?${qs}`);
       st.setItems(data.items);
       st.setTotal(data.total);
@@ -98,17 +99,19 @@ function useRows(f: ActivityFiltersState, topOperatorUserId: string | null, page
       st.setLoading(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [f.from, f.to, f.q, f.clientId, f.segment, topOperatorUserId, page]);
+  }, [f.from, f.to, f.q, f.clientId, f.segment, topOperatorUserId, page, pageSize]);
   useEffect(() => { void fetchItems(); }, [fetchItems]);
-  return { ...st, totalPages: Math.max(1, Math.ceil(st.total / PAGE_SIZE)), fetchItems };
+  return { ...st, pageSize, totalPages: Math.max(1, Math.ceil(st.total / pageSize)), fetchItems };
 }
 
-export function useActivityPage() {
+/** `pageSize` = filas que entran en pantalla (`useFitRows`, 27/08/2026). */
+export function useActivityPage(pageSize: number) {
   const filters = useFilters();
   const [page, setPage] = useState(0);
   const { summary, summaryLoading, summaryError, fetchSummary } = useSummary(filters);
-  const list = useRows(filters, summary?.top_operator?.user_id ?? null, page);
+  const list = useRows(filters, summary?.top_operator?.user_id ?? null, page, pageSize);
   useEffect(() => { setPage(0); }, [filters.from, filters.to, filters.q, filters.clientId, filters.segment]);
+  usePageSizeReset(pageSize, setPage);
   return { filters, page, setPage, summary, summaryLoading, summaryError, fetchSummary, ...list };
 }
 

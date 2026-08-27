@@ -1,8 +1,6 @@
 import { APP_LOCALE } from '../../../shared/lib/formatters';
 import type { SupplyColor, SupplyUrgency } from '../../../shared/types/supplies';
 
-export const PAGE_SIZE = 50;
-
 export const URGENCY_LABELS: Record<SupplyUrgency, string> = {
   critico: 'CRÍTICO',
   bajo: 'NIVEL BAJO',

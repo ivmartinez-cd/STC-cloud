@@ -55,7 +55,7 @@ interface Props { row: Row; selected: boolean; onToggle: () => void; onAction: (
  * 25/08/2026) — celdas chicas separadas arriba por el límite de 20 líneas/función. */
 export default function PendingQueueRow({ row, selected, onToggle, onAction }: Props) {
   return (
-    <div className={`grid ${GRID_COLS} min-h-[54px] items-center gap-x-[14px] border-b border-line-200 px-5 py-[11px] transition-colors duration-150 ease-in-out hover:bg-surface-hover`}>
+    <div data-fit-row className={`grid ${GRID_COLS} min-h-[54px] items-center gap-x-[14px] border-b border-line-200 px-5 py-[11px] transition-colors duration-150 ease-in-out hover:bg-surface-hover`}>
       <SelectCheckbox selected={selected} onToggle={onToggle} />
       <DeviceIdentityCell row={row} />
       <ClientSuggestedCell row={row} />

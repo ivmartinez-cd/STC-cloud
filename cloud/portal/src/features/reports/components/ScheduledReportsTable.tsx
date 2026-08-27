@@ -1,11 +1,13 @@
 import { Copy, Download, Loader2, Pause, Pencil, Play, Trash2 } from 'lucide-react';
 import EstadoChip from '../../../shared/components/EstadoChip';
+import { TableSkeletonRow } from '../../../shared/components/TableStates';
 import { FREQ_LABELS, REPORT_TYPE_LABELS, type ScheduledReport } from '../types/scheduledReports';
 import { fmtClosedAt } from '../lib/reportsPresentation';
 import { BTN_PRIMARY_LG } from '../../../shared/lib/buttons';
 
 const GRID_COLS = 'grid-cols-[minmax(240px,1fr)_170px_150px_160px_150px_146px]';
 const HEAD_LABELS = ['NOMBRE', 'ALCANCE', 'FRECUENCIA', 'DESTINATARIOS', 'PRÓXIMO ENVÍO', 'ESTADO'];
+const SKELETON_WIDTHS = ['w-2/3', 'w-1/2', 'w-1/2', 'w-1/3', 'w-1/2', 'w-1/2'];
 
 function statusChip(r: ScheduledReport): { label: string; variant: 'neutral' | 'attention' } {
   if (!r.enabled) return { label: 'PAUSADO', variant: 'neutral' };
@@ -48,7 +50,7 @@ function Row({ r, clientName, busy, onRun, onTogglePause, onEdit, onRemove, onDu
 }) {
   const chip = statusChip(r);
   return (
-    <div className={`grid ${GRID_COLS} items-center gap-x-[14px] border-b border-line-200 px-5 py-[11px]`} style={{ minHeight: 54 }}>
+    <div data-fit-row className={`grid ${GRID_COLS} items-center gap-x-[14px] border-b border-line-200 px-5 py-[11px]`} style={{ minHeight: 54 }}>
       <NameCell r={r} />
       <span className="truncate font-sans text-[12.5px] text-ink-700">{clientName(r.client_id)}</span>
       <span className="font-sans text-[12.5px] text-ink-700">{FREQ_LABELS[r.schedule_freq]}</span>
@@ -73,6 +75,7 @@ interface Props {
   onRemove: (r: ScheduledReport) => void;
   onDuplicate: (r: ScheduledReport) => void;
   onCreate: () => void;
+  skeletonRows?: number;
 }
 
 function EmptyBody({ onCreate }: { onCreate: () => void }) {
@@ -90,15 +93,17 @@ function EmptyBody({ onCreate }: { onCreate: () => void }) {
 }
 
 /** "Tus informes" (handoff hifi #3, fase 5) — encabezado real + empty state
- * DENTRO de la tabla (no una tarjeta aparte), tal como pide el mockup. */
-export default function ScheduledReportsTable({ items, loading, clientName, busyId, onRun, onTogglePause, onEdit, onRemove, onDuplicate, onCreate }: Props) {
+ * DENTRO de la tabla (no una tarjeta aparte), tal como pide el mockup. La
+ * tarjeta blanca la pone la página (crece con flex); acá sólo cabecera + filas
+ * para que `useFitRows` mida bien. */
+export default function ScheduledReportsTable({ items, loading, clientName, busyId, onRun, onTogglePause, onEdit, onRemove, onDuplicate, onCreate, skeletonRows = 3 }: Props) {
   return (
-    <div className="rounded-[5px] border border-line-100 bg-white">
-      <div className={`grid ${GRID_COLS} items-center gap-x-[14px] border-b border-line-100 bg-surface-avatar px-5 py-3`}>
+    <div role="table" aria-label="Tus informes">
+      <div data-fit-fixed className={`grid ${GRID_COLS} items-center gap-x-[14px] border-b border-line-100 bg-surface-avatar px-5 py-3`}>
         {HEAD_LABELS.map((h) => <span key={h} className="font-montserrat text-[8.5px] font-bold uppercase tracking-[.14em] text-ink-300">{h}</span>)}
       </div>
       {loading ? (
-        <div className="h-24 animate-pulse bg-surface-track" />
+        Array.from({ length: skeletonRows }, (_, i) => <TableSkeletonRow key={i} gridCols={GRID_COLS} widths={SKELETON_WIDTHS} />)
       ) : items.length === 0 ? (
         <EmptyBody onCreate={onCreate} />
       ) : (

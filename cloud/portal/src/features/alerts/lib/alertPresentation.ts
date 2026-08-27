@@ -1,7 +1,5 @@
 import { APP_LOCALE } from '../../../shared/lib/formatters';
 
-export const PAGE_SIZE = 50;
-
 export const SEVERITY_LABELS: Record<string, string> = { critical: 'CRÍTICA', warning: 'ADVERTENCIA' };
 
 /** Chips institucionales (handoff hifi #3, 26/08/2026) — reemplaza la paleta

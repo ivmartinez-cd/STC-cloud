@@ -47,7 +47,7 @@ function MetadataPanel({ item }: { item: AuditLogItem }) {
 function Row({ item, expanded, onToggle }: { item: AuditLogItem; expanded: boolean; onToggle: () => void }) {
   return (
     <>
-      <div className={`grid ${GRID_COLS} cursor-pointer items-center gap-x-[14px] border-b border-line-200 px-5 py-[11px] hover:bg-surface-btn-hover`} style={{ height: 54 }} onClick={onToggle}>
+      <div data-fit-row className={`grid ${GRID_COLS} cursor-pointer items-center gap-x-[14px] border-b border-line-200 px-5 py-[11px] hover:bg-surface-btn-hover`} style={{ height: 54 }} onClick={onToggle}>
         <span className="font-mono text-[12px] text-ink-600">{fmtTime(item.created_at)}</span>
         <ActionCell item={item} />
         <TargetCell item={item} />
@@ -70,11 +70,14 @@ function DayHeader({ group }: { group: DayGroup }) {
   );
 }
 
-interface Props { items: AuditLogItem[]; loading: boolean; error: string; hasActiveFilters: boolean; onRetry: () => void; onClearFilters: () => void }
+interface Props {
+  items: AuditLogItem[]; loading: boolean; error: string; hasActiveFilters: boolean;
+  onRetry: () => void; onClearFilters: () => void; skeletonRows?: number;
+}
 
 function TableColumnHead() {
   return (
-    <div className={`grid ${GRID_COLS} items-center gap-x-[14px] border-b border-line-100 bg-surface-avatar px-5 py-3`}>
+    <div data-fit-fixed className={`grid ${GRID_COLS} items-center gap-x-[14px] border-b border-line-100 bg-surface-avatar px-5 py-3`}>
       {HEAD_LABELS.map((h) => <span key={h} className="font-montserrat text-[8.5px] font-bold uppercase tracking-[.14em] text-ink-300">{h}</span>)}
       <span />
     </div>
@@ -95,7 +98,7 @@ function GroupedRows({ groups, expandedId, onToggle }: { groups: DayGroup[]; exp
 }
 
 /** Tabla de Movimientos agrupada por día (handoff hifi #3, fase 5). */
-export default function ActivityTable({ items, loading, error, hasActiveFilters, onRetry, onClearFilters }: Props) {
+export default function ActivityTable({ items, loading, error, hasActiveFilters, onRetry, onClearFilters, skeletonRows = 8 }: Props) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const toggle = (id: string) => setExpandedId((prev) => (prev === id ? null : id));
   const groups = groupByDay(items);
@@ -104,7 +107,7 @@ export default function ActivityTable({ items, loading, error, hasActiveFilters,
       <div style={{ minWidth: TABLE_MIN_WIDTH }}>
         <TableColumnHead />
         {error ? <TableErrorState message={error} onRetry={onRetry} />
-          : loading ? Array.from({ length: 8 }, (_, i) => <TableSkeletonRow key={i} gridCols={GRID_COLS} widths={['w-1/2', 'w-2/3', 'w-3/4', 'w-1/2', 'w-1/2', 'w-1/2', '']} />)
+          : loading ? Array.from({ length: skeletonRows }, (_, i) => <TableSkeletonRow key={i} gridCols={GRID_COLS} widths={['w-1/2', 'w-2/3', 'w-3/4', 'w-1/2', 'w-1/2', 'w-1/2', '']} />)
           : items.length === 0 ? <TableEmptyState message="Sin movimientos" hasActiveFilters={hasActiveFilters} onClearFilters={onClearFilters} />
           : <GroupedRows groups={groups} expandedId={expandedId} onToggle={toggle} />}
       </div>

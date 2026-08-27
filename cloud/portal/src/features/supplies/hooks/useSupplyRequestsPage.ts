@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '../../../shared/lib/api';
 import { useAuth } from '../../../store/AuthContext';
+import { usePageSizeReset } from '../../../shared/hooks/usePageSizeReset';
 import type { SupplyRequest, SupplyRequestStats, SupplyRequestStatus } from '../types/supplyRequests';
-import { PAGE_SIZE } from '../lib/supplyRequestsPresentation';
 
 export interface ClientOption { id: string; name: string }
 export type RequestTab = SupplyRequestStatus | 'all';
@@ -27,8 +27,8 @@ function useRowsState() {
   return { items, setItems, total, setTotal, stats, setStats, loading, setLoading };
 }
 
-async function requestPage(f: Filters): Promise<{ list: { items: SupplyRequest[]; total: number }; stats: SupplyRequestStats }> {
-  const listParams = new URLSearchParams({ limit: String(PAGE_SIZE), offset: String(f.page * PAGE_SIZE) });
+async function requestPage(f: Filters, pageSize: number): Promise<{ list: { items: SupplyRequest[]; total: number }; stats: SupplyRequestStats }> {
+  const listParams = new URLSearchParams({ limit: String(pageSize), offset: String(f.page * pageSize) });
   if (f.tab !== 'all') listParams.set('status', f.tab);
   if (f.clientId) listParams.set('client_id', f.clientId);
   const statsParams = f.clientId ? `?client_id=${f.clientId}` : '';
@@ -39,12 +39,12 @@ async function requestPage(f: Filters): Promise<{ list: { items: SupplyRequest[]
   return { list, stats };
 }
 
-function useRows(f: Filters) {
+function useRows(f: Filters, pageSize: number) {
   const st = useRowsState();
   const load = useCallback(async () => {
     st.setLoading(true);
     try {
-      const { list, stats } = await requestPage(f);
+      const { list, stats } = await requestPage(f, pageSize);
       st.setItems(list.items);
       st.setTotal(list.total);
       st.setStats(stats);
@@ -55,9 +55,9 @@ function useRows(f: Filters) {
       st.setLoading(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [f.tab, f.clientId, f.page]);
+  }, [f.tab, f.clientId, f.page, pageSize]);
   useEffect(() => { void load(); }, [load]);
-  return { ...st, totalPages: Math.max(1, Math.ceil(st.total / PAGE_SIZE)), reload: load };
+  return { ...st, pageSize, totalPages: Math.max(1, Math.ceil(st.total / pageSize)), reload: load };
 }
 
 function countOfBuilder(stats: SupplyRequestStats | null) {
@@ -76,11 +76,13 @@ function useClients(canManage: boolean) {
   return { clients, clientName: (id: string) => clients.find((c) => c.id === id)?.name ?? '…' };
 }
 
-export function useSupplyRequestsPage() {
+/** `pageSize` = filas que entran en pantalla (`useFitRows`, 27/08/2026). */
+export function useSupplyRequestsPage(pageSize: number) {
   const { role } = useAuth();
   const canManage = role === 'admin' || role === 'operator';
   const filters = useFilters();
-  const list = useRows(filters);
+  usePageSizeReset(pageSize, filters.setPage);
+  const list = useRows(filters, pageSize);
   const { clients, clientName } = useClients(canManage);
   const [detailId, setDetailId] = useState<string | null>(null);
 

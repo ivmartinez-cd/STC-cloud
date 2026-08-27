@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import PageHeader from '../../../shared/components/PageHeader';
 import HifiPagination from '../../../shared/components/HifiPagination';
 import { BTN_PRIMARY_LG, BTN_SECONDARY_LG } from '../../../shared/lib/buttons';
+import { useFitRows } from '../../../shared/hooks/useFitRows';
 import { useEmailLogPage } from '../hooks/useEmailLogPage';
-import { PAGE_SIZE } from '../lib/emailLogPresentation';
 import { exportEmailLogCsv } from '../lib/exportEmailLogCsv';
 import EmailLogBanner from '../components/EmailLogBanner';
 import EmailLogMetricsStrip from '../components/EmailLogMetricsStrip';
@@ -16,7 +16,8 @@ import EmailLogTable from '../components/EmailLogTable';
  * sueltas sin decir por qué. El banner + la tira de métricas son el
  * diagnóstico; la tabla queda para el detalle fila por fila. */
 export default function EmailLog() {
-  const s = useEmailLogPage();
+  const fit = useFitRows({ estimate: 54 });
+  const s = useEmailLogPage(fit.rows);
   const navigate = useNavigate();
   const [exporting, setExporting] = useState(false);
 
@@ -26,7 +27,7 @@ export default function EmailLog() {
   };
 
   return (
-    <div className="-m-4 flex min-w-0 flex-col bg-surface-page px-[34px] pb-9 pt-[30px] md:-m-10">
+    <div className="-m-4 flex min-w-0 flex-col bg-surface-page px-[34px] pb-9 pt-[30px] md:-m-10 md:h-full md:min-h-0">
       <PageHeader
         eyebrow="AUDITORÍA DE EMAILS DE NOTIFICACIÓN" title="Correo"
         subtitle="Cada intento queda registrado, se haya enviado o no. Si un aviso no llegó, acá está el motivo exacto."
@@ -41,13 +42,15 @@ export default function EmailLog() {
       <EmailLogBanner summary={s.summary} />
       <EmailLogMetricsStrip summary={s.summary} loading={s.summaryLoading} error={s.summaryError} onRetry={s.fetchSummary} />
 
-      <div className="rounded-[5px] border border-line-100 bg-white">
+      <div className="flex min-h-0 flex-1 flex-col rounded-[5px] border border-line-100 bg-white">
         <EmailLogFilterBar
           query={s.filters.rawQuery} onQueryChange={s.filters.setRawQuery}
           status={s.filters.status} onStatusChange={s.filters.setStatus}
         />
-        <EmailLogTable items={s.items} clientName={s.nameOf} loading={s.loading} error={s.error} onRetry={s.fetchRows} />
-        <HifiPagination page={s.filters.page} totalPages={s.totalPages} total={s.total} pageSize={PAGE_SIZE} itemLabel="intentos" onPageChange={s.filters.setPage} />
+        <div ref={fit.ref} className="min-h-0 flex-1 overflow-hidden">
+          <EmailLogTable items={s.items} clientName={s.nameOf} loading={s.loading} error={s.error} onRetry={s.fetchRows} skeletonRows={fit.rows} />
+        </div>
+        <HifiPagination page={s.filters.page} totalPages={s.totalPages} total={s.total} pageSize={s.pageSize} itemLabel="intentos" onPageChange={s.filters.setPage} />
       </div>
     </div>
   );

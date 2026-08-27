@@ -46,7 +46,7 @@ function Row({ r, clientName, onOpen }: { r: SupplyRequest; clientName: (id: str
   const pending = r.status === 'pending';
   return (
     <button
-      type="button" onClick={() => onOpen(r.id)}
+      type="button" data-fit-row onClick={() => onOpen(r.id)}
       className={`grid ${GRID_COLS} min-h-[54px] w-full items-center gap-x-[14px] border-b border-line-200 px-5 py-[11px] text-left transition-colors duration-150 ease-in-out hover:bg-surface-hover`}
     >
       <EquipmentCell r={r} />
@@ -63,7 +63,7 @@ function Row({ r, clientName, onOpen }: { r: SupplyRequest; clientName: (id: str
 
 function HeaderRow() {
   return (
-    <div className={`grid ${GRID_COLS} items-center gap-x-[14px] border-b border-line-100 bg-surface-table-head px-5 py-3`}>
+    <div data-fit-fixed className={`grid ${GRID_COLS} items-center gap-x-[14px] border-b border-line-100 bg-surface-table-head px-5 py-3`}>
       {HEAD_LABELS.map((l) => <div key={l} className="font-montserrat text-[8.5px] font-bold uppercase tracking-[.14em] text-ink-300">{l}</div>)}
       <div className="text-right font-montserrat text-[8.5px] font-bold uppercase tracking-[.14em] text-ink-600">APERTURA</div>
       <div className="text-right font-montserrat text-[8.5px] font-bold uppercase tracking-[.14em] text-ink-300">ANTIGÜEDAD</div>
@@ -79,17 +79,18 @@ interface Props {
   clientName: (id: string) => string;
   loading: boolean;
   onOpen: (id: string) => void;
+  skeletonRows?: number;
 }
 
 /** Tabla de Pedidos (handoff hifi #3, fase 3, 26/08/2026): cliente y sede,
  * consumible con SKU faltante marcado como bloqueante, CTA única por fila. */
-export default function SupplyRequestsTable({ items, clientName, loading, onOpen }: Props) {
+export default function SupplyRequestsTable({ items, clientName, loading, onOpen, skeletonRows = 8 }: Props) {
   return (
     <div className="overflow-x-auto">
       <div className="min-w-[1180px]" role="table" aria-label="Pedidos">
         <HeaderRow />
         {loading ? (
-          Array.from({ length: 8 }, (_, i) => <TableSkeletonRow key={i} gridCols={GRID_COLS} widths={SKELETON_WIDTHS} />)
+          Array.from({ length: skeletonRows }, (_, i) => <TableSkeletonRow key={i} gridCols={GRID_COLS} widths={SKELETON_WIDTHS} />)
         ) : items.length === 0 ? (
           <TableEmptyState message="Sin pedidos en este estado" />
         ) : (

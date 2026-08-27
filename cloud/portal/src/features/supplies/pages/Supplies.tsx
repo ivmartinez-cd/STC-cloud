@@ -5,7 +5,7 @@ import HifiPagination from '../../../shared/components/HifiPagination';
 import { BTN_PRIMARY_LG, BTN_SECONDARY_LG } from '../../../shared/lib/buttons';
 import { fmt } from '../../../shared/lib/formatters';
 import { useSuppliesPage } from '../hooks/useSuppliesPage';
-import { PAGE_SIZE } from '../lib/suppliesPresentation';
+import { useFitRows } from '../../../shared/hooks/useFitRows';
 import { exportSuppliesCsv } from '../lib/exportSuppliesCsv';
 import SuppliesMetricsStrip from '../components/SuppliesMetricsStrip';
 import SuppliesFilterBar from '../components/SuppliesFilterBar';
@@ -36,7 +36,8 @@ export default function Supplies() {
   // `POST /supply-requests` requiere admin/operator en la práctica (mismo scope
   // que SupplyRequests.tsx) — client_viewer ve la tabla pero no genera pedidos.
   const readOnly = role === 'client_viewer';
-  const s = useSuppliesPage();
+  const fit = useFitRows({ estimate: 58 });
+  const s = useSuppliesPage(fit.rows);
   const [exporting, setExporting] = useState(false);
 
   const handleExport = async () => {
@@ -45,7 +46,7 @@ export default function Supplies() {
   };
 
   return (
-    <div className="-m-4 flex min-w-0 flex-col bg-surface-page px-[34px] pb-9 pt-[30px] md:-m-10">
+    <div className="-m-4 flex min-w-0 flex-col bg-surface-page px-[34px] pb-9 pt-[30px] md:-m-10 md:h-full md:min-h-0">
       <PageHeader
         eyebrow="TÓNERES, TAMBORES Y KITS DE MANTENIMIENTO" title="Consumibles" subtitle={subtitle(s.summary)}
         actions={<HeaderActions s={s} exporting={exporting} onExport={handleExport} />}
@@ -53,7 +54,7 @@ export default function Supplies() {
 
       <SuppliesMetricsStrip summary={s.summary} loading={s.summaryLoading} error={s.summaryError} onRetry={s.fetchSummary} />
 
-      <div className="rounded-[5px] border border-line-100 bg-white">
+      <div className="flex min-h-0 flex-1 flex-col rounded-[5px] border border-line-100 bg-white">
         <SuppliesFilterBar
           query={s.filters.rawQuery} onQueryChange={s.filters.setRawQuery}
           clientId={s.filters.clientId} onClientIdChange={s.filters.setClientId}
@@ -62,8 +63,10 @@ export default function Supplies() {
           urgency={s.filters.urgency} onUrgencyChange={s.filters.setUrgency}
         />
         <SuppliesBulkBar count={s.rowSelection.count} busy={s.busy} onGenerate={() => void s.generateSelected()} onClear={s.rowSelection.clear} />
-        <SuppliesTable items={s.items} readOnly={readOnly} selection={s.rowSelection} rowKey={s.rowKey} loading={s.loading} error={s.error} onRetry={s.fetchSupplies} />
-        <HifiPagination page={s.filters.page} totalPages={s.totalPages} total={s.total} pageSize={PAGE_SIZE} itemLabel="ítems" onPageChange={s.filters.setPage} />
+        <div ref={fit.ref} className="min-h-0 flex-1 overflow-hidden">
+          <SuppliesTable items={s.items} readOnly={readOnly} selection={s.rowSelection} rowKey={s.rowKey} loading={s.loading} error={s.error} onRetry={s.fetchSupplies} skeletonRows={fit.rows} />
+        </div>
+        <HifiPagination page={s.filters.page} totalPages={s.totalPages} total={s.total} pageSize={s.pageSize} itemLabel="ítems" onPageChange={s.filters.setPage} />
       </div>
     </div>
   );

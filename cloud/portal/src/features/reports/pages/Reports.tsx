@@ -5,6 +5,7 @@ import PageHeader from '../../../shared/components/PageHeader';
 import { BTN_PRIMARY_LG, BTN_SECONDARY_LG } from '../../../shared/lib/buttons';
 import type { Closure } from '../types/reports';
 import { useReportsPage, type ReportsPageState } from '../hooks/useReportsPage';
+import { useReportsDetailPaging } from '../hooks/useReportsDetailPaging';
 import ReportsPeriodBar from '../components/ReportsPeriodBar';
 import ReportsMetricsStrip from '../components/ReportsMetricsStrip';
 import ReportsAnomalyBanner from '../components/ReportsAnomalyBanner';
@@ -14,10 +15,6 @@ import ReopenClosureModal from '../components/ReopenClosureModal';
 
 function downloadExport(clientId: string, closureId: string, format: 'csv' | 'xlsx' | 'pdf') {
   window.open(`/api/v1/clients/${clientId}/reports/${closureId}/export.${format}`, '_blank');
-}
-
-function scrollToTable() {
-  document.getElementById('reports-detail-table')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function HeaderActions({ s }: { s: ReportsPageState }) {
@@ -65,15 +62,17 @@ function useReopenModal(s: ReportsPageState) {
       st.setReopening(false);
     }
   };
-  return { ...st, confirm };
+  const cancel = () => { st.setTarget(null); st.setReason(''); };
+  return { ...st, confirm, cancel };
 }
 
 function Reports() {
   const s = useReportsPage();
+  const paging = useReportsDetailPaging(s.rows);
   const reopen = useReopenModal(s);
 
   return (
-    <div className="-m-4 flex min-w-0 flex-col bg-surface-page px-[34px] pb-9 pt-[30px] md:-m-10">
+    <div className="-m-4 flex min-w-0 flex-col bg-surface-page px-[34px] pb-9 pt-[30px] md:-m-10 md:h-full md:min-h-0">
       <PageHeader
         eyebrow="CIERRE MENSUAL INMUTABLE POR CLIENTE" title="Reportes de facturación"
         subtitle="Lectura inicial y final, delta y fuente por equipo. Una vez cerrado el período, los valores no se recalculan: quedan como respaldo de lo facturado."
@@ -87,8 +86,8 @@ function Reports() {
       ) : (
         <>
           <ReportsMetricsStrip s={s} />
-          <ReportsAnomalyBanner rows={s.rows} onViewCalc={scrollToTable} />
-          <ReportsDetailTable period={s.period} rows={s.rows} loading={s.loading} error={s.error} onRetry={s.fetchRows} />
+          <ReportsAnomalyBanner rows={s.rows} onViewCalc={() => paging.setFilter('anomaly')} />
+          <ReportsDetailTable period={s.period} rows={s.rows} paging={paging} loading={s.loading} error={s.error} onRetry={s.fetchRows} />
           <ReportsClosuresHistory
             closures={s.closures} closuresLoading={s.closuresLoading} activePeriod={s.period} isReadOnlyViewer={s.isReadOnlyViewer}
             onSelectPeriod={s.setPeriod} onDownload={(id, fmt) => downloadExport(s.selectedClientId, id, fmt)} onReopenRequest={reopen.setTarget}
@@ -97,10 +96,7 @@ function Reports() {
       )}
 
       {reopen.target && (
-        <ReopenClosureModal
-          target={reopen.target} reason={reopen.reason} onReasonChange={reopen.setReason}
-          onCancel={() => { reopen.setTarget(null); reopen.setReason(''); }} onConfirm={reopen.confirm} reopening={reopen.reopening}
-        />
+        <ReopenClosureModal target={reopen.target} reason={reopen.reason} onReasonChange={reopen.setReason} onCancel={reopen.cancel} onConfirm={reopen.confirm} reopening={reopen.reopening} />
       )}
     </div>
   );

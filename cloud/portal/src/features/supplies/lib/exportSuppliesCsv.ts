@@ -13,8 +13,7 @@ async function fetchAllMatching(f: { query: string; clientId: string; kind: Supp
   let offset = 0;
   let all: FleetSupplyRow[] = [];
   for (;;) {
-    const params = buildSuppliesParams(f, 0);
-    params.set('limit', String(limit));
+    const params = buildSuppliesParams(f, 0, limit);
     params.set('offset', String(offset));
     const data = await api.get<FleetSuppliesResponse>(`/supplies?${params.toString()}`);
     all = all.concat(data.items);

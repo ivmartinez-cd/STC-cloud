@@ -5,10 +5,11 @@ import type { ReportRow } from '../lib/reportsPresentation';
 interface Props { rows: ReportRow[]; onViewCalc: () => void }
 
 /** Banner de anomalía (handoff hifi #3, fase 5) — sólo si hay equipos con
- * reset de contador. "VER CÁLCULO" hace scroll a la tabla, donde cada fila
- * anómala ya lleva el chip "RESET DE CONTADOR": no hay un desglose de
- * cálculo aparte (día a día del histórico) todavía, así que el link real es
- * "andá a ver esas filas", no una promesa de detalle que no existe. */
+ * reset de contador. "VER CÁLCULO" filtra la tabla a las filas anómalas
+ * (cada una ya lleva el chip "RESET DE CONTADOR"; antes hacía scroll, pero
+ * la pantalla ya no scrollea): no hay un desglose de cálculo aparte (día a
+ * día del histórico) todavía, así que el link real es "andá a ver esas
+ * filas", no una promesa de detalle que no existe. */
 export default function ReportsAnomalyBanner({ rows, onViewCalc }: Props) {
   const anomalous = rows.filter((r) => r.hadCounterReset);
   if (anomalous.length === 0) return null;

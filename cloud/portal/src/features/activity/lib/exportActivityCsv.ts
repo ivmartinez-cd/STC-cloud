@@ -15,8 +15,7 @@ async function fetchAllMatching(filters: ActivityFiltersState, topOperatorUserId
   let offset = 0;
   let all: AuditLogItem[] = [];
   for (;;) {
-    const params = buildActivityQueryParams(filters, topOperatorUserId, 0);
-    params.set('limit', String(limit));
+    const params = buildActivityQueryParams(filters, topOperatorUserId, 0, limit);
     params.set('offset', String(offset));
     const data = await api.get<AuditLogsResponse>(`/audit-logs?${params.toString()}`);
     all = all.concat(data.items);

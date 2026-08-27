@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useRowSelection } from '../../../shared/hooks/useRowSelection';
+import { useFitRows } from '../../../shared/hooks/useFitRows';
 import { BulkMoveDevicesModal } from '../../../shared/components/DeviceLifecycleModals/BulkMoveDevicesModal';
 import { usePendingQueue } from '../hooks/usePendingQueue';
 import { usePendingQueueActions } from '../hooks/usePendingQueueActions';
@@ -32,7 +33,8 @@ function useRowAction(approve: (ids: string[]) => void, openModal: (kind: ModalK
  * elegir un cliente para mostrar cualquier fila. Área de contenido únicamente —
  * sidebar/topbar son de `app/layout/`. */
 const PendingDevices = () => {
-  const dir = usePendingQueue();
+  const fit = useFitRows({ estimate: 54 });
+  const dir = usePendingQueue(fit.rows);
   const visibleIds = useMemo(() => dir.rows.map((r) => r.id), [dir.rows]);
   const rowSelection = useRowSelection(visibleIds);
   const refresh = () => { void dir.refetch(); void dir.refetchSummary(); };
@@ -49,14 +51,15 @@ const PendingDevices = () => {
   const reassignTarget = actionIds.length === 1 ? dir.rows.find((r) => r.id === actionIds[0]) : undefined;
 
   return (
-    <div className="-m-4 min-w-0 flex flex-col bg-surface-page px-[34px] pb-9 pt-[30px] md:-m-10">
+    <div className="-m-4 min-w-0 flex flex-col bg-surface-page px-[34px] pb-9 pt-[30px] md:-m-10 md:h-full md:min-h-0">
       <PendingQueueHeader
         selectedCount={rowSelection.count} acting={actions.acting}
         onApproveSelected={() => approveIds(Array.from(rowSelection.selected))}
         exportFilters={{ query: dir.effectiveQuery, clientId: dir.clientId, segment: dir.segment }}
       />
       <PendingQueueMetricsStrip summary={dir.summary} loading={dir.summaryLoading} error={dir.summaryError} onRetry={dir.refetchSummary} />
-      <div className="rounded-[5px] border border-line-100 bg-white">
+      {/* La tarjeta crece hasta el pie; el banner de duplicados queda abajo, fuera de ella, con alto fijo. */}
+      <div className="flex min-h-0 flex-1 flex-col rounded-[5px] border border-line-100 bg-white">
         <PendingQueueFilterBar
           query={dir.rawQuery} onQueryChange={dir.setRawQuery}
           clientId={dir.clientId} clients={dir.clients} onClientChange={dir.setClientId}
@@ -70,14 +73,16 @@ const PendingDevices = () => {
           onIgnore={() => openModal('ignore', Array.from(rowSelection.selected))}
           onClear={rowSelection.clear}
         />
-        <PendingQueueTable
-          rows={dir.rows} loading={dir.loading} error={dir.error} onRetry={dir.refetch}
-          sortDir={dir.sortDir} onToggleSort={dir.toggleSort} hasActiveFilters={hasActiveFilters} onClearFilters={dir.clearFilters}
-          selected={rowSelection.selected} allSelected={rowSelection.allSelected} onToggleRow={rowSelection.toggle} onToggleAll={rowSelection.toggleAll}
-          onRowAction={onRowAction}
-        />
+        <div ref={fit.ref} className="min-h-0 flex-1 overflow-hidden">
+          <PendingQueueTable
+            rows={dir.rows} loading={dir.loading} error={dir.error} onRetry={dir.refetch} skeletonRows={fit.rows}
+            sortDir={dir.sortDir} onToggleSort={dir.toggleSort} hasActiveFilters={hasActiveFilters} onClearFilters={dir.clearFilters}
+            selected={rowSelection.selected} allSelected={rowSelection.allSelected} onToggleRow={rowSelection.toggle} onToggleAll={rowSelection.toggleAll}
+            onRowAction={onRowAction}
+          />
+        </div>
         {!dir.error && !dir.loading && (
-          <PendingQueuePagination page={dir.page} totalPages={dir.totalPages} total={dir.total} waiting7dPlus={dir.summary?.waiting_7d_plus ?? 0} onPageChange={dir.setPage} />
+          <PendingQueuePagination page={dir.page} totalPages={dir.totalPages} total={dir.total} pageSize={dir.pageSize} waiting7dPlus={dir.summary?.waiting_7d_plus ?? 0} onPageChange={dir.setPage} />
         )}
       </div>
       <PendingQueueDuplicatesBanner

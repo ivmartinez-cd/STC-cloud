@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '../../../shared/lib/api';
 import { useDebounce } from '../../../shared/hooks/useDebounce';
+import { usePageSizeReset } from '../../../shared/hooks/usePageSizeReset';
 import type { ClientOption, EmailLogRow, EmailLogSummary, EmailStatus } from '../types/emailLog';
-import { PAGE_SIZE } from '../lib/emailLogPresentation';
 
 export type StatusFilter = 'todos' | EmailStatus;
 
@@ -17,15 +17,15 @@ function useFilters() {
 
 type Filters = ReturnType<typeof useFilters>;
 
-function listParams(f: Filters): URLSearchParams {
-  const params = new URLSearchParams({ limit: String(PAGE_SIZE), offset: String(f.page * PAGE_SIZE) });
+function listParams(f: Filters, pageSize: number): URLSearchParams {
+  const params = new URLSearchParams({ limit: String(pageSize), offset: String(f.page * pageSize) });
   if (f.query.trim().length >= 2) params.set('q', f.query.trim());
   if (f.status !== 'todos') params.set('status', f.status);
   return params;
 }
 
-function requestEmailLogPage(f: Filters): Promise<{ items: EmailLogRow[]; total: number }> {
-  return api.get<{ items: EmailLogRow[]; total: number }>(`/email-log?${listParams(f).toString()}`);
+function requestEmailLogPage(f: Filters, pageSize: number): Promise<{ items: EmailLogRow[]; total: number }> {
+  return api.get<{ items: EmailLogRow[]; total: number }>(`/email-log?${listParams(f, pageSize).toString()}`);
 }
 
 /** Sólo el `useState` — separado de `useRows` por el límite de 20 líneas/función. */
@@ -37,13 +37,13 @@ function useRowsState() {
   return { items, setItems, total, setTotal, loading, setLoading, error, setError };
 }
 
-function useRows(f: Filters) {
+function useRows(f: Filters, pageSize: number) {
   const st = useRowsState();
   const fetchRows = useCallback(async () => {
     st.setLoading(true);
     st.setError('');
     try {
-      const data = await requestEmailLogPage(f);
+      const data = await requestEmailLogPage(f, pageSize);
       st.setItems(data.items);
       st.setTotal(data.total);
     } catch (e) {
@@ -52,9 +52,9 @@ function useRows(f: Filters) {
       st.setLoading(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [f.query, f.status, f.page]);
+  }, [f.query, f.status, f.page, pageSize]);
   useEffect(() => { void fetchRows(); }, [fetchRows]);
-  return { ...st, totalPages: Math.max(1, Math.ceil(st.total / PAGE_SIZE)), fetchRows };
+  return { ...st, pageSize, totalPages: Math.max(1, Math.ceil(st.total / pageSize)), fetchRows };
 }
 
 function useSummary() {
@@ -83,9 +83,11 @@ function useClients() {
   return { clients, nameOf };
 }
 
-export function useEmailLogPage() {
+/** `pageSize` = filas que entran en pantalla (`useFitRows`, 27/08/2026). */
+export function useEmailLogPage(pageSize: number) {
   const filters = useFilters();
-  return { filters, ...useRows(filters), ...useSummary(), ...useClients() };
+  usePageSizeReset(pageSize, filters.setPage);
+  return { filters, ...useRows(filters, pageSize), ...useSummary(), ...useClients() };
 }
 
 export type EmailLogPageState = ReturnType<typeof useEmailLogPage>;

@@ -22,7 +22,7 @@ function HeaderRow({ sortDir, onToggleSort, allSelected, onToggleAll }: {
   sortDir: SortDir; onToggleSort: () => void; allSelected: boolean; onToggleAll: () => void;
 }) {
   return (
-    <div role="row" className={`grid ${GRID_COLS} items-center gap-x-[14px] border-b border-line-100 bg-surface-table-head px-5 py-3`}>
+    <div role="row" data-fit-fixed className={`grid ${GRID_COLS} items-center gap-x-[14px] border-b border-line-100 bg-surface-table-head px-5 py-3`}>
       <button type="button" onClick={onToggleAll} className="justify-self-start text-ink-300 hover:text-ink-100" title="Seleccionar todos">
         {allSelected ? <CheckSquare size={14} /> : <Square size={14} />}
       </button>
@@ -35,10 +35,10 @@ function HeaderRow({ sortDir, onToggleSort, allSelected, onToggleAll }: {
   );
 }
 
-function LoadingSkeleton() {
+function LoadingSkeleton({ count }: { count: number }) {
   return (
     <>
-      {Array.from({ length: 8 }).map((_, i) => (
+      {Array.from({ length: count }).map((_, i) => (
         <div key={i} className={`grid ${GRID_COLS} items-center gap-x-[14px] border-b border-line-200 px-5 py-[11px]`} style={{ height: 54 }}>
           <span />
           <span className="h-3 w-3/5 animate-pulse rounded bg-surface-track" />
@@ -88,6 +88,7 @@ function EmptyState({ hasActiveFilters, onClearFilters }: { hasActiveFilters: bo
 
 interface Props {
   rows: Row[];
+  skeletonRows?: number;
   loading: boolean;
   error: string;
   onRetry: () => void;
@@ -108,14 +109,14 @@ interface Props {
  * líneas/función de la guía. */
 export default function PendingQueueTable({
   rows, loading, error, onRetry, sortDir, onToggleSort, hasActiveFilters, onClearFilters,
-  selected, allSelected, onToggleRow, onToggleAll, onRowAction,
+  selected, allSelected, onToggleRow, onToggleAll, onRowAction, skeletonRows = 8,
 }: Props) {
   return (
     <div className="overflow-x-auto">
       <div className="min-w-[1240px]" role="table" aria-label="Dispositivos pendientes">
         <HeaderRow sortDir={sortDir} onToggleSort={onToggleSort} allSelected={allSelected} onToggleAll={onToggleAll} />
         {error && <ErrorState onRetry={onRetry} />}
-        {!error && loading && <LoadingSkeleton />}
+        {!error && loading && <LoadingSkeleton count={skeletonRows} />}
         {!error && !loading && rows.length === 0 && <EmptyState hasActiveFilters={hasActiveFilters} onClearFilters={onClearFilters} />}
         {!error && !loading && rows.map((row) => (
           <PendingQueueRow key={row.id} row={row} selected={selected.has(row.id)} onToggle={() => onToggleRow(row.id)} onAction={onRowAction} />

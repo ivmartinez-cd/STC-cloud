@@ -2,11 +2,9 @@ import { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { api } from '../../../shared/lib/api';
 import { useDebounce } from '../../../shared/hooks/useDebounce';
+import { usePageSizeReset } from '../../../shared/hooks/usePageSizeReset';
 import type { ClientOption } from '../../../shared/components/DeviceLifecycleModals/types';
 import type { PendingQueueResponse, PendingQueueRow, PendingQueueSegment, PendingQueueSummary, SortDir } from '../types/pendingDevices';
-
-/** Mismo techo que `/devices/directory`/`/clients/directory` (README). */
-export const PAGE_SIZE = 50;
 
 const SEGMENTS: PendingQueueSegment[] = ['todos', 'posibles_duplicados', 'mas_7_dias', 'sin_cliente'];
 
@@ -74,17 +72,17 @@ type Filters = ReturnType<typeof useFilters>;
  * "esperar más" y "haber sido creado antes" son la misma cosa mirada al revés. */
 function apiDirFor(sortDir: SortDir): SortDir { return sortDir === 'desc' ? 'asc' : 'desc'; }
 
-function queueParams(filters: Filters, page: number): URLSearchParams {
+function queueParams(filters: Filters, page: number, pageSize: number): URLSearchParams {
   const { effectiveQuery, clientId, segment, sortDir } = filters;
-  const params = new URLSearchParams({ dir: apiDirFor(sortDir), limit: String(PAGE_SIZE), offset: String(page * PAGE_SIZE) });
+  const params = new URLSearchParams({ dir: apiDirFor(sortDir), limit: String(pageSize), offset: String(page * pageSize) });
   if (effectiveQuery) params.set('q', effectiveQuery);
   if (clientId) params.set('client_id', clientId);
   if (segment !== 'todos') params.set('segment', segment);
   return params;
 }
 
-function fetchQueuePage(filters: Filters, page: number): Promise<PendingQueueResponse> {
-  return api.get<PendingQueueResponse>(`/devices/pending/directory?${queueParams(filters, page).toString()}`);
+function fetchQueuePage(filters: Filters, page: number, pageSize: number): Promise<PendingQueueResponse> {
+  return api.get<PendingQueueResponse>(`/devices/pending/directory?${queueParams(filters, page, pageSize).toString()}`);
 }
 
 function useRowsState() {
@@ -99,11 +97,11 @@ type RowsState = ReturnType<typeof useRowsState>;
 
 /** Cuerpo de la carga, separado de `useRows` para no cruzar el límite de 20
  * líneas/función de la guía. */
-async function loadRows(st: RowsState, filters: Filters, page: number) {
+async function loadRows(st: RowsState, filters: Filters, page: number, pageSize: number) {
   st.setLoading(true);
   st.setError('');
   try {
-    const data = await fetchQueuePage(filters, page);
+    const data = await fetchQueuePage(filters, page, pageSize);
     st.setRows(data.rows ?? []);
     st.setTotal(data.total ?? 0);
   } catch (e: unknown) {
@@ -114,16 +112,16 @@ async function loadRows(st: RowsState, filters: Filters, page: number) {
 }
 
 /** Página actual — reactiva a filtro/cliente/segmento/orden/página. */
-function useRows(filters: Filters) {
+function useRows(filters: Filters, pageSize: number) {
   const { effectiveQuery, clientId, segment, sortDir, page } = filters;
   const st = useRowsState();
   const fetchRows = useCallback(
-    () => loadRows(st, filters, page),
+    () => loadRows(st, filters, page, pageSize),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [effectiveQuery, clientId, segment, sortDir, page],
+    [effectiveQuery, clientId, segment, sortDir, page, pageSize],
   );
   useEffect(() => { void fetchRows(); }, [fetchRows]);
-  const totalPages = Math.max(1, Math.ceil(st.total / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(st.total / pageSize));
   return { ...st, totalPages, refetch: fetchRows };
 }
 
@@ -155,9 +153,12 @@ function useClientOptions() {
   return clients;
 }
 
-export function usePendingQueue() {
+/** `pageSize` viene de `useFitRows` en la página: las filas que entran en el
+ * alto disponible (27/08/2026 — antes 50 fijas y scroll). */
+export function usePendingQueue(pageSize: number) {
   const filters = useFilters();
-  return { ...filters, ...useRows(filters), ...useSummary(), clients: useClientOptions() };
+  usePageSizeReset(pageSize, filters.setPage);
+  return { ...filters, pageSize, ...useRows(filters, pageSize), ...useSummary(), clients: useClientOptions() };
 }
 
 export type PendingQueueState = ReturnType<typeof usePendingQueue>;

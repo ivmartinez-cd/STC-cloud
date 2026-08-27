@@ -1,8 +1,6 @@
 import { APP_LOCALE } from '../../../shared/lib/formatters';
 import type { EmailStatus } from '../types/emailLog';
 
-export const PAGE_SIZE = 50;
-
 export const STATUS_LABELS: Record<EmailStatus, string> = {
   sent: 'ENTREGADO',
   error: 'ERROR',

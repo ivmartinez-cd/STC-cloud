@@ -6,7 +6,7 @@ import { useToast } from '../../../store/ToastContext';
 import { useDebounce } from '../../../shared/hooks/useDebounce';
 import { useRowSelection } from '../../../shared/hooks/useRowSelection';
 import type { FleetSupplyRow, FleetSuppliesResponse, SuppliesSummaryResponse, SupplyKind, SupplyUrgency } from '../../../shared/types/supplies';
-import { PAGE_SIZE } from '../lib/suppliesPresentation';
+import { usePageSizeReset } from '../../../shared/hooks/usePageSizeReset';
 
 export interface ClientOption { id: string; name: string }
 export type UrgencyFilter = SupplyUrgency | '';
@@ -25,8 +25,8 @@ function useFilters() {
 
 type Filters = ReturnType<typeof useFilters>;
 
-export function buildSuppliesParams(f: Pick<Filters, 'query' | 'clientId' | 'kind' | 'urgency'>, page: number): URLSearchParams {
-  const params = new URLSearchParams({ limit: String(PAGE_SIZE), offset: String(page * PAGE_SIZE) });
+export function buildSuppliesParams(f: Pick<Filters, 'query' | 'clientId' | 'kind' | 'urgency'>, page: number, pageSize: number): URLSearchParams {
+  const params = new URLSearchParams({ limit: String(pageSize), offset: String(page * pageSize) });
   if (f.query.trim().length >= 2) params.set('q', f.query.trim());
   if (f.clientId) params.set('client_id', f.clientId);
   if (f.kind) params.set('kind', f.kind);
@@ -42,13 +42,13 @@ function useRowsState() {
   return { items, setItems, total, setTotal, loading, setLoading, error, setError };
 }
 
-function useRows(f: Filters) {
+function useRows(f: Filters, pageSize: number) {
   const st = useRowsState();
   const fetchSupplies = useCallback(async () => {
     st.setLoading(true);
     st.setError('');
     try {
-      const data = await api.get<FleetSuppliesResponse>(`/supplies?${buildSuppliesParams(f, f.page).toString()}`);
+      const data = await api.get<FleetSuppliesResponse>(`/supplies?${buildSuppliesParams(f, f.page, pageSize).toString()}`);
       st.setItems(data.items);
       st.setTotal(data.total);
     } catch (e) {
@@ -57,9 +57,9 @@ function useRows(f: Filters) {
       st.setLoading(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [f.query, f.clientId, f.kind, f.urgency, f.page]);
+  }, [f.query, f.clientId, f.kind, f.urgency, f.page, pageSize]);
   useEffect(() => { void fetchSupplies(); }, [fetchSupplies]);
-  return { ...st, totalPages: Math.max(1, Math.ceil(st.total / PAGE_SIZE)), fetchSupplies };
+  return { ...st, pageSize, totalPages: Math.max(1, Math.ceil(st.total / pageSize)), fetchSupplies };
 }
 
 function useSummary(clientId: string) {
@@ -142,11 +142,13 @@ function useBulkGenerate(list: ReturnType<typeof useRows>, summary: ReturnType<t
   return { busy, rowSelection, generateSelected, generateAllCritical, rowKey };
 }
 
-export function useSuppliesPage() {
+/** `pageSize` = filas que entran en pantalla (`useFitRows`, 27/08/2026). */
+export function useSuppliesPage(pageSize: number) {
   const { role } = useAuth();
   const canFilterByClient = role === 'admin' || role === 'operator';
   const filters = useFilters();
-  const list = useRows(filters);
+  usePageSizeReset(pageSize, filters.setPage);
+  const list = useRows(filters, pageSize);
   const summaryState = useSummary(filters.clientId);
   const bulk = useBulkGenerate(list, summaryState);
 

@@ -52,7 +52,7 @@ function DetailLinkCell({ deviceId }: { deviceId: string | null }) {
 function Row({ r, readOnly, selection, rowKey }: { r: FleetSupplyRow; readOnly: boolean; selection: Selection; rowKey: (r: FleetSupplyRow) => string }) {
   const chip = urgencyChipProps(r.urgency);
   return (
-    <div className={`grid ${GRID_COLS} min-h-[54px] items-center gap-x-[14px] border-b border-line-200 px-5 py-[11px] transition-colors duration-150 ease-in-out hover:bg-surface-hover`}>
+    <div data-fit-row className={`grid ${GRID_COLS} min-h-[54px] items-center gap-x-[14px] border-b border-line-200 px-5 py-[11px] transition-colors duration-150 ease-in-out hover:bg-surface-hover`}>
       <SelectCell r={r} readOnly={readOnly} selection={selection} rowKey={rowKey} />
       <EquipmentCell r={r} />
       <span className="truncate font-sans text-[12.5px] text-ink-700">{r.client_name ?? '—'}</span>
@@ -68,7 +68,7 @@ function Row({ r, readOnly, selection, rowKey }: { r: FleetSupplyRow; readOnly: 
 
 function HeaderRow({ readOnly, selection }: { readOnly: boolean; selection: Selection }) {
   return (
-    <div className={`grid ${GRID_COLS} items-center gap-x-[14px] border-b border-line-100 bg-surface-table-head px-5 py-3`}>
+    <div data-fit-fixed className={`grid ${GRID_COLS} items-center gap-x-[14px] border-b border-line-100 bg-surface-table-head px-5 py-3`}>
       {readOnly ? <span /> : (
         <button type="button" onClick={selection.toggleAll} className="justify-self-start text-ink-300 hover:text-ink-100" title="Seleccionar todos">
           {selection.allSelected ? <CheckSquare size={14} /> : <Square size={14} />}
@@ -93,12 +93,13 @@ interface Props {
   loading: boolean;
   error: string;
   onRetry: () => void;
+  skeletonRows?: number;
 }
 
 /** Tabla de Consumibles (handoff hifi #3, fase 3, 26/08/2026): NIVEL RESTANTE
  * como barra + %, PÁG. RESTANTES y URGENCIA como columnas nuevas (antes la
  * pantalla no tenía ningún agregado por fila más allá del %). */
-export default function SuppliesTable({ items, readOnly, selection, rowKey, loading, error, onRetry }: Props) {
+export default function SuppliesTable({ items, readOnly, selection, rowKey, loading, error, onRetry, skeletonRows = 8 }: Props) {
   return (
     <div className="overflow-x-auto">
       <div className="min-w-[1300px]" role="table" aria-label="Consumibles">
@@ -106,7 +107,7 @@ export default function SuppliesTable({ items, readOnly, selection, rowKey, load
         {error ? (
           <TableErrorState message="No se pudo cargar" onRetry={onRetry} />
         ) : loading ? (
-          Array.from({ length: 8 }, (_, i) => <TableSkeletonRow key={i} gridCols={GRID_COLS} widths={SKELETON_WIDTHS} />)
+          Array.from({ length: skeletonRows }, (_, i) => <TableSkeletonRow key={i} gridCols={GRID_COLS} widths={SKELETON_WIDTHS} />)
         ) : items.length === 0 ? (
           <TableEmptyState message="Ningún consumible con los filtros actuales" />
         ) : (

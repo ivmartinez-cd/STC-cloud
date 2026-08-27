@@ -22,6 +22,7 @@ interface Props {
   onRetry: () => void;
   onUpdate: (id: number, patch: AlertPatch) => void;
   onCreateIncident: (alert: Alert) => void;
+  skeletonRows?: number;
 }
 
 const HEAD_LABELS = ['SEVERIDAD', 'CLIENTE', 'MONITOR / EQUIPO', 'CÓDIGO Y MOTIVO', 'CLASE'];
@@ -69,7 +70,7 @@ type RowProps = Pick<Props, 'classLabels' | 'readOnly' | 'selection' | 'pendingI
 
 function AlertRow({ a, classLabels, readOnly, selection, pendingId, onUpdate, onCreateIncident }: RowProps) {
   return (
-    <div className={`grid ${GRID_COLS} min-h-[54px] items-center gap-x-[14px] border-b border-line-200 px-5 py-[11px] transition-colors duration-150 ease-in-out hover:bg-surface-hover`}>
+    <div data-fit-row className={`grid ${GRID_COLS} min-h-[54px] items-center gap-x-[14px] border-b border-line-200 px-5 py-[11px] transition-colors duration-150 ease-in-out hover:bg-surface-hover`}>
       {readOnly ? <span /> : (
         <button type="button" onClick={() => selection.toggle(a.id)} className="justify-self-start text-ink-300 hover:text-ink-100" title="Seleccionar">
           {selection.selected.has(a.id) ? <CheckSquare size={15} className="text-brand" /> : <Square size={15} />}
@@ -89,7 +90,7 @@ function AlertRow({ a, classLabels, readOnly, selection, pendingId, onUpdate, on
 
 function HeaderRow({ readOnly, selection }: Pick<Props, 'readOnly' | 'selection'>) {
   return (
-    <div className={`grid ${GRID_COLS} items-center gap-x-[14px] border-b border-line-100 bg-surface-table-head px-5 py-3`}>
+    <div data-fit-fixed className={`grid ${GRID_COLS} items-center gap-x-[14px] border-b border-line-100 bg-surface-table-head px-5 py-3`}>
       {readOnly ? <span /> : (
         <button type="button" onClick={selection.toggleAll} className="justify-self-start text-ink-300 hover:text-ink-100" title="Seleccionar todos">
           {selection.allSelected ? <CheckSquare size={14} /> : <Square size={14} />}
@@ -111,7 +112,7 @@ function GroupHeader({ label, count }: { label: string; count: number }) {
   );
 }
 
-function GroupedRows(props: Omit<Props, 'groupByCode' | 'loading' | 'error' | 'onRetry'>) {
+function GroupedRows(props: Omit<Props, 'groupByCode' | 'loading' | 'error' | 'onRetry' | 'skeletonRows'>) {
   const groups = new Map<string, Alert[]>();
   for (const a of props.alerts) {
     const code = codeOf(a);
@@ -134,7 +135,7 @@ const SKELETON_WIDTHS = ['', 'w-3/5', 'w-2/5', 'w-1/2', 'w-3/5', 'w-2/5', 'w-2/5
 
 function Body(props: Props) {
   if (props.error) return <TableErrorState message="No se pudo cargar" onRetry={props.onRetry} />;
-  if (props.loading) return <>{Array.from({ length: 8 }, (_, i) => <TableSkeletonRow key={i} gridCols={GRID_COLS} widths={SKELETON_WIDTHS} />)}</>;
+  if (props.loading) return <>{Array.from({ length: props.skeletonRows ?? 8 }, (_, i) => <TableSkeletonRow key={i} gridCols={GRID_COLS} widths={SKELETON_WIDTHS} />)}</>;
   if (props.alerts.length === 0) return <TableEmptyState message="Ningún resultado con los filtros actuales" />;
   return props.groupByCode ? <GroupedRows {...props} /> : <>{props.alerts.map((a) => <AlertRow key={a.id} a={a} {...props} />)}</>;
 }

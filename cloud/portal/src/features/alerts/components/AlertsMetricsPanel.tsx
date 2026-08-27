@@ -39,7 +39,10 @@ interface Props {
  * junto a `AlertsByCodePanel` (`Alertas.dc.html:37-38`): el mockup usa
  * `auto-fit,minmax(140px,1fr)` — el 2×2 sale solo del ancho del CONTENEDOR, no
  * del viewport. Por eso no reutiliza `MetricsStrip` (forzaría 4 columnas fijas
- * incluso a mitad de pantalla). */
+ * incluso a mitad de pantalla). En `lg+` se fuerza el 2×2: el grid de la página
+ * iguala la altura de las dos celdas y la tira de 4 en fila (≈100 px) quedaba
+ * estirada al alto del panel de códigos con el número flotando arriba
+ * (revisión de Ivan, 27/08/2026). */
 export default function AlertsMetricsPanel({ summary, loading, error, onRetry }: Props) {
   if (error) {
     return (
@@ -50,7 +53,7 @@ export default function AlertsMetricsPanel({ summary, loading, error, onRetry }:
     );
   }
   return (
-    <div className="grid grid-cols-[repeat(auto-fit,minmax(140px,1fr))] gap-px overflow-hidden rounded-[5px] border border-line-100 bg-line-400">
+    <div className="grid grid-cols-[repeat(auto-fit,minmax(140px,1fr))] gap-px overflow-hidden rounded-[5px] border border-line-100 bg-line-400 lg:grid-cols-2">
       {buildCells(summary).map((c) => <MetricCell key={c.label} cell={c} loading={loading} />)}
     </div>
   );

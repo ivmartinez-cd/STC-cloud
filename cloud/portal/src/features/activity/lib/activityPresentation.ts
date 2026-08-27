@@ -1,8 +1,6 @@
 import { APP_LOCALE } from '../../../shared/lib/formatters';
 import type { AuditCategory, AuditLogItem } from '../../../shared/types/audit';
 
-export const PAGE_SIZE = 50;
-
 /** Misma escala de 3 tonos que el resto del handoff (severo/atención/neutro),
  * duplicada a propósito (el guard `arch-portal` bloquea importar entre
  * features) — acá por CATEGORÍA, no por clase de alerta. */

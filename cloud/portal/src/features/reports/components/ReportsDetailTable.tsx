@@ -1,11 +1,10 @@
-import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import EstadoChip from '../../../shared/components/EstadoChip';
+import HifiPagination from '../../../shared/components/HifiPagination';
 import { TableEmptyState, TableErrorState, TableSkeletonRow } from '../../../shared/components/TableStates';
 import { GRID_COLS, TABLE_MIN_WIDTH } from './reportsGrid';
 import { displayDelta, fmtDate, fmtInt, type ReportRow } from '../lib/reportsPresentation';
-
-type Filter = 'all' | 'anomaly' | 'zero';
+import type { DetailFilter, DetailPaging } from '../hooks/useReportsDetailPaging';
 
 const HEAD_LABELS = ['EQUIPO', 'LECTURA INICIAL', 'LECTURA FINAL', 'DELTA ↓', 'MONO', 'FUENTE', 'OBSERVACIÓN'];
 
@@ -22,7 +21,7 @@ function FilterChip({ label, active, onClick }: { label: string; active: boolean
   );
 }
 
-function TableHeader({ period, rows, filter, onFilter }: { period: string; rows: ReportRow[]; filter: Filter; onFilter: (f: Filter) => void }) {
+function TableHeader({ period, rows, filter, onFilter }: { period: string; rows: ReportRow[]; filter: DetailFilter; onFilter: (f: DetailFilter) => void }) {
   const anomalies = rows.filter((r) => r.hadCounterReset).length;
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line-150 px-5 py-[14px]">
@@ -65,7 +64,7 @@ function Row({ row }: { row: ReportRow }) {
   const delta = displayDelta(row);
   const deltaColor = row.hadCounterReset ? 'text-brand-severe' : delta === 0 ? 'text-ink-200' : 'text-ink-900';
   return (
-    <div className={`grid ${GRID_COLS} items-center gap-x-[14px] border-b border-line-200 px-5 py-[11px] ${row.hadCounterReset ? 'bg-brand-soft/40' : ''}`} style={{ height: 54 }}>
+    <div data-fit-row className={`grid ${GRID_COLS} items-center gap-x-[14px] border-b border-line-200 px-5 py-[11px] ${row.hadCounterReset ? 'bg-brand-soft/40' : ''}`} style={{ height: 54 }}>
       <EquipmentCell row={row} />
       <ReadingCell total={row.firstTotal} at={row.firstAt} />
       <ReadingCell total={row.lastTotal} at={row.lastAt} />
@@ -95,7 +94,7 @@ function TotalsRow({ rows }: { rows: ReportRow[] }) {
 
 function TableColumnHead() {
   return (
-    <div className={`grid ${GRID_COLS} items-center gap-x-[14px] border-b border-line-100 bg-surface-avatar px-5 py-3`}>
+    <div data-fit-fixed className={`grid ${GRID_COLS} items-center gap-x-[14px] border-b border-line-100 bg-surface-avatar px-5 py-3`}>
       {HEAD_LABELS.map((h, i) => (
         <span key={h} className={`font-montserrat text-[8.5px] font-bold uppercase tracking-[.14em] text-ink-300 ${i >= 1 && i <= 4 ? 'text-right' : ''}`}>{h}</span>
       ))}
@@ -103,39 +102,36 @@ function TableColumnHead() {
   );
 }
 
-function TableBody({ filtered, loading, error, filter, onRetry, onClearFilter }: {
-  filtered: ReportRow[]; loading: boolean; error: string; filter: Filter; onRetry: () => void; onClearFilter: () => void;
+function TableBody({ visible, loading, error, filter, onRetry, onClearFilter, skeletonRows }: {
+  visible: ReportRow[]; loading: boolean; error: string; filter: DetailFilter; onRetry: () => void; onClearFilter: () => void; skeletonRows: number;
 }) {
   if (error) return <TableErrorState message={error} onRetry={onRetry} />;
-  if (loading) return <>{Array.from({ length: 6 }, (_, i) => <TableSkeletonRow key={i} gridCols={GRID_COLS} widths={['w-2/3', 'w-1/2', 'w-1/2', 'w-1/3', 'w-1/3', 'w-1/2', '']} />)}</>;
-  if (filtered.length === 0) return <TableEmptyState message="Sin equipos con este filtro" hasActiveFilters={filter !== 'all'} onClearFilters={onClearFilter} />;
-  return <>{filtered.map((r) => <Row key={r.key} row={r} />)}</>;
+  if (loading) return <>{Array.from({ length: skeletonRows }, (_, i) => <TableSkeletonRow key={i} gridCols={GRID_COLS} widths={['w-2/3', 'w-1/2', 'w-1/2', 'w-1/3', 'w-1/3', 'w-1/2', '']} />)}</>;
+  if (visible.length === 0) return <TableEmptyState message="Sin equipos con este filtro" hasActiveFilters={filter !== 'all'} onClearFilters={onClearFilter} />;
+  return <>{visible.map((r) => <Row key={r.key} row={r} />)}</>;
 }
 
-function filterRows(rows: ReportRow[], filter: Filter): ReportRow[] {
-  if (filter === 'anomaly') return rows.filter((r) => r.hadCounterReset);
-  if (filter === 'zero') return rows.filter((r) => displayDelta(r) === 0);
-  return rows;
-}
-
-interface Props { period: string; rows: ReportRow[]; loading: boolean; error: string; onRetry: () => void }
+interface Props { period: string; rows: ReportRow[]; paging: DetailPaging; loading: boolean; error: string; onRetry: () => void }
 
 /** Tabla densa "detalle por equipo" (handoff hifi #3, fase 5) + fila de
- * totales al pie — filtrado client-side sobre las filas ya cargadas
- * (preview/cierre no paginan). */
-export default function ReportsDetailTable({ period, rows, loading, error, onRetry }: Props) {
-  const [filter, setFilter] = useState<Filter>('all');
-  const filtered = filterRows(rows, filter);
+ * totales al pie. Filtro y paginación client-side vienen de
+ * `useReportsDetailPaging` (la página los comparte con el banner de
+ * anomalías); la tarjeta crece con `flex-1` y sólo la tabla se mide. */
+export default function ReportsDetailTable({ period, rows, paging, loading, error, onRetry }: Props) {
+  const ready = !loading && !error;
   return (
-    <div id="reports-detail-table" className="rounded-[5px] border border-line-100 bg-white">
-      <TableHeader period={period} rows={rows} filter={filter} onFilter={setFilter} />
-      <div className="overflow-x-auto">
-        <div style={{ minWidth: TABLE_MIN_WIDTH }}>
-          <TableColumnHead />
-          <TableBody filtered={filtered} loading={loading} error={error} filter={filter} onRetry={onRetry} onClearFilter={() => setFilter('all')} />
+    <div className="flex min-h-0 flex-1 flex-col rounded-[5px] border border-line-100 bg-white">
+      <TableHeader period={period} rows={rows} filter={paging.filter} onFilter={paging.setFilter} />
+      <div ref={paging.fit.ref} className="min-h-0 flex-1 overflow-hidden">
+        <div className="overflow-x-auto">
+          <div style={{ minWidth: TABLE_MIN_WIDTH }}>
+            <TableColumnHead />
+            <TableBody visible={paging.visible} loading={loading} error={error} filter={paging.filter} onRetry={onRetry} onClearFilter={() => paging.setFilter('all')} skeletonRows={paging.fit.rows} />
+          </div>
         </div>
       </div>
-      {!loading && !error && rows.length > 0 && <TotalsRow rows={rows} />}
+      {ready && rows.length > 0 && <TotalsRow rows={rows} />}
+      {ready && <HifiPagination page={paging.page} totalPages={paging.totalPages} total={paging.total} pageSize={paging.pageSize} itemLabel="equipos" onPageChange={paging.setPage} />}
     </div>
   );
 }

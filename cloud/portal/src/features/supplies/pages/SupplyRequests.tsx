@@ -1,7 +1,7 @@
 import PageHeader from '../../../shared/components/PageHeader';
 import HifiPagination from '../../../shared/components/HifiPagination';
 import { useSupplyRequestsPage } from '../hooks/useSupplyRequestsPage';
-import { PAGE_SIZE } from '../lib/supplyRequestsPresentation';
+import { useFitRows } from '../../../shared/hooks/useFitRows';
 import SupplyRequestsMetricsStrip from '../components/SupplyRequestsMetricsStrip';
 import SupplyRequestsTabs from '../components/SupplyRequestsTabs';
 import SupplyRequestsTable from '../components/SupplyRequestsTable';
@@ -15,10 +15,11 @@ import SupplyRequestDetailModal from '../components/SupplyRequestDetailModal';
  * puntuales ya vive en Consumibles (fila → GENERAR PEDIDO) y en el detalle
  * de equipo; no se duplica el flujo acá. */
 export default function SupplyRequests() {
-  const s = useSupplyRequestsPage();
+  const fit = useFitRows({ estimate: 54 });
+  const s = useSupplyRequestsPage(fit.rows);
 
   return (
-    <div className="-m-4 flex min-w-0 flex-col bg-surface-page px-[34px] pb-9 pt-[30px] md:-m-10">
+    <div className="-m-4 flex min-w-0 flex-col bg-surface-page px-[34px] pb-9 pt-[30px] md:-m-10 md:h-full md:min-h-0">
       <PageHeader
         eyebrow="SOLICITUDES DE CONSUMIBLES" title="Pedidos"
         subtitle="Se abren solos al cruzar el umbral configurado y se completan solos al detectar el reemplazo del consumible. Los pedidos manuales requieren confirmación de un operador."
@@ -33,10 +34,14 @@ export default function SupplyRequests() {
 
       <SupplyRequestsMetricsStrip stats={s.stats} loading={s.loading && !s.stats} />
 
-      <div className="rounded-[5px] border border-line-100 bg-white">
+      {/* Las tabs son parte fija de la tarjeta; sólo el bloque de la tabla
+          crece. El banner de duplicados queda afuera, debajo. */}
+      <div className="flex min-h-0 flex-1 flex-col rounded-[5px] border border-line-100 bg-white">
         <SupplyRequestsTabs active={s.filters.tab} onChange={s.filters.setTab} countOf={s.countOf} />
-        <SupplyRequestsTable items={s.items} clientName={s.clientName} loading={s.loading} onOpen={s.setDetailId} />
-        <HifiPagination page={s.filters.page} totalPages={s.totalPages} total={s.total} pageSize={PAGE_SIZE} itemLabel="pedidos" onPageChange={s.filters.setPage} />
+        <div ref={fit.ref} className="min-h-0 flex-1 overflow-hidden">
+          <SupplyRequestsTable items={s.items} clientName={s.clientName} loading={s.loading} onOpen={s.setDetailId} skeletonRows={fit.rows} />
+        </div>
+        <HifiPagination page={s.filters.page} totalPages={s.totalPages} total={s.total} pageSize={s.pageSize} itemLabel="pedidos" onPageChange={s.filters.setPage} />
       </div>
 
       {s.duplicatePair && (
