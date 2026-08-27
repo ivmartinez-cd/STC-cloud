@@ -128,7 +128,8 @@ propia de tener varios módulos: **ningún módulo importa el `domain` o `applic
 otro módulo** — solo puede depender de `shared/`. Verificar esta regla con una herramienta
 de análisis de imports en CI (ej. `import-linter` en Python), no dejarla como convención de
 palabra. Justificar la elección por escrito con un ADR cuando se adopte esta variante (ver
-`docs/adr/003-estructura-modulo-capa.md` de este repo como ejemplo).
+`docs/adr/001-adoptar-architecture-guide.md` de este repo, que ya documenta esta
+decisión — o uno nuevo si la elección es distinta a la de ese ADR).
 
 #### Frontend (React / Vue / Angular)
 
@@ -216,14 +217,18 @@ order-processing/
 | Parámetros por función | 3 | Agrupar en objeto |
 | Profundidad de anidamiento | 3 niveles | Extraer a función o invertir condición |
 
-**Cómo se mide en este repo** (auditorías 2026-08-14/22): backend con AST sobre el span
-físico, sin migraciones Alembic; frontend por archivo. En componentes React el límite de
-20 líneas por función no se aplica al componente en sí (un componente JSX es una función
-de render, y medirlo así da cientos de "violaciones" sin valor): el límite que rige es el
-del archivo (300) más la regla de responsabilidad única — un componente no mezcla fetch,
-estado y layout; cuando pasa, se extraen hooks y sub-componentes. Los casos que excedían
-los límites al congelarse la deuda están en `scripts/sizes-baseline.json` (ADR-017/020) y
-`make check` corre `scripts/check_sizes.py`, que falla con cualquier caso nuevo.
+**Cómo se mide en este repo** (auditorías 2026-08-14/22, corregido 2026-08-27 — este
+párrafo describía un pipeline Python/`make` que nunca existió acá, copiado sin adaptar del
+repo hermano `helpdesk-manager`): backend con AST sobre el span físico, excluyendo las
+migraciones de Knex (`cloud/src/db/migrations`); frontend por archivo. En componentes React
+el límite de 20 líneas por función no se aplica al componente en sí (un componente JSX es
+una función de render, y medirlo así da cientos de "violaciones" sin valor): el límite que
+rige es el del archivo (300) más la regla de responsabilidad única — un componente no mezcla
+fetch, estado y layout; cuando pasa, se extraen hooks y sub-componentes. Los casos que
+excedían los límites al congelarse la deuda están en `cloud/scripts/sizes-baseline.json`
+(ver [ADR-002](../adr/002-sizes-baseline-ratchet.md)) y `npm run check:sizes` (incluido en
+`npm run check:arch -w cloud`, job `arch` de `.github/workflows/ci.yml`) corre
+`cloud/scripts/check-sizes.mjs`, que falla con cualquier caso nuevo por encima del límite.
 
 ### Patrones Prohibidos
 
@@ -351,13 +356,21 @@ catch (error) {
 
 ---
 
-**Cómo se verifica en este repo** (2026-08-22): `scripts/check_guards.py` (en `make check`
-sobre HEAD y en el pre-commit sobre lo staged) falla con cualquier `except Exception`/`except:`
-que no relance, no loguee ni delegue en un handler con nombre; con SQL armado por f-string o
-concatenación; con literales tipo secreto; con `print(`/`console.log(`; con
-`dangerouslySetInnerHTML`; con endpoints que devuelven `list[...]` sin `Page[T]` o sin
-`require_permission`/identidad. Lo ya aceptado (pre-auth, ADR-021, constantes en SQL) está en
-`scripts/guards-baseline.json`; agregar ahí algo nuevo es una decisión que se documenta.
+**Cómo se verifica en este repo** (2026-08-22, corregido 2026-08-27 — mismo caso que arriba:
+este párrafo describía reglas de un guard Python que nunca corrió en este repo, ver
+[ADR-003](../adr/003-guards-baseline-ratchet.md)): `cloud/scripts/check-guards.mjs` (`npm run
+check:guards`, incluido en `check:arch`, job `arch` de `.github/workflows/ci.yml` — sin
+pre-commit hook local, sólo CI) falla con 7 reglas sobre TypeScript/TSX: `console-log`
+(`console.log`/`debugger` en producción, no tests), `silent-catch` (`catch {}` sin ni un
+comentario), `sql-interpolation` (`.raw(` con template literal interpolando algo que no sea
+una constante `UPPER_SNAKE`), y 4 reglas de fronteras de módulo —
+`arch-domain`/`arch-application` (un módulo con capas no puede importar fuera de su propia
+capa hacia afuera, salvo su propio `domain`/paquetes npm), `arch-cross-module` (un módulo no
+importa internals de otro módulo, sólo su facade `index`/`presentation`) y `arch-portal`
+(`shared`/`store`/`app` del portal no importa `features/`, ni una `feature` importa otra). La
+autenticación por endpoint la verifica un script aparte, `check-routes.mjs` (ver más abajo).
+Lo ya aceptado al congelar cada regla está en `cloud/scripts/guards-baseline.json`; agregar
+ahí algo nuevo es una decisión que se documenta.
 
 ## 7. Testing
 
@@ -434,33 +447,41 @@ describe('CreateUserUseCase', () => {
 - [ ] Rate limiting configurado (si expuesto a internet)
 - [ ] Queries parametrizadas (sin SQL injection)
 
-### Autorización por módulo (este repo)
+### Autorización por endpoint (este repo)
 
-Los permisos son usuario × módulo × acción sobre un catálogo en tablas (ADR-005/007/029). Un
-módulo o pantalla nueva **no está terminado** hasta tener las cuatro patas — la auditoría del
-2026-08-21 encontró un módulo entero (`turnos`) y varias pantallas sin ellas:
+**Corrección 2026-08-27**: esta sección describía un catálogo de permisos en tablas
+(`module`/`module_action`, ADR-005/007/029), archivos `well_known_permissions.py` /
+`well_known_features.py`, `require_permission`/`require_feature` y
+`frontend/src/shared/config/route-permissions.ts` — nada de eso existe en `stc-cloud`; es
+texto copiado sin adaptar del repo hermano `helpdesk-manager` (que sí es Python y sí tiene
+ese catálogo). El modelo real de este repo es más simple, deny-by-default en dos ejes, y
+está enforced por `cloud/scripts/check-routes.mjs` (`npm run check:routes`, incluido en
+`check:arch`) en vez de una tabla en base de datos — ver
+[ADR-004](../adr/004-modelo-de-autorizacion.md):
 
-1. **Catálogo**: migración que siembra `module` + `module_action` (y que tenga `downgrade`).
-   Sin fila en `module_action` el permiso no se puede conceder desde la UI de admin.
-2. **Backend**: `modules/<m>/domain/well_known_permissions.py` con las `Permission` del módulo
-   y `Depends(require_permission(...))` en **cada** endpoint — nunca un permiso "prestado" de
-   otro módulo (`admin.manage`, etc.). Solo-sesión (`get_current_identity`) únicamente cuando
-   la información es de verdad para cualquier usuario logueado, y documentado en el router.
-3. **Frontend — ruta**: entrada en `frontend/src/shared/config/route-permissions.ts` (la
-   consumen el `RouteGuard` del layout y los submenús del sidebar).
-4. **Frontend — acciones**: `can(modulo, accion)` en cada botón de mutación, espejando el
-   permiso que pide el endpoint que dispara.
+1. **Eje 1 — tipo de credencial, por `preHandler` de Fastify** (`portalAuth` / `agentAuth` /
+   `apiKeyAuth`, según quién llama: usuario del portal, agente instalado, o integrador con
+   API key). `check-routes.mjs` recorre las ~190 declaraciones `fastify.<verbo>(url, {…})`
+   del backend y **falla si una ruta nueva no declara `preHandler`** y tampoco está en la
+   allowlist explícita `PUBLIC_ROUTES` (login, activate/refresh de agente, health, `/metrics`
+   — que valida `METRICS_TOKEN` dentro del handler). Deny-by-default en código, no en config.
+2. **Eje 2 — rol, dentro del portal** (`admin` / `operator` / `client_viewer`), en
+   `cloud/src/api/policy/rolePolicy.ts`: `client_viewer` (usuario scopeado a un cliente) sólo
+   llega a las rutas listadas en `CLIENT_VIEWER_ROUTES` (allowlist, no denylist); `admin` y
+   `operator` llegan a todo lo demás; `ADMIN_ONLY_ROUTES` lista a mano los handlers que además
+   exigen `role === "admin"` adentro del código (usuarios, feedback, system-settings, versión
+   del agente) — `check-routes.mjs` valida que esos paths sigan existiendo, pero el chequeo de
+   rol en sí no es estático (no hay forma de inferirlo de un `if` arbitrario en el handler),
+   así que mantenerla actualizada es manual.
+3. **Frontend**: el rol del usuario logueado (`PortalUser.role`) se chequea inline donde hace
+   falta gatear una acción o un ítem de navegación (ej. `app/layout/navItems.ts`,
+   `app/layout/useNavBadges.ts`) — no hay un catálogo de permisos ni un `can(modulo, accion)`
+   central; el contrato real es "el rol que exige el endpoint" (eje 2 de arriba), y el
+   frontend replica esa misma condición donde la UI necesita ocultar o deshabilitar algo.
 
-No sembrar acciones "por si acaso": una fila del catálogo que ningún `require_permission`
-chequea es un permiso que se puede tildar y no hace nada.
-
-**Funciones por usuario (ADR-032)**: si una pantalla o card debe poder concederse a un usuario
-independientemente de las acciones del módulo, es una "función": fila en `module_feature`
-(migración, con backfill si reemplaza una regla de código), constante en
-`modules/<m>/domain/well_known_features.py`, `require_feature` en el endpoint cuando expone
-datos propios, entrada `feature:` en `route-permissions.ts` (o guard de card) y alta en
-`FUNCIONES_TL` de las plantillas. Las acciones siguen decidiendo crear/editar/aprobar; las
-funciones, qué se ve.
+`npm run check:routes:catalog` regenera `docs/dev/PERMISSIONS_CATALOG.md` — quién puede
+llamar cada ruta (credencial + rol), cruzando los 2 ejes de arriba con el código real en vez
+de mantenerlo a mano.
 
 ---
 
