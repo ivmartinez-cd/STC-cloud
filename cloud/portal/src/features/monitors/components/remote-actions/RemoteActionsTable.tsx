@@ -4,7 +4,8 @@ import {
   ACTION_ACCENT_COLOR, ACTION_LABELS, ACTION_SUBTITLES,
   type RemoteActionBatchRow, type SortDir,
 } from '../../types/remoteActions';
-import StatusChip, { batchStatusChip } from './StatusChip';
+import StatusChip from './StatusChip';
+import { batchStatusChip } from './statusChipLabels';
 
 const GRID_COLS = 'grid-cols-[76px_minmax(210px,1fr)_minmax(200px,1fr)_84px_146px_158px_146px_40px]';
 

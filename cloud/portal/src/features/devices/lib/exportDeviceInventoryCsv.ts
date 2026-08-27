@@ -40,8 +40,8 @@ export async function exportDeviceInventoryCsv(query: string, segment: DeviceDir
     r.agent_name ?? '', ESTADO_LABEL[r.estado], r.consumible_pct ?? '', r.last_seen ?? '', r.alerts_count,
   ])];
   const csv = lines.map((row) => row.map(csvField).join(',')).join('\n');
-  // BOM (﻿) al frente — mismo motivo que `exportClientsCsv.ts` (Excel/es-AR).
-  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+  // BOM (\uFEFF) al frente — mismo motivo que `exportClientsCsv.ts` (Excel/es-AR).
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;

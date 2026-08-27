@@ -4,7 +4,8 @@ import { api } from '../../../../shared/lib/api';
 import { useToast } from '../../../../store/ToastContext';
 import { formatShortDateTime } from '../../../../shared/lib/formatters';
 import { ACTION_LABELS, STATUS_LABELS, type RemoteActionBatchDetail, type RemoteActionBatchItem } from '../../types/remoteActions';
-import StatusChip, { itemStatusChip } from './StatusChip';
+import StatusChip from './StatusChip';
+import { itemStatusChip } from './statusChipLabels';
 
 /** POST de cancelación — separado del render (guía §4: ninguna función
  * arriba de 20 líneas). El botón "Cancelar lote" reemplaza al que antes

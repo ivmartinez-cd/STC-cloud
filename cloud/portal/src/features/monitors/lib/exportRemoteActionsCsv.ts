@@ -37,8 +37,8 @@ export async function exportRemoteActionsCsv(query: string, segment: RemoteActio
     STATUS_LABELS[r.status] ?? r.status, formatShortDateTime(r.scheduled_at), r.completed_at ? formatShortDateTime(r.completed_at) : '',
   ])];
   const csv = lines.map((row) => row.map(csvField).join(',')).join('\n');
-  // BOM (﻿) al frente: sin esto Excel adivina mal el charset (es-AR).
-  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+  // BOM (\uFEFF) al frente: sin esto Excel adivina mal el charset (es-AR).
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
