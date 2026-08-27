@@ -4,13 +4,13 @@ import type Redis from "ioredis";
 import type { AgentService } from "../modules/agents";
 import type { AuthHook } from "./middlewares/authMiddleware";
 
-import { registerAuthRoutes } from "./routes/authRoutes";
+import { registerAuthRoutes } from "../modules/auth";
 import { registerAgentRoutes } from "../modules/agents/presentation/agent-routes";
 import { registerPortalAgentRoutes } from "../modules/agents/presentation/portal-agent-routes";
 import { registerClientRoutes } from "../modules/clients/presentation/client-routes";
-import { registerPublicApiRoutes } from "./routes/publicApiRoutes";
+import { registerPublicApiRoutes } from "../modules/public-api";
 import { registerDeviceRoutes } from "../modules/devices/presentation/device-routes";
-import { registerDashboardRoutes } from "./routes/dashboardRoutes";
+import { registerDashboardRoutes } from "../modules/dashboard";
 import { registerFeedbackRoutes } from "../modules/feedback/presentation/feedback-routes";
 import { registerScheduledReportRoutes } from "../modules/scheduled-reports/presentation/scheduled-report-routes";
 import { registerActivityViewRoutes } from "../modules/activity-views/presentation/activity-view-routes";
@@ -25,8 +25,8 @@ import { registerReportRoutes } from "../modules/reports/presentation/report-rou
 import { registerAuditRoutes } from "../modules/audit/presentation/audit-routes";
 import { registerAlertRoutes } from "../modules/alerts/presentation/alert-routes";
 import { registerInventoryRoutes } from "../modules/inventory/presentation/inventory-routes";
-import { registerSuppliesRoutes } from "./routes/suppliesRoutes";
-import { registerIncidentRoutes } from "./routes/incidentRoutes";
+import { registerSuppliesRoutes } from "../modules/supplies";
+import { registerIncidentRoutes } from "../modules/incidents";
 import { CLIENT_VIEWER_ROUTES } from "./policy/rolePolicy";
 
 interface AuthHooks {
