@@ -2,8 +2,8 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import fs from "fs";
 import path from "path";
 import type Redis from "ioredis";
-import type { PortalUser } from "../../middlewares/authMiddleware";
-import type { VersionUpdateBody } from "./shared";
+import type { PortalUser } from "../../../api/middlewares/authMiddleware";
+import type { VersionUpdateBody } from "../domain/entities/auth-dtos";
 
 async function agentVersion(fastify: FastifyInstance, redis: Redis) {
   // 1. Intentar leer de Redis

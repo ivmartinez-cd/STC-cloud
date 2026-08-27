@@ -1,5 +1,6 @@
 import type { Knex } from "knex";
 import { logger } from "../logger";
+import { hashPassword } from "../modules/auth";
 
 /**
  * Normaliza `knex_migrations.name` a la extensión que corresponde al modo de
@@ -30,7 +31,6 @@ export async function normalizeMigrationExtensions(db: Knex, isTs: boolean): Pro
 /** Auto-inicializar primer administrador si la tabla `users` está vacía. */
 export async function bootstrapDefaultAdmin(db: Knex): Promise<void> {
   try {
-    const { hashPassword } = require("./utils/password");
     const usersCount = await db("users").count("id as count").first();
     const count = parseInt((usersCount?.count as string) || "0", 10);
     if (count === 0) {

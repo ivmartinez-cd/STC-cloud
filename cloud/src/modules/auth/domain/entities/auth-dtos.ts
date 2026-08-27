@@ -1,13 +1,13 @@
 /** Cuerpo de login del portal. `remember` (handoff hifi "Login", 26/08/2026):
  * "Mantener la sesión abierta en este equipo" — extiende el TTL de la cookie
  * de `JWT_PORTAL_TTL` (8h) a `JWT_PORTAL_REMEMBER_TTL` (30d). */
-export interface LoginBody { username: string; password: string; remember?: boolean; }
+export interface LoginBody { username: string; password: string; remember?: boolean; totp_code?: string; }
 
 /** Cuerpo de creación de usuario. */
-export interface CreateUserBody { username: string; password: string; role?: string; client_id?: string; }
+export interface CreateUserBody { username: string; password: string; role?: string; client_id?: string; totp_required?: boolean; }
 
 /** Cuerpo de actualización de usuario. */
-export interface UpdateUserBody { password?: string; role?: string; active?: boolean; client_id?: string; }
+export interface UpdateUserBody { password?: string; role?: string; active?: boolean; client_id?: string; totp_required?: boolean; }
 
 /** Cuerpo de activación de agente. */
 export interface ActivateBody { key: string; hardwareId?: string; }

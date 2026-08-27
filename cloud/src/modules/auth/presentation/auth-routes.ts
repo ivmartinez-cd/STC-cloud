@@ -1,9 +1,9 @@
 import { FastifyInstance } from "fastify";
 import { Knex } from "knex";
 import Redis from "ioredis";
-import { AgentService } from "../../modules/agents";
-import { createAuthController } from "../controllers/authController";
-import type { AuthHook } from "../middlewares/authMiddleware";
+import { AgentService } from "../../agents";
+import { createAuthController } from "./auth-controller";
+import type { AuthHook } from "../../../api/middlewares/authMiddleware";
 
 // Techos de fuerza bruta en login/activate — deliberadamente INDEPENDIENTES
 // de RATE_LIMIT_MAX (ese es el límite general por IP; éstos protegen contra
@@ -103,8 +103,8 @@ export function registerAuthRoutes(
   });
 
   // Público (sin `preHandler`): la tira de métricas del panel de marca en /login
-  // se ve antes de autenticar. Cacheado en Redis (ver login-stats.ts) para que
-  // quedar expuesto sin sesión no habilite pegarle a la DB en cada carga.
+  // se ve antes de autenticar. Cacheado en Redis (ver login-stats-controller.ts)
+  // para que quedar expuesto sin sesión no habilite pegarle a la DB en cada carga.
   fastify.get("/api/v1/portal/login-stats", {
     config: { rateLimit: { max: 30, timeWindow: "1 minute" } },
     handler: ctrl.loginStats,

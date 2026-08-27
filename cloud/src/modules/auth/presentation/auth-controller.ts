@@ -1,18 +1,19 @@
 import type { FastifyInstance } from "fastify";
 import type { Knex } from "knex";
 import type Redis from "ioredis";
-import type { AgentService } from "../../../modules/agents";
-import { createAuthSessionHandlers } from "./session";
-import { createAuthUserHandlers } from "./users";
-import { createAuthAgentHandlers } from "./agent-auth";
-import { createAuthAgentVersionHandlers } from "./agent-version";
-import { createLoginStatsHandler } from "./login-stats";
+import type { AgentService } from "../../agents";
+import { createAuthSessionHandlers } from "./session-controller";
+import { createAuthUserHandlers } from "./users-controller";
+import { createAuthAgentHandlers } from "./agent-auth-controller";
+import { createAuthAgentVersionHandlers } from "./agent-version-controller";
+import { createLoginStatsHandler } from "./login-stats-controller";
 
 /**
  * Controller de autenticación (portal + agentes) y usuarios (Fase 2 de
  * docs/dev/ARCHITECTURE_MIGRATION_PLAN.md — dividido desde un solo archivo de
- * 385 líneas). Mismo objeto de handlers que devolvía el archivo original;
- * ningún import externo cambia.
+ * 385 líneas; migrado a módulo con capas completas en la tanda 2026-08-27).
+ * Mismo objeto de handlers que devolvía el archivo original; ningún import
+ * externo cambia.
  */
 export function createAuthController(fastify: FastifyInstance, db: Knex, redis: Redis, agentService: AgentService) {
   return {

@@ -10,7 +10,7 @@
 import { test, describe, after } from 'node:test';
 import assert from 'node:assert/strict';
 import knexLib from 'knex';
-import { hashPassword } from '../api/utils/password';
+import { hashPassword } from '../modules/auth/domain/services/password-hasher';
 
 const API  = process.env.API_URL  || 'http://localhost:3000/api/v1';
 const USER = process.env.PORTAL_ADMIN_USER     || 'admin';

@@ -1,9 +1,9 @@
 import { FastifyInstance } from "fastify";
 import { Knex } from "knex";
 import Redis from "ioredis";
-import { AgentService } from "../../modules/agents";
-import { createDashboardController } from "../controllers/dashboardController";
-import type { AuthHook } from "../middlewares/authMiddleware";
+import { AgentService } from "../../agents";
+import { createDashboardController } from "./dashboard-controller";
+import type { AuthHook } from "../../../api/middlewares/authMiddleware";
 
 export function registerDashboardRoutes(
   fastify: FastifyInstance,

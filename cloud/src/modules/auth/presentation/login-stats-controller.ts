@@ -1,7 +1,7 @@
 import type { FastifyRequest } from "fastify";
 import type { Knex } from "knex";
 import type Redis from "ioredis";
-import { queryDevicesCount, queryAgentsStats, queryClientsCount, queryMonthlyVolume } from "../dashboardController/dashboard-queries";
+import { queryDevicesCount, queryAgentsStats, queryClientsCount, queryMonthlyVolume } from "../../dashboard";
 
 const CACHE_KEY = "stc:login_stats";
 const CACHE_TTL_SECONDS = 60;
