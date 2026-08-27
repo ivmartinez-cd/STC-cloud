@@ -40,9 +40,9 @@ export interface ClientDeviceDirectoryResponse {
  * `detected_at`) aditivas al shape que ya usaba `MergeDeviceModal.tsx`. */
 export interface DuplicateCandidate {
   a_id: string; a_serial: string | null; a_mac: string | null; a_ip: string | null;
-  a_brand: string | null; a_model: string | null; a_name: string | null;
+  a_brand: string | null; a_model: string | null; a_name: string | null; a_hostname: string | null;
   b_id: string; b_serial: string | null; b_mac: string | null; b_ip: string | null;
-  b_brand: string | null; b_model: string | null; b_name: string | null;
+  b_brand: string | null; b_model: string | null; b_name: string | null; b_hostname: string | null;
   reason: string;
   detected_at: string | null;
 }

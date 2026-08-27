@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ConfirmationModal } from '../ConfirmationModal';
 import { api } from '../../lib/api';
+import { DUPLICATE_REASON_LABEL } from '../../lib/duplicateReasons';
 
 interface DuplicateCandidate {
   a_id: string; a_serial: string | null; a_mac: string | null; a_ip: string | null;
@@ -46,7 +47,7 @@ export function MergeDeviceModal({ isOpen, onClose, onDone, deviceId, clientId }
   const otherIdOf = (c: DuplicateCandidate) => (c.a_id === deviceId ? c.b_id : c.a_id);
   const labelOf = (c: DuplicateCandidate) => {
     const other = c.a_id === deviceId ? { serial: c.b_serial, mac: c.b_mac, ip: c.b_ip } : { serial: c.a_serial, mac: c.a_mac, ip: c.a_ip };
-    return `${other.serial ?? other.ip ?? other.mac ?? '—'} (${c.reason})`;
+    return `${other.serial ?? other.ip ?? other.mac ?? '—'} (${DUPLICATE_REASON_LABEL[c.reason] ?? c.reason})`;
   };
 
   return (

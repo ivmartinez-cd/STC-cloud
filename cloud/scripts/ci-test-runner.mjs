@@ -27,6 +27,7 @@ const TEST_FILES = [
   "src/tests/alertDigest.test.ts",
   "src/tests/reports.test.ts",
   "src/tests/deviceLifecycle.test.ts",
+  "src/tests/deviceDuplicates.test.ts",
   "src/tests/deviceLifecycleBulkActions.test.ts",
   "src/tests/auditFeed.test.ts",
   "src/tests/inventoryFields.test.ts",

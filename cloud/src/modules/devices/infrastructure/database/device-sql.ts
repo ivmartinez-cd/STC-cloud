@@ -1,27 +1,58 @@
-// Self-join de pares vivos del mismo cliente, por MAC, por IP-fantasma en
-// la misma sede, o por serial coincidente entre monitores distintos (el
-// caso que motiva la clave por cliente en primer lugar).
+// Self-join de pares vivos del mismo cliente, por MAC, por IP en el mismo
+// monitor, o por serial coincidente entre monitores distintos (el caso que
+// motiva la clave por cliente en primer lugar).
 //
 // `a_brand`/`a_model`/`a_name`/`b_*` y `detected_at` (25/08/2026): el handoff hifi
 // "Cliente — detalle" muestra el par como "HP LaserJet M428 ↔ HP LaserJet M428fdw"
 // (marca+modelo, no serie cruda) + antigüedad de la coincidencia — columnas nuevas,
 // aditivas, no cambian el shape que ya consume `DuplicateDevicesCard.tsx`/
 // `MergeDeviceModal.tsx` (siguen usando sólo `a_serial`/`a_ip`/`a_mac`/`reason`).
+//
+// Guardas (27/08/2026, auditoría contra la flota real): dos equipos con seriales
+// identificantes DISTINTOS son dos impresoras físicas distintas, se parezcan en lo
+// que se parezcan — la coincidencia de hostname (las HP reportan el modelo como
+// hostname por defecto: 6 "HP LaserJet E50145" distintas producían 15 pares
+// falsos) o de IP (DHCP reasigna la misma IP a otro equipo en días distintos)
+// no las convierte en duplicado. La única excepción es la MAC: dos filas con la
+// misma MAC física y seriales distintos son la misma impresora con un serial mal
+// leído (caso real: HP M428fdw con serial "Z5MAB…" de una versión vieja del
+// agente) — ésa sí se muestra. Un hostname igual al modelo no cuenta como
+// coincidencia por sí solo. El predicado de serial identificante es el mismo
+// de `devices_client_serial_uniq` / `isIdentifyingSerial` (device-identity.ts).
+const IDENTIFYING_SERIAL_SQL = (t: string) =>
+  `(${t}.serial_number IS NOT NULL AND length(btrim(${t}.serial_number)) >= 5
+     AND (${t}.ip_address IS NULL OR btrim(${t}.serial_number) <> host(${t}.ip_address))
+     AND btrim(${t}.serial_number) !~ '^[0-9]{1,3}(\\.[0-9]{1,3}){3}$'
+     AND btrim(${t}.serial_number) !~ '^(.)\\1*$'
+     AND btrim(${t}.serial_number) !~* '^(unknown|n/\\?a|none|null|nil|serial|s/\\?n|not \\?set|default)$'
+     AND btrim(${t}.serial_number) !~* '^(sn)\\?0*123456[0-9]*$')`;
+
+const DISTINCT_IDENTIFYING_SERIALS_SQL =
+  `(${IDENTIFYING_SERIAL_SQL("a")} AND ${IDENTIFYING_SERIAL_SQL("b")}
+     AND upper(btrim(a.serial_number)) <> upper(btrim(b.serial_number)))`;
+
+const HOSTNAME_MATCH_SQL =
+  `(a.hostname IS NOT NULL AND btrim(a.hostname) <> '' AND lower(btrim(a.hostname)) = lower(btrim(b.hostname))
+     AND lower(btrim(a.hostname)) <> lower(btrim(coalesce(a.model, '')))
+     AND lower(btrim(b.hostname)) <> lower(btrim(coalesce(b.model, ''))))`;
+
 export const DUPLICATES_SQL = (byAgent: boolean) => `SELECT a.id AS a_id, a.serial_number AS a_serial, a.mac AS a_mac, a.ip_address AS a_ip,
             a.agent_id AS a_agent_id, a.last_seen AS a_last_seen,
-            a.brand AS a_brand, a.model AS a_model, a.name AS a_name,
+            a.brand AS a_brand, a.model AS a_model, a.name AS a_name, a.hostname AS a_hostname,
             b.id AS b_id, b.serial_number AS b_serial, b.mac AS b_mac, b.ip_address AS b_ip,
             b.agent_id AS b_agent_id, b.last_seen AS b_last_seen,
-            b.brand AS b_brand, b.model AS b_model, b.name AS b_name,
+            b.brand AS b_brand, b.model AS b_model, b.name AS b_name, b.hostname AS b_hostname,
             LEAST(a.created_at, b.created_at) AS detected_at,
             CASE
               WHEN a.mac IS NOT NULL AND a.mac = b.mac THEN 'same_mac'
-              WHEN a.agent_id = b.agent_id AND a.ip_address = b.ip_address
-                AND (a.serial_number IS NULL OR a.serial_number = host(a.ip_address)
-                     OR b.serial_number IS NULL OR b.serial_number = host(b.ip_address))
-                THEN 'ghost_same_ip'
-              WHEN upper(btrim(a.serial_number)) = upper(btrim(b.serial_number)) AND a.agent_id <> b.agent_id
+              WHEN a.serial_number IS NOT NULL AND upper(btrim(a.serial_number)) = upper(btrim(b.serial_number))
+                AND a.agent_id <> b.agent_id
                 THEN 'same_serial_different_monitor'
+              WHEN a.agent_id = b.agent_id AND a.ip_address IS NOT NULL AND a.ip_address = b.ip_address
+                AND (NOT ${IDENTIFYING_SERIAL_SQL("a")} OR NOT ${IDENTIFYING_SERIAL_SQL("b")})
+                THEN 'ghost_same_ip'
+              WHEN a.agent_id = b.agent_id AND a.ip_address IS NOT NULL AND a.ip_address = b.ip_address
+                THEN 'same_ip'
               ELSE 'same_hostname'
             END AS reason
        FROM devices a JOIN devices b ON a.id < b.id
@@ -30,11 +61,14 @@ export const DUPLICATES_SQL = (byAgent: boolean) => `SELECT a.id AS a_id, a.seri
         AND b.decommissioned_at IS NULL AND b.merged_into IS NULL
         AND (
           (a.mac IS NOT NULL AND a.mac = b.mac)
-          OR (a.agent_id = b.agent_id AND a.ip_address IS NOT NULL AND a.ip_address = b.ip_address)
-          OR (a.serial_number IS NOT NULL AND upper(btrim(a.serial_number)) = upper(btrim(b.serial_number)))
-          OR (a.hostname IS NOT NULL AND a.hostname = b.hostname)
+          OR (NOT ${DISTINCT_IDENTIFYING_SERIALS_SQL} AND (
+               (a.agent_id = b.agent_id AND a.ip_address IS NOT NULL AND a.ip_address = b.ip_address)
+            OR (a.serial_number IS NOT NULL AND upper(btrim(a.serial_number)) = upper(btrim(b.serial_number)))
+            OR ${HOSTNAME_MATCH_SQL}
+          ))
         )
         ${byAgent ? "AND (a.agent_id = ? OR b.agent_id = ?)" : ""}
+      ORDER BY detected_at DESC
       LIMIT 200`;
 
 export function duplicatesBindings(clientId: string, agentId?: string): string[] {
