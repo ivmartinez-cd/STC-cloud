@@ -484,7 +484,7 @@
     "src/modules/public-api/presentation/public-api-controller.ts": [
       {
         "name": "createPublicApiController",
-        "length": 73
+        "length": 74
       }
     ],
     "src/modules/public-api/presentation/public-api-routes.ts": [
@@ -686,7 +686,7 @@
       },
       {
         "name": "Layout",
-        "length": 40
+        "length": 44
       }
     ],
     "portal/src/app/layout/SidebarNav.tsx": [
@@ -722,13 +722,13 @@
     "portal/src/features/activity/pages/Activity.tsx": [
       {
         "name": "Activity",
-        "length": 32
+        "length": 37
       }
     ],
     "portal/src/features/alerts/pages/Alerts.tsx": [
       {
         "name": "Alerts",
-        "length": 48
+        "length": 54
       }
     ],
     "portal/src/features/auth/pages/Login.tsx": [
@@ -756,7 +756,7 @@
     "portal/src/features/clients/components/ClientAttentionZone.tsx": [
       {
         "name": "ClientAttentionZone",
-        "length": 33
+        "length": 31
       }
     ],
     "portal/src/features/clients/components/ClientDetailTabs.tsx": [
@@ -771,16 +771,10 @@
         "length": 50
       }
     ],
-    "portal/src/features/clients/components/ClientDevicesPagination.tsx": [
-      {
-        "name": "ClientDevicesPagination",
-        "length": 55
-      }
-    ],
     "portal/src/features/clients/components/ClientDevicesSection.tsx": [
       {
         "name": "ClientDevicesSection",
-        "length": 42
+        "length": 29
       }
     ],
     "portal/src/features/clients/components/ClientDevicesTable.tsx": [
@@ -798,7 +792,7 @@
     "portal/src/features/clients/components/ClientMonitorsSection.tsx": [
       {
         "name": "ClientMonitorsSection",
-        "length": 96
+        "length": 87
       }
     ],
     "portal/src/features/clients/components/ClientProfileCard.tsx": [
@@ -822,23 +816,17 @@
     "portal/src/features/clients/components/ClientsDirectoryTable.tsx": [
       {
         "name": "ClientsDirectoryTable",
-        "length": 128
+        "length": 130
       },
       {
         "name": "anonymous",
-        "length": 48
+        "length": 49
       }
     ],
     "portal/src/features/clients/components/ClientsFilterBar.tsx": [
       {
         "name": "ClientsFilterBar",
         "length": 50
-      }
-    ],
-    "portal/src/features/clients/components/ClientsPagination.tsx": [
-      {
-        "name": "ClientsPagination",
-        "length": 55
       }
     ],
     "portal/src/features/clients/components/ConfigCardShell.tsx": [
@@ -862,13 +850,17 @@
     "portal/src/features/clients/components/DeviceApprovalCard.tsx": [
       {
         "name": "DeviceApprovalCard",
-        "length": 99
+        "length": 98
       }
     ],
     "portal/src/features/clients/components/DuplicateDevicesCard.tsx": [
       {
+        "name": "Row",
+        "length": 21
+      },
+      {
         "name": "DuplicateDevicesCard",
-        "length": 27
+        "length": 37
       }
     ],
     "portal/src/features/clients/components/EditClientModal.tsx": [
@@ -880,7 +872,7 @@
     "portal/src/features/clients/components/IncidentRulesCard.tsx": [
       {
         "name": "IncidentRulesCard",
-        "length": 111
+        "length": 118
       }
     ],
     "portal/src/features/clients/components/NewKeyModal.tsx": [
@@ -966,13 +958,13 @@
     "portal/src/features/clients/pages/ClientDetail.tsx": [
       {
         "name": "ClientDetail",
-        "length": 110
+        "length": 106
       }
     ],
     "portal/src/features/clients/pages/Clients.tsx": [
       {
         "name": "Clients",
-        "length": 192
+        "length": 196
       }
     ],
     "portal/src/features/dashboard/components/AgentVersionsCard.tsx": [
@@ -1056,7 +1048,7 @@
     "portal/src/features/devices/components/detail/AlertsTab.tsx": [
       {
         "name": "AlertsTab",
-        "length": 39
+        "length": 31
       }
     ],
     "portal/src/features/devices/components/detail/CostsTab.tsx": [
@@ -1114,13 +1106,13 @@
     "portal/src/features/devices/components/detail/HistoryTab.tsx": [
       {
         "name": "HistoryTab",
-        "length": 36
+        "length": 44
       }
     ],
     "portal/src/features/devices/components/detail/IncidentsTab.tsx": [
       {
         "name": "IncidentsTab",
-        "length": 42
+        "length": 49
       }
     ],
     "portal/src/features/devices/components/detail/MediaTab.tsx": [
@@ -1150,37 +1142,43 @@
     "portal/src/features/devices/pages/DeviceDetail.tsx": [
       {
         "name": "DeviceDetail",
-        "length": 145
+        "length": 148
       }
     ],
     "portal/src/features/devices/pages/Devices.tsx": [
       {
         "name": "Devices",
-        "length": 26
+        "length": 31
       }
     ],
     "portal/src/features/email-log/pages/EmailLog.tsx": [
       {
         "name": "EmailLog",
-        "length": 37
+        "length": 40
+      }
+    ],
+    "portal/src/features/incidents/components/IncidentsTable.tsx": [
+      {
+        "name": "Row",
+        "length": 21
       }
     ],
     "portal/src/features/incidents/pages/IncidentDetail.tsx": [
       {
         "name": "IncidentDetail",
-        "length": 238
+        "length": 244
       }
     ],
     "portal/src/features/incidents/pages/Incidents.tsx": [
       {
         "name": "Incidents",
-        "length": 50
+        "length": 55
       }
     ],
     "portal/src/features/monitors/components/ConfigTabPanel.tsx": [
       {
         "name": "ConfigTabPanel",
-        "length": 137
+        "length": 145
       }
     ],
     "portal/src/features/monitors/components/ConnectivityStrip.tsx": [
@@ -1204,7 +1202,7 @@
     "portal/src/features/monitors/components/DeviceInventoryTable.tsx": [
       {
         "name": "DeviceInventoryTable",
-        "length": 249
+        "length": 252
       },
       {
         "name": "handleApproveDiscovered",
@@ -1264,7 +1262,7 @@
     "portal/src/features/monitors/components/RecentActivityCard.tsx": [
       {
         "name": "RecentActivityCard",
-        "length": 60
+        "length": 65
       }
     ],
     "portal/src/features/monitors/components/ReportsTabPanel.tsx": [
@@ -1278,7 +1276,7 @@
       },
       {
         "name": "ReportsTabPanel",
-        "length": 137
+        "length": 143
       }
     ],
     "portal/src/features/monitors/components/SnmpCredentialDraftForm.tsx": [
@@ -1337,12 +1335,6 @@
       {
         "name": "AgentsFleetMetricsStrip",
         "length": 29
-      }
-    ],
-    "portal/src/features/monitors/components/agents/AgentsPagination.tsx": [
-      {
-        "name": "AgentsPagination",
-        "length": 57
       }
     ],
     "portal/src/features/monitors/components/agents/AgentsSignalDistributionCard.tsx": [
@@ -1412,37 +1404,31 @@
     "portal/src/features/monitors/pages/Agents.tsx": [
       {
         "name": "Agents",
-        "length": 149
+        "length": 153
       }
     ],
     "portal/src/features/monitors/pages/MonitorDetail.tsx": [
       {
         "name": "MonitorDetail",
-        "length": 209
+        "length": 212
       }
     ],
     "portal/src/features/monitors/pages/RemoteActions.tsx": [
       {
         "name": "RemoteActions",
-        "length": 103
+        "length": 109
       }
     ],
     "portal/src/features/pending-devices/pages/PendingDevices.tsx": [
       {
         "name": "PendingDevices",
-        "length": 72
+        "length": 76
       }
     ],
     "portal/src/features/reports/components/ReopenClosureModal.tsx": [
       {
         "name": "ReopenClosureModal",
         "length": 26
-      }
-    ],
-    "portal/src/features/reports/components/ReportsClosuresHistory.tsx": [
-      {
-        "name": "ReportsClosuresHistory",
-        "length": 21
       }
     ],
     "portal/src/features/reports/components/ScheduledReportModal.tsx": [
@@ -1458,23 +1444,19 @@
     "portal/src/features/reports/pages/Reports.tsx": [
       {
         "name": "Reports",
-        "length": 37
+        "length": 35
       }
     ],
     "portal/src/features/reports/pages/ScheduledReports.tsx": [
       {
         "name": "ScheduledReports",
-        "length": 48
+        "length": 41
       }
     ],
     "portal/src/features/settings/components/FeedbackCard.tsx": [
       {
         "name": "FeedbackCard",
-        "length": 116
-      },
-      {
-        "name": "anonymous",
-        "length": 61
+        "length": 24
       }
     ],
     "portal/src/features/settings/components/MessageTemplatesCard.tsx": [
@@ -1502,7 +1484,7 @@
     "portal/src/features/settings/components/operators/OperatorsCard.tsx": [
       {
         "name": "OperatorsCard",
-        "length": 78
+        "length": 68
       }
     ],
     "portal/src/features/settings/components/operators/ResetPasswordModal.tsx": [
@@ -1520,7 +1502,7 @@
     "portal/src/features/settings/pages/Settings.tsx": [
       {
         "name": "Settings",
-        "length": 46
+        "length": 23
       }
     ],
     "portal/src/features/supplies/components/SupplyRequestDetailModal.tsx": [
@@ -1532,13 +1514,13 @@
     "portal/src/features/supplies/pages/Supplies.tsx": [
       {
         "name": "Supplies",
-        "length": 37
+        "length": 40
       }
     ],
     "portal/src/features/supplies/pages/SupplyRequests.tsx": [
       {
         "name": "SupplyRequests",
-        "length": 35
+        "length": 40
       }
     ],
     "portal/src/shared/components/BrandModal.tsx": [
@@ -1659,6 +1641,12 @@
       {
         "name": "SimplePagination",
         "length": 24
+      }
+    ],
+    "portal/src/shared/hooks/useFitRows.ts": [
+      {
+        "name": "useFitRows",
+        "length": 55
       }
     ],
     "portal/src/shared/hooks/useRowSelection.ts": [
