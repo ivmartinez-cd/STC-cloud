@@ -14,7 +14,6 @@ import ClientAttentionZone from '../components/ClientAttentionZone';
 import ClientConfigZone from '../components/ClientConfigZone';
 import ClientDevicesSection from '../components/ClientDevicesSection';
 import ClientTabRedirect from '../components/ClientTabRedirect';
-import ClientMonitorsSection from '../components/ClientMonitorsSection';
 import type { ClientDetailTab } from '../types/clientDetail';
 
 function parseTab(v: string | null): ClientDetailTab {
@@ -70,7 +69,7 @@ const ClientDetail = () => {
   };
 
   return (
-    <div className="-m-4 min-w-0 flex flex-col gap-4 bg-surface-page px-[34px] pb-9 pt-[26px] md:-m-10">
+    <div className="-m-4 flex min-w-0 flex-col gap-4 bg-surface-page px-[34px] pb-9 pt-[26px] md:-m-10 md:h-full md:min-h-0">
       <nav className="mb-1 flex items-center gap-2 font-sans text-xs">
         <Link to="/clients" className="font-semibold text-brand-accent hover:underline">Clientes</Link>
         <span className="text-ink-sep-light">/</span>
@@ -97,22 +96,18 @@ const ClientDetail = () => {
           </div>
 
           {tab === 'resumen' && (
-            <>
-              <ClientAttentionZone
-                client={client} usage={usage} isReadOnlyViewer={isReadOnlyViewer}
-                onSaveNotifications={updateNotifications} onToggleDeviceApproval={updateDeviceApprovalRequired}
-              />
-              <ClientMonitorsSection
-                monitors={monitors}
-                now={now}
-                isReadOnlyViewer={isReadOnlyViewer}
-                onCreateClick={() => setShowMonitorModal(true)}
-                onDeleteClick={setMonitorToDelete}
-              />
-            </>
+            <ClientAttentionZone
+              client={client} usage={usage} monitors={monitors} now={now} isReadOnlyViewer={isReadOnlyViewer}
+              onSaveNotifications={updateNotifications} onToggleDeviceApproval={updateDeviceApprovalRequired}
+              onCreateMonitor={() => setShowMonitorModal(true)} onDeleteMonitor={setMonitorToDelete}
+            />
           )}
 
-          {tab === 'dispositivos' && <ClientDevicesSection clientId={id!} active={tab === 'dispositivos'} />}
+          {tab === 'dispositivos' && (
+            <div className="flex min-h-0 flex-1 flex-col">
+              <ClientDevicesSection clientId={id!} active={tab === 'dispositivos'} />
+            </div>
+          )}
 
           {tab === 'alertas' && (
             <ClientTabRedirect

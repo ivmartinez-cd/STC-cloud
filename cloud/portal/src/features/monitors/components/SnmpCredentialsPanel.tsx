@@ -116,7 +116,7 @@ export default function SnmpCredentialsPanel({ credentials, rev, onSave }: Props
   };
 
   return (
-    <div className="rounded-[5px] border border-line-100 bg-white lg:col-span-2">
+    <div className="rounded-[5px] border border-line-100 bg-white">
       <div className="border-b border-line-150 px-5 py-3.5">
         <span className="font-montserrat text-[9px] font-bold uppercase tracking-[.15em] text-ink-600">Credenciales SNMP</span>
         <p className="mt-1 font-sans text-[11.5px] leading-[1.5] text-ink-300">

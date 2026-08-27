@@ -42,6 +42,7 @@ function Row({ inc, classLabels }: { inc: Incident; classLabels: Record<string, 
   const origin = originChipProps(inc.origin);
   return (
     <div
+      data-fit-row
       className={`grid ${GRID_COLS} cursor-pointer items-center gap-x-[14px] border-b border-line-200 px-5 py-[11px] hover:bg-surface-btn-hover`}
       style={{ height: 54 }} onClick={() => navigate(`/incidents/${inc.id}`)}
     >
@@ -65,11 +66,12 @@ interface Props {
   hasActiveFilters: boolean;
   onRetry: () => void;
   onClearFilters: () => void;
+  skeletonRows?: number;
 }
 
 function TableHead() {
   return (
-    <div className={`grid ${GRID_COLS} items-center gap-x-[14px] border-b border-line-100 bg-surface-avatar px-5 py-3`}>
+    <div data-fit-fixed className={`grid ${GRID_COLS} items-center gap-x-[14px] border-b border-line-100 bg-surface-avatar px-5 py-3`}>
       {HEAD_LABELS.map((h) => <span key={h} className="font-montserrat text-[8.5px] font-bold uppercase tracking-[.14em] text-ink-300">{h}</span>)}
       <span className="text-right font-montserrat text-[8.5px] font-bold uppercase tracking-[.14em] text-ink-600">ANTIG. ↓</span>
       <span />
@@ -77,9 +79,9 @@ function TableHead() {
   );
 }
 
-function TableBody({ items, classLabels, loading, error, hasActiveFilters, onRetry, onClearFilters }: Props) {
+function TableBody({ items, classLabels, loading, error, hasActiveFilters, onRetry, onClearFilters, skeletonRows = 8 }: Props) {
   if (error) return <TableErrorState message={error} onRetry={onRetry} />;
-  if (loading) return <>{Array.from({ length: 8 }, (_, i) => <TableSkeletonRow key={i} gridCols={GRID_COLS} widths={['w-2/3', 'w-3/4', 'w-2/3', 'w-1/2', 'w-1/2', 'w-1/2', '', '']} />)}</>;
+  if (loading) return <>{Array.from({ length: skeletonRows }, (_, i) => <TableSkeletonRow key={i} gridCols={GRID_COLS} widths={['w-2/3', 'w-3/4', 'w-2/3', 'w-1/2', 'w-1/2', 'w-1/2', '', '']} />)}</>;
   if (items.length === 0) return <TableEmptyState message="Sin incidentes" hasActiveFilters={hasActiveFilters} onClearFilters={onClearFilters} />;
   return <>{items.map((inc) => <Row key={inc.id} inc={inc} classLabels={classLabels} />)}</>;
 }

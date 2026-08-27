@@ -79,9 +79,10 @@ function SortableHeader({
 }
 
 export default function ClientsDirectoryTable({
-  rows, loading, error, onRetry, maxDeviceCount, sortField, sortDir, onToggleSort, hasActiveFilters, onClearFilters,
+  rows, loading, error, onRetry, maxDeviceCount, sortField, sortDir, onToggleSort, hasActiveFilters, onClearFilters, skeletonRows = 9,
 }: {
   rows: ClientDirectoryRow[];
+  skeletonRows?: number;
   loading: boolean;
   error: string;
   onRetry: () => void;
@@ -95,7 +96,7 @@ export default function ClientsDirectoryTable({
   return (
     <div className="overflow-x-auto">
       <div className="min-w-[1180px]" role="table" aria-label="Clientes">
-        <div role="row" className={`grid ${GRID_COLS} items-center gap-x-[14px] border-b border-line-100 bg-surface-table-head px-5 py-3`}>
+        <div role="row" data-fit-fixed className={`grid ${GRID_COLS} items-center gap-x-[14px] border-b border-line-100 bg-surface-table-head px-5 py-3`}>
           <div role="columnheader" className="font-montserrat text-[8.5px] font-bold uppercase tracking-[.14em] text-ink-300">
             INFORMACIÓN DEL CLIENTE
           </div>
@@ -125,7 +126,7 @@ export default function ClientsDirectoryTable({
         )}
 
         {!error && loading && (
-          Array.from({ length: 9 }).map((_, i) => (
+          Array.from({ length: skeletonRows }).map((_, i) => (
             <div key={i} className={`grid ${GRID_COLS} items-center gap-x-[14px] border-b border-line-200 px-5 py-[11px]`} style={{ height: 54 }}>
               <span className="h-3 w-3/5 animate-pulse rounded bg-surface-track" />
               <span className="h-3 w-2/5 animate-pulse rounded bg-surface-track" />
@@ -161,6 +162,7 @@ export default function ClientsDirectoryTable({
               key={r.id}
               to={`/clients/${r.id}`}
               role="row"
+              data-fit-row
               className={`group grid ${GRID_COLS} min-h-[54px] items-center gap-x-[14px] border-b border-line-200 px-5 py-[11px] transition-colors duration-150 ease-in-out hover:bg-surface-hover`}
             >
               <div role="cell" className="flex min-w-0 items-center gap-3">

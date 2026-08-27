@@ -26,7 +26,7 @@ const HEADER_CLS = 'font-montserrat text-[8.5px] font-bold uppercase tracking-[.
 
 function HeaderRow({ sortDir, onToggleSort }: { sortDir: SortDir; onToggleSort: () => void }) {
   return (
-    <div role="row" className={`grid ${GRID_COLS} items-center gap-x-[14px] border-b border-line-100 bg-surface-table-head px-5 py-3`}>
+    <div role="row" data-fit-fixed className={`grid ${GRID_COLS} items-center gap-x-[14px] border-b border-line-100 bg-surface-table-head px-5 py-3`}>
       <div role="columnheader" className={HEADER_CLS}>LOTE</div>
       <div role="columnheader" className={HEADER_CLS}>ACCIÓN</div>
       <div role="columnheader" className={HEADER_CLS}>OBJETIVO</div>
@@ -81,7 +81,7 @@ function Row({ b, onClick }: { b: RemoteActionBatchRow; onClick: () => void }) {
   const chip = batchStatusChip(b.status);
   return (
     <div
-      role="row" tabIndex={0} onClick={onClick} onKeyDown={(e) => { if (e.key === 'Enter') onClick(); }}
+      role="row" data-fit-row tabIndex={0} onClick={onClick} onKeyDown={(e) => { if (e.key === 'Enter') onClick(); }}
       className={`group grid ${GRID_COLS} min-h-[54px] cursor-pointer items-center gap-x-[14px] border-b border-line-200 px-5 py-[11px] transition-colors duration-150 ease-in-out hover:bg-surface-hover`}
     >
       <div role="cell" className="font-mono text-[12px] text-brand-accent">#{b.number}</div>
@@ -96,10 +96,10 @@ function Row({ b, onClick }: { b: RemoteActionBatchRow; onClick: () => void }) {
   );
 }
 
-function LoadingRows() {
+function LoadingRows({ count }: { count: number }) {
   return (
     <>
-      {Array.from({ length: 10 }).map((_, i) => (
+      {Array.from({ length: count }).map((_, i) => (
         <div key={i} className={`grid ${GRID_COLS} items-center gap-x-[14px] border-b border-line-200 px-5 py-[11px]`} style={{ height: 54 }}>
           {Array.from({ length: 8 }).map((__, j) => (
             <span key={j} className={`h-3 animate-pulse rounded bg-surface-track ${j >= 3 ? 'justify-self-end' : ''} ${j === 1 ? 'w-4/5' : 'w-3/5'}`} />
@@ -143,18 +143,18 @@ function TableEmpty({ hasActiveFilters, onClearFilters }: { hasActiveFilters: bo
 /** Tabla de lotes de "Acciones remotas" (handoff hifi "4 pantallas") —
  * CSS-grid-como-tabla-ARIA, mismo patrón que `ClientsDirectoryTable`. */
 export default function RemoteActionsTable({
-  rows, loading, error, onRetry, sortDir, onToggleSort, onRowClick, hasActiveFilters, onClearFilters,
+  rows, loading, error, onRetry, sortDir, onToggleSort, onRowClick, hasActiveFilters, onClearFilters, skeletonRows = 10,
 }: {
   rows: RemoteActionBatchRow[]; loading: boolean; error: string; onRetry: () => void;
   sortDir: SortDir; onToggleSort: () => void; onRowClick: (b: RemoteActionBatchRow) => void;
-  hasActiveFilters: boolean; onClearFilters: () => void;
+  hasActiveFilters: boolean; onClearFilters: () => void; skeletonRows?: number;
 }) {
   return (
     <div className="overflow-x-auto">
       <div className="min-w-[1240px]" role="table" aria-label="Lotes de acciones remotas">
         <HeaderRow sortDir={sortDir} onToggleSort={onToggleSort} />
         {error && <TableError onRetry={onRetry} />}
-        {!error && loading && <LoadingRows />}
+        {!error && loading && <LoadingRows count={skeletonRows} />}
         {!error && !loading && rows.length === 0 && <TableEmpty hasActiveFilters={hasActiveFilters} onClearFilters={onClearFilters} />}
         {!error && !loading && rows.map((b) => <Row key={b.id} b={b} onClick={() => onRowClick(b)} />)}
       </div>

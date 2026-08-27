@@ -4,6 +4,7 @@ import { useToast } from '../../../store/ToastContext';
 import ConfirmModal from '../../../shared/components/ConfirmModal';
 import { fmt, APP_LOCALE } from '../../../shared/lib/formatters';
 import { useAgentsDirectory } from '../hooks/useAgentsDirectory';
+import { useFitRows } from '../../../shared/hooks/useFitRows';
 import { exportAgentsCsv } from '../lib/exportAgentsCsv';
 import type { AgentDirectoryRow } from '../types/agentsDirectory';
 import AgentsFleetMetricsStrip from '../components/agents/AgentsFleetMetricsStrip';
@@ -26,7 +27,8 @@ function formatSyncTime(d: Date): string {
  * por antigüedad de señal (`GET /agents/signal-buckets`), aparte. */
 const Agents = () => {
   const { showToast } = useToast();
-  const dir = useAgentsDirectory();
+  const fit = useFitRows({ estimate: 54 });
+  const dir = useAgentsDirectory(fit.rows);
 
   const [syncing, setSyncing] = useState(false);
   const [lastSyncAt, setLastSyncAt] = useState(() => new Date());
@@ -89,7 +91,7 @@ const Agents = () => {
   const hasActiveFilters = dir.effectiveQuery !== '' || dir.segment !== 'todos';
 
   return (
-    <div className="-m-4 min-w-0 flex flex-col bg-surface-page px-[34px] pb-9 pt-[30px] md:-m-10">
+    <div className="-m-4 min-w-0 flex flex-col bg-surface-page px-[34px] pb-9 pt-[30px] md:-m-10 md:h-full md:min-h-0">
       <div className="mb-[22px] flex flex-wrap items-end justify-between gap-4">
         <div>
           <div className="mb-2.5 flex items-center gap-3">
@@ -131,28 +133,31 @@ const Agents = () => {
         <AgentsSignalDistributionCard data={dir.buckets} loading={dir.bucketsLoading} error={dir.bucketsError} onRetry={dir.refetchBuckets} />
       </div>
 
-      <div className="rounded-[5px] border border-line-100 bg-white">
+      <div className="flex min-h-0 flex-1 flex-col rounded-[5px] border border-line-100 bg-white">
         <AgentsFilterBar query={dir.rawQuery} onQueryChange={dir.setRawQuery} segment={dir.segment} onSegmentChange={dir.setSegment} sortDir={dir.sortDir} />
 
-        <AgentsDirectoryTable
-          rows={dir.rows}
-          loading={dir.loading}
-          error={dir.error}
-          onRetry={dir.refetch}
-          sortDir={dir.sortDir}
-          onToggleSort={dir.toggleSort}
-          hasActiveFilters={hasActiveFilters}
-          onClearFilters={dir.clearFilters}
-          openMenuId={openMenuId}
-          onToggleMenu={(id) => setOpenMenuId((cur) => (cur === id ? null : id))}
-          onCloseMenu={() => setOpenMenuId(null)}
-          onConfig={(row) => setConfigModal({ id: row.id, name: row.name, remote_ews_enabled: row.remote_ews_enabled })}
-          onRegen={regenerateKey}
-          onRevoke={setAgentToRevoke}
-        />
+        <div ref={fit.ref} className="min-h-0 flex-1 overflow-hidden">
+          <AgentsDirectoryTable
+            rows={dir.rows}
+            loading={dir.loading}
+            error={dir.error}
+            onRetry={dir.refetch}
+            sortDir={dir.sortDir}
+            onToggleSort={dir.toggleSort}
+            hasActiveFilters={hasActiveFilters}
+            onClearFilters={dir.clearFilters}
+            openMenuId={openMenuId}
+            onToggleMenu={(id) => setOpenMenuId((cur) => (cur === id ? null : id))}
+            onCloseMenu={() => setOpenMenuId(null)}
+            onConfig={(row) => setConfigModal({ id: row.id, name: row.name, remote_ews_enabled: row.remote_ews_enabled })}
+            onRegen={regenerateKey}
+            onRevoke={setAgentToRevoke}
+            skeletonRows={fit.rows}
+          />
+        </div>
 
         {!dir.error && !dir.loading && (
-          <AgentsPagination page={dir.page} totalPages={dir.totalPages} total={dir.total} staleCount={dir.summary?.stale_over_6h ?? 0} onPageChange={dir.setPage} />
+          <AgentsPagination page={dir.page} totalPages={dir.totalPages} total={dir.total} pageSize={dir.pageSize} staleCount={dir.summary?.stale_over_6h ?? 0} onPageChange={dir.setPage} />
         )}
       </div>
 

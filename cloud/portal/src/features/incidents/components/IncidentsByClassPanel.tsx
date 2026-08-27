@@ -29,14 +29,20 @@ interface Props {
   onRetry: () => void;
 }
 
+const MAX_CLASSES = 6;
+
 function PanelBody({ byClass, classLabels, avgAgingSeconds, maxAgingSeconds, loading, error, onRetry }: Omit<Props, 'openTotal'>) {
   if (error) return <CardError onRetry={onRetry} />;
   if (loading) return <div className="h-[120px] animate-pulse rounded bg-surface-track" />;
   if (byClass.length === 0) return <div className="py-6 text-center font-sans text-[12.5px] text-ink-300">Sin incidentes abiertos</div>;
   const max = byClass[0]?.count ?? 0;
+  // Sólo las 6 clases con más abiertos — mismo criterio que `AlertsByCodePanel`.
+  const shown = byClass.slice(0, MAX_CLASSES);
+  const hidden = byClass.length - shown.length;
   return (
     <>
-      {byClass.map((row) => <ClassRow key={row.class} row={row} max={max} classLabels={classLabels} />)}
+      {shown.map((row) => <ClassRow key={row.class} row={row} max={max} classLabels={classLabels} />)}
+      {hidden > 0 && <div className="mt-2 font-sans text-[11.5px] text-ink-300">y {hidden} clase{hidden === 1 ? '' : 's'} más con menos abiertos</div>}
       <div className="mt-3 font-sans text-[11.5px] leading-[1.5] text-ink-400">
         Antigüedad media de los abiertos: <strong className="font-semibold text-brand-accent">{fmtAging(avgAgingSeconds)}</strong> · el más viejo lleva {fmtAging(maxAgingSeconds)}.
       </div>

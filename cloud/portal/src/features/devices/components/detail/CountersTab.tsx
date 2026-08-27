@@ -21,7 +21,7 @@ export default function CountersTab({
   counters: DetailedCounters | undefined;
 }) {
   return (
-    <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+    <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-2">
       <CountersCard device={device} latest={latest} totalPages={totalPages} monoPages={monoPages} colorPages={colorPages} counters={counters} />
       <Card>
         <CardTitle icon={<Cpu size={16} />}>Desglose por función</CardTitle>

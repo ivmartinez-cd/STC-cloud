@@ -86,21 +86,25 @@ export default function ConfigTabPanel({ monitor, onSave, onSaveSnmpCredentials,
     finally { setSaving(false); }
   };
 
+  // 3 columnas que llenan el alto (rediseño sin scroll, 27/08/2026): red |
+  // umbrales + horario | credenciales SNMP + zona de riesgo. El editor de
+  // segmentos IP es el único bloque que puede scrollear (es una lista
+  // editable, paginarla sería peor) y ocupa lo que sobra de su columna.
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <div className="rounded-[5px] border border-line-100 bg-white p-5">
+    <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col gap-4">
+      <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 lg:grid-cols-3">
+        <div className="flex min-h-0 flex-col rounded-[5px] border border-line-100 bg-white p-5">
           <div className="mb-4 border-b border-line-150 pb-3.5">
             <span className="font-montserrat text-[9px] font-bold uppercase tracking-[.15em] text-ink-600">Parámetros de red</span>
           </div>
-          <div className="space-y-4">
+          <div className="flex min-h-0 flex-1 flex-col gap-4">
             <div>
               <label className={LABEL}>Nombre del sitio</label>
               <input required type="text" value={form.name} className={INPUT} onChange={e => set('name', e.target.value)} />
             </div>
-            <div>
+            <div className="flex min-h-0 flex-1 flex-col">
               <label className={LABEL}>Segmentos IP barridos</label>
-              <div className="max-h-[300px] overflow-y-auto pr-1">
+              <div className="min-h-0 flex-1 overflow-y-auto pr-1">
                 <IpRangesEditor ranges={form.ip_ranges} onChange={ranges => setForm(f => ({ ...f, ip_ranges: ranges }))} credentials={monitor.config?.snmp_credentials ?? []} />
               </div>
             </div>
@@ -111,6 +115,7 @@ export default function ConfigTabPanel({ monitor, onSave, onSaveSnmpCredentials,
           </div>
         </div>
 
+        <div className="flex min-h-0 flex-col gap-4">
         <div className="rounded-[5px] border border-line-100 bg-white p-5">
           <div className="mb-4 border-b border-line-150 pb-3.5">
             <span className="font-montserrat text-[9px] font-bold uppercase tracking-[.15em] text-ink-600">Umbrales de consumibles</span>
@@ -138,11 +143,11 @@ export default function ConfigTabPanel({ monitor, onSave, onSaveSnmpCredentials,
           </div>
         </div>
 
-        <div className="rounded-[5px] border border-line-100 bg-white p-5 lg:col-span-2">
+        <div className="rounded-[5px] border border-line-100 bg-white p-5">
           <div className="mb-4 border-b border-line-150 pb-3.5">
             <span className="font-montserrat text-[9px] font-bold uppercase tracking-[.15em] text-ink-600">Horario laboral</span>
           </div>
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
             <div>
               <label className={LABEL}>Zona horaria (IANA)</label>
               <input type="text" list="tz-datalist" value={form.businessHours.timezone} onChange={e => setForm(f => ({ ...f, businessHours: { ...f.businessHours, timezone: e.target.value } }))} className={`${INPUT} font-mono`} />
@@ -175,11 +180,13 @@ export default function ConfigTabPanel({ monitor, onSave, onSaveSnmpCredentials,
             </div>
           </div>
         </div>
+        </div>
 
+        <div className="flex min-h-0 flex-col gap-4">
         <SnmpCredentialsPanel credentials={monitor.config?.snmp_credentials ?? []} rev={monitor.config?.snmp_credentials_rev ?? 0} onSave={onSaveSnmpCredentials} />
 
         {/* Zona de riesgo (handoff §5 punto 21) — border-left naranja oscuro, REVOCAR en variante borde, nunca rojo relleno. */}
-        <div className="space-y-3.5 rounded-[5px] border border-brand-chip-border bg-white p-5 lg:col-span-2" style={{ borderLeftWidth: 3, borderLeftColor: '#C6710A' }}>
+        <div className="space-y-3.5 rounded-[5px] border border-brand-chip-border bg-white p-5" style={{ borderLeftWidth: 3, borderLeftColor: '#C6710A' }}>
           <span className="font-montserrat text-[9px] font-bold uppercase tracking-[.15em] text-ink-600">Zona de riesgo</span>
           <p className="max-w-2xl font-sans text-[12.5px] leading-[1.55] text-ink-700">
             Revocar desconecta el agente de forma permanente: deja de reportar telemetría y su llave de activación queda inválida.
@@ -191,6 +198,7 @@ export default function ConfigTabPanel({ monitor, onSave, onSaveSnmpCredentials,
           >
             <ShieldOff size={14} /> Revocar licencia
           </button>
+        </div>
         </div>
       </div>
 

@@ -42,7 +42,7 @@ function LastAccessCells() {
 function Row({ user, isSelf, onOpen }: { user: DBUser; isSelf: boolean; onOpen: (u: DBUser) => void }) {
   return (
     <button
-      type="button" onClick={() => onOpen(user)}
+      type="button" onClick={() => onOpen(user)} data-fit-row
       className={`grid ${GRID_COLS} min-h-[54px] w-full items-center gap-x-[14px] border-b border-line-200 px-5 py-[11px] text-left transition-colors duration-150 ease-in-out hover:bg-surface-hover`}
     >
       <OperatorCell user={user} isSelf={isSelf} />
@@ -60,11 +60,13 @@ interface Props {
   currentUserId: string | null;
   loading: boolean;
   onOpen: (u: DBUser) => void;
+  /** Filas del skeleton — la página pasa las que caben (`useFitRows`). */
+  skeletonRows?: number;
 }
 
 function HeaderRow() {
   return (
-    <div className={`grid ${GRID_COLS} items-center gap-x-[14px] border-b border-line-100 bg-surface-table-head px-5 py-3`}>
+    <div data-fit-fixed className={`grid ${GRID_COLS} items-center gap-x-[14px] border-b border-line-100 bg-surface-table-head px-5 py-3`}>
       {HEAD_LABELS.map((l) => <div key={l} className="font-montserrat text-[8.5px] font-bold uppercase tracking-[.14em] text-ink-300">{l}</div>)}
       <div className="text-right font-montserrat text-[8.5px] font-bold uppercase tracking-[.14em] text-ink-600">ÚLTIMO ACCESO</div>
       <div className="font-montserrat text-[8.5px] font-bold uppercase tracking-[.14em] text-ink-300">ORIGEN</div>
@@ -73,8 +75,8 @@ function HeaderRow() {
   );
 }
 
-function Body({ users, currentUserId, loading, onOpen }: Props) {
-  if (loading) return <>{Array.from({ length: 5 }, (_, i) => <TableSkeletonRow key={i} gridCols={GRID_COLS} widths={['w-3/5', 'w-2/5', 'w-1/2', 'w-2/5', '', '', '']} />)}</>;
+function Body({ users, currentUserId, loading, onOpen, skeletonRows = 5 }: Props) {
+  if (loading) return <>{Array.from({ length: skeletonRows }, (_, i) => <TableSkeletonRow key={i} gridCols={GRID_COLS} widths={['w-3/5', 'w-2/5', 'w-1/2', 'w-2/5', '', '', '']} />)}</>;
   if (users.length === 0) return <TableEmptyState message="Ningún operador coincide con el filtro" />;
   return <>{users.map((u) => <Row key={u.id} user={u} isSelf={u.id === currentUserId} onOpen={onOpen} />)}</>;
 }

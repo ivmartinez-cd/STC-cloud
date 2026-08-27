@@ -2,12 +2,10 @@ import { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { api } from '../../../shared/lib/api';
 import { useDebounce } from '../../../shared/hooks/useDebounce';
+import { usePageSizeReset } from '../../../shared/hooks/usePageSizeReset';
 import type {
   AgentDirectoryResponse, AgentDirectoryRow, AgentFleetSummary, AgentSegment, AgentSignalBucketsResponse, SortDir,
 } from '../types/agentsDirectory';
-
-/** Mismo criterio que `/clients`/`/devices` (ver `useClientsDirectory.ts`): techo/página establecidos para el resto de tablas paginadas del portal. */
-export const PAGE_SIZE = 50;
 
 const SEGMENTS: AgentSegment[] = ['todos', 'sin_senal', 'desactualizados', 'llave_por_vencer'];
 
@@ -62,7 +60,7 @@ function useDirectoryFilters() {
 type DirectoryFilters = ReturnType<typeof useDirectoryFilters>;
 
 /** Página actual del listado — reactiva a filtro/orden/página. */
-function useDirectoryRows(filters: DirectoryFilters) {
+function useDirectoryRows(filters: DirectoryFilters, pageSize: number) {
   const { effectiveQuery, segment, sortDir, page } = filters;
   const [rows, setRows] = useState<AgentDirectoryRow[]>([]);
   const [total, setTotal] = useState(0);
@@ -72,7 +70,7 @@ function useDirectoryRows(filters: DirectoryFilters) {
   const fetchDirectory = useCallback(async () => {
     setLoading(true);
     setError('');
-    const params = new URLSearchParams({ dir: sortDir, limit: String(PAGE_SIZE), offset: String(page * PAGE_SIZE) });
+    const params = new URLSearchParams({ dir: sortDir, limit: String(pageSize), offset: String(page * pageSize) });
     if (effectiveQuery) params.set('q', effectiveQuery);
     if (segment !== 'todos') params.set('segment', segment);
     try {
@@ -84,11 +82,11 @@ function useDirectoryRows(filters: DirectoryFilters) {
     } finally {
       setLoading(false);
     }
-  }, [effectiveQuery, segment, sortDir, page]);
+  }, [effectiveQuery, segment, sortDir, page, pageSize]);
 
   useEffect(() => { void fetchDirectory(); }, [fetchDirectory]);
 
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
   return { rows, total, totalPages, loading, error, refetch: fetchDirectory };
 }
 
@@ -137,9 +135,12 @@ function useSignalBuckets() {
   return { buckets, bucketsLoading, bucketsError, refetchBuckets: fetchBuckets };
 }
 
-export function useAgentsDirectory() {
+/** `pageSize` viene de `useFitRows` en la página: las filas que entran en el
+ * alto disponible (27/08/2026 — antes 50 fijas y scroll). */
+export function useAgentsDirectory(pageSize: number) {
   const filters = useDirectoryFilters();
-  return { ...filters, ...useDirectoryRows(filters), ...useFleetSummary(), ...useSignalBuckets() };
+  usePageSizeReset(pageSize, filters.setPage);
+  return { ...filters, pageSize, ...useDirectoryRows(filters, pageSize), ...useFleetSummary(), ...useSignalBuckets() };
 }
 
 export type AgentsDirectoryState = ReturnType<typeof useAgentsDirectory>;

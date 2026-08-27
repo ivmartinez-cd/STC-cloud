@@ -104,7 +104,7 @@ const Terminal: React.FC<TerminalProps> = ({ agentId }) => {
   ];
 
   return (
-    <div className="flex h-[560px] flex-col overflow-hidden rounded-[5px] border border-[#23252A]" style={{ background: '#17181A' }}>
+    <div className="flex min-h-[260px] flex-1 flex-col overflow-hidden rounded-[5px] border border-[#23252A]" style={{ background: '#17181A' }}>
       <div className="flex items-center justify-between border-b border-[#23252A] px-6 py-3.5">
         <div className="flex items-center gap-2.5">
           <TerminalIcon size={15} className="text-brand" />

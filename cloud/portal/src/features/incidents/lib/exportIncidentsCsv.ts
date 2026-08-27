@@ -15,8 +15,7 @@ async function fetchAllMatching(filters: IncidentFiltersState): Promise<Incident
   let offset = 0;
   let all: Incident[] = [];
   for (;;) {
-    const params = buildIncidentsQueryParams(filters, 0);
-    params.set('limit', String(limit));
+    const params = buildIncidentsQueryParams(filters, 0, limit);
     params.set('offset', String(offset));
     const data = await api.get<{ items: Incident[]; total: number }>(`/incidents?${params.toString()}`);
     all = all.concat(data.items);

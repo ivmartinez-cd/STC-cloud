@@ -25,10 +25,10 @@ export default function PrintTrendCard({ trend, loading, error, onRetry }: {
           <span className="flex items-center gap-2 font-sans text-[11.5px] text-ink-400"><span className="block h-[3px] w-[9px] bg-brand" />Color</span>
         </div>
       }>Tendencia de impresión · 12 meses</CardTitle>
-      <div className="px-5 pb-4 pt-5">
+      <div className="px-5 pb-3.5 pt-4">
         {error ? <CardError onRetry={onRetry} /> : (
           <>
-            <div className="flex h-[132px] items-end gap-2.5">
+            <div className="flex h-[96px] items-end gap-1.5">
               {(loading ? Array.from({ length: 12 }) : months).map((m, i) => (
                 <div key={loading ? i : (m as typeof months[number]).month} className="flex flex-1 flex-col items-center gap-2">
                   {loading ? <span className="w-full animate-pulse rounded-[2px] bg-surface-track" style={{ height: 40 + (i % 4) * 15 }} /> : (
@@ -41,7 +41,7 @@ export default function PrintTrendCard({ trend, loading, error, onRetry }: {
               ))}
             </div>
             {!loading && trend && (
-              <div className="mt-4 flex flex-wrap items-center justify-between gap-2.5 border-t border-line-150 pt-3.5">
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-2.5 border-t border-line-150 pt-3">
                 <span className="font-sans text-[12.5px] text-ink-400">
                   Promedio mensual <strong className="font-semibold text-ink-900">{fmt(trend.monthly_avg)} páginas</strong>
                   {trend.peak && <> · pico {fmt(trend.peak.total)} en {MONTH_SHORT_ES[trend.peak.month.slice(-2)]?.toLowerCase()}</>}
@@ -59,7 +59,7 @@ export default function PrintTrendCard({ trend, loading, error, onRetry }: {
 }
 
 function BarStack({ month, max }: { month: { mono: number; color: number; total: number }; max: number }) {
-  const h = Math.max(4, Math.round((month.total / max) * 122));
+  const h = Math.max(4, Math.round((month.total / max) * 86));
   const hm = month.total > 0 ? Math.max(month.mono > 0 ? 2 : 0, Math.round(h * (month.mono / month.total))) : 0;
   const hc = Math.max(month.color > 0 ? 2 : 0, h - hm);
   return (

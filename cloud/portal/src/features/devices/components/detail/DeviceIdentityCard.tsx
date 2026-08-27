@@ -17,8 +17,8 @@ export default function DeviceIdentityCard({ device }: { device: DeviceDetailDat
   return (
     <Card>
       <CardTitle right={<WebPanelLink ip={device.ip_address} />}>Identificación</CardTitle>
-      <div className="px-5 pb-[18px] pt-[18px]">
-        <div className="mb-4 flex h-[150px] items-center justify-center overflow-hidden rounded-[3px] border border-line-150 bg-surface-input">
+      <div className="px-5 pb-3.5 pt-3.5">
+        <div className="mb-3 flex h-[104px] items-center justify-center overflow-hidden rounded-[3px] border border-line-150 bg-surface-input">
           <DeviceImage brand={device.brand} model={device.model} />
         </div>
         <Row label="ID del dispositivo" value={device.id.slice(0, 9)} mono />

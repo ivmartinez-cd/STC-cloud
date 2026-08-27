@@ -4,6 +4,8 @@ import { api } from '../../../shared/lib/api';
 import { useToast } from '../../../store/ToastContext';
 import ConfigCardShell from './ConfigCardShell';
 import EstadoChip from '../../../shared/components/EstadoChip';
+import HifiPagination from '../../../shared/components/HifiPagination';
+import { useClientPagination } from '../../../shared/hooks/useClientPagination';
 import type { IncidentRule } from '../../../shared/types/incidents';
 import type { AlertClassOption } from '../../../shared/types/alerts';
 import { APP_LOCALE } from '../../../shared/lib/formatters';
@@ -58,6 +60,10 @@ export default function IncidentRulesCard({ clientId, canEdit }: { clientId: str
     }
   };
 
+  // 4 clases por página: la tarjeta comparte una grilla 3×2 con otras cinco y
+  // las 8 clases apiladas la hacían el doble de alta que sus vecinas.
+  const pager = useClientPagination(rules, 4);
+
   if (!canEdit) return null;
 
   const activeCount = rules.filter((r) => r.enabled).length;
@@ -70,51 +76,51 @@ export default function IncidentRulesCard({ clientId, canEdit }: { clientId: str
       meta={lastEdited ? `Última edición ${new Date(lastEdited).toLocaleDateString(APP_LOCALE)}` : 'Sin ediciones'}
       cta={{ label: saving ? 'Guardando…' : 'Administrar', onClick: save }}
     >
-      <p className="mb-4 font-sans text-[12.5px] text-ink-400">
-        Opt-in por clase de alerta: si está activo, una alerta que cumpla la severidad mínima abre (o agrupa en) un incidente automático para este cliente.
+      <p className="mb-3 font-sans text-[12px] text-ink-400">
+        Opt-in por clase: una alerta que cumpla la severidad mínima abre (o agrupa en) un incidente automático.
       </p>
       {loading ? (
         <div className="flex justify-center py-10"><Loader2 size={22} className="animate-spin text-brand" /></div>
       ) : (
-        <div className="overflow-x-auto">
+        <div>
           <table className="w-full border-collapse text-left text-[11.5px]">
             <thead className="border-b border-line-150 bg-surface-table-head">
               <tr>
-                <th className="px-3 py-2 font-montserrat text-[8.5px] font-bold uppercase tracking-[.14em] text-ink-300">Clase</th>
-                <th className="px-3 py-2 font-montserrat text-[8.5px] font-bold uppercase tracking-[.14em] text-ink-300">Activo</th>
-                <th className="px-3 py-2 font-montserrat text-[8.5px] font-bold uppercase tracking-[.14em] text-ink-300">Severidad mínima</th>
-                <th className="px-3 py-2 font-montserrat text-[8.5px] font-bold uppercase tracking-[.14em] text-ink-300">Retardo (min)</th>
-                <th className="px-3 py-2 font-montserrat text-[8.5px] font-bold uppercase tracking-[.14em] text-ink-300">SLA (hs)</th>
-                <th className="px-3 py-2 font-montserrat text-[8.5px] font-bold uppercase tracking-[.14em] text-ink-300">Auto-cierre</th>
+                <th className="px-2 py-2 font-montserrat text-[8.5px] font-bold uppercase tracking-[.14em] text-ink-300">Clase</th>
+                <th className="px-2 py-2 font-montserrat text-[8.5px] font-bold uppercase tracking-[.14em] text-ink-300">Activo</th>
+                <th className="px-2 py-2 font-montserrat text-[8.5px] font-bold uppercase tracking-[.14em] text-ink-300" title="Severidad mínima">Sev. mín.</th>
+                <th className="px-2 py-2 font-montserrat text-[8.5px] font-bold uppercase tracking-[.14em] text-ink-300" title="Retardo en minutos">Ret. (min)</th>
+                <th className="px-2 py-2 font-montserrat text-[8.5px] font-bold uppercase tracking-[.14em] text-ink-300" title="SLA en horas">SLA (hs)</th>
+                <th className="px-2 py-2 font-montserrat text-[8.5px] font-bold uppercase tracking-[.14em] text-ink-300" title="Auto-cierre al resolverse las alertas">Auto</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-line-200">
-              {rules.map((r) => (
+              {pager.visible.map((r) => (
                 <tr key={r.class}>
-                  <td className="px-3 py-2 font-sans font-semibold text-ink-900">{classOptions.find((c) => (c.id as string) === r.class)?.label ?? r.class}</td>
-                  <td className="px-3 py-2">
+                  <td className="px-2 py-1.5 font-sans font-semibold text-ink-900">{classOptions.find((c) => (c.id as string) === r.class)?.label ?? r.class}</td>
+                  <td className="px-2 py-1.5">
                     <button type="button" onClick={() => updateRule(r.class, { enabled: !r.enabled })} className="block">
                       <EstadoChip variant={r.enabled ? 'attention' : 'neutral'} label={r.enabled ? 'SÍ' : 'NO'} />
                     </button>
                   </td>
-                  <td className="px-3 py-2">
+                  <td className="px-2 py-1.5">
                     <select value={r.min_severity} onChange={(e) => updateRule(r.class, { min_severity: e.target.value as IncidentRule['min_severity'] })}
                       className="cursor-pointer rounded-[3px] border border-line-300 bg-white px-2 py-1 font-sans text-[11.5px] text-ink-700 outline-none focus:border-brand">
                       <option value="critical">Crítico</option>
                       <option value="warning">Advertencia</option>
                     </select>
                   </td>
-                  <td className="px-3 py-2">
+                  <td className="px-2 py-1.5">
                     <input type="number" min={0} max={1440} value={r.delay_minutes}
                       onChange={(e) => updateRule(r.class, { delay_minutes: Number(e.target.value) })}
-                      className="w-16 rounded-[3px] border border-line-300 bg-white px-2 py-1 font-mono text-[11.5px] text-ink-700 outline-none focus:border-brand" />
+                      className="w-14 rounded-[3px] border border-line-300 bg-white px-2 py-1 font-mono text-[11.5px] text-ink-700 outline-none focus:border-brand" />
                   </td>
-                  <td className="px-3 py-2">
+                  <td className="px-2 py-1.5">
                     <input type="number" min={1} value={r.sla_hours ?? ''} placeholder="—"
                       onChange={(e) => updateRule(r.class, { sla_hours: e.target.value ? Number(e.target.value) : null })}
-                      className="w-16 rounded-[3px] border border-line-300 bg-white px-2 py-1 font-mono text-[11.5px] text-ink-700 outline-none focus:border-brand" />
+                      className="w-14 rounded-[3px] border border-line-300 bg-white px-2 py-1 font-mono text-[11.5px] text-ink-700 outline-none focus:border-brand" />
                   </td>
-                  <td className="px-3 py-2">
+                  <td className="px-2 py-1.5">
                     <input type="checkbox" checked={r.auto_close_on_alerts_resolved} className="accent-brand"
                       onChange={(e) => updateRule(r.class, { auto_close_on_alerts_resolved: e.target.checked })} />
                   </td>
@@ -122,6 +128,9 @@ export default function IncidentRulesCard({ clientId, canEdit }: { clientId: str
               ))}
             </tbody>
           </table>
+          {rules.length > pager.pageSize && (
+            <HifiPagination page={pager.page} totalPages={pager.totalPages} total={pager.total} pageSize={pager.pageSize} itemLabel="clases" onPageChange={pager.setPage} />
+          )}
         </div>
       )}
     </ConfigCardShell>

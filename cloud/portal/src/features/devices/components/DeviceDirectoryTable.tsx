@@ -23,7 +23,7 @@ function HeaderRow({ sortDir, onToggleSort, allSelected, onToggleAll }: {
   sortDir: SortDir; onToggleSort: () => void; allSelected: boolean; onToggleAll: () => void;
 }) {
   return (
-    <div role="row" className={`grid ${GRID_COLS} items-center gap-x-[14px] border-b border-line-100 bg-surface-table-head px-5 py-3`}>
+    <div role="row" data-fit-fixed className={`grid ${GRID_COLS} items-center gap-x-[14px] border-b border-line-100 bg-surface-table-head px-5 py-3`}>
       <button type="button" onClick={onToggleAll} className="justify-self-start text-ink-300 hover:text-ink-100" title="Seleccionar todos">
         {allSelected ? <CheckSquare size={14} /> : <Square size={14} />}
       </button>
@@ -37,10 +37,10 @@ function HeaderRow({ sortDir, onToggleSort, allSelected, onToggleAll }: {
   );
 }
 
-function LoadingSkeleton() {
+function LoadingSkeleton({ count }: { count: number }) {
   return (
     <>
-      {Array.from({ length: 8 }).map((_, i) => (
+      {Array.from({ length: count }).map((_, i) => (
         <div key={i} className={`grid ${GRID_COLS} items-center gap-x-[14px] border-b border-line-200 px-5 py-[11px]`} style={{ height: 54 }}>
           <span />
           <span className="h-3 w-3/5 animate-pulse rounded bg-surface-track" />
@@ -102,6 +102,7 @@ function GroupBlock({ group, selected, onToggleRow }: {
 
 interface Props {
   groups: DeviceDirectoryGroup[];
+  skeletonRows?: number;
   loading: boolean;
   error: string;
   onRetry: () => void;
@@ -121,14 +122,14 @@ interface Props {
  * límite de 20 líneas/función de la guía. */
 export default function DeviceDirectoryTable({
   groups, loading, error, onRetry, sortDir, onToggleSort, hasActiveFilters, onClearFilters,
-  selected, allSelected, onToggleRow, onToggleAll,
+  selected, allSelected, onToggleRow, onToggleAll, skeletonRows = 8,
 }: Props) {
   return (
     <div className="overflow-x-auto">
       <div className="min-w-[1240px]" role="table" aria-label="Inventario de dispositivos">
         <HeaderRow sortDir={sortDir} onToggleSort={onToggleSort} allSelected={allSelected} onToggleAll={onToggleAll} />
         {error && <ErrorState onRetry={onRetry} />}
-        {!error && loading && <LoadingSkeleton />}
+        {!error && loading && <LoadingSkeleton count={skeletonRows} />}
         {!error && !loading && groups.length === 0 && <EmptyState hasActiveFilters={hasActiveFilters} onClearFilters={onClearFilters} />}
         {!error && !loading && groups.map((g) => (
           <GroupBlock key={g.id} group={g} selected={selected} onToggleRow={onToggleRow} />

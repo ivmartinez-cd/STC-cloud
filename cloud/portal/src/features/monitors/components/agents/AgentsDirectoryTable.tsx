@@ -43,7 +43,7 @@ function AgentRow({
 }) {
   const notReporting = row.estado !== 'reportando';
   return (
-    <div role="row" className={`grid ${GRID_COLS} min-h-[54px] items-center gap-x-[14px] border-b border-line-200 px-5 py-[11px]`}>
+    <div role="row" data-fit-row className={`grid ${GRID_COLS} min-h-[54px] items-center gap-x-[14px] border-b border-line-200 px-5 py-[11px]`}>
       <div role="cell" className="min-w-0">
         <div className="truncate font-sans text-[12.5px] font-semibold text-ink-900">{row.name}</div>
         {/* Id interno del nodo (antes "Nodo ID: xxxxxxxx" en línea propia) — el
@@ -82,10 +82,10 @@ function AgentRow({
   );
 }
 
-function LoadingRows() {
+function LoadingRows({ count }: { count: number }) {
   return (
     <>
-      {Array.from({ length: 10 }).map((_, i) => (
+      {Array.from({ length: count }).map((_, i) => (
         <div key={i} className={`grid ${GRID_COLS} items-center gap-x-[14px] border-b border-line-200 px-5 py-[11px]`} style={{ height: 54 }}>
           <span className="h-3 w-3/5 animate-pulse rounded bg-surface-track" />
           <span className="h-3 w-2/5 animate-pulse rounded bg-surface-track" />
@@ -116,6 +116,7 @@ interface AgentsDirectoryTableProps {
   onConfig: (row: AgentDirectoryRow) => void;
   onRegen: (row: AgentDirectoryRow) => void;
   onRevoke: (row: AgentDirectoryRow) => void;
+  skeletonRows?: number;
 }
 
 /** Tabla "Salud de nodos" (handoff hifi 25/08/2026) — CSS-grid-como-tabla-ARIA,
@@ -125,12 +126,12 @@ interface AgentsDirectoryTableProps {
  * columna GESTIÓN (antes botones invisibles hasta hover) — acciones movidas al
  * menú del chevron. */
 export default function AgentsDirectoryTable(props: AgentsDirectoryTableProps) {
-  const { rows, loading, error, onRetry, sortDir, onToggleSort, hasActiveFilters, onClearFilters, openMenuId, onToggleMenu, onCloseMenu, onConfig, onRegen, onRevoke } = props;
+  const { rows, loading, error, onRetry, sortDir, onToggleSort, hasActiveFilters, onClearFilters, openMenuId, onToggleMenu, onCloseMenu, onConfig, onRegen, onRevoke, skeletonRows = 10 } = props;
 
   return (
     <div className="overflow-x-auto">
       <div className="min-w-[1260px]" role="table" aria-label="Salud de nodos">
-        <div role="row" className={`grid ${GRID_COLS} items-center gap-x-[14px] border-b border-line-100 bg-surface-table-head px-5 py-3`}>
+        <div role="row" data-fit-fixed className={`grid ${GRID_COLS} items-center gap-x-[14px] border-b border-line-100 bg-surface-table-head px-5 py-3`}>
           <div role="columnheader" className="font-montserrat text-[8.5px] font-bold uppercase tracking-[.14em] text-ink-300">NODO</div>
           <div role="columnheader" className="font-montserrat text-[8.5px] font-bold uppercase tracking-[.14em] text-ink-300">CLIENTE</div>
           <div role="columnheader" className="font-montserrat text-[8.5px] font-bold uppercase tracking-[.14em] text-ink-300">HARDWARE ID</div>
@@ -150,7 +151,7 @@ export default function AgentsDirectoryTable(props: AgentsDirectoryTableProps) {
           </div>
         )}
 
-        {!error && loading && <LoadingRows />}
+        {!error && loading && <LoadingRows count={skeletonRows} />}
 
         {!error && !loading && rows.length === 0 && (
           <div className="flex flex-col items-center justify-center gap-1.5 py-20 text-center">

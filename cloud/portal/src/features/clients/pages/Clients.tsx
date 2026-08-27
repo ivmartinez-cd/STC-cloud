@@ -5,6 +5,7 @@ import { useToast } from '../../../store/ToastContext';
 import { useAuth } from '../../../store/AuthContext';
 import { fmt } from '../../../shared/lib/formatters';
 import { useClientsDirectory } from '../hooks/useClientsDirectory';
+import { useFitRows } from '../../../shared/hooks/useFitRows';
 import { exportClientsCsv } from '../lib/exportClientsCsv';
 import PortfolioMetricsStrip from '../components/PortfolioMetricsStrip';
 import ClientsFilterBar from '../components/ClientsFilterBar';
@@ -19,7 +20,8 @@ import ClientsPagination from '../components/ClientsPagination';
 const Clients = () => {
   const { showToast } = useToast();
   const { role } = useAuth();
-  const dir = useClientsDirectory();
+  const fit = useFitRows({ estimate: 54 });
+  const dir = useClientsDirectory(fit.rows);
 
   const [showModal, setShowModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -57,7 +59,7 @@ const Clients = () => {
   const hasActiveFilters = dir.effectiveQuery !== '' || dir.segment !== 'todos';
 
   return (
-    <div className="-m-4 min-w-0 flex flex-col bg-surface-page px-[34px] pb-9 pt-[30px] md:-m-10">
+    <div className="-m-4 flex min-w-0 flex-col bg-surface-page px-[34px] pb-9 pt-[30px] md:-m-10 md:h-full md:min-h-0">
       <div className="mb-[22px] flex flex-wrap items-end justify-between gap-4">
         <div>
           <div className="mb-2.5 flex items-center gap-3">
@@ -103,7 +105,7 @@ const Clients = () => {
         onRetry={dir.refetchSummary}
       />
 
-      <div className="rounded-[5px] border border-line-100 bg-white">
+      <div className="flex min-h-0 flex-1 flex-col rounded-[5px] border border-line-100 bg-white">
         <ClientsFilterBar
           query={dir.rawQuery}
           onQueryChange={dir.setRawQuery}
@@ -113,21 +115,24 @@ const Clients = () => {
           sortDir={dir.sortDir}
         />
 
-        <ClientsDirectoryTable
-          rows={dir.rows}
-          loading={dir.loading}
-          error={dir.error}
-          onRetry={dir.refetch}
-          maxDeviceCount={dir.maxDeviceCountOnPage}
-          sortField={dir.sortField}
-          sortDir={dir.sortDir}
-          onToggleSort={dir.toggleSort}
-          hasActiveFilters={hasActiveFilters}
-          onClearFilters={dir.clearFilters}
-        />
+        <div ref={fit.ref} className="min-h-0 flex-1 overflow-hidden">
+          <ClientsDirectoryTable
+            rows={dir.rows}
+            loading={dir.loading}
+            error={dir.error}
+            onRetry={dir.refetch}
+            maxDeviceCount={dir.maxDeviceCountOnPage}
+            sortField={dir.sortField}
+            sortDir={dir.sortDir}
+            onToggleSort={dir.toggleSort}
+            hasActiveFilters={hasActiveFilters}
+            onClearFilters={dir.clearFilters}
+            skeletonRows={fit.rows}
+          />
+        </div>
 
         {!dir.error && !dir.loading && (
-          <ClientsPagination page={dir.page} totalPages={dir.totalPages} total={dir.total} onPageChange={dir.setPage} />
+          <ClientsPagination page={dir.page} totalPages={dir.totalPages} total={dir.total} pageSize={dir.pageSize} onPageChange={dir.setPage} />
         )}
       </div>
 

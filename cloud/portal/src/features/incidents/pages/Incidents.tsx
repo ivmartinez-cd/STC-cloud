@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import PageHeader from '../../../shared/components/PageHeader';
 import CreateIncidentModal from '../../../shared/components/CreateIncidentModal';
 import { BTN_PRIMARY_LG, BTN_SECONDARY_LG } from '../../../shared/lib/buttons';
+import { useFitRows } from '../../../shared/hooks/useFitRows';
 import { useIncidentsPage, type IncidentsPageState } from '../hooks/useIncidentsPage';
 import { exportIncidentsCsv } from '../lib/exportIncidentsCsv';
 import IncidentsMetricsPanel from '../components/IncidentsMetricsPanel';
@@ -30,7 +31,8 @@ function clearFilters(f: IncidentsPageState['filters']): void {
 }
 
 function Incidents() {
-  const s = useIncidentsPage();
+  const fit = useFitRows({ estimate: 54 });
+  const s = useIncidentsPage(fit.rows);
   const navigate = useNavigate();
   const [exporting, setExporting] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
@@ -41,7 +43,7 @@ function Incidents() {
   };
 
   return (
-    <div className="-m-4 flex min-w-0 flex-col bg-surface-page px-[34px] pb-9 pt-[30px] md:-m-10">
+    <div className="-m-4 flex min-w-0 flex-col bg-surface-page px-[34px] pb-9 pt-[30px] md:-m-10 md:h-full md:min-h-0">
       <PageHeader
         eyebrow="UNIDADES DE TRABAJO DE SERVICIO" title="Incidentes"
         subtitle="Sobreviven a que la alerta técnica que los originó se resuelva sola: el incidente sigue abierto hasta que un operador lo cierra."
@@ -57,17 +59,21 @@ function Incidents() {
         />
       </div>
 
-      <div className="rounded-[5px] border border-line-100 bg-white">
+      <div className="flex min-h-0 flex-1 flex-col rounded-[5px] border border-line-100 bg-white">
         <IncidentsFilterBar filters={s.filters} />
-        <IncidentsTable
-          items={s.items} classLabels={s.classLabels} loading={s.loading} error={s.error}
-          hasActiveFilters={hasActiveFilters(s.filters)} onRetry={s.fetchIncidents} onClearFilters={() => clearFilters(s.filters)}
-        />
-        <IncidentsPagination page={s.page} total={s.total} totalPages={s.totalPages} onChange={s.setPage} />
+        <div ref={fit.ref} className="min-h-0 flex-1 overflow-hidden">
+          <IncidentsTable
+            items={s.items} classLabels={s.classLabels} loading={s.loading} error={s.error}
+            hasActiveFilters={hasActiveFilters(s.filters)} onRetry={s.fetchIncidents} onClearFilters={() => clearFilters(s.filters)}
+            skeletonRows={fit.rows}
+          />
+        </div>
+        <IncidentsPagination page={s.page} total={s.total} totalPages={s.totalPages} pageSize={s.pageSize} onChange={s.setPage} />
       </div>
 
+      {/* Banner de cierres instantáneos: fuera de la tarjeta que crece, se queda al pie. */}
       {s.stats && (
-        <div className="mt-4">
+        <div className="mt-4 shrink-0">
           <IncidentsInstantClosuresBanner instantClosures={s.stats.instantClosures} classLabels={s.classLabels} />
         </div>
       )}

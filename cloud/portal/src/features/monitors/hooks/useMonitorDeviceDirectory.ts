@@ -2,14 +2,15 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { api } from '../../../shared/lib/api';
 import { useDebounce } from '../../../shared/hooks/useDebounce';
+import { usePageSizeReset } from '../../../shared/hooks/usePageSizeReset';
 import type {
   AgentDeviceDirectoryResponse, AgentDeviceDirectoryRow, AgentDeviceSegment, AgentDeviceSortField, SortDir,
 } from '../types/monitorDetail';
 
 /** Tabla "Equipos detectados por este monitor" (handoff hifi "Monitor — detalle",
  * 25/08/2026) — mismo patrón que `useClientDeviceDirectory.ts`, scopeada a UN
- * agente en vez de un cliente. */
-export const MONITOR_DEVICE_PAGE_SIZE = 10;
+ * agente en vez de un cliente. El tamaño de página lo decide la pantalla
+ * (`useFitRows`, 27/08/2026). */
 
 const SEGMENTS: AgentDeviceSegment[] = ['todos', 'sin_conexion', 'con_alertas', 'sin_aprobar'];
 const SORT_FIELDS: AgentDeviceSortField[] = ['alerts_count', 'consumible_pct', 'last_seen'];
@@ -75,7 +76,7 @@ function useDeviceFilters(active: boolean) {
 
 type DeviceFilters = ReturnType<typeof useDeviceFilters>;
 
-function useDeviceRows(agentId: string, filters: DeviceFilters) {
+function useDeviceRows(agentId: string, filters: DeviceFilters, pageSize: number) {
   const { effectiveQuery, segment, sortField, sortDir, page } = filters;
   const [rows, setRows] = useState<AgentDeviceDirectoryRow[]>([]);
   const [total, setTotal] = useState(0);
@@ -86,7 +87,7 @@ function useDeviceRows(agentId: string, filters: DeviceFilters) {
     setLoading(true);
     setError('');
     const params = new URLSearchParams({
-      sort: sortField, dir: sortDir, limit: String(MONITOR_DEVICE_PAGE_SIZE), offset: String(page * MONITOR_DEVICE_PAGE_SIZE),
+      sort: sortField, dir: sortDir, limit: String(pageSize), offset: String(page * pageSize),
     });
     if (effectiveQuery) params.set('q', effectiveQuery);
     if (segment !== 'todos') params.set('segment', segment);
@@ -99,17 +100,18 @@ function useDeviceRows(agentId: string, filters: DeviceFilters) {
     } finally {
       setLoading(false);
     }
-  }, [agentId, effectiveQuery, segment, sortField, sortDir, page]);
+  }, [agentId, effectiveQuery, segment, sortField, sortDir, page, pageSize]);
 
   useEffect(() => { void fetchDirectory(); }, [fetchDirectory]);
 
-  const totalPages = Math.max(1, Math.ceil(total / MONITOR_DEVICE_PAGE_SIZE));
-  return { rows, total, totalPages, loading, error, refetch: fetchDirectory };
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  return { rows, total, totalPages, pageSize, loading, error, refetch: fetchDirectory };
 }
 
-export function useMonitorDeviceDirectory(agentId: string, active: boolean) {
+export function useMonitorDeviceDirectory(agentId: string, active: boolean, pageSize: number) {
   const filters = useDeviceFilters(active);
-  const rows = useDeviceRows(agentId, filters);
+  usePageSizeReset(pageSize, filters.setPage);
+  const rows = useDeviceRows(agentId, filters, pageSize);
   const hasActiveFilters = useMemo(() => filters.effectiveQuery !== '' || filters.segment !== 'todos', [filters.effectiveQuery, filters.segment]);
   return { ...filters, ...rows, hasActiveFilters };
 }

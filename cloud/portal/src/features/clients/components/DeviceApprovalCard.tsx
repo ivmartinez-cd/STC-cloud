@@ -76,10 +76,9 @@ export default function DeviceApprovalCard({
           {loading ? '…' : `${total} pendiente${total === 1 ? '' : 's'}`}
         </span>
       </div>
-      <div className="px-5 pb-[18px] pt-4">
-        <p className="mb-3.5 max-w-[52ch] font-sans text-[12.5px] leading-[1.55] text-ink-100">
-          Los equipos descubiertos por el agente de red quedan en espera de aprobación. Al aprobarlos se incorporan
-          al inventario y comienzan a reportar consumo y alertas.
+      <div className="px-5 pb-3.5 pt-3">
+        <p className="mb-3 font-sans text-[12px] leading-[1.5] text-ink-100">
+          Los equipos descubiertos por el agente quedan en espera; al aprobarlos empiezan a reportar consumo y alertas.
         </p>
         {canEdit && (
           <div className="flex gap-2.5">
@@ -97,7 +96,7 @@ export default function DeviceApprovalCard({
             </Link>
           </div>
         )}
-        <div className="mt-3.5 flex items-center justify-between gap-3 border-t border-line-200 pt-3">
+        <div className="mt-3 flex items-center justify-between gap-3 border-t border-line-200 pt-2.5">
           <span className="font-sans text-[11.5px] text-ink-400">Exigir aprobación para equipos nuevos</span>
           <button
             type="button" onClick={toggleRequireApproval} disabled={!canEdit || togglingApproval}

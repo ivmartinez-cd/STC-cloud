@@ -3,6 +3,7 @@ import { api } from '../../../shared/lib/api';
 import { useToast } from '../../../store/ToastContext';
 import { useRemoteActionsDirectory } from '../hooks/useRemoteActionsDirectory';
 import { useRemoteActionsInsights } from '../hooks/useRemoteActionsInsights';
+import { useFitRows } from '../../../shared/hooks/useFitRows';
 import { exportRemoteActionsCsv } from '../lib/exportRemoteActionsCsv';
 import RemoteActionsMetricsStrip from '../components/remote-actions/RemoteActionsMetricsStrip';
 import RemoteActionsByTypeCard from '../components/remote-actions/RemoteActionsByTypeCard';
@@ -25,7 +26,8 @@ import { APP_LOCALE } from '../../../shared/lib/formatters';
  */
 export default function RemoteActions() {
   const { showToast } = useToast();
-  const dir = useRemoteActionsDirectory();
+  const fit = useFitRows({ estimate: 54 });
+  const dir = useRemoteActionsDirectory(fit.rows);
   const insights = useRemoteActionsInsights();
 
   const [createOpen, setCreateOpen] = useState(false);
@@ -54,7 +56,7 @@ export default function RemoteActions() {
   };
 
   return (
-    <div className="-m-4 min-w-0 flex flex-col bg-surface-page px-[34px] pb-9 pt-[30px] md:-m-10">
+    <div className="-m-4 min-w-0 flex flex-col bg-surface-page px-[34px] pb-9 pt-[30px] md:-m-10 md:h-full md:min-h-0">
       <div className="mb-[22px] flex flex-wrap items-end justify-between gap-4">
         <div>
           <div className="mb-2.5 flex items-center gap-3">
@@ -103,21 +105,26 @@ export default function RemoteActions() {
         </div>
       )}
 
-      <div className="rounded-[5px] border border-line-100 bg-white">
+      {/* Sólo esta tarjeta crece: la tira de métricas, "por tipo" y el banner
+          de diagnóstico de arriba conservan su alto fijo. */}
+      <div className="flex min-h-0 flex-1 flex-col rounded-[5px] border border-line-100 bg-white">
         <RemoteActionsFilterBar
           query={dir.rawQuery} onQueryChange={dir.setRawQuery}
           segment={dir.segment} onSegmentChange={dir.setSegment}
           sortDir={dir.sortDir}
         />
 
-        <RemoteActionsTable
-          rows={dir.rows} loading={dir.loading} error={dir.error} onRetry={dir.refetch}
-          sortDir={dir.sortDir} onToggleSort={dir.toggleSortDir}
-          onRowClick={openDetail} hasActiveFilters={dir.hasActiveFilters} onClearFilters={dir.clearFilters}
-        />
+        <div ref={fit.ref} className="min-h-0 flex-1 overflow-hidden">
+          <RemoteActionsTable
+            rows={dir.rows} loading={dir.loading} error={dir.error} onRetry={dir.refetch}
+            sortDir={dir.sortDir} onToggleSort={dir.toggleSortDir}
+            onRowClick={openDetail} hasActiveFilters={dir.hasActiveFilters} onClearFilters={dir.clearFilters}
+            skeletonRows={fit.rows}
+          />
+        </div>
 
         {!dir.error && !dir.loading && (
-          <RemoteActionsPagination page={dir.page} totalPages={dir.totalPages} total={dir.total} onPageChange={dir.setPage} />
+          <RemoteActionsPagination page={dir.page} totalPages={dir.totalPages} total={dir.total} pageSize={dir.pageSize} onPageChange={dir.setPage} />
         )}
       </div>
 

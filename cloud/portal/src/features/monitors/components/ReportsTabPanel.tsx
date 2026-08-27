@@ -8,6 +8,9 @@ import type { Device, MonitorData } from '../../../shared/types/monitor';
 import { fmt, APP_LOCALE } from '../../../shared/lib/formatters';
 import ZoneLabel from '../../../shared/components/ZoneLabel';
 import { BrandModal } from '../../../shared/components/BrandModal';
+import HifiPagination from '../../../shared/components/HifiPagination';
+import { useFitRows } from '../../../shared/hooks/useFitRows';
+import { useClientPagination } from '../../../shared/hooks/useClientPagination';
 
 interface Props {
   devices: Device[];
@@ -119,6 +122,9 @@ function KpiCard({ label, value, note, accent }: { label: string; value: string;
 
 const ReportsTabPanel = ({ devices, monitor }: Props) => {
   const [showExportModal, setShowExportModal] = useState(false);
+  // La tabla de insumos es lo único que crece: KPIs y gráfico quedan fijos
+  // arriba y las filas se paginan según el alto restante (27/08/2026).
+  const fit = useFitRows({ estimate: 54, min: 2 });
 
   const totalDevices  = devices.length;
   const totalMono     = devices.reduce((s, d) => s + Number(d.monthly_mono  ?? 0), 0);
@@ -132,10 +138,11 @@ const ReportsTabPanel = ({ devices, monitor }: Props) => {
     mono: Number(d.monthly_mono ?? 0), color: Number(d.monthly_color ?? 0),
   }));
   const devicesWithToner = devices.filter(d => d.toner_black != null);
+  const pager = useClientPagination(devicesWithToner, fit.rows);
   const top = [...devices].sort((a, b) => Number(b.monthly_pages ?? 0) - Number(a.monthly_pages ?? 0))[0];
 
   return (
-    <div className="space-y-4">
+    <div className="flex min-h-0 flex-1 flex-col gap-4">
       {/* KPIs — handoff §5.15: cifras simples, sin iconos decorativos */}
       <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-4">
         <KpiCard label="Equipos" value={fmt(totalDevices)} note="dispositivos activos" />
@@ -154,7 +161,7 @@ const ReportsTabPanel = ({ devices, monitor }: Props) => {
             </button>
           )}
         </div>
-        <div className="p-5">
+        <div className="px-5 pb-4 pt-3">
           {chartData.length === 0 ? (
             <div className="flex flex-col items-center justify-center gap-2 py-16">
               <BarChart2 size={32} className="text-ink-200" />
@@ -162,7 +169,7 @@ const ReportsTabPanel = ({ devices, monitor }: Props) => {
             </div>
           ) : (
             <>
-              <ResponsiveContainer width="100%" height={280}>
+              <ResponsiveContainer width="100%" height={170}>
                 <BarChart data={chartData} margin={{ top: 4, right: 4, left: -16, bottom: 0 }} barCategoryGap="40%" barGap={4}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#F0F2F2" vertical={false} />
                   <XAxis dataKey="name" tick={{ fontSize: 9, fontWeight: 700, fill: '#A5AAAD', letterSpacing: '0.06em' }} axisLine={false} tickLine={false} />
@@ -177,15 +184,12 @@ const ReportsTabPanel = ({ devices, monitor }: Props) => {
               </ResponsiveContainer>
 
               {top && Number(top.monthly_pages ?? 0) > 0 && (
-                <div className="mt-5 flex items-center gap-4 rounded-[3px] border border-brand-chip-border bg-brand-soft p-4">
-                  <div className="flex-1">
-                    <p className="mb-0.5 font-montserrat text-[8.5px] font-bold uppercase tracking-[.13em] text-brand-accent">Mayor productor del mes</p>
-                    <p className="font-sans text-[13px] font-semibold text-ink-900">{top.model ?? 'N/A'} · <span className="font-mono text-[12px] text-brand-accent">{top.serial_number ?? 'S/N'}</span></p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-montserrat text-[21px] font-bold tabular-nums text-ink-900">{fmt(Number(top.monthly_pages ?? 0))}</p>
-                    <p className="font-sans text-[11px] text-ink-300">páginas este mes</p>
-                  </div>
+                <div className="mt-3 flex items-center gap-4 rounded-[3px] border border-brand-chip-border bg-brand-soft px-4 py-2">
+                  <p className="min-w-0 flex-1 truncate font-sans text-[12.5px] text-ink-900">
+                    <span className="mr-2 font-montserrat text-[8.5px] font-bold uppercase tracking-[.13em] text-brand-accent">Mayor productor del mes</span>
+                    <span className="font-semibold">{top.model ?? 'N/A'}</span> · <span className="font-mono text-[12px] text-brand-accent">{top.serial_number ?? 'S/N'}</span>
+                  </p>
+                  <p className="shrink-0 font-montserrat text-[16px] font-bold tabular-nums text-ink-900">{fmt(Number(top.monthly_pages ?? 0))} <span className="font-sans text-[11px] font-normal text-ink-300">pág. este mes</span></p>
                 </div>
               )}
             </>
@@ -194,7 +198,7 @@ const ReportsTabPanel = ({ devices, monitor }: Props) => {
       </div>
 
       {/* Reporte de insumos */}
-      <div>
+      <div className="flex min-h-0 flex-1 flex-col">
         <div className="mb-3.5 flex items-center justify-between gap-3">
           <ZoneLabel text={`Reporte de insumos · ${fmt(devicesWithToner.length)}`} lineColorClass="bg-brand" />
           {devicesWithToner.length > 0 && (
@@ -204,25 +208,26 @@ const ReportsTabPanel = ({ devices, monitor }: Props) => {
             </span>
           )}
         </div>
-        <div className="rounded-[5px] border border-line-100 bg-white">
+        <div className="flex min-h-0 flex-1 flex-col rounded-[5px] border border-line-100 bg-white">
           {devicesWithToner.length === 0 ? (
             <div className="flex flex-col items-center justify-center gap-2 py-16">
               <Package size={32} className="text-ink-200" />
               <p className="font-sans text-[12.5px] text-ink-300">Sin datos de consumibles disponibles</p>
             </div>
           ) : (
+            <div ref={fit.ref} className="min-h-0 flex-1 overflow-hidden">
             <div className="overflow-x-auto">
               <div style={{ minWidth: 900 }}>
-                <div role="row" className="grid grid-cols-[minmax(180px,1fr)_110px_140px_110px_90px_90px_90px_90px] items-center gap-3.5 border-b border-line-100 bg-surface-table-head px-5 py-3">
+                <div role="row" data-fit-fixed className="grid grid-cols-[minmax(180px,1fr)_110px_140px_110px_90px_90px_90px_90px] items-center gap-3.5 border-b border-line-100 bg-surface-table-head px-5 py-3">
                   {['MODELO', 'MARCA', 'S/N', 'ESTADO', 'NEGRO', 'CIAN', 'MAGENTA', 'AMARILLO'].map((h) => (
                     <span key={h} className="font-montserrat text-[8.5px] font-bold uppercase tracking-[.14em] text-ink-300">{h}</span>
                   ))}
                 </div>
-                {devicesWithToner.map((device) => {
+                {pager.visible.map((device) => {
                   const status = deviceTonerStatus(device);
                   const s = STATUS_STYLE[status];
                   return (
-                    <div key={device.id} role="row" className="grid min-h-[54px] grid-cols-[minmax(180px,1fr)_110px_140px_110px_90px_90px_90px_90px] items-center gap-3.5 border-b border-line-200 px-5 py-[11px] last:border-0">
+                    <div key={device.id} role="row" data-fit-row className="grid min-h-[54px] grid-cols-[minmax(180px,1fr)_110px_140px_110px_90px_90px_90px_90px] items-center gap-3.5 border-b border-line-200 px-5 py-[11px] last:border-0">
                       <span className="truncate font-sans text-[12.5px] font-semibold text-ink-900">{device.model ?? 'N/A'}</span>
                       <span className="font-sans text-[12px] text-ink-400">{device.brand ?? 'N/A'}</span>
                       <span className="font-mono text-[11.5px] text-ink-700">{device.serial_number ?? 'S/N'}</span>
@@ -238,6 +243,10 @@ const ReportsTabPanel = ({ devices, monitor }: Props) => {
                 })}
               </div>
             </div>
+            </div>
+          )}
+          {devicesWithToner.length > pager.pageSize && (
+            <HifiPagination page={pager.page} totalPages={pager.totalPages} total={pager.total} pageSize={pager.pageSize} itemLabel="equipos" onPageChange={pager.setPage} />
           )}
         </div>
       </div>

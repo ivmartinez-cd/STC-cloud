@@ -5,7 +5,8 @@ import type { Device } from '../../../shared/types/monitor';
 import { api } from '../../../shared/lib/api';
 import { fmt } from '../../../shared/lib/formatters';
 import { useRowSelection } from '../../../shared/hooks/useRowSelection';
-import { useMonitorDeviceDirectory, MONITOR_DEVICE_PAGE_SIZE } from '../hooks/useMonitorDeviceDirectory';
+import { useMonitorDeviceDirectory } from '../hooks/useMonitorDeviceDirectory';
+import { useFitRows } from '../../../shared/hooks/useFitRows';
 import { useToast } from '../../../store/ToastContext';
 import BulkActionBar from '../../../shared/components/BulkActionBar';
 import EstadoChip from '../../../shared/components/EstadoChip';
@@ -42,8 +43,9 @@ const DeviceInventoryTable = ({ devices, monitorName, agentId, clientId, pending
   const [showExportModal, setShowExportModal] = useState(false);
   const [approving, setApproving] = useState(false);
   const { showToast } = useToast();
-  const dir = useMonitorDeviceDirectory(agentId, active);
-  const { rows, total, totalPages, page, setPage, loading, error, refetch, rawQuery, setRawQuery, segment, setSegment, sortField, sortDir, toggleSort, hasActiveFilters, clearFilters } = dir;
+  const fit = useFitRows({ estimate: 54 });
+  const dir = useMonitorDeviceDirectory(agentId, active, fit.rows);
+  const { rows, total, totalPages, pageSize, page, setPage, loading, error, refetch, rawQuery, setRawQuery, segment, setSegment, sortField, sortDir, toggleSort, hasActiveFilters, clearFilters } = dir;
 
   const rowSelection = useRowSelection(rows.map((d) => d.id));
   const [bulkModal, setBulkModal] = useState<'decommission' | 'recommission' | 'move' | 'monitor-state' | null>(null);
@@ -103,12 +105,12 @@ const DeviceInventoryTable = ({ devices, monitorName, agentId, clientId, pending
     setShowExportModal(false);
   };
 
-  const from = page * MONITOR_DEVICE_PAGE_SIZE + 1;
-  const to = Math.min((page + 1) * MONITOR_DEVICE_PAGE_SIZE, total);
+  const from = page * pageSize + 1;
+  const to = Math.min((page + 1) * pageSize, total);
 
   return (
-    <>
-      <div className="flex items-end justify-between gap-3.5 flex-wrap mb-[26px]">
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="flex items-end justify-between gap-3.5 flex-wrap mb-4">
         <div className="flex items-center gap-[11px]">
           <span className="block h-0.5 w-5 bg-brand" />
           <span className="font-montserrat text-[9px] font-bold uppercase tracking-[.19em] text-ink-550">
@@ -137,7 +139,7 @@ const DeviceInventoryTable = ({ devices, monitorName, agentId, clientId, pending
         )}
       </div>
 
-      <div className="rounded-[5px] border border-line-100 bg-white">
+      <div className="flex min-h-0 flex-1 flex-col rounded-[5px] border border-line-100 bg-white">
         <div className="flex flex-wrap items-center gap-3 border-b border-line-150 px-5 py-3.5">
           <div className="relative min-w-[240px] max-w-[400px] flex-1">
             <Search size={11} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#a9aeb0]" />
@@ -189,9 +191,10 @@ const DeviceInventoryTable = ({ devices, monitorName, agentId, clientId, pending
           </BulkActionBar>
         )}
 
+        <div ref={fit.ref} className="min-h-0 flex-1 overflow-hidden">
         <div className="overflow-x-auto">
           <div className="min-w-[1180px]" role="table" aria-label="Equipos detectados por este monitor">
-            <div role="row" className={`grid ${GRID_COLS} items-center gap-x-[14px] border-b border-line-100 bg-surface-table-head px-5 py-3`}>
+            <div role="row" data-fit-fixed className={`grid ${GRID_COLS} items-center gap-x-[14px] border-b border-line-100 bg-surface-table-head px-5 py-3`}>
               <div className="justify-self-start">
                 {!isReadOnlyViewer && (
                   <button onClick={rowSelection.toggleAll} className="text-ink-300 hover:text-ink-100" title="Seleccionar todos">
@@ -216,7 +219,7 @@ const DeviceInventoryTable = ({ devices, monitorName, agentId, clientId, pending
             )}
 
             {!error && loading && (
-              Array.from({ length: 10 }).map((_, i) => (
+              Array.from({ length: fit.rows }).map((_, i) => (
                 <div key={i} className={`grid ${GRID_COLS} items-center gap-x-[14px] border-b border-line-200 px-5 py-[11px]`} style={{ height: 54 }}>
                   <span className="h-3 w-3/5 animate-pulse rounded bg-surface-track" />
                   <span className="h-3 w-2/5 animate-pulse rounded bg-surface-track" />
@@ -239,7 +242,7 @@ const DeviceInventoryTable = ({ devices, monitorName, agentId, clientId, pending
             )}
 
             {!error && !loading && rows.map((d) => (
-              <div key={d.id} className={`group grid ${GRID_COLS} min-h-[54px] items-center gap-x-[14px] border-b border-line-200 px-5 py-[11px] transition-colors duration-150 ease-in-out hover:bg-surface-hover`}>
+              <div key={d.id} data-fit-row className={`group grid ${GRID_COLS} min-h-[54px] items-center gap-x-[14px] border-b border-line-200 px-5 py-[11px] transition-colors duration-150 ease-in-out hover:bg-surface-hover`}>
                 {!isReadOnlyViewer && (
                   <button onClick={() => rowSelection.toggle(d.id)} className="justify-self-start text-ink-300 hover:text-brand">
                     {rowSelection.selected.has(d.id) ? <CheckSquare size={14} className="text-brand" /> : <Square size={14} />}
@@ -270,6 +273,7 @@ const DeviceInventoryTable = ({ devices, monitorName, agentId, clientId, pending
             ))}
           </div>
         </div>
+        </div>
 
         {total > 0 && (
           <DeviceInventoryPagination page={page} totalPages={totalPages} total={total} from={from} to={to} onPageChange={setPage} />
@@ -284,7 +288,7 @@ const DeviceInventoryTable = ({ devices, monitorName, agentId, clientId, pending
       <BulkRecommissionModal isOpen={bulkModal === 'recommission'} onClose={() => setBulkModal(null)} onDone={handleBulkDone} deviceIds={selectedIds} />
       <BulkMoveDevicesModal isOpen={bulkModal === 'move'} onClose={() => setBulkModal(null)} onDone={handleBulkDone} deviceIds={selectedIds} currentClientId={clientId} currentAgentId={agentId} />
       <BulkMonitorStateModal isOpen={bulkModal === 'monitor-state'} onClose={() => setBulkModal(null)} onDone={handleBulkDone} deviceIds={selectedIds} />
-    </>
+    </div>
   );
 };
 

@@ -3,8 +3,8 @@ import { useSearchParams } from 'react-router-dom';
 import { api } from '../../../shared/lib/api';
 import { useAuth } from '../../../store/AuthContext';
 import { useDebounce } from '../../../shared/hooks/useDebounce';
+import { usePageSizeReset } from '../../../shared/hooks/usePageSizeReset';
 import type { Incident, IncidentListResponse, IncidentStats } from '../../../shared/types/incidents';
-import { PAGE_SIZE } from '../lib/incidentPresentation';
 
 export type ClientOption = { id: string; name: string };
 
@@ -27,7 +27,7 @@ function useIncidentFilters(): IncidentFiltersState {
   return { q, setQ, openOnly, setOpenOnly, old24h, setOld24h, noDevice, setNoDevice, clientId };
 }
 
-export function buildIncidentsQueryParams(f: IncidentFiltersState, page: number): URLSearchParams {
+export function buildIncidentsQueryParams(f: IncidentFiltersState, page: number, pageSize: number): URLSearchParams {
   const params = new URLSearchParams();
   if (f.q.trim().length >= 2) params.set('q', f.q.trim());
   if (f.openOnly) params.set('status', 'open');
@@ -35,8 +35,8 @@ export function buildIncidentsQueryParams(f: IncidentFiltersState, page: number)
   if (f.noDevice) params.set('no_device', 'true');
   if (f.clientId) params.set('client_id', f.clientId);
   params.set('order', 'aging_desc');
-  params.set('limit', String(PAGE_SIZE));
-  params.set('offset', String(page * PAGE_SIZE));
+  params.set('limit', String(pageSize));
+  params.set('offset', String(page * pageSize));
   return params;
 }
 
@@ -84,19 +84,19 @@ function useRowsState() {
   return { items, setItems, total, setTotal, loading, setLoading, error, setError };
 }
 
-function requestIncidentPage(filters: IncidentFiltersState, page: number): Promise<IncidentListResponse> {
-  const qs = buildIncidentsQueryParams(filters, page).toString();
+function requestIncidentPage(filters: IncidentFiltersState, page: number, pageSize: number): Promise<IncidentListResponse> {
+  const qs = buildIncidentsQueryParams(filters, page, pageSize).toString();
   return api.get<IncidentListResponse>(`/incidents?${qs}`);
 }
 
-function useRows(filters: IncidentFiltersState, page: number, debouncedQ: string) {
+function useRows(filters: IncidentFiltersState, page: number, debouncedQ: string, pageSize: number) {
   const st = useRowsState();
   const effective = { ...filters, q: debouncedQ };
   const fetchIncidents = useCallback(async () => {
     st.setLoading(true);
     st.setError('');
     try {
-      const data = await requestIncidentPage(effective, page);
+      const data = await requestIncidentPage(effective, page, pageSize);
       st.setItems(data.items);
       st.setTotal(data.total);
     } catch (e) {
@@ -105,25 +105,27 @@ function useRows(filters: IncidentFiltersState, page: number, debouncedQ: string
       st.setLoading(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedQ, filters.openOnly, filters.old24h, filters.noDevice, filters.clientId, page]);
+  }, [debouncedQ, filters.openOnly, filters.old24h, filters.noDevice, filters.clientId, page, pageSize]);
   useEffect(() => { void fetchIncidents(); }, [fetchIncidents]);
-  return { ...st, totalPages: Math.max(1, Math.ceil(st.total / PAGE_SIZE)), fetchIncidents };
+  return { ...st, pageSize, totalPages: Math.max(1, Math.ceil(st.total / pageSize)), fetchIncidents };
 }
 
-function useList(filters: IncidentFiltersState) {
+function useList(filters: IncidentFiltersState, pageSize: number) {
   const [page, setPage] = useState(0);
   const debouncedQ = useDebounce(filters.q, 300);
   useEffect(() => { setPage(0); }, [debouncedQ, filters.openOnly, filters.old24h, filters.noDevice, filters.clientId]);
-  return { page, setPage, ...useRows(filters, page, debouncedQ) };
+  usePageSizeReset(pageSize, setPage);
+  return { page, setPage, ...useRows(filters, page, debouncedQ, pageSize) };
 }
 
-export function useIncidentsPage() {
+/** `pageSize` = filas que entran en pantalla (`useFitRows`, 27/08/2026). */
+export function useIncidentsPage(pageSize: number) {
   const { role } = useAuth();
   const canManage = role === 'admin' || role === 'operator';
   const filters = useIncidentFilters();
   const clients = useClients(canManage);
   const classLabels = useClassLabels();
-  const list = useList(filters);
+  const list = useList(filters, pageSize);
   return { canManage, filters, clients, classLabels, ...list, ...useStats(filters.clientId) };
 }
 

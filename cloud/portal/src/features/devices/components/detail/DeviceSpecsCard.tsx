@@ -12,7 +12,7 @@ export default function DeviceSpecsCard({ device, extra }: { device: DeviceDetai
   return (
     <Card>
       <CardTitle>Datos del dispositivo</CardTitle>
-      <div className="px-5 pb-[18px] pt-[18px]">
+      <div className="px-5 pb-3.5 pt-3.5">
         <Row label="Marca" value={extra?.manufacturer ?? device.brand} />
         <Row label="Modelo" value={device.model} />
         <Row label="Firmware" value={device.firmware} mono />

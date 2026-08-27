@@ -125,7 +125,7 @@ const DeviceDetail = () => {
   }
 
   return (
-    <div className="-m-4 min-w-0 flex flex-col gap-4 bg-surface-page px-[34px] pb-9 pt-[26px] md:-m-10">
+    <div className="-m-4 flex min-w-0 flex-col gap-4 bg-surface-page px-[34px] pb-9 pt-[26px] md:-m-10 md:h-full md:min-h-0">
       <nav className="mb-1 flex items-center gap-2 font-sans text-xs">
         <Link to="/clients" className="font-semibold text-brand-accent hover:underline">Clientes</Link>
         <span className="text-ink-sep-light">/</span>
@@ -151,6 +151,8 @@ const DeviceDetail = () => {
         <DetailTabs tabs={TABS} active={activeTab} onChange={handleTabChange} />
       </div>
 
+      {/* La tab activa llena el alto restante (rediseño sin scroll, 27/08/2026). */}
+      <div className="flex min-h-0 flex-1 flex-col">
       {activeTab === 'general' && (
         <GeneralTab
           device={device} extra={extra} latest={latest} totalPages={totalPages} monoPages={monoPages} colorPages={colorPages}
@@ -165,6 +167,7 @@ const DeviceDetail = () => {
       {activeTab === 'incidents' && <IncidentsTab incidents={incidents.data} incidentsLoading={incidents.loading} />}
       {activeTab === 'costs' && canSeeHistory && <CostsTab deviceId={id!} />}
       {activeTab === 'history' && canSeeHistory && <HistoryTab history={history.data} historyLoading={history.loading} />}
+      </div>
 
       <ConfirmationModal
         isOpen={deleteOpen} onClose={() => { if (!deleting) setDeleteOpen(false); }} onConfirm={handleDelete}

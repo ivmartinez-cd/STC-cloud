@@ -1,6 +1,9 @@
 import { Radio, Trash2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import ZoneLabel from '../../../shared/components/ZoneLabel';
+import HifiPagination from '../../../shared/components/HifiPagination';
+import { useFitRows } from '../../../shared/hooks/useFitRows';
+import { useClientPagination } from '../../../shared/hooks/useClientPagination';
 import { OFFLINE_THRESHOLD_MS } from '../../../shared/lib/constants';
 import type { Monitor } from '../../../shared/types/monitor';
 
@@ -52,9 +55,36 @@ function formatLastSeen(iso: string | null, now: number): string {
   return hrs < 24 ? `hace ${hrs} h` : `hace ${Math.round(hrs / 24)} d`;
 }
 
+/** Contador de equipos del nodo — linkea a la tab "Dispositivos" del monitor. */
+function DeviceCountLink({ id, count }: { id: string; count: number }) {
+  return (
+    <Link
+      to={`/monitors/${id}?tab=devices`}
+      className="inline-flex h-[26px] min-w-[36px] items-center justify-center rounded-[3px] border border-line-avatar bg-surface-avatar px-2 font-montserrat text-[11.5px] font-semibold tabular-nums text-ink-600 transition-colors duration-150 ease-in-out hover:border-brand hover:text-brand-accent"
+    >
+      {count}
+    </Link>
+  );
+}
+
+function DeleteMonitorButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title="Eliminar monitor"
+      className="flex h-[26px] w-[26px] items-center justify-center rounded-[3px] border border-line-avatar text-ink-300 transition-colors duration-150 ease-in-out hover:border-severity-critical hover:text-severity-critical"
+    >
+      <Trash2 size={13} />
+    </button>
+  );
+}
+
 /** Zona "Monitores instalados" (handoff hifi "Cliente — detalle", 25/08/2026) —
  * los nodos DCA del cliente, no confundir con `ClientDevicesSection` (equipos/
- * impresoras) que se muestra arriba en la misma página. */
+ * impresoras) que vive en la tab "Dispositivos". Es el elemento que crece en la
+ * columna del resumen: la lista viene entera del backend, así que se pagina en
+ * memoria con las filas que entran en el alto disponible (`useFitRows`, 27/08/2026). */
 export default function ClientMonitorsSection({
   monitors,
   now,
@@ -68,8 +98,11 @@ export default function ClientMonitorsSection({
   onCreateClick: () => void;
   onDeleteClick: (monitor: { id: string; name: string }) => void;
 }) {
+  const fit = useFitRows({ estimate: 54, min: 2 });
+  const pg = useClientPagination(monitors, fit.rows);
+
   return (
-    <section className="space-y-3.5">
+    <section className="flex min-h-0 flex-1 flex-col gap-3.5">
       <div className="flex flex-wrap items-end justify-between gap-3.5">
         <ZoneLabel text={`Monitores instalados · ${monitors.length} nodos`} lineColorClass="bg-brand-gray" />
         {!isReadOnlyViewer && (
@@ -83,70 +116,58 @@ export default function ClientMonitorsSection({
         )}
       </div>
 
-      <div className="rounded-[5px] border border-line-100 bg-white">
-        <div className="overflow-x-auto">
-          <div className="min-w-[760px]" role="table" aria-label="Monitores instalados">
-            <div role="row" className={`grid ${GRID_COLS} items-center gap-x-[14px] border-b border-line-100 bg-surface-table-head px-5 py-3`}>
-              <div role="columnheader" className="font-montserrat text-[8.5px] font-bold uppercase tracking-[.14em] text-ink-300">NODO</div>
-              <div role="columnheader" className="font-montserrat text-[8.5px] font-bold uppercase tracking-[.14em] text-ink-300">ESTADO</div>
-              <div role="columnheader" className="text-right font-montserrat text-[8.5px] font-bold uppercase tracking-[.14em] text-ink-300">ÚLTIMA ACTIVIDAD</div>
-              <div role="columnheader" className="text-right font-montserrat text-[8.5px] font-bold uppercase tracking-[.14em] text-ink-300">DISPOSITIVOS</div>
-              <div role="columnheader" />
+      <div className="flex min-h-0 flex-1 flex-col rounded-[5px] border border-line-100 bg-white">
+        <div ref={fit.ref} className="min-h-0 flex-1 overflow-hidden">
+          <div className="overflow-x-auto">
+            <div className="min-w-[760px]" role="table" aria-label="Monitores instalados">
+              <div role="row" data-fit-fixed className={`grid ${GRID_COLS} items-center gap-x-[14px] border-b border-line-100 bg-surface-table-head px-5 py-3`}>
+                <div role="columnheader" className="font-montserrat text-[8.5px] font-bold uppercase tracking-[.14em] text-ink-300">NODO</div>
+                <div role="columnheader" className="font-montserrat text-[8.5px] font-bold uppercase tracking-[.14em] text-ink-300">ESTADO</div>
+                <div role="columnheader" className="text-right font-montserrat text-[8.5px] font-bold uppercase tracking-[.14em] text-ink-300">ÚLTIMA ACTIVIDAD</div>
+                <div role="columnheader" className="text-right font-montserrat text-[8.5px] font-bold uppercase tracking-[.14em] text-ink-300">DISPOSITIVOS</div>
+                <div role="columnheader" />
+              </div>
+
+              {monitors.length === 0 && (
+                <div className="flex flex-col items-center justify-center gap-1.5 py-20 text-center">
+                  <span className="font-sans text-[12.5px] text-ink-300">Sin monitores configurados</span>
+                </div>
+              )}
+
+              {pg.visible.map((m) => (
+                <div
+                  key={m.id}
+                  role="row" data-fit-row
+                  className={`grid ${GRID_COLS} min-h-[54px] items-center gap-x-[14px] border-b border-line-200 px-5 py-[11px] transition-colors duration-150 ease-in-out hover:bg-surface-hover`}
+                >
+                  <div role="cell" className="min-w-0">
+                    <Link to={`/monitors/${m.id}`} className="group/m flex min-w-0 items-center gap-3">
+                      <span className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-[3px] border border-line-avatar bg-surface-avatar text-ink-400 transition-colors duration-150 ease-in-out group-hover/m:border-brand group-hover/m:text-brand">
+                        <Radio size={14} />
+                      </span>
+                      <div className="min-w-0">
+                        <div className="truncate font-sans text-[12.5px] font-semibold text-ink-900 transition-colors duration-150 ease-in-out group-hover/m:text-brand-accent">{m.name}</div>
+                        {m.host_name && <div className="truncate font-sans text-[11px] text-ink-300">{m.host_name}</div>}
+                      </div>
+                    </Link>
+                  </div>
+
+                  <MonitorStatusChip status={m.status} last_seen={m.last_seen} now={now} />
+
+                  <div className="text-right font-sans text-[12px] text-ink-400">{formatLastSeen(m.last_seen, now)}</div>
+
+                  <div className="flex justify-end"><DeviceCountLink id={m.id} count={m.device_count} /></div>
+
+                  <div className="flex justify-end">
+                    {!isReadOnlyViewer && <DeleteMonitorButton onClick={() => onDeleteClick({ id: m.id, name: m.name })} />}
+                  </div>
+                </div>
+              ))}
             </div>
-
-            {monitors.length === 0 && (
-              <div className="flex flex-col items-center justify-center gap-1.5 py-20 text-center">
-                <span className="font-sans text-[12.5px] text-ink-300">Sin monitores configurados</span>
-              </div>
-            )}
-
-            {monitors.map((m) => (
-              <div
-                key={m.id}
-                role="row"
-                className={`grid ${GRID_COLS} min-h-[54px] items-center gap-x-[14px] border-b border-line-200 px-5 py-[11px] transition-colors duration-150 ease-in-out hover:bg-surface-hover`}
-              >
-                <div role="cell" className="min-w-0">
-                  <Link to={`/monitors/${m.id}`} className="group/m flex min-w-0 items-center gap-3">
-                    <span className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-[3px] border border-line-avatar bg-surface-avatar text-ink-400 transition-colors duration-150 ease-in-out group-hover/m:border-brand group-hover/m:text-brand">
-                      <Radio size={14} />
-                    </span>
-                    <div className="min-w-0">
-                      <div className="truncate font-sans text-[12.5px] font-semibold text-ink-900 transition-colors duration-150 ease-in-out group-hover/m:text-brand-accent">{m.name}</div>
-                      {m.host_name && <div className="truncate font-sans text-[11px] text-ink-300">{m.host_name}</div>}
-                    </div>
-                  </Link>
-                </div>
-
-                <MonitorStatusChip status={m.status} last_seen={m.last_seen} now={now} />
-
-                <div className="text-right font-sans text-[12px] text-ink-400">{formatLastSeen(m.last_seen, now)}</div>
-
-                <div className="flex justify-end">
-                  <Link
-                    to={`/monitors/${m.id}?tab=devices`}
-                    className="inline-flex h-[26px] min-w-[36px] items-center justify-center rounded-[3px] border border-line-avatar bg-surface-avatar px-2 font-montserrat text-[11.5px] font-semibold tabular-nums text-ink-600 transition-colors duration-150 ease-in-out hover:border-brand hover:text-brand-accent"
-                  >
-                    {m.device_count}
-                  </Link>
-                </div>
-
-                <div className="flex justify-end">
-                  {!isReadOnlyViewer && (
-                    <button
-                      type="button"
-                      onClick={() => onDeleteClick({ id: m.id, name: m.name })}
-                      title="Eliminar monitor"
-                      className="flex h-[26px] w-[26px] items-center justify-center rounded-[3px] border border-line-avatar text-ink-300 transition-colors duration-150 ease-in-out hover:border-severity-critical hover:text-severity-critical"
-                    >
-                      <Trash2 size={13} />
-                    </button>
-                  )}
-                </div>
-              </div>
-            ))}
           </div>
         </div>
+
+        <HifiPagination page={pg.page} totalPages={pg.totalPages} total={pg.total} pageSize={pg.pageSize} itemLabel="nodos" onPageChange={pg.setPage} />
       </div>
     </section>
   );

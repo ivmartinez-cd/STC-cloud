@@ -2,14 +2,10 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { api } from '../../../shared/lib/api';
 import { useDebounce } from '../../../shared/hooks/useDebounce';
+import { usePageSizeReset } from '../../../shared/hooks/usePageSizeReset';
 import type {
   ClientDirectoryResponse, ClientDirectoryRow, ClientPortfolioSummary, ClientSegment, ClientSortField, SortDir,
 } from '../types/clientsDirectory';
-
-/** Estándar del codebase (mismo criterio que `/devices`, migrado 25/08/2026 en el
- * commit `e73acc7`): el handoff pedía 9 filas por página, pero acá se usa el
- * pageSize/técho ya establecido para el resto de las tablas paginadas del portal. */
-export const PAGE_SIZE = 50;
 
 const SEGMENTS: ClientSegment[] = ['todos', 'sin_contacto', 'con_alertas', 'sin_reporte_24h'];
 const SORT_FIELDS: ClientSortField[] = ['monitor_count', 'device_count', 'alerts_count', 'last_report_at'];
@@ -78,7 +74,7 @@ function useDirectoryFilters() {
 type DirectoryFilters = ReturnType<typeof useDirectoryFilters>;
 
 /** Página actual del listado — reactiva a filtro/orden/página. */
-function useDirectoryRows(filters: DirectoryFilters) {
+function useDirectoryRows(filters: DirectoryFilters, pageSize: number) {
   const { effectiveQuery, segment, sortField, sortDir, page } = filters;
   const [rows, setRows] = useState<ClientDirectoryRow[]>([]);
   const [total, setTotal] = useState(0);
@@ -88,7 +84,7 @@ function useDirectoryRows(filters: DirectoryFilters) {
   const fetchDirectory = useCallback(async () => {
     setLoading(true);
     setError('');
-    const params = new URLSearchParams({ sort: sortField, dir: sortDir, limit: String(PAGE_SIZE), offset: String(page * PAGE_SIZE) });
+    const params = new URLSearchParams({ sort: sortField, dir: sortDir, limit: String(pageSize), offset: String(page * pageSize) });
     if (effectiveQuery) params.set('q', effectiveQuery);
     if (segment !== 'todos') params.set('segment', segment);
     try {
@@ -100,14 +96,14 @@ function useDirectoryRows(filters: DirectoryFilters) {
     } finally {
       setLoading(false);
     }
-  }, [effectiveQuery, segment, sortField, sortDir, page]);
+  }, [effectiveQuery, segment, sortField, sortDir, page, pageSize]);
 
   useEffect(() => { void fetchDirectory(); }, [fetchDirectory]);
 
   // Las barras de "Equipos" se escalan sobre el máximo de la PÁGINA visible, no el
   // global (README: "evita barras invisibles al paginar").
   const maxDeviceCountOnPage = useMemo(() => rows.reduce((max, r) => Math.max(max, r.device_count), 0), [rows]);
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   return { rows, total, totalPages, loading, error, refetch: fetchDirectory, maxDeviceCountOnPage };
 }
@@ -134,9 +130,12 @@ function useDirectorySummary() {
   return { summary, summaryLoading, summaryError, refetchSummary: fetchSummary };
 }
 
-export function useClientsDirectory() {
+/** `pageSize` viene de `useFitRows` en la página: las filas que entran en el
+ * alto disponible (27/08/2026 — antes 50 fijas y scroll). */
+export function useClientsDirectory(pageSize: number) {
   const filters = useDirectoryFilters();
-  return { ...filters, ...useDirectoryRows(filters), ...useDirectorySummary() };
+  usePageSizeReset(pageSize, filters.setPage);
+  return { ...filters, pageSize, ...useDirectoryRows(filters, pageSize), ...useDirectorySummary() };
 }
 
 export type ClientsDirectoryState = ReturnType<typeof useClientsDirectory>;

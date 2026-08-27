@@ -68,7 +68,7 @@ export default function DeviceDirectoryRow({ row, selected, onToggle }: { row: R
   const notReporting = row.estado !== 'en_linea';
   const rowClass = `group grid ${GRID_COLS} min-h-[54px] items-center gap-x-[14px] border-b border-line-200 px-5 py-[11px] transition-colors duration-150 ease-in-out hover:bg-surface-hover ${row.estado === 'dado_de_baja' ? 'opacity-60' : ''}`;
   return (
-    <div className={rowClass}>
+    <div data-fit-row className={rowClass}>
       <SelectCheckbox selected={selected} onToggle={onToggle} />
       <DeviceIdentityCell row={row} />
       <EstadoChip variant={row.estado === 'sin_contacto' ? 'attention' : 'neutral'} label={ESTADO_LABEL[row.estado]} />

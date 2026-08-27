@@ -1,7 +1,5 @@
 import { APP_LOCALE } from '../../../shared/lib/formatters';
 
-export const PAGE_SIZE = 50;
-
 /** Mismo punteado de 3 tonos que `features/alerts/lib/alertPresentation.ts`
  * (duplicado a propósito — el guard `arch-portal` bloquea importar entre
  * features). Los valores de `class` acá son los mismos `alert_class` que

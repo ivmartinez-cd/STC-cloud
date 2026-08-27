@@ -11,18 +11,19 @@ interface EmailSummary { sinSmtp: number }
  * (ver `AutomationCard.tsx`) — mostrarla acá como "bloqueante resuelto por
  * RESOLVER AHORA" sería un botón que no hace nada. Sólo se diagnostica el
  * bloqueante real: SMTP sin configurar, con la cifra real de `/email-log/summary`. */
-export default function SettingsBlockersBanner({ smtpConfigured }: { smtpConfigured: boolean }) {
+export default function SettingsBlockersBanner({ smtpConfigured, onResolve }: { smtpConfigured: boolean; onResolve: () => void }) {
   const [sinSmtp, setSinSmtp] = useState<number | null>(null);
   useEffect(() => {
     if (smtpConfigured) return;
     api.get<EmailSummary>('/email-log/summary').then((s) => setSinSmtp(s.sinSmtp)).catch(() => { /* informativo */ });
   }, [smtpConfigured]);
   if (smtpConfigured) return null;
+  // Con tabs (27/08/2026) no hay a dónde scrollear: `onResolve` activa la tab Correo.
   return (
     <DiagnosticBanner
       headline="SERVIDOR SMTP SIN CONFIGURAR — BLOQUEA LA OPERACIÓN"
       body={<>Sin servidor SMTP configurado, ningún aviso sale del sistema{sinSmtp != null ? <> (<strong className="font-semibold">{fmt(sinSmtp)}</strong> intentos fallidos por esta causa)</> : null}.</>}
-      cta={{ label: 'RESOLVER AHORA', onClick: () => { document.getElementById('smtp-card')?.scrollIntoView({ behavior: 'smooth', block: 'center' }); } }}
+      cta={{ label: 'RESOLVER AHORA', onClick: onResolve }}
     />
   );
 }

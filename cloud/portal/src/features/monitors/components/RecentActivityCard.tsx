@@ -1,5 +1,6 @@
 import type { AgentActivityEvent, AgentActivityKind } from '../types/monitorDetail';
 import { APP_LOCALE } from '../../../shared/lib/formatters';
+import { useFitRows } from '../../../shared/hooks/useFitRows';
 
 const KIND_COLOR: Record<AgentActivityKind, string> = {
   barrido: 'bg-brand', incidencia: 'bg-brand-severe', administrativo: 'bg-brand-gray',
@@ -28,10 +29,13 @@ export default function RecentActivityCard({ events, loading, error, onRetry, on
   onViewConsole?: () => void;
   visible?: boolean;
 }) {
+  // Muestra sólo los eventos que entran en el alto que le dejó la fila de
+  // arriba (rediseño sin scroll, 27/08/2026); el backend ya limita a 15.
+  const fit = useFitRows({ estimate: 40, min: 2 });
   if (!visible) return null;
 
   return (
-    <div className="rounded-[5px] border border-line-100 bg-white">
+    <div className="flex min-h-0 flex-col rounded-[5px] border border-line-100 bg-white">
       <div className="flex items-baseline justify-between px-5 py-3.5">
         <span className="font-montserrat text-[9px] font-bold uppercase tracking-[.15em] text-ink-600">Actividad reciente</span>
         {onViewConsole && (
@@ -44,7 +48,7 @@ export default function RecentActivityCard({ events, loading, error, onRetry, on
         )}
       </div>
 
-      <div className="px-5 pb-4 pt-2">
+      <div ref={fit.ref} className="min-h-0 flex-1 overflow-hidden px-5 pb-4 pt-2">
         {error && (
           <div className="flex flex-col items-center justify-center gap-1.5 py-8 text-center">
             <span className="font-sans text-[12.5px] text-ink-900">No se pudo cargar</span>
@@ -66,13 +70,15 @@ export default function RecentActivityCard({ events, loading, error, onRetry, on
           <p className="py-8 text-center font-sans text-[12.5px] text-ink-300">Sin actividad en las últimas 72 horas</p>
         )}
 
-        {!error && !loading && events.map((e, i) => (
+        {!error && !loading && events.slice(0, fit.rows).map((e, i) => (
           <div
             key={e.id}
+            data-fit-row
+            title={e.text}
             className={`grid grid-cols-[8px_1fr_84px] items-baseline gap-[11px] py-[9px] ${i === events.length - 1 ? '' : 'border-b border-line-200'}`}
           >
             <span className={`relative top-1 block h-[7px] w-[7px] rounded-full ${KIND_COLOR[e.kind]}`} />
-            <span className="font-sans text-[12.5px] leading-[1.4] text-ink-700">{e.text}</span>
+            <span className="truncate font-sans text-[12.5px] leading-[1.4] text-ink-700">{e.text}</span>
             <span className="text-right font-sans text-[11.5px] leading-[1.4] text-ink-300">{formatAge(e.at)}</span>
           </div>
         ))}

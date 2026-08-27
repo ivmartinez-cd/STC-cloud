@@ -1,13 +1,11 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Link } from 'react-router-dom';
 import { useAuth } from '../../../../store/AuthContext';
 import { useDebounce } from '../../../../shared/hooks/useDebounce';
 import { api } from '../../../../shared/lib/api';
-import { operatorsBreakdown } from '../../lib/settingsPresentation';
 import type { DBUser, DBClient } from '../../types/settings';
 import OperatorsHeader from './OperatorsHeader';
-import OperatorsFilterBar, { type OperatorFilter } from './OperatorsFilterBar';
-import OperatorsTable from './OperatorsTable';
+import { type OperatorFilter } from './OperatorsFilterBar';
+import OperatorsListCard from './OperatorsListCard';
 import OperatorDetailModal from './OperatorDetailModal';
 import RolePermissionsModal from './RolePermissionsModal';
 import CreateUserModal from './CreateUserModal';
@@ -111,20 +109,10 @@ export default function OperatorsCard() {
   return (
     <>
       <OperatorsHeader count={users.length} isAdmin={isAdmin} onViewPermissions={() => setShowPermissions(true)} onAddOperator={() => setShowCreateModal(true)} />
-      <div className="rounded-[5px] border border-line-100 bg-white">
-        <OperatorsFilterBar query={rawQuery} onQueryChange={setRawQuery} filter={filter} onFilterChange={setFilter} />
-        {error ? (
-          <div className="px-5 py-8 text-center font-sans text-[12.5px] text-ink-900">{error}</div>
-        ) : (
-          <OperatorsTable users={filtered} currentUserId={currentUserId} loading={loading} onOpen={setDetailUser} />
-        )}
-        {!loading && !error && (
-          <div className="flex flex-wrap items-center justify-between gap-2.5 px-5 py-3.5">
-            <span className="font-sans text-[12px] text-ink-300">{operatorsBreakdown(users)}</span>
-            <Link to="/activity" className="font-montserrat text-[10px] font-semibold uppercase tracking-[.08em] text-brand-accent hover:underline">VER REGISTRO DE ACCESOS →</Link>
-          </div>
-        )}
-      </div>
+      <OperatorsListCard
+        users={users} filtered={filtered} loading={loading} error={error} currentUserId={currentUserId} onOpen={setDetailUser}
+        query={rawQuery} onQueryChange={setRawQuery} filter={filter} onFilterChange={setFilter}
+      />
 
       {detailUser && (
         <OperatorDetailModal

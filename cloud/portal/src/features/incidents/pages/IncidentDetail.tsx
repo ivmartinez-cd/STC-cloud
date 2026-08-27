@@ -10,6 +10,8 @@ import { useToast } from '../../../store/ToastContext';
 import type { IncidentDetail as IncidentDetailType } from '../../../shared/types/incidents';
 import { INCIDENT_STATUS_LABELS, INCIDENT_STATUS_COLORS, type IncidentStatus } from '../../../shared/lib/constants';
 import { APP_LOCALE } from '../../../shared/lib/formatters';
+import SimplePagination from '../../../shared/components/SimplePagination';
+import { useClientPagination } from '../../../shared/hooks/useClientPagination';
 
 function fmtDate(v: string | null): string {
   if (!v) return '—';
@@ -34,6 +36,10 @@ const IncidentDetail = () => {
   const [error, setError] = useState('');
   const [comment, setComment] = useState('');
   const [busy, setBusy] = useState(false);
+  // 6 por página en vez de scroll interno (rediseño sin scroll, 27/08/2026).
+  const alertsPager = useClientPagination(incident?.alerts ?? [], 6);
+  const eventsPager = useClientPagination(incident?.events ?? [], 6);
+
 
   const fetchIncident = useCallback(async () => {
     if (!id) return;
@@ -202,7 +208,7 @@ const IncidentDetail = () => {
             <p className="text-xs text-slate-400 font-medium">Ninguna alerta vinculada.</p>
           ) : (
             <div className="space-y-2">
-              {incident.alerts.map((a) => (
+              {alertsPager.visible.map((a) => (
                 <div key={a.id} className="flex items-center justify-between gap-2 px-3 py-2 rounded-xl border border-slate-100 bg-slate-50/50">
                   <div className="min-w-0">
                     <p className="text-[11px] font-mono text-slate-500 truncate">{a.type}</p>
@@ -215,6 +221,7 @@ const IncidentDetail = () => {
                   )}
                 </div>
               ))}
+              <SimplePagination page={alertsPager.page} pageSize={alertsPager.pageSize} total={alertsPager.total} onPageChange={alertsPager.setPage} />
             </div>
           )}
         </div>
@@ -223,8 +230,8 @@ const IncidentDetail = () => {
           <h3 className="text-sm font-black text-[#1a2333] tracking-tight flex items-center gap-2 mb-4">
             <Clock size={16} className="text-brand" /> Timeline
           </h3>
-          <div className="space-y-3 max-h-[400px] overflow-y-auto pr-1">
-            {incident.events.map((e) => (
+          <div className="space-y-3">
+            {eventsPager.visible.map((e) => (
               <div key={e.id} className="flex items-start gap-3">
                 <div className="w-1.5 h-1.5 rounded-full bg-brand mt-1.5 shrink-0" />
                 <div className="min-w-0">
@@ -235,6 +242,7 @@ const IncidentDetail = () => {
                 </div>
               </div>
             ))}
+            <SimplePagination page={eventsPager.page} pageSize={eventsPager.pageSize} total={eventsPager.total} onPageChange={eventsPager.setPage} />
           </div>
           {canManage && (
             <div className="mt-4 flex items-center gap-2">

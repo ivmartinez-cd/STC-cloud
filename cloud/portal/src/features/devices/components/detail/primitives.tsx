@@ -6,7 +6,7 @@ import { fmtInt } from '../../../../shared/lib/supplies';
 /** Fila "etiqueta → valor" (handoff hifi, transversal): label Montserrat 700
  * 8.5px tracking, valor a la derecha, borde inferior sutil. */
 export const Row = ({ label, value, mono = false, muted = false }: { label: string; value: ReactNode; mono?: boolean; muted?: boolean }) => (
-  <div className="flex items-baseline justify-between gap-4 border-b border-line-200 py-[9px]">
+  <div className="flex items-baseline justify-between gap-4 border-b border-line-200 py-[7px]">
     <span className="whitespace-nowrap font-montserrat text-[8.5px] font-bold uppercase leading-[1.3] tracking-[.13em] text-ink-300">{label}</span>
     <span className={`min-w-0 text-right text-[12.5px] leading-[1.3] ${muted ? 'text-ink-300' : 'text-ink-900'} ${mono ? 'font-mono' : 'font-sans'} overflow-hidden text-ellipsis`}>
       {value ?? '—'}

@@ -127,7 +127,7 @@ const MonitorDetail = () => {
   ];
 
   return (
-    <div className="-m-4 min-w-0 flex flex-col gap-4 bg-surface-page px-[34px] pb-9 pt-[26px] md:-m-10">
+    <div className="-m-4 flex min-w-0 flex-col gap-4 bg-surface-page px-[34px] pb-9 pt-[26px] md:-m-10 md:h-full md:min-h-0">
       <nav className="mb-1 flex items-center gap-2 font-sans text-xs">
         <Link to="/monitoring" className="font-semibold text-brand-accent hover:underline">Clientes</Link>
         <span className="text-ink-sep-light">/</span>
@@ -151,15 +151,17 @@ const MonitorDetail = () => {
       </div>
 
       {/* Overview Tab */}
+      {/* Cada tab llena el alto que deja la tarjeta de identidad (rediseño sin
+          scroll, 27/08/2026): las listas dimensionan sus filas con useFitRows. */}
       {activeTab === 'overview' && (
-        <>
+        <div className="flex min-h-0 flex-1 flex-col gap-4">
           <div className="grid grid-cols-[repeat(auto-fit,minmax(320px,1fr))] gap-4">
             <DeviceSummaryCard stats={stats} loading={statsLoading} error={statsError} onRetry={refetchStats} />
             <MonitorSpecsCard monitor={monitor} now={now} stats={stats} onViewDiagnostics={() => handleTabChange('reports')} />
             <LicenseCard monitor={monitor} license={license} loading={licenseLoading} error={licenseError} onRetry={refetchLicense} keyCopied={keyCopied} onCopyKey={copyKey} />
           </div>
 
-          <div className="grid grid-cols-1 gap-4 min-[1100px]:grid-cols-[1.55fr_1fr]">
+          <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 min-[1100px]:grid-cols-[1.55fr_1fr]">
             <ConnectivityStrip
               days={days} loading={daysLoading} error={daysError} onRetry={refetchDays}
               uptimePct={stats?.uptime_30d_pct ?? null} outages={stats?.outages_30d ?? null}
@@ -169,7 +171,7 @@ const MonitorDetail = () => {
               visible={!isReadOnlyViewer} onViewConsole={isReadOnlyViewer ? undefined : () => handleTabChange('console')}
             />
           </div>
-        </>
+        </div>
       )}
 
       {/* Devices Tab */}
@@ -186,9 +188,10 @@ const MonitorDetail = () => {
         />
       )}
 
-      {/* Console Tab */}
+      {/* Console Tab — la terminal es el único bloque del portal que conserva
+          scroll interno: es un log, recortarlo o paginarlo no tiene sentido. */}
       {activeTab === 'console' && !isReadOnlyViewer && (
-        <div>
+        <div className="flex min-h-0 flex-1 flex-col">
           <RemoteToolsPanel commandLoading={commandLoading} onCommand={sendCommand} />
           <Terminal agentId={id ?? ''} />
           <div className="mt-4 flex items-start gap-3.5 rounded-[3px] border border-brand-chip-border bg-brand-soft p-4">

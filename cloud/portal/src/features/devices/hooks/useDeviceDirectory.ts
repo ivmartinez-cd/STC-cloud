@@ -2,12 +2,10 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { api } from '../../../shared/lib/api';
 import { useDebounce } from '../../../shared/hooks/useDebounce';
+import { usePageSizeReset } from '../../../shared/hooks/usePageSizeReset';
 import type {
   DeviceDirectoryGroup, DeviceDirectoryResponse, DeviceDirectorySegment, DeviceInventorySummary, SortDir,
 } from '../types/deviceDirectory';
-
-/** Mismo techo que `/clients` (README) aunque el handoff hifi muestra 12 filas de muestra. */
-export const PAGE_SIZE = 50;
 
 const SEGMENTS: DeviceDirectorySegment[] = ['todos', 'sin_contacto', 'con_alertas', 'consumible_bajo', 'sin_agente'];
 
@@ -70,17 +68,17 @@ function useDirectoryFilters() {
 
 type DirectoryFilters = ReturnType<typeof useDirectoryFilters>;
 
-function directoryParams(filters: DirectoryFilters, page: number): URLSearchParams {
+function directoryParams(filters: DirectoryFilters, page: number, pageSize: number): URLSearchParams {
   const { effectiveQuery, segment, sortDir, includeDecommissioned } = filters;
-  const params = new URLSearchParams({ sort: 'last_seen', dir: sortDir, limit: String(PAGE_SIZE), offset: String(page * PAGE_SIZE) });
+  const params = new URLSearchParams({ sort: 'last_seen', dir: sortDir, limit: String(pageSize), offset: String(page * pageSize) });
   if (effectiveQuery) params.set('q', effectiveQuery);
   if (segment !== 'todos') params.set('segment', segment);
   if (includeDecommissioned) params.set('include', 'decommissioned');
   return params;
 }
 
-function fetchDirectoryPage(filters: DirectoryFilters, page: number): Promise<DeviceDirectoryResponse> {
-  return api.get<DeviceDirectoryResponse>(`/devices/directory?${directoryParams(filters, page).toString()}`);
+function fetchDirectoryPage(filters: DirectoryFilters, page: number, pageSize: number): Promise<DeviceDirectoryResponse> {
+  return api.get<DeviceDirectoryResponse>(`/devices/directory?${directoryParams(filters, page, pageSize).toString()}`);
 }
 
 /** Sólo el `useState` de la página actual — separado de `useDirectoryRows` por el
@@ -94,7 +92,7 @@ function useDirectoryRowsState() {
 }
 
 /** Página actual (grupos ya armados server-side) — reactiva a filtro/orden/página/baja. */
-function useDirectoryRows(filters: DirectoryFilters) {
+function useDirectoryRows(filters: DirectoryFilters, pageSize: number) {
   const { effectiveQuery, segment, sortDir, page, includeDecommissioned } = filters;
   const st = useDirectoryRowsState();
 
@@ -102,7 +100,7 @@ function useDirectoryRows(filters: DirectoryFilters) {
     st.setLoading(true);
     st.setError('');
     try {
-      const data = await fetchDirectoryPage(filters, page);
+      const data = await fetchDirectoryPage(filters, page, pageSize);
       st.setGroups(data.groups ?? []);
       st.setTotal(data.total ?? 0);
     } catch (e: unknown) {
@@ -111,11 +109,11 @@ function useDirectoryRows(filters: DirectoryFilters) {
       st.setLoading(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [effectiveQuery, segment, sortDir, page, includeDecommissioned]);
+  }, [effectiveQuery, segment, sortDir, page, includeDecommissioned, pageSize]);
 
   useEffect(() => { void fetchDirectory(); }, [fetchDirectory]);
 
-  const totalPages = Math.max(1, Math.ceil(st.total / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(st.total / pageSize));
   const rowCount = useMemo(() => st.groups.reduce((sum, g) => sum + g.rows.length, 0), [st.groups]);
   return { ...st, totalPages, rowCount, clientCount: st.groups.length, refetch: fetchDirectory };
 }
@@ -142,9 +140,12 @@ function useDirectorySummary() {
   return { summary, summaryLoading, summaryError, refetchSummary: fetchSummary };
 }
 
-export function useDeviceDirectory() {
+/** `pageSize` viene de `useFitRows` en la página: las filas de equipo que entran
+ * en el alto disponible (27/08/2026 — antes 50 fijas y scroll). */
+export function useDeviceDirectory(pageSize: number) {
   const filters = useDirectoryFilters();
-  return { ...filters, ...useDirectoryRows(filters), ...useDirectorySummary() };
+  usePageSizeReset(pageSize, filters.setPage);
+  return { ...filters, pageSize, ...useDirectoryRows(filters, pageSize), ...useDirectorySummary() };
 }
 
 export type DeviceDirectoryState = ReturnType<typeof useDeviceDirectory>;

@@ -61,9 +61,9 @@ function SortableHeader({
  * 25/08/2026) — mismo patrón/mecánica que `ClientsDirectoryTable.tsx` del listado
  * de Clientes, aplicado a los DISPOSITIVOS de un cliente puntual. */
 export default function ClientDevicesTable({
-  rows, loading, error, onRetry, sortField, sortDir, onToggleSort, hasActiveFilters, onClearFilters,
+  rows, loading, error, onRetry, sortField, sortDir, onToggleSort, hasActiveFilters, onClearFilters, skeletonRows = 10,
 }: {
-  rows: ClientDeviceDirectoryRow[];
+  rows: ClientDeviceDirectoryRow[]; skeletonRows?: number;
   loading: boolean;
   error: string;
   onRetry: () => void;
@@ -76,7 +76,7 @@ export default function ClientDevicesTable({
   return (
     <div className="overflow-x-auto">
       <div className="min-w-[1180px]" role="table" aria-label="Infraestructura de monitoreo">
-        <div role="row" className={`grid ${GRID_COLS} items-center gap-x-[14px] border-b border-line-100 bg-surface-table-head px-5 py-3`}>
+        <div role="row" data-fit-fixed className={`grid ${GRID_COLS} items-center gap-x-[14px] border-b border-line-100 bg-surface-table-head px-5 py-3`}>
           <div role="columnheader" className="font-montserrat text-[8.5px] font-bold uppercase tracking-[.14em] text-ink-300">DISPOSITIVO</div>
           <div role="columnheader" className="font-montserrat text-[8.5px] font-bold uppercase tracking-[.14em] text-ink-300">ESTADO</div>
           <div role="columnheader" className="font-montserrat text-[8.5px] font-bold uppercase tracking-[.14em] text-ink-300">UBICACIÓN</div>
@@ -94,7 +94,7 @@ export default function ClientDevicesTable({
         )}
 
         {!error && loading && (
-          Array.from({ length: 10 }).map((_, i) => (
+          Array.from({ length: skeletonRows }).map((_, i) => (
             <div key={i} className={`grid ${GRID_COLS} items-center gap-x-[14px] border-b border-line-200 px-5 py-[11px]`} style={{ height: 54 }}>
               <span className="h-3 w-3/5 animate-pulse rounded bg-surface-track" />
               <span className="h-3 w-2/5 animate-pulse rounded bg-surface-track" />
@@ -122,7 +122,7 @@ export default function ClientDevicesTable({
           <Link
             key={d.id}
             to={`/devices/${d.id}`}
-            role="row"
+            role="row" data-fit-row
             className={`group grid ${GRID_COLS} min-h-[54px] items-center gap-x-[14px] border-b border-line-200 px-5 py-[11px] transition-colors duration-150 ease-in-out hover:bg-surface-hover`}
           >
             <div role="cell" className="flex min-w-0 items-center gap-3">
