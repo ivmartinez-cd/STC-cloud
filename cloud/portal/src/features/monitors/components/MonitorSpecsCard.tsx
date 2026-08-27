@@ -64,7 +64,7 @@ export default function MonitorSpecsCard({ monitor, now, stats, onViewDiagnostic
       </div>
       <div className="flex-1 px-5 pb-4 pt-1">
         {rows.map((r) => (
-          <div key={r.label} className="flex items-baseline justify-between gap-4 border-b border-line-200 py-[9px] last:border-b-0">
+          <div key={r.label} className="flex items-baseline justify-between gap-4 border-b border-line-200 py-[9px] short:py-[5px] last:border-b-0">
             <span className="whitespace-nowrap font-montserrat text-[8.5px] font-bold uppercase tracking-[.13em] text-ink-300">{r.label}</span>
             <span
               className={`min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-right ${

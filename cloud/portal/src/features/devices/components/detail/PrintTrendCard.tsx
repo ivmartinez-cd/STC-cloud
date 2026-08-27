@@ -28,7 +28,7 @@ export default function PrintTrendCard({ trend, loading, error, onRetry }: {
       <div className="px-5 pb-3.5 pt-4">
         {error ? <CardError onRetry={onRetry} /> : (
           <>
-            <div className="flex h-[96px] items-end gap-1.5">
+            <div className="flex h-[96px] short:h-[74px] items-end gap-1.5">
               {(loading ? Array.from({ length: 12 }) : months).map((m, i) => (
                 <div key={loading ? i : (m as typeof months[number]).month} className="flex flex-1 flex-col items-center gap-2">
                   {loading ? <span className="w-full animate-pulse rounded-[2px] bg-surface-track" style={{ height: 40 + (i % 4) * 15 }} /> : (
@@ -59,13 +59,15 @@ export default function PrintTrendCard({ trend, loading, error, onRetry }: {
 }
 
 function BarStack({ month, max }: { month: { mono: number; color: number; total: number }; max: number }) {
-  const h = Math.max(4, Math.round((month.total / max) * 86));
-  const hm = month.total > 0 ? Math.max(month.mono > 0 ? 2 : 0, Math.round(h * (month.mono / month.total))) : 0;
-  const hc = Math.max(month.color > 0 ? 2 : 0, h - hm);
+  // Alturas en % del contenedor (y no en px) para que la tarjeta compacte en
+  // viewports bajos (`short:`) sin recortar las barras.
+  const pct = Math.max(4, Math.round((month.total / max) * 100));
+  const hm = month.total > 0 ? Math.round(pct * (month.mono / month.total)) : 0;
+  const hc = pct - hm;
   return (
-    <div className="flex w-full flex-col justify-end gap-0.5">
-      <div className="w-full rounded-t-[2px] bg-brand" style={{ height: hc }} />
-      <div className="w-full bg-brand-gray" style={{ height: hm }} />
+    <div className="flex h-[86px] short:h-[64px] w-full flex-col justify-end gap-0.5">
+      <div className="w-full rounded-t-[2px] bg-brand" style={{ height: `${hc}%`, minHeight: month.color > 0 ? 2 : 0 }} />
+      <div className="w-full bg-brand-gray" style={{ height: `${hm}%`, minHeight: month.mono > 0 ? 2 : 0 }} />
     </div>
   );
 }

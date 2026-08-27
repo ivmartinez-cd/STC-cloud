@@ -16,7 +16,7 @@ function buildCells(s: IncidentStats | null): Cell[] {
 
 function MetricCell({ cell, loading }: { cell: Cell; loading: boolean }) {
   return (
-    <div className="bg-white px-[18px] pb-4 pt-[15px]">
+    <div className="bg-white px-[18px] pb-4 pt-[15px] short:pb-2.5 short:pt-2.5">
       <div className="min-h-[22px] font-montserrat text-[8px] font-bold uppercase leading-[1.4] tracking-[.13em] text-ink-300">{cell.label}</div>
       {loading ? (
         <span className="mt-1.5 block h-[21px] w-3/5 animate-pulse rounded bg-surface-track" />

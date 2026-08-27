@@ -40,7 +40,7 @@ function EncryptionField({ draft, disabled, onChange }: { draft: SettingsDraft; 
 
 function SmtpFields({ draft, disabled, onChange }: { draft: SettingsDraft; disabled: boolean; onChange: (p: Partial<SettingsDraft>) => void }) {
   return (
-    <div className="mb-4 grid grid-cols-[repeat(auto-fit,minmax(140px,1fr))] gap-3.5">
+    <div className="mb-4 short:mb-3 grid grid-cols-[repeat(auto-fit,minmax(140px,1fr))] gap-3.5">
       <Field label="SERVIDOR SMTP" value={draft.smtpHost} onChange={(v) => onChange({ smtpHost: v })} placeholder="Sin definir" disabled={disabled} />
       <Field label="PUERTO" value={draft.smtpPort} onChange={(v) => onChange({ smtpPort: v.replace(/\D/g, '') })} placeholder="587" mono disabled={disabled} />
       <Field label="USUARIO" value={draft.smtpUser} onChange={(v) => onChange({ smtpUser: v })} placeholder="Sin definir" disabled={disabled} />

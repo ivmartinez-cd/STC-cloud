@@ -56,7 +56,7 @@ export default function StatsStrip({
   const cells = buildCells(stats, supplies);
 
   return (
-    <div className="mb-4 grid grid-cols-3 gap-px overflow-hidden rounded-[5px] border border-line-100 bg-line-400 md:grid-cols-5 xl:grid-cols-9">
+    <div className="mb-4 short:mb-3 grid grid-cols-3 gap-px overflow-hidden rounded-[5px] border border-line-100 bg-line-400 md:grid-cols-5 xl:grid-cols-9">
       {error ? (
         <div className="col-span-3 bg-white px-4 py-6 md:col-span-5 xl:col-span-9">
           <CardError onRetry={onRetry} className="py-2" />
@@ -65,7 +65,7 @@ export default function StatsStrip({
         cells.map((c) => {
           const cellLoading = loading || (c.label === 'Consumibles alerta' && suppliesLoading);
           return (
-            <div key={c.label} className="bg-white px-4 pb-4 pt-[15px]">
+            <div key={c.label} className="bg-white px-4 pb-4 pt-[15px] short:pb-2.5 short:pt-2.5">
               <div className="font-montserrat text-[8px] font-bold uppercase leading-[1.3] tracking-[.13em] text-ink-300">{c.label}</div>
               {cellLoading ? (
                 <SkeletonBlock heightPx={21} widthPct={60} className="mt-1.5" />

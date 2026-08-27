@@ -20,7 +20,7 @@ export default function CurrentCountersCard({ device, latest, totalPages, monoPa
       <CardTitle right={<span className="font-sans text-[11.5px] text-ink-300">{fmtDateTime(latest?.time ?? device.last_seen)}</span>}>Contadores actuales</CardTitle>
       <div className="px-5 pb-3.5 pt-3.5">
         <div className="mb-[18px] flex items-baseline gap-2.5">
-          <span className="font-montserrat text-[34px] font-extrabold leading-none tracking-[-.02em] tabular-nums text-ink-900">{fmtInt(totalPages)}</span>
+          <span className="font-montserrat text-[34px] font-extrabold short:text-[26px] leading-none tracking-[-.02em] tabular-nums text-ink-900">{fmtInt(totalPages)}</span>
           <span className="font-sans text-[12.5px] text-ink-100">páginas totales</span>
         </div>
         <div className="mb-4 flex h-2 overflow-hidden rounded-[4px]">

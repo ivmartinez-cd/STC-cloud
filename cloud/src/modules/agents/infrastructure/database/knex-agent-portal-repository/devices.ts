@@ -3,13 +3,17 @@ import { onlyLiveDevices } from "../../../../../api/utils/deviceFilters";
 
 // Volumen mensual por suma de deltas positivos (no MAX-MIN), ventana extendida
 // 40 días, filtrando por los equipos de ESTE agente dentro de la subconsulta.
+// Mono/color sólo cuentan cuando el delta está entre 0 y el delta total del
+// mismo intervalo: un contador parcial que oscila (p. ej. un registro que
+// recibe lecturas de dos equipos: mono 315 ↔ 61.000 con total estable) sumaba
+// 61k de "mono" en un mes de 4k páginas → "Distribución 1555 %" (27/08/2026).
 const MONTHLY_SUBQUERY = `
     (
       SELECT
         device_id,
         SUM(GREATEST(total_pages_delta, 0))::int AS monthly_pages,
-        SUM(GREATEST(mono_pages_delta,  0))::int AS monthly_mono,
-        SUM(GREATEST(color_pages_delta, 0))::int AS monthly_color
+        SUM(CASE WHEN mono_pages_delta  BETWEEN 0 AND GREATEST(total_pages_delta, 0) THEN mono_pages_delta  ELSE 0 END)::int AS monthly_mono,
+        SUM(CASE WHEN color_pages_delta BETWEEN 0 AND GREATEST(total_pages_delta, 0) THEN color_pages_delta ELSE 0 END)::int AS monthly_color
       FROM (
         SELECT
           device_id,

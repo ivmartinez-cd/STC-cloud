@@ -22,14 +22,14 @@ function RowCta({ row }: { row: EmailLogRow }) {
   const navigate = useNavigate();
   if (row.status === 'skipped_no_recipient' && row.client_id) {
     return (
-      <button type="button" onClick={() => navigate(`/clients/${row.client_id}`)} className="justify-self-end font-montserrat text-[10px] font-semibold uppercase tracking-[.08em] text-brand-accent hover:underline">
+      <button type="button" onClick={() => navigate(`/clients/${row.client_id}`)} className="justify-self-end whitespace-nowrap font-montserrat text-[10px] font-semibold uppercase tracking-[.08em] text-brand-accent hover:underline">
         ASIGNAR CONTACTO →
       </button>
     );
   }
   if (row.status === 'skipped_no_transport' || row.status === 'error') {
     return (
-      <button type="button" onClick={() => navigate('/settings')} className="justify-self-end font-montserrat text-[10px] font-semibold uppercase tracking-[.08em] text-brand-accent hover:underline">
+      <button type="button" onClick={() => navigate('/settings')} className="justify-self-end whitespace-nowrap font-montserrat text-[10px] font-semibold uppercase tracking-[.08em] text-brand-accent hover:underline">
         CONFIGURAR SMTP →
       </button>
     );

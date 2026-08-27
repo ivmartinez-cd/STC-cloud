@@ -20,7 +20,7 @@ function Shell({
   accent, children,
 }: { accent: string; children: ReactNode }) {
   return (
-    <div className="flex flex-col rounded-[5px] border border-line-100 border-t-[3px] bg-white px-[22px] pb-[22px] pt-5" style={{ borderTopColor: accent }}>
+    <div className="flex flex-col rounded-[5px] border border-line-100 border-t-[3px] bg-white px-[22px] pb-[22px] pt-5 short:pb-4 short:pt-3.5" style={{ borderTopColor: accent }}>
       {children}
     </div>
   );
@@ -171,7 +171,7 @@ function VolumeCard({ stats, loading, error, onRetry }: Pick<HeadlineProps, 'sta
  * alertas activas, monitores sin conexión y volumen mensual. */
 export default function HeadlineCards({ stats, alertsByClass, loading, error, onRetry }: HeadlineProps) {
   return (
-    <div className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+    <div className="mb-4 short:mb-3 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
       <AlertsCard alertsByClass={alertsByClass} loading={loading} error={error} onRetry={onRetry} />
       <OfflineMonitorsCard stats={stats} loading={loading} error={error} onRetry={onRetry} />
       <VolumeCard stats={stats} loading={loading} error={error} onRetry={onRetry} />

@@ -59,23 +59,31 @@ function PanelHeader({ total, loading, error }: Pick<Props, 'total' | 'loading' 
 
 const MAX_CODES = 6;
 
-function PanelBody({ byCode, total, loading, error, onRetry }: Props) {
-  if (error) return <CardError onRetry={onRetry} />;
-  if (loading) return <div className="h-[120px] animate-pulse rounded bg-surface-track" />;
-  if (byCode.length === 0) return <div className="py-6 text-center font-sans text-[12.5px] text-ink-300">Sin alertas sin resolver</div>;
+/** Sólo los 6 códigos más frecuentes: el panel comparte fila con las métricas
+ * y con 11+ códigos se comía el alto de la tabla (rediseño sin scroll,
+ * 27/08/2026). Dos columnas en xl+ (6 códigos en 3 filas), así el panel queda
+ * a la altura del 2×2 de métricas de al lado en vez de estirarlo. */
+function CodeList({ byCode, total }: Pick<Props, 'byCode' | 'total'>) {
   const max = byCode[0]?.count ?? 0;
-  // Sólo los 6 códigos más frecuentes: el panel comparte fila con las métricas
-  // y con 11+ códigos se comía el alto de la tabla (rediseño sin scroll, 27/08/2026).
   const shown = byCode.slice(0, MAX_CODES);
   const hidden = byCode.length - shown.length;
   return (
     <>
-      {/* Dos columnas en xl+: 6 códigos en 3 filas, así el panel queda a la
-        * altura del 2×2 de métricas de al lado en vez de estirarlo. */}
       <div className="grid grid-cols-1 gap-x-6 [&>*:last-child]:border-b-0 xl:grid-cols-2 xl:[&>*:nth-last-child(-n+2)]:border-b-0">
         {shown.map((row, i) => <CodeRow key={row.code} row={row} index={i} max={max} total={total} />)}
       </div>
       {hidden > 0 && <div className="mt-2 font-sans text-[11.5px] text-ink-300">y {hidden} código{hidden === 1 ? '' : 's'} más con menos alertas</div>}
+    </>
+  );
+}
+
+function PanelBody({ byCode, total, loading, error, onRetry }: Props) {
+  if (error) return <CardError onRetry={onRetry} />;
+  if (loading) return <div className="h-[120px] animate-pulse rounded bg-surface-track" />;
+  if (byCode.length === 0) return <div className="py-6 text-center font-sans text-[12.5px] text-ink-300">Sin alertas sin resolver</div>;
+  return (
+    <>
+      <CodeList byCode={byCode} total={total} />
       <ConnectivityConclusion byCode={byCode} total={total} />
     </>
   );

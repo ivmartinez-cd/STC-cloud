@@ -7,7 +7,7 @@ import SettingsBlockersBanner from '../components/SettingsBlockersBanner';
 import SettingsTabs from '../components/SettingsTabs';
 import SettingsTabPanels from '../components/SettingsTabPanels';
 
-const ROOT_CLS = '-m-4 flex min-w-0 flex-col bg-surface-page px-[34px] pb-9 pt-[30px] md:-m-10 md:h-full md:min-h-0';
+const ROOT_CLS = '-m-4 flex min-w-0 flex-col bg-surface-page px-[34px] pb-9 pt-[30px] short:pb-4 short:pt-4 md:-m-10 md:h-full md:min-h-0';
 
 function HeaderActions({ s }: { s: SystemSettingsFormState }) {
   return (

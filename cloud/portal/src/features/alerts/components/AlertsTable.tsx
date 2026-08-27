@@ -50,17 +50,17 @@ function StatusChip({ a }: { a: Alert }) {
 
 function RowCta({ a, pendingId, onUpdate, onCreateIncident }: Pick<Props, 'pendingId' | 'onUpdate' | 'onCreateIncident'> & { a: Alert }) {
   if (a.incident_id) {
-    return <Link to={`/incidents/${a.incident_id}`} className="justify-self-end font-montserrat text-[10px] font-semibold uppercase tracking-[.08em] text-brand-accent hover:underline">VER INCIDENTE →</Link>;
+    return <Link to={`/incidents/${a.incident_id}`} className="justify-self-end whitespace-nowrap font-montserrat text-[10px] font-semibold uppercase tracking-[.08em] text-brand-accent hover:underline">VER INCIDENTE →</Link>;
   }
   if (!a.acknowledged) {
     return (
-      <button type="button" disabled={pendingId === a.id} onClick={() => onUpdate(a.id, { acknowledged: true })} className="justify-self-end font-montserrat text-[10px] font-semibold uppercase tracking-[.08em] text-brand-accent hover:underline disabled:opacity-50">
+      <button type="button" disabled={pendingId === a.id} onClick={() => onUpdate(a.id, { acknowledged: true })} className="justify-self-end whitespace-nowrap font-montserrat text-[10px] font-semibold uppercase tracking-[.08em] text-brand-accent hover:underline disabled:opacity-50">
         RECONOCER →
       </button>
     );
   }
   return (
-    <button type="button" onClick={() => onCreateIncident(a)} className="justify-self-end font-montserrat text-[10px] font-semibold uppercase tracking-[.08em] text-brand-accent hover:underline">
+    <button type="button" onClick={() => onCreateIncident(a)} className="justify-self-end whitespace-nowrap font-montserrat text-[10px] font-semibold uppercase tracking-[.08em] text-brand-accent hover:underline">
       ABRIR INCIDENTE →
     </button>
   );

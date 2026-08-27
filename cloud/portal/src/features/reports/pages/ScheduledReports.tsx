@@ -131,7 +131,7 @@ export default function ScheduledReports() {
   const openEdit = (r: ScheduledReport) => { setEditing(r); setTemplate(null); setModalOpen(true); };
 
   return (
-    <div className="-m-4 flex min-w-0 flex-col bg-surface-page px-[34px] pb-9 pt-[30px] md:-m-10 md:h-full md:min-h-0">
+    <div className="-m-4 flex min-w-0 flex-col bg-surface-page px-[34px] pb-9 pt-[30px] short:pb-4 short:pt-4 md:-m-10 md:h-full md:min-h-0">
       <PageHeader
         eyebrow="INFORMES GUARDADOS Y PROGRAMADOS" title="Informes"
         subtitle={data.items.length === 0 ? 'Se generan solos según su frecuencia y llegan por email a los destinatarios definidos. Todavía no creaste ninguno.' : 'Se generan solos según su frecuencia y llegan por email a los destinatarios definidos.'}

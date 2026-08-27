@@ -27,7 +27,7 @@ export default function EmailLog() {
   };
 
   return (
-    <div className="-m-4 flex min-w-0 flex-col bg-surface-page px-[34px] pb-9 pt-[30px] md:-m-10 md:h-full md:min-h-0">
+    <div className="-m-4 flex min-w-0 flex-col bg-surface-page px-[34px] pb-9 pt-[30px] short:pb-4 short:pt-4 md:-m-10 md:h-full md:min-h-0">
       <PageHeader
         eyebrow="AUDITORÍA DE EMAILS DE NOTIFICACIÓN" title="Correo"
         subtitle="Cada intento queda registrado, se haya enviado o no. Si un aviso no llegó, acá está el motivo exacto."

@@ -143,8 +143,11 @@ const ReportsTabPanel = ({ devices, monitor }: Props) => {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4">
-      {/* KPIs — handoff §5.15: cifras simples, sin iconos decorativos */}
-      <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-4">
+      {/* KPIs (handoff §5.15: cifras simples, sin iconos) en 2×2 al lado del
+        * gráfico — apilados encima (27/08/2026) dejaban la tabla de insumos
+        * sin una sola fila visible ni a 1080. */}
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1fr_2.1fr]">
+      <div className="grid grid-cols-2 gap-4">
         <KpiCard label="Equipos" value={fmt(totalDevices)} note="dispositivos activos" />
         <KpiCard label="Total páginas" value={fmt(totalPages)} note="volumen mensual procesado" />
         <KpiCard label="Distribución" value={`${totalPages > 0 ? Math.round((totalMono / totalPages) * 100) : 0}%`} note={`mono · ${totalPages > 0 ? Math.round((totalColor / totalPages) * 100) : 0}% color`} />
@@ -152,7 +155,7 @@ const ReportsTabPanel = ({ devices, monitor }: Props) => {
       </div>
 
       {/* Reporte ejecutivo de uso */}
-      <div className="rounded-[5px] border border-line-100 bg-white">
+      <div className="flex flex-col rounded-[5px] border border-line-100 bg-white">
         <div className="flex items-center justify-between gap-3 border-b border-line-150 px-5 py-3.5">
           <span className="font-montserrat text-[9px] font-bold uppercase tracking-[.15em] text-ink-600">Reporte ejecutivo de uso</span>
           {devices.length > 0 && (
@@ -169,7 +172,7 @@ const ReportsTabPanel = ({ devices, monitor }: Props) => {
             </div>
           ) : (
             <>
-              <ResponsiveContainer width="100%" height={170}>
+              <ResponsiveContainer width="100%" height={150}>
                 <BarChart data={chartData} margin={{ top: 4, right: 4, left: -16, bottom: 0 }} barCategoryGap="40%" barGap={4}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#F0F2F2" vertical={false} />
                   <XAxis dataKey="name" tick={{ fontSize: 9, fontWeight: 700, fill: '#A5AAAD', letterSpacing: '0.06em' }} axisLine={false} tickLine={false} />
@@ -195,6 +198,7 @@ const ReportsTabPanel = ({ devices, monitor }: Props) => {
             </>
           )}
         </div>
+      </div>
       </div>
 
       {/* Reporte de insumos */}

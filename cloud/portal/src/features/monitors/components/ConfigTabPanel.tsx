@@ -137,7 +137,7 @@ export default function ConfigTabPanel({ monitor, onSave, onSaveSnmpCredentials,
               <input type="range" min="1" max="99" value={form.tonerCriticalThreshold} onChange={e => set('tonerCriticalThreshold', parseInt(e.target.value))} className="h-1.5 w-full cursor-pointer appearance-none rounded-[3px] bg-surface-track accent-brand-severe" />
               <p className="mt-1.5 font-sans text-[11.5px] leading-[1.5] text-ink-300">Se crea una alerta crítica cuando el tóner baja de este porcentaje.</p>
             </div>
-            <p className="border-t border-line-150 pt-3.5 font-sans text-[11.5px] leading-[1.5] text-ink-300">
+            <p className="border-t border-line-150 pt-3.5 font-sans text-[11.5px] leading-[1.5] text-ink-300 short:hidden">
               Cada color de tóner se evalúa de forma independiente; las alertas se resuelven solas apenas el nivel sube (p. ej. tras un cambio de cartucho).
             </p>
           </div>
@@ -164,14 +164,14 @@ export default function ConfigTabPanel({ monitor, onSave, onSaveSnmpCredentials,
           </div>
           <div className="mt-4">
             <label className={LABEL}>Días laborables</label>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-1.5">
               {WEEKDAY_LABELS.map(({ iso, label }) => {
                 const active = form.businessHours.days.includes(iso);
                 return (
                   <button
                     key={iso} type="button"
                     onClick={() => setForm(f => ({ ...f, businessHours: { ...f.businessHours, days: active ? f.businessHours.days.filter(d => d !== iso) : [...f.businessHours.days, iso].sort((a, b) => a - b) } }))}
-                    className={`rounded-[3px] px-3.5 py-2 font-montserrat text-[10.5px] font-semibold uppercase tracking-[.06em] transition-colors duration-150 ease-in-out ${active ? 'bg-brand text-white' : 'border border-line-300 bg-white text-ink-300 hover:bg-surface-btn-hover'}`}
+                    className={`rounded-[3px] px-3 py-2 font-montserrat text-[10.5px] font-semibold uppercase tracking-[.04em] transition-colors duration-150 ease-in-out ${active ? 'bg-brand text-white' : 'border border-line-300 bg-white text-ink-300 hover:bg-surface-btn-hover'}`}
                   >
                     {label}
                   </button>
@@ -186,7 +186,7 @@ export default function ConfigTabPanel({ monitor, onSave, onSaveSnmpCredentials,
         <SnmpCredentialsPanel credentials={monitor.config?.snmp_credentials ?? []} rev={monitor.config?.snmp_credentials_rev ?? 0} onSave={onSaveSnmpCredentials} />
 
         {/* Zona de riesgo (handoff §5 punto 21) — border-left naranja oscuro, REVOCAR en variante borde, nunca rojo relleno. */}
-        <div className="space-y-3.5 rounded-[5px] border border-brand-chip-border bg-white p-5" style={{ borderLeftWidth: 3, borderLeftColor: '#C6710A' }}>
+        <div className="space-y-3.5 short:space-y-2 rounded-[5px] border border-brand-chip-border bg-white p-5 short:p-4" style={{ borderLeftWidth: 3, borderLeftColor: '#C6710A' }}>
           <span className="font-montserrat text-[9px] font-bold uppercase tracking-[.15em] text-ink-600">Zona de riesgo</span>
           <p className="max-w-2xl font-sans text-[12.5px] leading-[1.55] text-ink-700">
             Revocar desconecta el agente de forma permanente: deja de reportar telemetría y su llave de activación queda inválida.

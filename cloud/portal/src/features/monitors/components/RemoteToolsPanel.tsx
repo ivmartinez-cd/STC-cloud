@@ -22,7 +22,7 @@ const COMMANDS: CommandDef[] = [
  * 11) — tarjetas blancas con explicación de una línea y botón EJECUTAR, no
  * botones sueltos de colores distintos. */
 const RemoteToolsPanel = ({ commandLoading, onCommand }: Props) => (
-  <div className="mb-4 grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4">
+  <div className="mb-4 short:mb-3 grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4">
     {COMMANDS.map(({ action, label, description, icon: Icon }) => (
       <div key={action} className="flex flex-col rounded-[5px] border border-line-100 bg-white p-4">
         <div className="mb-2 flex items-center gap-2.5">

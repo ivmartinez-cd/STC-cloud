@@ -29,7 +29,8 @@ const RESIZE_DEBOUNCE_MS = 150;
  * El contenedor tiene que tener el alto determinado por sus hermanos (flex),
  * nunca por su contenido — si no, medir el contenido cambiaría el contenedor
  * y se realimentaría. Con `overflow-hidden` un píxel de sobra se recorta en
- * vez de abrir scroll.
+ * vez de abrir scroll; sólo cuando no entra ni `min` filas el hook fuerza
+ * `overflow-y: auto` (inline) para no dejar filas cortadas.
  */
 export function useFitRows(options: Options) {
   const { estimate } = options;
@@ -52,6 +53,9 @@ export function useFitRows(options: Options) {
     const sample = el.querySelector<HTMLElement>('[data-fit-row]');
     const rowHeight = sample?.offsetHeight || estimate;
     const fits = Math.floor((available - fixed) / rowHeight) - reserveRows;
+    // Si no entra ni el mínimo (viewport muy bajo), mejor un scroll interno
+    // que una fila cortada a la mitad por el `overflow-hidden` del contenedor.
+    el.style.overflowY = fits < min ? 'auto' : '';
     return Math.max(min, Math.min(max, fits));
   }, [estimate, min, max, reserveRows]);
 

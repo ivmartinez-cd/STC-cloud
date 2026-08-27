@@ -19,7 +19,7 @@ export default function DetailTabs<T extends string>({ tabs, active, onChange }:
             type="button"
             aria-selected={isActive}
             onClick={() => onChange(t.id)}
-            className={`border-b-2 py-[14px] font-sans text-[12.5px] font-semibold transition-colors duration-150 ease-in-out focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-2 ${
+            className={`border-b-2 py-[14px] short:py-2.5 font-sans text-[12.5px] font-semibold transition-colors duration-150 ease-in-out focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-2 ${
               isActive ? 'border-brand text-ink-900' : 'border-transparent text-ink-550 hover:text-ink-600'
             }`}
           >

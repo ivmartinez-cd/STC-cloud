@@ -56,7 +56,7 @@ function Row({ r, clientName, onOpen }: { r: SupplyRequest; clientName: (id: str
       <span className="justify-self-start"><EstadoChip label={SUPPLY_REQUEST_STATUS_LABELS[r.status].toUpperCase()} variant={statusChip.variant} /></span>
       <span className="text-right font-sans text-[12px] text-ink-600">{fmtDate(r.opened_at)}</span>
       <span className={`text-right font-montserrat text-[12.5px] font-semibold ${pending ? 'text-brand-severe' : 'text-ink-600'}`}>{fmtAge(r.opened_at, r.closed_at)}</span>
-      <span className="justify-self-end font-montserrat text-[10px] font-semibold uppercase tracking-[.08em] text-brand-accent">{pending ? 'TRAMITAR →' : 'VER →'}</span>
+      <span className="justify-self-end whitespace-nowrap font-montserrat text-[10px] font-semibold uppercase tracking-[.08em] text-brand-accent">{pending ? 'TRAMITAR →' : 'VER →'}</span>
     </button>
   );
 }

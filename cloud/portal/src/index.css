@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+/* Viewport "bajo" (27/08/2026): una pantalla 1080p con la barra del navegador
+ * y la taskbar de Windows deja ~900px útiles. Con `short:` las páginas
+ * compactan cabeceras y paddings para seguir entrando sin scroll. */
+@custom-variant short (@media (max-height: 960px));
+
 @theme {
   /* Paleta institucional exacta de "Manual de marca.pdf" (Canal Directo) —
      línea Institucional/MPS, la única que aplica a STC Cloud. Nunca usar los

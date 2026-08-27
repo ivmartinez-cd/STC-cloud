@@ -38,13 +38,13 @@ function Activity() {
   };
 
   return (
-    <div className="-m-4 flex min-w-0 flex-col bg-surface-page px-[34px] pb-9 pt-[30px] md:-m-10 md:h-full md:min-h-0">
+    <div className="-m-4 flex min-w-0 flex-col bg-surface-page px-[34px] pb-9 pt-[30px] short:pb-4 short:pt-4 md:-m-10 md:h-full md:min-h-0">
       <PageHeader
         eyebrow="HISTORIAL DE ALTAS, BAJAS Y CAMBIOS DE CONFIGURACIÓN" title="Movimientos" subtitle={subtitle(s.summary)}
         actions={<button type="button" onClick={handleExport} disabled={exporting} className={BTN_SECONDARY_LG}>{exporting ? 'EXPORTANDO…' : 'EXPORTAR CSV'}</button>}
       />
 
-      <div className="mb-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <div className="mb-4 short:mb-3 grid grid-cols-1 gap-4 lg:grid-cols-2">
         <ActivityMetricsPanel summary={s.summary} loading={s.summaryLoading} error={s.summaryError} onRetry={s.fetchSummary} />
         <ActivityByCategoryPanel byCategory={s.summary?.by_category ?? []} total={s.summary?.total ?? 0} loading={s.summaryLoading} error={s.summaryError} onRetry={s.fetchSummary} />
       </div>

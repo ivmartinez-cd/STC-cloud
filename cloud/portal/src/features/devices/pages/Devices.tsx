@@ -24,7 +24,7 @@ const Devices = () => {
   const handleRefresh = () => { void dir.refetch(); void dir.refetchSummary(); };
 
   return (
-    <div className="-m-4 min-w-0 flex flex-col bg-surface-page px-[34px] pb-9 pt-[30px] md:-m-10 md:h-full md:min-h-0">
+    <div className="-m-4 min-w-0 flex flex-col bg-surface-page px-[34px] pb-9 pt-[30px] short:pb-4 short:pt-4 md:-m-10 md:h-full md:min-h-0">
       <DeviceInventoryHeader summary={dir.summary} query={dir.effectiveQuery} segment={dir.segment} sortDir={dir.sortDir} includeDecommissioned={dir.includeDecommissioned} onRefresh={handleRefresh} />
       <DeviceInventoryMetricsStrip summary={dir.summary} loading={dir.summaryLoading} error={dir.summaryError} onRetry={dir.refetchSummary} />
       <div className="flex min-h-0 flex-1 flex-col rounded-[5px] border border-line-100 bg-white">

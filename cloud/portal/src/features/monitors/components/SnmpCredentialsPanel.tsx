@@ -119,14 +119,14 @@ export default function SnmpCredentialsPanel({ credentials, rev, onSave }: Props
     <div className="rounded-[5px] border border-line-100 bg-white">
       <div className="border-b border-line-150 px-5 py-3.5">
         <span className="font-montserrat text-[9px] font-bold uppercase tracking-[.15em] text-ink-600">Credenciales SNMP</span>
-        <p className="mt-1 font-sans text-[11.5px] leading-[1.5] text-ink-300">
+        <p className="mt-1 font-sans text-[11.5px] leading-[1.5] text-ink-300 short:hidden">
           Lista probada en orden (v1 / v2c / v3) — la community de arriba sigue como respaldo legado
         </p>
       </div>
 
       <div className="space-y-4 px-5 pb-[18px] pt-4">
         {rows.length === 0 && (
-          <div className="rounded-[5px] border border-dashed border-line-300 bg-white py-8 text-center">
+          <div className="rounded-[5px] border border-dashed border-line-300 bg-white py-8 short:py-3 text-center">
             <p className="font-montserrat text-[10px] font-bold uppercase tracking-[.13em] text-ink-300">Sin credenciales adicionales configuradas</p>
           </div>
         )}

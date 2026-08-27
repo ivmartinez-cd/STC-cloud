@@ -77,7 +77,7 @@ export default function DeviceApprovalCard({
         </span>
       </div>
       <div className="px-5 pb-3.5 pt-3">
-        <p className="mb-3 font-sans text-[12px] leading-[1.5] text-ink-100">
+        <p className="mb-3 font-sans text-[12px] leading-[1.5] text-ink-100 short:hidden">
           Los equipos descubiertos por el agente quedan en espera; al aprobarlos empiezan a reportar consumo y alertas.
         </p>
         {canEdit && (

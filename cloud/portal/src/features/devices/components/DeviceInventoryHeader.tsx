@@ -38,13 +38,13 @@ function HeaderActions({ query, segment, sortDir, includeDecommissioned, onRefre
 
 export default function DeviceInventoryHeader({ summary, query, segment, sortDir, includeDecommissioned, onRefresh }: Props) {
   return (
-    <div className="mb-[22px] flex flex-wrap items-end justify-between gap-4">
+    <div className="mb-[22px] flex flex-wrap items-end short:mb-3 justify-between gap-4">
       <div>
-        <div className="mb-2.5 flex items-center gap-3">
+        <div className="mb-2.5 flex items-center gap-3 short:mb-1.5">
           <span className="block h-0.5 w-5 bg-brand" />
           <span className="font-montserrat text-[9px] font-bold uppercase leading-none tracking-[.19em] text-ink-300">CONTROL GLOBAL DE IMPRESORAS</span>
         </div>
-        <h1 className="m-0 font-montserrat text-[34px] font-extrabold leading-[1.05] tracking-[-.018em] text-ink-900">Inventario de dispositivos</h1>
+        <h1 className="m-0 font-montserrat text-[34px] font-extrabold short:text-[26px] leading-[1.05] tracking-[-.018em] text-ink-900">Inventario de dispositivos</h1>
         {summary && (
           <p className="mt-2.5 font-sans text-[12.5px] text-ink-400">
             {fmt(summary.devices_total)} dispositivos · {fmt(summary.clients_total)} clientes · {fmt(summary.reporting_24h)} reportando en las últimas 24 h

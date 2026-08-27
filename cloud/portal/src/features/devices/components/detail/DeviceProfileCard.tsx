@@ -82,7 +82,7 @@ export default function DeviceProfileCard({
   ].filter((p): p is string => !!p);
 
   return (
-    <div className="flex flex-wrap items-start justify-between gap-5 px-6 pb-5 pt-[22px]">
+    <div className="flex flex-wrap items-start justify-between gap-5 px-6 pb-5 pt-[22px] short:pb-3 short:pt-3">
       <div className="flex min-w-0 items-center gap-4">
         <span className="flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-[4px] border border-line-avatar bg-surface-avatar font-montserrat text-[13px] font-bold text-ink-100">
           {initialsOf(device.model, device.brand)}

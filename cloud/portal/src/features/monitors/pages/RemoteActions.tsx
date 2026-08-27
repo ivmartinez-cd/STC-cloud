@@ -56,16 +56,16 @@ export default function RemoteActions() {
   };
 
   return (
-    <div className="-m-4 min-w-0 flex flex-col bg-surface-page px-[34px] pb-9 pt-[30px] md:-m-10 md:h-full md:min-h-0">
-      <div className="mb-[22px] flex flex-wrap items-end justify-between gap-4">
+    <div className="-m-4 min-w-0 flex flex-col bg-surface-page px-[34px] pb-9 pt-[30px] short:pb-4 short:pt-4 md:-m-10 md:h-full md:min-h-0">
+      <div className="mb-[22px] flex flex-wrap items-end short:mb-3 justify-between gap-4">
         <div>
-          <div className="mb-2.5 flex items-center gap-3">
+          <div className="mb-2.5 flex items-center gap-3 short:mb-1.5">
             <span className="block h-0.5 w-5 bg-brand" />
             <span className="font-montserrat text-[9px] font-bold uppercase leading-none tracking-[.19em] text-ink-300">
               ACCIONES REMOTAS EN BLOQUE SOBRE LOS MONITORES
             </span>
           </div>
-          <h1 className="m-0 font-montserrat text-[34px] font-extrabold leading-[1.05] tracking-[-.018em] text-ink-900">
+          <h1 className="m-0 font-montserrat text-[34px] font-extrabold short:text-[26px] leading-[1.05] tracking-[-.018em] text-ink-900">
             Acciones
           </h1>
           {insights.summary && (
@@ -90,7 +90,7 @@ export default function RemoteActions() {
         </div>
       </div>
 
-      <div className="mb-4 grid grid-cols-[repeat(auto-fit,minmax(340px,1fr))] gap-4">
+      <div className="mb-4 short:mb-3 grid grid-cols-[repeat(auto-fit,minmax(340px,1fr))] gap-4">
         <RemoteActionsMetricsStrip
           summary={insights.summary} loading={insights.summaryLoading} error={insights.summaryError} onRetry={insights.refetchSummary}
         />

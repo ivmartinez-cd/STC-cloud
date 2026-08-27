@@ -43,14 +43,14 @@ function Incidents() {
   };
 
   return (
-    <div className="-m-4 flex min-w-0 flex-col bg-surface-page px-[34px] pb-9 pt-[30px] md:-m-10 md:h-full md:min-h-0">
+    <div className="-m-4 flex min-w-0 flex-col bg-surface-page px-[34px] pb-9 pt-[30px] short:pb-4 short:pt-4 md:-m-10 md:h-full md:min-h-0">
       <PageHeader
         eyebrow="UNIDADES DE TRABAJO DE SERVICIO" title="Incidentes"
         subtitle="Sobreviven a que la alerta técnica que los originó se resuelva sola: el incidente sigue abierto hasta que un operador lo cierra."
         actions={<HeaderActions s={s} exporting={exporting} onExport={handleExport} onCreate={() => setShowCreate(true)} />}
       />
 
-      <div className="mb-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <div className="mb-4 short:mb-3 grid grid-cols-1 gap-4 lg:grid-cols-2">
         <IncidentsMetricsPanel stats={s.stats} loading={s.statsLoading} error={s.statsError} onRetry={s.fetchStats} />
         <IncidentsByClassPanel
           byClass={s.stats?.byClass ?? []} classLabels={s.classLabels} openTotal={s.stats?.openTotal ?? 0}

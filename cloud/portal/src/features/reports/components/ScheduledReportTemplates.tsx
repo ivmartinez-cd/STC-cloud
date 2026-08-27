@@ -50,7 +50,7 @@ interface Props { templates: ReportTemplate[]; showAll: boolean; onUse: (t: Repo
 export default function ScheduledReportTemplates({ templates, showAll, onUse }: Props) {
   const visible = showAll ? templates : templates.slice(0, TEMPLATES_COLLAPSED);
   return (
-    <div className="mb-4 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+    <div className="mb-4 short:mb-3 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
       {visible.map((t) => <TemplateCard key={t.report_type} t={t} onUse={onUse} />)}
     </div>
   );

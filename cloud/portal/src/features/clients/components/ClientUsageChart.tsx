@@ -39,14 +39,18 @@ function ChartContent({ usage }: Props) {
             </span>
           )}
         </div>
-        <div className="flex h-[88px] items-end gap-1.5">
+        <div className="flex h-[88px] short:h-[64px] items-end gap-1.5">
           {points.map((p) => (
-            <div key={p.key} className="flex flex-1 flex-col items-center gap-[7px]">
-              <div
-                className={`w-full rounded-t-[2px] ${p.isCurrent ? 'bg-brand' : 'bg-surface-track-alt'}`}
-                style={{ height: `${Math.max(6, Math.round((p.total / max) * 68) + 6)}px` }}
-                title={`${p.labelShort}: ${fmt(p.total)}`}
-              />
+            <div key={p.key} className="flex h-full flex-1 flex-col items-center gap-[7px]">
+              {/* Alto en % del hueco (flex-1, definido) y no en px: así la tarjeta
+                * compacta en viewports bajos (`short:`) sin recortar las barras. */}
+              <div className="flex w-full flex-1 items-end">
+                <div
+                  className={`w-full rounded-t-[2px] ${p.isCurrent ? 'bg-brand' : 'bg-surface-track-alt'}`}
+                  style={{ height: `${Math.max(8, Math.round((p.total / max) * 92) + 8)}%` }}
+                  title={`${p.labelShort}: ${fmt(p.total)}`}
+                />
+              </div>
               <span className="font-montserrat text-[8.5px] font-semibold tracking-[.06em] text-chart-axis">{p.labelShort}</span>
             </div>
           ))}

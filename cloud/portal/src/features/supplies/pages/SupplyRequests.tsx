@@ -19,7 +19,7 @@ export default function SupplyRequests() {
   const s = useSupplyRequestsPage(fit.rows);
 
   return (
-    <div className="-m-4 flex min-w-0 flex-col bg-surface-page px-[34px] pb-9 pt-[30px] md:-m-10 md:h-full md:min-h-0">
+    <div className="-m-4 flex min-w-0 flex-col bg-surface-page px-[34px] pb-9 pt-[30px] short:pb-4 short:pt-4 md:-m-10 md:h-full md:min-h-0">
       <PageHeader
         eyebrow="SOLICITUDES DE CONSUMIBLES" title="Pedidos"
         subtitle="Se abren solos al cruzar el umbral configurado y se completan solos al detectar el reemplazo del consumible. Los pedidos manuales requieren confirmación de un operador."

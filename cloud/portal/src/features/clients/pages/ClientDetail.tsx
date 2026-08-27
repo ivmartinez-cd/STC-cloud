@@ -69,7 +69,7 @@ const ClientDetail = () => {
   };
 
   return (
-    <div className="-m-4 flex min-w-0 flex-col gap-4 bg-surface-page px-[34px] pb-9 pt-[26px] md:-m-10 md:h-full md:min-h-0">
+    <div className="-m-4 flex min-w-0 flex-col gap-4 bg-surface-page px-[34px] pb-9 pt-[26px] short:gap-3 short:pb-4 short:pt-3 md:-m-10 md:h-full md:min-h-0">
       <nav className="mb-1 flex items-center gap-2 font-sans text-xs">
         <Link to="/clients" className="font-semibold text-brand-accent hover:underline">Clientes</Link>
         <span className="text-ink-sep-light">/</span>

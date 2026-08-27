@@ -3,27 +3,22 @@ import { X } from 'lucide-react';
 
 interface Props { collapsed: boolean; isMobileMenuOpen: boolean; onNavigate: () => void; onCloseMobile: () => void; }
 
-/** Filtro SVG que pinta el isologo (logo2.png) en el naranja exacto de la marca. */
-const OrangeFilter = () => (
-  <svg width="0" height="0" className="absolute">
-    <filter id="precise-orange" colorInterpolationFilters="sRGB">
-      <feColorMatrix type="matrix" values="0 0 0 0 0.968  0 0 0 0 0.576  0 0 0 0 0.113  0 0 0 1 0" />
-    </filter>
-  </svg>
-);
-
-/** Cabecera del panel de marca (handoff hifi "Sidebar", 26/08/2026) — isotipo +
- * lockup en fila, igual que el panel oscuro del Login. Colapsado: sólo el isotipo, centrado. */
+/** Cabecera del panel de marca. Desde el 27/08/2026 usa el wordmark vectorial
+ * oficial para fondo oscuro (`brand/wm-blanco.svg`: isotipo + "CANAL DIRECTO"),
+ * el mismo del panel oscuro del Login, con "STC CLOUD" debajo como nombre del
+ * producto. Antes: isotipo PNG de 26px teñido con un filtro SVG + el lockup
+ * tipeado a mano en 12/7.5px, que se veía chico y desparejo con el Login.
+ * Colapsado: sólo el isotipo (`logo2.png`, blanco), centrado. */
 const SidebarBrand = ({ collapsed, isMobileMenuOpen, onNavigate, onCloseMobile }: Props) => (
-  <div className={`relative flex shrink-0 items-center border-b border-panel-dark-line ${collapsed ? 'justify-center py-5' : 'gap-3 px-[18px] py-5'}`}>
-    <Link to="/" onClick={onNavigate} className="flex min-w-0 items-center gap-3">
-      <OrangeFilter />
-      <img src="/logo2.png" alt="STC Cloud" style={{ filter: 'url(#precise-orange)' }} className="h-[26px] w-auto flex-none object-contain" />
-      {!collapsed && (
-        <div className="min-w-0">
-          <div className="font-montserrat text-xs font-extrabold leading-[1.2] tracking-[.04em] text-white">STC CLOUD</div>
-          <div className="mt-[3px] font-montserrat text-[7.5px] font-bold leading-[1.4] tracking-[.15em] text-brand">CANAL DIRECTO</div>
-        </div>
+  <div className={`relative flex shrink-0 items-center border-b border-panel-dark-line ${collapsed ? 'justify-center py-5' : 'px-[18px] py-[18px]'}`}>
+    <Link to="/" onClick={onNavigate} className="flex min-w-0 flex-col gap-[7px]" title="STC Cloud · Canal Directo">
+      {collapsed ? (
+        <img src="/logo2.png" alt="Canal Directo" className="h-[26px] w-auto flex-none object-contain" />
+      ) : (
+        <>
+          <img src="/brand/wm-blanco.svg" alt="Canal Directo" className="block h-[30px] w-auto max-w-full flex-none" />
+          <div className="pl-[3px] font-montserrat text-[8px] font-bold leading-none tracking-[.2em] text-brand">STC CLOUD</div>
+        </>
       )}
     </Link>
     {isMobileMenuOpen && (

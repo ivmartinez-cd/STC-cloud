@@ -138,6 +138,10 @@ export class KnexAlertRepository implements AlertRepository {
   findPage(scope: AlertScope, filters: AlertQueryFilters, page: AlertPage): Promise<RawAlertListRow[]> {
     return this.scopedQuery(scope, filters)
       .select(...LIST_COLUMNS, this.db.raw(INCIDENT_ID_SQL), this.db.raw(INCIDENT_NUMBER_SQL))
+      // Críticas primero y, dentro de cada severidad, las más nuevas: el
+      // listado se anuncia "ordenado por severidad" y hasta el 27/08/2026
+      // ordenaba sólo por fecha (las advertencias tapaban a las críticas).
+      .orderByRaw("CASE alerts.severity WHEN 'critical' THEN 0 ELSE 1 END")
       .orderBy("alerts.created_at", "desc")
       .limit(page.limit)
       .offset(page.offset);

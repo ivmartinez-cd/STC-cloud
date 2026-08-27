@@ -122,7 +122,7 @@ export default function LicenseCard({ monitor, license, loading, error, onRetry,
             )}
           </div>
 
-          <div className="mb-4 flex items-center gap-[11px] rounded-[3px] border border-brand-chip-border bg-brand-soft px-[13px] py-3">
+          <div className="mb-4 flex items-center gap-[11px] rounded-[3px] border border-brand-chip-border bg-brand-soft px-[13px] py-3 short:hidden">
             <span className="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full bg-brand text-[11px] font-bold text-white">✓</span>
             <div>
               <div className="font-montserrat text-[8.5px] font-bold uppercase tracking-[.13em] text-brand-accent">Enlace cifrado</div>

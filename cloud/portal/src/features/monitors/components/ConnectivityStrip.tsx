@@ -1,7 +1,7 @@
 import type { ConnectivityDay } from '../types/monitorDetail';
 import { APP_LOCALE } from '../../../shared/lib/formatters';
 
-const STATUS_HEIGHT: Record<ConnectivityDay['status'], number> = { online: 60, parcial: 38, sin_contacto: 20 };
+const STATUS_HEIGHT: Record<ConnectivityDay['status'], string> = { online: '100%', parcial: '63%', sin_contacto: '33%' };
 const STATUS_COLOR: Record<ConnectivityDay['status'], string> = { online: 'bg-brand-gray', parcial: 'bg-brand', sin_contacto: 'bg-brand-severe' };
 
 function formatAxisDate(iso: string): string {
@@ -46,8 +46,8 @@ export default function ConnectivityStrip({ days, loading, error, onRetry, uptim
           <button type="button" onClick={onRetry} className="font-montserrat text-[9.5px] font-semibold uppercase tracking-[.1em] text-brand-accent hover:underline">Reintentar</button>
         </div>
       ) : (
-        <div className="px-5 pb-4 pt-[18px]">
-          <div className="flex h-16 items-end gap-[3px]">
+        <div className="px-5 pb-4 pt-[18px] short:pb-3 short:pt-3">
+          <div className="flex h-[60px] short:h-11 items-end gap-[3px]">
             {loading
               ? Array.from({ length: 30 }).map((_, i) => (
                 <div key={i} className="h-full flex-1 animate-pulse rounded-[2px] bg-surface-track" style={{ height: 20 + (i % 3) * 15 }} />

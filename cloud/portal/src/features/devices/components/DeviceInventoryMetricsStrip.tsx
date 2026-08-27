@@ -33,7 +33,7 @@ function MetricCellFooter({ cell, loading }: { cell: Cell; loading: boolean }) {
 
 function MetricCell({ cell, loading }: { cell: Cell; loading: boolean }) {
   return (
-    <div className="bg-white px-[18px] pb-4 pt-[15px]">
+    <div className="bg-white px-[18px] pb-4 pt-[15px] short:pb-2.5 short:pt-2.5">
       <div className="font-montserrat text-[8px] font-bold uppercase leading-[1.3] tracking-[.13em] text-ink-300">{cell.label}</div>
       {loading ? (
         <span className="mt-1.5 block h-[21px] w-3/5 animate-pulse rounded bg-surface-track" />
@@ -74,7 +74,7 @@ export default function DeviceInventoryMetricsStrip({ summary, loading, error, o
   if (error) return <MetricsErrorState onRetry={onRetry} />;
   const cells = buildCells(summary);
   return (
-    <div className="mb-4 grid grid-cols-1 gap-px overflow-hidden rounded-[5px] border border-line-100 bg-line-400 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5">
+    <div className="mb-4 short:mb-3 grid grid-cols-1 gap-px overflow-hidden rounded-[5px] border border-line-100 bg-line-400 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5">
       {cells.map((c) => <MetricCell key={c.label} cell={c} loading={loading} />)}
     </div>
   );
