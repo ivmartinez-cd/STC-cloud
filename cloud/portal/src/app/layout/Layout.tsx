@@ -152,8 +152,12 @@ const Layout = () => {
       <Sidebar collapsed={collapsed} onToggleCollapse={toggleCollapse} isMobileMenuOpen={isMobileMenuOpen} onCloseMobile={closeMobile} />
       <div className={`flex flex-col flex-1 min-w-0 h-screen min-h-0 transition-all duration-300 ease-in-out ${collapsed ? 'md:pl-16' : 'md:pl-[248px]'}`}>
         <TopHeader onToggleMobile={() => setIsMobileMenuOpen((v) => !v)} />
+        {/* Cadena de alturas (27/08/2026): <main> sigue siendo el único contenedor
+            con scroll — pero sólo como red de seguridad. Cada página se monta
+            `h-full flex-col min-h-0` y dimensiona sus listas con `useFitRows`
+            para que a un viewport normal NADA desborde y la barra no aparezca. */}
         <main ref={mainRef} className="flex-1 min-h-0 overflow-y-auto animate-fade-in bg-[#f8fafc] [overflow-anchor:none]">
-          <div className="max-w-[1400px] mx-auto p-4 md:p-10 xl:h-full xl:flex xl:flex-col">
+          <div className="max-w-[1400px] mx-auto p-4 md:p-10 md:h-full md:min-h-0 md:flex md:flex-col">
             <Suspense fallback={<ModuleFallback />}>
               {totpEnrollmentRequired && <TotpBanner />}
               <Outlet />
