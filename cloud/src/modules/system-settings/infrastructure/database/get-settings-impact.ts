@@ -1,5 +1,5 @@
 import type { Knex } from "knex";
-import { suppliesCountBelowThreshold } from "../../../../services/suppliesService/queries";
+import { suppliesCountBelowThreshold } from "../../../supplies";
 
 export interface SettingsImpact {
   agentOffline: { affected: number; total: number };

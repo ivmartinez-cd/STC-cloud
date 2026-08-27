@@ -1,5 +1,5 @@
 import type { Knex } from "knex";
-import { deviceSupplies, fleetSupplies } from "../../../../services/suppliesService";
+import { deviceSupplies, fleetSupplies } from "../../../supplies";
 import type {
   EnabledClient,
   EnabledClientsSource,

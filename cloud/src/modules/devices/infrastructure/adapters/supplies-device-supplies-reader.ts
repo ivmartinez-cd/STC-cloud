@@ -1,5 +1,5 @@
 import type { Knex } from "knex";
-import { deviceSupplies } from "../../../../services/suppliesService";
+import { deviceSupplies } from "../../../supplies";
 import type { DeviceLowestSupply } from "../../domain/entities/device-detail";
 import type { DeviceSuppliesReader } from "../../application/ports/device-supplies-reader";
 

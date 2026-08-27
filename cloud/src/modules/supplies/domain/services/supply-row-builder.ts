@@ -1,4 +1,4 @@
-import type { SupplyColor, SupplyKind, SuppliesDetails, SuppliesItem, SupplyRow, UsageRate } from "./types";
+import type { SupplyColor, SupplyKind, SuppliesDetails, SuppliesItem, SupplyRow, UsageRate } from "../entities/supply-row";
 
 type TonerKey = "black" | "cyan" | "magenta" | "yellow";
 const TONER_META: Array<{ key: TonerKey; label: SupplyColor; cls: string }> = [

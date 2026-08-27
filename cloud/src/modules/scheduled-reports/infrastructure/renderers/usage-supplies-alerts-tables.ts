@@ -1,7 +1,7 @@
 import type { Knex } from "knex";
 import type { RenderedTable } from "../../application/ports/report-renderer";
 import { computePeriodUsage, formatPeriod, parsePeriod } from "../../../reports";
-import { fleetSupplies, type FleetSupplyRow } from "../../../../services/suppliesService";
+import { fleetSupplies, type FleetSupplyRow } from "../../../supplies";
 import { KnexDeviceCostsRepository, periodCost, type DeviceCosts } from "../../../device-costs";
 
 const MAX_ROWS = 5000;

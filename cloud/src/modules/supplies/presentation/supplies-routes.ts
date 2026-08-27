@@ -1,7 +1,7 @@
 import { FastifyInstance } from "fastify";
 import { Knex } from "knex";
-import { createSuppliesController } from "../controllers/suppliesController";
-import type { AuthHook } from "../middlewares/authMiddleware";
+import { createSuppliesController } from "./supplies-controller";
+import type { AuthHook } from "../../../api/middlewares/authMiddleware";
 
 /**
  * Fase 8 del gap analysis vs HP SDS — vista de flota de consumibles. Ambas

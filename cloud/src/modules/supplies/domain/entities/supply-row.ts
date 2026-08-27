@@ -45,8 +45,8 @@ export interface SupplyRow {
 
 /** Handoff hifi #3, fase 3, 26/08/2026 — explica los 417 `unknown` de la
  * columna NIVEL RESTANTE en vez de dejarlos sin justificación. Umbrales
- * ≤15%/≤35% (`CRITICAL_PCT`/`LOW_PCT` en `queries.ts`), calculada en
- * servidor para que la fila y la tira de métricas nunca discrepen. */
+ * ≤15%/≤35% (`CRITICAL_PCT`/`LOW_PCT` en `domain/services/supply-urgency.ts`),
+ * calculada en servidor para que la fila y la tira de métricas nunca discrepen. */
 export type SupplyUrgency = "critico" | "bajo" | "normal" | "sin_lectura";
 
 export interface FleetSupplyRow extends SupplyRow {

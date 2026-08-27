@@ -1,7 +1,10 @@
 import { FastifyRequest } from "fastify";
 import { Knex } from "knex";
-import { getScope } from "../utils/scope";
-import { fleetSupplies, suppliesSummary, type SupplyKind, type SupplyUrgency } from "../../services/suppliesService";
+import { getScope } from "../../../api/utils/scope";
+import { KnexSuppliesRepository } from "../infrastructure/database/knex-supplies-repository";
+import { ListFleetSuppliesUseCase } from "../application/use-cases/list-fleet-supplies";
+import { GetSuppliesSummaryUseCase } from "../application/use-cases/get-supplies-summary";
+import type { SupplyKind, SupplyUrgency } from "../domain/entities/supply-row";
 
 interface SuppliesQuery {
   client_id?: string;
@@ -29,12 +32,16 @@ const SUMMARY_CACHE_MS = 60_000;
  * `dashboardController.getDashboard`.
  */
 export function createSuppliesController(db: Knex) {
+  const repo = new KnexSuppliesRepository(db);
+  const listFleetSupplies = new ListFleetSuppliesUseCase(repo);
+  const getSuppliesSummary = new GetSuppliesSummaryUseCase(repo);
+
   return {
     listSupplies: async (request: FastifyRequest) => {
       const scope = getScope(request);
       const { client_id, agent_id, kind, max_percentage, max_days, q, urgency, limit, offset } = request.query as SuppliesQuery;
       const clientId = scope.kind === "client" ? scope.id : (client_id || null);
-      return fleetSupplies(db, {
+      return listFleetSupplies.execute({
         clientId,
         agentId: agent_id || null,
         kind: kind || null,
@@ -54,7 +61,7 @@ export function createSuppliesController(db: Knex) {
       const cacheKey = `${clientId ?? "all"}:${agent_id ?? "all"}`;
       const cached = summaryCache.get(cacheKey);
       if (cached && Date.now() - cached.at < SUMMARY_CACHE_MS) return cached.data;
-      const data = await suppliesSummary(db, { clientId, agentId: agent_id || null });
+      const data = await getSuppliesSummary.execute({ clientId, agentId: agent_id || null });
       summaryCache.set(cacheKey, { at: Date.now(), data });
       return data;
     },
