@@ -19,12 +19,7 @@ explícitamente; si no aparece acá, sigue tal como está descrito abajo.
 multi-réplica del proxy EWS, réplicas reales de `api` + fix de DNS dinámico en
 nginx, dashboards Grafana + alerting sobre Prometheus, polish de locale + fix
 real de TZ hardcodeada en el export de logs, export PDF + entrega SFTP de
-reportes). De lo que quedaba en el backlog corto (§4), sólo siguen abiertos dos
-ítems bloqueados por factores externos a este repo, no por falta de código:
-**R8/cobertura de marcas** (Ricoh/Kyocera/Brother/Xerox/Canon/Konica — necesita
-hardware real para fixtures, no completable desde acá) y el **DPA** (documento
-legal, requiere revisión de abogado). Sin pendientes de código conocidos más
-allá de eso.
+reportes). Sin pendientes de código conocidos más allá de eso.
 
 **Cierre de una ronda aparte (26-27/08/2026), fuera de §4 — ver Fase 20:**
 verificación post-entrega del handoff hifi #3 (rediseño de 9 pantallas, no
@@ -376,12 +371,8 @@ medio, tampoco hay urgencia en evitarlo). Se retoma el día que haya una razón
 concreta para correr más de una réplica de la API — ese día conviene el
 advisory lock de Postgres (`pg_try_advisory_lock`) mencionado en el
 comentario del archivo, más simple que resolver una cola.
-También sigue sin tocar: familias de marcas nuevas
-(Ricoh/Kyocera/Brother/Xerox/Canon/Konica — siguen cayendo a `generic` o con OIDs
-parciales, §3 R8; requiere hardware real para captura/fixtures, no completable
-sin acceso a equipos reales). ✅ (23/08/2026) Documentación: comparativa v2.0,
-inventario de datos y auditoría IT ya reescritos — falta sólo el DPA
-(documento legal, no técnico, deliberadamente no redactado).
+✅ (23/08/2026) Documentación: comparativa v2.0, inventario de datos y
+auditoría IT ya reescritos.
 
 ### Fase 3 — Paridad con HP SDS Manager LATAM (gap analysis 23/08/2026) — completa: 11 de 11 ítems cerrados
 Origen: comparación en vivo del portal contra HP SDS Manager LATAM (dashboard,
@@ -1526,9 +1517,9 @@ metadata; usuario inexistente audita `unknown_user` con `target_id` null)
 
 Con esto se cierra el corte de seguridad planificado del bloque 6.
 **Pendiente para más adelante**: ✅ (26/08/2026) `triggerScan` sin auditar y
-auditoría de cambio de versión de agente — ver Fase 13. R6-R9 del doc
-(versionado disperso, TZ fija, cobertura de marcas, portal sin paginación)
-también cerrados en pasadas posteriores (ver §3 más abajo y Fase 10).
+auditoría de cambio de versión de agente — ver Fase 13. R6, R7 y R9 del doc
+(versionado disperso, TZ fija, portal sin paginación) también cerrados en
+pasadas posteriores (ver §3 más abajo y Fase 10).
 
 ### Fase 7 — Agente v1.2.0 (24/08/2026) — completa: reinicio remoto de impresora
 
@@ -2798,7 +2789,7 @@ Leyenda de prioridad: **P0** bloquea facturación/seguridad · **P1** paridad op
 | Retención | 10 años, política publicada | **readings**: 24 meses (`add_retention_policy` nativo); **agent_logs**: 90 días; **alerts resueltas**: 12 meses (job app-level); **audit_logs**: sin purga (write-only, decisión de negocio); compresión 7 d en readings | Política formal publicada + agregados continuos | P2 |
 | Esquema | — | Migraciones ≠ prod (hypertable comentada en `20260506000000:55-58`; `readings.supplies_details` y drop de `readings.id` sólo en prod) | Migración de reconciliación | P0 |
 | Índices | — | Sólo `readings(time)`; falta `(device_id,time)`, `alerts(device_id,resolved)`, `audit_logs`, `agents(client_id)` | Índices | P0 |
-| Certificaciones | ISO 27001/27017, SOC 2, NIST CSF | Ninguna (decisión consciente) | Al menos: política de retención, DPA, inventario de datos actualizado | P2 |
+| Certificaciones | ISO 27001/27017, SOC 2, NIST CSF | Ninguna (decisión consciente) | Al menos: política de retención, inventario de datos actualizado | P2 |
 | API pública / ISV | SDS API para MPS | ✅ (23/08/2026) API keys por cliente (`api_keys`, hash SHA-256) + webhooks de integración ERP (`api_webhooks`, firma HMAC) para lecturas/alertas/cierres, endpoints `/api/v1/public/*`; ✅ (26/08/2026) spec OpenAPI 3.1 completo, `docs/api/openapi.yaml` | UI de portal para keys/webhooks ya hecha (23/08/2026) | — |
 | Remote EWS | Sí (túnel, whitelist, expira) | No | Túnel HTTP sobre el WSS existente, con allowlist y TTL | P2 |
 | Firmware push / reboot remoto | Sí | No | — (fuera de scope declarado) | — |
@@ -2924,9 +2915,6 @@ argentino en vez del local). ✅ (26/08/2026) Ver Fase 18 — cerrado del
 todo, incluido un bug real que apareció en el camino (`formatDateAR` del
 reporte de logs exportado sí tenía la TZ de Buenos Aires hardcodeada, no
 cosmético).
-
-### R8 · Cobertura de marcas — **P1**
-Familias reales sólo HP/Samsung/Lexmark (18 perfiles). Ricoh/Brother/Xerox → `generic.ews` + OIDs parciales (`BROTHER_OIDS.totalPages` vacío; Xerox mono=color). Canon, Kyocera, Konica Minolta, Epson, Sharp, Toshiba, OKI, Pantum ni siquiera son `Brand` → caen a `generic` (Printer‑MIB sirve para total/insumos, pero sin desglose color ni alertas ricas). En un MPS multimarca esto limita la promesa comercial.
 
 ### R9 · Portal — **P1** — cerrado
 ✅ **Paginación server-side real, primer listado** (25/08/2026, ver abajo).
@@ -3171,14 +3159,13 @@ que este hallazgo nombraba explícitamente.
 - ✅ **Resolución de hostname (point lookup) + credenciales SNMP por rango**: `ip_ranges` acepta un tercer tipo de entrada `{hostname}` resuelto por el agente en cada ciclo (el cloud no tiene visibilidad de la DNS interna del cliente); cada entrada admite `credential_ids?` para restringir qué credenciales se prueban en ESE rango durante discovery, con fail-open ante ids colgantes y warnings no bloqueantes (rangos superpuestos con credenciales distintas, borrado de una credencial referenciada). ✅ UI de asignación de `credential_ids` en el portal — nota desactualizada, ya cerrada 25/08/2026 (ver "Estado de implementación" arriba, `CredentialIdsSelect.tsx`); restricción por rango en meter/supplies no se hizo (`known_devices` no tiene vínculo a rango, y no aporta valor real ahí).
 - ✅ Identidad `(client_id, serial)` + MAC secundaria + merge de duplicados; decommission/mover/editar dispositivo.
 
-### Fase 2 — Diferenciación (2–3 meses) — arrancada: 5 de 7 ítems cerrados
+### Fase 2 — Diferenciación (2–3 meses) — arrancada: 5 de 6 ítems cerrados
 - ✅ (23/08/2026) API pública con API keys por cliente + webhooks (lecturas, alertas, cierres) → integración ERP. UI de portal ya hecha (23/08/2026). ✅ (25/08/2026) Retry/expiración automáticos — ver Fase 8 en "Estado de implementación". ✅ (26/08/2026) Documentación OpenAPI/Swagger — ver Fase 9.
 - ✅ (23/08/2026) Remote EWS por túnel sobre el WSS existente (allowlist en dos capas, staleness, audit) — sólo el acceso EWS en sí, sin paridad IMIL completa (MIB walk remoto, deshabilitar monitoreo, reenviar lecturas, descubrir IP puntual quedan pendientes). Ver "Estado de implementación".
 - Backend multi‑réplica: pub/sub Redis para WS, jobs BullMQ repetibles (heartbeat monitor), métricas Prometheus, Sentry. ✅ (23/08/2026) **Sub-ítem cerrado**: logs estructurados con pino en vez de `console.log` (`cloud/src/logger.ts`), sin dependencia de ninguna decisión de arquitectura pendiente — ver "Estado de implementación". El resto (pub/sub Redis, BullMQ repeatable, Prometheus, Sentry) sigue sin tocar.
 - ✅ (23/08/2026) Agregados continuos (diario/mensual por equipo, `readings_daily_agg`/`readings_monthly_agg`) — sólo backend/endpoint, sin dashboard de portal todavía. Ver "Estado de implementación".
-- Familias nuevas: Ricoh WIM, Kyocera CCX, Brother BMS, Xerox WS, Canon, Konica; fixtures reales por modelo; matriz de cobertura de scopes visible en el portal (columna Driver + scopes).
 - ✅ (23/08/2026) Agente: rollback de update (single-file, verificado contra Windows real; el parche ZIP sólo backup manual), activación offline (retry con backoff), dedupe de lecturas idénticas (4h), detección de PJL deshabilitado, log rotation real, "mantener datos" al desinstalar (compilación verificada con Inno Setup 6.7.1 real, falta correr instalación/desinstalación de punta a punta) — ver "Estado de implementación".
-- ✅ (23/08/2026) Documentación: comparativa v2.0, inventario de datos (privacidad) y auditoría IT reescritos reflejando todo lo de esta pasada (SNMPv3, identidad, EWS remoto, retención, API pública, resiliencia de agente); retención formalizada dentro del inventario y la auditoría IT. Falta: **DPA** (Data Processing Agreement) — deliberadamente NO redactado, es un documento contractual/legal que requiere revisión de abogado, no una tarea de documentación técnica.
+- ✅ (23/08/2026) Documentación: comparativa v2.0, inventario de datos (privacidad) y auditoría IT reescritos reflejando todo lo de esta pasada (SNMPv3, identidad, EWS remoto, retención, API pública, resiliencia de agente); retención formalizada dentro del inventario y la auditoría IT.
 
 ---
 
