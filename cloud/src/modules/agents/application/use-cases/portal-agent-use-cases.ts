@@ -5,12 +5,13 @@ import type { AgentPortalRepository } from "../../domain/repositories/agent-port
 import { parseIpRangeSpecs, resolveBusinessHours } from "../../domain/services/agent-config-view";
 import type { AuditLogWriter } from "../ports/audit-log-writer";
 import type { Actor } from "../dtos/agent-dtos";
+import { AppError } from "../../../../shared/domain/errors";
 
-export class AgentNotFoundError extends Error {
+export class AgentNotFoundError extends AppError {
   readonly statusCode = 404;
 }
 
-export class AgentDeleteConflictError extends Error {
+export class AgentDeleteConflictError extends AppError {
   readonly statusCode = 409;
 }
 

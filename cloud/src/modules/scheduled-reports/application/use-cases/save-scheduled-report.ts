@@ -4,8 +4,9 @@ import type {
   ScheduledReportWrite,
 } from "../../domain/repositories/scheduled-report-repository";
 import type { ScheduledReportInputDto } from "../dtos/scheduled-report-dtos";
+import { ValidationError } from "../../../../shared/domain/errors";
 
-export class ScheduledReportValidationError extends Error {}
+export class ScheduledReportValidationError extends ValidationError {}
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MAX_RECIPIENTS = 20;

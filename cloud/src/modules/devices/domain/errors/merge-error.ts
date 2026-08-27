@@ -1,5 +1,7 @@
+import { AppError } from "../../../../shared/domain/errors";
+
 /** Familia de errores de fusión — nombres conservados de `deviceLifecycleService/merge-types.ts` (los referencia `agentService`). */
-export class MergeError extends Error {}
+export class MergeError extends AppError {}
 export class MergeIdentityConflictError extends MergeError {}
 export class MergeClientMismatchError extends MergeError {}
 export class MergeTooLargeError extends MergeError {

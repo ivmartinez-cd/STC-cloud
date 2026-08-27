@@ -1,5 +1,7 @@
+import { AppError } from "../../../../shared/domain/errors";
+
 /** Error de dominio con el status HTTP que le corresponde en el borde. */
-export class DeviceError extends Error {
+export class DeviceError extends AppError {
   constructor(message: string, public readonly statusCode: number, public readonly extra?: Record<string, unknown>) {
     super(message);
     this.name = "DeviceError";

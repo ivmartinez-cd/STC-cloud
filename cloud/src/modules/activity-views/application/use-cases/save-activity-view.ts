@@ -1,7 +1,8 @@
 import type { ActivitySavedView } from "../../domain/entities/activity-saved-view";
 import type { ActivitySavedViewRepository } from "../../domain/repositories/activity-saved-view-repository";
+import { ValidationError } from "../../../../shared/domain/errors";
 
-export class ActivityViewValidationError extends Error {}
+export class ActivityViewValidationError extends ValidationError {}
 
 const MAX_NAME_LEN = 80;
 const MAX_VIEWS_PER_USER = 30;

@@ -5,8 +5,9 @@ import type { AuditLogWriter } from "../ports/audit-log-writer";
 import type { EwsProxyGateway } from "../ports/ews-proxy-gateway";
 import type { Actor, EwsProxyInput, EwsProxyOutput, SendCommandInput } from "../dtos/agent-dtos";
 import type { AgentCommandsUseCase } from "./command-use-cases";
+import { AppError } from "../../../../shared/domain/errors";
 
-export class RemoteActionError extends Error {
+export class RemoteActionError extends AppError {
   constructor(message: string, public readonly statusCode: number) { super(message); }
 }
 

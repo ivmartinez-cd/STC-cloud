@@ -8,8 +8,9 @@ import type {
   SupplyRequestWrite,
 } from "../../domain/repositories/supply-request-repository";
 import type { RequestNotifier } from "../ports/request-notifier";
+import { AppError } from "../../../../shared/domain/errors";
 
-export class SupplyRequestError extends Error {
+export class SupplyRequestError extends AppError {
   constructor(message: string, readonly statusCode: number) {
     super(message);
   }

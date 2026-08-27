@@ -1,5 +1,7 @@
+import { AppError } from "../../../../shared/domain/errors";
+
 /** Error de dominio con el status HTTP que le corresponde en el borde (mismo criterio que `CustomFieldError`). */
-export class AlertError extends Error {
+export class AlertError extends AppError {
   constructor(message: string, public readonly statusCode: number) {
     super(message);
     this.name = "AlertError";
