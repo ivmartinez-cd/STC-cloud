@@ -4,75 +4,7 @@
     "src/api/bootstrap.ts": [
       {
         "name": "bootstrapDefaultAdmin",
-        "length": 23
-      }
-    ],
-    "src/api/controllers/authController/agent-auth.ts": [
-      {
-        "name": "agentActivate",
-        "length": 35
-      }
-    ],
-    "src/api/controllers/authController/agent-version.ts": [
-      {
-        "name": "agentVersion",
-        "length": 32
-      },
-      {
-        "name": "updateAgentVersion",
-        "length": 34
-      }
-    ],
-    "src/api/controllers/authController/session.ts": [
-      {
-        "name": "portalLogin",
-        "length": 92
-      }
-    ],
-    "src/api/controllers/authController/users.ts": [
-      {
-        "name": "createUser",
-        "length": 45
-      },
-      {
-        "name": "updateUser",
-        "length": 43
-      },
-      {
-        "name": "deleteUser",
-        "length": 25
-      }
-    ],
-    "src/api/controllers/dashboardController/dashboard.ts": [
-      {
-        "name": "getDashboard",
-        "length": 92
-      }
-    ],
-    "src/api/controllers/incidentController.ts": [
-      {
-        "name": "createIncidentController",
-        "length": 173
-      },
-      {
-        "name": "createIncident",
-        "length": 24
-      }
-    ],
-    "src/api/controllers/publicApiController.ts": [
-      {
-        "name": "createPublicApiController",
-        "length": 118
-      },
-      {
-        "name": "listAlerts",
-        "length": 30
-      }
-    ],
-    "src/api/controllers/suppliesController.ts": [
-      {
-        "name": "createSuppliesController",
-        "length": 30
+        "length": 22
       }
     ],
     "src/api/health.ts": [
@@ -105,28 +37,10 @@
         "length": 32
       }
     ],
-    "src/api/routes/authRoutes.ts": [
-      {
-        "name": "registerAuthRoutes",
-        "length": 83
-      }
-    ],
-    "src/api/routes/incidentRoutes.ts": [
-      {
-        "name": "registerIncidentRoutes",
-        "length": 25
-      }
-    ],
-    "src/api/routes/publicApiRoutes.ts": [
-      {
-        "name": "registerPublicApiRoutes",
-        "length": 53
-      }
-    ],
     "src/api/routes.ts": [
       {
         "name": "registerAllRoutes",
-        "length": 48
+        "length": 49
       }
     ],
     "src/api/server.ts": [
@@ -164,7 +78,7 @@
       },
       {
         "name": "openOrLinkIncident",
-        "length": 47
+        "length": 48
       },
       {
         "name": "processRule",
@@ -216,7 +130,7 @@
     "src/modules/agents/application/use-cases/lifecycle-use-cases.ts": [
       {
         "name": "execute",
-        "length": 22
+        "length": 23
       }
     ],
     "src/modules/agents/application/use-cases/process-reading.ts": [
@@ -344,7 +258,7 @@
     "src/modules/audit/infrastructure/database/knex-audit-log-repository.ts": [
       {
         "name": "buildBaseQuery",
-        "length": 25
+        "length": 26
       },
       {
         "name": "findPage",
@@ -355,6 +269,56 @@
       {
         "name": "toAuditLogsView",
         "length": 23
+      }
+    ],
+    "src/modules/auth/application/use-cases/login-use-case.ts": [
+      {
+        "name": "execute",
+        "length": 48
+      }
+    ],
+    "src/modules/auth/application/use-cases/user-management-use-cases.ts": [
+      {
+        "name": "execute",
+        "length": 26
+      },
+      {
+        "name": "execute",
+        "length": 35
+      }
+    ],
+    "src/modules/auth/presentation/agent-auth-controller.ts": [
+      {
+        "name": "agentActivate",
+        "length": 35
+      }
+    ],
+    "src/modules/auth/presentation/agent-version-controller.ts": [
+      {
+        "name": "agentVersion",
+        "length": 32
+      },
+      {
+        "name": "updateAgentVersion",
+        "length": 34
+      }
+    ],
+    "src/modules/auth/presentation/auth-routes.ts": [
+      {
+        "name": "registerAuthRoutes",
+        "length": 83
+      }
+    ],
+    "src/modules/auth/presentation/session-controller.ts": [
+      {
+        "name": "portalLogin",
+        "length": 50
+      }
+    ],
+    "src/modules/auth/presentation/users-controller.ts": [
+      {
+        "name": "createAuthUserHandlers",
+        "length": 52
       }
     ],
     "src/modules/clients/infrastructure/database/knex-client-repository/directory.ts": [
@@ -373,6 +337,12 @@
       {
         "name": "registerClientRoutes",
         "length": 50
+      }
+    ],
+    "src/modules/dashboard/application/use-cases/get-dashboard-stats.ts": [
+      {
+        "name": "execute",
+        "length": 91
       }
     ],
     "src/modules/devices/application/use-cases/bulk-lifecycle-use-cases.ts": [
@@ -441,6 +411,46 @@
         "length": 50
       }
     ],
+    "src/modules/incidents/infrastructure/database/incident-mutations.ts": [
+      {
+        "name": "createIncident",
+        "length": 35
+      },
+      {
+        "name": "anonymous",
+        "length": 30
+      },
+      {
+        "name": "reopenIncident",
+        "length": 25
+      }
+    ],
+    "src/modules/incidents/infrastructure/database/incident-reads.ts": [
+      {
+        "name": "listIncidents",
+        "length": 58
+      },
+      {
+        "name": "getIncident",
+        "length": 29
+      }
+    ],
+    "src/modules/incidents/presentation/incident-controller.ts": [
+      {
+        "name": "createIncidentController",
+        "length": 212
+      },
+      {
+        "name": "createIncident",
+        "length": 24
+      }
+    ],
+    "src/modules/incidents/presentation/incident-routes.ts": [
+      {
+        "name": "registerIncidentRoutes",
+        "length": 31
+      }
+    ],
     "src/modules/inventory/application/use-cases/custom-field-def-use-cases.ts": [
       {
         "name": "execute",
@@ -471,6 +481,18 @@
         "length": 24
       }
     ],
+    "src/modules/public-api/presentation/public-api-controller.ts": [
+      {
+        "name": "createPublicApiController",
+        "length": 73
+      }
+    ],
+    "src/modules/public-api/presentation/public-api-routes.ts": [
+      {
+        "name": "registerPublicApiRoutes",
+        "length": 53
+      }
+    ],
     "src/modules/reports/application/use-cases/export-closure.ts": [
       {
         "name": "execute",
@@ -490,13 +512,39 @@
     "src/modules/reports/presentation/report-view.ts": [
       {
         "name": "toClosureLineView",
-        "length": 25
+        "length": 27
       }
     ],
     "src/modules/scheduled-reports/infrastructure/mail/smtp-report-mailer.ts": [
       {
         "name": "send",
         "length": 23
+      }
+    ],
+    "src/modules/supplies/domain/services/supply-row-builder.ts": [
+      {
+        "name": "itemRow",
+        "length": 23
+      },
+      {
+        "name": "buildTonerRows",
+        "length": 24
+      },
+      {
+        "name": "buildMaintenanceRows",
+        "length": 21
+      }
+    ],
+    "src/modules/supplies/infrastructure/database/knex-supplies-repository.ts": [
+      {
+        "name": "fleetDevices",
+        "length": 21
+      }
+    ],
+    "src/modules/supplies/presentation/supplies-controller.ts": [
+      {
+        "name": "createSuppliesController",
+        "length": 36
       }
     ],
     "src/modules/supply-requests/presentation/supply-request-controller.ts": [
@@ -525,36 +573,6 @@
       {
         "name": "decryptSecret",
         "length": 22
-      }
-    ],
-    "src/services/incidentService/mutations.ts": [
-      {
-        "name": "createIncident",
-        "length": 35
-      },
-      {
-        "name": "anonymous",
-        "length": 30
-      },
-      {
-        "name": "reopenIncident",
-        "length": 25
-      }
-    ],
-    "src/services/incidentService/reads.ts": [
-      {
-        "name": "listIncidents",
-        "length": 46
-      },
-      {
-        "name": "getIncident",
-        "length": 29
-      }
-    ],
-    "src/services/incidentService/rules.ts": [
-      {
-        "name": "upsertIncidentRule",
-        "length": 23
       }
     ],
     "src/services/notificationService/mailer.ts": [
@@ -603,26 +621,6 @@
         "length": 26
       }
     ],
-    "src/services/suppliesService/queries.ts": [
-      {
-        "name": "fetchFleetDevices",
-        "length": 21
-      }
-    ],
-    "src/services/suppliesService/row-builder.ts": [
-      {
-        "name": "itemRow",
-        "length": 23
-      },
-      {
-        "name": "buildTonerRows",
-        "length": 24
-      },
-      {
-        "name": "buildMaintenanceRows",
-        "length": 21
-      }
-    ],
     "src/shared/domain/business-hours.ts": [
       {
         "name": "validateBusinessHours",
@@ -658,7 +656,7 @@
     "src/tests/monitorDetail.test.ts": [
       {
         "name": "before",
-        "length": 52
+        "length": 58
       }
     ],
     "src/ws/handshake.ts": [
@@ -698,7 +696,7 @@
       },
       {
         "name": "SidebarNav",
-        "length": 37
+        "length": 44
       },
       {
         "name": "anonymous",
@@ -724,15 +722,7 @@
     "portal/src/features/activity/pages/Activity.tsx": [
       {
         "name": "Activity",
-        "length": 202
-      },
-      {
-        "name": "useCallback",
-        "length": 21
-      },
-      {
-        "name": "anonymous",
-        "length": 38
+        "length": 32
       }
     ],
     "portal/src/features/alerts/pages/Alerts.tsx": [
@@ -1184,7 +1174,7 @@
     "portal/src/features/incidents/pages/Incidents.tsx": [
       {
         "name": "Incidents",
-        "length": 178
+        "length": 50
       }
     ],
     "portal/src/features/monitors/components/ConfigTabPanel.tsx": [
@@ -1446,25 +1436,19 @@
     "portal/src/features/reports/components/ReopenClosureModal.tsx": [
       {
         "name": "ReopenClosureModal",
-        "length": 28
+        "length": 26
       }
     ],
     "portal/src/features/reports/components/ReportsClosuresHistory.tsx": [
       {
         "name": "ReportsClosuresHistory",
-        "length": 89
-      }
-    ],
-    "portal/src/features/reports/components/ReportsPreviewTable.tsx": [
-      {
-        "name": "ReportsPreviewTable",
-        "length": 64
+        "length": 21
       }
     ],
     "portal/src/features/reports/components/ScheduledReportModal.tsx": [
       {
         "name": "ScheduledReportModal",
-        "length": 141
+        "length": 143
       },
       {
         "name": "save",
@@ -1474,13 +1458,13 @@
     "portal/src/features/reports/pages/Reports.tsx": [
       {
         "name": "Reports",
-        "length": 195
+        "length": 37
       }
     ],
     "portal/src/features/reports/pages/ScheduledReports.tsx": [
       {
         "name": "ScheduledReports",
-        "length": 136
+        "length": 48
       }
     ],
     "portal/src/features/settings/components/FeedbackCard.tsx": [
@@ -1536,7 +1520,7 @@
     "portal/src/features/settings/pages/Settings.tsx": [
       {
         "name": "Settings",
-        "length": 44
+        "length": 46
       }
     ],
     "portal/src/features/supplies/components/SupplyRequestDetailModal.tsx": [
@@ -1548,13 +1532,13 @@
     "portal/src/features/supplies/pages/Supplies.tsx": [
       {
         "name": "Supplies",
-        "length": 216
+        "length": 37
       }
     ],
     "portal/src/features/supplies/pages/SupplyRequests.tsx": [
       {
         "name": "SupplyRequests",
-        "length": 112
+        "length": 35
       }
     ],
     "portal/src/shared/components/BrandModal.tsx": [

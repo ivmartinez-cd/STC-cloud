@@ -21,71 +21,6 @@ Total: 191 rutas · públicas: 10 · client_viewer: 53 · sólo admin: 8
 | GET | `/api/v1/health` | público |
 | GET | `/api/v1/agents/download-installer` | público |
 
-## `src/api/routes/authRoutes.ts`
-
-| Método | Ruta | Quién puede |
-|---|---|---|
-| POST | `/api/v1/portal/login` | público |
-| GET | `/api/v1/portal/login-stats` | público |
-| POST | `/api/v1/portal/logout` | público |
-| GET | `/api/v1/portal/me` | admin · operator · client_viewer |
-| POST | `/api/v1/portal/ws-ticket` | admin · operator |
-| GET | `/api/v1/portal/users` | admin |
-| POST | `/api/v1/portal/users` | admin |
-| PUT | `/api/v1/portal/users/:id` | admin |
-| DELETE | `/api/v1/portal/users/:id` | admin |
-| POST | `/api/v1/agents/activate` | público |
-| POST | `/api/v1/agents/refresh` | público |
-| GET | `/api/v1/agents/version` | agente (token) |
-| POST | `/api/v1/portal/agents/version` | admin |
-
-## `src/api/routes/dashboardRoutes.ts`
-
-| Método | Ruta | Quién puede |
-|---|---|---|
-| GET | `/api/v1/dashboard` | admin · operator · client_viewer |
-| GET | `/api/v1/search` | admin · operator · client_viewer |
-
-## `src/api/routes/incidentRoutes.ts`
-
-| Método | Ruta | Quién puede |
-|---|---|---|
-| GET | `/api/v1/incidents` | admin · operator · client_viewer |
-| GET | `/api/v1/incidents/stats` | admin · operator · client_viewer |
-| GET | `/api/v1/incidents/:id` | admin · operator · client_viewer |
-| POST | `/api/v1/incidents` | admin · operator |
-| PATCH | `/api/v1/incidents/:id` | admin · operator |
-| POST | `/api/v1/incidents/:id/status` | admin · operator |
-| POST | `/api/v1/incidents/:id/close` | admin · operator |
-| POST | `/api/v1/incidents/:id/reopen` | admin · operator |
-| POST | `/api/v1/incidents/:id/comments` | admin · operator |
-| POST | `/api/v1/incidents/:id/assign` | admin · operator |
-| POST | `/api/v1/incidents/:id/alerts` | admin · operator |
-| DELETE | `/api/v1/incidents/:id/alerts/:alertId` | admin · operator |
-| GET | `/api/v1/clients/:id/incident-rules` | admin · operator |
-| PUT | `/api/v1/clients/:id/incident-rules` | admin · operator |
-| GET | `/api/v1/settings/system/incident-rules` | admin · operator |
-| PUT | `/api/v1/settings/system/incident-rules` | admin · operator |
-
-## `src/api/routes/publicApiRoutes.ts`
-
-| Método | Ruta | Quién puede |
-|---|---|---|
-| GET | `/api/v1/public/devices` | API key de cliente |
-| GET | `/api/v1/public/devices/:id/readings` | API key de cliente |
-| GET | `/api/v1/public/alerts` | API key de cliente |
-| GET | `/api/v1/public/reports/closures` | API key de cliente |
-| GET | `/api/v1/public/reports/closures/:id` | API key de cliente |
-| GET | `/api/v1/public/webhook` | API key de cliente |
-| PUT | `/api/v1/public/webhook` | API key de cliente |
-
-## `src/api/routes/suppliesRoutes.ts`
-
-| Método | Ruta | Quién puede |
-|---|---|---|
-| GET | `/api/v1/supplies` | admin · operator · client_viewer |
-| GET | `/api/v1/supplies/summary` | admin · operator · client_viewer |
-
 ## `src/modules/activity-views/presentation/activity-view-routes.ts`
 
 | Método | Ruta | Quién puede |
@@ -153,6 +88,24 @@ Total: 191 rutas · públicas: 10 · client_viewer: 53 · sólo admin: 8
 | GET | `/api/v1/audit-logs/actions` | admin · operator |
 | GET | `/api/v1/audit-logs/summary` | admin · operator |
 
+## `src/modules/auth/presentation/auth-routes.ts`
+
+| Método | Ruta | Quién puede |
+|---|---|---|
+| POST | `/api/v1/portal/login` | público |
+| GET | `/api/v1/portal/login-stats` | público |
+| POST | `/api/v1/portal/logout` | público |
+| GET | `/api/v1/portal/me` | admin · operator · client_viewer |
+| POST | `/api/v1/portal/ws-ticket` | admin · operator |
+| GET | `/api/v1/portal/users` | admin |
+| POST | `/api/v1/portal/users` | admin |
+| PUT | `/api/v1/portal/users/:id` | admin |
+| DELETE | `/api/v1/portal/users/:id` | admin |
+| POST | `/api/v1/agents/activate` | público |
+| POST | `/api/v1/agents/refresh` | público |
+| GET | `/api/v1/agents/version` | agente (token) |
+| POST | `/api/v1/portal/agents/version` | admin |
+
 ## `src/modules/clients/presentation/client-routes.ts`
 
 | Método | Ruta | Quién puede |
@@ -179,6 +132,13 @@ Total: 191 rutas · públicas: 10 · client_viewer: 53 · sólo admin: 8
 | GET | `/api/v1/clients/:id/sftp-destination` | admin · operator |
 | PUT | `/api/v1/clients/:id/sftp-destination` | admin · operator |
 | DELETE | `/api/v1/clients/:id/sftp-destination` | admin · operator |
+
+## `src/modules/dashboard/presentation/dashboard-routes.ts`
+
+| Método | Ruta | Quién puede |
+|---|---|---|
+| GET | `/api/v1/dashboard` | admin · operator · client_viewer |
+| GET | `/api/v1/search` | admin · operator · client_viewer |
 
 ## `src/modules/device-costs/presentation/device-costs-routes.ts`
 
@@ -233,6 +193,27 @@ Total: 191 rutas · públicas: 10 · client_viewer: 53 · sólo admin: 8
 | GET | `/api/v1/feedback` | admin |
 | PUT | `/api/v1/feedback/:id/status` | admin |
 
+## `src/modules/incidents/presentation/incident-routes.ts`
+
+| Método | Ruta | Quién puede |
+|---|---|---|
+| GET | `/api/v1/incidents` | admin · operator · client_viewer |
+| GET | `/api/v1/incidents/stats` | admin · operator · client_viewer |
+| GET | `/api/v1/incidents/:id` | admin · operator · client_viewer |
+| POST | `/api/v1/incidents` | admin · operator |
+| PATCH | `/api/v1/incidents/:id` | admin · operator |
+| POST | `/api/v1/incidents/:id/status` | admin · operator |
+| POST | `/api/v1/incidents/:id/close` | admin · operator |
+| POST | `/api/v1/incidents/:id/reopen` | admin · operator |
+| POST | `/api/v1/incidents/:id/comments` | admin · operator |
+| POST | `/api/v1/incidents/:id/assign` | admin · operator |
+| POST | `/api/v1/incidents/:id/alerts` | admin · operator |
+| DELETE | `/api/v1/incidents/:id/alerts/:alertId` | admin · operator |
+| GET | `/api/v1/clients/:id/incident-rules` | admin · operator |
+| PUT | `/api/v1/clients/:id/incident-rules` | admin · operator |
+| GET | `/api/v1/settings/system/incident-rules` | admin · operator |
+| PUT | `/api/v1/settings/system/incident-rules` | admin · operator |
+
 ## `src/modules/inventory/presentation/inventory-routes.ts`
 
 | Método | Ruta | Quién puede |
@@ -258,6 +239,18 @@ Total: 191 rutas · públicas: 10 · client_viewer: 53 · sólo admin: 8
 | Método | Ruta | Quién puede |
 |---|---|---|
 | GET | `/metrics` | público |
+
+## `src/modules/public-api/presentation/public-api-routes.ts`
+
+| Método | Ruta | Quién puede |
+|---|---|---|
+| GET | `/api/v1/public/devices` | API key de cliente |
+| GET | `/api/v1/public/devices/:id/readings` | API key de cliente |
+| GET | `/api/v1/public/alerts` | API key de cliente |
+| GET | `/api/v1/public/reports/closures` | API key de cliente |
+| GET | `/api/v1/public/reports/closures/:id` | API key de cliente |
+| GET | `/api/v1/public/webhook` | API key de cliente |
+| PUT | `/api/v1/public/webhook` | API key de cliente |
 
 ## `src/modules/remote-actions/presentation/remote-action-routes.ts`
 
@@ -295,6 +288,13 @@ Total: 191 rutas · públicas: 10 · client_viewer: 53 · sólo admin: 8
 | POST | `/api/v1/scheduled-reports/:id/duplicate` | admin · operator |
 | POST | `/api/v1/scheduled-reports/:id/run` | admin · operator |
 | GET | `/api/v1/scheduled-reports/:id/download` | admin · operator |
+
+## `src/modules/supplies/presentation/supplies-routes.ts`
+
+| Método | Ruta | Quién puede |
+|---|---|---|
+| GET | `/api/v1/supplies` | admin · operator · client_viewer |
+| GET | `/api/v1/supplies/summary` | admin · operator · client_viewer |
 
 ## `src/modules/supply-requests/presentation/supply-request-routes.ts`
 

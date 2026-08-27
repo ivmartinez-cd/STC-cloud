@@ -1969,6 +1969,135 @@ cancela sus tests ("test did not finish before its parent and was cancelled"),
 fácil de confundir con un bug real del código si no se sabe que es sólo la
 env var faltante.
 
+## Auditoría de cumplimiento + Fase 3 completa (2026-08-27)
+
+Ivan pidió validar que toda la app cumple con `ARCHITECTURE_GUIDE.md` y, tras el
+reporte inicial, "continuar sin pausas hasta terminar". Se confirmó con
+`ListAgents` que ninguna sesión hermana activa estaba tocando `stc-cloud`
+(3 sesiones en otros repos, 1 después confirmó `cd-test` sin superposición).
+
+**Hallazgos del reporte inicial, todos cerrados en esta tanda:**
+
+1. **`eslint` real (2 errores + 2 warnings)** — `exportDeviceInventoryCsv.ts`/
+   `exportRemoteActionsCsv.ts` tenían el BOM del CSV tipeado como carácter
+   crudo en vez de `﻿` (inconsistente con `exportClientsCsv.ts`, disparaba
+   `no-irregular-whitespace`); `StatusChip.tsx` mezclaba un componente
+   default-export con 2 funciones no-componente (`react-refresh/only-export-
+   components`) — extraídas a `statusChipLabels.ts`, mismo patrón que
+   `format.ts` de la Fase 2 (`DeviceDetail`).
+2. **`.env.production.example` desactualizado** — 7 variables reales usadas en
+   código no documentadas (`LOG_LEVEL`, `DATABASE_URL`,
+   `ALERT_DIGEST_JOB_AUTOSTART`, `AGENT_VERSION`/`AGENT_DOWNLOAD_URL`/
+   `AGENT_HASH`); en particular `LOGIN_RATE_LIMIT_MAX`/
+   `AGENT_ACTIVATE_RATE_LIMIT_MAX` del commit `8ab9979` sí estaban pero el
+   resto no. Agregadas, comentadas, mismo estilo que el resto del archivo.
+3. **`ARCHITECTURE_GUIDE.md` describía sistemas que no existen en este repo**
+   — 3 secciones "cómo se mide/verifica/autoriza en este repo" eran texto
+   copiado sin adaptar de `helpdesk-manager` (Python): `make check`,
+   `scripts/check_sizes.py`/`check_guards.py`, exclusión de "migraciones
+   Alembic", reglas de guard tipo `except Exception`/f-string SQL, y sobre
+   todo un catálogo de permisos en tablas (`module`/`module_action`,
+   `well_known_permissions.py`, `require_permission`, `module_feature`,
+   `well_known_features.py`, `route-permissions.ts`) que **nunca se
+   implementó acá** — el modelo real es `preHandler` (credencial) +
+   `rolePolicy.ts` (rol), enforced por `check-routes.mjs`. Corregidas las 3
+   secciones con la mecánica real verificada en código, más un ADR-003
+   dangling (`docs/adr/003-estructura-modulo-capa.md`, nunca creado) redirigido
+   a ADR-001, que ya cubre esa decisión. ADRs nuevos: `002-sizes-baseline-
+   ratchet.md`, `003-guards-baseline-ratchet.md` (reemplazan las referencias
+   ADR-017/020/021 fantasma), `004-modelo-de-autorizacion.md` (reemplaza
+   ADR-005/007/029/032 fantasma).
+4. **18 de 19 módulos migrados no usaban `shared/domain/errors`** — sólo
+   `feedback` (piloto de Fase 1) heredaba de `AppError`; el resto (`DeviceError`,
+   `AlertError`, `ClientError`, `ReportError`, `CustomFieldError`, `MergeError`,
+   `AgentNotFoundError`/`AgentDeleteConflictError`, `RemoteActionError`,
+   `SupplyRequestError`, `ScheduledReportValidationError`/
+   `ActivityViewValidationError`) extendía `Error` directo. Rebase mecánico a
+   `AppError` (o a `ValidationError` para los dos que eran validación pura) en
+   11 archivos de 8 módulos — mismo `statusCode`/`instanceof` que ya usaba cada
+   controller, cero cambio de comportamiento. `RollbackSignal`
+   (`devices/application/ports/device-unit-of-work.ts`) NO se tocó — es una
+   señal de control interno para rollback de transacción, no un error de
+   dominio surfaced a HTTP.
+5. **5 dominios de backend seguían flat** (`auth`, `dashboard`, `supplies`,
+   `incidents`, `publicApi`) — fuera del alcance original de la Fase 3 (que
+   cerró con 7: `audit/inventory/alerts/reports/clients/devices/agents`).
+   Migrados los 5 en esta tanda, mismo patrón module→capa que el resto:
+
+   - **`supplies`** (`services/suppliesService/` + `suppliesController.ts` +
+     `suppliesRoutes.ts`, ~480L) → `modules/supplies/`. 4 consumidores
+     externos (`supply-requests`, `system-settings`, `devices`,
+     `scheduled-reports`) actualizados a importar el facade en vez de
+     `services/suppliesService`.
+   - **`dashboard`** (`dashboardController/{dashboard,dashboard-queries,index}.ts`
+     + `dashboardRoutes.ts`, ~440L) → `modules/dashboard/`. Puertos nuevos
+     (`AlertsByClassReader`, `AgentVersionReader`) para que la application
+     layer no dependa de `Knex`/`Redis` crudos (única forma de que
+     `countOpenAlertsByClass`/`getPublishedAgentVersion` — de otro
+     módulo/servicio — no violaran `arch-application`). `authController/
+     login-stats.ts` (ahora `modules/auth/presentation/login-stats-
+     controller.ts`) actualizado para importar `queryClientsCount`/etc. del
+     facade nuevo.
+   - **`incidents`** (`services/incidentService/*` + `incidentClassifier.ts` +
+     `incidentController.ts` + `incidentRoutes.ts`, ~950L) → `modules/incidents/`.
+     `IncidentError` rebasado a `AppError` de paso (quedaba pendiente del punto
+     4). `jobs/incidentWorker.ts` NO se tocó — hace sus propias queries SQL
+     directas contra `incidents`/`incident_alerts`/`incident_events`/
+     `incident_rules` en un proceso separado, nunca importó `incidentService`.
+   - **`auth`** (`authController/{session,users,agent-auth,agent-version,
+     login-stats,shared,index}.ts` + `authRoutes.ts`, ~760L, el más grande y
+     el más acoplado a Fastify de los 5) → `modules/auth/`. `LoginUseCase`
+     nuevo separa verificación de credenciales/2FA (dominio) de cookies/JWT
+     (presentación, sigue dependiendo de Fastify a propósito — la guía lista
+     "autenticación" como responsabilidad de Presentation). `api/utils/
+     password.ts` (`hashPassword`/`verifyPassword`, puras, sin I/O más que
+     `crypto`) se movió a `modules/auth/domain/services/password-hasher.ts`
+     — único consumidor externo real (`api/bootstrap.ts`, más un test que
+     usaba comillas simples y no apareció en el primer grep) actualizado.
+   - **`publicApi`** (`publicApiController.ts` + `publicApiRoutes.ts`, ~240L)
+     → `modules/public-api/`. `services/publicWebhookService.ts` NO se migró
+     a propósito — ya era deliberadamente compartido con los workers de
+     notificaciones y con `modules/clients` (ver comentario preexistente en
+     `public-webhook-config-store.ts`); se envolvió en un puerto
+     (`PublicWebhookConfigPort`) para que la application layer no dependiera
+     de `Knex` crudo.
+
+   Patrón repetido en los 5: domain (entidades/errores/puertos) sin imports de
+   Knex/Redis/otro módulo salvo por facade; infrastructure implementa los
+   puertos sobre Knex, movimiento verbatim de las queries originales;
+   application orquesta con puertos, no drivers; presentation adapta HTTP,
+   mapea errores tipados a status code (mismo criterio que
+   `feedback-controller.ts::sendIfAppError`). `check-sizes.mjs`/
+   `check-guards.mjs` verificados después de cada uno (baseline regenerado
+   sólo cuando la deuda ya existía verbatim en el archivo original — 3 casos
+   nuevos de `arch-application` por importar `Knex`/`Redis`/`api/utils/*`
+   directo en application, corregidos con puertos, no baseline-ados).
+
+**Validación:** stack efímero propio en contenedores Docker sin nombre
+compartido con el stack real (`eph_pg`:55440, `eph_redis`:56379, API local vía
+`node dist/api/server.js` en :34567 — no la imagen Docker, para iterar sin
+rebuild de imagen). Un hallazgo real del propio proceso: `dist/` tenía
+artefactos compilados de ANTES de la Fase 2 (`authController.js` monolítico
+conviviendo con el directorio `authController/`, `suppliesController.js`,
+`suppliesService.js`) — nunca limpiado porque `dist/` está en `.gitignore` y
+Node resuelve el `.js` suelto antes que el directorio con `index.js` en un
+`require` ambiguo; causaba un crash real de arranque
+(`FST_ERR_ROUTE_MISSING_HANDLER`) no relacionado con esta migración. `rm -rf
+dist && npm run build` lo resuelve — deuda a tener en cuenta si vuelve a
+aparecer un error de arranque que no tiene explicación en `src/`.
+
+Tests dirigidos por dominio, todos verdes tras corregir env vars de test
+(`ALERTS_TEST_DB_HOST/PORT` apuntando al stack efímero, no al puerto 5434 del
+compose compartido — mismo gotcha ya documentado arriba, mordido de nuevo dos
+veces en esta tanda): `supplies.test.ts` 14/14, `incidents.test.ts` +
+`incidentAutoRules.test.ts` + `globalIncidentRules.test.ts` 26/26 (incluye un
+tick real del `incidentWorker`, ~96s), `e2e.test.ts` + `e2eSecurityAndTokens.test.ts`
++ `rbac.test.ts` + `rbacMutationsDenied1/2.test.ts` + `twoFactor.test.ts`
+118/118, `publicApi.test.ts` + `publicApiKeyExpiry.test.ts` +
+`publicApiWebhookDelivery.test.ts` 31/31. Pendiente al momento de escribir esto:
+suite completa (`ci-test-runner.mjs`, ~52 archivos) como verificación final de
+que nada cruzado quedó roto.
+
 ## Cómo retomar este plan
 
 Cada fase es independiente y puede ejecutarse como una tarea separada. Antes de
