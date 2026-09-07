@@ -135,21 +135,32 @@ describe('pub/sub WS — e2e (broadcast cruza Redis hasta el socket del portal)'
 
     const wsUrl = `${BASE.replace(/^http/, 'ws')}/ws?token=${ticket.data.ticket}`;
     const socket = new WebSocket(wsUrl);
-    const received: any[] = [];
-    socket.on('message', (raw) => received.push(JSON.parse(raw.toString())));
-    await new Promise((resolve, reject) => {
-      socket.once('open', resolve);
-      socket.once('error', reject);
-    });
+    // Publica vía ioredis (mismo REDIS_URL que usa la API) en vez de
+    // `docker exec stc_redis ...`: ese nombre de contenedor solo existe en
+    // el docker-compose de dev, no en los servicios de Postgres/Redis del
+    // job de CI — cualquier falla acá (execSync que tira antes de
+    // socket.close()) dejaba el WS abierto y el proceso de test colgado
+    // indefinidamente (sin timeout), lo que trabó el runner de CI 6+ horas.
+    const { default: Redis } = await import('ioredis');
+    const publisher = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
+    try {
+      const received: any[] = [];
+      socket.on('message', (raw) => received.push(JSON.parse(raw.toString())));
+      await new Promise((resolve, reject) => {
+        socket.once('open', resolve);
+        socket.once('error', reject);
+      });
 
-    // Publicar directo al canal (lo que haría broadcastToPortal en OTRA réplica)
-    const { execSync } = await import('node:child_process');
-    const payload = JSON.stringify({ event: 'obs_test', data: { ping: Date.now() } });
-    execSync(`docker exec stc_redis redis-cli publish stc:ws:portal '${payload}'`);
+      // Publicar directo al canal (lo que haría broadcastToPortal en OTRA réplica)
+      const payload = JSON.stringify({ event: 'obs_test', data: { ping: Date.now() } });
+      await publisher.publish('stc:ws:portal', payload);
 
-    await new Promise((r) => setTimeout(r, 1500));
-    socket.close();
-    const hit = received.find((m) => m.event === 'obs_test');
-    assert.ok(hit, 'el broadcast publicado en Redis debe llegar por el socket del portal');
+      await new Promise((r) => setTimeout(r, 1500));
+      const hit = received.find((m) => m.event === 'obs_test');
+      assert.ok(hit, 'el broadcast publicado en Redis debe llegar por el socket del portal');
+    } finally {
+      socket.close();
+      await publisher.quit();
+    }
   });
 });
