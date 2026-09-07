@@ -14,8 +14,8 @@ STC-cloud/
 ├── cloud/               # Servidor Backend (Fastify API) y Portal Web (React)
 │   ├── portal/          # Frontend Web del Portal (Vite + React)
 │   └── src/             # Backend API y Servicios de Negocio (Fastify)
-├── bridge/              # Interfaz o puente de comunicación entre componentes
-├── shared/              # Modelos de datos y tipos compartidos TypeScript
+├── bridge/              # Código huérfano de una feature anterior (ConsoleEngine); no lo referencia ningún build actual — ver agent/src/core/ConsoleEngine.ts
+├── shared/              # Tipos y utilidades de cripto; sin package.json propio, no integrado a los builds de cloud/agent
 ├── docs/                # Documentación técnica, manuales e informes de auditoría
 └── docker-compose.yml   # Orquestación local/producción con contenedores
 ```

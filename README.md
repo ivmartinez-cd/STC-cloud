@@ -2,7 +2,7 @@
 
 **Sistema de Toma de Contadores Multimarca en la Nube**
 
-> Plataforma completa para monitoreo remoto de impresoras via SNMP. Recolecta contadores de páginas, niveles de toner y estado operativo de impresoras HP, Lexmark, Samsung, Ricoh, Brother y Xerox.
+> Plataforma completa para monitoreo remoto de impresoras vía SNMP. Recolecta contadores de páginas, niveles de tóner y estado operativo de impresoras HP, Lexmark, Samsung, Ricoh, Brother y Xerox.
 
 ---
 
@@ -10,9 +10,10 @@
 
 STC Cloud es un sistema empresarial que automatiza la lectura de contadores de impresoras multimarca. Consiste en:
 
-- **Agente Windows** que escanea la red local via SNMP y envía datos a la nube
-- **API Backend** que recibe, almacena y procesa los datos en series temporales
+- **Agente Windows (DCA)** que escanea la red local vía SNMP y envía datos a la nube
+- **API Backend** que recibe, valida y almacena los datos en series temporales
 - **Portal Web** para visualización, reportes y gestión remota de agentes
+- **Stack de observabilidad** (Prometheus + Grafana + Alertmanager) y backups automáticos en producción
 
 ### Características principales
 
@@ -20,9 +21,12 @@ STC Cloud es un sistema empresarial que automatiza la lectura de contadores de i
 |---|---|
 | 🔍 Escaneo SNMP multimarca | HP, Lexmark, Samsung, Ricoh, Brother, Xerox |
 | 📊 Series temporales | PostgreSQL + TimescaleDB con compresión automática |
-| 🔐 Seguridad | JWT con refresh tokens, rate limiting, AES-256-GCM |
+| 🔐 Seguridad | JWT con refresh tokens, rate limiting, AES-256-GCM, RBAC agente/portal |
 | 📈 Portal web | Dashboard, reportes, exportación CSV, alertas en tiempo real |
 | 🖥️ Agente Windows | Servicio de fondo, cola offline SQLite, reconexión automática |
+| 🔌 API pública para ERP | Solo lectura + webhooks salientes por API key (ver [OpenAPI](docs/api/openapi.yaml)) |
+| 📡 Observabilidad | Prometheus + Grafana + Alertmanager + backups automáticos (producción) |
+| ✅ CI en cada PR | Lint/typecheck/build, guardas de arquitectura, tests de integración reales |
 | 🐳 Docker ready | Despliegue en un comando con SSL automático (Let's Encrypt) |
 
 ---
@@ -44,8 +48,9 @@ graph TB
         WS[🔌 WebSocket Hub]
         PG[(🐘 PostgreSQL<br/>+ TimescaleDB)]
         RD[(🔴 Redis<br/>Cache + Cola)]
-        BQ[⚙️ BullMQ<br/>Alert Worker]
+        BQ[⚙️ BullMQ<br/>Workers de alertas/jobs]
         FE[🖥️ Portal React<br/>Vite + TailwindCSS]
+        OBS[📡 Prometheus + Grafana<br/>+ Alertmanager]
     end
 
     P1 & P2 & P3 -->|SNMP v2c| A
@@ -57,6 +62,7 @@ graph TB
     API --> WS
     BQ --> PG
     BQ --> RD
+    API -.métricas.-> OBS
 ```
 
 ---
@@ -65,14 +71,16 @@ graph TB
 
 | Componente | Tecnología |
 |---|---|
-| **Backend** | Node.js 20 + Fastify 4 + TypeScript |
+| **Backend** | Node.js 20 + Fastify 5 + TypeScript |
 | **Base de datos** | PostgreSQL 16 + TimescaleDB |
 | **Cache / Cola** | Redis 7 + BullMQ |
-| **Frontend** | React 19 + Vite + TailwindCSS 4 + Recharts |
-| **Agente** | Node.js + net-snmp + better-sqlite3 |
-| **Monitor UI** | .NET 10 WinForms |
+| **Frontend** | React 19 + Vite 6 + TailwindCSS 4 + Recharts |
+| **Agente** | Node.js + net-snmp + better-sqlite3, empaquetado como SEA (esbuild) |
+| **Monitor UI** | .NET 9 WinForms (tray app local) |
 | **Instalador** | Inno Setup + NSSM |
 | **Infraestructura** | Docker Compose + nginx + Let's Encrypt |
+| **Observabilidad (prod)** | Prometheus + Grafana + Alertmanager + backups automáticos |
+| **CI** | GitHub Actions (lint, typecheck, build, guardas de arquitectura, tests de integración) |
 
 ---
 
@@ -80,35 +88,41 @@ graph TB
 
 ```
 stc-cloud/
-├── cloud/                 # Backend API
-│   ├── portal/            # Frontend React (Vite)
+├── cloud/                    # Backend API
+│   ├── portal/               # Frontend React (Vite) — package.json/lockfile propios
 │   ├── src/
-│   │   ├── api/           # Servidor Fastify + rutas
-│   │   ├── db/            # Knex migrations + seeds
-│   │   ├── services/      # Lógica de negocio (AgentService)
-│   │   ├── jobs/          # Workers de alertas (BullMQ)
-│   │   ├── ws/            # WebSocket hub
-│   │   └── tests/         # E2E + load tests
-│   ├── docker/            # Dockerfiles originales
-│   ├── Dockerfile         # Build API
-│   └── tsconfig.json
-├── agent/                 # Agente SNMP Windows
+│   │   ├── api/               # Servidor Fastify, rutas y middlewares
+│   │   ├── modules/            # Dominios (clients, devices, alerts, incidents, public-api, ...)
+│   │   ├── db/                 # Knex migrations + seeds
+│   │   ├── services/           # Lógica de negocio transversal
+│   │   ├── jobs/                # Workers de alertas/reportes (BullMQ)
+│   │   ├── ws/                  # WebSocket hub
+│   │   └── tests/              # 65 archivos de test (integración E2E contra Postgres+Redis reales)
+│   ├── scripts/               # Guardas de arquitectura (check:sizes/guards/routes/coverage)
+│   └── Dockerfile
+├── agent/                    # Agente SNMP Windows (DCA)
 │   ├── src/
-│   │   ├── core/          # Main loop, config AES-256
-│   │   ├── snmp/          # Scanner + OID maps
-│   │   ├── sync/          # Cola SQLite + uploader
-│   │   └── tests/         # Unit tests (26 tests)
-│   └── build/             # Script de empaquetado .exe
-├── monitor-ui/            # Tray app Windows (.NET WinForms)
-├── installer/             # Inno Setup installer
-├── shared/                # Tipos TypeScript + cripto compartida
-├── docs/                  # Documentación técnica
-├── docker-compose.yml     # Desarrollo local (postgres + redis)
-├── docker-compose.prod.yml # Producción completa
-├── nginx.conf             # Reverse proxy + SSL
-├── deploy.sh              # Script de despliegue
-└── .env.production.example # Template de variables
+│   │   ├── core/               # Main loop, ConfigManager (AES-256-GCM + HWID), ConsoleEngine
+│   │   ├── capture/             # Motor de captura por marca/modelo (drivers, OIDs)
+│   │   ├── snmp/                # Transporte SNMP
+│   │   ├── sync/                # Cola SQLite + uploader
+│   │   └── tests/              # 19 archivos de test (unitarios, sin servidor)
+│   └── build-sea.js           # Empaquetado real a binario (esbuild), usado por el instalador
+├── monitor-ui/               # Tray app Windows (.NET WinForms)
+├── installer/                # Inno Setup installer + firma del binario
+├── shared/                   # Tipos TS y utilidades de cripto — sin package.json propio,
+│                              #   no integrado a los builds actuales de cloud/agent (código huérfano)
+├── docs/                     # Documentación técnica (ver docs/README.md)
+├── grafana/ · prometheus/ · alertmanager/  # Config del stack de observabilidad de producción
+├── .github/workflows/ci.yml  # CI: portal, guardas de arquitectura, API, agente
+├── docker-compose.yml         # Infra de desarrollo (postgres + redis + api + portal en contenedor)
+├── docker-compose.prod.yml    # Producción completa (+ nginx, certbot, backups, observabilidad)
+├── nginx.conf                 # Reverse proxy + SSL
+├── deploy.sh                  # Script de despliegue
+└── .env.production.example    # Template de variables
 ```
+
+> `bridge/console-engine.ts` es código huérfano de una feature anterior (ver `agent/src/core/ConsoleEngine.ts`, que la reemplazó); no se referencia desde ningún build actual.
 
 ---
 
@@ -118,7 +132,7 @@ stc-cloud/
 
 - Node.js 20+
 - Docker + Docker Compose v2
-- .NET SDK 10 (solo para Monitor UI)
+- .NET SDK 9 (solo para Monitor UI)
 
 ### 1. Clonar y configurar
 
@@ -131,8 +145,10 @@ cp .env.production.example .env
 
 ### 2. Levantar infraestructura
 
+`docker-compose.yml` define postgres, redis, api y portal — para desarrollo con hot-reload conviene levantar solo la infraestructura y correr api/portal en el host (paso 4):
+
 ```bash
-docker compose up -d  # PostgreSQL + Redis
+docker compose up -d postgres redis
 ```
 
 ### 3. Instalar y migrar
@@ -155,8 +171,6 @@ cd cloud/portal && npm run dev
 
 - **Backend**: http://localhost:3000
 - **Portal**: http://localhost:5173
-
-> 📖 Para instrucciones detalladas de pruebas, ver [GUIA_PRUEBAS.md](GUIA_PRUEBAS.md)
 
 ---
 
@@ -196,7 +210,7 @@ chmod +x deploy.sh
 El script automáticamente:
 - Valida la configuración
 - Genera certificado SSL con Let's Encrypt
-- Levanta todos los servicios (API, Portal, PostgreSQL, Redis, nginx)
+- Levanta todos los servicios (API, Portal, PostgreSQL, Redis, nginx, Prometheus, Grafana, Alertmanager, backups)
 - Ejecuta migraciones de base de datos
 
 ### Comandos útiles post-deploy
@@ -215,6 +229,21 @@ docker compose -f docker-compose.prod.yml restart api
 docker compose -f docker-compose.prod.yml down
 ```
 
+Ver [docs/internos/DEPLOY_CLOUD.md](docs/internos/DEPLOY_CLOUD.md) para el procedimiento detallado.
+
+---
+
+## ✅ CI / Calidad
+
+Cada push y PR a `main` corre en GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)):
+
+| Job | Qué valida |
+|---|---|
+| **Portal** | ESLint + TypeScript + validación de íconos + build |
+| **Arquitectura** | Guardas contra `docs/dev/ARCHITECTURE_GUIDE.md`: límites de tamaño de archivo/función (`check:sizes`), reglas de dependencias entre capas (`check:guards`), autenticación declarada en toda ruta (`check:routes`) |
+| **API** | Build + tests de integración reales contra Postgres/Redis levantados como servicios del job, + cobertura mínima por capa (`check:coverage`) |
+| **Agente** | Build + suite de tests + empaquetado real con esbuild (el mismo artefacto que firma el instalador) |
+
 ---
 
 ## 🧪 Tests
@@ -222,11 +251,11 @@ docker compose -f docker-compose.prod.yml down
 ```bash
 # Unit tests del agente (sin servidor)
 cd agent && npm test
-# → 26 tests: scanner SNMP + cola SQLite
+# → 19 archivos de test: scanner SNMP, cola SQLite, captura por marca, etc.
 
-# E2E tests (requiere backend corriendo)
+# Tests de integración (requiere backend + Postgres + Redis reales)
 cd cloud && npm test
-# → 18 tests: auth, heartbeat, sync, revocación
+# → 65 archivos de test: auth, RBAC, heartbeat, sync, alertas, incidentes, API pública, etc.
 
 # Load test
 cd cloud && npm run test:load -- --agents 20 --duration 60
@@ -237,33 +266,27 @@ cd agent && npm run snmp:sim -- --brand hp
 
 ---
 
-## 📊 API Endpoints
+## 📊 API
 
-### Públicos
-| Método | Ruta | Descripción |
-|--------|------|-------------|
-| `GET` | `/health` | Health check |
-| `POST` | `/api/v1/portal/login` | Login del portal |
-| `POST` | `/api/v1/agents/activate` | Activar agente con key |
-| `POST` | `/api/v1/agents/refresh` | Renovar JWT del agente |
+Hay dos superficies de API separadas:
 
-### Agente (requiere JWT de agente)
-| Método | Ruta | Descripción |
-|--------|------|-------------|
-| `POST` | `/api/v1/agents/:id/heartbeat` | Heartbeat + recibir config |
-| `POST` | `/api/v1/devices/sync` | Enviar lecturas (batch ≤500) |
-| `POST` | `/api/v1/devices/register` | Registrar nuevas impresoras |
-| `GET` | `/api/v1/agents/:id/commands` | Obtener comandos pendientes |
+- **`/api/v1/...`** — la que usan el portal (cookie de sesión JWT) y el agente (JWT de agente). Principales rutas:
 
-### Portal (requiere JWT de portal)
-| Método | Ruta | Descripción |
-|--------|------|-------------|
-| `GET` | `/api/v1/dashboard` | Stats del dashboard |
-| `GET` | `/api/v1/clients` | Lista de clientes |
-| `GET` | `/api/v1/agents` | Lista de agentes |
-| `GET` | `/api/v1/devices/:id/readings` | Serie temporal de contadores |
-| `GET` | `/api/v1/alerts` | Alertas activas |
-| `POST` | `/api/v1/agents/:id/revoke` | Revocar agente |
+  | Método | Ruta | Descripción |
+  |--------|------|-------------|
+  | `GET` | `/health` | Health check |
+  | `POST` | `/api/v1/portal/login` | Login del portal |
+  | `POST` | `/api/v1/agents/activate` | Activar agente con key |
+  | `POST` | `/api/v1/agents/refresh` | Renovar JWT del agente |
+  | `POST` | `/api/v1/agents/:id/heartbeat` | Heartbeat + recibir config *(JWT agente)* |
+  | `POST` | `/api/v1/devices/sync` | Enviar lecturas, batch ≤500 *(JWT agente)* |
+  | `GET` | `/api/v1/dashboard` | Stats del dashboard *(JWT portal)* |
+  | `GET` | `/api/v1/devices/:id/readings` | Serie temporal de contadores *(JWT portal)* |
+  | `POST` | `/api/v1/agents/:id/revoke` | Revocar agente *(JWT portal)* |
+
+  El resto de los módulos (clientes, incidentes, insumos, costos, reportes programados, plantillas, 2FA, IP ranges, SFTP, etc.) siguen el mismo esquema; el catálogo completo de rutas lo genera `npm run check:routes:catalog -w cloud`.
+
+- **API pública de solo lectura (+ webhooks)** — pensada para que un ERP externo consulte flota, cierres y alertas de un cliente sin hacer polling, autenticada por API key. Spec completa en [`docs/api/openapi.yaml`](docs/api/openapi.yaml).
 
 ---
 
@@ -272,16 +295,21 @@ cd agent && npm run snmp:sim -- --brand hp
 | Prioridad | Mejora |
 |-----------|--------|
 | 🔴 Alta | Integración con HP SDS API |
-| 🔴 Alta | Exportación automática a ERP (Webhook) |
 | 🟡 Media | Soporte SNMPv3 para entornos de alta seguridad |
 | 🟡 Media | Expansión de diccionario de OIDs (Canon/Xerox) |
+
+> La exportación a ERP por webhook (antes en este roadmap) ya está implementada — ver [`docs/api/openapi.yaml`](docs/api/openapi.yaml).
 
 ---
 
 ## 📄 Documentación
 
-- [docs/STC_Prerrequisitos_Despliegue_v1.5.html](docs/STC_Prerrequisitos_Despliegue_v1.5.html) — **Guía de requisitos para el cliente (Despliegue)**
-- [docs/STC_Manifiesto_Seguridad_v1.5.html](docs/STC_Manifiesto_Seguridad_v1.5.html) — **Especificaciones técnicas de seguridad para Auditoría IT**
+Ver [docs/README.md](docs/README.md) para el índice completo (documentos para presentar a clientes/auditores, guías de arquitectura, auditorías de seguridad, etc.). Accesos directos:
+
+- [docs/cliente/STC_Auditoria_Sistemas_IT_v1.7.html](docs/cliente/STC_Auditoria_Sistemas_IT_v1.7.html) — Especificaciones técnicas de seguridad para Auditoría IT
+- [docs/dev/ARCHITECTURE_GUIDE.md](docs/dev/ARCHITECTURE_GUIDE.md) — Principios y guardas de arquitectura del código
+- [docs/dev/CODE_MAP.md](docs/dev/CODE_MAP.md) — Mapa detallado del código fuente
+- [docs/api/openapi.yaml](docs/api/openapi.yaml) — Spec de la API pública para integración ERP
 - [SECURITY_AUDIT.md](SECURITY_AUDIT.md) — Informe de Auditoría de Seguridad (Resumen Ejecutivo)
 - [CONTRIBUTING.md](CONTRIBUTING.md) — Guía de estándares de codificación y contribución
 

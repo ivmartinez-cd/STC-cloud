@@ -6,7 +6,7 @@
 |-------------|---------------|
 | Node.js | 20.x |
 | Docker + Docker Compose | 24.x / v2.x |
-| .NET SDK (solo para Monitor UI) | 10.x |
+| .NET SDK (solo para Monitor UI) | 9.x |
 
 ## Levantar el entorno de desarrollo
 
@@ -112,4 +112,4 @@ stc-cloud/
 - **Commits**: Mensajes descriptivos en español o inglés
 - **Branches**: `feature/nombre`, `fix/nombre`, `docs/nombre`
 - **Testing**: Escribir tests para toda lógica nueva
-- **Linting**: Ejecutar `npm run lint` antes de cada commit
+- **Linting**: `npm run check` en `cloud/portal` (íconos + TypeScript + ESLint) y `npm run check:arch -w cloud` (guardas de arquitectura) antes de cada commit
