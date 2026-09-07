@@ -89,13 +89,15 @@ jobs:
       PORTAL_ADMIN_PASSWORD: Admin1234
       API_URL: http://localhost:3000/api/v1
       PORT: "3000"
-      # rbac.test.ts/alerts.test.ts abren una conexión pg propia (fuera de la
-      # app) para probar cosas que la API no expone (CHECK constraints, LEFT
-      # JOIN crudo) — por defecto asumen el mapeo de puerto no estándar del
-      # docker-compose local (5434→5432); acá el service de Postgres publica
-      # el puerto estándar, así que hay que pisar el default explícitamente.
+      # rbac.test.ts/alerts.test.ts/clientDirectory.test.ts/clientDeviceDirectory.test.ts
+      # abren una conexión pg propia (fuera de la app) para probar cosas que
+      # la API no expone (CHECK constraints, LEFT JOIN crudo) — por defecto
+      # asumen el mapeo de puerto no estándar del docker-compose local
+      # (5434→5432); acá el service de Postgres publica el puerto estándar,
+      # así que hay que pisar el default explícitamente.
       RBAC_TEST_DB_PORT: "5432"
       ALERTS_TEST_DB_PORT: "5432"
+      CLIENT_DIRECTORY_TEST_DB_PORT: "5432"
     steps:
       - uses: actions/checkout@v4
 
