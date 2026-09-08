@@ -5,7 +5,6 @@ import { fmt } from '../../../shared/lib/formatters';
 import { useFitRows } from '../../../shared/hooks/useFitRows';
 import { useActivityPage, type ActivityPageState } from '../hooks/useActivityPage';
 import { exportActivityCsv } from '../lib/exportActivityCsv';
-import ActivityMetricsPanel from '../components/ActivityMetricsPanel';
 import ActivityByCategoryPanel from '../components/ActivityByCategoryPanel';
 import ActivityFilterBar from '../components/ActivityFilterBar';
 import ActivityTable from '../components/ActivityTable';
@@ -45,7 +44,6 @@ function Activity() {
       />
 
       <div className="mb-4 short:mb-3 grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <ActivityMetricsPanel summary={s.summary} loading={s.summaryLoading} error={s.summaryError} onRetry={s.fetchSummary} />
         <ActivityByCategoryPanel byCategory={s.summary?.by_category ?? []} total={s.summary?.total ?? 0} loading={s.summaryLoading} error={s.summaryError} onRetry={s.fetchSummary} />
       </div>
 

@@ -8,7 +8,6 @@ import DetailTabs from '../../../shared/components/DetailTabs';
 import { ConfirmationModal } from '../../../shared/components/ConfirmationModal';
 import { EditDeviceModal, DecommissionDeviceModal, MoveDeviceModal, MergeDeviceModal } from '../../../shared/components/DeviceLifecycleModals';
 import DeviceProfileCard from '../components/detail/DeviceProfileCard';
-import DeviceMetricsStrip from '../components/detail/DeviceMetricsStrip';
 import DeviceStatusBanners from '../components/detail/DeviceStatusBanners';
 import GeneralTab from '../components/detail/GeneralTab';
 import CountersTab from '../components/detail/CountersTab';
@@ -61,7 +60,7 @@ const DeviceDetail = () => {
     device, alerts, loading, error, refetch, customFieldDefs, details, supplyRows, activeAlerts,
     deleteDevice, recommission, recommissioning, changeMonitorState, changingMonitorState,
   } = useDeviceDetail(id!);
-  const { stats, loading: statsLoading, error: statsError, refetch: refetchStats } = useDeviceStats(id!);
+  const { stats, refetch: refetchStats } = useDeviceStats(id!);
   const { trend, loading: trendLoading, error: trendError, refetch: refetchTrend } = useDevicePrintTrend(id!);
 
   const [editOpen, setEditOpen] = useState(false);
@@ -147,7 +146,6 @@ const DeviceDetail = () => {
           onRecommission={recommission} onDecommission={() => setDecommissionOpen(true)} onDelete={() => setDeleteOpen(true)}
           onMonitorStateChange={changeMonitorState}
         />
-        <DeviceMetricsStrip stats={stats} loading={statsLoading} error={statsError} onRetry={refetchStats} />
         <DetailTabs tabs={TABS} active={activeTab} onChange={handleTabChange} />
       </div>
 

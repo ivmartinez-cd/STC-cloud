@@ -44,7 +44,7 @@ export default function SupplyRequestSettingsCard({ clientId, canEdit }: { clien
     <ConfigCardShell
       title="Pedidos automáticos de consumibles"
       status={{ label: settings?.enabled ? 'ACTIVO' : 'SIN CONFIGURAR', active: !!settings?.enabled }}
-      meta={settings ? `Umbral ${settings.threshold_pct}%` : '—'}
+      meta=""
       cta={{ label: saving ? 'Guardando…' : 'Administrar', onClick: save }}
     >
       <p className="mb-4 font-sans text-[12.5px] text-ink-400">

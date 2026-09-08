@@ -5,7 +5,6 @@ import { BulkMoveDevicesModal } from '../../../shared/components/DeviceLifecycle
 import { usePendingQueue } from '../hooks/usePendingQueue';
 import { usePendingQueueActions } from '../hooks/usePendingQueueActions';
 import PendingQueueHeader from '../components/PendingQueueHeader';
-import PendingQueueMetricsStrip from '../components/PendingQueueMetricsStrip';
 import PendingQueueFilterBar from '../components/PendingQueueFilterBar';
 import PendingQueueBulkBar from '../components/PendingQueueBulkBar';
 import PendingQueueTable from '../components/PendingQueueTable';
@@ -57,9 +56,8 @@ const PendingDevices = () => {
         onApproveSelected={() => approveIds(Array.from(rowSelection.selected))}
         exportFilters={{ query: dir.effectiveQuery, clientId: dir.clientId, segment: dir.segment }}
       />
-      <PendingQueueMetricsStrip summary={dir.summary} loading={dir.summaryLoading} error={dir.summaryError} onRetry={dir.refetchSummary} />
       {/* La tarjeta crece hasta el pie; el banner de duplicados queda abajo, fuera de ella, con alto fijo. */}
-      <div className="flex min-h-0 flex-1 flex-col rounded-[5px] border border-line-100 bg-white">
+      <div className="mt-4 flex min-h-0 flex-1 flex-col rounded-[5px] border border-line-100 bg-white">
         <PendingQueueFilterBar
           query={dir.rawQuery} onQueryChange={dir.setRawQuery}
           clientId={dir.clientId} clients={dir.clients} onClientChange={dir.setClientId}

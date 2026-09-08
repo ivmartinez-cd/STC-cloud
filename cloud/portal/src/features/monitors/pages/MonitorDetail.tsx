@@ -6,7 +6,6 @@ import { useMonitorDetail } from '../hooks/useMonitorDetail';
 import { useMonitorStats, useMonitorConnectivity, useMonitorLicense, useMonitorActivity } from '../hooks/useMonitorOverview';
 import { useTime } from '../../../shared/hooks/useTime';
 import MonitorProfileCard from '../components/MonitorProfileCard';
-import MonitorMetricsStrip from '../components/MonitorMetricsStrip';
 import DetailTabs from '../../../shared/components/DetailTabs';
 import DeviceSummaryCard from '../components/DeviceSummaryCard';
 import MonitorSpecsCard from '../components/MonitorSpecsCard';
@@ -146,7 +145,6 @@ const MonitorDetail = () => {
           onOpenSettings={() => handleTabChange('config')}
           onRegenKey={handleRegen}
         />
-        <MonitorMetricsStrip stats={stats} loading={statsLoading} error={statsError} onRetry={refetchStats} />
         <DetailTabs tabs={TABS} active={activeTab} onChange={handleTabChange} />
       </div>
 

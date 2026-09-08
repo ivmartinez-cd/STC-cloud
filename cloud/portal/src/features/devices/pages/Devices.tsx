@@ -3,7 +3,6 @@ import { useRowSelection } from '../../../shared/hooks/useRowSelection';
 import { useFitRows } from '../../../shared/hooks/useFitRows';
 import { useDeviceDirectory } from '../hooks/useDeviceDirectory';
 import DeviceInventoryHeader from '../components/DeviceInventoryHeader';
-import DeviceInventoryMetricsStrip from '../components/DeviceInventoryMetricsStrip';
 import DeviceInventoryFilterBar from '../components/DeviceInventoryFilterBar';
 import DeviceInventoryBulkBar from '../components/DeviceInventoryBulkBar';
 import DeviceDirectoryTable from '../components/DeviceDirectoryTable';
@@ -26,8 +25,7 @@ const Devices = () => {
   return (
     <div className="-m-4 min-w-0 flex flex-col bg-surface-page px-[34px] pb-9 pt-[30px] short:pb-4 short:pt-4 md:-m-10 md:h-full md:min-h-0">
       <DeviceInventoryHeader summary={dir.summary} query={dir.effectiveQuery} segment={dir.segment} sortDir={dir.sortDir} includeDecommissioned={dir.includeDecommissioned} onRefresh={handleRefresh} />
-      <DeviceInventoryMetricsStrip summary={dir.summary} loading={dir.summaryLoading} error={dir.summaryError} onRetry={dir.refetchSummary} />
-      <div className="flex min-h-0 flex-1 flex-col rounded-[5px] border border-line-100 bg-white">
+      <div className="mt-4 short:mt-3 flex min-h-0 flex-1 flex-col rounded-[5px] border border-line-100 bg-white">
         <DeviceInventoryFilterBar query={dir.rawQuery} onQueryChange={dir.setRawQuery} segment={dir.segment} onSegmentChange={dir.setSegment} includeDecommissioned={dir.includeDecommissioned} onIncludeDecommissionedChange={dir.setIncludeDecommissioned} />
         <DeviceInventoryBulkBar count={rowSelection.count} onClear={rowSelection.clear} />
         <div ref={fit.ref} className="min-h-0 flex-1 overflow-hidden">

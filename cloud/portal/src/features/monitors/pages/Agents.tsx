@@ -7,7 +7,6 @@ import { useAgentsDirectory } from '../hooks/useAgentsDirectory';
 import { useFitRows } from '../../../shared/hooks/useFitRows';
 import { exportAgentsCsv } from '../lib/exportAgentsCsv';
 import type { AgentDirectoryRow } from '../types/agentsDirectory';
-import AgentsFleetMetricsStrip from '../components/agents/AgentsFleetMetricsStrip';
 import AgentsSignalDistributionCard from '../components/agents/AgentsSignalDistributionCard';
 import AgentsFilterBar from '../components/agents/AgentsFilterBar';
 import AgentsDirectoryTable from '../components/agents/AgentsDirectoryTable';
@@ -129,7 +128,6 @@ const Agents = () => {
       </div>
 
       <div className="mb-4 short:mb-3 grid grid-cols-[repeat(auto-fit,minmax(340px,1fr))] gap-4">
-        <AgentsFleetMetricsStrip summary={dir.summary} loading={dir.summaryLoading} error={dir.summaryError} onRetry={dir.refetchSummary} />
         <AgentsSignalDistributionCard data={dir.buckets} loading={dir.bucketsLoading} error={dir.bucketsError} onRetry={dir.refetchBuckets} />
       </div>
 

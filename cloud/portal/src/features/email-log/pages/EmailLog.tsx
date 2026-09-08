@@ -7,7 +7,6 @@ import { useFitRows } from '../../../shared/hooks/useFitRows';
 import { useEmailLogPage } from '../hooks/useEmailLogPage';
 import { exportEmailLogCsv } from '../lib/exportEmailLogCsv';
 import EmailLogBanner from '../components/EmailLogBanner';
-import EmailLogMetricsStrip from '../components/EmailLogMetricsStrip';
 import EmailLogFilterBar from '../components/EmailLogFilterBar';
 import EmailLogTable from '../components/EmailLogTable';
 
@@ -40,9 +39,8 @@ export default function EmailLog() {
       />
 
       <EmailLogBanner summary={s.summary} />
-      <EmailLogMetricsStrip summary={s.summary} loading={s.summaryLoading} error={s.summaryError} onRetry={s.fetchSummary} />
 
-      <div className="flex min-h-0 flex-1 flex-col rounded-[5px] border border-line-100 bg-white">
+      <div className="mt-4 flex min-h-0 flex-1 flex-col rounded-[5px] border border-line-100 bg-white">
         <EmailLogFilterBar
           query={s.filters.rawQuery} onQueryChange={s.filters.setRawQuery}
           status={s.filters.status} onStatusChange={s.filters.setStatus}

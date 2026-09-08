@@ -6,7 +6,6 @@ import { BTN_PRIMARY_LG, BTN_SECONDARY_LG } from '../../../shared/lib/buttons';
 import { useFitRows } from '../../../shared/hooks/useFitRows';
 import { useIncidentsPage, type IncidentsPageState } from '../hooks/useIncidentsPage';
 import { exportIncidentsCsv } from '../lib/exportIncidentsCsv';
-import IncidentsMetricsPanel from '../components/IncidentsMetricsPanel';
 import IncidentsByClassPanel from '../components/IncidentsByClassPanel';
 import IncidentsInstantClosuresBanner from '../components/IncidentsInstantClosuresBanner';
 import IncidentsFilterBar from '../components/IncidentsFilterBar';
@@ -51,7 +50,6 @@ function Incidents() {
       />
 
       <div className="mb-4 short:mb-3 grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <IncidentsMetricsPanel stats={s.stats} loading={s.statsLoading} error={s.statsError} onRetry={s.fetchStats} />
         <IncidentsByClassPanel
           byClass={s.stats?.byClass ?? []} classLabels={s.classLabels} openTotal={s.stats?.openTotal ?? 0}
           avgAgingSeconds={s.stats?.avgAgingSeconds ?? 0} maxAgingSeconds={s.stats?.maxAgingSeconds ?? 0}

@@ -7,7 +7,6 @@ import type { Closure } from '../types/reports';
 import { useReportsPage, type ReportsPageState } from '../hooks/useReportsPage';
 import { useReportsDetailPaging } from '../hooks/useReportsDetailPaging';
 import ReportsPeriodBar from '../components/ReportsPeriodBar';
-import ReportsMetricsStrip from '../components/ReportsMetricsStrip';
 import ReportsAnomalyBanner from '../components/ReportsAnomalyBanner';
 import ReportsDetailTable from '../components/ReportsDetailTable';
 import ReportsClosuresHistory from '../components/ReportsClosuresHistory';
@@ -85,7 +84,6 @@ function Reports() {
         <div className="rounded-[5px] border border-line-100 bg-white py-16 text-center font-sans text-[13px] text-ink-300">Seleccioná un cliente para ver su facturación.</div>
       ) : (
         <>
-          <ReportsMetricsStrip s={s} />
           <ReportsAnomalyBanner rows={s.rows} onViewCalc={() => paging.setFilter('anomaly')} />
           <ReportsDetailTable period={s.period} rows={s.rows} paging={paging} loading={s.loading} error={s.error} onRetry={s.fetchRows} />
           <ReportsClosuresHistory

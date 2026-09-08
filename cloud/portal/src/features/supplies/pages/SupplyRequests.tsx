@@ -2,7 +2,6 @@ import PageHeader from '../../../shared/components/PageHeader';
 import HifiPagination from '../../../shared/components/HifiPagination';
 import { useSupplyRequestsPage } from '../hooks/useSupplyRequestsPage';
 import { useFitRows } from '../../../shared/hooks/useFitRows';
-import SupplyRequestsMetricsStrip from '../components/SupplyRequestsMetricsStrip';
 import SupplyRequestsTabs from '../components/SupplyRequestsTabs';
 import SupplyRequestsTable from '../components/SupplyRequestsTable';
 import SupplyRequestsDuplicateBanner from '../components/SupplyRequestsDuplicateBanner';
@@ -32,11 +31,9 @@ export default function SupplyRequests() {
         )}
       />
 
-      <SupplyRequestsMetricsStrip stats={s.stats} loading={s.loading && !s.stats} />
-
       {/* Las tabs son parte fija de la tarjeta; sólo el bloque de la tabla
           crece. El banner de duplicados queda afuera, debajo. */}
-      <div className="flex min-h-0 flex-1 flex-col rounded-[5px] border border-line-100 bg-white">
+      <div className="mt-4 flex min-h-0 flex-1 flex-col rounded-[5px] border border-line-100 bg-white">
         <SupplyRequestsTabs active={s.filters.tab} onChange={s.filters.setTab} countOf={s.countOf} />
         <div ref={fit.ref} className="min-h-0 flex-1 overflow-hidden">
           <SupplyRequestsTable items={s.items} clientName={s.clientName} loading={s.loading} onOpen={s.setDetailId} skeletonRows={fit.rows} />

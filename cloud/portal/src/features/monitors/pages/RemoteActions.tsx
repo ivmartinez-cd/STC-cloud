@@ -5,7 +5,6 @@ import { useRemoteActionsDirectory } from '../hooks/useRemoteActionsDirectory';
 import { useRemoteActionsInsights } from '../hooks/useRemoteActionsInsights';
 import { useFitRows } from '../../../shared/hooks/useFitRows';
 import { exportRemoteActionsCsv } from '../lib/exportRemoteActionsCsv';
-import RemoteActionsMetricsStrip from '../components/remote-actions/RemoteActionsMetricsStrip';
 import RemoteActionsByTypeCard from '../components/remote-actions/RemoteActionsByTypeCard';
 import DiagnosticBanner from '../components/remote-actions/DiagnosticBanner';
 import RemoteActionsFilterBar from '../components/remote-actions/RemoteActionsFilterBar';
@@ -91,9 +90,6 @@ export default function RemoteActions() {
       </div>
 
       <div className="mb-4 short:mb-3 grid grid-cols-[repeat(auto-fit,minmax(340px,1fr))] gap-4">
-        <RemoteActionsMetricsStrip
-          summary={insights.summary} loading={insights.summaryLoading} error={insights.summaryError} onRetry={insights.refetchSummary}
-        />
         <RemoteActionsByTypeCard
           byType={insights.byType} loading={insights.byTypeLoading} error={insights.byTypeError} onRetry={insights.refetchByType}
         />

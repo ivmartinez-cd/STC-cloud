@@ -7,7 +7,6 @@ import { fmt } from '../../../shared/lib/formatters';
 import { useSuppliesPage } from '../hooks/useSuppliesPage';
 import { useFitRows } from '../../../shared/hooks/useFitRows';
 import { exportSuppliesCsv } from '../lib/exportSuppliesCsv';
-import SuppliesMetricsStrip from '../components/SuppliesMetricsStrip';
 import SuppliesFilterBar from '../components/SuppliesFilterBar';
 import SuppliesBulkBar from '../components/SuppliesBulkBar';
 import SuppliesTable from '../components/SuppliesTable';
@@ -52,9 +51,7 @@ export default function Supplies() {
         actions={<HeaderActions s={s} exporting={exporting} onExport={handleExport} />}
       />
 
-      <SuppliesMetricsStrip summary={s.summary} loading={s.summaryLoading} error={s.summaryError} onRetry={s.fetchSummary} />
-
-      <div className="flex min-h-0 flex-1 flex-col rounded-[5px] border border-line-100 bg-white">
+      <div className="mt-4 flex min-h-0 flex-1 flex-col rounded-[5px] border border-line-100 bg-white">
         <SuppliesFilterBar
           query={s.filters.rawQuery} onQueryChange={s.filters.setRawQuery}
           clientId={s.filters.clientId} onClientIdChange={s.filters.setClientId}

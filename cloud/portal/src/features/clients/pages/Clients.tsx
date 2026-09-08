@@ -7,7 +7,6 @@ import { fmt } from '../../../shared/lib/formatters';
 import { useClientsDirectory } from '../hooks/useClientsDirectory';
 import { useFitRows } from '../../../shared/hooks/useFitRows';
 import { exportClientsCsv } from '../lib/exportClientsCsv';
-import PortfolioMetricsStrip from '../components/PortfolioMetricsStrip';
 import ClientsFilterBar from '../components/ClientsFilterBar';
 import ClientsDirectoryTable from '../components/ClientsDirectoryTable';
 import ClientsPagination from '../components/ClientsPagination';
@@ -98,14 +97,7 @@ const Clients = () => {
         </div>
       </div>
 
-      <PortfolioMetricsStrip
-        summary={dir.summary}
-        loading={dir.summaryLoading}
-        error={dir.summaryError}
-        onRetry={dir.refetchSummary}
-      />
-
-      <div className="flex min-h-0 flex-1 flex-col rounded-[5px] border border-line-100 bg-white">
+      <div className="mt-4 flex min-h-0 flex-1 flex-col rounded-[5px] border border-line-100 bg-white">
         <ClientsFilterBar
           query={dir.rawQuery}
           onQueryChange={dir.setRawQuery}

@@ -8,7 +8,6 @@ import { useAuth } from '../../../store/AuthContext';
 import ConfirmModal from '../../../shared/components/ConfirmModal';
 import CreateMonitorModal from '../components/CreateMonitorModal';
 import ClientProfileCard from '../components/ClientProfileCard';
-import ClientMetricsCards from '../components/ClientMetricsCards';
 import ClientDetailTabs from '../components/ClientDetailTabs';
 import ClientAttentionZone from '../components/ClientAttentionZone';
 import ClientConfigZone from '../components/ClientConfigZone';
@@ -45,7 +44,7 @@ const ClientDetail = () => {
   const { showToast } = useToast();
   const now = useNow();
   const {
-    client, monitors, usage, stats, loading, error,
+    client, monitors, usage, loading, error,
     createMonitor, deleteMonitor, updateNotifications, updateDeviceApprovalRequired, updateClientProfile,
   } = useClientDetail(id!);
   const { tab, setTab } = useActiveTab();
@@ -91,7 +90,6 @@ const ClientDetail = () => {
         <>
           <div className="rounded-[5px] border border-line-100 bg-white">
             <ClientProfileCard client={client} monitors={monitors} canEdit={!isReadOnlyViewer} onSave={updateClientProfile} />
-            <ClientMetricsCards client={client} monitors={monitors} usage={usage} stats={stats} />
             <ClientDetailTabs active={tab} onChange={setTab} />
           </div>
 

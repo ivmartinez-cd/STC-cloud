@@ -7,7 +7,6 @@ import type { Alert } from '../../../shared/types/alerts';
 import { useFitRows } from '../../../shared/hooks/useFitRows';
 import { useAlertsPage, deriveIncidentContext, type AlertsPageState } from '../hooks/useAlertsPage';
 import { exportAlertsCsv } from '../lib/exportAlertsCsv';
-import AlertsMetricsPanel from '../components/AlertsMetricsPanel';
 import AlertsByCodePanel from '../components/AlertsByCodePanel';
 import AlertsFilterBar from '../components/AlertsFilterBar';
 import AlertsBulkBar from '../components/AlertsBulkBar';
@@ -66,7 +65,6 @@ function Alerts() {
       />
 
       <div className="mb-4 short:mb-3 grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <AlertsMetricsPanel summary={s.summary} loading={s.summaryLoading} error={s.summaryError} onRetry={s.fetchSummary} />
         <AlertsByCodePanel byCode={s.summary?.byCode ?? []} total={s.summary?.total ?? 0} loading={s.summaryLoading} error={s.summaryError} onRetry={s.fetchSummary} />
       </div>
 
