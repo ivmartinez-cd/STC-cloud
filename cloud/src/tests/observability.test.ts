@@ -33,6 +33,17 @@ async function req(method: string, path: string, body?: unknown, token?: string)
   return { status: res.status, data: data as any };
 }
 
+/** Reintenta `probe` hasta que devuelva algo truthy o se agote `timeoutMs`. */
+async function waitFor<T>(probe: () => T | undefined, timeoutMs: number): Promise<T | undefined> {
+  const deadline = Date.now() + timeoutMs;
+  for (;;) {
+    const hit = probe();
+    if (hit) return hit;
+    if (Date.now() >= deadline) return undefined;
+    await new Promise((r) => setTimeout(r, 50));
+  }
+}
+
 const pgConn = {
   host: process.env.RBAC_TEST_DB_HOST || 'localhost',
   port: Number(process.env.RBAC_TEST_DB_PORT || 5434),
@@ -162,8 +173,12 @@ describe('pub/sub WS — e2e (broadcast cruza Redis hasta el socket del portal)'
       const payload = JSON.stringify({ event: 'obs_test', data: { ping: Date.now() } });
       await publisher.publish('stc:ws:portal', payload);
 
-      await new Promise((r) => setTimeout(r, 1500));
-      const hit = received.find((m) => m.event === 'obs_test');
+      // Espera por condición, no un sleep fijo: el 1.5s que había antes
+      // alcanzaba corriendo el archivo solo, pero no con la suite completa en
+      // paralelo — el mensaje llegaba unos ms tarde y el test fallaba sin que
+      // hubiera nada roto (falso rojo intermitente en CI). Ahora corta apenas
+      // llega, y sólo espera los 10s completos si de verdad no llegó nunca.
+      const hit = await waitFor(() => received.find((m) => m.event === 'obs_test'), 10_000);
       assert.ok(hit, 'el broadcast publicado en Redis debe llegar por el socket del portal');
     } finally {
       socket.close();
