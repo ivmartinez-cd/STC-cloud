@@ -94,14 +94,22 @@ jobs:
       API_URL: http://localhost:3000/api/v1
       PORT: "3000"
       # rbac.test.ts/alerts.test.ts/clientDirectory.test.ts/clientDeviceDirectory.test.ts
-      # abren una conexión pg propia (fuera de la app) para probar cosas que
-      # la API no expone (CHECK constraints, LEFT JOIN crudo) — por defecto
-      # asumen el mapeo de puerto no estándar del docker-compose local
-      # (5434→5432); acá el service de Postgres publica el puerto estándar,
-      # así que hay que pisar el default explícitamente.
+      # /deviceDetail.test.ts/monitorDetail.test.ts abren una conexión pg propia
+      # (fuera de la app) para probar cosas que la API no expone (CHECK
+      # constraints, LEFT JOIN crudo) — por defecto asumen el mapeo de puerto
+      # no estándar del docker-compose local (5434→5432); acá el service de
+      # Postgres publica el puerto estándar, así que hay que pisar el default
+      # explícitamente. Si falta una, el test no falla por assertion: tira
+      # ECONNREFUSED en el hook y cancela todos sus subtests.
+      #
+      # Toda var `*_TEST_DB_PORT` que use un test tiene que estar acá. Para
+      # chequearlo:
+      #   grep -rho 'process\.env\.[A-Z_]*TEST_DB_PORT' cloud/src/tests | sort -u
       RBAC_TEST_DB_PORT: "5432"
       ALERTS_TEST_DB_PORT: "5432"
       CLIENT_DIRECTORY_TEST_DB_PORT: "5432"
+      DEVICE_DETAIL_TEST_DB_PORT: "5432"
+      MONITOR_DETAIL_TEST_DB_PORT: "5432"
     steps:
       - uses: actions/checkout@v4
 
