@@ -41,6 +41,7 @@ Documentación del proyecto **STC Cloud**, organizada por audiencia. Todo lo lis
 * **[STC_Technical_Architecture_Guide.md](dev/STC_Technical_Architecture_Guide.md):** Deep-dive del motor de captura por modelo del agente (`identify` → `resolve` → `collect`), SQLite/WAL, doble token y Ed25519.
 * **[STC_Capture_Drivers_Master_Prompt.md](dev/STC_Capture_Drivers_Master_Prompt.md):** Documento rector para agregar o mantener drivers de captura por modelo de impresora.
 * **[PERMISSIONS_CATALOG.md](dev/PERMISSIONS_CATALOG.md):** Catálogo de rutas y permisos. **Auto-generado** — regenerar con `node cloud/scripts/check-routes.mjs --write-catalog`, no editar a mano.
+* **[TECH_DEBT.md](dev/TECH_DEBT.md):** Registro vivo de deuda técnica conocida y aceptada: lo que funciona a medias, depende de un paso manual o falla en silencio. Hoy cubre los 5 gaps del pipeline de actualización remota del agente (OTA).
 
 ---
 
