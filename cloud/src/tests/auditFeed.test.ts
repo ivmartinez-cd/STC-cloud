@@ -3,9 +3,10 @@
 // deviceLifecycle.test.ts (backend corriendo en localhost:3000/3001).
 // Ejecutar: API_URL=http://localhost:3000/api/v1 npx tsx --test src/tests/auditFeed.test.ts
 
-import { test, describe } from 'node:test';
+import { test, describe, after } from 'node:test';
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
+import Redis from 'ioredis';
 
 const API  = process.env.API_URL  || 'http://localhost:3000/api/v1';
 const USER = process.env.PORTAL_ADMIN_USER     || 'admin';
@@ -208,13 +209,15 @@ describe('Audit feed — RESCAN puntual y cambio de versión de agente', () => {
   });
 });
 
+// La IP del cliente varía según el entorno (gateway del docker-compose de
+// dev vs. localhost en CI) — se borra por patrón en vez de asumir una IP
+// fija. Antes usaba `docker exec stc_redis redis-cli DEL "...-172.22.0.1"`,
+// que en CI no borraba nada (esa IP nunca fue la del cliente ahí).
+const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
+after(() => redis.quit());
 async function drainLoginRateLimit(): Promise<void> {
-  const { execSync } = await import('node:child_process');
-  try {
-    execSync('docker exec stc_redis redis-cli DEL "fastify-rate-limit-POST/api/v1/portal/login-172.22.0.1"', { stdio: 'ignore' });
-  } catch {
-    // best-effort: si no hay docker (CI distinta), el test puede tardar más por el 429 natural
-  }
+  const keys = await redis.keys('fastify-rate-limit-POST/api/v1/portal/login-*');
+  if (keys.length) await redis.del(...keys);
 }
 
 describe('Audit feed — login (R5 del gap analysis: "audit logs ausentes para... logins")', () => {

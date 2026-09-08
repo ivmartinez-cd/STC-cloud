@@ -1,17 +1,23 @@
 // Relay Redis multi-réplica del proxy EWS (Fase 15 del gap analysis) — e2e
-// contra el stack Docker real, simulando "otra réplica" con
-// `docker exec stc_redis redis-cli publish ...`, mismo criterio que ya usa
-// `observability.test.ts` para el pub/sub de broadcasts de portal. Cubre
-// justo lo que `portalAgentEws.test.ts` NO puede cubrir corriendo un solo
-// proceso: los tres canales del relay (`stc:ws:ews-push`,
-// `stc:ws:ews-result`) tal como los vería una réplica vecina.
+// contra el stack Docker real, simulando "otra réplica" publicando
+// directo por ioredis (mismo REDIS_URL que usa la API). Cubre justo lo
+// que `portalAgentEws.test.ts` NO puede cubrir corriendo un solo proceso:
+// los tres canales del relay (`stc:ws:ews-push`, `stc:ws:ews-result`) tal
+// como los vería una réplica vecina.
 // Ejecutar: API_URL=http://localhost:3000/api/v1 npx tsx --test src/tests/ewsProxyRelay.test.ts
 
 import { test, describe, after } from 'node:test';
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
-import { execSync } from 'node:child_process';
 import WebSocket from 'ws';
+import Redis from 'ioredis';
+
+// Antes usaba `docker exec stc_redis redis-cli publish ...`: ese nombre de
+// contenedor solo existe en el docker-compose de dev, no en los servicios
+// de Postgres/Redis del job de CI (ver el cuelgue que esto mismo causó en
+// observability.test.ts). ioredis conecta igual en dev y en CI.
+const publisher = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
+after(() => publisher.quit());
 
 const API  = process.env.API_URL  || 'http://localhost:3000/api/v1';
 const WS_BASE = API.replace(/^http/, 'ws').replace(/\/api\/v1$/, '/ws');
@@ -34,9 +40,8 @@ async function req(method: string, path: string, body?: unknown, token?: string)
   return { status: res.status, data: data as any };
 }
 
-function redisPublish(channel: string, payload: unknown): void {
-  const json = JSON.stringify(payload).replace(/'/g, `'\\''`);
-  execSync(`docker exec stc_redis redis-cli publish ${channel} '${json}'`);
+async function redisPublish(channel: string, payload: unknown): Promise<void> {
+  await publisher.publish(channel, JSON.stringify(payload));
 }
 
 const ts = Date.now();
@@ -99,7 +104,7 @@ describe('Relay EWS proxy — push por Redis (réplica vecina entrega el comando
 
   test('un publish en stc:ws:ews-push llega al socket local del agente', async () => {
     const commandId = `relay-cmd-${crypto.randomUUID()}`;
-    redisPublish('stc:ws:ews-push', { agentId: ctx.agentId, commandId, payload: { ip: '10.0.0.1', path: '/relay-test', method: 'GET' } });
+    await redisPublish('stc:ws:ews-push', { agentId: ctx.agentId, commandId, payload: { ip: '10.0.0.1', path: '/relay-test', method: 'GET' } });
 
     await new Promise((r) => setTimeout(r, 800));
     const hit = received.find((m) => m.type === 'command' && m.id === commandId);
@@ -116,12 +121,12 @@ describe('Relay EWS proxy — resultado por Redis (réplica vecina entrega la re
 
   test('setup: conectar el agente falso, responde SÓLO por relay Redis (nunca por su propio WS)', async () => {
     socket = new WebSocket(WS_BASE, { headers: { Authorization: `Bearer ${ctx.agentToken}` } });
-    socket.on('message', (raw: Buffer) => {
+    socket.on('message', async (raw: Buffer) => {
       const msg = JSON.parse(raw.toString());
       if (msg.type !== 'command' || msg.commandType !== 'EWS_PROXY') return;
       // Publica DIRECTO al canal de resultado — simula que el agente respondió
       // a una réplica vecina, nunca al socket que abrió este test.
-      redisPublish('stc:ws:ews-result', {
+      await redisPublish('stc:ws:ews-result', {
         commandId: msg.id,
         ok: true,
         value: { status: 200, headers: {}, bodyBase64: Buffer.from('<html>RELAY-OK</html>').toString('base64'), truncated: false },
@@ -157,7 +162,7 @@ describe('Relay EWS proxy — desconexión relayeada (réplica vecina avisa que 
   test('un publish {kind:"disconnect"} rechaza la request en vuelo con el mensaje de desconexión', async () => {
     const pending = req('POST', `/agents/${ctx.agentId}/ews-proxy`, { device_id: ctx.deviceId, path: '/relay-disconnect' }, ctx.adminToken);
     await new Promise((r) => setTimeout(r, 300)); // dar tiempo a que la request quede esperando el resultado
-    redisPublish('stc:ws:ews-result', { kind: 'disconnect', agentId: ctx.agentId });
+    await redisPublish('stc:ws:ews-result', { kind: 'disconnect', agentId: ctx.agentId });
 
     const res = await pending;
     assert.equal(res.status, 502);

@@ -3,8 +3,9 @@
 // enrolamiento y login contra el stack real.
 // Ejecutar: API_URL=http://localhost:3000/api/v1 npx tsx --test src/tests/twoFactor.test.ts
 
-import { test, describe } from 'node:test';
+import { test, describe, after } from 'node:test';
 import assert from 'node:assert/strict';
+import Redis from 'ioredis';
 import {
   base32Decode,
   base32Encode,
@@ -32,16 +33,17 @@ if (!PASS) {
  * `POST /portal/login` tiene rate-limit propio (10/min, authRoutes.ts) — este
  * archivo por sí solo hace más de 10 logins en <2s. No es un bug de producto
  * (el límite es correcto contra fuerza bruta real); se drena la key entre
- * bloques del archivo, mismo mecanismo manual que ya se usa para depurar esto
- * (`docker exec stc_redis redis-cli DEL ...`), sólo que automatizado acá.
+ * bloques del archivo. La IP del cliente varía según el entorno (gateway del
+ * docker-compose de dev vs. localhost en CI), así que se borra por patrón en
+ * vez de asumir una IP fija — antes usaba `docker exec stc_redis redis-cli
+ * DEL "...-172.22.0.1"` (esa IP nunca fue la del cliente en CI, así que ahí
+ * el drain no hacía nada y el archivo terminaba pegándose un 429 real).
  */
+const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
+after(() => redis.quit());
 async function drainLoginRateLimit(): Promise<void> {
-  const { execSync } = await import('node:child_process');
-  try {
-    execSync('docker exec stc_redis redis-cli DEL "fastify-rate-limit-POST/api/v1/portal/login-172.22.0.1"', { stdio: 'ignore' });
-  } catch {
-    // best-effort: si no hay docker (CI distinta), el test puede tardar más por el 429 natural
-  }
+  const keys = await redis.keys('fastify-rate-limit-POST/api/v1/portal/login-*');
+  if (keys.length) await redis.del(...keys);
 }
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
