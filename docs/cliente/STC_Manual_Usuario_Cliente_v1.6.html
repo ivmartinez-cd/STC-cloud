@@ -3,19 +3,52 @@
 <head>
     <meta charset="UTF-8">
     <title>STC Cloud - Manual de Usuario y Propuesta de Valor v1.6</title>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;900&family=Source+Sans+3:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
     <style>
+        /* Paleta institucional Canal Directo — los mismos tokens que usa el portal
+           STC Cloud desde el rediseño de agosto/2026 (cloud/portal/src/index.css):
+           sólo naranja + grises, nunca azul, rojo ni verde. La severidad se
+           resuelve con un gradiente DENTRO del naranja y el gris, no con semáforo.
+           Si cambia la paleta de la app, cambia también acá. */
         :root {
-            --stc-blue: #004a99;
-            --stc-orange: #f7931d;
-            --text-dark: #1a2333;
-            --text-gray: #64748b;
-            --bg-light: #f8fafc;
-            --border-color: #e2e8f0;
+            --brand: #f7941d;              /* Institucional (naranja) */
+            --brand-severe: #c6710a;       /* naranja oscuro — severidad / atención */
+            --brand-accent: #b4700b;       /* naranja de texto (contraste sobre blanco) */
+            --brand-soft: #fdf4e9;         /* fondo suave de callouts y chips */
+            --brand-light: #fbc486;        /* naranja claro — categorías secundarias */
+            --brand-warn-text: #8a6033;    /* texto sobre fondo naranja suave */
+            --brand-warn-border: #e0a76b;  /* borde cálido de aviso */
+
+            --ink-900: #2e3033;            /* títulos */
+            --ink-700: #3c4144;            /* texto de cuerpo */
+            --ink-600: #4b5053;            /* texto secundario fuerte */
+            --ink-400: #8a9094;            /* texto secundario */
+            --ink-300: #9fa4a7;            /* labels en mayúscula, pies de página */
+            --ink-200: #b4b9bb;            /* texto tenue */
+            --ink-100: #6c7275;            /* gris oscuro — "sin urgencia" (nunca verde) */
+
+            --line-100: #e2e6e6;           /* borde de tabla / tarjeta */
+            --line-150: #edefef;           /* borde interno / separador */
+            --line-300: #d5d9da;           /* borde de acento secundario */
+
+            --surface-page: #f7f8f8;       /* fondo de tarjeta, bloque y encabezado de tabla */
+            --surface-track: #f0f2f2;      /* relleno neutro (chips) */
+            --surface-table-head: #fbfcfc; /* relleno más tenue (zebra, bloques sueltos) */
+
+            --panel-dark: #2e3033;         /* panel oscuro (diagramas, consola) */
+            --panel-dark-text: #a9aeb0;    /* texto secundario sobre panel oscuro */
+            --panel-dark-code: #d8dcdd;    /* texto de consola sobre panel oscuro */
+
+            /* Alias que usa el contenido de este documento */
+            --text-dark: var(--ink-900);
+            --text-gray: var(--ink-400);
+
+            --bg-light: var(--surface-page);
+            --border-color: var(--line-100);
         }
 
         body {
-            font-family: 'Inter', sans-serif;
+            font-family: 'Source Sans 3', 'Source Sans Pro', system-ui, -apple-system, sans-serif;
             margin: 0;
             padding: 0;
             background: white;
@@ -51,7 +84,7 @@
             font-family: 'Montserrat', sans-serif;
             font-size: 13px;
             font-weight: 700;
-            color: var(--stc-blue);
+            color: var(--ink-600);
             letter-spacing: 0.05em;
         }
 
@@ -68,7 +101,7 @@
             font-family: 'Montserrat', sans-serif;
             font-weight: 900;
             font-size: 42px;
-            color: var(--stc-blue);
+            color: var(--ink-900);
             letter-spacing: -0.02em;
         }
 
@@ -76,7 +109,7 @@
             font-family: 'Montserrat', sans-serif;
             font-weight: 900;
             font-size: 42px;
-            color: var(--stc-orange);
+            color: var(--brand);
             letter-spacing: -0.02em;
         }
 
@@ -84,7 +117,7 @@
             font-family: 'Montserrat', sans-serif;
             font-size: 34px;
             font-weight: 700;
-            color: var(--stc-blue);
+            color: var(--ink-900);
             margin: 0;
             line-height: 1.1;
             text-transform: uppercase;
@@ -94,7 +127,7 @@
             font-family: 'Montserrat', sans-serif;
             font-size: 34px;
             font-weight: 400;
-            color: var(--stc-blue);
+            color: var(--brand);
             margin: 5px 0 50px 0;
             text-transform: uppercase;
         }
@@ -117,7 +150,7 @@
 
         /* === HEADER INTERNO === */
         .internal-header {
-            border-bottom: 3px solid var(--stc-blue);
+            border-bottom: 2px solid var(--brand);
             padding-bottom: 8px;
             margin-bottom: 30px;
             display: flex;
@@ -129,11 +162,11 @@
             font-family: 'Montserrat', sans-serif;
             font-weight: 900;
             font-size: 18px;
-            color: var(--stc-blue);
+            color: var(--ink-900);
         }
 
         .internal-brand span {
-            color: var(--stc-orange);
+            color: var(--brand);
         }
 
         .internal-doc-type {
@@ -147,26 +180,26 @@
         /* === CONTENIDO === */
         h2 {
             font-family: 'Montserrat', sans-serif;
-            color: var(--stc-blue);
+            color: var(--ink-900);
             font-size: 20px;
-            border-bottom: 1px solid #f1f5f9;
+            border-bottom: 1px solid var(--line-150);
             padding-bottom: 8px;
             margin-top: 35px;
         }
 
         h3 {
             font-family: 'Montserrat', sans-serif;
-            color: var(--stc-orange);
+            color: var(--brand-accent);
             font-size: 15px;
             margin-top: 25px;
             text-transform: uppercase;
             letter-spacing: 0.05em;
         }
 
-        p { font-size: 13.5px; color: #334155; line-height: 1.7; }
+        p { font-size: 13.5px; color: var(--ink-700); line-height: 1.7; }
 
         ul { padding-left: 20px; }
-        li { font-size: 13.5px; color: #334155; margin-bottom: 8px; line-height: 1.6; }
+        li { font-size: 13.5px; color: var(--ink-700); margin-bottom: 8px; line-height: 1.6; }
 
         /* === ELEMENTOS VISUALES === */
         .value-card {
@@ -181,14 +214,14 @@
 
         .value-card-icon {
             font-size: 24px;
-            color: var(--stc-orange);
+            color: var(--brand);
             display: flex;
             align-items: center;
         }
 
         .value-card-content h4 {
             margin: 0 0 5px 0;
-            color: var(--stc-blue);
+            color: var(--ink-900);
             font-family: 'Montserrat', sans-serif;
             font-size: 14px;
             font-weight: 700;
@@ -207,13 +240,17 @@
             margin-right: 5px;
         }
 
+        /* Única excepción a la paleta naranja + grises: estos puntos no son UI del
+           portal, documentan el icono de bandeja de Windows (monitor-ui/TrayApplication.cs),
+           que sigue usando semáforo verde / naranja / rojo. Deben coincidir con el
+           color real que ve el usuario en su equipo, no con el tema del portal. */
         .dot-green { background: #22c55e; box-shadow: 0 0 5px #22c55e; }
         .dot-orange { background: #f97316; box-shadow: 0 0 5px #f97316; }
         .dot-red { background: #ef4444; box-shadow: 0 0 5px #ef4444; }
 
         .callout-box {
-            background: #eff6ff;
-            border-left: 4px solid var(--stc-blue);
+            background: var(--brand-soft);
+            border-left: 4px solid var(--brand);
             padding: 15px 20px;
             margin: 25px 0;
             border-radius: 0 8px 8px 0;
@@ -222,14 +259,14 @@
         .callout-box p {
             margin: 0;
             font-size: 13px;
-            color: var(--stc-blue);
+            color: var(--brand-warn-text);
             font-weight: 600;
         }
 
         .security-badge {
-            background: #f0fdf4;
-            border: 1px solid #bbf7d0;
-            color: #166534;
+            background: var(--brand-soft);
+            border: 1px solid var(--brand-warn-border);
+            color: var(--brand-warn-text);
             padding: 4px 8px;
             border-radius: 4px;
             font-weight: 700;
@@ -242,8 +279,8 @@
         table { width: 100%; border-collapse: collapse; margin: 20px 0; }
         th, td { border: 1px solid var(--border-color); padding: 12px 14px; text-align: left; font-size: 13px; }
         th {
-            background-color: #f8fafc;
-            color: var(--stc-blue);
+            background-color: var(--surface-page);
+            color: var(--ink-400);
             font-weight: 700;
             text-transform: uppercase;
             font-size: 11px;
@@ -257,12 +294,12 @@
             align-items: baseline;
             margin-bottom: 12px;
             font-size: 14px;
-            color: #1a2333;
+            color: var(--ink-700);
             text-decoration: none;
         }
         .toc-text { flex-shrink: 0; padding-right: 5px; }
-        .toc-dots { flex-grow: 1; border-bottom: 1px dotted #94a3b8; margin: 0 5px; position: relative; top: -4px; }
-        .toc-page { flex-shrink: 0; padding-left: 5px; font-weight: 600; color: var(--stc-blue); }
+        .toc-dots { flex-grow: 1; border-bottom: 1px dotted var(--line-300); margin: 0 5px; position: relative; top: -4px; }
+        .toc-page { flex-shrink: 0; padding-left: 5px; font-weight: 600; color: var(--brand-accent); }
 
         .footer {
             position: absolute;
@@ -272,7 +309,7 @@
             border-top: 1px solid var(--border-color);
             padding-top: 15px;
             font-size: 10px;
-            color: #94a3b8;
+            color: var(--ink-300);
             text-align: center;
         }
     </style>

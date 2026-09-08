@@ -3,21 +3,54 @@
 <head>
     <meta charset="UTF-8">
     <title>STC Cloud - Arquitectura del Agente v1.0</title>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;900&family=Source+Sans+3:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
     <style>
+        /* Paleta institucional Canal Directo — los mismos tokens que usa el portal
+           STC Cloud desde el rediseño de agosto/2026 (cloud/portal/src/index.css):
+           sólo naranja + grises, nunca azul, rojo ni verde. La severidad se
+           resuelve con un gradiente DENTRO del naranja y el gris, no con semáforo.
+           Si cambia la paleta de la app, cambia también acá. */
         :root {
-            --stc-blue: #004a99;
-            --stc-orange: #f7931d;
-            --text-dark: #1a2333;
-            --text-gray: #64748b;
-            --code-bg: #f8fafc;
+            --brand: #f7941d;              /* Institucional (naranja) */
+            --brand-severe: #c6710a;       /* naranja oscuro — severidad / atención */
+            --brand-accent: #b4700b;       /* naranja de texto (contraste sobre blanco) */
+            --brand-soft: #fdf4e9;         /* fondo suave de callouts y chips */
+            --brand-light: #fbc486;        /* naranja claro — categorías secundarias */
+            --brand-warn-text: #8a6033;    /* texto sobre fondo naranja suave */
+            --brand-warn-border: #e0a76b;  /* borde cálido de aviso */
+
+            --ink-900: #2e3033;            /* títulos */
+            --ink-700: #3c4144;            /* texto de cuerpo */
+            --ink-600: #4b5053;            /* texto secundario fuerte */
+            --ink-400: #8a9094;            /* texto secundario */
+            --ink-300: #9fa4a7;            /* labels en mayúscula, pies de página */
+            --ink-200: #b4b9bb;            /* texto tenue */
+            --ink-100: #6c7275;            /* gris oscuro — "sin urgencia" (nunca verde) */
+
+            --line-100: #e2e6e6;           /* borde de tabla / tarjeta */
+            --line-150: #edefef;           /* borde interno / separador */
+            --line-300: #d5d9da;           /* borde de acento secundario */
+
+            --surface-page: #f7f8f8;       /* fondo de tarjeta, bloque y encabezado de tabla */
+            --surface-track: #f0f2f2;      /* relleno neutro (chips) */
+            --surface-table-head: #fbfcfc; /* relleno más tenue (zebra, bloques sueltos) */
+
+            --panel-dark: #2e3033;         /* panel oscuro (diagramas, consola) */
+            --panel-dark-text: #a9aeb0;    /* texto secundario sobre panel oscuro */
+            --panel-dark-code: #d8dcdd;    /* texto de consola sobre panel oscuro */
+
+            /* Alias que usa el contenido de este documento */
+            --text-dark: var(--ink-900);
+            --text-gray: var(--ink-400);
+
+            --code-bg: var(--surface-page);
         }
 
         body {
-            font-family: 'Inter', sans-serif;
+            font-family: 'Source Sans 3', 'Source Sans Pro', system-ui, -apple-system, sans-serif;
             margin: 0;
             padding: 0;
-            background: #f1f5f9;
+            background: var(--surface-page);
             color: var(--text-dark);
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
@@ -45,7 +78,7 @@
         }
 
         .cover-top-bar {
-            border-bottom: 1px solid #e2e8f0;
+            border-bottom: 1px solid var(--line-100);
             padding-bottom: 15px;
             display: flex;
             justify-content: space-between;
@@ -57,7 +90,7 @@
             font-family: 'Montserrat', sans-serif;
             font-size: 12px;
             font-weight: 700;
-            color: var(--stc-blue);
+            color: var(--ink-600);
             letter-spacing: 0.05em;
         }
 
@@ -74,7 +107,7 @@
             font-family: 'Montserrat', sans-serif;
             font-weight: 900;
             font-size: 42px;
-            color: var(--stc-blue);
+            color: var(--ink-900);
             letter-spacing: -0.02em;
         }
 
@@ -82,7 +115,7 @@
             font-family: 'Montserrat', sans-serif;
             font-weight: 900;
             font-size: 42px;
-            color: var(--stc-orange);
+            color: var(--brand);
             letter-spacing: -0.02em;
         }
 
@@ -90,7 +123,7 @@
             font-family: 'Montserrat', sans-serif;
             font-size: 34px;
             font-weight: 700;
-            color: var(--stc-blue);
+            color: var(--ink-900);
             margin: 0;
             line-height: 1.15;
             text-transform: uppercase;
@@ -100,7 +133,7 @@
             font-family: 'Montserrat', sans-serif;
             font-size: 34px;
             font-weight: 400;
-            color: var(--stc-blue);
+            color: var(--brand);
             margin: 5px 0 50px 0;
             text-transform: uppercase;
         }
@@ -114,7 +147,7 @@
         }
 
         .internal-header {
-            border-bottom: 3px solid var(--stc-blue);
+            border-bottom: 2px solid var(--brand);
             padding-bottom: 8px;
             margin-bottom: 25px;
             display: flex;
@@ -126,10 +159,10 @@
             font-family: 'Montserrat', sans-serif;
             font-weight: 900;
             font-size: 16px;
-            color: var(--stc-blue);
+            color: var(--ink-900);
         }
 
-        .internal-brand span { color: var(--stc-orange); }
+        .internal-brand span { color: var(--brand); }
 
         .internal-doc-type {
             font-size: 10px;
@@ -141,35 +174,35 @@
 
         h2 {
             font-family: 'Montserrat', sans-serif;
-            color: var(--stc-blue);
+            color: var(--ink-900);
             font-size: 20px;
-            border-bottom: 1px solid #f1f5f9;
+            border-bottom: 1px solid var(--line-150);
             padding-bottom: 8px;
             margin-top: 35px;
         }
 
         h3 {
             font-family: 'Montserrat', sans-serif;
-            color: var(--stc-orange);
+            color: var(--brand-accent);
             font-size: 14px;
             margin-top: 25px;
             text-transform: uppercase;
             letter-spacing: 0.05em;
         }
 
-        p { font-size: 13.5px; color: #334155; line-height: 1.65; }
+        p { font-size: 13.5px; color: var(--ink-700); line-height: 1.65; }
 
         ul, ol { padding-left: 20px; }
 
-        li { font-size: 13.5px; color: #334155; margin-bottom: 8px; line-height: 1.6; }
+        li { font-size: 13.5px; color: var(--ink-700); margin-bottom: 8px; line-height: 1.6; }
 
         table { width: 100%; border-collapse: collapse; margin: 20px 0; }
 
-        th, td { border: 1px solid #e2e8f0; padding: 10px 12px; text-align: left; font-size: 12.5px; }
+        th, td { border: 1px solid var(--line-100); padding: 10px 12px; text-align: left; font-size: 12.5px; }
 
         th {
-            background-color: #f8fafc;
-            color: var(--stc-blue);
+            background-color: var(--surface-page);
+            color: var(--ink-400);
             font-weight: 700;
             text-transform: uppercase;
             font-size: 11px;
@@ -177,22 +210,22 @@
         }
 
         .note-callout {
-            background: #fff7ed;
-            border-left: 4px solid var(--stc-orange);
+            background: var(--brand-soft);
+            border-left: 4px solid var(--brand);
             padding: 14px 18px;
             margin: 18px 0;
             font-size: 13px;
-            color: #9a3412;
+            color: var(--brand-warn-text);
             line-height: 1.6;
         }
 
         .info-callout {
-            background: #eff6ff;
-            border-left: 4px solid var(--stc-blue);
+            background: var(--surface-page);
+            border-left: 4px solid var(--line-300);
             padding: 14px 18px;
             margin: 18px 0;
             font-size: 13px;
-            color: #1e40af;
+            color: var(--ink-600);
             line-height: 1.6;
         }
 
@@ -201,10 +234,10 @@
             bottom: 20mm;
             left: 25mm;
             right: 25mm;
-            border-top: 1px solid #e2e8f0;
+            border-top: 1px solid var(--line-100);
             padding-top: 15px;
             font-size: 10px;
-            color: #94a3b8;
+            color: var(--ink-300);
             text-align: center;
         }
 
@@ -215,7 +248,7 @@
             align-items: baseline;
             margin-bottom: 14px;
             font-size: 14px;
-            color: #1a2333;
+            color: var(--ink-700);
             text-decoration: none;
         }
 
@@ -231,7 +264,7 @@
             flex-shrink: 0;
             font-family: 'Montserrat', sans-serif;
             font-weight: 700;
-            color: var(--stc-blue);
+            color: var(--brand-accent);
             font-size: 13px;
             width: 28px;
         }
@@ -240,19 +273,19 @@
 
         .toc-dots {
             flex-grow: 1;
-            border-bottom: 1px dotted #94a3b8;
+            border-bottom: 1px dotted var(--line-300);
             margin: 0 5px;
             position: relative;
             top: -4px;
         }
 
-        .toc-page { flex-shrink: 0; padding-left: 5px; font-weight: 700; color: var(--stc-blue); }
+        .toc-page { flex-shrink: 0; padding-left: 5px; font-weight: 700; color: var(--brand-accent); }
 
         .toc-section {
             font-family: 'Montserrat', sans-serif;
             font-size: 10px;
             font-weight: 700;
-            color: var(--stc-orange);
+            color: var(--brand-accent);
             text-transform: uppercase;
             letter-spacing: 0.08em;
             margin: 20px 0 8px 0;
@@ -260,12 +293,12 @@
 
         pre.code {
             background: var(--code-bg);
-            border: 1px solid #e2e8f0;
-            border-left: 4px solid var(--stc-blue);
+            border: 1px solid var(--line-100);
+            border-left: 4px solid var(--brand);
             padding: 14px;
             font-size: 11.5px;
-            font-family: 'Courier New', Courier, monospace;
-            color: #1e293b;
+            font-family: 'JetBrains Mono', ui-monospace, 'Courier New', monospace;
+            color: var(--ink-700);
             overflow-x: auto;
             border-radius: 4px;
             line-height: 1.5;
@@ -273,12 +306,12 @@
         }
 
         pre.diagram {
-            background: #0f172a;
-            color: #38bdf8;
-            border-left: 4px solid var(--stc-orange);
+            background: var(--panel-dark);
+            color: var(--brand-light);
+            border-left: 4px solid var(--brand);
             padding: 15px;
             font-size: 10.5px;
-            font-family: 'Courier New', Courier, monospace;
+            font-family: 'JetBrains Mono', ui-monospace, 'Courier New', monospace;
             overflow-x: auto;
             border-radius: 4px;
             line-height: 1.35;
@@ -287,7 +320,7 @@
 
         .diagram-title {
             font-size: 10px;
-            color: #94a3b8;
+            color: var(--ink-400);
             text-transform: uppercase;
             letter-spacing: 0.1em;
             margin-bottom: -8px;
@@ -302,32 +335,32 @@
         }
 
         .card {
-            background: #f8fafc;
-            border-left: 4px solid var(--stc-blue);
+            background: var(--surface-page);
+            border-left: 4px solid var(--ink-300);
             padding: 14px;
         }
 
-        .card.orange { border-left-color: var(--stc-orange); }
+        .card.orange { border-left-color: var(--brand); }
 
         .card-title {
             font-family: 'Montserrat', sans-serif;
             font-size: 11px;
             font-weight: 700;
-            color: var(--stc-blue);
+            color: var(--ink-900);
             text-transform: uppercase;
             letter-spacing: 0.04em;
             margin-bottom: 8px;
         }
 
-        .card.orange .card-title { color: var(--stc-orange); }
+        .card.orange .card-title { color: var(--brand-accent); }
 
-        .card p { font-size: 12px; margin: 0; color: #475569; }
+        .card p { font-size: 12px; margin: 0; color: var(--ink-600); }
 
         code {
-            font-family: 'Courier New', monospace;
+            font-family: 'JetBrains Mono', ui-monospace, 'Courier New', monospace;
             font-size: 11.5px;
-            color: var(--stc-blue);
-            background: #e0eaf7;
+            color: var(--brand-accent);
+            background: var(--brand-soft);
             padding: 1px 5px;
             border-radius: 3px;
         }
@@ -724,7 +757,7 @@
             <strong>Para el equipo de sistemas del cliente:</strong> el agente se actualiza solo, sin requerir acceso remoto al equipo ni ventanas de mantenimiento coordinadas — la verificación criptográfica reemplaza la necesidad de supervisión manual de cada actualización.
         </div>
 
-        <p style="margin-top: 30px; color: #94a3b8; font-size: 12px;">
+        <p style="margin-top: 30px; color: var(--ink-300); font-size: 12px;">
             Para el detalle de implementación (constantes, funciones, formatos de parseo por fabricante), ver <em>STC_Agente_Funcionamiento_Interno</em> y <em>STC_Guia_Arquitectura_Tecnica</em> en esta misma carpeta.
         </p>
 

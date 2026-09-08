@@ -3,23 +3,56 @@
 <head>
     <meta charset="UTF-8">
     <title>STC Cloud - Análisis de Escalabilidad y Límites Operativos v2.0</title>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;900&family=Source+Sans+3:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
     <style>
+        /* Paleta institucional Canal Directo — los mismos tokens que usa el portal
+           STC Cloud desde el rediseño de agosto/2026 (cloud/portal/src/index.css):
+           sólo naranja + grises, nunca azul, rojo ni verde. La severidad se
+           resuelve con un gradiente DENTRO del naranja y el gris, no con semáforo.
+           Si cambia la paleta de la app, cambia también acá. */
         :root {
-            --stc-blue: #004a99;
-            --stc-orange: #f7931d;
-            --text-dark: #1a2333;
-            --text-gray: #64748b;
-            --code-bg: #f8fafc;
-            --red-alert: #dc2626;
-            --red-bg: #fef2f2;
+            --brand: #f7941d;              /* Institucional (naranja) */
+            --brand-severe: #c6710a;       /* naranja oscuro — severidad / atención */
+            --brand-accent: #b4700b;       /* naranja de texto (contraste sobre blanco) */
+            --brand-soft: #fdf4e9;         /* fondo suave de callouts y chips */
+            --brand-light: #fbc486;        /* naranja claro — categorías secundarias */
+            --brand-warn-text: #8a6033;    /* texto sobre fondo naranja suave */
+            --brand-warn-border: #e0a76b;  /* borde cálido de aviso */
+
+            --ink-900: #2e3033;            /* títulos */
+            --ink-700: #3c4144;            /* texto de cuerpo */
+            --ink-600: #4b5053;            /* texto secundario fuerte */
+            --ink-400: #8a9094;            /* texto secundario */
+            --ink-300: #9fa4a7;            /* labels en mayúscula, pies de página */
+            --ink-200: #b4b9bb;            /* texto tenue */
+            --ink-100: #6c7275;            /* gris oscuro — "sin urgencia" (nunca verde) */
+
+            --line-100: #e2e6e6;           /* borde de tabla / tarjeta */
+            --line-150: #edefef;           /* borde interno / separador */
+            --line-300: #d5d9da;           /* borde de acento secundario */
+
+            --surface-page: #f7f8f8;       /* fondo de tarjeta, bloque y encabezado de tabla */
+            --surface-track: #f0f2f2;      /* relleno neutro (chips) */
+            --surface-table-head: #fbfcfc; /* relleno más tenue (zebra, bloques sueltos) */
+
+            --panel-dark: #2e3033;         /* panel oscuro (diagramas, consola) */
+            --panel-dark-text: #a9aeb0;    /* texto secundario sobre panel oscuro */
+            --panel-dark-code: #d8dcdd;    /* texto de consola sobre panel oscuro */
+
+            /* Alias que usa el contenido de este documento */
+            --text-dark: var(--ink-900);
+            --text-gray: var(--ink-400);
+
+            --code-bg: var(--surface-page);
+            --alert-line: var(--brand-severe);  /* antes rojo */
+            --alert-bg: var(--brand-soft);
         }
 
         body {
-            font-family: 'Inter', sans-serif;
+            font-family: 'Source Sans 3', 'Source Sans Pro', system-ui, -apple-system, sans-serif;
             margin: 0;
             padding: 0;
-            background: #f1f5f9;
+            background: var(--surface-page);
             color: var(--text-dark);
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
@@ -49,7 +82,7 @@
         }
 
         .cover-top-bar {
-            border-bottom: 1px solid #e2e8f0;
+            border-bottom: 1px solid var(--line-100);
             padding-bottom: 15px;
             display: flex;
             justify-content: space-between;
@@ -61,7 +94,7 @@
             font-family: 'Montserrat', sans-serif;
             font-size: 12px;
             font-weight: 700;
-            color: var(--stc-blue);
+            color: var(--ink-600);
             letter-spacing: 0.05em;
         }
 
@@ -81,7 +114,7 @@
             font-family: 'Montserrat', sans-serif;
             font-weight: 900;
             font-size: 42px;
-            color: var(--stc-blue);
+            color: var(--ink-900);
             letter-spacing: -0.02em;
         }
 
@@ -89,7 +122,7 @@
             font-family: 'Montserrat', sans-serif;
             font-weight: 900;
             font-size: 42px;
-            color: var(--stc-orange);
+            color: var(--brand);
             letter-spacing: -0.02em;
         }
 
@@ -97,7 +130,7 @@
             font-family: 'Montserrat', sans-serif;
             font-size: 34px;
             font-weight: 700;
-            color: var(--stc-blue);
+            color: var(--ink-900);
             margin: 0;
             line-height: 1.15;
             text-transform: uppercase;
@@ -107,7 +140,7 @@
             font-family: 'Montserrat', sans-serif;
             font-size: 28px;
             font-weight: 400;
-            color: var(--stc-blue);
+            color: var(--brand);
             margin: 5px 0 50px 0;
             text-transform: uppercase;
         }
@@ -121,7 +154,7 @@
         }
 
         .internal-header {
-            border-bottom: 3px solid var(--stc-blue);
+            border-bottom: 2px solid var(--brand);
             padding-bottom: 8px;
             margin-bottom: 25px;
             display: flex;
@@ -133,11 +166,11 @@
             font-family: 'Montserrat', sans-serif;
             font-weight: 900;
             font-size: 16px;
-            color: var(--stc-blue);
+            color: var(--ink-900);
         }
 
         .internal-brand span {
-            color: var(--stc-orange);
+            color: var(--brand);
         }
 
         .internal-doc-type {
@@ -150,16 +183,16 @@
 
         h2 {
             font-family: 'Montserrat', sans-serif;
-            color: var(--stc-blue);
+            color: var(--ink-900);
             font-size: 20px;
-            border-bottom: 1px solid #f1f5f9;
+            border-bottom: 1px solid var(--line-150);
             padding-bottom: 8px;
             margin-top: 35px;
         }
 
         h3 {
             font-family: 'Montserrat', sans-serif;
-            color: var(--stc-orange);
+            color: var(--brand-accent);
             font-size: 14px;
             margin-top: 25px;
             text-transform: uppercase;
@@ -168,7 +201,7 @@
 
         p { 
             font-size: 13.5px; 
-            color: #334155; 
+            color: var(--ink-700); 
             line-height: 1.65; 
         }
 
@@ -178,7 +211,7 @@
         
         li { 
             font-size: 13.5px; 
-            color: #334155; 
+            color: var(--ink-700); 
             margin-bottom: 8px; 
             line-height: 1.6;
         }
@@ -190,15 +223,15 @@
         }
 
         th, td { 
-            border: 1px solid #e2e8f0; 
+            border: 1px solid var(--line-100); 
             padding: 12px; 
             text-align: left; 
             font-size: 12.5px; 
         }
 
         th {
-            background-color: #f8fafc;
-            color: var(--stc-blue);
+            background-color: var(--surface-page);
+            color: var(--ink-400);
             font-weight: 700;
             text-transform: uppercase;
             font-size: 11px;
@@ -206,22 +239,22 @@
         }
 
         .note-callout {
-            background: #fff7ed;
-            border-left: 4px solid var(--stc-orange);
+            background: var(--brand-soft);
+            border-left: 4px solid var(--brand);
             padding: 18px;
             margin: 25px 0;
             font-size: 13px;
-            color: #9a3412;
+            color: var(--brand-warn-text);
             line-height: 1.6;
         }
 
         .alert-callout {
-            background: var(--red-bg);
-            border-left: 4px solid var(--red-alert);
+            background: var(--alert-bg);
+            border-left: 4px solid var(--alert-line);
             padding: 18px;
             margin: 25px 0;
             font-size: 13px;
-            color: #7f1d1d;
+            color: var(--brand-warn-text);
             line-height: 1.6;
         }
 
@@ -230,10 +263,10 @@
             bottom: 20mm;
             left: 25mm;
             right: 25mm;
-            border-top: 1px solid #e2e8f0;
+            border-top: 1px solid var(--line-100);
             padding-top: 15px;
             font-size: 10px;
-            color: #94a3b8;
+            color: var(--ink-300);
             text-align: center;
         }
 
@@ -246,7 +279,7 @@
             align-items: baseline;
             margin-bottom: 14px;
             font-size: 14px;
-            color: #1a2333;
+            color: var(--ink-700);
             text-decoration: none;
         }
 
@@ -266,7 +299,7 @@
         
         .toc-dots { 
             flex-grow: 1; 
-            border-bottom: 1px dotted #94a3b8; 
+            border-bottom: 1px dotted var(--line-300); 
             margin: 0 5px; 
             position: relative; 
             top: -4px; 
@@ -276,7 +309,7 @@
             flex-shrink: 0; 
             padding-left: 5px; 
             font-weight: 700; 
-            color: var(--stc-blue);
+            color: var(--brand-accent);
         }
     </style>
 </head>
@@ -390,31 +423,31 @@
                     <td><strong>api</strong></td>
                     <td>512 MB RAM / 1 CPU</td>
                     <td>Backend Fastify — WS persistente por agente, sync cada ~5 min, dashboard/reportes del portal.</td>
-                    <td style="color: #16a34a; font-weight: bold;">SÍ — con los mecanismos de §3</td>
+                    <td style="color: var(--ink-100); font-weight: bold;">SÍ — con los mecanismos de §3</td>
                 </tr>
                 <tr>
                     <td><strong>postgres</strong></td>
                     <td>1 GB RAM / 1 CPU</td>
                     <td>PostgreSQL 16 + TimescaleDB, con compresión y retención configuradas sobre `readings`.</td>
-                    <td style="color: #16a34a; font-weight: bold;">SÍ — pool de 20 conexiones (ver §3)</td>
+                    <td style="color: var(--ink-100); font-weight: bold;">SÍ — pool de 20 conexiones (ver §3)</td>
                 </tr>
                 <tr>
                     <td><strong>redis</strong></td>
                     <td>256 MB RAM / 0.5 CPU</td>
                     <td>Rate-limit store, blacklist de tokens de agente, 4 colas BullMQ (notificaciones, cierres, webhooks públicos, evaluación de alertas).</td>
-                    <td style="color: #16a34a; font-weight: bold;">SÍ — volumen estimado muy por debajo de este límite</td>
+                    <td style="color: var(--ink-100); font-weight: bold;">SÍ — volumen estimado muy por debajo de este límite</td>
                 </tr>
                 <tr>
                     <td><strong>portal</strong></td>
                     <td>128 MB RAM / 0.25 CPU</td>
                     <td>Build estático de React servido por nginx dentro del contenedor.</td>
-                    <td style="color: #16a34a; font-weight: bold;">SÍ — es un sitio estático, no procesa nada por request</td>
+                    <td style="color: var(--ink-100); font-weight: bold;">SÍ — es un sitio estático, no procesa nada por request</td>
                 </tr>
                 <tr>
                     <td><strong>nginx / certbot / backup</strong></td>
                     <td>128 MB / 64 MB / 256 MB</td>
                     <td>Reverse proxy + SSL automático (Let's Encrypt), y `pg_dump` diario con retención de 30 días.</td>
-                    <td style="color: #16a34a; font-weight: bold;">SÍ</td>
+                    <td style="color: var(--ink-100); font-weight: bold;">SÍ</td>
                 </tr>
             </tbody>
         </table>
@@ -577,7 +610,7 @@
                 colas — es una decisión de arquitectura pendiente, no un obstáculo técnico.</li>
         </ol>
 
-        <div class="note-callout" style="background: #f0fdf4; border-left-color: #16a34a; color: #14532d;">
+        <div class="note-callout" style="background: var(--surface-page); border-left-color: var(--ink-100); color: var(--ink-700);">
             <strong>Conclusión:</strong> la escala objetivo de 200+ clientes y miles de equipos está
             cubierta por el diseño y el sizing actuales. El crecimiento posterior tiene un camino de
             evolución conocido y ordenado — no hay ningún punto del sistema que requiera un rediseño para

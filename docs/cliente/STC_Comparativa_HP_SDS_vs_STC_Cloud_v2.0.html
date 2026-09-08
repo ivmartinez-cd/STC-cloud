@@ -3,24 +3,54 @@
 <head>
     <meta charset="UTF-8">
     <title>STC Cloud - Comparativa HP SDS vs STC Cloud v2.0</title>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;900&family=Source+Sans+3:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
     <style>
+        /* Paleta institucional Canal Directo — los mismos tokens que usa el portal
+           STC Cloud desde el rediseño de agosto/2026 (cloud/portal/src/index.css):
+           sólo naranja + grises, nunca azul, rojo ni verde. La severidad se
+           resuelve con un gradiente DENTRO del naranja y el gris, no con semáforo.
+           Si cambia la paleta de la app, cambia también acá. */
         :root {
-            --stc-blue: #004a99;
-            --stc-orange: #f7931d;
-            --text-dark: #1a2333;
-            --text-gray: #64748b;
-            --code-bg: #f8fafc;
-            --green: #16a34a;
-            --red: #dc2626;
-            --amber: #d97706;
+            --brand: #f7941d;              /* Institucional (naranja) */
+            --brand-severe: #c6710a;       /* naranja oscuro — severidad / atención */
+            --brand-accent: #b4700b;       /* naranja de texto (contraste sobre blanco) */
+            --brand-soft: #fdf4e9;         /* fondo suave de callouts y chips */
+            --brand-light: #fbc486;        /* naranja claro — categorías secundarias */
+            --brand-warn-text: #8a6033;    /* texto sobre fondo naranja suave */
+            --brand-warn-border: #e0a76b;  /* borde cálido de aviso */
+
+            --ink-900: #2e3033;            /* títulos */
+            --ink-700: #3c4144;            /* texto de cuerpo */
+            --ink-600: #4b5053;            /* texto secundario fuerte */
+            --ink-400: #8a9094;            /* texto secundario */
+            --ink-300: #9fa4a7;            /* labels en mayúscula, pies de página */
+            --ink-200: #b4b9bb;            /* texto tenue */
+            --ink-100: #6c7275;            /* gris oscuro — "sin urgencia" (nunca verde) */
+
+            --line-100: #e2e6e6;           /* borde de tabla / tarjeta */
+            --line-150: #edefef;           /* borde interno / separador */
+            --line-300: #d5d9da;           /* borde de acento secundario */
+
+            --surface-page: #f7f8f8;       /* fondo de tarjeta, bloque y encabezado de tabla */
+            --surface-track: #f0f2f2;      /* relleno neutro (chips) */
+            --surface-table-head: #fbfcfc; /* relleno más tenue (zebra, bloques sueltos) */
+
+            --panel-dark: #2e3033;         /* panel oscuro (diagramas, consola) */
+            --panel-dark-text: #a9aeb0;    /* texto secundario sobre panel oscuro */
+            --panel-dark-code: #d8dcdd;    /* texto de consola sobre panel oscuro */
+
+            /* Alias que usa el contenido de este documento */
+            --text-dark: var(--ink-900);
+            --text-gray: var(--ink-400);
+
+            --code-bg: var(--surface-page);
         }
 
         body {
-            font-family: 'Inter', sans-serif;
+            font-family: 'Source Sans 3', 'Source Sans Pro', system-ui, -apple-system, sans-serif;
             margin: 0;
             padding: 0;
-            background: #f1f5f9;
+            background: var(--surface-page);
             color: var(--text-dark);
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
@@ -49,7 +79,7 @@
 
         /* ── Cover ── */
         .cover-top-bar {
-            border-bottom: 1px solid #e2e8f0;
+            border-bottom: 1px solid var(--line-100);
             padding-bottom: 15px;
             display: flex;
             justify-content: space-between;
@@ -61,7 +91,7 @@
             font-family: 'Montserrat', sans-serif;
             font-size: 12px;
             font-weight: 700;
-            color: var(--stc-blue);
+            color: var(--ink-600);
             letter-spacing: 0.05em;
         }
 
@@ -78,7 +108,7 @@
             font-family: 'Montserrat', sans-serif;
             font-weight: 900;
             font-size: 42px;
-            color: var(--stc-blue);
+            color: var(--ink-900);
             letter-spacing: -0.02em;
         }
 
@@ -86,7 +116,7 @@
             font-family: 'Montserrat', sans-serif;
             font-weight: 900;
             font-size: 42px;
-            color: var(--stc-orange);
+            color: var(--brand);
             letter-spacing: -0.02em;
         }
 
@@ -94,7 +124,7 @@
             font-family: 'Montserrat', sans-serif;
             font-size: 34px;
             font-weight: 700;
-            color: var(--stc-blue);
+            color: var(--ink-900);
             margin: 0;
             line-height: 1.15;
             text-transform: uppercase;
@@ -104,7 +134,7 @@
             font-family: 'Montserrat', sans-serif;
             font-size: 34px;
             font-weight: 400;
-            color: var(--stc-blue);
+            color: var(--brand);
             margin: 5px 0 50px 0;
             text-transform: uppercase;
         }
@@ -119,7 +149,7 @@
 
         /* ── Internal pages ── */
         .internal-header {
-            border-bottom: 3px solid var(--stc-blue);
+            border-bottom: 2px solid var(--brand);
             padding-bottom: 8px;
             margin-bottom: 25px;
             display: flex;
@@ -131,10 +161,10 @@
             font-family: 'Montserrat', sans-serif;
             font-weight: 900;
             font-size: 16px;
-            color: var(--stc-blue);
+            color: var(--ink-900);
         }
 
-        .internal-brand span { color: var(--stc-orange); }
+        .internal-brand span { color: var(--brand); }
 
         .internal-doc-type {
             font-size: 10px;
@@ -146,31 +176,31 @@
 
         h2 {
             font-family: 'Montserrat', sans-serif;
-            color: var(--stc-blue);
+            color: var(--ink-900);
             font-size: 20px;
-            border-bottom: 1px solid #f1f5f9;
+            border-bottom: 1px solid var(--line-150);
             padding-bottom: 8px;
             margin-top: 35px;
         }
 
         h3 {
             font-family: 'Montserrat', sans-serif;
-            color: var(--stc-orange);
+            color: var(--brand-accent);
             font-size: 14px;
             margin-top: 25px;
             text-transform: uppercase;
             letter-spacing: 0.05em;
         }
 
-        p { font-size: 13.5px; color: #334155; line-height: 1.65; }
+        p { font-size: 13.5px; color: var(--ink-700); line-height: 1.65; }
         ul, ol { padding-left: 20px; }
-        li { font-size: 13.5px; color: #334155; margin-bottom: 8px; line-height: 1.6; }
+        li { font-size: 13.5px; color: var(--ink-700); margin-bottom: 8px; line-height: 1.6; }
 
         table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-        th, td { border: 1px solid #e2e8f0; padding: 10px 12px; text-align: left; font-size: 12px; vertical-align: top; }
+        th, td { border: 1px solid var(--line-100); padding: 10px 12px; text-align: left; font-size: 12px; vertical-align: top; }
         th {
-            background-color: #f8fafc;
-            color: var(--stc-blue);
+            background-color: var(--surface-page);
+            color: var(--ink-400);
             font-weight: 700;
             text-transform: uppercase;
             font-size: 10.5px;
@@ -178,22 +208,22 @@
         }
 
         .note-callout {
-            background: #fff7ed;
-            border-left: 4px solid var(--stc-orange);
+            background: var(--brand-soft);
+            border-left: 4px solid var(--brand);
             padding: 18px;
             margin: 25px 0;
             font-size: 13px;
-            color: #9a3412;
+            color: var(--brand-warn-text);
             line-height: 1.6;
         }
 
         .info-callout {
-            background: #eff6ff;
-            border-left: 4px solid var(--stc-blue);
+            background: var(--surface-page);
+            border-left: 4px solid var(--line-300);
             padding: 18px;
             margin: 25px 0;
             font-size: 13px;
-            color: #1e3a5f;
+            color: var(--ink-600);
             line-height: 1.6;
         }
 
@@ -202,10 +232,10 @@
             bottom: 20mm;
             left: 25mm;
             right: 25mm;
-            border-top: 1px solid #e2e8f0;
+            border-top: 1px solid var(--line-100);
             padding-top: 15px;
             font-size: 10px;
-            color: #94a3b8;
+            color: var(--ink-300);
             text-align: center;
         }
 
@@ -217,7 +247,7 @@
             align-items: baseline;
             margin-bottom: 14px;
             font-size: 14px;
-            color: #1a2333;
+            color: var(--ink-700);
             text-decoration: none;
         }
 
@@ -230,8 +260,8 @@
         }
 
         .toc-text { flex-shrink: 0; padding-right: 5px; font-weight: 600; }
-        .toc-dots { flex-grow: 1; border-bottom: 1px dotted #94a3b8; margin: 0 5px; position: relative; top: -4px; }
-        .toc-page { flex-shrink: 0; padding-left: 5px; font-weight: 700; color: var(--stc-blue); }
+        .toc-dots { flex-grow: 1; border-bottom: 1px dotted var(--line-300); margin: 0 5px; position: relative; top: -4px; }
+        .toc-page { flex-shrink: 0; padding-left: 5px; font-weight: 700; color: var(--brand-accent); }
 
         /* ── Verdict badges ── */
         .badge {
@@ -246,32 +276,32 @@
         }
 
         .badge-mejorar {
-            background: #fef3c7;
-            color: #92400e;
-            border: 1px solid #f59e0b;
+            background: var(--brand-soft);
+            color: var(--brand-warn-text);
+            border: 1px solid var(--brand-warn-border);
         }
 
         .badge-intencional {
-            background: #d1fae5;
-            color: #065f46;
-            border: 1px solid #34d399;
+            background: var(--surface-track);
+            color: var(--ink-600);
+            border: 1px solid var(--line-300);
         }
 
         .badge-riesgo {
-            background: #fee2e2;
-            color: #991b1b;
-            border: 1px solid #f87171;
+            background: var(--brand-soft);
+            color: var(--brand-severe);
+            border: 1px solid var(--brand-severe);
         }
 
         .badge-ok {
-            background: #f0fdf4;
-            color: #166534;
-            border: 1px solid #86efac;
+            background: var(--surface-track);
+            color: var(--ink-600);
+            border: 1px solid var(--line-300);
         }
 
-        .badge-p1 { background: #dc2626; color: white; border: none; }
-        .badge-p2 { background: #d97706; color: white; border: none; }
-        .badge-p3 { background: #2563eb; color: white; border: none; }
+        .badge-p1 { background: var(--brand-severe); color: white; border: none; }
+        .badge-p2 { background: var(--brand); color: white; border: none; }
+        .badge-p3 { background: var(--ink-100); color: white; border: none; }
 
         /* ── Section accent ── */
         .section-label {
@@ -279,17 +309,17 @@
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 0.12em;
-            color: var(--stc-orange);
+            color: var(--brand-accent);
             margin-bottom: 2px;
         }
 
         pre.diagram {
-            background: #0f172a;
-            color: #38bdf8;
-            border-left: 4px solid var(--stc-orange);
+            background: var(--panel-dark);
+            color: var(--brand-light);
+            border-left: 4px solid var(--brand);
             padding: 15px;
             font-size: 10.5px;
-            font-family: 'Courier New', Courier, monospace;
+            font-family: 'JetBrains Mono', ui-monospace, 'Courier New', monospace;
             overflow-x: auto;
             border-radius: 4px;
             line-height: 1.35;
@@ -298,12 +328,12 @@
 
         pre.code {
             background: var(--code-bg);
-            border: 1px solid #e2e8f0;
-            border-left: 4px solid var(--stc-blue);
+            border: 1px solid var(--line-100);
+            border-left: 4px solid var(--brand);
             padding: 14px;
             font-size: 11.5px;
-            font-family: 'Courier New', Courier, monospace;
-            color: #1e293b;
+            font-family: 'JetBrains Mono', ui-monospace, 'Courier New', monospace;
+            color: var(--ink-700);
             overflow-x: auto;
             border-radius: 4px;
             line-height: 1.5;
@@ -318,7 +348,7 @@
         }
 
         .col-box {
-            border: 1px solid #e2e8f0;
+            border: 1px solid var(--line-100);
             border-radius: 6px;
             padding: 14px 16px;
         }
@@ -332,25 +362,25 @@
             margin-bottom: 10px;
         }
 
-        .col-hp .col-box-title { color: #1d4ed8; }
-        .col-stc .col-box-title { color: var(--stc-orange); }
-        .col-hp { border-top: 3px solid #1d4ed8; background: #eff6ff; }
-        .col-stc { border-top: 3px solid var(--stc-orange); background: #fff7ed; }
+        .col-hp .col-box-title { color: var(--ink-600); }
+        .col-stc .col-box-title { color: var(--brand-accent); }
+        .col-hp { border-top: 3px solid var(--line-300); background: var(--surface-page); }
+        .col-stc { border-top: 3px solid var(--brand); background: var(--brand-soft); }
 
         .col-box ul { margin: 0; padding-left: 16px; }
         .col-box li { font-size: 12px; margin-bottom: 5px; }
 
         .improvement-card {
-            border: 1px solid #e2e8f0;
+            border: 1px solid var(--line-100);
             border-radius: 6px;
             padding: 16px;
             margin-bottom: 14px;
             border-left: 4px solid;
         }
 
-        .improvement-card.p1 { border-left-color: #dc2626; }
-        .improvement-card.p2 { border-left-color: #d97706; }
-        .improvement-card.p3 { border-left-color: #2563eb; }
+        .improvement-card.p1 { border-left-color: var(--brand-severe); }
+        .improvement-card.p2 { border-left-color: var(--brand); }
+        .improvement-card.p3 { border-left-color: var(--ink-100); }
 
         .improvement-card-header {
             display: flex;
@@ -369,7 +399,7 @@
         .improvement-card p {
             font-size: 12.5px;
             margin: 4px 0 0 0;
-            color: #475569;
+            color: var(--ink-600);
         }
     </style>
 </head>
@@ -1225,7 +1255,7 @@ STC Cloud Discovery:
 
     <p>De los 6 puntos de mejora priorizados en v1.0 (mayo 2026), <strong>5 ya están resueltos</strong> (marcados abajo). Quedan genuinamente pendientes 2 ítems — uno operativo, uno de certificación formal — más los que surgieron de esta misma pasada de trabajo (remote EWS con paridad IMIL completa, UI de portal para API pública, backend multi-réplica).</p>
 
-    <div class="improvement-card p1" style="border-left-color: #16a34a;">
+    <div class="improvement-card p1" style="border-left-color: var(--ink-100);">
         <div class="improvement-card-header">
             <div class="improvement-card-title">Auditoría de uso de PJL en HP FutureSmart 4.5+</div>
             <span class="badge badge-ok">Resuelto</span>
@@ -1233,7 +1263,7 @@ STC Cloud Discovery:
         <p>El motor de captura ya usa EWS como fuente primaria de contadores, con PJL sólo como fallback — y desde agosto 2026 el agente además detecta y loguea cuando un equipo deja de responder a PJL de forma consistente (posible firewall/firmware con PJL deshabilitado), en vez de fallar en silencio.</p>
     </div>
 
-    <div class="improvement-card p1" style="border-left-color: #16a34a;">
+    <div class="improvement-card p1" style="border-left-color: var(--ink-100);">
         <div class="improvement-card-header">
             <div class="improvement-card-title">Soporte SNMPv3</div>
             <span class="badge badge-ok">Resuelto</span>
@@ -1241,7 +1271,7 @@ STC Cloud Discovery:
         <p>v1/v2c/v3 (MD5/SHA-2, DES/AES), lista de hasta 8 credenciales por agente o por rango de IP, cifradas at-rest. Ver §5.</p>
     </div>
 
-    <div class="improvement-card p1" style="border-left-color: #16a34a;">
+    <div class="improvement-card p1" style="border-left-color: var(--ink-100);">
         <div class="improvement-card-header">
             <div class="improvement-card-title">Política formal de retención de datos cloud</div>
             <span class="badge badge-ok">Resuelto</span>
@@ -1249,7 +1279,7 @@ STC Cloud Discovery:
         <p>Crudo 24 meses (TimescaleDB nativo), agregados diario/mensual sin vencimiento, agent_logs 90 días, alertas resueltas 12 meses. Ver §10.</p>
     </div>
 
-    <div class="improvement-card p1" style="border-left-color: #16a34a;">
+    <div class="improvement-card p1" style="border-left-color: var(--ink-100);">
         <div class="improvement-card-header">
             <div class="improvement-card-title">Identidad de dispositivo con MAC address</div>
             <span class="badge badge-ok">Resuelto</span>
@@ -1257,7 +1287,7 @@ STC Cloud Discovery:
         <p>MAC capturada como campo secundario, más una solución más completa de lo planteado originalmente: clave compuesta (client_id, serial) y herramienta de fusión manual de duplicados ya existentes. Ver §6.</p>
     </div>
 
-    <div class="improvement-card p1" style="border-left-color: #16a34a;">
+    <div class="improvement-card p1" style="border-left-color: var(--ink-100);">
         <div class="improvement-card-header">
             <div class="improvement-card-title">Acceso EWS remoto vía nube</div>
             <span class="badge badge-ok">Resuelto (parcial)</span>

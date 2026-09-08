@@ -3,21 +3,55 @@
 <head>
     <meta charset="UTF-8">
     <title>STC Cloud - Manual del Administrador IT v1.5</title>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Inter:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;900&family=Source+Sans+3:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
     <style>
+        /* Paleta institucional Canal Directo — los mismos tokens que usa el portal
+           STC Cloud desde el rediseño de agosto/2026 (cloud/portal/src/index.css):
+           sólo naranja + grises, nunca azul, rojo ni verde. La severidad se
+           resuelve con un gradiente DENTRO del naranja y el gris, no con semáforo.
+           Si cambia la paleta de la app, cambia también acá. */
         :root {
-            --stc-blue: #004a99;
-            --stc-orange: #f7931d;
-            --text-dark: #1a2333;
-            --text-gray: #64748b;
-            --green: #16a34a;
-            --red: #dc2626;
-            --yellow: #d97706;
-            --code-bg: #0f172a;
+            --brand: #f7941d;              /* Institucional (naranja) */
+            --brand-severe: #c6710a;       /* naranja oscuro — severidad / atención */
+            --brand-accent: #b4700b;       /* naranja de texto (contraste sobre blanco) */
+            --brand-soft: #fdf4e9;         /* fondo suave de callouts y chips */
+            --brand-light: #fbc486;        /* naranja claro — categorías secundarias */
+            --brand-warn-text: #8a6033;    /* texto sobre fondo naranja suave */
+            --brand-warn-border: #e0a76b;  /* borde cálido de aviso */
+
+            --ink-900: #2e3033;            /* títulos */
+            --ink-700: #3c4144;            /* texto de cuerpo */
+            --ink-600: #4b5053;            /* texto secundario fuerte */
+            --ink-400: #8a9094;            /* texto secundario */
+            --ink-300: #9fa4a7;            /* labels en mayúscula, pies de página */
+            --ink-200: #b4b9bb;            /* texto tenue */
+            --ink-100: #6c7275;            /* gris oscuro — "sin urgencia" (nunca verde) */
+
+            --line-100: #e2e6e6;           /* borde de tabla / tarjeta */
+            --line-150: #edefef;           /* borde interno / separador */
+            --line-300: #d5d9da;           /* borde de acento secundario */
+
+            --surface-page: #f7f8f8;       /* fondo de tarjeta, bloque y encabezado de tabla */
+            --surface-track: #f0f2f2;      /* relleno neutro (chips) */
+            --surface-table-head: #fbfcfc; /* relleno más tenue (zebra, bloques sueltos) */
+
+            --panel-dark: #2e3033;         /* panel oscuro (diagramas, consola) */
+            --panel-dark-text: #a9aeb0;    /* texto secundario sobre panel oscuro */
+            --panel-dark-code: #d8dcdd;    /* texto de consola sobre panel oscuro */
+
+            /* Alias que usa el contenido de este documento */
+            --text-dark: var(--ink-900);
+            --text-gray: var(--ink-400);
+
+            --code-bg: var(--panel-dark);
+            /* Severidad: gradiente naranja + gris, sin semáforo. */
+            --sev-ok: var(--ink-100);
+            --sev-warn: var(--brand);
+            --sev-critical: var(--brand-severe);
         }
 
         body {
-            font-family: 'Inter', sans-serif;
+            font-family: 'Source Sans 3', 'Source Sans Pro', system-ui, -apple-system, sans-serif;
             margin: 0;
             padding: 0;
             background: white;
@@ -41,7 +75,7 @@
 
         /* === PORTADA === */
         .cover-top-bar {
-            border-bottom: 1px solid #e2e8f0;
+            border-bottom: 1px solid var(--line-100);
             padding-bottom: 15px;
             display: flex;
             justify-content: space-between;
@@ -53,7 +87,7 @@
             font-family: 'Montserrat', sans-serif;
             font-size: 14px;
             font-weight: 700;
-            color: var(--stc-blue);
+            color: var(--ink-600);
             letter-spacing: 0.05em;
         }
 
@@ -70,21 +104,21 @@
             font-family: 'Montserrat', sans-serif;
             font-weight: 900;
             font-size: 42px;
-            color: var(--stc-blue);
+            color: var(--ink-900);
         }
 
         .brand-cloud {
             font-family: 'Montserrat', sans-serif;
             font-weight: 900;
             font-size: 42px;
-            color: var(--stc-orange);
+            color: var(--brand);
         }
 
         .main-title {
             font-family: 'Montserrat', sans-serif;
             font-size: 34px;
             font-weight: 700;
-            color: var(--stc-blue);
+            color: var(--ink-900);
             margin: 0;
             text-transform: uppercase;
         }
@@ -93,7 +127,7 @@
             font-family: 'Montserrat', sans-serif;
             font-size: 34px;
             font-weight: 400;
-            color: var(--stc-blue);
+            color: var(--brand);
             margin: 5px 0 20px 0;
             text-transform: uppercase;
         }
@@ -124,7 +158,7 @@
 
         /* === HEADER INTERNO === */
         .internal-header {
-            border-bottom: 3px solid var(--stc-blue);
+            border-bottom: 2px solid var(--brand);
             padding-bottom: 8px;
             margin-bottom: 30px;
             display: flex;
@@ -136,10 +170,10 @@
             font-family: 'Montserrat', sans-serif;
             font-weight: 900;
             font-size: 18px;
-            color: var(--stc-blue);
+            color: var(--ink-900);
         }
 
-        .internal-brand span { color: var(--stc-orange); }
+        .internal-brand span { color: var(--brand); }
 
         .internal-doc-type {
             font-size: 11px;
@@ -152,51 +186,51 @@
         /* === TIPOGRAFÍA === */
         h2 {
             font-family: 'Montserrat', sans-serif;
-            color: var(--stc-blue);
+            color: var(--ink-900);
             font-size: 20px;
-            border-bottom: 1px solid #f1f5f9;
+            border-bottom: 1px solid var(--line-150);
             padding-bottom: 8px;
             margin-top: 40px;
         }
 
         h3 {
             font-family: 'Montserrat', sans-serif;
-            color: var(--stc-orange);
+            color: var(--brand-accent);
             font-size: 14px;
             margin-top: 25px;
             text-transform: uppercase;
             letter-spacing: 0.05em;
         }
 
-        p { font-size: 13.5px; color: #334155; line-height: 1.75; }
+        p { font-size: 13.5px; color: var(--ink-700); line-height: 1.75; }
 
         /* === TABLAS === */
         table { width: 100%; border-collapse: collapse; margin: 20px 0; }
 
-        th, td { border: 1px solid #e2e8f0; padding: 12px 14px; text-align: left; font-size: 13px; }
+        th, td { border: 1px solid var(--line-100); padding: 12px 14px; text-align: left; font-size: 13px; }
 
         th {
-            background-color: var(--stc-blue);
-            color: white;
+            background-color: var(--surface-page);
+            color: var(--ink-400);
             font-weight: 700;
             text-transform: uppercase;
             font-size: 11px;
             letter-spacing: 0.05em;
         }
 
-        tr:nth-child(even) td { background: #f8fafc; }
+        tr:nth-child(even) td { background: var(--surface-table-head); }
 
         td.code {
-            font-family: 'JetBrains Mono', monospace;
+            font-family: 'JetBrains Mono', ui-monospace, monospace;
             font-size: 12px;
-            color: var(--stc-blue);
+            color: var(--brand-accent);
             font-weight: 600;
         }
 
-        td.exit-0 { border-left: 4px solid var(--green); }
-        td.exit-1 { border-left: 4px solid var(--yellow); }
-        td.exit-2 { border-left: 4px solid var(--red); }
-        td.exit-3 { border-left: 4px solid #7c3aed; }
+        td.exit-0 { border-left: 4px solid var(--sev-ok); }
+        td.exit-1 { border-left: 4px solid var(--sev-warn); }
+        td.exit-2 { border-left: 4px solid var(--sev-critical); }
+        td.exit-3 { border-left: 4px solid var(--ink-300); }
 
         .badge {
             display: inline-block;
@@ -204,42 +238,42 @@
             border-radius: 4px;
             font-size: 11px;
             font-weight: 700;
-            font-family: 'JetBrains Mono', monospace;
+            font-family: 'JetBrains Mono', ui-monospace, monospace;
         }
 
-        .badge-ok    { background: #dcfce7; color: #15803d; }
-        .badge-warn  { background: #fef3c7; color: #92400e; }
-        .badge-error { background: #fee2e2; color: #991b1b; }
-        .badge-info  { background: #dbeafe; color: #1d4ed8; }
+        .badge-ok    { background: var(--surface-track); color: var(--ink-600); }
+        .badge-warn  { background: var(--brand-soft); color: var(--brand-warn-text); }
+        .badge-error { background: var(--brand-soft); color: var(--brand-severe); }
+        .badge-info  { background: var(--surface-track); color: var(--ink-600); }
 
         /* === CALLOUTS === */
         .note-callout {
-            background: #f1f5f9;
-            border-left: 4px solid var(--stc-blue);
+            background: var(--brand-soft);
+            border-left: 4px solid var(--brand);
             padding: 16px 20px;
             margin: 25px 0;
             font-size: 13px;
-            color: #1e293b;
+            color: var(--brand-warn-text);
             line-height: 1.6;
         }
 
         .warn-callout {
-            background: #fffbeb;
-            border-left: 4px solid var(--stc-orange);
+            background: var(--brand-soft);
+            border-left: 4px solid var(--brand);
             padding: 16px 20px;
             margin: 25px 0;
             font-size: 13px;
-            color: #78350f;
+            color: var(--brand-warn-text);
             line-height: 1.6;
         }
 
         .danger-callout {
-            background: #fff1f2;
-            border-left: 4px solid var(--red);
+            background: var(--brand-soft);
+            border-left: 4px solid var(--sev-critical);
             padding: 16px 20px;
             margin: 25px 0;
             font-size: 13px;
-            color: #7f1d1d;
+            color: var(--brand-warn-text);
             line-height: 1.6;
         }
 
@@ -255,29 +289,32 @@
         .code-block-label {
             font-size: 10px;
             font-weight: 700;
-            color: #64748b;
+            color: var(--panel-dark-text);
             text-transform: uppercase;
             letter-spacing: 0.1em;
             margin-bottom: 10px;
-            font-family: 'JetBrains Mono', monospace;
+            font-family: 'JetBrains Mono', ui-monospace, monospace;
         }
 
         .code-block pre {
             margin: 0;
-            font-family: 'JetBrains Mono', monospace;
+            font-family: 'JetBrains Mono', ui-monospace, monospace;
             font-size: 12px;
             line-height: 1.7;
-            color: #e2e8f0;
+            color: var(--panel-dark-code);
             white-space: pre-wrap;
         }
 
-        .code-block .kw  { color: #c084fc; }   /* keywords */
-        .code-block .fn  { color: #60a5fa; }   /* functions */
-        .code-block .str { color: #86efac; }   /* strings */
-        .code-block .cmt { color: #4b5563; font-style: italic; } /* comments */
-        .code-block .num { color: #fb923c; }   /* numbers */
-        .code-block .var { color: #fde68a; }   /* variables */
-        .code-block .key { color: #67e8f9; }   /* JSON keys */
+        /* Coloreado de sintaxis sobre el panel oscuro: naranja institucional + grises,
+           sin el violeta/celeste/verde del tema anterior. Los dos hex sueltos son
+           tonos intermedios que sólo existen acá (no hay token equivalente). */
+        .code-block .kw  { color: var(--brand); }   /* keywords */
+        .code-block .fn  { color: var(--brand-light); }   /* functions */
+        .code-block .str { color: var(--ink-200); }   /* strings */
+        .code-block .cmt { color: #8a9096; font-style: italic; } /* comments */
+        .code-block .num { color: #fdd0a2; }   /* numbers */
+        .code-block .var { color: var(--panel-dark-code); }   /* variables */
+        .code-block .key { color: var(--brand-light); }   /* JSON keys */
 
         /* === JSON SCHEMA === */
         .schema-field {
@@ -285,14 +322,14 @@
             grid-template-columns: 200px 100px 1fr;
             gap: 12px;
             padding: 10px 0;
-            border-bottom: 1px solid #f1f5f9;
+            border-bottom: 1px solid var(--line-150);
             font-size: 13px;
         }
 
         .schema-field:last-child { border-bottom: none; }
-        .schema-name { font-family: 'JetBrains Mono', monospace; color: var(--stc-blue); font-weight: 600; font-size: 12px; }
-        .schema-type { font-family: 'JetBrains Mono', monospace; color: var(--text-gray); font-size: 11px; }
-        .schema-desc { color: #334155; }
+        .schema-name { font-family: 'JetBrains Mono', ui-monospace, monospace; color: var(--brand-accent); font-weight: 600; font-size: 12px; }
+        .schema-type { font-family: 'JetBrains Mono', ui-monospace, monospace; color: var(--text-gray); font-size: 11px; }
+        .schema-desc { color: var(--ink-700); }
 
         /* === TOC === */
         .toc-container { margin-top: 20px; }
@@ -302,12 +339,12 @@
             align-items: baseline;
             margin-bottom: 12px;
             font-size: 14px;
-            color: #1a2333;
+            color: var(--ink-700);
         }
 
         .toc-text { flex-shrink: 0; padding-right: 5px; }
-        .toc-dots { flex-grow: 1; border-bottom: 1px dotted #94a3b8; margin: 0 5px; position: relative; top: -4px; }
-        .toc-page { flex-shrink: 0; padding-left: 5px; font-weight: 600; color: var(--stc-blue); }
+        .toc-dots { flex-grow: 1; border-bottom: 1px dotted var(--line-300); margin: 0 5px; position: relative; top: -4px; }
+        .toc-page { flex-shrink: 0; padding-left: 5px; font-weight: 600; color: var(--brand-accent); }
 
         /* === FOOTER === */
         .footer {
@@ -315,25 +352,25 @@
             bottom: 20mm;
             left: 25mm;
             right: 25mm;
-            border-top: 1px solid #e2e8f0;
+            border-top: 1px solid var(--line-100);
             padding-top: 12px;
             font-size: 10px;
-            color: #94a3b8;
+            color: var(--ink-300);
             display: flex;
             justify-content: space-between;
         }
 
         ul { padding-left: 20px; }
-        li { font-size: 13.5px; color: #334155; margin-bottom: 8px; line-height: 1.6; }
+        li { font-size: 13.5px; color: var(--ink-700); margin-bottom: 8px; line-height: 1.6; }
 
         .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 20px 0; }
         .stat-box {
-            border: 1px solid #e2e8f0;
+            border: 1px solid var(--line-100);
             border-radius: 8px;
             padding: 16px;
             text-align: center;
         }
-        .stat-num { font-family: 'Montserrat', sans-serif; font-size: 36px; font-weight: 900; color: var(--stc-blue); }
+        .stat-num { font-family: 'Montserrat', sans-serif; font-size: 36px; font-weight: 900; color: var(--brand); }
         .stat-label { font-size: 12px; color: var(--text-gray); text-transform: uppercase; letter-spacing: 0.05em; }
     </style>
 </head>
@@ -534,7 +571,7 @@
                 </td>
             </tr>
             <tr>
-                <td class="code exit-3"><span class="badge" style="background:#ede9fe;color:#5b21b6;">3 — ERROR DE RED</span></td>
+                <td class="code exit-3"><span class="badge" style="background:var(--surface-track);color:var(--ink-600);">3 — ERROR DE RED</span></td>
                 <td><code>--activate</code></td>
                 <td>
                     El agente no pudo establecer conexión TCP con el servidor portal.
@@ -985,7 +1022,7 @@ Flags: runhidden waituntilterminated;
         a nuevo hardware. La configuración cifrada queda ligada al hardware antiguo y no puede descifrarse.
     </p>
 
-    <ol style="font-size:13.5px; color:#334155; line-height:2;">
+    <ol style="font-size:13.5px; color:var(--ink-700); line-height:2;">
         <li>Verificar el estado con <code>agente.exe --status</code> y confirmar <code>"hardware_binding_integrity": "hwid-mismatch"</code>.</li>
         <li>Detener el servicio: <code>net stop STCCloudMonitor</code></li>
         <li>Eliminar la configuración antigua: <code>del "C:\ProgramData\STCCloudMonitor\config.enc"</code></li>
@@ -1027,28 +1064,28 @@ Flags: runhidden waituntilterminated;
 
     <h3>9.1 Desbloqueo de SmartScreen (Instalador)</h3>
     <p>Si al ejecutar <code>STC-Monitor-Setup.exe</code> aparece la pantalla azul de SmartScreen:</p>
-    <ol style="font-size:13.5px; color:#334155; line-height:2;">
+    <ol style="font-size:13.5px; color:var(--ink-700); line-height:2;">
         <li>Hacer clic en <strong>"Más información"</strong> (enlace debajo del mensaje de advertencia).</li>
         <li>Hacer clic en el botón <strong>"Ejecutar de todas formas"</strong> que aparece.</li>
         <li>Continuar con la instalación normalmente.</li>
     </ol>
 
     <p>Para desbloquear un archivo descargado desde el Explorador de Windows (sin ejecutarlo):</p>
-    <ol style="font-size:13.5px; color:#334155; line-height:2;">
+    <ol style="font-size:13.5px; color:var(--ink-700); line-height:2;">
         <li>Hacer clic derecho sobre <code>STC-Monitor-Setup.exe</code> → <strong>Propiedades</strong>.</li>
         <li>En la pestaña <strong>General</strong>, marcar la casilla <strong>"Desbloquear"</strong> en la sección de seguridad.</li>
         <li>Hacer clic en <strong>Aceptar</strong> y ejecutar el instalador.</li>
     </ol>
 
     <p>O bien desde PowerShell (requiere privilegios de administrador):</p>
-    <pre style="background:#0f172a;color:#e2e8f0;padding:12px 16px;border-radius:6px;font-size:12px;overflow-x:auto;">Unblock-File -Path "C:\Descargas\STC-Monitor-Setup.exe"</pre>
+    <pre style="background:var(--panel-dark);color:var(--panel-dark-code);padding:12px 16px;border-radius:6px;font-size:12px;overflow-x:auto;">Unblock-File -Path "C:\Descargas\STC-Monitor-Setup.exe"</pre>
 
     <h3>9.2 Exclusión en Windows Defender (Post-instalación)</h3>
     <p>
         Para evitar que Windows Defender interrumpa la ejecución del agente como servicio, añadir
         una exclusión de ruta permanente. Ejecutar en PowerShell <strong>como Administrador</strong>:
     </p>
-    <pre style="background:#0f172a;color:#e2e8f0;padding:12px 16px;border-radius:6px;font-size:12px;overflow-x:auto;"># Excluir el directorio de instalación del agente
+    <pre style="background:var(--panel-dark);color:var(--panel-dark-code);padding:12px 16px;border-radius:6px;font-size:12px;overflow-x:auto;"># Excluir el directorio de instalación del agente
 Add-MpPreference -ExclusionPath "C:\Program Files\STC Cloud Monitor"
 
 # Excluir también el directorio de datos (opcional, recomendado)
@@ -1057,7 +1094,7 @@ Add-MpPreference -ExclusionPath "C:\ProgramData\STCCloudMonitor"
 # Verificar que las exclusiones quedaron registradas
 Get-MpPreference | Select-Object -ExpandProperty ExclusionPath</pre>
 
-    <div class="note-callout" style="border-left-color:#d97706; background:#fffbeb;">
+    <div class="note-callout" style="border-left-color:var(--brand-severe); background:var(--brand-soft);">
         <strong>Nota de seguridad:</strong> Las exclusiones de Windows Defender deben aplicarse únicamente
         a las rutas específicas del agente, nunca a unidades completas o directorios de sistema.
         Documentar la exclusión en el registro de cambios de seguridad de la organización.
@@ -1068,7 +1105,7 @@ Get-MpPreference | Select-Object -ExpandProperty ExclusionPath</pre>
         Para entornos con múltiples equipos, la exclusión puede distribuirse mediante
         <strong>Group Policy</strong>:
     </p>
-    <ol style="font-size:13.5px; color:#334155; line-height:2;">
+    <ol style="font-size:13.5px; color:var(--ink-700); line-height:2;">
         <li>Abrir <strong>Group Policy Management</strong> en el Domain Controller.</li>
         <li>Crear o editar una GPO vinculada a la OU con los equipos monitoreados.</li>
         <li>Navegar a: <em>Computer Configuration → Administrative Templates → Windows Components → Microsoft Defender Antivirus → Exclusions → Path Exclusions</em>.</li>
@@ -1081,7 +1118,7 @@ Get-MpPreference | Select-Object -ExpandProperty ExclusionPath</pre>
         Antes de instalar, cualquier equipo de seguridad puede verificar que el binario descargado
         coincide exactamente con el publicado por STC Cloud, usando el script de verificación incluido:
     </p>
-    <pre style="background:#0f172a;color:#e2e8f0;padding:12px 16px;border-radius:6px;font-size:12px;overflow-x:auto;"># Ejecutar desde PowerShell en el directorio de descarga
+    <pre style="background:var(--panel-dark);color:var(--panel-dark-code);padding:12px 16px;border-radius:6px;font-size:12px;overflow-x:auto;"># Ejecutar desde PowerShell en el directorio de descarga
 .\verify_hash.ps1 -FilePath "STC-Monitor-Setup.exe" -ExpectedHash "&lt;HASH_OFICIAL&gt;"</pre>
     <p>
         El script <code>verify_hash.ps1</code> se distribuye junto al instalador y calcula el hash

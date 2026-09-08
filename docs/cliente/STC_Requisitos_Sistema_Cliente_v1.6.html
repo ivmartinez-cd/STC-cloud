@@ -3,17 +3,49 @@
 <head>
     <meta charset="UTF-8">
     <title>STC Cloud - Requisitos de Sistema para Clientes v1.6</title>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;900&family=Source+Sans+3:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
     <style>
+        /* Paleta institucional Canal Directo — los mismos tokens que usa el portal
+           STC Cloud desde el rediseño de agosto/2026 (cloud/portal/src/index.css):
+           sólo naranja + grises, nunca azul, rojo ni verde. La severidad se
+           resuelve con un gradiente DENTRO del naranja y el gris, no con semáforo.
+           Si cambia la paleta de la app, cambia también acá. */
         :root {
-            --stc-blue: #004a99;
-            --stc-orange: #f7931d;
-            --text-dark: #1a2333;
-            --text-gray: #64748b;
+            --brand: #f7941d;              /* Institucional (naranja) */
+            --brand-severe: #c6710a;       /* naranja oscuro — severidad / atención */
+            --brand-accent: #b4700b;       /* naranja de texto (contraste sobre blanco) */
+            --brand-soft: #fdf4e9;         /* fondo suave de callouts y chips */
+            --brand-light: #fbc486;        /* naranja claro — categorías secundarias */
+            --brand-warn-text: #8a6033;    /* texto sobre fondo naranja suave */
+            --brand-warn-border: #e0a76b;  /* borde cálido de aviso */
+
+            --ink-900: #2e3033;            /* títulos */
+            --ink-700: #3c4144;            /* texto de cuerpo */
+            --ink-600: #4b5053;            /* texto secundario fuerte */
+            --ink-400: #8a9094;            /* texto secundario */
+            --ink-300: #9fa4a7;            /* labels en mayúscula, pies de página */
+            --ink-200: #b4b9bb;            /* texto tenue */
+            --ink-100: #6c7275;            /* gris oscuro — "sin urgencia" (nunca verde) */
+
+            --line-100: #e2e6e6;           /* borde de tabla / tarjeta */
+            --line-150: #edefef;           /* borde interno / separador */
+            --line-300: #d5d9da;           /* borde de acento secundario */
+
+            --surface-page: #f7f8f8;       /* fondo de tarjeta, bloque y encabezado de tabla */
+            --surface-track: #f0f2f2;      /* relleno neutro (chips) */
+            --surface-table-head: #fbfcfc; /* relleno más tenue (zebra, bloques sueltos) */
+
+            --panel-dark: #2e3033;         /* panel oscuro (diagramas, consola) */
+            --panel-dark-text: #a9aeb0;    /* texto secundario sobre panel oscuro */
+            --panel-dark-code: #d8dcdd;    /* texto de consola sobre panel oscuro */
+
+            /* Alias que usa el contenido de este documento */
+            --text-dark: var(--ink-900);
+            --text-gray: var(--ink-400);
         }
 
         body {
-            font-family: 'Inter', sans-serif;
+            font-family: 'Source Sans 3', 'Source Sans Pro', system-ui, -apple-system, sans-serif;
             margin: 0;
             padding: 0;
             background: white;
@@ -36,7 +68,7 @@
         }
 
         .cover-top-bar {
-            border-bottom: 1px solid #e2e8f0;
+            border-bottom: 1px solid var(--line-100);
             padding-bottom: 15px;
             display: flex;
             justify-content: space-between;
@@ -48,7 +80,7 @@
             font-family: 'Montserrat', sans-serif;
             font-size: 14px;
             font-weight: 700;
-            color: var(--stc-blue);
+            color: var(--ink-600);
             letter-spacing: 0.05em;
         }
 
@@ -65,7 +97,7 @@
             font-family: 'Montserrat', sans-serif;
             font-weight: 900;
             font-size: 42px;
-            color: var(--stc-blue);
+            color: var(--ink-900);
             letter-spacing: -0.02em;
         }
 
@@ -73,7 +105,7 @@
             font-family: 'Montserrat', sans-serif;
             font-weight: 900;
             font-size: 42px;
-            color: var(--stc-orange);
+            color: var(--brand);
             letter-spacing: -0.02em;
         }
 
@@ -81,7 +113,7 @@
             font-family: 'Montserrat', sans-serif;
             font-size: 38px;
             font-weight: 700;
-            color: var(--stc-blue);
+            color: var(--ink-900);
             margin: 0;
             line-height: 1.1;
             text-transform: uppercase;
@@ -91,7 +123,7 @@
             font-family: 'Montserrat', sans-serif;
             font-size: 38px;
             font-weight: 400;
-            color: var(--stc-blue);
+            color: var(--brand);
             margin: 5px 0 60px 0;
             text-transform: uppercase;
         }
@@ -105,7 +137,7 @@
         }
 
         .internal-header {
-            border-bottom: 3px solid var(--stc-blue);
+            border-bottom: 2px solid var(--brand);
             padding-bottom: 8px;
             margin-bottom: 30px;
             display: flex;
@@ -117,7 +149,7 @@
             font-family: 'Montserrat', sans-serif;
             font-weight: 900;
             font-size: 18px;
-            color: var(--stc-blue);
+            color: var(--ink-900);
         }
 
         .internal-doc-type {
@@ -130,31 +162,31 @@
 
         h2 {
             font-family: 'Montserrat', sans-serif;
-            color: var(--stc-blue);
+            color: var(--ink-900);
             font-size: 22px;
-            border-bottom: 1px solid #f1f5f9;
+            border-bottom: 1px solid var(--line-150);
             padding-bottom: 8px;
             margin-top: 40px;
         }
 
         h3 {
             font-family: 'Montserrat', sans-serif;
-            color: var(--stc-orange);
+            color: var(--brand-accent);
             font-size: 16px;
             margin-top: 25px;
             text-transform: uppercase;
             letter-spacing: 0.05em;
         }
 
-        p { font-size: 14px; color: #334155; line-height: 1.7; }
+        p { font-size: 14px; color: var(--ink-700); line-height: 1.7; }
 
         table { width: 100%; border-collapse: collapse; margin: 20px 0; }
 
-        th, td { border: 1px solid #e2e8f0; padding: 14px; text-align: left; font-size: 13px; }
+        th, td { border: 1px solid var(--line-100); padding: 14px; text-align: left; font-size: 13px; }
 
         th {
-            background-color: #f8fafc;
-            color: var(--stc-blue);
+            background-color: var(--surface-page);
+            color: var(--ink-400);
             font-weight: 700;
             text-transform: uppercase;
             font-size: 11px;
@@ -162,12 +194,12 @@
         }
 
         .note-callout {
-            background: #fff7ed;
-            border-left: 4px solid var(--stc-orange);
+            background: var(--brand-soft);
+            border-left: 4px solid var(--brand);
             padding: 20px;
             margin: 30px 0;
             font-size: 13px;
-            color: #9a3412;
+            color: var(--brand-warn-text);
         }
 
         .footer {
@@ -175,10 +207,10 @@
             bottom: 20mm;
             left: 25mm;
             right: 25mm;
-            border-top: 1px solid #e2e8f0;
+            border-top: 1px solid var(--line-100);
             padding-top: 15px;
             font-size: 10px;
-            color: #94a3b8;
+            color: var(--ink-300);
             text-align: center;
         }
 
@@ -189,7 +221,7 @@
             align-items: baseline;
             margin-bottom: 12px;
             font-size: 14px;
-            color: #1a2333;
+            color: var(--ink-700);
             text-decoration: none;
         }
 
@@ -202,11 +234,11 @@
         }
 
         .toc-text { flex-shrink: 0; padding-right: 5px; }
-        .toc-dots { flex-grow: 1; border-bottom: 1px dotted #94a3b8; margin: 0 5px; position: relative; top: -4px; }
+        .toc-dots { flex-grow: 1; border-bottom: 1px dotted var(--line-300); margin: 0 5px; position: relative; top: -4px; }
         .toc-page { flex-shrink: 0; padding-left: 5px; font-weight: 600; }
 
         ul { padding-left: 20px; }
-        li { font-size: 14px; color: #334155; margin-bottom: 8px; }
+        li { font-size: 14px; color: var(--ink-700); margin-bottom: 8px; }
     </style>
 </head>
 <body>
@@ -310,7 +342,7 @@
             <li><strong>Sistemas de Escritorio:</strong> Windows 10 y Windows 11 (ediciones Pro, Enterprise y Education de 64 bits).</li>
             <li><strong>Virtualización:</strong> Completamente compatible con entornos virtuales VMware ESXi, Microsoft Hyper-V, Citrix, Nutanix y nubes híbridas AWS/Azure.</li>
         </ul>
-        <p style="font-size: 13px; color: #64748b;">
+        <p style="font-size: 13px; color: var(--ink-400);">
             <strong>Cuenta de ejecución:</strong> el servicio ("STCCloudMonitor") se ejecuta por defecto bajo la cuenta <strong>LocalSystem</strong>. Si la política de la organización exige ejecutarlo bajo una cuenta de servicio nominal, se recomienda que esa cuenta tenga contraseña sin expiración: el vencimiento de la contraseña detiene el servicio y, con él, la recolección de contadores.
         </p>
 
@@ -473,10 +505,10 @@
         <p>
             Para las auditorías de infraestructura que exigen validar el binario antes de distribuirlo, el paquete de distribución incluye el script <code>verify_hash.ps1</code>, que compara el instalador descargado contra el hash SHA-256 oficial de esa versión:
         </p>
-        <div class="note-callout" style="font-family: monospace; background: #f1f5f9; border-color: #475569; color: #1e293b; padding: 15px; font-size: 12px; border-radius: 4px;">
+        <div class="note-callout" style="font-family: monospace; background: var(--line-150); border-color: var(--ink-600); color: var(--ink-700); padding: 15px; font-size: 12px; border-radius: 4px;">
             .\verify_hash.ps1 -FilePath "STC-Monitor-Setup.exe" -ExpectedHash "&lt;HASH_OFICIAL_STC&gt;"
         </div>
-        <p style="font-size: 13px; color: #64748b;">
+        <p style="font-size: 13px; color: var(--ink-400);">
             El hash SHA-256 oficial de cada versión se publica en el portal STC Cloud y en las notas de lanzamiento. Este control garantiza que el instalador no fue alterado por terceros durante la transferencia.
         </p>
 
@@ -490,7 +522,7 @@
             Para realizar la instalación de forma desatendida forzando el inicio automático y vinculándolo con los datos del portal en una sola línea, ejecute el instalador con los siguientes modificadores:
         </p>
         
-        <div class="note-callout" style="font-family: monospace; background: #f1f5f9; border-color: #475569; color: #1e293b; padding: 15px; font-size: 12px; border-radius: 4px;">
+        <div class="note-callout" style="font-family: monospace; background: var(--line-150); border-color: var(--ink-600); color: var(--ink-700); padding: 15px; font-size: 12px; border-radius: 4px;">
             STC-Monitor-Setup.exe /VERYSILENT /KEY="LLAVE_DE_ACTIVACION_DE_64_CARACTERES" /SERVER="https://${DOMAIN}"
         </div>
 
