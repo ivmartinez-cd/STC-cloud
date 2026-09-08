@@ -11,8 +11,11 @@
 | | Reglas |
 |---|---|
 | Cumple, verificado | 12 |
-| Gap abierto | 7 |
+| Gap **cerrado** en esta pasada | 2 (**A**, **C**) |
+| Gap abierto | 5 |
 | No concluyente (requiere revisión manual) | 1 |
+
+Los dos cerrados son los que degradaban una garantía activa: los 13 tests que no corrían en CI (y con ellos la cobertura medida) y las escrituras a `audit_logs` sin `client_id`. Como efecto lateral se corrigió la causa raíz del CI intermitente de este repo — ver el cierre del ítem **A**.
 
 Las reglas de **mayor impacto estructural** —dirección de dependencias, fronteras entre módulos, pureza del dominio, tamaño de archivo, autenticación por endpoint— se cumplen sin excepciones y con el baseline de guardas **vacío**. Los gaps abiertos son de proceso (§9/§12), de higiene (§4) y uno de cobertura de CI que sí merece acción inmediata (**A**).
 
@@ -80,7 +83,9 @@ O sea: no hay deuda escondida detrás de este gap. Prenderlos en CI es un cambio
 
 **Por qué no se alfabetizó** (el diseño obvio, y era incorrecto): se probó ordenar todo alfabéticamente y `ewsProxyRelay.test.ts` empezó a fallar de forma **reproducible** — 2 corridas limpias, misma assertion. Ese test publica en `stc:ws:ews-push` y espera **800 ms fijos** a que el mensaje llegue al socket; al pasar del puesto 48 al 33 dejó de dar tiempo. Aislado pasa 3/3. Con el orden restaurado, pasa.
 
-Deuda que esto destapó, para otra pasada: **hay al menos dos tests de pub/sub WS que dependen de un `sleep` fijo** en vez de esperar la condición —`ewsProxyRelay` (800 ms) y `observability` (que ya lleva 3 commits de estabilización: `be6dec0`, `bb63e4a`, `2008b4f`)—. Mientras sea así, el orden de la suite es carga acoplada y mover archivos es riesgoso. La corrección de fondo es reemplazar los sleeps por espera de evento con timeout.
+Deuda que esto destapó: **dos tests de pub/sub WS ataban el orden de la suite a la carga de la máquina** —`ewsProxyRelay` (sleep de 800 ms) y `observability` (`waitFor` de 10 s, con 3 commits previos de estabilización: `be6dec0`, `bb63e4a`, `2008b4f`)—.
+
+**Estado: CORREGIDO (`116e6d2`).** Ninguna espera podía funcionar siempre, porque el problema no era que el mensaje tardara: Redis pub/sub es fire-and-forget y el `open` del WS resuelve cuando el **cliente** terminó el handshake, no cuando el servidor registró ese socket. Un publish que cae en esa ventana se pierde para siempre. Ahora se republica hasta que llegue, con corte por timeout — lo que además los hace cortar apenas llega: `ewsProxyRelay` 800 ms → **2 ms**, `observability` hasta 10 s → **265 ms**.
 
 **Verificación de la corrección** (stack efímero limpio, 3 corridas de suite completa):
 
@@ -126,7 +131,15 @@ Mitigación real existente: `package-lock.json` está commiteado y CI usa `npm c
 
 Consecuencia concreta: `knex-audit-log-repository.ts:37` filtra con `andWhere("a.client_id", filter.clientId)`, así que estas filas **son invisibles** cuando el feed de auditoría se filtra por cliente. Aparecen sin filtrar o filtradas por acción/fecha/target.
 
-**Nota:** el docstring de `auditService.ts` dice que quedan "~19 call-sites" — **está desactualizado, son 3**. Conviene corregirlo aunque no se cierre el gap ahora, porque hoy sobreestima el trabajo pendiente por un factor de 6.
+**Estado: CORREGIDO (`8dd6df5`).** Los 3 pasan por `writeAudit` con su `client_id`: en devices ya estaba disponible (`clientId` era parámetro, `device.client_id` se usaba dos líneas arriba); en auth se agregó al puerto `UserAuditPort`, explícito y con el cliente del usuario **afectado**; en feedback se sumó `clientId` a `EffectiveIdentity` y el resolver ahora consulta `users` también en el caso no-admin.
+
+Se corrigió además el docstring de `auditService.ts`, que decía "~19 call-sites pendientes" cuando eran 3. Para verificar que no reaparezca uno:
+
+```bash
+grep -rn '"audit_logs")\.insert' cloud/src --include=*.ts | grep -v tests
+```
+
+El único resultado esperado es `auditService.ts`.
 
 ---
 
@@ -180,8 +193,8 @@ De los últimos 30 commits: mediana **124** inserciones, pero **5 superan 400** 
 
 ## 4. Acciones recomendadas, por orden
 
-1. **A** — arreglar el descubrimiento de tests en `ci-test-runner.mjs`. Es el único gap que degrada una garantía activa (CI verde + cobertura).
-2. **C** — cerrar los 3 call-sites de `audit_logs` y corregir el docstring de `auditService.ts`.
+1. ~~**A** — arreglar el descubrimiento de tests en `ci-test-runner.mjs`.~~ Hecho (`eff999a`, `0d8eb45`, `116e6d2`).
+2. ~~**C** — cerrar los 3 call-sites de `audit_logs` y corregir el docstring.~~ Hecho (`8dd6df5`).
 3. **D** — decidir Gitflow vs trunk-based y alinear la guía con la realidad, vía ADR.
 4. **B** — decidir fijado de versiones vs lockfile, y dejarlo escrito en §5.
 5. **G** — agregar `AGENT_DATA_DIR` al `.env.production.example`.
