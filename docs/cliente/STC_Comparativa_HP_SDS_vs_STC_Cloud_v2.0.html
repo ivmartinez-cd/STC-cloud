@@ -1278,7 +1278,7 @@ STC Cloud Discovery:
             <div class="improvement-card-title">Backend multi-réplica</div>
             <span class="badge badge-p3">P3 Largo plazo</span>
         </div>
-        <p>Sigue sin resolverse — decisión de arquitectura pendiente, no un descuido. El registro de sockets WS activos vive en memoria de un único proceso; escalar a múltiples réplicas del backend requeriría pub/sub Redis para el WS y decidir si vale la pena migrar los jobs periódicos (hoy <code>setInterval</code> simple, deliberadamente NO BullMQ repeatable — la Redis de producción usa una política de desalojo que podría perder el estado de un job repetible en silencio).</p>
+        <p>Parcialmente resuelto — el resto es una decisión de arquitectura pendiente, no un descuido. Los broadcasts hacia el portal ya se retransmiten entre procesos por pub/sub Redis (<code>ws/redis-channels.ts</code>), así que sobrevivirían a varias réplicas; lo que sigue atado a un proceso es el envío de comandos a un agente puntual (hay afinidad de socket, con entrega por heartbeat como respaldo). Completarlo implica además decidir si vale la pena migrar los jobs periódicos (hoy <code>setInterval</code> simple, deliberadamente NO BullMQ repeatable — la Redis de producción usa una política de desalojo que podría perder el estado de un job repetible en silencio).</p>
     </div>
 
     <div class="improvement-card p3">

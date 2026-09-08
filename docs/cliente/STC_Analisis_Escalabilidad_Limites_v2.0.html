@@ -545,11 +545,11 @@
             </tbody>
         </table>
 
-        <h3>2. Qué monitorear en producción</h3>
+        <h3>2. Qué monitorear una vez en operación</h3>
         <ul>
             <li><strong>Crecimiento del disco:</strong> el volumen `pgdata` durante los primeros meses de
-                operación real — la compresión de TimescaleDB hace difícil predecirlo en papel; medirlo es
-                más confiable que asumirlo.</li>
+                operación — la compresión de TimescaleDB hace difícil predecirlo en papel; medirlo con la
+                flota real es más confiable que asumir un número de antemano.</li>
             <li><strong>CPU/RAM en picos de sincronización:</strong> los contenedores tienen límites
                 explícitos en `docker-compose.prod.yml`; si `api` o `postgres` los tocan de forma
                 sostenida, es la señal para subir el sizing.</li>
@@ -568,10 +568,13 @@
                 `/devices/sync` prioriza integridad de facturación; si el volumen de ingesta creciera un
                 orden de magnitud, la evolución es agregar la resolución de identidad en lotes — un cambio
                 de esfuerzo alto que sólo se justifica a esa escala.</li>
-            <li><strong>Réplicas horizontales de la API:</strong> la capa de WebSocket ya está preparada
-                para múltiples réplicas (retransmisión entre procesos vía Redis pub/sub); escalar
-                horizontalmente requiere además ajustar el pool de base de datos por réplica y migrar los
-                jobs de temporizador simple a colas — el diseño actual ya lo contempla.</li>
+            <li><strong>Réplicas horizontales de la API:</strong> el camino está parcialmente allanado.
+                Los avisos en tiempo real hacia el portal ya se retransmiten entre procesos vía Redis
+                pub/sub, así que funcionarían con varias réplicas; los comandos dirigidos a un agente
+                puntual dependen de a qué réplica está conectado ese agente, y hoy se cubren con la
+                entrega por heartbeat como respaldo. Completar el escalado horizontal requiere además
+                ajustar el pool de base de datos por réplica y migrar los jobs de temporizador simple a
+                colas — es una decisión de arquitectura pendiente, no un obstáculo técnico.</li>
         </ol>
 
         <div class="note-callout" style="background: #f0fdf4; border-left-color: #16a34a; color: #14532d;">
