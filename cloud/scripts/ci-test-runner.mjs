@@ -1,5 +1,6 @@
 import Redis from "ioredis";
 import { spawn } from "node:child_process";
+import { readdirSync } from "node:fs";
 
 // Corre cada archivo de test en un proceso `tsx --test` separado, con un
 // FLUSHDB de Redis entre uno y otro. Necesario porque el rate-limiter de
@@ -7,63 +8,102 @@ import { spawn } from "node:child_process";
 // todos en un solo proceso `node --test <a> <b> ...` — mismo 429 falso que
 // ya se ve corriendo el `npm test` combinado en local (no es una regresión
 // real, es la ventana de rate-limit pisándose entre archivos).
-const TEST_FILES = [
-  "src/tests/e2e.test.ts",
-  "src/tests/e2eDeviceSync.test.ts",
-  "src/tests/e2eSecurityAndTokens.test.ts",
-  "src/tests/rbac.test.ts",
-  "src/tests/rbacDevicesSearch.test.ts",
-  "src/tests/rbacMutationsDenied1.test.ts",
-  "src/tests/rbacMutationsDenied2.test.ts",
-  // clientDirectory.test.ts/clientDeviceDirectory.test.ts faltaban acá (sólo
-  // corrían via `npm test` local) — mismo criterio que el resto de este archivo,
-  // se agregan para que CI también las ejecute.
-  "src/tests/clientDirectory.test.ts",
-  "src/tests/clientDeviceDirectory.test.ts",
-  "src/tests/alertCatalog.test.ts",
-  "src/tests/alerts.test.ts",
-  "src/tests/alertsEwsRegression.test.ts",
-  "src/tests/alertsWebhookGuard.test.ts",
-  "src/tests/alertDigest.test.ts",
-  "src/tests/reports.test.ts",
-  "src/tests/deviceLifecycle.test.ts",
-  "src/tests/deviceDuplicates.test.ts",
-  "src/tests/deviceLifecycleBulkActions.test.ts",
-  "src/tests/auditFeed.test.ts",
-  "src/tests/inventoryFields.test.ts",
-  "src/tests/monitorState.test.ts",
-  "src/tests/pendingDevices.test.ts",
-  "src/tests/supplies.test.ts",
-  "src/tests/supplyOrigin.test.ts",
-  "src/tests/incidents.test.ts",
-  "src/tests/incidentAutoRules.test.ts",
-  "src/tests/scheduledReports.test.ts",
-  "src/tests/supplyRequests.test.ts",
-  "src/tests/messageTemplates.test.ts",
-  "src/tests/emailLog.test.ts",
-  "src/tests/deviceCosts.test.ts",
-  "src/tests/remoteActions.test.ts",
-  "src/tests/observability.test.ts",
-  "src/tests/twoFactor.test.ts",
-  "src/tests/snmpCredentials.test.ts",
-  "src/tests/ipRangeSpec.test.ts",
-  "src/tests/ipRangeSpecCompile.test.ts",
-  "src/tests/businessHours.test.ts",
-  "src/tests/ipRangesCredentials.test.ts",
-  "src/tests/publicApi.test.ts",
-  "src/tests/publicApiKeyExpiry.test.ts",
-  "src/tests/publicApiWebhookDelivery.test.ts",
-  "src/tests/deviceUsageHistory.test.ts",
-  "src/tests/ewsProxyService.test.ts",
-  "src/tests/portalAgentEws.test.ts",
-  "src/tests/ewsProxyRelay.test.ts",
-  "src/tests/customFieldRules.test.ts",
-  "src/tests/feedbackUseCases.test.ts",
-  "src/tests/systemSettings.test.ts",
-  "src/tests/agentLogsReport.test.ts",
-  "src/tests/sftpDestination.test.ts",
-  "src/tests/clientSftpDestination.test.ts",
+
+const TESTS_DIR = "src/tests";
+
+// Ningún archivo de test se puede quedar afuera de CI por olvido (auditoría
+// 2026-09-08): la lista de acá abajo se había desfasado del disco y CI corría
+// 52 de los 65 archivos existentes. Los 13 ausentes no fallaban — simplemente
+// no se ejecutaban — y `check-coverage.mjs` calculaba la cobertura sobre esa
+// suite incompleta. Ya había pasado antes con `clientDirectory`/
+// `clientDeviceDirectory`, así que el modo de falla es la lista, no las
+// entradas.
+//
+// El arreglo es de INCLUSIÓN, no de orden: `KNOWN_ORDER` fija la secuencia
+// histórica y `discoverTestFiles()` le agrega al final todo `.test.ts` del
+// disco que no esté listado. Un archivo nuevo entra a CI por existir; los que
+// ya estaban corren exactamente en el mismo orden que antes.
+//
+// El orden importa y NO se puede alfabetizar: `ewsProxyRelay.test.ts` espera
+// 800ms fijos a que le llegue un publish de Redis y falla de forma
+// reproducible si corre antes de lo que corría (verificado en 2 corridas
+// limpias al intentar ordenar alfabético). Mientras ese test dependa de un
+// sleep fijo, mover archivos de lugar es un cambio riesgoso: agregá al final.
+const KNOWN_ORDER = [
+  "e2e.test.ts",
+  "e2eDeviceSync.test.ts",
+  "e2eSecurityAndTokens.test.ts",
+  "rbac.test.ts",
+  "rbacDevicesSearch.test.ts",
+  "rbacMutationsDenied1.test.ts",
+  "rbacMutationsDenied2.test.ts",
+  "clientDirectory.test.ts",
+  "clientDeviceDirectory.test.ts",
+  "alertCatalog.test.ts",
+  "alerts.test.ts",
+  "alertsEwsRegression.test.ts",
+  "alertsWebhookGuard.test.ts",
+  "alertDigest.test.ts",
+  "reports.test.ts",
+  "deviceLifecycle.test.ts",
+  "deviceDuplicates.test.ts",
+  "deviceLifecycleBulkActions.test.ts",
+  "auditFeed.test.ts",
+  "inventoryFields.test.ts",
+  "monitorState.test.ts",
+  "pendingDevices.test.ts",
+  "supplies.test.ts",
+  "supplyOrigin.test.ts",
+  "incidents.test.ts",
+  "incidentAutoRules.test.ts",
+  "scheduledReports.test.ts",
+  "supplyRequests.test.ts",
+  "messageTemplates.test.ts",
+  "emailLog.test.ts",
+  "deviceCosts.test.ts",
+  "remoteActions.test.ts",
+  "observability.test.ts",
+  "twoFactor.test.ts",
+  "snmpCredentials.test.ts",
+  "ipRangeSpec.test.ts",
+  "ipRangeSpecCompile.test.ts",
+  "businessHours.test.ts",
+  "ipRangesCredentials.test.ts",
+  "publicApi.test.ts",
+  "publicApiKeyExpiry.test.ts",
+  "publicApiWebhookDelivery.test.ts",
+  "deviceUsageHistory.test.ts",
+  "ewsProxyService.test.ts",
+  "portalAgentEws.test.ts",
+  "ewsProxyRelay.test.ts",
+  "customFieldRules.test.ts",
+  "feedbackUseCases.test.ts",
+  "systemSettings.test.ts",
+  "agentLogsReport.test.ts",
+  "sftpDestination.test.ts",
+  "clientSftpDestination.test.ts",
 ];
+
+function discoverTestFiles() {
+  const onDisk = readdirSync(TESTS_DIR)
+    .filter((f) => f.endsWith(".test.ts"))
+    .sort();
+
+  const known = KNOWN_ORDER.filter((f) => onDisk.includes(f));
+  const discovered = onDisk.filter((f) => !KNOWN_ORDER.includes(f));
+
+  const renamed = KNOWN_ORDER.filter((f) => !onDisk.includes(f));
+  if (renamed.length > 0) {
+    // Entrada de KNOWN_ORDER que ya no existe: rename o borrado sin limpiar
+    // acá. No es fatal, pero se avisa para que la lista no se pudra otra vez.
+    console.warn(`!!! KNOWN_ORDER menciona archivos inexistentes: ${renamed.join(", ")}`);
+  }
+  if (discovered.length > 0) {
+    console.log(`Archivos nuevos (no listados en KNOWN_ORDER, corren al final): ${discovered.join(", ")}`);
+  }
+
+  return [...known, ...discovered].map((f) => `${TESTS_DIR}/${f}`);
+}
 
 // remoteActions.test.ts tarda ~4min de forma legítima (polling real) — el
 // timeout tiene que dejarle margen. Es una red de seguridad: si CUALQUIER
@@ -88,17 +128,28 @@ function runFile(file) {
 
 async function main() {
   const redis = new Redis(process.env.REDIS_URL || "redis://localhost:6379");
-  let anyFailed = false;
+  const testFiles = discoverTestFiles();
+  const failed = [];
 
-  for (const file of TEST_FILES) {
+  console.log(`Descubiertos ${testFiles.length} archivos de test en ${TESTS_DIR}/`);
+
+  for (const file of testFiles) {
     await redis.flushdb();
     console.log(`\n=== ${file} ===`);
     const code = await runFile(file);
-    if (code !== 0) anyFailed = true;
+    if (code !== 0) failed.push(file);
   }
 
   await redis.quit();
-  process.exit(anyFailed ? 1 : 0);
+
+  if (failed.length > 0) {
+    console.error(`\n${failed.length} de ${testFiles.length} archivos fallaron:`);
+    for (const f of failed) console.error(`  - ${f}`);
+  } else {
+    console.log(`\nOK: ${testFiles.length}/${testFiles.length} archivos.`);
+  }
+
+  process.exit(failed.length > 0 ? 1 : 0);
 }
 
 main();
