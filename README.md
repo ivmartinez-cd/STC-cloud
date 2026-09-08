@@ -21,11 +21,11 @@ STC Cloud es un sistema empresarial que automatiza la lectura de contadores de i
 |---|---|
 | 🔍 Escaneo SNMP multimarca | HP, Lexmark, Samsung, Ricoh, Brother, Xerox |
 | 📊 Series temporales | PostgreSQL + TimescaleDB con compresión automática |
-| 🔐 Seguridad | JWT con refresh tokens, rate limiting, AES-256-GCM, RBAC agente/portal |
+| 🔐 Seguridad | JWT con refresh tokens, 2FA TOTP, CSRF, rate limiting por identidad, AES-256-GCM, RBAC de 3 roles |
 | 📈 Portal web | Dashboard, reportes, exportación CSV, alertas en tiempo real |
 | 🖥️ Agente Windows | Servicio de fondo, cola offline SQLite, reconexión automática |
 | 🔌 API pública para ERP | Solo lectura + webhooks salientes por API key (ver [OpenAPI](docs/api/openapi.yaml)) |
-| 📡 Observabilidad | Prometheus + Grafana + Alertmanager + backups automáticos (producción) |
+| 📡 Observabilidad | Backups automáticos diarios; Prometheus + Grafana + Alertmanager como perfil opt-in |
 | ✅ CI en cada PR | Lint/typecheck/build, guardas de arquitectura, tests de integración reales |
 | 🐳 Docker ready | Despliegue en un comando con SSL automático (Let's Encrypt) |
 
@@ -79,7 +79,7 @@ graph TB
 | **Monitor UI** | .NET 9 WinForms (tray app local) |
 | **Instalador** | Inno Setup + NSSM |
 | **Infraestructura** | Docker Compose + nginx + Let's Encrypt |
-| **Observabilidad (prod)** | Prometheus + Grafana + Alertmanager + backups automáticos |
+| **Observabilidad (prod)** | Prometheus + Grafana + Alertmanager (perfil opt-in) + backups automáticos |
 | **CI** | GitHub Actions (lint, typecheck, build, guardas de arquitectura, tests de integración) |
 
 ---
@@ -210,8 +210,12 @@ chmod +x deploy.sh
 El script automáticamente:
 - Valida la configuración
 - Genera certificado SSL con Let's Encrypt
-- Levanta todos los servicios (API, Portal, PostgreSQL, Redis, nginx, Prometheus, Grafana, Alertmanager, backups)
+- Levanta los servicios base (API, Portal, PostgreSQL, Redis, nginx, certbot, backups)
 - Ejecuta migraciones de base de datos
+
+> El stack de observabilidad (Prometheus, Grafana, Alertmanager) es **opt-in**: no lo levanta `deploy.sh`. Se activa aparte con
+> `docker compose -f docker-compose.prod.yml --env-file .env.production --profile observability up -d`
+> (ver [docs/internos/DEPLOY_CLOUD.md](docs/internos/DEPLOY_CLOUD.md)).
 
 ### Comandos útiles post-deploy
 
@@ -306,7 +310,7 @@ Hay dos superficies de API separadas:
 
 Ver [docs/README.md](docs/README.md) para el índice completo (documentos para presentar a clientes/auditores, guías de arquitectura, auditorías de seguridad, etc.). Accesos directos:
 
-- [docs/cliente/STC_Auditoria_Sistemas_IT_v1.7.html](docs/cliente/STC_Auditoria_Sistemas_IT_v1.7.html) — Especificaciones técnicas de seguridad para Auditoría IT
+- [docs/cliente/STC_Auditoria_Sistemas_IT_v2.1.html](docs/cliente/STC_Auditoria_Sistemas_IT_v2.1.html) — Especificaciones técnicas de seguridad para Auditoría IT
 - [docs/dev/ARCHITECTURE_GUIDE.md](docs/dev/ARCHITECTURE_GUIDE.md) — Principios y guardas de arquitectura del código
 - [docs/dev/CODE_MAP.md](docs/dev/CODE_MAP.md) — Mapa detallado del código fuente
 - [docs/api/openapi.yaml](docs/api/openapi.yaml) — Spec de la API pública para integración ERP

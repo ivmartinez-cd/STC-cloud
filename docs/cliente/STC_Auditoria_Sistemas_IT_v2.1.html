@@ -397,11 +397,7 @@
         </div>
 
         <div class="note-callout" style="padding: 10px 15px; margin: 15px 0 0 0; font-size: 12px;">
-            <strong>Novedades desde v1.7 (mayo 2026):</strong> autenticación WSS por ticket de un solo uso (§7), red de seguridad de rollback en las actualizaciones de firmware del agente (§8), soporte SNMPv3 con credenciales cifradas at-rest (§9), y dos secciones nuevas — acceso remoto controlado a EWS (§10) y política formal de retención de datos (§11).
-        </div>
-
-        <div class="note-callout" style="padding: 10px 15px; margin: 15px 0 0 0; font-size: 12px;">
-            <strong>Novedades desde v2.0 (agosto 2026):</strong> primera capacidad de <strong>escritura SNMP (SNMP SET)</strong> del sistema — reinicio remoto de impresora, ver §9 — hasta ahora todo el tráfico SNMP descrito en esta guía era exclusivamente de lectura (GET); y auditoría de inicio de sesión al portal (éxito y falla, con IP) sumada a `audit_logs`, sin cambiar su política de retención sin purga (§11).
+            <strong>Alcance:</strong> esta guía documenta los controles de seguridad vigentes del sistema — superficie de red, criptografía, autenticación, integridad de firmware, tráfico SNMP (lectura y la única operación de escritura), acceso remoto a EWS y política de retención de datos. Cada sección describe el comportamiento real del código en producción.
         </div>
 
         <div class="footer">
@@ -444,7 +440,7 @@
         <pre class="diagram">
 [DCA local] ──► (CONNECT proxy:8080) ──► [HTTP CONNECT Tunnel] ──► [Firewall WAN] ──► [Fastify API:443]
   │                                                                                          ▲
-  └───────► [Túnel WSS Segura (Bearer Token JWT + ping/pong nativo cada 8s)] ────────────────┘</pre>
+  └───────► [Túnel WSS Segura (Bearer Token JWT + ping/pong nativo cada 5s)] ────────────────┘</pre>
 
         <p>
             Para redes corporativas con políticas de seguridad que restringen la salida directa a internet a través de la red perimetral, el agente DCA soporta de forma nativa la tunelización del tráfico WSS e HTTPS mediante un proxy corporativo (HTTP CONNECT Tunneling). Esto se implementa de manera segura a través de `createProxyAgent`, aislando las credenciales del proxy corporativo en memoria mediante autenticación Basic encriptada.
@@ -512,12 +508,12 @@ Encrypted_Buffer = AES-256-GCM(Data: JSON_Config, Key: Clave_Derivada, IV: 12-by
 
         <h2 id="descubrimiento">4. Escaneo de Red e Inmunidad frente a Sistemas IDS/IPS</h2>
         <p>
-            El módulo de escaneo de red (`scanner.ts`) implementa una estrategia de interrogación defensiva diseñada específicamente para **no disparar falsos positivos en consolas SIEM o alertas de intrusión (IDS/IPS)** del cliente local al analizar las IPs corporativas:
+            El motor de captura del agente (`capture/`) implementa una estrategia de interrogación defensiva diseñada específicamente para **no disparar falsos positivos en consolas SIEM o alertas de intrusión (IDS/IPS)** del cliente local al analizar las IPs corporativas:
         </p>
 
         <h3>A. Pre-evaluación Ultrarrápida de Puertos (TCP Probing)</h3>
         <p>
-            Antes de interactuar con una IP de red, el agente DCA realiza una sonda preliminar de conexión TCP en los puertos de impresión conocidos (`9100`, `631`, `80`, `443`). El timeout máximo de conexión se establece en **500 ms** (`REACH_TIMEOUT = 500`). Si la IP no responde, se omite de forma inmediata.
+            Antes de interactuar con una IP de red, el agente DCA realiza una sonda preliminar de conexión TCP en los puertos de impresión conocidos (`9100`, `631`, `80`, `443`). Los timeouts están diferenciados según el tipo de puerto: **500 ms** para los puertos exclusivos de impresión `9100` y `631` (`REACH_TIMEOUT_MS`), que responden de inmediato, y **2000 ms** para los puertos web `80` y `443` (`WEB_REACH_TIMEOUT_MS`), ya que el firmware EWS antiguo (Samsung SyncThru V4, JetDirect) puede tardar en aceptar el handshake TCP aunque el puerto esté abierto. Si la IP no responde, se omite de forma inmediata.
         </p>
 
         <h3>B. Bifurcación Determinante por Puertos Exclusivos (`hasPrinterPort`)</h3>
@@ -561,7 +557,7 @@ Encrypted_Buffer = AES-256-GCM(Data: JSON_Config, Key: Clave_Derivada, IV: 12-by
 
         <h2 id="ews-engine">5. Motor EWS: Matriz de Endpoints y Extracción Quirúrgica</h2>
         <p>
-            El motor HTTP Scraping implementado en `ews.ts` es el núcleo de mayor precisión. Al interrogar directamente los servidores web embebidos de las placas de red (EWS), evita consultas complejas y extrae información fidedigna.
+            El motor HTTP Scraping implementado en `capture/transport/http.ts`, con los endpoints declarados por familia de fabricante en `capture/families/`, es el núcleo de mayor precisión. Al interrogar directamente los servidores web embebidos de las placas de red (EWS), evita consultas complejas y extrae información fidedigna.
         </p>
 
         <h3>A. Matriz Quirúrgica de Endpoints del Firmware</h3>

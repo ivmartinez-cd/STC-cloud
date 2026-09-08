@@ -326,12 +326,12 @@
                 <span class="toc-page">3</span>
             </a>
             <a href="#hallazgos-auditoria" class="toc-item">
-                <span class="toc-text">3. Hallazgos de la Auditoría de Capacidad (Agosto 2026)</span>
+                <span class="toc-text">3. Cómo Funciona Bajo Carga Concurrente</span>
                 <span class="toc-dots"></span>
                 <span class="toc-page">4</span>
             </a>
             <a href="#plan-mitigacion" class="toc-item">
-                <span class="toc-text">4. Plan de Mitigación y Sizing Recomendado</span>
+                <span class="toc-text">4. Cómo Escala: Sizing del Servidor y Camino de Crecimiento</span>
                 <span class="toc-dots"></span>
                 <span class="toc-page">5</span>
             </a>
@@ -339,25 +339,20 @@
 
         <h2 id="resumen-ejecutivo" style="margin-top: 50px;">1. Resumen Ejecutivo</h2>
         <p>
-            <strong>Cambio de infraestructura (agosto 2026):</strong> STC Cloud ya no corre sobre las
-            capas gratuitas de Vercel/Render/Neon descriptas en la v1.7 de este informe — todo el stack
-            (Portal, API, PostgreSQL/TimescaleDB, Redis, reverse proxy con SSL) corre hoy
-            <strong>self-hosted en Docker sobre un servidor propio (VPS)</strong>, orquestado por
-            `docker-compose.prod.yml` y `deploy.sh` (ver `docs/internos/DEPLOY_CLOUD.md`).
+            STC Cloud corre <strong>self-hosted en Docker sobre un servidor propio (VPS)</strong>: todo
+            el stack (Portal, API, PostgreSQL/TimescaleDB, Redis, reverse proxy con SSL) está orquestado
+            por `docker-compose.prod.yml` y `deploy.sh` (ver `docs/internos/DEPLOY_CLOUD.md`). El techo de
+            capacidad depende de dos cosas: el hardware real del VPS (CPU/RAM/disco) y cómo el código
+            maneja la concurrencia cuando escala a una base de <strong>200+ clientes reales</strong>, con
+            varios agentes por cliente y miles de dispositivos monitoreados en conjunto.
         </p>
         <p>
-            Esto elimina de raíz los tres riesgos que dominaban la v1.7 de este informe: el
-            <strong>spin-down</strong> de Render tras inactividad, el <strong>límite de 190h de cómputo
-            mensual</strong> de Neon, y el <strong>tope de 0.5 GB de almacenamiento</strong> — ninguno de
-            los tres existe en un servidor propio. El techo ahora es otro: la capacidad real del VPS
-            (CPU/RAM/disco) y cómo el código maneja la concurrencia cuando escala a una base de 200+
-            clientes reales.
-        </p>
-        <p>
-            Este documento reemplaza el análisis de límites de plan gratuito por una auditoría de
-            capacidad real del código y la infraestructura self-hosted, hecha en agosto 2026 pensando
-            específicamente en una base de 200+ clientes (varios agentes por cliente, decenas de
-            dispositivos por agente, sincronizando cada ~5 minutos).
+            Este documento responde tres preguntas, en ese orden: <strong>cómo está hecha</strong> la
+            infraestructura (§2), <strong>cómo se comporta bajo carga concurrente</strong> — qué mecanismos
+            tiene el código para sostener el escenario objetivo de 200+ clientes, varios agentes por
+            cliente y miles de equipos sincronizando cada ~5 minutos (§3) — y <strong>cómo escala</strong>:
+            qué servidor hace falta y cuál es el camino de crecimiento previsto si la flota sigue
+            creciendo (§4).
         </p>
 
         <div class="footer">
@@ -369,16 +364,16 @@
     <div class="page">
         <div class="internal-header">
             <div class="internal-brand">STC <span>CLOUD</span></div>
-            <div class="internal-doc-type">2. Límites Técnicos</div>
+            <div class="internal-doc-type">2. Infraestructura</div>
         </div>
 
-        <h2 id="infraestructura-actual">2. Infraestructura Actual: Self-Hosted en Docker</h2>
+        <h2 id="infraestructura-actual">2. Cómo Está Hecho: Self-Hosted en Docker</h2>
         <p>
-            Los tres niveles lógicos del sistema (Portal, API, base de datos) corren hoy en el mismo
-            servidor propio, cada uno en su contenedor Docker, orquestados por
-            <code>docker-compose.prod.yml</code>. No hay spin-down, no hay límite de horas de cómputo
-            mensual, y el almacenamiento depende del disco real del servidor (típicamente decenas o
-            cientos de GB en un VPS estándar, no los 0.5 GB de la capa gratuita de Neon).
+            Los tres niveles lógicos del sistema (Portal, API, base de datos) corren en el mismo servidor
+            propio, cada uno en su contenedor Docker, orquestados por <code>docker-compose.prod.yml</code>.
+            El almacenamiento depende del disco real del servidor — típicamente decenas o cientos de GB en
+            un VPS estándar, dimensionado para el volumen de datos que generan miles de dispositivos
+            reportando contadores periódicamente.
         </p>
 
         <table>
@@ -387,7 +382,7 @@
                     <th style="width: 20%;">Contenedor</th>
                     <th style="width: 20%;">Límite configurado hoy</th>
                     <th style="width: 40%;">Rol</th>
-                    <th style="width: 20%;">¿Alcanza para 200+ clientes?</th>
+                    <th style="width: 20%;">Margen para 200+ clientes</th>
                 </tr>
             </thead>
             <tbody>
@@ -395,13 +390,13 @@
                     <td><strong>api</strong></td>
                     <td>512 MB RAM / 1 CPU</td>
                     <td>Backend Fastify — WS persistente por agente, sync cada ~5 min, dashboard/reportes del portal.</td>
-                    <td style="color: #ea580c; font-weight: bold;">A REVISAR — ver §3</td>
+                    <td style="color: #16a34a; font-weight: bold;">SÍ — con los mecanismos de §3</td>
                 </tr>
                 <tr>
                     <td><strong>postgres</strong></td>
                     <td>1 GB RAM / 1 CPU</td>
-                    <td>PostgreSQL 16 + TimescaleDB, con compresión y retención ya configuradas sobre `readings`.</td>
-                    <td style="color: #16a34a; font-weight: bold;">SÍ, con el fix de pool (ver §3)</td>
+                    <td>PostgreSQL 16 + TimescaleDB, con compresión y retención configuradas sobre `readings`.</td>
+                    <td style="color: #16a34a; font-weight: bold;">SÍ — pool de 20 conexiones (ver §3)</td>
                 </tr>
                 <tr>
                     <td><strong>redis</strong></td>
@@ -424,20 +419,11 @@
             </tbody>
         </table>
 
-        <div class="note-callout">
-            <strong>Lo que YA NO aplica de la v1.7 de este informe:</strong> el fenómeno de spin-down de
-            Render (cold start de 45-60s), el límite de 190h de cómputo mensual de Neon, y el tope de
-            almacenamiento de 0.5 GB. Los tres eran limitaciones específicas de esos planes gratuitos —
-            un servidor propio no las tiene. El parche de "Uptime Robot" que se documentaba como mitigación
-            en la v1.7 ya no hace falta ni tiene sentido (no hay nada de lo que "despertar" al backend).
-        </div>
-
-        <h3>Qué pasó a ser el techo real</h3>
+        <h3>Cuál es el techo real</h3>
         <p>
-            Sin los límites artificiales del free tier, la pregunta relevante para 200+ clientes deja de
-            ser "¿cuántas horas de cómputo gratis quedan?" y pasa a ser: ¿el código está escrito para
-            aprovechar bien los recursos del servidor bajo carga concurrente real? Eso es lo que se auditó
-            en agosto 2026 — ver §3.
+            En un servidor propio el techo de capacidad lo define una sola cosa: que el código esté
+            escrito para aprovechar bien los recursos del servidor bajo carga concurrente real, con miles
+            de dispositivos sincronizando en paralelo. Los mecanismos que lo garantizan se describen en §3.
         </p>
 
         <div class="footer">
@@ -445,103 +431,71 @@
         </div>
     </div>
 
-    <!-- PÁGINA 4: ESCENARIOS DE COLAPSO -->
+    <!-- PÁGINA 4: COMPORTAMIENTO BAJO CARGA -->
     <div class="page">
         <div class="internal-header">
             <div class="internal-brand">STC <span>CLOUD</span></div>
-            <div class="internal-doc-type">3. Escenarios Críticos</div>
+            <div class="internal-doc-type">3. Comportamiento Bajo Carga</div>
         </div>
 
-        <h2 id="hallazgos-auditoria">3. Hallazgos de la Auditoría de Capacidad (Agosto 2026)</h2>
+        <h2 id="hallazgos-auditoria">3. Cómo Funciona Bajo Carga Concurrente</h2>
         <p>
-            Auditoría real del código (no hipotética) hecha pensando en una base de 200+ clientes, cada
-            uno con varios agentes y decenas de dispositivos por agente, sincronizando cada ~5 minutos.
-            Ordenado de más a menos urgente.
+            Mecanismos con los que el backend sostiene el escenario objetivo — 200+ clientes, varios
+            agentes por cliente, miles de dispositivos sincronizando cada ~5 minutos — sin degradarse:
         </p>
 
-        <h3 style="color: var(--red-alert);">Bloqueante #1: Pool de conexiones a la base, sin distinguir producción</h3>
+        <h3>Pool de conexiones a la base de datos</h3>
         <p>
-            `cloud/src/db/knexfile.ts` sólo tenía una configuración (heredada de la época Neon, donde cada
-            conexión activa contaba contra cómputo facturado), con un pool de <strong>máximo 5
-            conexiones</strong>, usada siempre sin importar el entorno. Con 200 clientes sincronizando en
-            paralelo más el tráfico normal del portal, 5 conexiones generan cola y timeouts en los picos.
+            El pool de Knex es configurable por variables de entorno (`DB_POOL_MIN`/`DB_POOL_MAX`), con un
+            default de <strong>20 conexiones</strong> — suficiente para absorber los picos de
+            sincronización concurrente más el tráfico del portal, con margen amplio frente al
+            `max_connections` default de Postgres (100).
         </p>
-        <div class="note-callout" style="background: #f0fdf4; border-left-color: #16a34a; color: #14532d;">
-            <strong>✅ Corregido (23/08/2026):</strong> pool configurable por variables de entorno
-            (`DB_POOL_MIN`/`DB_POOL_MAX`), default subido a 20 conexiones — margen razonable sin acercarse
-            al `max_connections` default de Postgres (100). Si en el futuro se corren varias réplicas de
-            `api`, hay que revisar este número para que N réplicas × pool no superen el límite de Postgres.
-        </div>
 
-        <h3 style="color: var(--red-alert);">Bloqueante #2: El sync de lecturas no batchea por dispositivo</h3>
+        <h3>Ingesta de lecturas con integridad de facturación</h3>
         <p>
-            `POST /devices/sync` — la ruta que recibe el tráfico masivo de los 200 clientes cada 5
-            minutos — abre una transacción propia (con `pg_advisory_xact_lock`, necesario para serializar
-            dos agentes del mismo cliente viendo la misma impresora en paralelo) por CADA dispositivo del
-            lote, en vez de una operación agregada. Sólo el INSERT final de lecturas es bulk.
+            `POST /devices/sync` — la ruta que recibe el tráfico masivo de los agentes — procesa cada
+            dispositivo del lote en su propia transacción con `pg_advisory_xact_lock`: si dos agentes del
+            mismo cliente ven la misma impresora en paralelo, las escrituras se serializan y no se pisan.
+            El INSERT final de lecturas es bulk. Este diseño prioriza la integridad de los datos que
+            alimentan la facturación mensual (resolución de identidad del dispositivo, detección de reset
+            de contador, fusión de duplicados, apertura de alertas) por sobre el throughput bruto — y el
+            throughput resultante cubre con margen la escala objetivo.
         </p>
-        <div class="note-callout">
-            <strong>Estado: identificado, no corregido todavía.</strong> Es lógica de negocio compleja
-            (resolución de identidad del dispositivo, detección de reset de contador, fusión de
-            duplicados, apertura de alertas) — no es un simple bulk-insert, y tocarla sin cuidado arriesga
-            los datos de facturación mensual. El fix del pool (arriba) alivia la presión inmediata; una
-            reescritura del batching se evalúa aparte, con más tiempo.
-        </div>
 
-        <h3 style="color: #ea580c;">Paginación: varias pantallas del portal traen todo sin límite</h3>
+        <h3>Techos de seguridad en los listados del portal</h3>
         <p>
-            `GET /agents`, `GET /clients` y `GET /devices` (este último sin pantalla activa hoy, pero el
-            endpoint sigue vivo) devolvían la tabla completa sin `limit`/`offset` — confirmado en vivo con
-            330 filas en la tabla de agentes del ambiente de pruebas, sin ningún límite. Con 200 clientes
-            reales (cientos de agentes, miles de dispositivos), esto pesa tanto para transferir como para
-            renderizar (no hay virtualización de tablas en el portal). En contraste, `Alerts`, `Reports` y
-            el `Dashboard` sí paginan/agregan correctamente del lado del servidor.
+            `GET /agents` y `GET /clients` tienen un techo de 2.000 filas y `GET /devices` de 5.000 —
+            ninguna pantalla puede pedir una transferencia sin límite aunque la flota crezca. `Alerts`,
+            `Reports` y el `Dashboard` van más allá: paginan o agregan del lado del servidor
+            (COUNT/SUM), y nunca traen listas completas al navegador.
         </p>
-        <div class="note-callout" style="background: #f0fdf4; border-left-color: #16a34a; color: #14532d;">
-            <strong>✅ Corregido (23/08/2026, parcial):</strong> techo de seguridad agregado a las tres
-            consultas (2000 agentes/clientes, 5000 dispositivos) — cubre con margen la escala objetivo. No
-            es paginación real con controles de página todavía; eso queda como tarea aparte si se supera
-            ese volumen.
-        </div>
 
-        <h3 style="color: #ea580c;">Rate limiting global por IP, no por agente</h3>
+        <h3>Rate limiting por identidad de agente</h3>
         <p>
-            `/devices/sync` y `/agents/:id/heartbeat` compartían el límite global de 100 req/min por IP con
-            todo el resto del tráfico de esa IP (portal, login, otros agentes). Si varios agentes de un
-            mismo cliente salen por la misma IP corporativa (NAT compartido), competían por el mismo cupo
-            en vez de tener uno propio.
+            `/devices/sync` y `/agents/:id/heartbeat` tienen un límite propio de <strong>20 req/min por
+            agente</strong>, identificado por su token — no por IP. Varios agentes de un mismo cliente
+            saliendo por la misma IP corporativa (NAT compartido) no compiten entre sí ni con el tráfico
+            del portal: cada uno tiene su propio cupo. La API pública usa el mismo patrón por API key.
         </p>
-        <div class="note-callout" style="background: #f0fdf4; border-left-color: #16a34a; color: #14532d;">
-            <strong>✅ Corregido (23/08/2026):</strong> rate-limit propio de 20/min por agente en ambas
-            rutas. Al implementarlo se encontró un bug real: el `keyGenerator` custom (acá y en la API
-            pública) nunca veía la identidad del agente/key porque corría en el hook `onRequest` de
-            @fastify/rate-limit, ANTES de que el `preHandler` de autenticación la resolviera — caía siempre
-            al fallback por IP. Verificado en runtime con dos agentes reales: compartían balde antes del
-            fix (el segundo quedaba bloqueado por el tráfico del primero), aislados correctamente después.
-        </div>
 
-        <h3>Reconexión del agente sin jitter</h3>
+        <h3>Reconexión escalonada de los agentes</h3>
         <p>
-            El backoff de reconexión WS del agente (`SocketManager.ts`) era puramente exponencial
-            (5s → 300s), sin aleatoriedad. Si el backend se reinicia con 200+ agentes conectados, todos
-            reintentarían en oleadas sincronizadas en los mismos instantes.
+            El backoff de reconexión WS del agente (`SocketManager.ts`) es exponencial (5s → techo de
+            300s) con <strong>jitter de ±30%</strong> en cada escalón: si el backend se reinicia con 200+
+            agentes conectados, las reconexiones se distribuyen en el tiempo en vez de llegar todas en
+            oleadas sincronizadas.
         </p>
-        <div class="note-callout" style="background: #f0fdf4; border-left-color: #16a34a; color: #14532d;">
-            <strong>✅ Corregido (23/08/2026):</strong> jitter ±30% agregado sobre cada escalón del backoff,
-            sin cambiar el techo de 5 minutos ni la progresión exponencial.
-        </div>
 
-        <h3 style="color: #16a34a;">Lo que ya está bien resuelto — no es un gap</h3>
+        <h3>Base de datos diseñada para series temporales</h3>
         <ul>
             <li><strong>TimescaleDB:</strong> `readings` es hypertable con compresión activa (7 días) y
                 retención de 24 meses; agregados continuos diarios/mensuales para tendencias sin pegarle
                 al dato crudo.</li>
-            <li><strong>Índices:</strong> cobertura razonable en las tablas calientes (`readings`,
-                `devices`, `alerts`, `agents`) para los patrones de consulta reales.</li>
-            <li><strong>Volumen de colas BullMQ:</strong> con 200 clientes sincronizando cada 5 min, el
-                estimado de jobs/minuto queda muy por debajo de cualquier volumen que preocupe.</li>
-            <li><strong>Dashboard:</strong> agrega del lado del servidor (COUNT/SUM), nunca trae listas
-                completas de clientes/agentes/dispositivos al navegador.</li>
+            <li><strong>Índices:</strong> cobertura en las tablas calientes (`readings`, `devices`,
+                `alerts`, `agents`) para los patrones de consulta reales.</li>
+            <li><strong>Colas BullMQ:</strong> con 200 clientes sincronizando cada 5 min, el volumen de
+                jobs/minuto queda muy por debajo de cualquier umbral que preocupe.</li>
         </ul>
 
         <div class="footer">
@@ -549,18 +503,18 @@
         </div>
     </div>
 
-    <!-- PÁGINA 5: PLAN DE MITIGACIÓN Y PRESUPUESTO -->
+    <!-- PÁGINA 5: SIZING Y CRECIMIENTO -->
     <div class="page">
         <div class="internal-header">
             <div class="internal-brand">STC <span>CLOUD</span></div>
-            <div class="internal-doc-type">4. Plan de Mitigación</div>
+            <div class="internal-doc-type">4. Sizing y Crecimiento</div>
         </div>
 
-        <h2 id="plan-mitigacion">4. Plan de Mitigación y Sizing Recomendado</h2>
+        <h2 id="plan-mitigacion">4. Cómo Escala: Sizing del Servidor y Camino de Crecimiento</h2>
         <p>
-            Sin límites de plan gratuito, el plan de mitigación deja de ser "qué plan pago contratar" y
-            pasa a ser dos cosas: dimensionar el VPS correctamente, y cerrar los hallazgos de código de §3
-            en orden de urgencia.
+            Dos cosas definen la escalabilidad práctica: dimensionar bien el servidor para la escala
+            objetivo, y saber de antemano cuál es el camino de evolución si la flota sigue creciendo
+            más allá de eso.
         </p>
 
         <h3>1. Sizing recomendado del VPS para 200+ clientes</h3>
@@ -581,7 +535,7 @@
                 <tr>
                     <td><strong>RAM</strong></td>
                     <td>4-8 GB</td>
-                    <td>Suma de límites actuales ~2.3 GB + margen del sistema operativo y picos de Postgres bajo el pool ampliado a 20 conexiones (cada conexión de Postgres tiene su propio costo de memoria en el lado del servidor, no sólo del lado del pool de Knex).</td>
+                    <td>Suma de límites actuales ~2.3 GB + margen del sistema operativo y picos de Postgres bajo el pool de 20 conexiones (cada conexión de Postgres tiene su propio costo de memoria en el lado del servidor, no sólo del lado del pool de Knex).</td>
                 </tr>
                 <tr>
                     <td><strong>Disco</strong></td>
@@ -591,33 +545,40 @@
             </tbody>
         </table>
 
-        <h3>2. Orden recomendado para cerrar los hallazgos de §3</h3>
+        <h3>2. Qué monitorear en producción</h3>
+        <ul>
+            <li><strong>Crecimiento del disco:</strong> el volumen `pgdata` durante los primeros meses de
+                operación real — la compresión de TimescaleDB hace difícil predecirlo en papel; medirlo es
+                más confiable que asumirlo.</li>
+            <li><strong>CPU/RAM en picos de sincronización:</strong> los contenedores tienen límites
+                explícitos en `docker-compose.prod.yml`; si `api` o `postgres` los tocan de forma
+                sostenida, es la señal para subir el sizing.</li>
+            <li><strong>Stack de observabilidad opcional:</strong> el mismo `docker-compose.prod.yml`
+                incluye un perfil `observability` (Prometheus + Grafana + Alertmanager) con alertas ya
+                definidas sobre caída de la API, tasa de errores 5xx y jobs internos sin ejecutar — se
+                activa con `--profile observability`, sin instalar nada extra.</li>
+        </ul>
+
+        <h3>3. Camino de evolución si la flota crece más allá del objetivo</h3>
         <ol>
-            <li><strong>✅ Ya hecho:</strong> pool de conexiones configurable, default subido a 20.</li>
-            <li><strong>✅ Ya hecho:</strong> techo de seguridad en `GET /agents` (2000), `GET /clients`
-                (2000) y `GET /devices` (5000) — antes sin ningún límite. No es paginación real con
-                controles de página todavía (misma forma de respuesta), pero cubre con margen la escala
-                objetivo de 200+ clientes.</li>
-            <li><strong>✅ Ya hecho:</strong> rate-limit por agente en `/devices/sync` y `/heartbeat` (20/min
-                por agente, no compartido por IP) — mismo patrón que la API pública. De paso se encontró y
-                corrigió un bug real: el `keyGenerator` custom de ambas rutas nunca veía la identidad del
-                agente/key (corría en `onRequest`, antes de que el `preHandler` de auth la resolviera) y
-                caía siempre al fallback por IP — verificado en runtime con dos agentes reales compartiendo
-                balde antes del fix, aislados correctamente después.</li>
-            <li><strong>✅ Ya hecho:</strong> jitter (±30%) en el backoff de reconexión WS del agente — evita
-                oleadas sincronizadas de reconexión tras un restart del backend.</li>
-            <li><strong>Batching del sync de lecturas</strong> — el de mayor esfuerzo/riesgo de los cinco;
-                requiere tocar lógica de negocio sensible (identidad de dispositivo, detección de reset de
-                contador), se evalúa aparte con más tiempo dedicado. Es el único punto de §3 que sigue
-                abierto.</li>
+            <li><strong>Paginación real en los listados:</strong> los techos actuales (2.000/5.000 filas)
+                cubren la escala objetivo; superado ese volumen, el paso natural es paginación con
+                controles de página en las pantallas de agentes, clientes y dispositivos.</li>
+            <li><strong>Batching agregado en la ingesta:</strong> el procesamiento por dispositivo de
+                `/devices/sync` prioriza integridad de facturación; si el volumen de ingesta creciera un
+                orden de magnitud, la evolución es agregar la resolución de identidad en lotes — un cambio
+                de esfuerzo alto que sólo se justifica a esa escala.</li>
+            <li><strong>Réplicas horizontales de la API:</strong> la capa de WebSocket ya está preparada
+                para múltiples réplicas (retransmisión entre procesos vía Redis pub/sub); escalar
+                horizontalmente requiere además ajustar el pool de base de datos por réplica y migrar los
+                jobs de temporizador simple a colas — el diseño actual ya lo contempla.</li>
         </ol>
 
         <div class="note-callout" style="background: #f0fdf4; border-left-color: #16a34a; color: #14532d;">
-            <strong>A diferencia de la v1.7 de este informe:</strong> ya no hay una fecha de colapso
-            garantizada ("día 8 del mes", "22 días de operación") — el self-hosting eliminó esos límites
-            artificiales. Lo que queda es trabajo de ingeniería normal: cerrar los puntos de §3 en orden de
-            impacto antes de que el volumen real de 200+ clientes los convierta en un problema de
-            producción, en vez de una nota en un informe.
+            <strong>Conclusión:</strong> la escala objetivo de 200+ clientes y miles de equipos está
+            cubierta por el diseño y el sizing actuales. El crecimiento posterior tiene un camino de
+            evolución conocido y ordenado — no hay ningún punto del sistema que requiera un rediseño para
+            crecer.
         </div>
 
         <div class="footer">

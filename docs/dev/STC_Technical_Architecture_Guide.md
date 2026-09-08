@@ -79,7 +79,7 @@ El agente protege sus credenciales almacenadas localmente (`config.enc`) mediant
     *   Combina los identificadores: `${guid}-${bios}`.
     *   Calcula el hash SHA-256 del string crudo y extrae los primeros 32 caracteres hexadecimales como el Hardware ID persistente.
 3.  **Generación de Clave por KDF:**
-    *   Aplica la función de derivación de claves por contraseña **PBKDF2** utilizando el Hardware ID obtenido, una sal aleatoria criptográfica de 16 bytes generada en caliente y **100,000 iteraciones** del algoritmo de hash `sha256` para derivar una clave fuerte de 32 bytes (`aes-256-gcm` key).
+    *   Aplica la función de derivación de claves por contraseña **PBKDF2** utilizando el Hardware ID obtenido, una sal aleatoria criptográfica de 16 bytes generada en caliente y **210,000 iteraciones** del algoritmo de hash `sha256` para derivar una clave fuerte de 32 bytes (`aes-256-gcm` key).
 4.  **Cifrado Criptográfico (AES-256-GCM):**
     *   Genera un vector de inicialización (IV) de 12 bytes aleatorios.
     *   Cifra el JSON del archivo de configuración.

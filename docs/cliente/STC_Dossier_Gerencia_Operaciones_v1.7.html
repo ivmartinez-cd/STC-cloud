@@ -361,7 +361,7 @@
         </p>
         <ul>
             <li>
-                <strong>Recolección en Silencio:</strong> Un agente local inaudible interroga periódicamente (por defecto cada 15 minutos) a las impresoras de la intranet mediante protocolos estándar de red corporativa.
+                <strong>Recolección en Silencio:</strong> Un agente local inaudible interroga periódicamente a las impresoras de la intranet mediante protocolos estándar de red corporativa, con una frecuencia que se adapta al horario laboral configurado de cada sitio: dentro del horario, descubrimiento de red cada 10 minutos, contadores cada 20 minutos, insumos cada 60 minutos y alertas cada 3 minutos; fuera del horario laboral el ritmo se espacia (descubrimiento cada 60 minutos, contadores e insumos cada 4 horas, alertas cada 15 minutos) para reducir el tráfico de red sin dejar de monitorear.
             </li>
             <li>
                 <strong>Derivación Directa:</strong> El agente extrae con precisión quirúrgica los contadores de impresión (páginas blanco y negro, páginas color, páginas a doble cara) y niveles de tóner.
@@ -405,6 +405,9 @@
             </li>
             <li>
                 <strong>Operadores Técnicos:</strong> Acceso a la monitorización del estado de los agentes, control de conectividad de los equipos de red y comandos de diagnóstico técnico básico. No disponen de permisos para ver datos confidenciales de costos de facturación o alterar parámetros organizacionales.
+            </li>
+            <li>
+                <strong>Visor de Cliente:</strong> Perfil de sólo lectura pensado para el personal del propio cliente final. Accede exclusivamente a la información de sus propios equipos y contadores, mediante una lista blanca explícita de pantallas de consulta; no puede ejecutar ninguna acción de modificación ni acceder a datos de otros clientes.
             </li>
         </ul>
 
@@ -473,6 +476,19 @@
                 <strong>Umbral Crítico (Tóner Crítico - ej. 10%):</strong> Envía de manera urgente un aviso para el despacho inmediato del consumible. Previene paradas operativas en el cliente y multas por incumplimiento de ANS (Acuerdos de Nivel de Servicio).
             </li>
         </ol>
+
+        <h3>Pedidos de Insumos Generados Automáticamente</h3>
+        <p>
+            Además del aviso visual, la plataforma puede **abrir el pedido de reposición por sí sola**, sin que un operador tenga que cargarlo a mano. Un proceso en el servidor evalúa cada pocos minutos los niveles de consumibles de los clientes que tengan la función habilitada y genera el pedido cuando corresponde. Dos comportamientos lo hacen confiable en la operación diaria:
+        </p>
+        <ul>
+            <li>
+                <strong>Sin pedidos duplicados:</strong> la base de datos garantiza que no pueda existir más de un pedido abierto para el mismo consumible del mismo equipo, aunque el nivel siga bajando entre una evaluación y la siguiente.
+            </li>
+            <li>
+                <strong>Cierre automático al reponer:</strong> cuando la telemetría detecta que el cartucho fue reemplazado (el nivel vuelve a subir), el pedido correspondiente se cierra solo, manteniendo la lista de pendientes limpia y fiel a la realidad del parque instalado.
+            </li>
+        </ul>
 
         <h3>Beneficios en Gestión de Stock</h3>
         <ul>

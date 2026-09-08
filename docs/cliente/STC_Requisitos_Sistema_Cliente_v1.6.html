@@ -310,6 +310,9 @@
             <li><strong>Sistemas de Escritorio:</strong> Windows 10 y Windows 11 (ediciones Pro, Enterprise y Education de 64 bits).</li>
             <li><strong>Virtualización:</strong> Completamente compatible con entornos virtuales VMware ESXi, Microsoft Hyper-V, Citrix, Nutanix y nubes híbridas AWS/Azure.</li>
         </ul>
+        <p style="font-size: 13px; color: #64748b;">
+            <strong>Cuenta de ejecución:</strong> el servicio ("STCCloudMonitor") se ejecuta por defecto bajo la cuenta <strong>LocalSystem</strong>. Si la política de la organización exige ejecutarlo bajo una cuenta de servicio nominal, se recomienda que esa cuenta tenga contraseña sin expiración: el vencimiento de la contraseña detiene el servicio y, con él, la recolección de contadores.
+        </p>
 
         <h2 id="hardware">3. Requisitos de Hardware</h2>
         <p>
@@ -462,9 +465,20 @@
         </p>
         <ul>
             <li><strong>Cifrado de Credenciales Locales:</strong> Toda la información de configuración (claves del portal, tokens de autenticación de 30 días, etc.) se almacena en el archivo `config.enc` cifrado simétricamente bajo **AES-256-GCM**.</li>
-            <li><strong>Hardware ID Binding:</strong> La clave de descifrado no se guarda en el equipo, sino que es derivada dinámicamente mediante **PBKDF2 (100,000 iteraciones)** a partir de parámetros inmutables del equipo host (Windows MachineGuid y Serial Number de la BIOS). Si la carpeta del agente es copiada a otro hardware, los datos no podrán ser descifrados, forzando la desvinculación.</li>
+            <li><strong>Hardware ID Binding:</strong> La clave de descifrado no se guarda en el equipo, sino que es derivada dinámicamente mediante **PBKDF2 (210,000 iteraciones)** a partir de parámetros inmutables del equipo host (Windows MachineGuid y Serial Number de la BIOS). Si la carpeta del agente es copiada a otro hardware, los datos no podrán ser descifrados, forzando la desvinculación.</li>
             <li><strong>Validación Criptográfica de Actualizaciones:</strong> El actualizador automático verifica la integridad mediante firmas criptográficas asimétricas **Ed25519** de clave pública fija y hashes SHA-256. Esto neutraliza de raíz los ataques a la cadena de suministro por manipulación del paquete de actualización.</li>
         </ul>
+
+        <h3>Verificación de Integridad del Instalador (SHA-256)</h3>
+        <p>
+            Para las auditorías de infraestructura que exigen validar el binario antes de distribuirlo, el paquete de distribución incluye el script <code>verify_hash.ps1</code>, que compara el instalador descargado contra el hash SHA-256 oficial de esa versión:
+        </p>
+        <div class="note-callout" style="font-family: monospace; background: #f1f5f9; border-color: #475569; color: #1e293b; padding: 15px; font-size: 12px; border-radius: 4px;">
+            .\verify_hash.ps1 -FilePath "STC-Monitor-Setup.exe" -ExpectedHash "&lt;HASH_OFICIAL_STC&gt;"
+        </div>
+        <p style="font-size: 13px; color: #64748b;">
+            El hash SHA-256 oficial de cada versión se publica en el portal STC Cloud y en las notas de lanzamiento. Este control garantiza que el instalador no fue alterado por terceros durante la transferencia.
+        </p>
 
         <h2 id="despliegue">7. Despliegue Masivo y Silencioso</h2>
         <p>
@@ -486,6 +500,12 @@
             • <code>/KEY</code>: Registra de inmediato el micro-agente con los identificadores correspondientes del cliente en el portal.<br>
             • <code>/SERVER</code>: Establece el endpoint del servidor API en la nube al cual reportará telemetría.
         </p>
+
+        <h3>Directorio de Datos del Agente</h3>
+        <p>
+            El agente almacena su configuración cifrada (`config.enc`) y su base de datos local de telemetría en una ruta fija fuera del perfil de usuario, accesible para el servicio y excluible en las políticas de antivirus si la organización lo requiere:
+        </p>
+        <p style="font-family: monospace; font-weight: bold; text-align: center;">C:\ProgramData\STCCloudMonitor\</p>
 
         <div class="footer">
             PÁGINA 5 | STC CLOUD – ESPECIFICACIONES DE CLIENTE

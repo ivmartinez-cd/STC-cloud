@@ -1,9 +1,9 @@
 # 🚀 Guía de Despliegue — Self-Hosted (Docker, VPS propio)
 
-> STC Cloud ya no corre en Render/Vercel/Neon — todo el stack (API, portal,
-> Postgres/TimescaleDB, Redis, reverse proxy con SSL) corre self-hosted en
-> Docker sobre un servidor propio (VPS o físico), orquestado por
-> `docker-compose.prod.yml` y automatizado por `deploy.sh`.
+> Todo el stack de STC Cloud (API, portal, Postgres/TimescaleDB, Redis,
+> reverse proxy con SSL) corre self-hosted en Docker sobre un servidor propio
+> (VPS o físico), orquestado por `docker-compose.prod.yml` y automatizado por
+> `deploy.sh`.
 
 | Componente | Dónde corre | Contenedor |
 |---|---|---|
@@ -72,7 +72,7 @@ Al terminar, el portal queda accesible en `https://${DOMAIN}` y la API en
 ## 3️⃣ Configurar el Agente Windows
 
 En el agente instalado en el cliente, la URL del servidor apunta al dominio
-propio (no a un host de Render):
+propio:
 
 ```
 API_URL=https://tu-dominio.com
@@ -88,8 +88,8 @@ API_URL=https://tu-dominio.com
 
 ## 🔄 Actualizar el deploy (nueva versión del backend/portal)
 
-A diferencia de Render/Vercel, acá no hay auto-deploy al hacer `git push` —
-hay que correr el rebuild manualmente en el servidor:
+El despliegue es manual: no hay auto-deploy al hacer `git push`, hay que
+correr el rebuild en el servidor:
 
 ```bash
 git pull origin main
@@ -125,11 +125,51 @@ docker compose -f docker-compose.prod.yml exec -T postgres \
   psql -U stc_admin -d stc_cloud < backup_descomprimido.sql
 ```
 
-## Límites y sizing (self-hosted, no free tier)
+## 📡 Observabilidad (perfil opcional)
 
-Ya no aplican las limitaciones de plan gratuito de Render/Vercel/Neon
-(spin-down, horas de cómputo, storage de 0.5 GB) — el techo real ahora es el
-tamaño del VPS y los límites de recursos configurados en
-`docker-compose.prod.yml` (`deploy.resources.limits` por servicio). Ver
-`docs/cliente/STC_Analisis_Escalabilidad_Limites_v1.7.html` para el análisis
-de capacidad frente a una base de 200+ clientes.
+Prometheus, Grafana y Alertmanager están definidos en el mismo
+`docker-compose.prod.yml` pero bajo el perfil `observability`, así que **no
+arrancan** con un `docker compose up -d` normal ni con `deploy.sh`. Para
+levantarlos:
+
+```bash
+docker compose -f docker-compose.prod.yml --env-file .env.production \
+  --profile observability up -d
+```
+
+Antes de levantarlo, completar en `.env.production`:
+
+```
+GRAFANA_ADMIN_USER=admin
+GRAFANA_ADMIN_PASSWORD=CAMBIAR_POR_CONTRASENA_SEGURA
+```
+
+Cómo queda expuesto:
+
+- **Grafana**: bajo `https://${DOMAIN}/grafana/`, detrás del mismo nginx y el
+  mismo certificado TLS que el portal y la API (`location /grafana/` en
+  `nginx.conf`) — no abre ningún puerto nuevo. Tiene su propio login,
+  independiente del portal, y el registro de usuarios está deshabilitado
+  (`GF_USERS_ALLOW_SIGN_UP: "false"`). El datasource de Prometheus y el
+  dashboard de STC Cloud se auto-provisionan desde `grafana/provisioning/` y
+  `grafana/dashboards/`.
+- **Prometheus** y **Alertmanager**: sin puerto publicado ni `location` de
+  nginx, a propósito — sólo accesibles dentro de la red interna
+  `stc-network`, mismo nivel de confianza que el endpoint `/metrics` de la
+  API. Prometheus scrapea `api:3000/metrics` cada 15s y retiene 15 días
+  (`--storage.tsdb.retention.time=15d`); las reglas de alerta viven en
+  `prometheus/alerts.yml`.
+
+Alertmanager arranca con el receiver en `'null'` (no notifica a nadie) y los
+datos SMTP como placeholders `CAMBIAR_*` en `alertmanager/alertmanager.yml`.
+Para que mande alertas por mail hay que completar ahí los mismos valores SMTP
+que ya usa la app y apuntar `route.receiver` al receiver `default` — el YAML
+de Alertmanager no interpola variables de entorno, así que se cargan a mano.
+
+## Límites y sizing
+
+El techo de capacidad lo definen el tamaño del VPS y los límites de recursos
+configurados en `docker-compose.prod.yml` (`deploy.resources.limits` por
+servicio). Ver `docs/cliente/STC_Analisis_Escalabilidad_Limites_v1.7.html`
+para el análisis de capacidad frente a una base de 200+ clientes y miles de
+equipos.

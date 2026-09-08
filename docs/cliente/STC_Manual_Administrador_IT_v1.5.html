@@ -367,7 +367,7 @@
         <div class="cover-meta">
             <div class="cover-meta-item">
                 <strong>Versión del Agente</strong>
-                1.5.6
+                1.3.0
             </div>
             <div class="cover-meta-item">
                 <strong>Clasificación</strong>
@@ -446,10 +446,10 @@
     </div>
 
     <div class="note-callout" style="margin-top:40px;">
-        <strong>Prerequisito:</strong> Este manual asume que el administrador ha leído el
-        <em>Manifiesto de Seguridad STC Cloud v1.5</em> y la
-        <em>Guía de Prerrequisitos de Despliegue v1.5</em>.
-        El agente debe instalarse únicamente en equipos que cumplan los requisitos de hardware y OS allí especificados.
+        <strong>Prerequisito:</strong> Este manual asume que el administrador ha leído los
+        <em>Requisitos del Sistema Cliente</em> y la
+        <em>Guía de Auditoría de Sistemas e IT</em>.
+        El agente debe instalarse únicamente en equipos que cumplan los requisitos de hardware, sistema operativo y red allí especificados.
     </div>
 
     <div class="footer">
@@ -609,7 +609,7 @@
     <div class="code-block">
         <div class="code-block-label">JSON — agente activo y en buen estado (exit 0)</div>
         <pre>{
-  <span class="key">"version"</span>:                    <span class="str">"1.5.6"</span>,
+  <span class="key">"version"</span>:                    <span class="str">"1.3.0"</span>,
   <span class="key">"timestamp"</span>:                  <span class="str">"2026-05-16T14:30:00.000Z"</span>,
   <span class="key">"activated"</span>:                  <span class="num">true</span>,
   <span class="key">"agentId"</span>:                    <span class="str">"agt_a1b2c3d4"</span>,
@@ -632,7 +632,7 @@
     <div class="code-block">
         <div class="code-block-label">JSON — hardware reemplazado, reactivación requerida (exit 1)</div>
         <pre>{
-  <span class="key">"version"</span>:                    <span class="str">"1.5.6"</span>,
+  <span class="key">"version"</span>:                    <span class="str">"1.3.0"</span>,
   <span class="key">"timestamp"</span>:                  <span class="str">"2026-05-16T14:30:01.000Z"</span>,
   <span class="key">"activated"</span>:                  <span class="num">false</span>,
   <span class="key">"agentId"</span>:                    <span class="num">null</span>,
@@ -676,7 +676,7 @@
             <tr>
                 <td class="code">version</td>
                 <td><code>string</code></td>
-                <td>Versión del binario del agente (ej. <code>"1.5.6"</code>).</td>
+                <td>Versión del binario del agente (ej. <code>"1.3.0"</code>).</td>
             </tr>
             <tr>
                 <td class="code">timestamp</td>

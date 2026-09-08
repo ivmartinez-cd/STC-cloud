@@ -1,126 +1,238 @@
 # 🗺️ Mapa de Código (Code Map) - Ecosistema STC Cloud
 
-Este documento proporciona una guía de navegación estructural sobre el repositorio de **STC Cloud** para facilitar la auditoría manual por parte del equipo de sistemas. Se detalla la función exacta de cada directorio y archivo principal, demostrando una separación limpia de responsabilidades (Decoupled Clean Architecture).
+Este documento es una guía de navegación estructural del repositorio de **STC Cloud**: qué hay en cada directorio y dónde vive cada responsabilidad. Sirve tanto para orientar a un desarrollador nuevo como para auditoría técnica.
+
+> El estándar de arquitectura vigente para código nuevo es [`ARCHITECTURE_GUIDE.md`](./ARCHITECTURE_GUIDE.md); este mapa describe el estado real del árbol, incluidas las zonas que todavía no terminaron de migrar a ese estándar.
 
 ---
 
 ## 🏗️ Estructura General del Proyecto
 
-El repositorio está dividido en carpetas independientes para el **Servidor Cloud**, el **Agente de Recolección (DCA)**, la **Interfaz de Monitoreo**, y los recursos de empaquetado/despliegue:
-
 ```
 STC-cloud/
-├── agent/               # Agente Local DCA (NodeJS compilado a SEA síncrono)
-├── cloud/               # Servidor Backend (Fastify API) y Portal Web (React)
-│   ├── portal/          # Frontend Web del Portal (Vite + React)
-│   └── src/             # Backend API y Servicios de Negocio (Fastify)
-├── bridge/              # Código huérfano de una feature anterior (ConsoleEngine); no lo referencia ningún build actual — ver agent/src/core/ConsoleEngine.ts
-├── shared/              # Tipos y utilidades de cripto; sin package.json propio, no integrado a los builds de cloud/agent
-├── docs/                # Documentación técnica, manuales e informes de auditoría
-└── docker-compose.yml   # Orquestación local/producción con contenedores
+├── agent/               # Agente Local DCA (Node.js compilado a ejecutable único)
+├── cloud/               # Backend (Fastify API) y Portal Web (React)
+│   ├── src/             # Backend API, módulos de negocio y jobs
+│   ├── portal/          # Frontend del Portal (Vite + React 19)
+│   ├── scripts/         # Guardas de arquitectura y runner de tests de CI
+│   └── docker/          # Dockerfiles e imagen de despliegue
+├── monitor-ui/          # Tray app local de Windows (.NET 9 WinForms)
+├── installer/           # Empaquetado del agente (Inno Setup) y firma de bundles
+├── prometheus/          # Config y reglas de alerta (perfil `observability`)
+├── grafana/             # Datasource y dashboards auto-provisionados
+├── alertmanager/        # Ruteo de alertas (perfil `observability`)
+├── docs/                # Documentación técnica, manuales e informes
+├── bridge/              # Código huérfano de una feature anterior; ningún build lo referencia
+├── shared/              # Tipos y utilidades de cripto; sin package.json propio, no integrado a los builds
+├── docker-compose.yml       # Stack de desarrollo local
+└── docker-compose.prod.yml  # Stack de producción (incluye perfil opcional `observability`)
 ```
 
 ---
 
 ## 📡 1. Agente Local (`/agent`)
 
-El agente de recolección (DCA) es un binario independiente de cero-configuración que se ejecuta en la intranet del cliente.
+Binario independiente que corre como servicio de Windows en la intranet del cliente.
 
 ```
 agent/src/
 ├── core/
-│   ├── main.ts            # Punto de entrada inicial y loop de ejecución
-│   ├── ConfigManager.ts   # Carga y descifrado de credenciales (AES-256-GCM + HWID)
-│   ├── ConsoleEngine.ts   # CLI interactiva de diagnóstico local
-│   └── SocketManager.ts   # Gestión de WebSockets seguros (WSS) bidireccionales
-├── capture/               # Motor de captura por modelo (ver capture/README.md)
-│   ├── index.ts           # captureDevice(): puertos → identidad → driver → scopes → normalización
-│   ├── registry.ts        # Familias + perfiles; resolve()
-│   ├── families/          # Lógica de protocolo por firmware (hp.devmgmt, samsung.syncthru, samsung.sws, lexmark.cgi, generic.printer-mib, ...)
-│   ├── models/<marca>/    # Un archivo declarativo por modelo de impresora (defineModel)
-│   ├── transport/         # fetchHttp (EWS) y SnmpClient (GET por lotes, GETBULK, v1/v2c/v3 con lista de credenciales y negociación fail-fast)
-│   └── normalize.ts       # CaptureResult → DeviceReading (contrato del servidor)
-├── snmp/
-│   ├── scanner.ts         # Fachada de compatibilidad sobre capture/ (readDevice, readViaSNMP, ...)
-│   ├── ews.ts             # Lista de endpoints EWS genéricos (familia generic.ews)
-│   ├── ews-parsers/       # Parsers HTML/JSON/XML por marca reutilizados por las familias
-│   └── oids.ts            # Diccionario de OIDs SNMP por marca (HP, Lexmark, Samsung, Ricoh, Brother, Xerox)
+│   ├── main.ts             # Punto de entrada; orquesta arranque y loops
+│   ├── config.ts           # Carga y descifrado de configuración (config.enc)
+│   ├── security.ts         # HWID binding: SHA-256 + PBKDF2 (210.000 iter) + AES-256-GCM
+│   ├── ScanService.ts      # Loop de escaneo; delega la lectura en capture/
+│   ├── SyncService.ts      # Loop de sincronización con la nube
+│   ├── HeartbeatService.ts # Latido periódico hacia el portal
+│   ├── SocketManager.ts    # WebSocket seguro (WSS) bidireccional, ping/pong y backoff con jitter
+│   ├── CommandHandler.ts   # Ejecución de comandos remotos recibidos por WS
+│   ├── TaskScheduler.ts    # Programación de los loops
+│   ├── BusinessHours.ts    # Cadencia adaptativa según horario laboral del sitio
+│   ├── TimeZoneUtils.ts    # Resolución de zona horaria IANA
+│   ├── devicePolicy.ts     # Reglas de qué dispositivos se reportan
+│   ├── UpdateService.ts    # Auto-actualización con verificación de firma
+│   ├── updateKey.ts        # Clave pública Ed25519 embebida para validar updates
+│   ├── CliCommands.ts      # Flags de CLI (--activate, --status, --set-proxy, ...)
+│   ├── ConsoleEngine.ts    # Consola de diagnóstico local
+│   ├── ConsoleConnector.ts # Puente de la consola con el portal
+│   ├── LogTailer.ts        # Lectura incremental de logs para envío
+│   ├── NetworkUtils.ts     # Utilidades de red
+│   ├── Logger.ts           # Logging estructurado
+│   └── version.ts          # Versión del agente
+├── capture/                # ⭐ Motor de captura actual (ver capture/README.md)
+│   ├── index.ts            # captureDevice(): puertos → identidad → driver → scopes → normalización
+│   ├── registry.ts         # Registro de familias y perfiles; resolve()
+│   ├── families/           # Lógica por firmware: hp-devmgmt, hp-futuresmart, hp-jetdirect-legacy,
+│   │                       #   samsung-syncthru, samsung-sws, lexmark-cgi, generic-ews, generic-printer-mib
+│   ├── models/<marca>/     # Un archivo declarativo por modelo (hp/, lexmark/, samsung/)
+│   ├── transport/          # http.ts (EWS) y snmp.ts (v1/v2c/v3, GETBULK, lista de credenciales)
+│   ├── normalize.ts        # CaptureResult → DeviceReading (contrato del servidor)
+│   ├── reading.ts          # Modelo de lectura
+│   ├── supplyOrigin.ts     # Origen/identidad de consumibles
+│   ├── types.ts            # Tipos del motor de captura
+│   └── bridge.ts           # Puente con el código legacy de snmp/
+├── snmp/                   # Protocolos y parsers; legacy salvo lo que usa capture/
+│   ├── scanner.ts          # Fachada de compatibilidad sobre capture/ (readDevice, readViaSNMP, ...)
+│   ├── ews.ts              # Endpoints EWS genéricos (usados por la familia generic-ews)
+│   ├── ews-parsers/        # Parsers HTML/JSON/XML por marca, reutilizados por las familias
+│   ├── oids.ts             # Diccionario de OIDs por marca
+│   ├── pjl.ts / ipp.ts     # Protocolos de fallback (TCP 9100 / 631)
+│   ├── printerReset.ts     # Reset remoto de impresora
+│   └── probeEndpoints.ts / testEws.ts / testSingleIp.ts  # Herramientas de diagnóstico
 ├── sync/
-│   ├── database.ts        # Cliente local SQLite de alto rendimiento (PRAGMA WAL)
-│   └── synchronizer.ts    # Transmisión y encolado tolerante a fallos WAN (Backpressure)
+│   ├── database.ts         # SQLite local en modo WAL: cola de lecturas + caché de dispositivos
+│   └── uploader.ts         # Envío por lotes al portal, con backpressure y purga
 ├── install/
-│   └── service.ts         # Registro y control del agente como Servicio de Windows
+│   ├── install.js          # Registro como servicio de Windows
+│   └── uninstall.js        # Desinstalación
 └── types/
-    └── index.ts           # Definiciones de tipo para telemetría e inventario
+    └── net-snmp.d.ts       # Tipos para la librería net-snmp
 ```
 
-### 🎯 Garantía de Separación:
-* **Capa de Captura (`capture/` + `snmp/`):** El código que dialoga directamente con los fierros (impresoras) mediante SNMP, PJL, IPP o HTTP está encapsulado aquí: `capture/` decide *qué* leer de cada modelo (perfiles y familias) y `snmp/` aporta parsers y OIDs. No contiene lógica de negocio del servidor.
-* **Capa de Almacenamiento (`sync/`):** Resguarda y encola lecturas en SQLite. El motor de sincronización (`synchronizer.ts`) se limita a empujar datos cifrados y purgar la cola cuando el servidor confirma la recepción.
-* **Capa de Seguridad (`core/ConfigManager.ts`):** Aislado del resto de rutinas. Único módulo autorizado para derivar llaves PBKDF2 y descifrar la configuración local.
+### 🎯 Garantía de Separación
+* **Captura (`capture/`):** único lugar que dialoga con las impresoras. Decide *qué* leer de cada modelo (perfiles, familias) y cómo transportarlo (SNMP/HTTP). `snmp/` aporta parsers, OIDs y protocolos de fallback.
+* **Persistencia (`sync/`):** encola en SQLite y empuja a la nube; no conoce protocolos de impresora.
+* **Seguridad (`core/security.ts` + `core/config.ts`):** único módulo autorizado a derivar claves y descifrar la configuración local.
 
 ---
 
-## ☁️ 2. Servidor Backend (`/cloud`)
+## ☁️ 2. Backend (`/cloud/src`)
 
-El backend de la nube está estructurado bajo el patrón **Controller-Service-Repository**, garantizando que el procesamiento HTTP sea independiente de la base de datos y la lógica comercial.
+Organizado en **módulos hexagonales** (`modules/`), con las capas y la regla de dependencias descriptas en `ARCHITECTURE_GUIDE.md` §3.
 
 ```
 cloud/src/
-├── api/
-│   ├── server.ts          # Inicializador de Fastify, plugins y middlewares de seguridad
-│   ├── routes/            # Definición de rutas REST y esquemas de validación (Joi/Schema)
-│   │   ├── auth.ts        # Endpoints de login y refresco de tokens
-│   │   ├── agents.ts      # Endpoints para comandos y registros DCA
-│   │   └── portal.ts      # API privada para la gestión web
-│   ├── controllers/       # Extracción de parámetros HTTP y mapeo de respuestas
-│   ├── middlewares/       # Validadores de tokens JWT (portalAuth y agentAuth)
-│   └── utils/             # Funciones criptográficas y formateadores comunes
-├── services/
-│   ├── agentService.ts        # Lógica de registro, control de latidos (Heartbeats) de agentes
-│   ├── deviceService.ts       # Coalescencia e inserciones transaccionales de impresoras
-│   ├── auditService.ts        # Registro inmutable de auditoría en la tabla `audit_logs`
-│   ├── snmpCredentials.ts     # Validación/enmascarado/cifrado de la lista de credenciales SNMP por agente (lógica pura, sin Knex)
-│   ├── cryptoService.ts       # Cifrado at-rest (AES-256-GCM, clave HKDF-SHA256 cacheada) usado por snmpCredentials.ts
-│   ├── ipRangeSpec.ts         # Validación de ip_ranges (CIDR + tope + exclusiones + hostname + credenciales por rango) y compilación a pares {start,end} planos para el agente (lógica pura, sin Knex)
-│   ├── businessHours.ts       # Horario laboral + TZ configurable por agente; offset UTC real (sin librería) para corregir el parseo de timestamps naive de logs/lecturas
-│   ├── apiKeyService.ts       # API keys de la API pública (integración ERP): alta/listado/revocación, hash SHA-256 at-rest
-│   └── publicWebhookService.ts # Webhooks de integración ERP por cliente (distintos de los webhooks de notificación interna); firma HMAC-SHA256, reusa el guard SSRF de notificationService.ts
+├── api/                    # Composición HTTP (no lógica de negocio)
+│   ├── server.ts           # Entrypoint: Fastify, Knex, Redis, arranque y shutdown
+│   ├── bootstrap.ts        # Migraciones al arrancar y admin por defecto
+│   ├── lifecycle.ts        # Ciclo de vida del proceso
+│   ├── plugins.ts          # CORS, helmet/CSP, rate limit, colas
+│   ├── routes.ts           # registerAllRoutes(): monta las rutas de cada módulo
+│   ├── health.ts           # /api/v1/health
+│   ├── middlewares/
+│   │   └── authMiddleware.ts  # portalAuth / agentAuth / apiKeyAuth + ownership de :id
+│   ├── policy/
+│   │   └── rolePolicy.ts      # RBAC: CLIENT_VIEWER_ROUTES / ADMIN_ONLY_ROUTES
+│   ├── utils/              # deviceFilters.ts, ip.ts, scope.ts
+│   ├── routes/             # (vacío — las rutas viven en modules/<x>/presentation/)
+│   └── controllers/        # (vacío — los controllers viven en modules/<x>/presentation/)
+├── modules/                # ⭐ 24 módulos de negocio, uno por dominio
+│   │                       #   activity-views, agents, alerts, audit, auth, clients, dashboard,
+│   │                       #   device-costs, devices, email-log, feedback, incidents, inventory,
+│   │                       #   message-templates, metrics, observability, public-api, remote-actions,
+│   │                       #   reports, scheduled-reports, supplies, supply-requests,
+│   │                       #   system-settings, two-factor
+│   └── <módulo>/
+│       ├── index.ts            # Superficie pública del módulo (ej. registerAuthRoutes)
+│       ├── domain/             # Entidades, servicios puros, errores, interfaces de repositorio
+│       ├── application/        # Casos de uso, DTOs y puertos
+│       ├── infrastructure/     # Adapters concretos: database/ (Knex), queue/, redis/
+│       └── presentation/       # Controllers, definición de rutas y wiring
+├── jobs/                   # 11 procesos en segundo plano (corren dentro del proceso api)
+│   ├── alertWorker.ts          # BullMQ: procesa alertas
+│   ├── incidentWorker.ts       # Agrupa alertas en incidentes
+│   ├── heartbeatMonitor.ts     # Detecta agentes caídos
+│   ├── notificationWorker.ts   # BullMQ: emails y webhooks de notificación
+│   ├── publicWebhookWorker.ts  # BullMQ: webhooks salientes hacia ERPs
+│   ├── remoteActionWorker.ts   # Despacha acciones remotas hacia agentes
+│   ├── reportDeliveryWorker.ts # BullMQ: genera y entrega reportes (email/webhook/SFTP)
+│   ├── scheduledReportsWorker.ts # Dispara reportes programados
+│   ├── supplyRequestWorker.ts  # Genera pedidos de consumibles
+│   ├── retentionJob.ts         # Purga logs y alertas resueltas
+│   └── alertDigestJob.ts       # Resumen periódico de alertas
+├── services/               # Servicios transversales a varios módulos
+│   ├── auditService.ts         # Punto único de escritura a `audit_logs`
+│   ├── cryptoService.ts        # Cifrado at-rest (AES-256-GCM) de credenciales de terceros
+│   ├── snmpCredentials.ts      # Lista de credenciales SNMP por agente (cifradas)
+│   ├── apiKeyService.ts        # API keys de integración ERP (hash SHA-256 at-rest)
+│   ├── publicWebhookService.ts # Webhooks salientes de la API pública (HMAC-SHA256)
+│   ├── notificationService/    # mailer, webhook y notificaciones por dominio
+│   ├── ewsProxyService.ts      # Comandos EWS "síncronos" sobre el WS asíncrono del agente
+│   ├── wsTicketService.ts      # Tickets WS de un solo uso (TTL 60s)
+│   ├── sftpDeliveryService.ts / sftpDestination.ts  # Entrega de reportes por SFTP
+│   ├── agentVersionService.ts  # Versión publicada del agente
+│   └── supplyOrigin.ts         # Origen de consumibles
+├── shared/domain/          # Lógica de dominio compartida entre módulos
+│   ├── ip-range-spec/          # Validación de rangos IP (CIDR + exclusiones) y compilación
+│   ├── business-hours.ts       # Horario laboral y zona horaria por agente
+│   ├── snmp-credential.ts      # Modelo de credencial SNMP
+│   ├── sftp-destination.ts     # Modelo de destino SFTP
+│   ├── audit-action-catalog.ts # Catálogo de acciones auditables
+│   └── errors/                 # Jerarquía AppError/DomainError/ApplicationError/InfrastructureError
+├── ws/                     # WebSocket (agentes + portal) en /ws
+│   ├── index.ts                # Registro del endpoint
+│   ├── handshake.ts            # Autenticación y clasificación de la conexión
+│   ├── redis-channels.ts       # Pub/sub para escalar entre réplicas
+│   └── state.ts                # Mapas de conexiones activas
 ├── db/
-│   ├── knex.ts            # Conexión principal parametrizada con Knex.js
-│   ├── migrations/        # Scripts estructurados SQL de migración en caliente
-│   └── seeds/             # Datos de prueba controlados
-└── ws/
-    └── server.ts          # Gateway WebSocket receptor de canales activos de agentes
+│   ├── knexfile.ts             # Configuración de Knex (Postgres + TimescaleDB); pool por env
+│   ├── migrations/             # 72 migraciones versionadas
+│   ├── seeds/ y manual_seed.ts # Datos de prueba
+│   └── test_db.ts              # Utilidades de base para tests
+├── tests/                  # Suite de integración (65 archivos .test.ts)
+├── logger.ts               # Logging (pino)
+└── version.ts              # Versión del backend
 ```
 
-### 🎯 Garantía de Separación:
-* **Rutas e Inyección de Esquemas (`api/routes/`):** Utilizan esquemas de validación estrictos en Fastify. Ningún payload de datos ingresa a la lógica interna si no coincide exactamente con el tipo de datos declarado.
-* **Servicios de Negocio (`services/`):** No contienen código relacionado con HTTP, cabeceras, ni cookies. Son clases puras de TypeScript que procesan lógica dura y llaman a Knex para persistencia.
-* **Middlewares (`api/middlewares/`):** Centralizan el control de acceso corporativo (RBAC), impidiendo que un agente interactúe con el portal y viceversa.
+### 🎯 Garantía de Separación
+* **`api/` sólo compone:** arranque, plugins, autenticación y montaje de rutas. La lógica vive en `modules/`.
+* **`modules/<x>/domain/` no importa infraestructura:** la regla de dependencias está enforced en CI por `cloud/scripts/check-guards.mjs`.
+* **Autorización centralizada:** `authMiddleware.ts` (tipo de credencial + ownership) y `rolePolicy.ts` (rol), verificados por `cloud/scripts/check-routes.mjs` — ver [ADR-004](../adr/004-modelo-de-autorizacion.md) y [PERMISSIONS_CATALOG.md](./PERMISSIONS_CATALOG.md).
 
 ---
 
 ## 📊 3. Portal Frontend (`/cloud/portal`)
 
-Aplicación moderna construida con Vite, React y TypeScript, estructurada para ser auto-explicativa:
+SPA en React 19 + TypeScript sobre Vite, con Tailwind CSS 4. Organizada **por feature**, no por tipo de archivo.
 
 ```
 cloud/portal/src/
-├── components/            # Componentes visuales atómicos reutilizables (FeedbackModal, etc.)
-├── hooks/                 # Controladores de estado dinámico y llamadas API centralizadas
-├── pages/                 # Páginas de la interfaz (Dashboard, Agentes, Impresoras)
-├── context/               # Proveedores de estado global (Autenticación, Sesión, Preferencias)
-├── utils/                 # Formateadores numéricos y helpers visuales
-└── main.tsx               # Punto de entrada de la UI
+├── main.tsx                # Punto de entrada
+├── App.tsx                 # Router: rutas lazy, RequireAuth y RequireRole
+├── app/layout/             # Shell de la aplicación
+│   ├── Layout.tsx              # Estructura general (sidebar + contenido)
+│   ├── SidebarNav.tsx / navItems.ts / navTree.ts  # Navegación y gateo por rol
+│   ├── useNavBadges.ts         # Contadores en el menú
+│   ├── GlobalSearch.tsx / useGlobalSearch.ts      # Búsqueda global
+│   └── FeedbackFab.tsx         # Acceso a feedback
+├── features/<dominio>/     # 13 features autocontenidas, cada una con pages/, components/, hooks/
+│   │                       #   activity, alerts, auth, clients, dashboard, devices, email-log,
+│   │                       #   incidents, monitors, pending-devices, reports, settings, supplies
+├── shared/                 # Transversal a features
+│   ├── lib/                    # Cliente HTTP (fetch + CSRF + manejo de 401/403), formatters
+│   ├── components/             # UI reutilizable
+│   ├── hooks/                  # Hooks compartidos (ej. polling de recursos)
+│   └── types/                  # Tipos de dominio compartidos
+├── store/                  # Estado global (sólo dos contextos)
+│   ├── AuthContext.tsx         # Sesión del usuario
+│   └── ToastContext.tsx        # Notificaciones
+└── assets/
 ```
+
+### 🎯 Garantía de Separación
+* **Una feature no importa de otra feature**, y `shared/`/`store/`/`app/` no importan de `features/` — regla verificada en CI por `check-guards.mjs`.
+* **Sesión sin token en JavaScript:** la autenticación viaja en cookie httpOnly; el cliente HTTP de `shared/lib/` agrega el header anti-CSRF en cada mutación.
 
 ---
 
-## 📜 4. Documentación de Auditoría (`/docs`)
+## 🔍 4. Guardas de Arquitectura (`/cloud/scripts`)
 
-Para facilitar el análisis técnico inmediato, se han consolidado múltiples informes de auditoría:
-*   [Guía Técnica de Arquitectura](file:///j:/Dev/Trabajo/STCcloud/STC-cloud/docs/dev/STC_Technical_Architecture_Guide.md) - Protocolos de red, flujo SNMP/EWS, Hardware Binding.
-*   [Informe de Auditoría de Código](file:///j:/Dev/Trabajo/STCcloud/STC-cloud/docs/dev/STC_Codebase_Audit_Report.md) - Hallazgos técnicos y mitigaciones aplicadas.
-*   [Informe de Seguridad y Hardening](file:///j:/Dev/Trabajo/STCcloud/STC-cloud/SECURITY_AUDIT.md) - Rate limit, JWT de dos capas, protección contra inyecciones SQL/Command.
-*   [Métodos de Extracción de Contadores](file:///j:/Dev/Trabajo/STCcloud/STC-cloud/docs/dev/PRINTER_COUNTER_METHODS.md) - Análisis técnico de la cascada de recolección local.
+Scripts que corren en CI y bloquean el merge si se viola una regla:
+
+| Script | Qué garantiza |
+| :--- | :--- |
+| `check-routes.mjs` | Toda ruta declara autenticación, salvo allowlist pública explícita. Con `--write-catalog` regenera `PERMISSIONS_CATALOG.md`. |
+| `check-guards.mjs` | Fronteras de dependencia entre capas y entre features; prohíbe logs de depuración y SQL interpolado. |
+| `check-sizes.mjs` | Límite de tamaño por archivo y por función (ratchet con baseline). |
+| `ci-test-runner.mjs` | Runner de la suite de integración. |
+
+---
+
+## 📜 5. Documentación de Referencia (`/docs`)
+
+* [ARCHITECTURE_GUIDE.md](./ARCHITECTURE_GUIDE.md) — Estándar de arquitectura y convenciones vigente.
+* [STC_Technical_Architecture_Guide.md](./STC_Technical_Architecture_Guide.md) — Arquitectura profunda del motor de captura del agente.
+* [STC_Capture_Drivers_Master_Prompt.md](./STC_Capture_Drivers_Master_Prompt.md) — Documento rector para agregar modelos de impresora nuevos.
+* [PERMISSIONS_CATALOG.md](./PERMISSIONS_CATALOG.md) — Quién puede llamar cada ruta (auto-generado).
+* [../adr/](../adr/) — Architecture Decision Records.
+* [../api/openapi.yaml](../api/openapi.yaml) — Especificación de la API pública.
+* [../../SECURITY_AUDIT.md](../../SECURITY_AUDIT.md) — Hardening y ciberseguridad del backend.

@@ -438,6 +438,24 @@ describe('CreateUserUseCase', () => {
 6. **Dependencias auditadas** — correr `npm audit` / `pip-audit` / equivalente en cada CI.
 7. **Autenticación vs Autorización separadas** — son responsabilidades distintas.
 
+### Reglas específicas de este repo
+
+8. **Auditoría de acciones administrativas** — toda acción administrativa (alta/baja/cambio de
+   estado de agentes, clientes, usuarios, configuración) debe quedar registrada en `audit_logs`.
+   Escribir a través de `cloud/src/services/auditService.ts`, que es el punto único de escritura
+   y garantiza que `client_id` se setee siempre; no insertar directo con `db("audit_logs")` en
+   código nuevo.
+9. **Privacidad de hardware** — nunca commitear un `config.enc` real ni ningún archivo con
+   credenciales derivadas de un equipo concreto (`config.enc` está en `.gitignore`). Ese archivo
+   está cifrado contra el HWID de la máquina que lo generó: subirlo filtra la configuración de un
+   cliente real sin aportar nada reproducible.
+10. **Ciclo de vida del agente** — respetar la máquina de estados `pending` → `active` → `revoked`
+    (`modules/agents/infrastructure/database/knex-agent-repository.ts`). Un agente nace `pending`
+    con su clave de activación, pasa a `active` al activarse, y `revoked` es terminal: además de
+    marcar el estado, revocar agrega el token a la blacklist de Redis para cortar el acceso sin
+    esperar a que expire el JWT (`modules/agents/application/use-cases/lifecycle-use-cases.ts`,
+    verificado en cada request por `api/middlewares/authMiddleware.ts`).
+
 ### Checklist de Seguridad por Feature
 
 - [ ] Input validado y sanitizado
