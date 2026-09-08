@@ -44,6 +44,34 @@ async function redisPublish(channel: string, payload: unknown): Promise<void> {
   await publisher.publish(channel, JSON.stringify(payload));
 }
 
+/**
+ * Publica en `channel` hasta que `probe` encuentre lo que espera, o se agote
+ * `timeoutMs`.
+ *
+ * Redis pub/sub es fire-and-forget: no hay replay. El `open` del WS resuelve
+ * cuando el CLIENTE terminó el handshake, que no es lo mismo que el servidor
+ * habiendo registrado ya ese socket — si el publish cae en esa ventana, el
+ * mensaje se pierde para siempre y esperar más no lo arregla. Antes acá había
+ * un `sleep(800)` fijo: alcanzaba en el puesto 48 de la suite y fallaba de
+ * forma reproducible en el 33 (auditoría 08-09-2026), que es lo que ataba el
+ * orden de la suite a la carga de la máquina.
+ */
+async function publishUntil<T>(
+  channel: string, payload: unknown, probe: () => T | undefined, timeoutMs = 10_000
+): Promise<T | undefined> {
+  const deadline = Date.now() + timeoutMs;
+  for (;;) {
+    await redisPublish(channel, payload);
+    const stepDeadline = Math.min(Date.now() + 250, deadline);
+    while (Date.now() < stepDeadline) {
+      const hit = probe();
+      if (hit) return hit;
+      await new Promise((r) => setTimeout(r, 25));
+    }
+    if (Date.now() >= deadline) return probe();
+  }
+}
+
 const ts = Date.now();
 const ctx = {
   adminToken: '', clientId: '', agentId: '', agentKey: '', agentToken: '',
@@ -104,10 +132,11 @@ describe('Relay EWS proxy — push por Redis (réplica vecina entrega el comando
 
   test('un publish en stc:ws:ews-push llega al socket local del agente', async () => {
     const commandId = `relay-cmd-${crypto.randomUUID()}`;
-    await redisPublish('stc:ws:ews-push', { agentId: ctx.agentId, commandId, payload: { ip: '10.0.0.1', path: '/relay-test', method: 'GET' } });
-
-    await new Promise((r) => setTimeout(r, 800));
-    const hit = received.find((m) => m.type === 'command' && m.id === commandId);
+    const hit = await publishUntil(
+      'stc:ws:ews-push',
+      { agentId: ctx.agentId, commandId, payload: { ip: '10.0.0.1', path: '/relay-test', method: 'GET' } },
+      () => received.find((m) => m.type === 'command' && m.id === commandId),
+    );
     assert.ok(hit, 'el pedido de push relayeado por Redis debe llegar al socket del agente conectado a esta réplica');
     assert.equal(hit.commandType, 'EWS_PROXY');
     assert.equal(hit.payload.path, '/relay-test');

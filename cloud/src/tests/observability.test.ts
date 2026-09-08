@@ -44,6 +44,28 @@ async function waitFor<T>(probe: () => T | undefined, timeoutMs: number): Promis
   }
 }
 
+/**
+ * Igual que `waitFor`, pero re-ejecuta `emit` en cada vuelta.
+ *
+ * Redis pub/sub es fire-and-forget: no hay replay. El `open` del WS resuelve
+ * cuando el CLIENTE terminó el handshake, que no es lo mismo que el servidor
+ * habiendo registrado ya ese socket en su set de clientes — si el publish cae
+ * en esa ventana, el suscriptor itera un set vacío y el mensaje se pierde para
+ * siempre. Esperar más no lo arregla (por eso el `waitFor` de 10s igual falló
+ * en CI el 08-09-2026, agotando los 10s enteros): hay que volver a publicar.
+ */
+async function waitForPublished<T>(
+  emit: () => Promise<unknown>, probe: () => T | undefined, timeoutMs: number
+): Promise<T | undefined> {
+  const deadline = Date.now() + timeoutMs;
+  for (;;) {
+    await emit();
+    const hit = await waitFor(probe, Math.min(250, Math.max(0, deadline - Date.now())));
+    if (hit) return hit;
+    if (Date.now() >= deadline) return undefined;
+  }
+}
+
 const pgConn = {
   host: process.env.RBAC_TEST_DB_HOST || 'localhost',
   port: Number(process.env.RBAC_TEST_DB_PORT || 5434),
@@ -169,16 +191,16 @@ describe('pub/sub WS — e2e (broadcast cruza Redis hasta el socket del portal)'
     try {
       await opened;
 
-      // Publicar directo al canal (lo que haría broadcastToPortal en OTRA réplica)
+      // Publicar directo al canal (lo que haría broadcastToPortal en OTRA réplica),
+      // reintentando: un único publish se pierde si cae antes de que el servidor
+      // registre el socket recién abierto (ver `waitForPublished`). Corta apenas
+      // llega, y sólo agota los 10s si no llegó nunca.
       const payload = JSON.stringify({ event: 'obs_test', data: { ping: Date.now() } });
-      await publisher.publish('stc:ws:portal', payload);
-
-      // Espera por condición, no un sleep fijo: el 1.5s que había antes
-      // alcanzaba corriendo el archivo solo, pero no con la suite completa en
-      // paralelo — el mensaje llegaba unos ms tarde y el test fallaba sin que
-      // hubiera nada roto (falso rojo intermitente en CI). Ahora corta apenas
-      // llega, y sólo espera los 10s completos si de verdad no llegó nunca.
-      const hit = await waitFor(() => received.find((m) => m.event === 'obs_test'), 10_000);
+      const hit = await waitForPublished(
+        () => publisher.publish('stc:ws:portal', payload),
+        () => received.find((m) => m.event === 'obs_test'),
+        10_000,
+      );
       assert.ok(hit, 'el broadcast publicado en Redis debe llegar por el socket del portal');
     } finally {
       socket.close();
