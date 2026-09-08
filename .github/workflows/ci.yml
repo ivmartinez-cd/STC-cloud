@@ -85,6 +85,10 @@ jobs:
       DB_NAME: stc_cloud
       REDIS_URL: redis://localhost:6379
       JWT_SECRET: una_clave_super_secreta_de_al_menos_32_caracteres_para_ci
+      # Cifra secretos (credenciales SNMP, SFTP y — desde twoFactor.test.ts —
+      # el totp_secret de 2FA) vía HKDF; sin ella encryptSecret() tira
+      # MissingEncryptionKeyError y cualquier ruta que la use responde 500.
+      SNMP_CREDENTIALS_KEY: una_clave_de_cifrado_cualquiera_para_ci
       PORTAL_ADMIN_USER: admin
       PORTAL_ADMIN_PASSWORD: Admin1234
       API_URL: http://localhost:3000/api/v1
