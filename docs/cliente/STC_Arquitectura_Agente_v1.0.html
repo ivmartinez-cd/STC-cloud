@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>STC Cloud - Arquitectura del Agente v1.0</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --stc-blue: #004a99;
+            --stc-orange: #f7931d;
+            --text-dark: #1a2333;
+            --text-gray: #64748b;
+            --code-bg: #f8fafc;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            background: #f1f5f9;
+            color: var(--text-dark);
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+
+        .page {
+            width: 210mm;
+            min-height: 297mm;
+            padding: 25mm;
+            margin: 20px auto;
+            box-sizing: border-box;
+            position: relative;
+            background: white;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+
+        @media print {
+            body { background: white; }
+            .page {
+                margin: 0;
+                padding: 20mm;
+                box-shadow: none;
+                page-break-after: always;
+            }
+        }
+
+        .cover-top-bar {
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 75mm;
+        }
+
+        .top-title {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--stc-blue);
+            letter-spacing: 0.05em;
+        }
+
+        .cover-main { text-align: left; padding-left: 10mm; }
+
+        .stc-cloud-brand {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 50px;
+        }
+
+        .brand-stc {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 900;
+            font-size: 42px;
+            color: var(--stc-blue);
+            letter-spacing: -0.02em;
+        }
+
+        .brand-cloud {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 900;
+            font-size: 42px;
+            color: var(--stc-orange);
+            letter-spacing: -0.02em;
+        }
+
+        .main-title {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 34px;
+            font-weight: 700;
+            color: var(--stc-blue);
+            margin: 0;
+            line-height: 1.15;
+            text-transform: uppercase;
+        }
+
+        .main-subtitle {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 34px;
+            font-weight: 400;
+            color: var(--stc-blue);
+            margin: 5px 0 50px 0;
+            text-transform: uppercase;
+        }
+
+        .version-tag {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-gray);
+            letter-spacing: 0.08em;
+        }
+
+        .internal-header {
+            border-bottom: 3px solid var(--stc-blue);
+            padding-bottom: 8px;
+            margin-bottom: 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+
+        .internal-brand {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 900;
+            font-size: 16px;
+            color: var(--stc-blue);
+        }
+
+        .internal-brand span { color: var(--stc-orange); }
+
+        .internal-doc-type {
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--text-gray);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        h2 {
+            font-family: 'Montserrat', sans-serif;
+            color: var(--stc-blue);
+            font-size: 20px;
+            border-bottom: 1px solid #f1f5f9;
+            padding-bottom: 8px;
+            margin-top: 35px;
+        }
+
+        h3 {
+            font-family: 'Montserrat', sans-serif;
+            color: var(--stc-orange);
+            font-size: 14px;
+            margin-top: 25px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        p { font-size: 13.5px; color: #334155; line-height: 1.65; }
+
+        ul, ol { padding-left: 20px; }
+
+        li { font-size: 13.5px; color: #334155; margin-bottom: 8px; line-height: 1.6; }
+
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+
+        th, td { border: 1px solid #e2e8f0; padding: 10px 12px; text-align: left; font-size: 12.5px; }
+
+        th {
+            background-color: #f8fafc;
+            color: var(--stc-blue);
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: 0.05em;
+        }
+
+        .note-callout {
+            background: #fff7ed;
+            border-left: 4px solid var(--stc-orange);
+            padding: 14px 18px;
+            margin: 18px 0;
+            font-size: 13px;
+            color: #9a3412;
+            line-height: 1.6;
+        }
+
+        .info-callout {
+            background: #eff6ff;
+            border-left: 4px solid var(--stc-blue);
+            padding: 14px 18px;
+            margin: 18px 0;
+            font-size: 13px;
+            color: #1e40af;
+            line-height: 1.6;
+        }
+
+        .footer {
+            position: absolute;
+            bottom: 20mm;
+            left: 25mm;
+            right: 25mm;
+            border-top: 1px solid #e2e8f0;
+            padding-top: 15px;
+            font-size: 10px;
+            color: #94a3b8;
+            text-align: center;
+        }
+
+        .toc-container { margin-top: 30px; }
+
+        .toc-item {
+            display: flex;
+            align-items: baseline;
+            margin-bottom: 14px;
+            font-size: 14px;
+            color: #1a2333;
+            text-decoration: none;
+        }
+
+        .toc-link {
+            text-decoration: none;
+            color: inherit;
+            display: flex;
+            width: 100%;
+            align-items: baseline;
+        }
+
+        .toc-num {
+            flex-shrink: 0;
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 700;
+            color: var(--stc-blue);
+            font-size: 13px;
+            width: 28px;
+        }
+
+        .toc-text { flex-shrink: 0; padding-right: 5px; font-weight: 600; }
+
+        .toc-dots {
+            flex-grow: 1;
+            border-bottom: 1px dotted #94a3b8;
+            margin: 0 5px;
+            position: relative;
+            top: -4px;
+        }
+
+        .toc-page { flex-shrink: 0; padding-left: 5px; font-weight: 700; color: var(--stc-blue); }
+
+        .toc-section {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--stc-orange);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin: 20px 0 8px 0;
+        }
+
+        pre.code {
+            background: var(--code-bg);
+            border: 1px solid #e2e8f0;
+            border-left: 4px solid var(--stc-blue);
+            padding: 14px;
+            font-size: 11.5px;
+            font-family: 'Courier New', Courier, monospace;
+            color: #1e293b;
+            overflow-x: auto;
+            border-radius: 4px;
+            line-height: 1.5;
+            margin: 12px 0;
+        }
+
+        pre.diagram {
+            background: #0f172a;
+            color: #38bdf8;
+            border-left: 4px solid var(--stc-orange);
+            padding: 15px;
+            font-size: 10.5px;
+            font-family: 'Courier New', Courier, monospace;
+            overflow-x: auto;
+            border-radius: 4px;
+            line-height: 1.35;
+            margin: 12px 0;
+        }
+
+        .diagram-title {
+            font-size: 10px;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: -8px;
+            font-weight: 700;
+        }
+
+        .two-col {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin: 18px 0;
+        }
+
+        .card {
+            background: #f8fafc;
+            border-left: 4px solid var(--stc-blue);
+            padding: 14px;
+        }
+
+        .card.orange { border-left-color: var(--stc-orange); }
+
+        .card-title {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--stc-blue);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            margin-bottom: 8px;
+        }
+
+        .card.orange .card-title { color: var(--stc-orange); }
+
+        .card p { font-size: 12px; margin: 0; color: #475569; }
+
+        code {
+            font-family: 'Courier New', monospace;
+            font-size: 11.5px;
+            color: var(--stc-blue);
+            background: #e0eaf7;
+            padding: 1px 5px;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- PÁGINA 1: PORTADA -->
+    <div class="page">
+        <div class="cover-top-bar">
+            <div class="top-title">STC CLOUD – DOCUMENTACIÓN TÉCNICA</div>
+        </div>
+
+        <div class="cover-main">
+            <div class="stc-cloud-brand">
+                <span class="brand-stc">STC</span>
+                <span class="brand-cloud">CLOUD</span>
+            </div>
+
+            <h1 class="main-title">ARQUITECTURA DEL</h1>
+            <h1 class="main-subtitle">AGENTE DE MONITOREO</h1>
+
+            <div class="version-tag">Visión de Arquitectura | v1.0 | Septiembre 2026</div>
+        </div>
+
+        <div class="footer">
+            © 2026 CANAL DIRECTO | STC CLOUD | ARQUITECTURA DEL AGENTE | DOCUMENTACIÓN TÉCNICA
+        </div>
+    </div>
+
+    <!-- PÁGINA 2: ÍNDICE -->
+    <div class="page">
+        <div class="internal-header">
+            <div class="internal-brand">STC <span>CLOUD</span></div>
+            <div class="internal-doc-type">Índice</div>
+        </div>
+
+        <h2 style="border: none; margin-bottom: 30px;">Índice de Contenidos</h2>
+
+        <div class="toc-container">
+            <div class="toc-item">
+                <span class="toc-num">1.</span>
+                <div class="toc-link">
+                    <span class="toc-text">Qué es y Dónde Vive el Agente</span>
+                    <span class="toc-dots"></span>
+                    <span class="toc-page">3</span>
+                </div>
+            </div>
+            <div class="toc-item">
+                <span class="toc-num">2.</span>
+                <div class="toc-link">
+                    <span class="toc-text">Los Tres Loops: Scan, Sync y Canal en Tiempo Real</span>
+                    <span class="toc-dots"></span>
+                    <span class="toc-page">4</span>
+                </div>
+            </div>
+            <div class="toc-item">
+                <span class="toc-num">3.</span>
+                <div class="toc-link">
+                    <span class="toc-text">Red Zero-Inbound: Sin Puertos Abiertos</span>
+                    <span class="toc-dots"></span>
+                    <span class="toc-page">5</span>
+                </div>
+            </div>
+            <div class="toc-item">
+                <span class="toc-num">4.</span>
+                <div class="toc-link">
+                    <span class="toc-text">Identidad Criptográfica por Hardware (HWID Binding)</span>
+                    <span class="toc-dots"></span>
+                    <span class="toc-page">5</span>
+                </div>
+            </div>
+            <div class="toc-item">
+                <span class="toc-num">5.</span>
+                <div class="toc-link">
+                    <span class="toc-text">Descubrimiento de Impresoras: la Cascada de Protocolos</span>
+                    <span class="toc-dots"></span>
+                    <span class="toc-page">6</span>
+                </div>
+            </div>
+            <div class="toc-item">
+                <span class="toc-num">6.</span>
+                <div class="toc-link">
+                    <span class="toc-text">Persistencia Local y Tolerancia a Fallas de Red</span>
+                    <span class="toc-dots"></span>
+                    <span class="toc-page">7</span>
+                </div>
+            </div>
+            <div class="toc-item">
+                <span class="toc-num">7.</span>
+                <div class="toc-link">
+                    <span class="toc-text">Autenticación y Actualizaciones Firmadas</span>
+                    <span class="toc-dots"></span>
+                    <span class="toc-page">8</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            PÁGINA 2 | STC CLOUD – ARQUITECTURA DEL AGENTE
+        </div>
+    </div>
+
+    <!-- PÁGINA 3: QUÉ ES EL AGENTE -->
+    <div class="page">
+        <div class="internal-header">
+            <div class="internal-brand">STC <span>CLOUD</span></div>
+            <div class="internal-doc-type">1. Qué es el Agente</div>
+        </div>
+
+        <h2 id="que-es">1. Qué es y Dónde Vive el Agente</h2>
+        <p>
+            El <strong>Agente STC Cloud</strong> es un proceso Node.js compilado como <strong>ejecutable único</strong> (sin dependencia de un runtime instalado en el equipo destino) que se instala como <strong>servicio de Windows</strong> dentro de la red local del cliente, típicamente en un equipo o servidor siempre encendido. No requiere agentes en cada impresora: un único proceso descubre y monitorea todas las impresoras de red visibles desde su segmento.
+        </p>
+
+        <div class="diagram-title">Ubicación del Agente en la Red del Cliente</div>
+        <pre class="diagram">
+  ┌───────────────────────────── Internet ─────────────────────────────┐
+  │                                                                     │
+  │                        STC Cloud Portal (API + WSS)                │
+  │                                                                     │
+  └───────────────────────────────┬─────────────────────────────────────┘
+                                    │  HTTPS / WSS — únicamente saliente
+  ┌─────────────────────────────── │ ─────────────────── Red del Cliente ┐
+  │                                 ▼                                    │
+  │                     ┌───────────────────────┐                        │
+  │                     │   STC Cloud Agent      │  Windows Service       │
+  │                     │  (proceso único, Node) │                        │
+  │                     └───────────┬────────────┘                        │
+  │                                 │ SNMP / HTTP(S) / PJL / IPP           │
+  │              ┌──────────────────┼──────────────────┐                  │
+  │              ▼                  ▼                  ▼                  │
+  │        ┌───────────┐      ┌───────────┐      ┌───────────┐            │
+  │        │ Impresora │      │ Impresora │      │ Impresora │   ...      │
+  │        └───────────┘      └───────────┘      └───────────┘            │
+  └────────────────────────────────────────────────────────────────────┘</pre>
+
+        <p>
+            El agente no expone ningún servicio hacia la red: es un cliente puro que sale a buscar datos a las impresoras (SNMP/HTTP/PJL/IPP) y sale a entregarlos a la nube (HTTPS/WSS). Esta dirección única del tráfico es la base de su modelo de seguridad, detallado en la sección 3.
+        </p>
+
+        <h3>Componentes Internos Principales</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 25%;">Módulo</th>
+                    <th style="width: 75%;">Responsabilidad</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td><code>core/</code></td><td>Orquestación: ciclo de vida, scheduler, configuración cifrada, conexión WebSocket, comandos remotos.</td></tr>
+                <tr><td><code>snmp/</code></td><td>Motor de descubrimiento y lectura: SNMP, EWS (scraping HTTP), PJL, IPP.</td></tr>
+                <tr><td><code>capture/</code></td><td>Normalización de lecturas por familia/modelo de impresora antes de encolarlas.</td></tr>
+                <tr><td><code>sync/</code></td><td>Cola local SQLite y subida por lotes al portal en la nube.</td></tr>
+                <tr><td><code>install/</code></td><td>Instalación/desinstalación como servicio de Windows (integración NSSM).</td></tr>
+            </tbody>
+        </table>
+
+        <div class="footer">
+            PÁGINA 3 | STC CLOUD – ARQUITECTURA DEL AGENTE
+        </div>
+    </div>
+
+    <!-- PÁGINA 4: LOS TRES LOOPS -->
+    <div class="page">
+        <div class="internal-header">
+            <div class="internal-brand">STC <span>CLOUD</span></div>
+            <div class="internal-doc-type">2. Los Tres Loops</div>
+        </div>
+
+        <h2 id="loops">2. Los Tres Loops: Scan, Sync y Canal en Tiempo Real</h2>
+        <p>
+            Tras el arranque (<code>main.ts</code>), el agente corre tres ciclos concurrentes e independientes que no se bloquean entre sí:
+        </p>
+
+        <div class="diagram-title">Ciclos de Operación</div>
+        <pre class="diagram">
+  main()
+    ├─► openQueue()           — Abre SQLite local en modo WAL
+    ├─► loadConfig()          — Descifra config.enc (HWID binding)
+    ├─► waitForConnectivity() — Backoff exponencial 10s → 5min
+    ├─► connectWebSocket()    — Canal WSS persistente con el portal
+    │
+    ├── LOOP SCAN ─────────────────────────────────────────────┐
+    │   Descubre y lee impresoras (SNMP/EWS/PJL/IPP)            │
+    │   Frecuencia adaptativa según horario laboral del sitio   │
+    │
+    ├── LOOP SYNC ─────────────────────────────────────────────┐
+    │   Cada 30s: sube lotes de lecturas pendientes al portal   │
+    │   Purga registros ya sincronizados o vencidos (7 días)    │
+    │
+    └── CANAL WEBSOCKET ───────────────────────────────────────┘
+        Recibe comandos en tiempo real del portal (forzar scan,
+        actualizar configuración, resetear impresora, etc.)</pre>
+
+        <h3>Frecuencia Adaptativa por Horario Laboral</h3>
+        <p>
+            El agente ajusta la cadencia de escaneo según el horario laboral configurable del sitio (días, franja horaria y zona IANA definidos desde el portal), reduciendo tráfico de red fuera de horario sin dejar de monitorear:
+        </p>
+        <div class="two-col">
+            <div class="card">
+                <div class="card-title">Dentro del horario laboral</div>
+                <p>Descubrimiento de red cada 10 minutos, contadores cada 20 minutos, insumos cada 60 minutos.</p>
+            </div>
+            <div class="card orange">
+                <div class="card-title">Fuera del horario laboral</div>
+                <p>Descubrimiento cada 60 minutos, contadores e insumos cada 4 horas.</p>
+            </div>
+        </div>
+
+        <h3>Canal en Tiempo Real (Comandos Remotos)</h3>
+        <p>
+            El WebSocket seguro (WSS, puerto 443) es bidireccional: además de que el agente pueda notificar eventos, el portal puede empujar comandos hacia el agente sin que este tenga que consultar (polling) constantemente — por ejemplo, forzar un escaneo inmediato, pedir un reset remoto de una impresora o actualizar la configuración de rangos IP. El canal se reconecta automáticamente ante cortes de red.
+        </p>
+
+        <div class="footer">
+            PÁGINA 4 | STC CLOUD – ARQUITECTURA DEL AGENTE
+        </div>
+    </div>
+
+    <!-- PÁGINA 5: ZERO-INBOUND Y HWID -->
+    <div class="page">
+        <div class="internal-header">
+            <div class="internal-brand">STC <span>CLOUD</span></div>
+            <div class="internal-doc-type">3–4. Red y Seguridad</div>
+        </div>
+
+        <h2 id="zero-inbound">3. Red Zero-Inbound: Sin Puertos Abiertos</h2>
+        <p>
+            Para integrarse sin fricción en redes corporativas reguladas (banca, salud, sector público), el agente opera bajo un paradigma <strong>Zero-Inbound</strong>:
+        </p>
+        <ul>
+            <li><strong>Sin sockets de entrada:</strong> El agente nunca escucha conexiones desde afuera. No hay superficie de ataque perimetral que exponer.</li>
+            <li><strong>Todo el tráfico es saliente:</strong> HTTPS y WSS estándar, siempre sobre el puerto <strong>TCP 443</strong>, indistinguible en el firewall del tráfico normal de navegación cifrada.</li>
+            <li><strong>Soporte de proxy corporativo:</strong> Si la red exige salida vía proxy, el agente lo usa automáticamente mediante HTTP CONNECT tunneling, tanto para la sincronización como para el WebSocket.</li>
+            <li><strong>Backoff exponencial ante cortes:</strong> Los reintentos de conexión escalan de 10 segundos a un techo de 5 minutos, evitando saturar firewalls o el propio portal cuando cae la WAN.</li>
+        </ul>
+
+        <h2 id="hwid-binding">4. Identidad Criptográfica por Hardware (HWID Binding)</h2>
+        <p>
+            La configuración local del agente (URL del portal, credenciales, rangos IP) se guarda cifrada en <code>config.enc</code>, atada de forma irreversible al equipo físico donde se instaló:
+        </p>
+
+        <div class="diagram-title">Flujo de Derivación Criptográfica</div>
+        <pre class="diagram">
+[MachineGuid] + [Serial BIOS] ──► SHA-256 ──► Hardware ID
+                                                    │
+                                                    ▼
+                                        PBKDF2 (100.000 iteraciones)
+                                                    │
+                                                    ▼
+[Config JSON] ──► AES-256-GCM ◄──────────── Clave derivada
+                       │
+                       ▼
+                config.enc en disco</pre>
+
+        <div class="note-callout">
+            <strong>Por qué importa:</strong> Si alguien copia <code>config.enc</code> a otra máquina para robar credenciales, el Hardware ID calculado en esa máquina es distinto y el descifrado falla de inmediato (<code>HWID_MISMATCH</code>). El archivo es inútil fuera del equipo original.
+        </div>
+
+        <div class="footer">
+            PÁGINA 5 | STC CLOUD – ARQUITECTURA DEL AGENTE
+        </div>
+    </div>
+
+    <!-- PÁGINA 6: DESCUBRIMIENTO -->
+    <div class="page">
+        <div class="internal-header">
+            <div class="internal-brand">STC <span>CLOUD</span></div>
+            <div class="internal-doc-type">5. Descubrimiento</div>
+        </div>
+
+        <h2 id="descubrimiento">5. Descubrimiento de Impresoras: la Cascada de Protocolos</h2>
+        <p>
+            Ninguna impresora habla un único protocolo de forma confiable. El agente resuelve esto con una cascada que prioriza precisión de datos y evita generar alertas de intrusión en la red del cliente:
+        </p>
+
+        <div class="diagram-title">Orden de Preferencia por IP</div>
+        <pre class="diagram">
+  1. Sondeo de puertos TCP (9100, 631, 80, 443) — 500ms/host
+       │
+       ├─ ¿9100 o 631 abiertos? ──► impresora confirmada
+       │       └─ habilitado el resto de la cascada
+       │
+       └─ ¿solo 80/443 abiertos? ──► podría ser router/NAS/PC
+               └─ se exige validación SNMP como impresora
+                  antes de intentar HTTP, evitando falsos
+                  positivos de escaneo web en infraestructura
+
+  2. EWS (scraping HTTP/S de la página admin) — máxima fidelidad
+  3. SNMP v2c (MIBs estándar de impresión)
+  4. PJL (comandos directos sobre TCP 9100)
+  5. IPP (atributos estandarizados sobre TCP 631)
+
+  Se detiene en el primer método que entrega contadores válidos.</pre>
+
+        <h3>Caché de Método (Fast Path) y Auto-Sanado</h3>
+        <p>
+            Una vez identificado el protocolo que funciona para una IP, el agente lo persiste como <em>hint</em> y lo usa directamente en los siguientes ciclos, saltándose la cascada completa. Si el hint apunta a SNMP pero el dispositivo tiene un puerto web disponible, el agente sospecha una degradación transitoria pasada y reintenta la cascada completa para intentar recuperar EWS (mayor riqueza de datos) automáticamente, sin intervención manual.
+        </p>
+
+        <h3>Cobertura Multi-Fabricante</h3>
+        <p>
+            El motor EWS incluye parsers dedicados para Samsung (SyncThru y SWS), HP (FutureSmart y legacy) y Lexmark, más un parser genérico de respaldo para Ricoh, Brother, Epson, Canon, Konica y Xerox. Todo el parseo se hace con expresiones regulares sobre HTML/XML/JSON planos — sin motor de navegador embebido, lo que mantiene el consumo de memoria del agente en el orden de decenas de MB.
+        </p>
+
+        <div class="footer">
+            PÁGINA 6 | STC CLOUD – ARQUITECTURA DEL AGENTE
+        </div>
+    </div>
+
+    <!-- PÁGINA 7: PERSISTENCIA LOCAL -->
+    <div class="page">
+        <div class="internal-header">
+            <div class="internal-brand">STC <span>CLOUD</span></div>
+            <div class="internal-doc-type">6. Persistencia y Resiliencia</div>
+        </div>
+
+        <h2 id="persistencia">6. Persistencia Local y Tolerancia a Fallas de Red</h2>
+        <p>
+            El agente guarda todo lo que lee en una base de datos <strong>SQLite local</strong> (modo <em>Write-Ahead Logging</em>) antes de intentar enviarlo a la nube. Esto lo hace funcionalmente independiente de la conectividad WAN:
+        </p>
+
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 25%;">Tabla</th>
+                    <th style="width: 75%;">Propósito</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td><code>readings_queue</code></td><td>Cola de lecturas pendientes de sincronizar (contadores, insumos, seriales, método de lectura).</td></tr>
+                <tr><td><code>known_devices</code></td><td>Caché de dispositivos ya identificados por IP, incluido el método de lectura preferido (hint).</td></tr>
+            </tbody>
+        </table>
+
+        <div class="two-col">
+            <div class="card">
+                <div class="card-title">Backpressure</div>
+                <p>Si la cola supera 10.000 registros pendientes (por ejemplo, WAN caída por varios días), el agente pausa el escaneo hasta liberar espacio, protegiendo el disco local.</p>
+            </div>
+            <div class="card orange">
+                <div class="card-title">Retención y purga</div>
+                <p>Cada ciclo de sincronización elimina registros ya enviados o con más de 7 días de antigüedad, manteniendo el archivo local estable.</p>
+            </div>
+        </div>
+
+        <div class="info-callout">
+            <strong>Garantía práctica:</strong> Con espacio en disco disponible, el agente puede operar hasta 7 días sin conexión a internet sin perder ninguna lectura. Al reconectar, drena la cola en orden cronológico y la plataforma recibe la serie temporal completa, sin huecos ni duplicados (el envío por lotes es idempotente).
+        </div>
+
+        <div class="footer">
+            PÁGINA 7 | STC CLOUD – ARQUITECTURA DEL AGENTE
+        </div>
+    </div>
+
+    <!-- PÁGINA 8: AUTENTICACIÓN Y ACTUALIZACIONES -->
+    <div class="page">
+        <div class="internal-header">
+            <div class="internal-brand">STC <span>CLOUD</span></div>
+            <div class="internal-doc-type">7. Autenticación y Actualizaciones</div>
+        </div>
+
+        <h2 id="auth-updates">7. Autenticación y Actualizaciones Firmadas</h2>
+
+        <h3>A. Autenticación Rotativa de Doble Token</h3>
+        <p>
+            El agente no guarda una contraseña fija de por vida. Usa un esquema de tokens de corta duración que se renuevan solos:
+        </p>
+        <ol>
+            <li><strong>Activación:</strong> una clave efímera, válida 24 horas, se usa una única vez al instalar.</li>
+            <li><strong>Refresh Token:</strong> el portal emite un token de 64 bytes que el agente guarda cifrado en <code>config.enc</code>.</li>
+            <li><strong>Access Token (JWT):</strong> token de corta duración usado en cada request normal.</li>
+            <li><strong>Rotación automática:</strong> si el portal responde <code>401</code>, el agente usa el refresh token para obtener un par nuevo de tokens sin intervención humana.</li>
+        </ol>
+
+        <h3>B. Actualizaciones de Firmware Firmadas (Ed25519)</h3>
+        <p>
+            El actualizador automático del agente verifica dos firmas antes de instalar cualquier versión nueva, mitigando ataques de cadena de suministro:
+        </p>
+        <ul>
+            <li><strong>Integridad:</strong> hash SHA-256 del paquete descargado, verificado contra el declarado por la API.</li>
+            <li><strong>Autenticidad:</strong> firma digital Ed25519 verificada contra una clave pública fija embebida en el binario del agente. Si la firma no valida, el archivo se borra de inmediato y se genera una alerta crítica — nunca se ejecuta código sin firma verificada.</li>
+        </ul>
+
+        <div class="note-callout">
+            <strong>Para el equipo de sistemas del cliente:</strong> el agente se actualiza solo, sin requerir acceso remoto al equipo ni ventanas de mantenimiento coordinadas — la verificación criptográfica reemplaza la necesidad de supervisión manual de cada actualización.
+        </div>
+
+        <p style="margin-top: 30px; color: #94a3b8; font-size: 12px;">
+            Para el detalle de implementación (constantes, funciones, formatos de parseo por fabricante), ver <em>STC_Agente_Funcionamiento_Interno</em> y <em>STC_Guia_Arquitectura_Tecnica</em> en esta misma carpeta.
+        </p>
+
+        <div class="footer">
+            PÁGINA 8 | STC CLOUD – ARQUITECTURA DEL AGENTE
+        </div>
+    </div>
+
+</body>
+</html>

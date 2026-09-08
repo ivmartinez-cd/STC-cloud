@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>STC Cloud - Arquitectura de la App Web v1.0</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --stc-blue: #004a99;
+            --stc-orange: #f7931d;
+            --text-dark: #1a2333;
+            --text-gray: #64748b;
+            --code-bg: #f8fafc;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            background: #f1f5f9;
+            color: var(--text-dark);
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+
+        .page {
+            width: 210mm;
+            min-height: 297mm;
+            padding: 25mm;
+            margin: 20px auto;
+            box-sizing: border-box;
+            position: relative;
+            background: white;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+
+        @media print {
+            body { background: white; }
+            .page {
+                margin: 0;
+                padding: 20mm;
+                box-shadow: none;
+                page-break-after: always;
+            }
+        }
+
+        .cover-top-bar {
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 75mm;
+        }
+
+        .top-title {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--stc-blue);
+            letter-spacing: 0.05em;
+        }
+
+        .cover-main { text-align: left; padding-left: 10mm; }
+
+        .stc-cloud-brand {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 50px;
+        }
+
+        .brand-stc {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 900;
+            font-size: 42px;
+            color: var(--stc-blue);
+            letter-spacing: -0.02em;
+        }
+
+        .brand-cloud {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 900;
+            font-size: 42px;
+            color: var(--stc-orange);
+            letter-spacing: -0.02em;
+        }
+
+        .main-title {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 34px;
+            font-weight: 700;
+            color: var(--stc-blue);
+            margin: 0;
+            line-height: 1.15;
+            text-transform: uppercase;
+        }
+
+        .main-subtitle {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 34px;
+            font-weight: 400;
+            color: var(--stc-blue);
+            margin: 5px 0 50px 0;
+            text-transform: uppercase;
+        }
+
+        .version-tag {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-gray);
+            letter-spacing: 0.08em;
+        }
+
+        .internal-header {
+            border-bottom: 3px solid var(--stc-blue);
+            padding-bottom: 8px;
+            margin-bottom: 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+
+        .internal-brand {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 900;
+            font-size: 16px;
+            color: var(--stc-blue);
+        }
+
+        .internal-brand span { color: var(--stc-orange); }
+
+        .internal-doc-type {
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--text-gray);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        h2 {
+            font-family: 'Montserrat', sans-serif;
+            color: var(--stc-blue);
+            font-size: 20px;
+            border-bottom: 1px solid #f1f5f9;
+            padding-bottom: 8px;
+            margin-top: 35px;
+        }
+
+        h3 {
+            font-family: 'Montserrat', sans-serif;
+            color: var(--stc-orange);
+            font-size: 14px;
+            margin-top: 25px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        p { font-size: 13.5px; color: #334155; line-height: 1.65; }
+
+        ul, ol { padding-left: 20px; }
+
+        li { font-size: 13.5px; color: #334155; margin-bottom: 8px; line-height: 1.6; }
+
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+
+        th, td { border: 1px solid #e2e8f0; padding: 10px 12px; text-align: left; font-size: 12.5px; }
+
+        th {
+            background-color: #f8fafc;
+            color: var(--stc-blue);
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: 0.05em;
+        }
+
+        .note-callout {
+            background: #fff7ed;
+            border-left: 4px solid var(--stc-orange);
+            padding: 14px 18px;
+            margin: 18px 0;
+            font-size: 13px;
+            color: #9a3412;
+            line-height: 1.6;
+        }
+
+        .info-callout {
+            background: #eff6ff;
+            border-left: 4px solid var(--stc-blue);
+            padding: 14px 18px;
+            margin: 18px 0;
+            font-size: 13px;
+            color: #1e40af;
+            line-height: 1.6;
+        }
+
+        .footer {
+            position: absolute;
+            bottom: 20mm;
+            left: 25mm;
+            right: 25mm;
+            border-top: 1px solid #e2e8f0;
+            padding-top: 15px;
+            font-size: 10px;
+            color: #94a3b8;
+            text-align: center;
+        }
+
+        .toc-container { margin-top: 30px; }
+
+        .toc-item {
+            display: flex;
+            align-items: baseline;
+            margin-bottom: 14px;
+            font-size: 14px;
+            color: #1a2333;
+            text-decoration: none;
+        }
+
+        .toc-link {
+            text-decoration: none;
+            color: inherit;
+            display: flex;
+            width: 100%;
+            align-items: baseline;
+        }
+
+        .toc-num {
+            flex-shrink: 0;
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 700;
+            color: var(--stc-blue);
+            font-size: 13px;
+            width: 28px;
+        }
+
+        .toc-text { flex-shrink: 0; padding-right: 5px; font-weight: 600; }
+
+        .toc-dots {
+            flex-grow: 1;
+            border-bottom: 1px dotted #94a3b8;
+            margin: 0 5px;
+            position: relative;
+            top: -4px;
+        }
+
+        .toc-page { flex-shrink: 0; padding-left: 5px; font-weight: 700; color: var(--stc-blue); }
+
+        .toc-section {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--stc-orange);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin: 20px 0 8px 0;
+        }
+
+        pre.code {
+            background: var(--code-bg);
+            border: 1px solid #e2e8f0;
+            border-left: 4px solid var(--stc-blue);
+            padding: 14px;
+            font-size: 11.5px;
+            font-family: 'Courier New', Courier, monospace;
+            color: #1e293b;
+            overflow-x: auto;
+            border-radius: 4px;
+            line-height: 1.5;
+            margin: 12px 0;
+        }
+
+        pre.diagram {
+            background: #0f172a;
+            color: #38bdf8;
+            border-left: 4px solid var(--stc-orange);
+            padding: 15px;
+            font-size: 10.5px;
+            font-family: 'Courier New', Courier, monospace;
+            overflow-x: auto;
+            border-radius: 4px;
+            line-height: 1.35;
+            margin: 12px 0;
+        }
+
+        .diagram-title {
+            font-size: 10px;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: -8px;
+            font-weight: 700;
+        }
+
+        .two-col {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin: 18px 0;
+        }
+
+        .three-col {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 14px;
+            margin: 18px 0;
+        }
+
+        .card {
+            background: #f8fafc;
+            border-left: 4px solid var(--stc-blue);
+            padding: 14px;
+        }
+
+        .card.orange { border-left-color: var(--stc-orange); }
+
+        .card-title {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--stc-blue);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            margin-bottom: 8px;
+        }
+
+        .card.orange .card-title { color: var(--stc-orange); }
+
+        .card p { font-size: 12px; margin: 0; color: #475569; }
+
+        code {
+            font-family: 'Courier New', monospace;
+            font-size: 11.5px;
+            color: var(--stc-blue);
+            background: #e0eaf7;
+            padding: 1px 5px;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- PÁGINA 1: PORTADA -->
+    <div class="page">
+        <div class="cover-top-bar">
+            <div class="top-title">STC CLOUD – DOCUMENTACIÓN TÉCNICA</div>
+        </div>
+
+        <div class="cover-main">
+            <div class="stc-cloud-brand">
+                <span class="brand-stc">STC</span>
+                <span class="brand-cloud">CLOUD</span>
+            </div>
+
+            <h1 class="main-title">ARQUITECTURA DE LA</h1>
+            <h1 class="main-subtitle">PLATAFORMA WEB</h1>
+
+            <div class="version-tag">Portal + API Cloud | v1.0 | Septiembre 2026</div>
+        </div>
+
+        <div class="footer">
+            © 2026 CANAL DIRECTO | STC CLOUD | ARQUITECTURA DE LA APP WEB | DOCUMENTACIÓN TÉCNICA
+        </div>
+    </div>
+
+    <!-- PÁGINA 2: ÍNDICE -->
+    <div class="page">
+        <div class="internal-header">
+            <div class="internal-brand">STC <span>CLOUD</span></div>
+            <div class="internal-doc-type">Índice</div>
+        </div>
+
+        <h2 style="border: none; margin-bottom: 30px;">Índice de Contenidos</h2>
+
+        <div class="toc-container">
+            <div class="toc-section">Visión General</div>
+            <div class="toc-item">
+                <span class="toc-num">1.</span>
+                <div class="toc-link">
+                    <span class="toc-text">Dos Aplicaciones, un Mismo Host: Portal y API</span>
+                    <span class="toc-dots"></span>
+                    <span class="toc-page">3</span>
+                </div>
+            </div>
+
+            <div class="toc-section">Backend (API Cloud)</div>
+            <div class="toc-item">
+                <span class="toc-num">2.</span>
+                <div class="toc-link">
+                    <span class="toc-text">Arranque y Organización Modular</span>
+                    <span class="toc-dots"></span>
+                    <span class="toc-page">4</span>
+                </div>
+            </div>
+            <div class="toc-item">
+                <span class="toc-num">3.</span>
+                <div class="toc-link">
+                    <span class="toc-text">Autenticación, Roles y Aislamiento Multi-Cliente</span>
+                    <span class="toc-dots"></span>
+                    <span class="toc-page">5</span>
+                </div>
+            </div>
+            <div class="toc-item">
+                <span class="toc-num">4.</span>
+                <div class="toc-link">
+                    <span class="toc-text">Base de Datos y Procesos en Segundo Plano</span>
+                    <span class="toc-dots"></span>
+                    <span class="toc-page">6</span>
+                </div>
+            </div>
+            <div class="toc-item">
+                <span class="toc-num">5.</span>
+                <div class="toc-link">
+                    <span class="toc-text">Tiempo Real (WebSocket) e Integraciones Externas</span>
+                    <span class="toc-dots"></span>
+                    <span class="toc-page">7</span>
+                </div>
+            </div>
+
+            <div class="toc-section">Frontend (Portal Web)</div>
+            <div class="toc-item">
+                <span class="toc-num">6.</span>
+                <div class="toc-link">
+                    <span class="toc-text">Stack, Organización por Features y Navegación</span>
+                    <span class="toc-dots"></span>
+                    <span class="toc-page">8</span>
+                </div>
+            </div>
+            <div class="toc-item">
+                <span class="toc-num">7.</span>
+                <div class="toc-link">
+                    <span class="toc-text">Sesión Sin JWT Visible: Cookies, CSRF y Datos en Vivo</span>
+                    <span class="toc-dots"></span>
+                    <span class="toc-page">9</span>
+                </div>
+            </div>
+
+            <div class="toc-section">Calidad y Despliegue</div>
+            <div class="toc-item">
+                <span class="toc-num">8.</span>
+                <div class="toc-link">
+                    <span class="toc-text">Controles Automáticos de Arquitectura (CI)</span>
+                    <span class="toc-dots"></span>
+                    <span class="toc-page">10</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            PÁGINA 2 | STC CLOUD – ARQUITECTURA DE LA APP WEB
+        </div>
+    </div>
+
+    <!-- PÁGINA 3: VISIÓN GENERAL -->
+    <div class="page">
+        <div class="internal-header">
+            <div class="internal-brand">STC <span>CLOUD</span></div>
+            <div class="internal-doc-type">1. Visión General</div>
+        </div>
+
+        <h2 id="vision-general">1. Dos Aplicaciones, un Mismo Host: Portal y API</h2>
+        <p>
+            "La app web" de STC Cloud son en realidad <strong>dos aplicaciones independientes</strong> que se despliegan juntas: un <strong>portal</strong> (interfaz que usan los clientes y administradores desde el navegador) y una <strong>API</strong> (el servidor Fastify que recibe tanto al portal como a los agentes instalados en cada sitio). Todo corre self-hosted en un único host mediante Docker Compose, sin depender de un proveedor cloud propietario.
+        </p>
+
+        <div class="diagram-title">Servicios del Despliegue (docker-compose.yml)</div>
+        <pre class="diagram">
+                              ┌──────────────────────┐
+                    HTTPS     │        nginx          │  Terminador TLS
+        Internet ────────────►  reverse proxy         │  (certbot renueva cada 12h)
+                              └──────────┬────────────┘
+                                         │
+                    ┌────────────────────┼────────────────────┐
+                    ▼                    ▼                    │
+          ┌──────────────────┐  ┌──────────────────┐          │
+          │   portal (SPA)   │  │   api (Fastify)  │◄─────────┘  agentes (WSS/HTTPS)
+          │  nginx + React   │  │  Node 20 + Jobs  │
+          └──────────────────┘  └─────────┬────────┘
+                                            │
+                              ┌─────────────┼─────────────┐
+                              ▼                           ▼
+                    ┌──────────────────┐        ┌──────────────────┐
+                    │ postgres          │        │ redis             │
+                    │ (TimescaleDB)     │        │ colas + pub/sub   │
+                    └──────────────────┘        └──────────────────┘
+                              │
+                              ▼
+                    ┌──────────────────┐
+                    │ backup (dump      │
+                    │ periódico)        │
+                    └──────────────────┘</pre>
+
+        <p>
+            El backend confía en nginx como proxy inmediato (<code>trustProxy: true</code>) para resolver la IP real del cliente vía <code>X-Forwarded-For</code>. Portal y API son contenedores separados con su propio Dockerfile; nginx enruta <code>/api/</code> y <code>/ws</code> hacia la API y todo lo demás hacia el portal estático.
+        </p>
+
+        <div class="note-callout">
+            <strong>Nota de escala actual:</strong> el despliegue asume explícitamente <strong>una sola réplica</strong> del contenedor <code>api</code> — varios procesos en segundo plano usan temporizadores simples (<code>setInterval</code>) en vez de colas distribuidas porque no hay más de una instancia corriendo a la vez. Escalar horizontalmente la API requeriría migrar esos procesos a colas (algunos, como el envío de notificaciones, ya usan BullMQ y sí soportan múltiples réplicas).
+        </div>
+
+        <div class="footer">
+            PÁGINA 3 | STC CLOUD – ARQUITECTURA DE LA APP WEB
+        </div>
+    </div>
+
+    <!-- PÁGINA 4: BACKEND - ARRANQUE Y MÓDULOS -->
+    <div class="page">
+        <div class="internal-header">
+            <div class="internal-brand">STC <span>CLOUD</span></div>
+            <div class="internal-doc-type">2. Backend: Arranque y Módulos</div>
+        </div>
+
+        <h2 id="backend-arranque">2. Arranque y Organización Modular</h2>
+        <p>
+            El servidor Fastify sigue una secuencia de arranque estricta y verificable (<code>server.ts</code>): valida variables de entorno críticas, corre las migraciones de base de datos pendientes, crea un usuario administrador por defecto si la base está vacía, y solo entonces registra rutas y abre el puerto.
+        </p>
+
+        <div class="diagram-title">Secuencia de Arranque</div>
+        <pre class="diagram">
+  start()
+    ├─► JWT_SECRET ausente?          ──► aborta el proceso (falla rápido, no arranca a medias)
+    ├─► db.migrate.latest()          ──► aplica migraciones pendientes de Postgres
+    ├─► bootstrapDefaultAdmin()      ──► crea admin inicial si la tabla users está vacía
+    ├─► registro de plugins base     ──► CORS, métricas, manejo de errores, rate limit
+    ├─► registerAllRoutes()          ──► ~20 módulos de negocio
+    ├─► WebSocket (/ws)              ──► agentes DCA + portal
+    └─► fastify.listen()             ──► + graceful shutdown</pre>
+
+        <h3>Arquitectura Hexagonal por Módulo</h3>
+        <p>
+            El backend está organizado en cerca de <strong>20 módulos de negocio</strong> independientes (<code>src/modules/</code>): <code>auth</code>, <code>agents</code>, <code>devices</code>, <code>alerts</code>, <code>incidents</code>, <code>clients</code>, <code>reports</code>, <code>scheduled-reports</code>, <code>supplies</code>, <code>supply-requests</code>, <code>remote-actions</code>, <code>two-factor</code>, <code>public-api</code>, <code>audit</code>, <code>observability</code>, <code>dashboard</code>, <code>inventory</code>, <code>device-costs</code>, <code>email-log</code>, <code>system-settings</code>, <code>message-templates</code>, <code>activity-views</code>, <code>metrics</code> y <code>feedback</code>. Cada módulo separa sus responsabilidades en cuatro capas:
+        </p>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 20%;">Capa</th>
+                    <th style="width: 80%;">Contenido</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td><code>domain/</code></td><td>Entidades, reglas de negocio puras, interfaces de repositorio y errores del dominio — sin dependencias externas.</td></tr>
+                <tr><td><code>application/</code></td><td>Casos de uso (orquestan el dominio) y puertos hacia infraestructura.</td></tr>
+                <tr><td><code>infrastructure/</code></td><td>Adaptadores concretos: acceso a Postgres vía Knex, colas, servicios externos.</td></tr>
+                <tr><td><code>presentation/</code></td><td>Controllers y definición de rutas Fastify, únicamente lo que el módulo expone hacia afuera.</td></tr>
+            </tbody>
+        </table>
+        <p>
+            El módulo <code>auth</code> es el más grande y ejemplifica el patrón: separa el caso de uso de login, la gestión de usuarios, y controllers dedicados por responsabilidad (autenticación de agentes, sesión de portal, gestión de usuarios, estadísticas de login, versión de agente).
+        </p>
+
+        <div class="footer">
+            PÁGINA 4 | STC CLOUD – ARQUITECTURA DE LA APP WEB
+        </div>
+    </div>
+
+    <!-- PÁGINA 5: AUTENTICACIÓN, ROLES Y MULTI-TENANCY -->
+    <div class="page">
+        <div class="internal-header">
+            <div class="internal-brand">STC <span>CLOUD</span></div>
+            <div class="internal-doc-type">3. Auth, Roles y Multi-Cliente</div>
+        </div>
+
+        <h2 id="auth-rbac">3. Autenticación, Roles y Aislamiento Multi-Cliente</h2>
+        <p>
+            La API distingue tres tipos de identidad que se conectan a ella, cada uno con su propio esquema de autenticación:
+        </p>
+
+        <div class="three-col">
+            <div class="card">
+                <div class="card-title">Agentes (DCA)</div>
+                <p>JWT propio del agente instalado en el cliente. Se valida contra una lista de revocación en Redis para poder desactivar un agente sin esperar que expire su token.</p>
+            </div>
+            <div class="card orange">
+                <div class="card-title">Usuarios del portal</div>
+                <p>JWT en cookie httpOnly (<code>stc_session</code>), nunca expuesto a JavaScript. Exige 2FA activo si la cuenta lo tiene forzado, en cualquier ruta salvo login/2FA.</p>
+            </div>
+            <div class="card">
+                <div class="card-title">Integraciones ERP</div>
+                <p>Header <code>X-Api-Key</code> de alta entropía, sin JWT. Sólo se guarda el hash SHA-256 de la clave en base de datos, nunca el valor en claro.</p>
+            </div>
+        </div>
+
+        <h3>Control de Acceso por Rol (RBAC)</h3>
+        <p>
+            Existen tres roles: <strong>admin</strong> y <strong>operator</strong> (sin restricciones de rutas) y <strong>client_viewer</strong>, limitado a una <em>allowlist</em> explícita de rutas de lectura. El diseño es deliberadamente <strong>deny-by-default</strong> en dos ejes: un rol no reconocido no accede a nada, y una ruta no listada tampoco. Al arrancar, el servidor verifica que cada ruta de la allowlist exista realmente registrada — un error de tipeo hace fallar el arranque en vez de denegar en silencio.
+        </p>
+        <div class="note-callout">
+            <strong>Detalle deliberado de seguridad:</strong> la allowlist de <code>client_viewer</code> excluye a propósito los endpoints que exponen la comunidad SNMP de un agente o sus logs internos, aunque en general pueda ver el resto de los datos de sus propios dispositivos.
+        </div>
+
+        <h3>Aislamiento entre Clientes (Multi-Tenancy)</h3>
+        <p>
+            Cada cliente de STC Cloud es una fila en la tabla <code>clients</code>. La columna <code>client_id</code> se propaga a usuarios, agentes, dispositivos y al registro de auditoría, y el aislamiento se aplica en dos capas redundantes: la validación de "pertenencia" de un recurso (<code>:id</code>) se hace de forma centralizada en el middleware de autenticación —no depende de que cada endpoint nuevo se acuerde de filtrar por cliente— y además cada consulta a base de datos scopea explícitamente por <code>client_id</code>.
+        </p>
+
+        <div class="footer">
+            PÁGINA 5 | STC CLOUD – ARQUITECTURA DE LA APP WEB
+        </div>
+    </div>
+
+    <!-- PÁGINA 6: BASE DE DATOS Y JOBS -->
+    <div class="page">
+        <div class="internal-header">
+            <div class="internal-brand">STC <span>CLOUD</span></div>
+            <div class="internal-doc-type">4. Base de Datos y Jobs</div>
+        </div>
+
+        <h2 id="db-jobs">4. Base de Datos y Procesos en Segundo Plano</h2>
+        <p>
+            La plataforma usa <strong>PostgreSQL con la extensión TimescaleDB</strong>, pensada para series temporales de alto volumen (lecturas de contadores de miles de impresoras a lo largo del tiempo), administrada mediante <strong>Knex</strong> (72 migraciones versionadas al momento de este documento).
+        </p>
+
+        <h3>Procesos en Segundo Plano</h3>
+        <p>
+            Todos los procesos corren dentro del mismo contenedor <code>api</code>, combinando dos mecanismos según la necesidad: colas <strong>BullMQ sobre Redis</strong> (para trabajo que debe sobrevivir un reinicio y eventualmente correr en varias réplicas) y temporizadores simples (para tareas periódicas de instancia única):
+        </p>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 28%;">Proceso</th>
+                    <th style="width: 15%;">Mecanismo</th>
+                    <th style="width: 57%;">Función</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td><code>alertWorker</code></td><td>BullMQ</td><td>Procesa alertas generadas por lecturas de dispositivos.</td></tr>
+                <tr><td><code>incidentWorker</code></td><td>Timer</td><td>Agrupa alertas relacionadas en incidentes.</td></tr>
+                <tr><td><code>heartbeatMonitor</code></td><td>Timer</td><td>Detecta agentes caídos y dispara alertas de conectividad.</td></tr>
+                <tr><td><code>notificationWorker</code></td><td>BullMQ</td><td>Entrega emails y webhooks de alertas, incidentes y pedidos de insumos.</td></tr>
+                <tr><td><code>publicWebhookWorker</code></td><td>BullMQ</td><td>Dispara webhooks salientes a los ERP de cada cliente.</td></tr>
+                <tr><td><code>remoteActionWorker</code></td><td>Timer</td><td>Despacha y reconcilia acciones remotas hacia los agentes.</td></tr>
+                <tr><td><code>reportDeliveryWorker</code></td><td>BullMQ</td><td>Genera y envía reportes (CSV/XLSX/PDF) por email, webhook o SFTP.</td></tr>
+                <tr><td><code>scheduledReportsWorker</code></td><td>Timer</td><td>Dispara reportes programados según su horario configurado.</td></tr>
+                <tr><td><code>supplyRequestWorker</code></td><td>Timer</td><td>Detecta consumibles bajos y genera pedidos de reposición.</td></tr>
+                <tr><td><code>retentionJob</code></td><td>Timer</td><td>Purga logs (90 días) y alertas resueltas (12 meses); nunca purga alertas abiertas.</td></tr>
+                <tr><td><code>alertDigestJob</code></td><td>Timer</td><td>Envía un resumen periódico de alertas por email.</td></tr>
+            </tbody>
+        </table>
+
+        <div class="footer">
+            PÁGINA 6 | STC CLOUD – ARQUITECTURA DE LA APP WEB
+        </div>
+    </div>
+
+    <!-- PÁGINA 7: WEBSOCKET Y API PÚBLICA -->
+    <div class="page">
+        <div class="internal-header">
+            <div class="internal-brand">STC <span>CLOUD</span></div>
+            <div class="internal-doc-type">5. Tiempo Real e Integraciones</div>
+        </div>
+
+        <h2 id="tiempo-real">5. Tiempo Real (WebSocket) e Integraciones Externas</h2>
+        <p>
+            Un único endpoint <code>/ws</code> atiende tanto a los agentes instalados en los clientes como a las sesiones del portal abiertas en el navegador, distinguiendo el tipo de conexión al autenticar.
+        </p>
+        <ul>
+            <li><strong>Tickets de un solo uso para el portal:</strong> en vez de pasar el token de sesión completo por la URL del WebSocket (quedaría en logs de proxies), el portal primero pide un <em>ticket</em> de corta duración (60 segundos) y lo usa una única vez para abrir el canal.</li>
+            <li><strong>Escalamiento horizontal vía Redis pub/sub:</strong> si en el futuro hay más de una réplica de la API, los sockets de distintos usuarios del portal quedan repartidos entre procesos. Un canal Redis dedicado retransmite los mensajes entre réplicas para que lleguen al socket correcto sin importar en qué proceso esté conectado.</li>
+            <li><strong>Comandos remotos "síncronos" sobre un transporte asíncrono:</strong> cuando un administrador pide una acción sobre una impresora concreta (por ejemplo, leer su configuración EWS en vivo), el pedido HTTP del portal queda esperando hasta que el agente responde por WebSocket, dando la sensación de una operación síncrona sin serlo realmente — y sin mezclar esa respuesta con la de otros administradores conectados al mismo tiempo.</li>
+        </ul>
+
+        <h2 id="api-publica">API Pública para Integraciones ERP</h2>
+        <p>
+            El módulo <code>public-api</code> expone lecturas de dispositivos y configuración de webhooks salientes a sistemas externos (ERPs de los clientes), autenticado por API Key en vez de sesión de usuario. Las lecturas destinadas a un ERP se procesan en una <strong>cola separada</strong> de la sincronización normal de los agentes, para que una entrega lenta hacia un sistema externo no retrase el ingreso de datos de los propios agentes.
+        </p>
+
+        <div class="footer">
+            PÁGINA 7 | STC CLOUD – ARQUITECTURA DE LA APP WEB
+        </div>
+    </div>
+
+    <!-- PÁGINA 8: FRONTEND - STACK Y NAVEGACIÓN -->
+    <div class="page">
+        <div class="internal-header">
+            <div class="internal-brand">STC <span>CLOUD</span></div>
+            <div class="internal-doc-type">6. Frontend: Stack y Navegación</div>
+        </div>
+
+        <h2 id="frontend-stack">6. Stack, Organización por Features y Navegación</h2>
+        <p>
+            El portal es una <strong>SPA en React 19 + TypeScript</strong>, construida con <strong>Vite</strong> y estilizada con <strong>Tailwind CSS 4</strong>. No usa una librería de manejo de estado global (Redux/Zustand) ni una librería de data-fetching (React Query/SWR): el estado global se resuelve con dos <em>Contexts</em> de React (sesión y notificaciones tipo toast) y cada pantalla trae sus propios datos con hooks propios.
+        </p>
+
+        <h3>Organización por Dominio (Feature-Based)</h3>
+        <p>
+            El código del portal se organiza por funcionalidad de negocio, no por tipo de archivo. Cada carpeta bajo <code>src/features/</code> es autocontenida (páginas, componentes y hooks propios):
+        </p>
+        <div class="three-col">
+            <div class="card"><div class="card-title">Operación</div><p>devices, pending-devices, monitors (agentes + consola remota), incidents, alerts</p></div>
+            <div class="card orange"><div class="card-title">Gestión</div><p>clients, supplies, supply-requests, settings</p></div>
+            <div class="card"><div class="card-title">Reporting</div><p>reports, scheduled-reports, activity, email-log</p></div>
+        </div>
+        <p>
+            Una regla de arquitectura vigilada automáticamente en CI impide que una feature importe código de otra feature directamente, y que el código compartido (<code>shared/</code>, <code>store/</code>, <code>app/</code>) dependa de una feature — la dependencia va siempre en un solo sentido.
+        </p>
+
+        <h3>Navegación y Control de Acceso en la Interfaz</h3>
+        <p>
+            Todas las páginas se cargan de forma perezosa (<code>lazy()</code>) para dividir el bundle por ruta. Fuera del login, todo el árbol de rutas exige sesión activa; además, las rutas exclusivas de administración (gestión de agentes, reportes programados, log de emails, acciones remotas, auditoría de actividad, dispositivos pendientes) están protegidas también por componente de rol en el propio router — así un usuario <code>client_viewer</code> no puede acceder tecleando la URL directamente, aunque esa opción no aparezca en su menú.
+        </p>
+
+        <div class="footer">
+            PÁGINA 8 | STC CLOUD – ARQUITECTURA DE LA APP WEB
+        </div>
+    </div>
+
+    <!-- PÁGINA 9: FRONTEND - COMUNICACIÓN CON EL BACKEND -->
+    <div class="page">
+        <div class="internal-header">
+            <div class="internal-brand">STC <span>CLOUD</span></div>
+            <div class="internal-doc-type">7. Sesión y Datos en Vivo</div>
+        </div>
+
+        <h2 id="frontend-backend">7. Sesión Sin JWT Visible: Cookies, CSRF y Datos en Vivo</h2>
+        <p>
+            El portal nunca maneja el token de sesión directamente en JavaScript. La autenticación viaja en una <strong>cookie httpOnly</strong>, invisible para el propio código del frontend y por lo tanto inalcanzable para un ataque de scripting (XSS) que intente robarla.
+        </p>
+        <ul>
+            <li><strong>Protección CSRF de doble cookie:</strong> junto a la cookie de sesión, el servidor entrega una segunda cookie legible por JavaScript con un token anti-CSRF, que el portal reenvía como header en cada operación de escritura. Un sitio externo que intente falsificar una petición no puede leer esa cookie ni, por lo tanto, construir el header correcto.</li>
+            <li><strong>Manejo centralizado de sesión vencida:</strong> un <code>401</code> (sesión inválida) redirige siempre al login; un <code>403</code> (falta de permiso de rol) no cierra la sesión, solo muestra el mensaje del backend — la distinción evita deslogueos innecesarios cuando el problema es de permisos, no de autenticación.</li>
+        </ul>
+
+        <h3>Datos en Vivo: Polling, no un Socket Global</h3>
+        <p>
+            A diferencia de lo que podría esperarse, el portal <strong>no mantiene un canal WebSocket permanente para refrescar pantallas</strong>: cada bloque de cada pantalla actualiza sus datos por sondeo periódico (cada 60 segundos), de forma independiente entre sí — si un bloque falla, no afecta al resto de la pantalla. La única excepción real a tiempo real es la <strong>consola remota</strong> de un agente específico, que sí abre un WebSocket dedicado (con el ticket de un solo uso descripto en la sección 5) mientras esa vista está abierta.
+        </p>
+
+        <div class="info-callout">
+            <strong>Por qué importa esta elección:</strong> el polling desacoplado hace que una pantalla compleja (por ejemplo, un dashboard con múltiples widgets) no dependa de un único canal en tiempo real que, si se cae, dejaría toda la pantalla congelada. Cada widget se recupera solo en su siguiente ciclo de sondeo.
+        </div>
+
+        <div class="footer">
+            PÁGINA 9 | STC CLOUD – ARQUITECTURA DE LA APP WEB
+        </div>
+    </div>
+
+    <!-- PÁGINA 10: CALIDAD Y CI -->
+    <div class="page">
+        <div class="internal-header">
+            <div class="internal-brand">STC <span>CLOUD</span></div>
+            <div class="internal-doc-type">8. Calidad y Despliegue</div>
+        </div>
+
+        <h2 id="calidad-ci">8. Controles Automáticos de Arquitectura (CI)</h2>
+        <p>
+            Varias de las reglas descriptas en este documento no dependen únicamente de la disciplina del equipo: están verificadas por scripts que corren en cada cambio y bloquean el pipeline si se violan, con un esquema de <em>ratchet</em> — el código ya existente que no cumple queda congelado en una lista base, pero nada nuevo puede empeorar esa lista.
+        </p>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 25%;">Control</th>
+                    <th style="width: 75%;">Qué garantiza</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td><code>check-routes.mjs</code></td><td>Cada ruta de la API declara explícitamente su autenticación, salvo que esté en una lista pública explícita — ninguna ruta queda "olvidada" sin proteger. Además regenera el catálogo de permisos de la documentación interna.</td></tr>
+                <tr><td><code>check-guards.mjs</code></td><td>Fronteras de dependencia entre capas (dominio/aplicación/infraestructura en el backend, entre features en el portal), prohíbe logs de depuración fuera de tests y manejo de errores silencioso sin justificar.</td></tr>
+                <tr><td><code>check-sizes.mjs</code></td><td>Límite de tamaño por archivo y por función tanto en el backend como en el portal, para evitar que un módulo crezca sin control con el tiempo.</td></tr>
+                <tr><td><code>check-icons.js</code></td><td>Evita que el portal referencie íconos que no existen en la librería de íconos.</td></tr>
+            </tbody>
+        </table>
+
+        <p>
+            El despliegue completo (nginx, portal, API, base de datos, Redis, renovación de certificados TLS y backups periódicos) se orquesta con un único <code>docker-compose.yml</code>, lo que permite reproducir el entorno de producción de forma idéntica en un ambiente de pruebas.
+        </p>
+
+        <p style="margin-top: 30px; color: #94a3b8; font-size: 12px;">
+            Para la arquitectura del componente instalado en la red del cliente, ver <em>STC_Arquitectura_Agente</em> en esta misma carpeta.
+        </p>
+
+        <div class="footer">
+            PÁGINA 10 | STC CLOUD – ARQUITECTURA DE LA APP WEB
+        </div>
+    </div>
+
+</body>
+</html>
