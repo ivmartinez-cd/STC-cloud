@@ -92,6 +92,16 @@ Deuda que esto destapó, para otra pasada: **hay al menos dos tests de pub/sub W
 
 La corrida 3 no tiene fallas atribuibles al cambio: los 52 archivos previos corren en el orden idéntico al de hoy, así que cualquier falla entre ellos también ocurre en el CI actual.
 
+**Lo que la verificación local NO detectó.** El primer CI con el cambio falló: `deviceDetail.test.ts` y `monitorDetail.test.ts` tiraron `ECONNREFUSED` en su hook. Abren una conexión pg propia con `DEVICE_DETAIL_TEST_DB_PORT` / `MONITOR_DETAIL_TEST_DB_PORT`, default **5434**, y el workflow no las definía. Local pasaban **por la razón equivocada**: ahí el 5434 existe y es la base de desarrollo compartida, así que los tests se conectaban a ella sin que se notara (limpian sus fixtures en el `after`; verificado que no quedaron residuos).
+
+Corregido en `0d8eb45`. Toda var `*_TEST_DB_PORT` que use un test tiene que estar en el workflow; listarlas con:
+
+```bash
+grep -rho 'process\.env\.[A-Z_]*TEST_DB_PORT' cloud/src/tests | sort -u
+```
+
+**Resultado final: CI verde, 65/65 archivos** (run 34244600665, los 4 jobs en success).
+
 ---
 
 ### B. §5.4 — versiones no fijadas — **MEDIA**
