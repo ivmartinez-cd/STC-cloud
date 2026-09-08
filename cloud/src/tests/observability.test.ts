@@ -135,6 +135,18 @@ describe('pub/sub WS — e2e (broadcast cruza Redis hasta el socket del portal)'
 
     const wsUrl = `${BASE.replace(/^http/, 'ws')}/ws?token=${ticket.data.ticket}`;
     const socket = new WebSocket(wsUrl);
+    // 'open' puede dispararse en cuanto termina el handshake (localhost: a
+    // veces en <1ms) — los listeners van YA, sincrónicamente, antes de
+    // cualquier await; si un `await import(...)` se cuela en el medio, se
+    // puede perder el evento y la promesa de abajo queda esperando para
+    // siempre (así se coló el cuelgue de 2h que reemplazó este código).
+    const received: any[] = [];
+    socket.on('message', (raw) => received.push(JSON.parse(raw.toString())));
+    const opened = new Promise((resolve, reject) => {
+      socket.once('open', resolve);
+      socket.once('error', reject);
+    });
+
     // Publica vía ioredis (mismo REDIS_URL que usa la API) en vez de
     // `docker exec stc_redis ...`: ese nombre de contenedor solo existe en
     // el docker-compose de dev, no en los servicios de Postgres/Redis del
@@ -144,12 +156,7 @@ describe('pub/sub WS — e2e (broadcast cruza Redis hasta el socket del portal)'
     const { default: Redis } = await import('ioredis');
     const publisher = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
     try {
-      const received: any[] = [];
-      socket.on('message', (raw) => received.push(JSON.parse(raw.toString())));
-      await new Promise((resolve, reject) => {
-        socket.once('open', resolve);
-        socket.once('error', reject);
-      });
+      await opened;
 
       // Publicar directo al canal (lo que haría broadcastToPortal en OTRA réplica)
       const payload = JSON.stringify({ event: 'obs_test', data: { ping: Date.now() } });

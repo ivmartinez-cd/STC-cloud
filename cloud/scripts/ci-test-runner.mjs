@@ -65,10 +65,24 @@ const TEST_FILES = [
   "src/tests/clientSftpDestination.test.ts",
 ];
 
+// remoteActions.test.ts tarda ~4min de forma legítima (polling real) — el
+// timeout tiene que dejarle margen. Es una red de seguridad: si CUALQUIER
+// archivo se cuelga (p.ej. un listener de WS registrado después de perderse
+// el evento, como pasó acá antes), esto lo mata a los 8min en vez de dejar
+// el job entero colgado horas hasta el timeout de GitHub Actions.
+const FILE_TIMEOUT_MS = 8 * 60 * 1000;
+
 function runFile(file) {
   return new Promise((resolve) => {
     const child = spawn("npx", ["tsx", "--test", file], { stdio: "inherit" });
-    child.on("exit", (code) => resolve(code ?? 1));
+    const timer = setTimeout(() => {
+      console.error(`\n!!! ${file} superó los ${FILE_TIMEOUT_MS / 1000}s — matando el proceso (probable cuelgue)`);
+      child.kill("SIGKILL");
+    }, FILE_TIMEOUT_MS);
+    child.on("exit", (code) => {
+      clearTimeout(timer);
+      resolve(code ?? 1);
+    });
   });
 }
 
