@@ -53,6 +53,7 @@ Documentación del proyecto **STC Cloud**, organizada por audiencia. Todo lo lis
 
 * **[SECURITY_AUDIT.md](../SECURITY_AUDIT.md) (raíz del proyecto):** Reporte de hardening del backend: 2FA TOTP, CSRF double-submit, RBAC de 3 roles deny-by-default, rate limiting por identidad, API keys hasheadas, protección IDOR centralizada y mitigación de XSS.
 * **[data_collection_inventory.md](security/data_collection_inventory.md):** Inventario de datos que recolecta el agente y su tratamiento (cubre 2FA, API pública, acciones remotas y retención). Documento vivo, con changelog.
+* **[DEPENDENCY_AUDIT_2026-09.md](security/DEPENDENCY_AUDIT_2026-09.md):** Auditoría de dependencias (`npm audit`) de backend, portal y agente, con evaluación de riesgo real y plan de acción. Incluye cómo reproducirla. Regenerar cuando cambien las dependencias.
 
 ---
 
