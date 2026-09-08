@@ -17,7 +17,7 @@
 
 Los dos cerrados son los que degradaban una garantía activa: los 13 tests que no corrían en CI (y con ellos la cobertura medida) y las escrituras a `audit_logs` sin `client_id`. Como efecto lateral se corrigió la causa raíz del CI intermitente de este repo — ver el cierre del ítem **A**.
 
-Las reglas de **mayor impacto estructural** —dirección de dependencias, fronteras entre módulos, pureza del dominio, tamaño de archivo, autenticación por endpoint— se cumplen sin excepciones y con el baseline de guardas **vacío**. Los gaps abiertos son de proceso (§9/§12), de higiene (§4) y uno de cobertura de CI que sí merece acción inmediata (**A**).
+Las reglas de **mayor impacto estructural** —dirección de dependencias, fronteras entre módulos, pureza del dominio, tamaño de archivo, autenticación por endpoint— se cumplen sin excepciones y con el baseline de guardas **vacío**. Los 5 gaps que siguen abiertos son de proceso (§9/§12) y de higiene (§4/§5): ninguno degrada una garantía activa.
 
 ---
 
@@ -40,7 +40,9 @@ Las reglas de **mayor impacto estructural** —dirección de dependencias, front
 
 ---
 
-## 2. Gaps abiertos
+## 2. Gaps
+
+**A** y **C** se cerraron en esta pasada y se dejan documentados acá con su evidencia; los demás siguen abiertos.
 
 ### A. 13 de 65 archivos de test nunca corren en CI — **ALTA**
 
@@ -94,8 +96,9 @@ Deuda que esto destapó: **dos tests de pub/sub WS ataban el orden de la suite a
 | 1 | alfabético | 64/65 — falla `ewsProxyRelay` |
 | 2 | alfabético, DB nueva | 64/65 — falla `ewsProxyRelay` (reproducible → causado por el orden) |
 | 3 | `KNOWN_ORDER` + append (final) | 64/65 — falla `observability` (flake preexistente, pasa 3/3 aislado) |
+| 4 | igual, ya con los dos tests de WS corregidos | **65/65** |
 
-La corrida 3 no tiene fallas atribuibles al cambio: los 52 archivos previos corren en el orden idéntico al de hoy, así que cualquier falla entre ellos también ocurre en el CI actual.
+La corrida 3 no tenía fallas atribuibles al cambio: los 52 archivos previos corren en el orden idéntico al de hoy, así que cualquier falla entre ellos también ocurre en el CI actual. La corrida 4, tras corregir la causa raíz de los tests de WS, quedó limpia — y CI también (run 34248477830, los 4 jobs en success).
 
 **Lo que la verificación local NO detectó.** El primer CI con el cambio falló: `deviceDetail.test.ts` y `monitorDetail.test.ts` tiraron `ECONNREFUSED` en su hook. Abren una conexión pg propia con `DEVICE_DETAIL_TEST_DB_PORT` / `MONITOR_DETAIL_TEST_DB_PORT`, default **5434**, y el workflow no las definía. Local pasaban **por la razón equivocada**: ahí el 5434 existe y es la base de desarrollo compartida, así que los tests se conectaban a ella sin que se notara (limpian sus fixtures en el `after`; verificado que no quedaron residuos).
 
