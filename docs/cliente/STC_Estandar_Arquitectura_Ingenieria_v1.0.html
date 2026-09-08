@@ -1,0 +1,1141 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>STC Cloud - Estándar de Arquitectura e Ingeniería v1.0</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;900&family=Source+Sans+3:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        /* Paleta institucional Canal Directo — los mismos tokens que usa el portal
+           STC Cloud desde el rediseño de agosto/2026 (cloud/portal/src/index.css):
+           sólo naranja + grises, nunca azul, rojo ni verde. La severidad se
+           resuelve con un gradiente DENTRO del naranja y el gris, no con semáforo.
+           Si cambia la paleta de la app, cambia también acá. */
+        :root {
+            --brand: #f7941d;              /* Institucional (naranja) */
+            --brand-severe: #c6710a;       /* naranja oscuro — severidad / atención */
+            --brand-accent: #b4700b;       /* naranja de texto (contraste sobre blanco) */
+            --brand-soft: #fdf4e9;         /* fondo suave de callouts y chips */
+            --brand-light: #fbc486;        /* naranja claro — categorías secundarias */
+            --brand-warn-text: #8a6033;    /* texto sobre fondo naranja suave */
+            --brand-warn-border: #e0a76b;  /* borde cálido de aviso */
+
+            --ink-900: #2e3033;            /* títulos */
+            --ink-700: #3c4144;            /* texto de cuerpo */
+            --ink-600: #4b5053;            /* texto secundario fuerte */
+            --ink-400: #8a9094;            /* texto secundario */
+            --ink-300: #9fa4a7;            /* labels en mayúscula, pies de página */
+            --ink-200: #b4b9bb;            /* texto tenue */
+            --ink-100: #6c7275;            /* gris oscuro — "sin urgencia" (nunca verde) */
+
+            --line-100: #e2e6e6;           /* borde de tabla / tarjeta */
+            --line-150: #edefef;           /* borde interno / separador */
+            --line-300: #d5d9da;           /* borde de acento secundario */
+
+            --surface-page: #f7f8f8;       /* fondo de tarjeta, bloque y encabezado de tabla */
+            --surface-track: #f0f2f2;      /* relleno neutro (chips) */
+            --surface-table-head: #fbfcfc; /* relleno más tenue (zebra, bloques sueltos) */
+
+            --panel-dark: #2e3033;         /* panel oscuro (diagramas, consola) */
+            --panel-dark-text: #a9aeb0;    /* texto secundario sobre panel oscuro */
+            --panel-dark-code: #d8dcdd;    /* texto de consola sobre panel oscuro */
+
+            /* Alias que usa el contenido de este documento */
+            --text-dark: var(--ink-900);
+            --text-gray: var(--ink-400);
+
+            --code-bg: var(--surface-page);
+        }
+
+        body {
+            font-family: 'Source Sans 3', 'Source Sans Pro', system-ui, -apple-system, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: var(--surface-page);
+            color: var(--text-dark);
+        }
+
+        .page {
+            width: 210mm;
+            min-height: 297mm;
+            padding: 25mm;
+            margin: 0 auto 10mm auto;
+            box-sizing: border-box;
+            position: relative;
+            background: white;
+        }
+
+        @media print {
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            body { background: white; }
+            .page { margin: 0; padding: 20mm; page-break-after: always; }
+        }
+
+        .cover-top-bar {
+            border-bottom: 1px solid var(--line-100);
+            padding-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 70mm;
+        }
+
+        .top-title {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--ink-600);
+            letter-spacing: 0.05em;
+        }
+
+        .cover-main { text-align: left; padding-left: 10mm; }
+
+        .stc-cloud-brand {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 60px;
+        }
+
+        .brand-stc {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 900;
+            font-size: 42px;
+            color: var(--ink-900);
+            letter-spacing: -0.02em;
+        }
+
+        .brand-cloud {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 900;
+            font-size: 42px;
+            color: var(--brand);
+            letter-spacing: -0.02em;
+        }
+
+        .main-title {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 34px;
+            font-weight: 700;
+            color: var(--ink-900);
+            margin: 0;
+            line-height: 1.1;
+            text-transform: uppercase;
+        }
+
+        .main-subtitle {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 34px;
+            font-weight: 400;
+            color: var(--brand);
+            margin: 5px 0 50px 0;
+            text-transform: uppercase;
+        }
+
+        .cover-desc {
+            font-size: 14px;
+            color: var(--ink-600);
+            line-height: 1.7;
+            max-width: 120mm;
+            margin-bottom: 40px;
+        }
+
+        .version-tag {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--ink-300);
+            letter-spacing: 0.1em;
+        }
+
+        .internal-header {
+            border-bottom: 2px solid var(--brand);
+            padding-bottom: 8px;
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+
+        .internal-brand {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 900;
+            font-size: 16px;
+            color: var(--ink-900);
+        }
+
+        .internal-brand span { color: var(--brand); }
+
+        .internal-doc-type {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-gray);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        h2 {
+            font-family: 'Montserrat', sans-serif;
+            color: var(--ink-900);
+            font-size: 20px;
+            border-bottom: 1px solid var(--line-150);
+            padding-bottom: 8px;
+            margin-top: 35px;
+        }
+
+        h3 {
+            font-family: 'Montserrat', sans-serif;
+            color: var(--brand-accent);
+            font-size: 14px;
+            margin-top: 25px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        p { font-size: 13.5px; color: var(--ink-700); line-height: 1.65; }
+
+        ul, ol { padding-left: 20px; }
+
+        li { font-size: 13.5px; color: var(--ink-700); margin-bottom: 8px; line-height: 1.6; }
+
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+
+        th, td { border: 1px solid var(--line-100); padding: 10px 12px; text-align: left; font-size: 12.5px; vertical-align: top; }
+
+        th {
+            background-color: var(--surface-page);
+            color: var(--ink-400);
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: 0.05em;
+        }
+
+        .note-callout {
+            background: var(--brand-soft);
+            border-left: 4px solid var(--brand);
+            padding: 14px 18px;
+            margin: 18px 0;
+            font-size: 13px;
+            color: var(--brand-warn-text);
+            line-height: 1.6;
+        }
+
+        .info-callout {
+            background: var(--surface-page);
+            border-left: 4px solid var(--line-300);
+            padding: 14px 18px;
+            margin: 18px 0;
+            font-size: 13px;
+            color: var(--ink-600);
+            line-height: 1.6;
+        }
+
+        .footer {
+            position: absolute;
+            bottom: 20mm;
+            left: 25mm;
+            right: 25mm;
+            border-top: 1px solid var(--line-100);
+            padding-top: 15px;
+            font-size: 10px;
+            color: var(--ink-300);
+            text-align: center;
+        }
+
+        .toc-container { margin-top: 30px; }
+
+        .toc-item {
+            display: flex;
+            align-items: baseline;
+            margin-bottom: 14px;
+            font-size: 14px;
+            color: var(--ink-700);
+            text-decoration: none;
+        }
+
+        .toc-link {
+            text-decoration: none;
+            color: inherit;
+            display: flex;
+            width: 100%;
+            align-items: baseline;
+        }
+
+        .toc-num {
+            flex-shrink: 0;
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 700;
+            color: var(--brand-accent);
+            font-size: 13px;
+            width: 28px;
+        }
+
+        .toc-text { flex-shrink: 0; padding-right: 5px; font-weight: 600; }
+
+        .toc-dots {
+            flex-grow: 1;
+            border-bottom: 1px dotted var(--line-300);
+            margin: 0 5px;
+            position: relative;
+            top: -4px;
+        }
+
+        .toc-page { flex-shrink: 0; padding-left: 5px; font-weight: 700; color: var(--brand-accent); }
+
+        pre.diagram {
+            background: var(--panel-dark);
+            color: var(--brand-light);
+            border-left: 4px solid var(--brand);
+            padding: 15px;
+            font-size: 10.5px;
+            font-family: 'JetBrains Mono', ui-monospace, 'Courier New', monospace;
+            overflow-x: auto;
+            border-radius: 4px;
+            line-height: 1.35;
+            margin: 12px 0;
+        }
+
+        .diagram-title {
+            font-size: 10px;
+            color: var(--ink-400);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: -8px;
+            font-weight: 700;
+        }
+
+        code {
+            font-family: 'JetBrains Mono', ui-monospace, 'Courier New', monospace;
+            font-size: 11.5px;
+            color: var(--brand-accent);
+            background: var(--brand-soft);
+            padding: 1px 5px;
+            border-radius: 3px;
+        }
+
+        .two-col {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin: 18px 0;
+        }
+
+        .card {
+            background: var(--surface-page);
+            border-left: 4px solid var(--ink-300);
+            padding: 14px;
+        }
+
+        .card.orange { border-left-color: var(--brand); }
+
+        .card-title {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--ink-900);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            margin-bottom: 8px;
+        }
+
+        .card.orange .card-title { color: var(--brand-accent); }
+
+        .card p { font-size: 12px; margin: 0; color: var(--ink-600); }
+
+        /* Tira de métricas de verificación: el resultado real de las guardas. */
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin: 22px 0;
+        }
+
+        .metric {
+            border: 1px solid var(--line-100);
+            border-radius: 6px;
+            padding: 14px 12px;
+            text-align: center;
+        }
+
+        .metric-num {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 26px;
+            font-weight: 900;
+            color: var(--ink-900);
+            line-height: 1.1;
+        }
+
+        .metric-label {
+            font-size: 9.5px;
+            color: var(--ink-400);
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+            margin-top: 5px;
+            line-height: 1.35;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            white-space: nowrap;
+        }
+
+        .badge-auto { background: var(--brand-soft); color: var(--brand-warn-text); border: 1px solid var(--brand-warn-border); }
+        .badge-manual { background: var(--surface-track); color: var(--ink-600); border: 1px solid var(--line-300); }
+
+        .section-label {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: var(--brand-accent);
+            margin-bottom: 2px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ══════════════ PÁGINA 1: PORTADA ══════════════ -->
+    <div class="page">
+        <div class="cover-top-bar">
+            <div class="top-title">CANAL DIRECTO S.A.</div>
+            <div class="version-tag">VERSIÓN 1.0</div>
+        </div>
+
+        <div class="cover-main">
+            <div class="stc-cloud-brand">
+                <span class="brand-stc">STC</span><span class="brand-cloud">CLOUD</span>
+            </div>
+
+            <h1 class="main-title">Estándar de Arquitectura</h1>
+            <div class="main-subtitle">e Ingeniería de Software</div>
+
+            <div class="cover-desc">
+                Cómo está construido el software que usted va a operar: el estándar de arquitectura
+                que sigue el equipo de desarrollo, qué reglas concretas impone y —lo importante para
+                una auditoría— cómo se verifica automáticamente que el código las cumpla en cada
+                cambio, en lugar de quedar como una declaración de buenas intenciones.
+            </div>
+
+            <div class="version-tag">DOCUMENTO TÉCNICO — GERENCIA DE SISTEMAS</div>
+        </div>
+
+        <div class="footer">Canal Directo S.A. — STC Cloud · Estándar de Arquitectura e Ingeniería v1.0 · Confidencial</div>
+    </div>
+
+    <!-- ══════════════ PÁGINA 2: ÍNDICE ══════════════ -->
+    <div class="page">
+        <div class="internal-header">
+            <div class="internal-brand">STC<span>CLOUD</span></div>
+            <div class="internal-doc-type">Índice de Contenidos</div>
+        </div>
+
+        <div class="toc-container">
+            <div class="toc-item"><a class="toc-link" href="#por-que"><span class="toc-num">1.</span><span class="toc-text">Por qué esto le importa a su área</span><span class="toc-dots"></span><span class="toc-page">3</span></a></div>
+            <div class="toc-item"><a class="toc-link" href="#estandar"><span class="toc-num">2.</span><span class="toc-text">El estándar que seguimos</span><span class="toc-dots"></span><span class="toc-page">3</span></a></div>
+            <div class="toc-item"><a class="toc-link" href="#capas"><span class="toc-num">3.</span><span class="toc-text">Organización del código: módulos y capas</span><span class="toc-dots"></span><span class="toc-page">4</span></a></div>
+            <div class="toc-item"><a class="toc-link" href="#reglas"><span class="toc-num">4.</span><span class="toc-text">Reglas concretas y cómo se miden</span><span class="toc-dots"></span><span class="toc-page">5</span></a></div>
+            <div class="toc-item"><a class="toc-link" href="#enforcement"><span class="toc-num">5.</span><span class="toc-text">Verificación automática en cada cambio</span><span class="toc-dots"></span><span class="toc-page">6</span></a></div>
+            <div class="toc-item"><a class="toc-link" href="#resultado"><span class="toc-num">6.</span><span class="toc-text">Resultado de la verificación vigente</span><span class="toc-dots"></span><span class="toc-page">7</span></a></div>
+            <div class="toc-item"><a class="toc-link" href="#deuda"><span class="toc-num">7.</span><span class="toc-text">Deuda técnica declarada y controlada</span><span class="toc-dots"></span><span class="toc-page">8</span></a></div>
+            <div class="toc-item"><a class="toc-link" href="#seguridad"><span class="toc-num">8.</span><span class="toc-text">Seguridad y trazabilidad de decisiones</span><span class="toc-dots"></span><span class="toc-page">9</span></a></div>
+            <div class="toc-item"><a class="toc-link" href="#limites"><span class="toc-num">9.</span><span class="toc-text">Qué no cubre la verificación automática</span><span class="toc-dots"></span><span class="toc-page">10</span></a></div>
+        </div>
+
+        <div class="info-callout" style="margin-top: 40px;">
+            <strong>Alcance de este documento.</strong> Cubre el estándar de ingeniería y su
+            verificación. La arquitectura funcional del sistema —qué componentes existen, cómo se
+            comunican y qué datos manejan— está en <em>Arquitectura de la App Web v1.0</em> (portal y
+            backend) y <em>Guía de Auditoría de Sistemas e IT v2.1</em> (agente). Este documento no
+            los reemplaza: responde una pregunta distinta, que es <em>cómo se construye y se controla</em>
+            lo que aquellos describen.
+        </div>
+
+        <div class="footer">Canal Directo S.A. — STC Cloud · Estándar de Arquitectura e Ingeniería v1.0 · Página 2</div>
+    </div>
+
+    <!-- ══════════════ PÁGINA 3 ══════════════ -->
+    <div class="page">
+        <div class="internal-header">
+            <div class="internal-brand">STC<span>CLOUD</span></div>
+            <div class="internal-doc-type">Contexto y Estándar</div>
+        </div>
+
+        <h2 id="por-que">1. Por qué esto le importa a su área</h2>
+
+        <p>
+            Cuando su organización incorpora un sistema, hereda el riesgo de cómo fue construido.
+            Un software sin estándar de arquitectura funciona igual de bien el primer día y se
+            degrada de forma predecible: cada cambio tarda más, cada corrección introduce dos
+            errores nuevos, y llega un punto en que el proveedor recomienda "rehacerlo" porque
+            nadie entiende el código que escribió el año pasado.
+        </p>
+
+        <p>Un estándar de arquitectura verificado le da tres garantías concretas:</p>
+
+        <div class="two-col">
+            <div class="card orange">
+                <div class="card-title">Continuidad</div>
+                <p>El código no depende de que una persona específica lo recuerde. La estructura es
+                explícita y uniforme en los 24 módulos del sistema: un desarrollador nuevo ubica
+                dónde vive cada cosa sin arqueología.</p>
+            </div>
+            <div class="card orange">
+                <div class="card-title">Cambios acotados</div>
+                <p>Las dependencias entre partes están restringidas por regla, no por costumbre. Un
+                cambio en facturación no puede romper alertas, porque el código que lo intentara no
+                pasa la verificación automática.</p>
+            </div>
+            <div class="card orange">
+                <div class="card-title">Auditabilidad</div>
+                <p>Las afirmaciones de este documento no son declarativas: cada una corresponde a un
+                script que corre en el pipeline y falla si deja de ser cierta. Usted puede pedir la
+                salida de esos scripts.</p>
+            </div>
+            <div class="card orange">
+                <div class="card-title">Reversibilidad</div>
+                <p>Las 72 migraciones de base de datos tienen su operación inversa (<code>down</code>)
+                escrita y versionada. Un despliegue que salga mal se revierte, no se parchea a mano
+                sobre la base productiva.</p>
+            </div>
+        </div>
+
+        <h2 id="estandar">2. El estándar que seguimos</h2>
+
+        <p>
+            El equipo trabaja contra un documento normativo interno, la <strong>Guía de Arquitectura
+            de Proyectos</strong>, que fija en 12 capítulos las reglas de estructura, nomenclatura,
+            tamaños máximos, manejo de errores, testing, seguridad, control de versiones y
+            rendimiento. No es un manifiesto genérico: es la norma contra la cual se revisa cada
+            cambio y contra la cual corren las verificaciones automáticas descritas en §5.
+        </p>
+
+        <p>Sus fundamentos son los estándares de la industria, no invenciones propias:</p>
+
+        <table>
+            <thead>
+                <tr><th style="width: 26%;">Fundamento</th><th>Qué impone en la práctica</th></tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>SOLID</strong></td>
+                    <td>Cada unidad de código tiene una sola responsabilidad y depende de abstracciones, no de implementaciones concretas. En la práctica: se puede reemplazar la base de datos, el proveedor de correo o el almacenamiento sin tocar la lógica de negocio.</td>
+                </tr>
+                <tr>
+                    <td><strong>Arquitectura hexagonal</strong><br>(puertos y adaptadores)</td>
+                    <td>La lógica de negocio no conoce a la tecnología que la rodea. La base de datos, la API HTTP y los servicios externos son piezas intercambiables enchufadas por fuera.</td>
+                </tr>
+                <tr>
+                    <td><strong>Clean Code</strong></td>
+                    <td>Límites duros de tamaño (funciones, archivos, parámetros, anidamiento), nombres que expresan intención y prohibición explícita de patrones que degradan el código (números mágicos, objetos que hacen de todo, errores silenciados).</td>
+                </tr>
+                <tr>
+                    <td><strong>Monolito modular</strong></td>
+                    <td>Un solo despliegue —simple de operar y de respaldar— pero internamente dividido en 24 módulos de negocio con fronteras verificadas. Se obtiene el aislamiento de microservicios sin su costo operativo.</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="note-callout">
+            <strong>Decisiones registradas.</strong> Las decisiones de arquitectura relevantes están
+            documentadas como <em>Architecture Decision Records</em> (ADR): qué se decidió, en qué
+            contexto y qué consecuencias se aceptaron. Hoy existen cuatro (adopción del estándar,
+            los dos mecanismos de control de deuda descritos en §7, y el modelo de autorización de
+            §8). Un ADR no se reescribe: si una decisión se revierte, se escribe uno nuevo que la
+            supera. Eso deja la trazabilidad del <em>por qué</em>, que es lo que normalmente se
+            pierde y lo que un auditor necesita.
+        </div>
+
+        <div class="footer">Canal Directo S.A. — STC Cloud · Estándar de Arquitectura e Ingeniería v1.0 · Página 3</div>
+    </div>
+
+    <!-- ══════════════ PÁGINA 4 ══════════════ -->
+    <div class="page">
+        <div class="internal-header">
+            <div class="internal-brand">STC<span>CLOUD</span></div>
+            <div class="internal-doc-type">Organización del Código</div>
+        </div>
+
+        <h2 id="capas">3. Organización del código: módulos y capas</h2>
+
+        <p>
+            El backend se organiza primero por <strong>módulo de negocio</strong> y dentro de cada
+            módulo por <strong>capa técnica</strong>. Cada uno de los 24 módulos —dispositivos,
+            alertas, insumos, reportes, incidentes, auditoría, etc.— contiene sus cuatro capas
+            completas, de modo que una funcionalidad vive en un solo lugar del árbol de directorios.
+        </p>
+
+        <div class="diagram-title">Estructura del backend</div>
+        <pre class="diagram">cloud/src/
+├── shared/                    Transversal: errores base, conexión a DB, tipos comunes
+└── modules/
+    ├── devices/               ─┐
+    │   ├── domain/             │  Reglas de negocio puras. No conoce base de datos,
+    │   │   ├── entities/       │  ni HTTP, ni librerías externas.
+    │   │   ├── repositories/   │  (interfaces = contratos que el módulo exige)
+    │   │   └── services/       │
+    │   ├── application/        │  Casos de uso: orquestan el dominio. Un archivo por caso.
+    │   │   ├── use-cases/      │
+    │   │   ├── ports/          │  (contratos hacia afuera: correo, SNMP, archivos…)
+    │   │   └── dtos/           │
+    │   ├── infrastructure/     │  Implementaciones concretas: Knex/PostgreSQL, adaptadores
+    │   │   ├── database/       │  a servicios externos. Aquí vive la tecnología.
+    │   │   └── adapters/       │
+    │   └── presentation/       │  Controladores HTTP, validadores, serialización.
+    ├── alerts/                 │
+    ├── supplies/              ─┘  … y así los 24 módulos, todos con la misma forma.
+    └── …</pre>
+
+        <h3>La regla de dependencias</h3>
+
+        <p>
+            Las dependencias apuntan siempre hacia adentro. El dominio no depende de nadie; la
+            infraestructura implementa lo que el dominio pide. Esta es la regla que evita que el
+            sistema se convierta en una madeja:
+        </p>
+
+        <div class="diagram-title">Dirección permitida de las dependencias</div>
+        <pre class="diagram">   Presentation  ──▶  Application  ──▶  Domain  ◀──  Infrastructure
+   (HTTP, roles)      (casos de uso)     (reglas)      (PostgreSQL, SNMP, correo)
+
+   ✔ Infrastructure implementa las interfaces que declara Domain
+   ✘ Domain NUNCA importa Infrastructure, Application ni Presentation
+   ✘ Un módulo NUNCA importa las tripas de otro módulo — sólo su fachada pública</pre>
+
+        <p>
+            La última línea es la que sostiene el aislamiento entre dominios de negocio: el módulo
+            de reportes puede pedirle datos al de dispositivos a través de su fachada, pero no puede
+            alcanzar sus entidades internas ni sus tablas. Cuando mañana haya que cambiar cómo se
+            almacenan los dispositivos, el módulo de reportes no se entera.
+        </p>
+
+        <h3>El portal web</h3>
+
+        <p>
+            El frontend sigue el mismo criterio adaptado a React: se organiza por
+            <em>feature</em> (dashboard, clientes, dispositivos, alertas, reportes…), cada una con
+            sus componentes, hooks y llamadas a la API. Una <em>feature</em> no importa a otra: lo
+            compartido vive en un espacio común explícito. La regla se verifica automáticamente,
+            igual que en el backend.
+        </p>
+
+        <div class="footer">Canal Directo S.A. — STC Cloud · Estándar de Arquitectura e Ingeniería v1.0 · Página 4</div>
+    </div>
+
+    <!-- ══════════════ PÁGINA 5 ══════════════ -->
+    <div class="page">
+        <div class="internal-header">
+            <div class="internal-brand">STC<span>CLOUD</span></div>
+            <div class="internal-doc-type">Reglas y Métricas</div>
+        </div>
+
+        <h2 id="reglas">4. Reglas concretas y cómo se miden</h2>
+
+        <p>
+            Un estándar sólo sirve si sus reglas son medibles. Estas son las que impone la guía, con
+            el criterio exacto con que se evalúan y si la verificación es automática o requiere
+            revisión humana.
+        </p>
+
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 30%;">Regla</th>
+                    <th style="width: 22%;">Límite / criterio</th>
+                    <th style="width: 20%;">Verificación</th>
+                    <th>Qué previene</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Tamaño de función</td>
+                    <td>20 líneas</td>
+                    <td><span class="badge badge-auto">Automática</span></td>
+                    <td>Funciones que hacen varias cosas y no se pueden probar por separado.</td>
+                </tr>
+                <tr>
+                    <td>Tamaño de archivo</td>
+                    <td>300 líneas</td>
+                    <td><span class="badge badge-auto">Automática</span></td>
+                    <td>Archivos "cajón de sastre" donde termina todo lo que no tiene lugar claro.</td>
+                </tr>
+                <tr>
+                    <td>Dirección de dependencias</td>
+                    <td>Sólo hacia el dominio</td>
+                    <td><span class="badge badge-auto">Automática</span></td>
+                    <td>Lógica de negocio acoplada a la base de datos; imposible de cambiar o probar.</td>
+                </tr>
+                <tr>
+                    <td>Fronteras entre módulos</td>
+                    <td>Sólo por fachada pública</td>
+                    <td><span class="badge badge-auto">Automática</span></td>
+                    <td>Que un cambio en un dominio rompa otro sin aviso.</td>
+                </tr>
+                <tr>
+                    <td>Fronteras entre <em>features</em> del portal</td>
+                    <td>Sin imports cruzados</td>
+                    <td><span class="badge badge-auto">Automática</span></td>
+                    <td>Efectos colaterales entre pantallas que no tienen relación funcional.</td>
+                </tr>
+                <tr>
+                    <td>Errores silenciados</td>
+                    <td>Prohibido <code>catch</code> vacío</td>
+                    <td><span class="badge badge-auto">Automática</span></td>
+                    <td>Fallas que desaparecen sin dejar rastro y aparecen como "datos raros".</td>
+                </tr>
+                <tr>
+                    <td>Trazas de depuración en producción</td>
+                    <td>Prohibido <code>console.log</code></td>
+                    <td><span class="badge badge-auto">Automática</span></td>
+                    <td>Fuga de datos a logs y ruido que tapa los errores reales.</td>
+                </tr>
+                <tr>
+                    <td>Inyección SQL</td>
+                    <td>Sin SQL armado por concatenación</td>
+                    <td><span class="badge badge-auto">Automática</span></td>
+                    <td>La vulnerabilidad más explotada en aplicaciones con base de datos.</td>
+                </tr>
+                <tr>
+                    <td>Autenticación por endpoint</td>
+                    <td>Toda ruta declara su credencial</td>
+                    <td><span class="badge badge-auto">Automática</span></td>
+                    <td>Que una ruta nueva quede expuesta sin autenticación por olvido.</td>
+                </tr>
+                <tr>
+                    <td>Cobertura de tests por capa</td>
+                    <td>90 / 85 / 70 / 60 %</td>
+                    <td><span class="badge badge-auto">Automática</span></td>
+                    <td>Que la lógica crítica quede sin red de seguridad ante un cambio.</td>
+                </tr>
+                <tr>
+                    <td>Migraciones reversibles</td>
+                    <td>Toda migración con <code>down</code></td>
+                    <td><span class="badge badge-manual">Revisión</span></td>
+                    <td>Despliegues que no se pueden revertir sin intervención manual en la base.</td>
+                </tr>
+                <tr>
+                    <td>Formato de commits</td>
+                    <td><em>Conventional Commits</em></td>
+                    <td><span class="badge badge-manual">Revisión</span></td>
+                    <td>Historial ilegible; imposible reconstruir qué cambió y por qué.</td>
+                </tr>
+                <tr>
+                    <td>Aislamiento de librerías externas</td>
+                    <td>Detrás de interfaz propia</td>
+                    <td><span class="badge badge-manual">Revisión</span></td>
+                    <td>Quedar atado a una librería que se abandona o cambia de licencia.</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="info-callout">
+            <strong>Sobre los componentes visuales.</strong> El límite de 20 líneas por función no se
+            aplica al cuerpo de un componente de interfaz: un componente es una función de
+            renderizado y medirla así produce cientos de "violaciones" sin valor. Ahí rige el límite
+            de archivo (300 líneas) más la regla de responsabilidad única: un componente no mezcla
+            obtención de datos, estado y maquetado; cuando lo hace, se separa. Esta excepción está
+            escrita en el estándar, no es una interpretación de conveniencia.
+        </div>
+
+        <div class="footer">Canal Directo S.A. — STC Cloud · Estándar de Arquitectura e Ingeniería v1.0 · Página 5</div>
+    </div>
+
+    <!-- ══════════════ PÁGINA 6 ══════════════ -->
+    <div class="page">
+        <div class="internal-header">
+            <div class="internal-brand">STC<span>CLOUD</span></div>
+            <div class="internal-doc-type">Verificación Automática</div>
+        </div>
+
+        <h2 id="enforcement">5. Verificación automática en cada cambio</h2>
+
+        <p>
+            Esta es la diferencia entre un estándar real y uno declarativo. Las reglas de §4 no se
+            confían a la memoria de quien programa ni a la atención de quien revisa: están
+            implementadas como programas que analizan el código fuente y <strong>bloquean la
+            integración</strong> del cambio si encuentran una violación nueva.
+        </p>
+
+        <p>
+            El pipeline de integración continua corre cuatro trabajos en paralelo ante cada cambio
+            propuesto sobre la rama principal. Si cualquiera falla, el cambio no entra:
+        </p>
+
+        <table>
+            <thead>
+                <tr><th style="width: 22%;">Trabajo</th><th>Qué ejecuta</th></tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Arquitectura</strong></td>
+                    <td>Las tres guardas estáticas: límites de tamaño, reglas de dependencias entre capas/módulos/<em>features</em> (más errores silenciados, trazas de depuración y SQL interpolado) y declaración de autenticación en todas las rutas.</td>
+                </tr>
+                <tr>
+                    <td><strong>API</strong></td>
+                    <td>Compilación con verificación estricta de tipos, arranque real del servidor contra PostgreSQL y Redis, suite de tests de integración y, al final, el umbral de cobertura por capa.</td>
+                </tr>
+                <tr>
+                    <td><strong>Portal</strong></td>
+                    <td>Análisis estático, verificación de tipos, validación de iconografía y compilación de producción.</td>
+                </tr>
+                <tr>
+                    <td><strong>Agente</strong></td>
+                    <td>Compilación, suite de tests del agente y empaquetado real —el mismo binario que distribuye el instalador, no una variante de prueba.</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>Las cuatro guardas, en detalle</h3>
+
+        <table>
+            <thead>
+                <tr><th style="width: 24%;">Guarda</th><th>Alcance de la verificación</th></tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Tamaños</strong></td>
+                    <td>Recorre el árbol de código construyendo el árbol sintáctico de cada archivo y mide el span físico real de cada función. Excluye las migraciones de base de datos, cuyo tamaño lo determina el esquema.</td>
+                </tr>
+                <tr>
+                    <td><strong>Guardas de dependencias</strong></td>
+                    <td>Siete reglas sobre todo el TypeScript del backend y el portal: cuatro de fronteras (capa, módulo, <em>feature</em>) y tres de higiene (errores silenciados, trazas de depuración, SQL interpolado).</td>
+                </tr>
+                <tr>
+                    <td><strong>Rutas</strong></td>
+                    <td>Recorre todas las declaraciones de endpoints del backend y falla si alguna no declara qué credencial exige y tampoco figura en la lista blanca explícita de rutas públicas. Es negación por defecto en el código, no en configuración.</td>
+                </tr>
+                <tr>
+                    <td><strong>Cobertura</strong></td>
+                    <td>Toma la cobertura real de ejecución de la suite y la agrega por capa de cada módulo, exigiendo el umbral correspondiente a cada una.</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="note-callout">
+            <strong>Por qué importa el orden.</strong> Las guardas no revisan el código escrito hace
+            un año buscando culpables: bloquean lo que se agrega hoy. Esa es la única forma de que un
+            sistema en producción mejore de manera sostenida en vez de quedar congelado esperando una
+            refactorización total que nunca llega. El mecanismo se explica en §7.
+        </div>
+
+        <div class="footer">Canal Directo S.A. — STC Cloud · Estándar de Arquitectura e Ingeniería v1.0 · Página 6</div>
+    </div>
+
+    <!-- ══════════════ PÁGINA 7 ══════════════ -->
+    <div class="page">
+        <div class="internal-header">
+            <div class="internal-brand">STC<span>CLOUD</span></div>
+            <div class="internal-doc-type">Estado Verificado</div>
+        </div>
+
+        <h2 id="resultado">6. Resultado de la verificación vigente</h2>
+
+        <p>
+            Los números siguientes son la salida de las guardas descritas en §5 sobre el código
+            actual. No son estimaciones: se reproducen ejecutando las verificaciones sobre el
+            repositorio.
+        </p>
+
+        <div class="metrics">
+            <div class="metric">
+                <div class="metric-num">892</div>
+                <div class="metric-label">Archivos analizados<br>por la guarda de tamaños</div>
+            </div>
+            <div class="metric">
+                <div class="metric-num">191</div>
+                <div class="metric-label">Rutas con credencial<br>declarada y verificada</div>
+            </div>
+            <div class="metric">
+                <div class="metric-num">0</div>
+                <div class="metric-label">Hallazgos de las guardas<br>de dependencias e higiene</div>
+            </div>
+            <div class="metric">
+                <div class="metric-num">24</div>
+                <div class="metric-label">Módulos de negocio<br>con sus 4 capas</div>
+            </div>
+        </div>
+
+        <table>
+            <thead>
+                <tr><th style="width: 42%;">Verificación</th><th style="width: 16%;">Estado</th><th>Detalle</th></tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Límites de tamaño de archivo</td>
+                    <td><strong>Cumple</strong></td>
+                    <td>Ningún archivo del sistema excede las 300 líneas.</td>
+                </tr>
+                <tr>
+                    <td>Dirección de dependencias entre capas</td>
+                    <td><strong>Cumple</strong></td>
+                    <td>Cero violaciones, y sin excepciones acumuladas: el registro de deuda de esta guarda está vacío.</td>
+                </tr>
+                <tr>
+                    <td>Fronteras entre módulos y <em>features</em></td>
+                    <td><strong>Cumple</strong></td>
+                    <td>Cero imports cruzados hacia partes internas de otro módulo.</td>
+                </tr>
+                <tr>
+                    <td>Pureza de la capa de dominio</td>
+                    <td><strong>Cumple</strong></td>
+                    <td>Los 91 archivos de dominio del backend no importan ninguna librería externa, base de datos ni cliente HTTP.</td>
+                </tr>
+                <tr>
+                    <td>Errores silenciados / trazas de depuración / SQL interpolado</td>
+                    <td><strong>Cumple</strong></td>
+                    <td>Cero hallazgos sobre todo el TypeScript de backend y portal.</td>
+                </tr>
+                <tr>
+                    <td>Autenticación declarada por endpoint</td>
+                    <td><strong>Cumple</strong></td>
+                    <td>191 rutas verificadas; 10 rutas públicas declaradas explícitamente (ingreso al portal, activación y renovación de credenciales del agente, chequeo de salud y métricas).</td>
+                </tr>
+                <tr>
+                    <td>Jerarquía de errores del estándar</td>
+                    <td><strong>Cumple</strong></td>
+                    <td>Las cuatro clases base del estándar están implementadas y son las que usa el sistema.</td>
+                </tr>
+                <tr>
+                    <td>Reversibilidad de migraciones</td>
+                    <td><strong>Cumple</strong></td>
+                    <td>Las 72 migraciones de base de datos definen su operación inversa.</td>
+                </tr>
+                <tr>
+                    <td>Formato de historial de cambios</td>
+                    <td><strong>Cumple</strong></td>
+                    <td>Los últimos 60 cambios respetan el formato normalizado, sin excepciones.</td>
+                </tr>
+                <tr>
+                    <td>Ausencia de credenciales en el código</td>
+                    <td><strong>Cumple</strong></td>
+                    <td>Sin contraseñas, claves ni tokens embebidos en el código fuente; todo por variables de entorno.</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="info-callout">
+            <strong>Cómo reproducir esto.</strong> Un auditor con acceso al repositorio obtiene los
+            mismos números ejecutando las verificaciones de arquitectura y revisando el resultado del
+            último pipeline sobre la rama principal. El equipo puede entregar esa salida como
+            evidencia ante un pedido formal.
+        </div>
+
+        <div class="footer">Canal Directo S.A. — STC Cloud · Estándar de Arquitectura e Ingeniería v1.0 · Página 7</div>
+    </div>
+
+    <!-- ══════════════ PÁGINA 8 ══════════════ -->
+    <div class="page">
+        <div class="internal-header">
+            <div class="internal-brand">STC<span>CLOUD</span></div>
+            <div class="internal-doc-type">Deuda Técnica</div>
+        </div>
+
+        <h2 id="deuda">7. Deuda técnica declarada y controlada</h2>
+
+        <p>
+            Ningún sistema en producción cumple el 100 % de un estándar desde el primer día, y un
+            proveedor que lo afirme está describiendo un sistema que no existe o un estándar que no
+            mide nada. Lo que distingue a un proyecto sano no es la ausencia de deuda técnica, sino
+            que la deuda esté <strong>inventariada, congelada y decreciendo</strong>.
+        </p>
+
+        <h3>El mecanismo: trinquete contra línea base</h3>
+
+        <p>
+            Cuando se adoptó el estándar sobre un sistema ya en producción, en lugar de detener el
+            desarrollo para reescribir todo, se hizo el inventario exacto de lo que no cumplía y se
+            lo congeló en un registro versionado. Desde entonces las guardas aplican una regla
+            asimétrica:
+        </p>
+
+        <ul>
+            <li><strong>Código nuevo:</strong> tolerancia cero. Cualquier función o archivo nuevo que
+            exceda los límites hace fallar la verificación y el cambio no entra.</li>
+            <li><strong>Código inventariado:</strong> se acepta tal como estaba, pero no puede
+            empeorar.</li>
+            <li><strong>Cuando se corrige un caso inventariado</strong>, se lo quita del registro y
+            ya no puede volver: el listón sólo se mueve en una dirección.</li>
+        </ul>
+
+        <p>
+            El registro es un archivo versionado en el repositorio: agregar algo ahí es un cambio
+            visible en el historial, que un revisor ve y tiene que justificar. No es una excepción
+            silenciosa en la configuración.
+        </p>
+
+        <h3>Estado actual del inventario</h3>
+
+        <table>
+            <thead>
+                <tr><th style="width: 40%;">Registro</th><th style="width: 18%;">Casos</th><th>Composición</th></tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Guardas de dependencias e higiene</td>
+                    <td><strong>0</strong></td>
+                    <td>Vacío. Las reglas de fronteras arquitectónicas y de higiene de código se cumplen sin ninguna excepción histórica.</td>
+                </tr>
+                <tr>
+                    <td>Límite de tamaño de archivo (300 líneas)</td>
+                    <td><strong>0</strong></td>
+                    <td>Vacío. Ningún archivo quedó por encima del límite.</td>
+                </tr>
+                <tr>
+                    <td>Límite de tamaño de función (20 líneas)</td>
+                    <td><strong>236</strong></td>
+                    <td>148 en el portal —en su mayoría funciones de renderizado, donde el límite es de aplicación discutible según la propia excepción del estándar— y 88 en el backend.</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="note-callout">
+            <strong>Lectura para un auditor.</strong> Que las dos primeras filas estén en cero es el
+            dato relevante: las reglas que protegen la <em>estructura</em> del sistema —las que hacen
+            costoso un cambio futuro— se cumplen sin excepciones. El inventario remanente es de
+            granularidad de funciones, la categoría de menor riesgo estructural y la de corrección
+            más incremental.
+        </div>
+
+        <div class="footer">Canal Directo S.A. — STC Cloud · Estándar de Arquitectura e Ingeniería v1.0 · Página 8</div>
+    </div>
+
+    <!-- ══════════════ PÁGINA 9 ══════════════ -->
+    <div class="page">
+        <div class="internal-header">
+            <div class="internal-brand">STC<span>CLOUD</span></div>
+            <div class="internal-doc-type">Seguridad y Trazabilidad</div>
+        </div>
+
+        <h2 id="seguridad">8. Seguridad y trazabilidad de decisiones</h2>
+
+        <p>
+            El estándar dedica un capítulo a seguridad con reglas no negociables. Las de alcance
+            general —validar toda entrada en el borde del sistema, nunca construir consultas por
+            concatenación, mínimo privilegio, separar autenticación de autorización, no registrar
+            datos sensibles— se detallan en la <em>Guía de Auditoría de Sistemas e IT v2.1</em>. Acá
+            interesan las tres que son propiedades <em>arquitectónicas</em> verificables.
+        </p>
+
+        <h3>Autorización por negación por defecto, en dos ejes</h3>
+
+        <p>
+            El acceso a cada endpoint se resuelve cruzando dos preguntas independientes, ninguna de
+            las cuales admite un valor por omisión permisivo:
+        </p>
+
+        <table>
+            <thead>
+                <tr><th style="width: 20%;">Eje</th><th style="width: 30%;">Pregunta</th><th>Cómo se garantiza</th></tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Credencial</strong></td>
+                    <td>¿Quién llama? Usuario del portal, agente instalado o integrador con clave de API.</td>
+                    <td>Cada ruta declara su verificador de credencial antes de ejecutar el manejador. La guarda de rutas falla si una ruta nueva no lo declara y no está en la lista blanca pública. <em>Verificado automáticamente.</em></td>
+                </tr>
+                <tr>
+                    <td><strong>Rol</strong></td>
+                    <td>¿Con qué permisos? Administrador, operador o usuario de cliente.</td>
+                    <td>El usuario acotado a un cliente sólo alcanza rutas de una lista blanca explícita; las rutas exclusivas de administrador se verifican dentro del manejador. <em>Lista blanca verificada; la condición de rol requiere revisión humana.</em></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <p>
+            El portal replica la misma condición de rol donde la interfaz necesita ocultar o
+            deshabilitar una acción, pero el control efectivo está siempre en el servidor: ocultar un
+            botón no es un control de seguridad.
+        </p>
+
+        <h3>Registro de auditoría</h3>
+
+        <p>
+            Toda acción administrativa —altas, bajas, cambios de estado de agentes, clientes,
+            usuarios y configuración— queda registrada en una tabla de auditoría con actor, acción,
+            objetivo, dirección de origen y marca temporal. El estándar exige que esa escritura pase
+            por un único punto del código, para que ningún registro quede sin la referencia al
+            cliente al que corresponde.
+        </p>
+
+        <h3>Trazabilidad de decisiones</h3>
+
+        <p>
+            Además del historial de cambios en formato normalizado, cada decisión de arquitectura
+            relevante tiene su ADR con contexto, decisión y consecuencias aceptadas. Ante la pregunta
+            de auditoría "¿por qué el sistema resuelve esto así?", la respuesta es un documento
+            fechado y versionado, no la reconstrucción de memoria de quien lo programó.
+        </p>
+
+        <div class="footer">Canal Directo S.A. — STC Cloud · Estándar de Arquitectura e Ingeniería v1.0 · Página 9</div>
+    </div>
+
+    <!-- ══════════════ PÁGINA 10 ══════════════ -->
+    <div class="page">
+        <div class="internal-header">
+            <div class="internal-brand">STC<span>CLOUD</span></div>
+            <div class="internal-doc-type">Límites y Alcance</div>
+        </div>
+
+        <h2 id="limites">9. Qué no cubre la verificación automática</h2>
+
+        <p>
+            Un documento de arquitectura que sólo enumera fortalezas es material comercial, no
+            material de auditoría. Estas son las limitaciones reales del esquema descrito, para que
+            su área evalúe el riesgo con información completa.
+        </p>
+
+        <table>
+            <thead>
+                <tr><th style="width: 34%;">Limitación</th><th>Alcance real y mitigación</th></tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Las guardas verifican forma, no intención</strong></td>
+                    <td>Un análisis estático confirma que una ruta declara autenticación, no que la regla de negocio que aplica sea la correcta. Eso lo cubren los tests de integración y la revisión humana, no las guardas.</td>
+                </tr>
+                <tr>
+                    <td><strong>La condición de rol no es verificable estáticamente</strong></td>
+                    <td>Que un manejador exija rol de administrador se resuelve dentro del código y no hay forma de inferirlo automáticamente. La lista de rutas afectadas se mantiene a mano y se contrasta con tests de control de acceso.</td>
+                </tr>
+                <tr>
+                    <td><strong>El aislamiento de librerías externas se revisa a ojo</strong></td>
+                    <td>La regla de envolver toda dependencia externa detrás de una interfaz propia se controla en revisión de código. No hay hoy una guarda que la haga fallar automáticamente.</td>
+                </tr>
+                <tr>
+                    <td><strong>Los umbrales de cobertura miden ejecución, no calidad</strong></td>
+                    <td>Un porcentaje alto indica que el código se ejecuta durante los tests, no que las aserciones sean buenas. Es una red de seguridad contra regresiones, no una prueba de corrección.</td>
+                </tr>
+                <tr>
+                    <td><strong>El estándar cubre el software, no la operación</strong></td>
+                    <td>Respaldos, monitoreo, retención y respuesta ante incidentes se documentan aparte y responden a otro conjunto de controles.</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>En síntesis</h3>
+
+        <p>
+            STC Cloud se construye contra un estándar de ingeniería escrito, con las reglas de mayor
+            impacto estructural verificadas por programa en cada cambio y con la deuda remanente
+            inventariada y en descenso controlado. Su área puede auditar cualquiera de las
+            afirmaciones de este documento ejecutando las mismas verificaciones que ejecuta el
+            pipeline, o solicitando su salida al equipo de desarrollo.
+        </p>
+
+        <div class="info-callout">
+            <strong>Documentos relacionados.</strong> <em>Arquitectura de la App Web v1.0</em> (portal
+            y backend en la nube), <em>Guía de Auditoría de Sistemas e IT v2.1</em> (controles de
+            seguridad del agente), <em>Análisis de Escalabilidad y Límites Operativos v2.0</em>
+            (comportamiento bajo carga y camino de crecimiento).
+        </div>
+
+        <div class="footer">Canal Directo S.A. — STC Cloud · Estándar de Arquitectura e Ingeniería v1.0 · Página 10</div>
+    </div>
+
+</body>
+</html>

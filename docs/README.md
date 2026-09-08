@@ -13,8 +13,9 @@ Documentación del proyecto **STC Cloud**, organizada por audiencia. Todo lo lis
 | **[Auditoría de Sistemas e IT](cliente/STC_Auditoria_Sistemas_IT_v2.1.html)** `v2.1` | Documento ancla para IT. Controles de seguridad vigentes: red Zero-Inbound, criptografía y HWID binding, descubrimiento de impresoras, autenticación de doble token, firma Ed25519 de firmware, tráfico SNMP, acceso remoto a EWS y retención de datos. Cubre en profundidad **el agente**. |
 | **[Arquitectura de la App Web](cliente/STC_Arquitectura_App_Web_v1.0.html)** `v1.0` | El complemento de la Auditoría: **portal + backend en la nube**. Despliegue, módulos, autenticación/roles/multi-cliente, base de datos, jobs, tiempo real y guardas de CI. |
 | **[Análisis de Escalabilidad](cliente/STC_Analisis_Escalabilidad_Limites_v2.0.html)** `v2.0` | Cómo está hecha la infraestructura, cómo se comporta bajo carga concurrente y cómo escala a 200+ clientes y miles de equipos: sizing del servidor y camino de crecimiento. |
+| **[Estándar de Arquitectura e Ingeniería](cliente/STC_Estandar_Arquitectura_Ingenieria_v1.0.html)** `v1.0` | La versión para el cliente de [`dev/ARCHITECTURE_GUIDE.md`](dev/ARCHITECTURE_GUIDE.md): qué estándar sigue el equipo, qué reglas impone y —lo que lo hace auditable— cómo las verifican las 4 guardas de CI en cada cambio. Incluye el inventario de deuda congelada y los límites de la verificación automática. |
 
-> Estos tres se presentan juntos y no se pisan entre sí: agente (Auditoría), plataforma web (Arquitectura App Web) y capacidad (Escalabilidad).
+> Los cuatro se presentan juntos y no se pisan entre sí: agente (Auditoría), plataforma web (Arquitectura App Web), capacidad (Escalabilidad) y proceso de construcción (Estándar de Arquitectura).
 
 ### Para otras audiencias
 | Documento | Perfil Destinatario | Propósito |
