@@ -3,22 +3,20 @@ import { Knex } from "knex";
 /**
  * Punto único de escritura a `audit_logs` — mismo criterio que motivó
  * `deviceFilters.ts` ("la única defensa contra que el 21° call-site se olvide
- * es que el predicado/helper tenga un nombre grepeable"). `audit_logs` tiene
- * ~27 call-sites hoy que insertan directo con `db("audit_logs").insert({...})`
- * sin `client_id` (columna nueva de la migración
- * `20260824020000_audit_logs_client_scope_and_indexes.ts`) — este helper es la
- * forma de que un call-site NUEVO no se olvide de setearlo.
+ * es que el predicado/helper tenga un nombre grepeable"). Existe para que
+ * ningún call-site se olvide de setear `client_id` (columna agregada por
+ * `20260824020000_audit_logs_client_scope_and_indexes.ts`): sin ese valor la
+ * fila queda invisible cuando el feed de auditoría filtra por cliente.
  *
- * Migrados a este helper en esta pasada: los ~7 inserts `DEVICE_*` de
- * `deviceController.ts` y el de `deviceLifecycleService.ts` (el contenido
- * principal del feed de "Movimientos y cambios"). El resto de los ~19
- * call-sites (agentService.ts, authController.ts, clientController.ts,
- * dashboardController.ts, feedbackController.ts, portalAgentController.ts,
- * reportService.ts, deviceIdentity.ts) sigue insertando directo — quedan sin
- * `client_id` hasta una pasada de limpieza aparte (documentado como pendiente
- * en el gap analysis). No es un problema de corrección: el feed simplemente
- * no puede filtrar esas filas por cliente todavía, pero sí aparecen filtradas
- * por acción/fecha/target.
+ * Desde 2026-09-08 NO quedan call-sites que inserten directo: la migración se
+ * cerró con los 3 últimos (`knex-device-identity-resolver.ts`,
+ * `knex-user-audit-gateway.ts` y `knex-audit-log-writer.ts` de feedback), que
+ * eran los que todavía escribían sin `client_id` y por eso no aparecían al
+ * filtrar el feed por cliente.
+ *
+ * Para verificar que no reaparezca uno nuevo:
+ *   grep -rn '"audit_logs")\.insert' cloud/src --include=*.ts | grep -v tests
+ * El único resultado esperado es este archivo.
  */
 export interface AuditEvent {
   action: string;

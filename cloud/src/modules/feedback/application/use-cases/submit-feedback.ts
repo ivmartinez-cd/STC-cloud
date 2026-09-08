@@ -17,6 +17,7 @@ function toCreateInput(input: SubmitFeedbackInput, author: EffectiveIdentity): C
 function toAuditEntry(input: SubmitFeedbackInput, feedback: Feedback, author: EffectiveIdentity): AuditLogEntry {
   return {
     userId: author.id,
+    clientId: author.clientId,
     action: input.type === "bug" ? "REPORT_BUG" : "SUGGEST_ENHANCEMENT",
     targetId: feedback.id,
     metadata: { title: input.title, type: input.type, submitted_by: author.username },

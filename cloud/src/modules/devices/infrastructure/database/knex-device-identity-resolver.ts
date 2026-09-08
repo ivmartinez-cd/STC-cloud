@@ -3,6 +3,9 @@ import type { MatchedBy, ResolveIdentityParams, ResolvedDevice } from "../../dom
 import {
   candidateSerial, equalsIgnoreCase, identityLockKey, isIdentifyingSerial, normalizeMac, shouldRebindAgent,
 } from "../../domain/services/device-identity";
+// Punto único de escritura a `audit_logs` (ARCHITECTURE_GUIDE §8.8): garantiza
+// que `client_id` se setee siempre, para que el feed pueda filtrar por cliente.
+import { writeAudit } from "../../../../services/auditService";
 
 /**
  * Escalera determinística de resolución de identidad (gap analysis §2.4).
@@ -65,9 +68,9 @@ async function matchByIp(
     // La IP la heredó otra impresora física (DHCP reciclado). Liberarla de la
     // fila vieja y dejar que se cree una fila nueva para el equipo entrante.
     await trx("devices").where("id", cand.id).update({ ip_address: null });
-    await trx("audit_logs").insert({
-      action: "DEVICE_IP_REASSIGNED", target_id: cand.id, user_id: null, ip_address: null,
-      metadata: JSON.stringify({ from_serial: candSerial, to_serial: realSerial, ip, agent_id: agentId }),
+    await writeAudit(trx, {
+      action: "DEVICE_IP_REASSIGNED", targetId: cand.id, clientId, userId: null, ip: null,
+      metadata: { from_serial: candSerial, to_serial: realSerial, ip, agent_id: agentId },
     });
     return { device: null, matchedBy: "none" };
   }
@@ -80,8 +83,8 @@ async function maybeRebindAgent(trx: Knex.Transaction, device: ResolvedDevice, a
   const fromAgentId = device.agent_id;
   await trx("devices").where("id", device.id).update({ agent_id: agentId, client_id: device.client_id, agent_reassigned_at: new Date() });
   device.agent_id = agentId;
-  await trx("audit_logs").insert({
-    action: "DEVICE_AGENT_REASSIGNED", target_id: device.id, user_id: null, ip_address: null,
-    metadata: JSON.stringify({ from_agent_id: fromAgentId, to_agent_id: agentId, last_seen: device.last_seen }),
+  await writeAudit(trx, {
+    action: "DEVICE_AGENT_REASSIGNED", targetId: device.id, clientId: device.client_id, userId: null, ip: null,
+    metadata: { from_agent_id: fromAgentId, to_agent_id: agentId, last_seen: device.last_seen },
   });
 }

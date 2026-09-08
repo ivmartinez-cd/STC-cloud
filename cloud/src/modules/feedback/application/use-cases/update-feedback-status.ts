@@ -8,6 +8,7 @@ import type { UpdateFeedbackStatusInput } from "../dtos/feedback-dtos";
 function toAuditEntry(input: UpdateFeedbackStatusInput, updated: Feedback, author: EffectiveIdentity): AuditLogEntry {
   return {
     userId: author.id,
+    clientId: author.clientId,
     action: "UPDATE_FEEDBACK_STATUS",
     targetId: updated.id,
     metadata: { status: input.status, title: updated.title, updated_by: author.username },

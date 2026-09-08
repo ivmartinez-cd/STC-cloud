@@ -41,7 +41,7 @@ function fakes() {
   const rows: Feedback[] = [];
   const audit: AuditLogEntry[] = [];
   const identity: IdentityResolver = {
-    async resolveEffectiveIdentity(user) { return { id: user.userId, username: user.username ?? user.userId }; },
+    async resolveEffectiveIdentity(user) { return { id: user.userId, username: user.username ?? user.userId, clientId: null }; },
   };
   const writer: AuditLogWriter = { async write(entry) { audit.push(entry); } };
   return { rows, audit, repo: memoryRepo(rows), identity, writer };

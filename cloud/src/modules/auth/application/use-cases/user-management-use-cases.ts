@@ -41,7 +41,7 @@ export class CreateUserUseCase {
       clientId, totpRequired: input.totpRequired === true,
     });
 
-    await this.audit.recordCreated(actorId, String(created.id), { username, role: finalRole, client_id: clientId });
+    await this.audit.recordCreated(actorId, String(created.id), clientId, { username, role: finalRole, client_id: clientId });
     return created;
   }
 }
@@ -83,7 +83,9 @@ export class UpdateUserUseCase {
     });
     if (!updated) throw new UserNotFoundError();
 
-    await this.audit.recordUpdated(actorId, targetId, {
+    // `clientId` es `undefined` cuando el update no toca el scope: ahí el
+    // cliente del usuario sigue siendo el que ya tenía.
+    await this.audit.recordUpdated(actorId, targetId, clientId !== undefined ? clientId : target.client_id, {
       changes: { password_changed: !!input.password, role: input.role, active: input.active, client_id: clientId },
     });
     return updated;
@@ -100,7 +102,7 @@ export class DeleteUserUseCase {
       throw new BusinessRuleViolationError("No puedes eliminar tu propio usuario");
     }
 
-    await this.audit.recordDeleted(actorId, targetId, { username: target.username, role: target.role });
+    await this.audit.recordDeleted(actorId, targetId, target.client_id, { username: target.username, role: target.role });
     await this.users.delete(targetId);
   }
 }
