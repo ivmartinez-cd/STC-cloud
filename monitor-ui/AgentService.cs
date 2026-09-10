@@ -44,6 +44,14 @@ internal static class AgentService
     private static string? FindBundlePath(string nodeExe) =>
         Path.Combine(Path.GetDirectoryName(nodeExe)!, "bundle.js") is string p && File.Exists(p) ? p : null;
 
+    // Node.js (desde hace varias versiones) se niega a arrancar en Windows
+    // anteriores a 8.1/Server 2012 R2 salvo que se le pida saltear el check —
+    // necesario para la variante legacy (Node 20.2.0 en Server 2008 R2). No
+    // afecta al runtime moderno (Node 24) en Windows 10+, ahí el check ya
+    // pasa igual; se setea siempre por simplicidad de un solo código fuente.
+    private static void ConfigureNodeEnv(ProcessStartInfo psi) =>
+        psi.EnvironmentVariables["NODE_SKIP_PLATFORM_CHECK"] = "1";
+
     // ── Status (calls bundle.js --status, parses JSON) ────────────────────────
 
     public static Task<AgentStatus?> GetStatusAsync() => Task.Run(GetStatus);
@@ -65,6 +73,7 @@ internal static class AgentService
                 CreateNoWindow         = true,
                 WindowStyle            = ProcessWindowStyle.Hidden,
             };
+            ConfigureNodeEnv(psi);
             using var proc = Process.Start(psi)!;
             var json = proc.StandardOutput.ReadToEnd();
             proc.WaitForExit(10_000);
@@ -98,6 +107,7 @@ internal static class AgentService
                 CreateNoWindow         = true,
                 WindowStyle            = ProcessWindowStyle.Hidden,
             };
+            ConfigureNodeEnv(psi);
             using var proc = Process.Start(psi)!;
             var stdout = proc.StandardOutput.ReadToEnd();
             var stderr = proc.StandardError.ReadToEnd();
@@ -141,6 +151,7 @@ internal static class AgentService
                 CreateNoWindow         = true,
                 WindowStyle            = ProcessWindowStyle.Hidden,
             };
+            ConfigureNodeEnv(psi);
             using var proc = Process.Start(psi)!;
             var stdout = proc.StandardOutput.ReadToEnd();
             var stderr = proc.StandardError.ReadToEnd();

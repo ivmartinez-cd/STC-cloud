@@ -207,7 +207,8 @@ internal sealed class ActivationForm : Form
         _tabSettings.Controls.Add(_txtServer);
 
         _tabSettings.Controls.Add(new Label { Text = "Clave Activacion:", Location = new Point(20, 143), Size = new Size(120, 20) });
-        _txtKey = new TextBox { Location = new Point(150, 140), Size = new Size(300, 23), Font = new Font("Consolas", 10f), PlaceholderText = "Ej: XXXX-XXXX-XXXX" };
+        _txtKey = new TextBox { Location = new Point(150, 140), Size = new Size(300, 23), Font = new Font("Consolas", 10f) };
+        Placeholder.Attach(_txtKey, "Ej: XXXX-XXXX-XXXX");
         _tabSettings.Controls.Add(_txtKey);
 
         _btnActivate = new Button
@@ -261,8 +262,8 @@ internal sealed class ActivationForm : Form
         {
             Location = new Point(90, 32),
             Size = new Size(240, 23),
-            PlaceholderText = "proxy.empresa.com"
         };
+        Placeholder.Attach(_txtProxyHost, "proxy.empresa.com");
         gbProxy.Controls.Add(_txtProxyHost);
 
         gbProxy.Controls.Add(new Label { Text = "Puerto:", Location = new Point(340, 35), Size = new Size(55, 20), ForeColor = Color.Black });
@@ -270,8 +271,8 @@ internal sealed class ActivationForm : Form
         {
             Location = new Point(395, 32),
             Size = new Size(85, 23),
-            PlaceholderText = "8080"
         };
+        Placeholder.Attach(_txtProxyPort, "8080");
         gbProxy.Controls.Add(_txtProxyPort);
 
         gbProxy.Controls.Add(new Label { Text = "Usuario:", Location = new Point(15, 75), Size = new Size(70, 20), ForeColor = Color.Black });
@@ -427,11 +428,13 @@ internal sealed class ActivationForm : Form
             {
                 var uri = new Uri(s.ProxyUrl);
                 _txtProxyHost.Text = uri.Host;
+                _txtProxyHost.ForeColor = Color.Black;
                 _txtProxyPort.Text = uri.Port > 0 ? uri.Port.ToString() : "";
-                
+                _txtProxyPort.ForeColor = Color.Black;
+
                 if (!string.IsNullOrEmpty(uri.UserInfo))
                 {
-                    var parts = uri.UserInfo.Split(':', 2);
+                    var parts = uri.UserInfo.Split(new[] { ':' }, 2);
                     _txtProxyUser.Text = parts[0];
                     if (parts.Length > 1) _txtProxyPass.Text = Uri.UnescapeDataString(parts[1]);
                 }
@@ -448,8 +451,8 @@ internal sealed class ActivationForm : Form
         }
         else
         {
-            _txtProxyHost.Text = "";
-            _txtProxyPort.Text = "";
+            Placeholder.Reset(_txtProxyHost);
+            Placeholder.Reset(_txtProxyPort);
             _txtProxyUser.Text = "";
             _txtProxyPass.Text = "";
             _lblProxyStatus.Text = "Estado: sin proxy configurado.";
@@ -484,8 +487,8 @@ internal sealed class ActivationForm : Form
         try
         {
             string proxyUrl = "";
-            var host = _txtProxyHost.Text.Trim();
-            var port = _txtProxyPort.Text.Trim();
+            var host = Placeholder.GetValue(_txtProxyHost).Trim();
+            var port = Placeholder.GetValue(_txtProxyPort).Trim();
             
             if (!string.IsNullOrEmpty(host))
             {
@@ -611,7 +614,7 @@ internal sealed class ActivationForm : Form
 
     private async void BtnActivate_Click(object? sender, EventArgs e)
     {
-        var key = _txtKey.Text.Trim();
+        var key = Placeholder.GetValue(_txtKey).Trim();
         var server = _txtServer.Text.Trim();
 
         if (string.IsNullOrEmpty(key))

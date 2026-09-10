@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
@@ -24,6 +24,11 @@
     <Description>Monitor de Impresoras SNMP - Consola de Gestión</Description>
     <Copyright>© STC Cloud</Copyright>
     <ApplicationIcon>favicon.ico</ApplicationIcon>
+    <!-- STC.Monitor.UI.Legacy.csproj (net48, para Server 2008 R2) vive en esta
+         misma carpeta y comparte el código fuente vía globbing default — sin
+         esto, el glob de ESTE proyecto también se metería a mirar adentro de
+         sus carpetas de salida (bin.legacy/obj.legacy) y viceversa. -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);bin.legacy/**;obj.legacy/**</DefaultItemExcludes>
   </PropertyGroup>
 
   <ItemGroup>

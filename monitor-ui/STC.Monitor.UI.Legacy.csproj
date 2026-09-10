@@ -1,0 +1,71 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Variante legacy de STC.Monitor.UI para hosts que no soportan .NET 9
+    (ej. Windows Server 2008 R2 — el runtime del agente ahí usa Node 20.2.0,
+    ver flag node-exe de agent/build-sea.js; .NET 9 tampoco corre en esa versión de
+    Windows, su piso es Windows 10). .NET Framework 4.8 sí soporta Windows 7
+    SP1 / Server 2008 R2 SP1 en adelante.
+
+    Comparte el mismo código fuente que STC.Monitor.UI.csproj (Program.cs,
+    ActivationForm.cs, AgentService.cs, TrayApplication.cs, Placeholder.cs) —
+    EnableDefaultCompileItems queda en su default (true), así que el glob del
+    SDK ya los toma solo; no hace falta listarlos acá. Los únicos ajustes de
+    código entre targets: Placeholder.cs reemplaza TextBox.PlaceholderText
+    (no existe en WinForms de .NET Framework) y Program.cs usa las llamadas
+    manuales de Application.* en vez de ApplicationConfiguration.Initialize()
+    (generado por el SDK, tampoco existe en Framework) — ambos ya son
+    compatibles con los dos proyectos sin #if.
+
+    A diferencia del proyecto net9: acá NO hay despliegue self-contained /
+    single-file (.NET Framework no lo soporta, depende del runtime instalado
+    en la máquina destino) — el print server del cliente necesita tener
+    .NET Framework 4.8 instalado (viene en Windows 10/Server 2016+, pero en
+    Server 2008 R2 hay que instalarlo aparte: sigue disponible como
+    descarga oficial de Microsoft, con soporte indefinido).
+  -->
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net48</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <AssemblyName>STC.Monitor.UI</AssemblyName>
+    <RootNamespace>STC.Monitor.UI</RootNamespace>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+    <!-- No console window under any circumstance -->
+    <ApplicationManifest>app.legacy.manifest</ApplicationManifest>
+    <Version>1.3.0</Version>
+    <FileVersion>1.3.0.0</FileVersion>
+    <Company>STC Cloud</Company>
+    <Product>STC Cloud Monitor</Product>
+    <Description>Monitor de Impresoras SNMP - Consola de Gestión (Legacy, .NET Framework 4.8)</Description>
+    <Copyright>© STC Cloud</Copyright>
+    <ApplicationIcon>favicon.ico</ApplicationIcon>
+    <!-- Salida propia: evita pisar bin/obj del proyecto net9 en la misma carpeta -->
+    <BaseOutputPath>bin.legacy\</BaseOutputPath>
+    <BaseIntermediateOutputPath>obj.legacy\</BaseIntermediateOutputPath>
+    <!-- Simétrico a DefaultItemExcludes de STC.Monitor.UI.csproj: sin esto, el
+         glob default de ESTE proyecto se metería a mirar bin/obj (net9) -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);bin/**;obj/**</DefaultItemExcludes>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- ServiceController está en el framework directo acá, no en un paquete -->
+    <Reference Include="System.ServiceProcess" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- System.Text.Json (usado por AgentService.cs) sí se distribuye como
+         paquete para net48 -->
+    <PackageReference Include="System.Text.Json" Version="8.0.5" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="favicon.ico" />
+    <EmbeddedResource Include="logo.png" />
+  </ItemGroup>
+
+</Project>

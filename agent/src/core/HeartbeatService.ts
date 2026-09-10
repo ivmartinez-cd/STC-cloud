@@ -4,7 +4,7 @@ import { getLocalIp, getHostOS } from './NetworkUtils';
 import { tryRefresh } from '../sync/uploader';
 import { getDeviceCount, pendingCount } from '../sync/database';
 import type { AgentConfig, IpRange, IpHost, DevicePolicy } from './config';
-import { ConfigManager } from './config';
+import { ConfigManager, getHostname } from './config';
 import type { CommandHandler, CommandResult } from './CommandHandler';
 import { VERSION } from './version';
 import type { SnmpCredential } from '../capture/transport/snmp';
@@ -84,7 +84,7 @@ export class HeartbeatService {
           commandResults,
           system_info: {
             version:   VERSION,
-            host_name: os.hostname(),
+            host_name: getHostname(),
             host_os:   getHostOS(),
             host_ip:   getLocalIp(),
             uptime:    Math.round(os.uptime())

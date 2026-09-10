@@ -21,7 +21,17 @@ static class Program
             return;
         }
 
-        ApplicationConfiguration.Initialize();
+        // Equivalente manual a ApplicationConfiguration.Initialize() (generado por
+        // el SDK, no existe en .NET Framework) — mismo resultado en ambos
+        // targets, así el archivo se comparte entre STC.Monitor.UI.csproj (net9,
+        // Windows 10+) y STC.Monitor.UI.Legacy.csproj (net48, Server 2008 R2+).
+#if NET5_0_OR_GREATER
+        // Application.SetHighDpiMode no existe en WinForms de .NET Framework —
+        // ahí la DPI-awareness se declara en el manifest, no por código.
+        Application.SetHighDpiMode(HighDpiMode.SystemAware);
+#endif
+        Application.EnableVisualStyles();
+        Application.SetCompatibleTextRenderingDefault(false);
         Application.Run(new TrayApplication());
     }
 }

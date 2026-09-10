@@ -105,14 +105,34 @@ function getWindowsHardwareId(): string {
     }
     
     // Serial de la BIOS es inmutable para el hardware. Le damos 8 segundos por si el inicio de Windows esta muy saturado.
-    const bios = execSync('powershell -NoProfile -Command "(Get-CimInstance Win32_BIOS).SerialNumber"', {
+    // Get-CimInstance requiere PowerShell 3.0+ (no existe en PS 2.0, el que
+    // trae Server 2008 R2 por defecto) -- el try/catch DENTRO del script de
+    // powershell cae a Get-WmiObject (equivalente, disponible desde PS 2.0)
+    // si el cmdlet no se reconoce. Confirmado en el primer despliegue real
+    // sobre Server 2008 R2 (10/09/2026): Get-CimInstance solo tiraba
+    // CommandNotFoundException.
+    const bios = execSync('powershell -NoProfile -Command "try { (Get-CimInstance Win32_BIOS).SerialNumber } catch { (Get-WmiObject Win32_BIOS).SerialNumber }"', {
       timeout: 8000, encoding: 'utf8', windowsHide: true,
     }).trim();
 
     return `${guid}-${bios}`;
   } catch (e) {
-    // Fallback a hostname si todo falla para evitar que el agente rompa
+    // Fallback a hostname si todo falla para evitar que el agente rompa.
+    // os.hostname() (libuv uv_os_gethostname) tira ENOSYS en Server 2008 R2
+    // -- confirmado en el mismo despliegue real de arriba. COMPUTERNAME es
+    // la misma info sin pasar por esa syscall.
+    return getHostname();
+  }
+}
+
+export function getHostname(): string {
+  if (process.platform === 'win32' && process.env.COMPUTERNAME) {
+    return process.env.COMPUTERNAME;
+  }
+  try {
     return os.hostname();
+  } catch {
+    return 'unknown-host';
   }
 }
 

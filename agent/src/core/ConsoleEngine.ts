@@ -1,8 +1,8 @@
 import net from 'net';
-import os from 'os';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { VERSION } from './version';
+import { getHostname } from './config';
 
 const execAsync = promisify(exec);
 
@@ -35,7 +35,7 @@ export class ConsoleEngine {
               status: 'online',
               system: {
                 platform: process.platform,
-                hostname: os.hostname(),
+                hostname: getHostname(),
                 uptime: Math.floor(process.uptime()),
                 time: new Date().toISOString()
               }

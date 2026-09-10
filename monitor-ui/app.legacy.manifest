@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<assembly manifestVersion="1.0" xmlns="urn:schemas-microsoft-com:asm.v1">
+  <assemblyIdentity version="1.0.0.0" name="STC.Monitor.UI"/>
+  <trustInfo xmlns="urn:schemas-microsoft-com:asm.v2">
+    <security>
+      <requestedPrivileges xmlns="urn:schemas-microsoft-com:asm.v3">
+        <!-- requireAdministrator: needed for service control (restart/stop) -->
+        <requestedExecutionLevel level="requireAdministrator" uiAccess="false"/>
+      </requestedPrivileges>
+    </security>
+  </trustInfo>
+  <!-- Sin bloque <compatibility>/<supportedOS>: el de app.manifest solo lista el
+       GUID de Windows 10/11 (variante net9). Esta variante (net48) corre desde
+       Server 2008 R2 en adelante — omitirlo evita que Windows aplique shims de
+       compatibilidad de versión pensados para el target más nuevo. -->
+  <asmv3:application xmlns:asmv3="urn:schemas-microsoft-com:asm.v3">
+    <asmv3:windowsSettings xmlns="http://schemas.microsoft.com/SMI/2005/WindowsSettings">
+      <!-- Equivalente, vía manifest, a Application.SetHighDpiMode(SystemAware)
+           que en net9 se hace por código (Program.cs) — WinForms de .NET
+           Framework no tiene ese método, la DPI-awareness se declara acá. -->
+      <dpiAware>true/PM</dpiAware>
+    </asmv3:windowsSettings>
+  </asmv3:application>
+</assembly>
