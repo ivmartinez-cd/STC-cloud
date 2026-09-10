@@ -82,3 +82,8 @@ query
 *.tar.gz
 pgdata_backup*
 fresh_dump_*
+
+# Paquetes de actualización del agente publicados (installer/publish-release.sh
+# los sube por scp directo al host de producción, no viven en el repo)
+agent-updates/*
+!agent-updates/.gitkeep

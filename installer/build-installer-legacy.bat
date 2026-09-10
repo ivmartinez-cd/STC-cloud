@@ -182,4 +182,9 @@ echo   ese script ya hace su propio "npm install" y lo recompila solo -- no
 echo   hace falta que hagas nada, pero NO mezcles instaladores de una misma
 echo   corrida sin pasar por ese paso.
 echo.
+echo   Para publicar dist-legacy\bundle.js como update OTA del canal 'legacy'
+echo   ^(agentes legacy YA instalados lo descargan solo, sin reinstalar^),
+echo   correr desde WSL/Git Bash ^(necesita STC_PORTAL_USER/PASSWORD^):
+echo     installer\publish-release.sh agent\dist-legacy\bundle.js !APP_VERSION! legacy
+echo.
 pause

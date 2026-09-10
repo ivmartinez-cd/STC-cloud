@@ -1,8 +1,7 @@
 import type { FastifyRequest } from "fastify";
 import type { Knex } from "knex";
-import type Redis from "ioredis";
 import { getScope } from "../../../api/utils/scope";
-import { getPublishedAgentVersion } from "../../../services/agentVersionService";
+import { KnexAgentReleaseRepository } from "../infrastructure/database/knex-agent-release-repository";
 import { GetAgentFleetSummaryUseCase, GetAgentSignalBucketsUseCase, ListAgentDirectoryUseCase } from "../application/use-cases/agent-directory-use-cases";
 import { KnexAgentDirectoryRepository } from "../infrastructure/database/knex-agent-directory-repository";
 
@@ -19,13 +18,13 @@ function runListAgentDirectory(uc: ListAgentDirectoryUseCase, request: FastifyRe
 
 /** Handlers de "Salud de nodos" (handoff hifi, 25/08/2026) — repo/use cases
  * propios (ver docblock de `KnexAgentDirectoryRepository`), cableados acá en
- * vez de en `agent-wiring.ts`: ese cableado tipa `redis` con la interfaz
- * reducida `RedisClient` del dominio, y acá hace falta el `Redis` real de
- * `ioredis` que ya recibe `registerPortalAgentRoutes` (mismo que usa
- * `dashboardController` para la versión publicada de agente). */
-export function createAgentDirectoryController(db: Knex, redis: Redis) {
+ * vez de en `agent-wiring.ts`. La versión publicada de agente ahora sale de
+ * `agent_releases` (Postgres, canal 'stable') en vez de Redis sin respaldo
+ * real (Fase 1 de OTA multi-canal, 10/09/2026, ver docs/dev/TECH_DEBT.md UPD-3). */
+export function createAgentDirectoryController(db: Knex) {
   const repo = new KnexAgentDirectoryRepository(db);
-  const getPublishedVersion = () => getPublishedAgentVersion(redis);
+  const releases = new KnexAgentReleaseRepository(db);
+  const getPublishedVersion = async () => (await releases.getLatest("stable"))?.version ?? "1.0.0";
   const directory = new ListAgentDirectoryUseCase(repo, getPublishedVersion);
   const summary = new GetAgentFleetSummaryUseCase(repo, getPublishedVersion);
   const buckets = new GetAgentSignalBucketsUseCase(repo);

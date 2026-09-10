@@ -121,7 +121,7 @@ export function registerPortalAgentRoutes(fastify: FastifyInstance, db: Knex, re
   // aparte de `GET /agents`: ese endpoint ya lo consumen `Monitors.tsx` y
   // `RemoteActions.tsx` (fuera de este alcance) además de tests de e2e/RBAC,
   // así que extenderlo en el lugar hubiera arriesgado romper esos contratos.
-  const dirCtrl = createAgentDirectoryController(db, redis);
+  const dirCtrl = createAgentDirectoryController(db);
   fastify.get("/api/v1/agents/directory", { ...auth, handler: dirCtrl.listAgentDirectory });
   fastify.get("/api/v1/agents/summary", { ...auth, handler: dirCtrl.getAgentFleetSummary });
   fastify.get("/api/v1/agents/signal-buckets", { ...auth, handler: dirCtrl.getAgentSignalBuckets });

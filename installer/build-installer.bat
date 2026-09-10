@@ -348,7 +348,7 @@ if "!STC_API_URL!"=="" (
 set API_URL=!STC_API_URL!
 
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
-    "$body = @{ version = '!APP_VERSION!'; url = '!DLURL!'; hash = '!UPDATE_HASH!' } | ConvertTo-Json;" ^
+    "$body = @{ version = '!APP_VERSION!'; url = '!DLURL!'; hash = '!UPDATE_HASH!'; channel = 'stable'; kind = 'zip' } | ConvertTo-Json;" ^
     "try {" ^
     "    $res = Invoke-RestMethod -Uri \"!API_URL!/api/v1/portal/agents/version\" -Method Post -Headers @{ Authorization = 'Bearer !STC_PORTAL_TOKEN!'; 'Content-Type' = 'application/json' } -Body $body;" ^
     "    Write-Host '      OK: API Dinamica actualizada al instante: v' $res.version;" ^

@@ -63,7 +63,7 @@ export function registerAllRoutes(
   registerPortalAgentRoutes(fastify, db, redis, agentService, portalAuth);
   registerClientRoutes(fastify, db, portalAuth);
   registerDeviceRoutes(fastify, db, portalAuth);
-  registerDashboardRoutes(fastify, db, agentService, portalAuth, redis);
+  registerDashboardRoutes(fastify, db, agentService, portalAuth);
   registerAlertRoutes(fastify, db, portalAuth);
   registerFeedbackRoutes(fastify, db, portalAuth);
   registerScheduledReportRoutes(fastify, db, portalAuth);

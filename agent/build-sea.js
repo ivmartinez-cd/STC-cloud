@@ -8,6 +8,9 @@ const path = require('path');
 // --target <esbuild target>: target de esbuild acorde al runtime embebido.
 // --out-dir <ruta>: carpeta de salida (default "dist") — usar una distinta
 // (ej. "dist-legacy") para no pisar el build normal al generar una variante.
+// --channel <stable|legacy>: canal de auto-update embebido en el bundle (ver
+// src/core/channel.ts) — determina contra qué release del server compara su
+// propia versión y a qué canal reporta pertenecer en el heartbeat.
 const args = process.argv.slice(2);
 const flag = (name, fallback) => {
   const i = args.indexOf(name);
@@ -15,6 +18,7 @@ const flag = (name, fallback) => {
 };
 const nodeExeSource = flag('--node-exe', process.execPath);
 const esbuildTarget = flag('--target', 'node24');
+const channel = flag('--channel', 'stable');
 const distDir = path.resolve(__dirname, flag('--out-dir', 'dist'));
 const bundlePath = path.join(distDir, 'bundle.js');
 const outputNodeExe = path.join(distDir, 'stc-node.exe');
@@ -35,7 +39,10 @@ console.log('📦 Empaquetando código con esbuild...');
 // empaquetado dentro de bundle.js, esa introspección resuelve mal la raíz
 // (busca en la raíz del agente en vez de en node_modules/better-sqlite3) y
 // nunca encuentra el binario, sin importar dónde se lo copie.
-execSync(`npx esbuild "src/core/main.ts" --bundle --platform=node --target=${esbuildTarget} --main-fields=main --outfile="${bundlePath}" --external:better-sqlite3 --external:bindings`, { stdio: 'inherit' });
+// --define:__STC_CHANNEL__="legacy" sin quoting extra a nivel shell: no tiene
+// espacios (esbuild recibe el token tal cual, las comillas dobles son para
+// SU sintaxis de --define, no para el shell).
+execSync(`npx esbuild "src/core/main.ts" --bundle --platform=node --target=${esbuildTarget} --main-fields=main --outfile="${bundlePath}" --external:better-sqlite3 --external:bindings --define:__STC_CHANNEL__="${channel}"`, { stdio: 'inherit' });
 
 // 3. Copiar el ejecutable de Node.js (actual, o el runtime legacy indicado) como runtime privado
 console.log('📑 Copiando runtime de Node.js...');

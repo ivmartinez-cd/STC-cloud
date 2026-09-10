@@ -16,7 +16,7 @@ export interface ActivateBody { key: string; hardwareId?: string; }
 export interface RefreshBody { agentId: string; refresh_token: string; }
 
 /** Cuerpo de actualización de versión de agente. */
-export interface VersionUpdateBody { version: string; url: string; hash: string; }
+export interface VersionUpdateBody { version: string; url: string; hash: string; channel?: string; kind?: string; }
 
 /** Parámetros de ruta con id. */
 export interface IdParams { id: string; }

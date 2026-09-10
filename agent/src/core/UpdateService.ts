@@ -5,6 +5,7 @@ import { promisify } from 'util';
 import { createHash, verify as cryptoVerify, createPublicKey } from 'crypto';
 import { UPDATE_PUBLIC_KEY_HEX } from './updateKey';
 import { DATA_DIR, type AgentConfig } from './config';
+import { CHANNEL } from './channel';
 import { log } from './Logger';
 import { VERSION } from './version';
 
@@ -37,7 +38,7 @@ export class UpdateService {
 
       const config = this.deps.getConfig();
 
-      const res = await fetch(`${config.serverUrl}/api/v1/agents/version`, {
+      const res = await fetch(`${config.serverUrl}/api/v1/agents/version?channel=${CHANNEL}`, {
         headers: { Authorization: `Bearer ${config.token}` },
         signal: AbortSignal.timeout(15_000),
       });
@@ -52,8 +53,16 @@ export class UpdateService {
         return false;
       }
 
-      const ALLOWED_URL_PREFIX = 'https://github.com/ivmartinez-cd/STC-cloud/releases/download/';
-      if (!data.url.startsWith(ALLOWED_URL_PREFIX)) {
+      // GitHub Releases (histórico) o el propio server que el agente ya usa
+      // para todo lo demás (self-hosted, ver Fase 1 de OTA multi-canal,
+      // 10/09/2026) — la confianza real la da la firma Ed25519 de más abajo,
+      // esta lista solo evita que una respuesta comprometida/mal configurada
+      // apunte a un host arbitrario.
+      const ALLOWED_URL_PREFIXES = [
+        'https://github.com/ivmartinez-cd/STC-cloud/releases/download/',
+        `${config.serverUrl}/updates/`,
+      ];
+      if (!ALLOWED_URL_PREFIXES.some((p) => data.url!.startsWith(p))) {
         log('WARN', `URL de descarga rechazada (dominio no autorizado): ${data.url}`);
         this.isUpdating = false;
         return false;

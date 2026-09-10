@@ -118,6 +118,11 @@ services:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
       - certbot-certs:/etc/letsencrypt:ro
       - certbot-www:/var/www/certbot:ro
+      # Paquetes de actualización del agente publicados por
+      # installer/publish-release.sh (bind mount, no volumen nombrado: así
+      # publicar es un scp directo a ./agent-updates en el host, sin entrar
+      # a ningún contenedor). Ver location /updates/ en nginx.conf.
+      - ./agent-updates:/var/www/updates:ro
     depends_on:
       api:
         condition: service_healthy

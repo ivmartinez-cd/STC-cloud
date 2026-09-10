@@ -1,6 +1,7 @@
 import os from 'os';
 import { log, logTailer } from './Logger';
 import { getLocalIp, getHostOS } from './NetworkUtils';
+import { CHANNEL } from './channel';
 import { tryRefresh } from '../sync/uploader';
 import { getDeviceCount, pendingCount } from '../sync/database';
 import type { AgentConfig, IpRange, IpHost, DevicePolicy } from './config';
@@ -87,7 +88,9 @@ export class HeartbeatService {
             host_name: getHostname(),
             host_os:   getHostOS(),
             host_ip:   getLocalIp(),
-            uptime:    Math.round(os.uptime())
+            uptime:    Math.round(os.uptime()),
+            channel:   CHANNEL,
+            runtime:   process.version,
           }
         }),
         signal: AbortSignal.timeout(65_000)

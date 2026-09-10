@@ -104,6 +104,22 @@ export interface SystemInfoPayload {
   host_os?: string;
   host_ip?: string;
   uptime?: number;
+  /** 'stable' | 'legacy' — ver agent/src/core/channel.ts. */
+  channel?: string;
+  /** process.version del runtime embebido, ej. "v20.2.0". */
+  runtime?: string;
+}
+
+/** Paquete publicado para un canal de actualización (ver docs/dev/TECH_DEBT.md UPD-1/3). */
+export interface AgentRelease {
+  id: string;
+  version: string;
+  channel: string;
+  kind: string;
+  url: string;
+  sha256: string;
+  published_by: string | null;
+  published_at: Date;
 }
 
 /** Lectura procesada y mapeada lista para inserción en la tabla `readings`. */

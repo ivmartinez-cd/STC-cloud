@@ -7,6 +7,7 @@ import { createAuthUserHandlers } from "./users-controller";
 import { createAuthAgentHandlers } from "./agent-auth-controller";
 import { createAuthAgentVersionHandlers } from "./agent-version-controller";
 import { createLoginStatsHandler } from "./login-stats-controller";
+import { KnexAgentReleaseRepository } from "../../agents/infrastructure/database/knex-agent-release-repository";
 
 /**
  * Controller de autenticación (portal + agentes) y usuarios (Fase 2 de
@@ -16,11 +17,12 @@ import { createLoginStatsHandler } from "./login-stats-controller";
  * externo cambia.
  */
 export function createAuthController(fastify: FastifyInstance, db: Knex, redis: Redis, agentService: AgentService) {
+  const agentReleases = new KnexAgentReleaseRepository(db);
   return {
     ...createAuthSessionHandlers(fastify, db, redis),
     ...createAuthUserHandlers(db),
     ...createAuthAgentHandlers(fastify, agentService),
-    ...createAuthAgentVersionHandlers(fastify, redis),
+    ...createAuthAgentVersionHandlers(fastify, agentReleases),
     ...createLoginStatsHandler(db, redis),
   };
 }

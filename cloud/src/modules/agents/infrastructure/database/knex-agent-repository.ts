@@ -90,7 +90,7 @@ export class KnexAgentRepository implements AgentRepository {
   async heartbeat(id: string, systemInfo?: SystemInfoPayload): Promise<void> {
     const updateData: Record<string, unknown> = { last_seen: new Date() };
     if (systemInfo) {
-      for (const k of ["version", "host_name", "host_os", "host_ip", "uptime"] as const) {
+      for (const k of ["version", "host_name", "host_os", "host_ip", "uptime", "channel", "runtime"] as const) {
         if (systemInfo[k] !== undefined) updateData[k] = systemInfo[k];
       }
     }

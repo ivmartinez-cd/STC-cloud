@@ -1,11 +1,11 @@
 import type { FastifyRequest } from "fastify";
 import type { Knex } from "knex";
-import type Redis from "ioredis";
 import type { AgentService } from "../../agents";
 import { getScope } from "../../../api/utils/scope";
 import { KnexDashboardRepository } from "../infrastructure/database/knex-dashboard-repository";
 import { KnexAlertsByClassReader } from "../infrastructure/adapters/knex-alerts-by-class-reader";
-import { RedisAgentVersionReader } from "../infrastructure/adapters/redis-agent-version-reader";
+import { PostgresAgentVersionReader } from "../infrastructure/adapters/postgres-agent-version-reader";
+import { KnexAgentReleaseRepository } from "../../agents/infrastructure/database/knex-agent-release-repository";
 import { GetDashboardStatsUseCase } from "../application/use-cases/get-dashboard-stats";
 import { GlobalSearchUseCase } from "../application/use-cases/global-search";
 
@@ -15,10 +15,10 @@ import { GlobalSearchUseCase } from "../application/use-cases/global-search";
  * completas en la tanda 2026-08-27). Las alertas que convivían acá viven en
  * `modules/alerts/` (Fase 3).
  */
-export function createDashboardController(db: Knex, agentService: AgentService, redis: Redis) {
+export function createDashboardController(db: Knex, agentService: AgentService) {
   const repo = new KnexDashboardRepository(db);
   const alertsReader = new KnexAlertsByClassReader(db);
-  const agentVersionReader = new RedisAgentVersionReader(redis);
+  const agentVersionReader = new PostgresAgentVersionReader(new KnexAgentReleaseRepository(db));
   const getDashboardStats = new GetDashboardStatsUseCase(repo, alertsReader, agentVersionReader);
   const globalSearch = new GlobalSearchUseCase(agentService);
 

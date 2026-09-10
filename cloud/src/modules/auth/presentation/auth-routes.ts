@@ -82,6 +82,11 @@ const updateVersionSchema = {
       version: { type: "string", minLength: 1 },
       url: { type: "string", minLength: 1 },
       hash: { type: "string", minLength: 1 },
+      // 'stable' | 'legacy' — default 'stable' si no se manda (compat con
+      // publicaciones viejas, un solo canal global).
+      channel: { type: "string", minLength: 1, maxLength: 20 },
+      // 'bundle' | 'zip' — default inferido de la extensión de `url` si no se manda.
+      kind: { type: "string", minLength: 1, maxLength: 10 },
     },
   },
 };
