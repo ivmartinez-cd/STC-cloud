@@ -1,4 +1,4 @@
-const { execSync } = require('child_process');
+const esbuild = require('esbuild');
 const fs = require('fs');
 const path = require('path');
 
@@ -39,10 +39,26 @@ console.log('📦 Empaquetando código con esbuild...');
 // empaquetado dentro de bundle.js, esa introspección resuelve mal la raíz
 // (busca en la raíz del agente en vez de en node_modules/better-sqlite3) y
 // nunca encuentra el binario, sin importar dónde se lo copie.
-// --define:__STC_CHANNEL__="legacy" sin quoting extra a nivel shell: no tiene
-// espacios (esbuild recibe el token tal cual, las comillas dobles son para
-// SU sintaxis de --define, no para el shell).
-execSync(`npx esbuild "src/core/main.ts" --bundle --platform=node --target=${esbuildTarget} --main-fields=main --outfile="${bundlePath}" --external:better-sqlite3 --external:bindings --define:__STC_CHANNEL__="${channel}"`, { stdio: 'inherit' });
+// Usamos la API de esbuild en vez de `npx esbuild ...` por shell (execSync):
+// pasar el valor de __STC_CHANNEL__ como string via linea de comandos es
+// tierra de nadie entre plataformas -- en Windows, cmd.exe se comia un par
+// de comillas dobles embebidas en un token sin espacios, asi que esbuild
+// terminaba viendo __STC_CHANNEL__=legacy (sin comillas), que NO es un
+// string literal sino una referencia a un identificador `legacy`
+// inexistente, y el reemplazo quedaba mal (channel.ts caia siempre a
+// 'stable', bug real encontrado en el primer despliegue OTA real,
+// 10/09/2026). Con la API, `define` es un objeto JS: JSON.stringify(channel)
+// arma el string literal correcto sin que ningun shell lo toque.
+esbuild.buildSync({
+  entryPoints: ['src/core/main.ts'],
+  bundle: true,
+  platform: 'node',
+  target: esbuildTarget,
+  mainFields: ['main'],
+  outfile: bundlePath,
+  external: ['better-sqlite3', 'bindings'],
+  define: { __STC_CHANNEL__: JSON.stringify(channel) },
+});
 
 // 3. Copiar el ejecutable de Node.js (actual, o el runtime legacy indicado) como runtime privado
 console.log('📑 Copiando runtime de Node.js...');
