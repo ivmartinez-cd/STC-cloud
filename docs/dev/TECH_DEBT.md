@@ -19,7 +19,7 @@ que muerda.
 | :--- | :--- | :--- | :--- | :--- |
 | [UPD-1](#upd-1--no-hay-release-publicado-mas-nuevo-que-v100) | Actualizaciones | No hay release publicado más nuevo que v1.0.0 | 🔴 Alta | Abierto |
 | [UPD-2](#upd-2--publicar-una-version-no-tiene-ui-solo-el-bat-o-curl) | Actualizaciones | Publicar una versión no tiene UI: solo el `.bat` o curl | 🟠 Media | Abierto |
-| [UPD-3](#upd-3--la-metadata-de-version-publicada-no-tiene-respaldo-real) | Actualizaciones | La metadata de versión publicada no tiene respaldo real | 🟠 Media | Abierto |
+| [UPD-3](#upd-3--la-metadata-de-version-publicada-no-tiene-respaldo-real-) | Actualizaciones | La metadata de versión publicada no tiene respaldo real | 🟠 Media | ✅ Cerrado |
 | [UPD-4](#upd-4--la-clave-de-firma-ed25519-existe-en-una-sola-maquina) | Seguridad | La clave de firma Ed25519 existe en una sola máquina | 🔴 Alta | Abierto |
 | [UPD-5](#upd-5--el-camino-real-de-actualizacion-zip-no-tiene-rollback-automatico) | Actualizaciones | El camino real de actualización (ZIP) no tiene rollback automático | 🟠 Media | Abierto |
 
@@ -77,6 +77,14 @@ y sus dos `.sig` de 64 bytes), o sea que el pipeline de build/firma/upload **fun
 **Para cerrarlo:** correr `installer\build-installer.bat` desde Windows con `GITHUB_TOKEN`,
 `STC_PORTAL_TOKEN` y `STC_API_URL` seteadas, bumpeando a 1.3.1+.
 
+**Actualización 10/09/2026:** con la Fase 1 de OTA multi-canal (ver sección de arriba y
+commit `40ac3e5`) el canal `legacy` ya tiene su primer release real publicado (v1.3.0, mismo
+número de versión que ya tenía instalado ISSN — republicación intencional para que el agente
+adopte el canal, no dispara auto-update por versión igual). El canal `stable` sigue sin nada
+publicado más nuevo que v1.0.0 — este ítem queda parcialmente cerrado: la falla de fondo
+(nadie corrió el paso de publicación) sigue latente para `stable` hasta la primera vez que se
+use `installer\build-installer.bat` con las credenciales seteadas, o `publish-release.sh` a mano.
+
 ---
 
 ### UPD-2 — Publicar una versión no tiene UI: solo el `.bat` o curl
@@ -98,9 +106,20 @@ endpoint, o bien hacer que el paso 8 del `.bat` sea un error duro en vez de un a
 
 ---
 
-### UPD-3 — La metadata de versión publicada no tiene respaldo real
+### UPD-3 — La metadata de versión publicada no tiene respaldo real ✅
 
-**Detectado:** 2026-09-08 · **Severidad:** 🟠 Media · **Estado:** Abierto
+**Detectado:** 2026-09-08 · **Severidad:** 🟠 Media · **Estado:** Cerrado 10/09/2026 (commit `40ac3e5`)
+
+**Cerrado:** la cascada Redis → `local_settings.json` → env vars se eliminó por completo.
+`agent-version-controller.ts` ahora lee/escribe la tabla `agent_releases` (Postgres, con
+backup automático vía el servicio `backup` de `docker-compose.prod.yml`) a través de
+`KnexAgentReleaseRepository`. De paso quedó separado por canal (`stable`/`legacy`, ver
+sección de arriba) — un agente legacy ya no compite por la misma fila de metadata que uno
+moderno. `agentVersionService.ts` y `RedisAgentVersionReader` (dashboard) se borraron, ya
+no había ningún consumidor real de esa ruta.
+
+<details>
+<summary>Contexto original (antes del fix)</summary>
 
 `agent-version-controller.ts` tiene una cascada de 3 fuentes pensada como redundancia, pero
 en producción **solo la primera es real**:
@@ -123,6 +142,8 @@ efectiva, pero convierte al archivo en un respaldo engañoso.
 **Para cerrarlo:** montar un volumen para `local_settings.json` en el servicio `api`, o
 mover la metadata a Postgres (que ya tiene backup automático), o al menos loguear un WARN
 cuando la cascada cae al fallback por defecto.
+
+</details>
 
 ---
 
