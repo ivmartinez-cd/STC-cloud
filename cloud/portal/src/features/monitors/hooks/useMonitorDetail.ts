@@ -127,9 +127,16 @@ export function useMonitorDetail(id: string) {
   }, [id, showToast, refetch]);
 
   const regenerateKey = useCallback(async (): Promise<string> => {
-    const data = await api.post<{ activation_key: string }>(`/agents/${id}/regenerate-key`);
+    // El backend devuelve {agentId, key, expiresAt} -- NO "activation_key".
+    // Leer el campo equivocado dejaba esto en `undefined`, el modal de
+    // confirmación con la key nueva nunca se abría (queda gateado por
+    // `regenKey && (...)` en MonitorDetail.tsx) y el operador terminaba
+    // copiando una key vieja mientras la base ya tenía la nueva -- el
+    // servidor la rechazaba como "invalida o ya usada" (findByActivationKey
+    // no la encuentra) aunque la que se acababa de generar fuera correcta.
+    const data = await api.post<{ key: string }>(`/agents/${id}/regenerate-key`);
     refetch();
-    return data.activation_key;
+    return data.key;
   }, [id, refetch]);
 
   const revokeMonitor = useCallback(async () => {

@@ -22,6 +22,11 @@ import { KnexClientRepository } from "../infrastructure/database/knex-client-rep
 import { KnexSystemSettingsReader } from "../infrastructure/adapters/system-settings-reader";
 import { createClientController, type ClientUseCases } from "./client-controller";
 
+// `format:"email"` a secas rechaza "" — y "" es justamente cómo se limpia el
+// campo (ver buildClientUpdates: `?.trim() || null`), así que se acepta
+// explícitamente además del formato válido.
+const emailOrEmpty = { type: "string", anyOf: [{ format: "email" }, { const: "" }] };
+
 const createClientSchema = {
   body: {
     type: "object",
@@ -29,16 +34,11 @@ const createClientSchema = {
     properties: {
       name: { type: "string", minLength: 1, maxLength: 255 },
       contact_name: { type: "string", maxLength: 100 },
-      contact_email: { type: "string", format: "email" },
+      contact_email: emailOrEmpty,
       contact_phone: { type: "string", maxLength: 50 },
     },
   },
 };
-
-// `format:"email"` a secas rechaza "" — y "" es justamente cómo se limpia el
-// campo (ver buildClientUpdates: `?.trim() || null`), así que se acepta
-// explícitamente además del formato válido.
-const emailOrEmpty = { type: "string", anyOf: [{ format: "email" }, { const: "" }] };
 
 const updateClientSchema = {
   body: {
