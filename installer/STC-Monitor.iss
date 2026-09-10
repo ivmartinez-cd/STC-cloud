@@ -40,7 +40,17 @@ Name: "spanish"; MessagesFile: "compiler:Languages\Spanish.isl"
 [Files]
 Source: "..\agent\dist\stc-node.exe";             DestDir: "{app}"; Flags: ignoreversion
 Source: "..\agent\dist\bundle.js";               DestDir: "{app}"; Flags: ignoreversion
-Source: "..\node_modules\better-sqlite3\build\Release\better_sqlite3.node"; DestDir: "{app}"; Flags: ignoreversion
+; better-sqlite3 y "bindings" quedan externalizados del bundle (ver
+; agent\build-sea.js): "bindings" ubica el .node compilado inspeccionando el
+; archivo que lo invoca para encontrar la raiz de SU PROPIO paquete (busca
+; node_modules/better-sqlite3/package.json subiendo directorios) -- necesita
+; el paquete completo ahi, no solo el binario compilado suelto. Y "bindings"
+; en si depende de "file-uri-to-path" -- confirmado faltante en el primer
+; despliegue real (10/09/2026): "Cannot find module 'bindings'" al arrancar
+; el servicio, better-sqlite3\ solo no alcanza.
+Source: "..\node_modules\better-sqlite3\*";  DestDir: "{app}\node_modules\better-sqlite3";  Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "..\node_modules\bindings\*";        DestDir: "{app}\node_modules\bindings";        Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "..\node_modules\file-uri-to-path\*"; DestDir: "{app}\node_modules\file-uri-to-path"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "tools\nssm.exe";                         DestDir: "{app}"; Flags: ignoreversion
 Source: "..\monitor-ui\publish\STC.Monitor.UI.exe"; DestDir: "{app}"; Flags: ignoreversion
 

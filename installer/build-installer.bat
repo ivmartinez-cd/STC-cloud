@@ -210,12 +210,21 @@ echo [5.5/8] Empaquetando actualizacion completa (ZIP)...
 set UPDATE_TEMP=%SCRIPT_DIR%\update_temp
 if exist "!UPDATE_TEMP!" rd /s /q "!UPDATE_TEMP!"
 mkdir "!UPDATE_TEMP!"
-mkdir "!UPDATE_TEMP!\node_modules\better-sqlite3\build\Release"
 
 copy /y "%AGENT_DIR%\dist\stc-node.exe" "!UPDATE_TEMP!\" > nul
 copy /y "%AGENT_DIR%\dist\bundle.js" "!UPDATE_TEMP!\" > nul
 copy /y "%UI_DIR%\publish\STC.Monitor.UI.exe" "!UPDATE_TEMP!\" > nul
-copy /y "%AGENT_DIR%\node_modules\better-sqlite3\build\Release\better_sqlite3.node" "!UPDATE_TEMP!\node_modules\better-sqlite3\build\Release\" > nul
+:: better-sqlite3 y "bindings" quedan externalizados del bundle (ver
+:: agent\build-sea.js): "bindings" ubica el .node compilado inspeccionando el
+:: archivo que lo invoca para encontrar la raiz de SU PROPIO paquete -- hace
+:: falta el paquete completo, no solo el binario compilado suelto. Y
+:: "bindings" en si depende de "file-uri-to-path" -- confirmado faltante en
+:: el primer despliegue real (10/09/2026): "Cannot find module 'bindings'"
+:: al arrancar el servicio. Viven en el node_modules de la RAIZ del monorepo
+:: (workspaces), no en agent\node_modules.
+xcopy "%SCRIPT_DIR%..\node_modules\better-sqlite3" "!UPDATE_TEMP!\node_modules\better-sqlite3\" /E /I /Y /Q > nul
+xcopy "%SCRIPT_DIR%..\node_modules\bindings" "!UPDATE_TEMP!\node_modules\bindings\" /E /I /Y /Q > nul
+xcopy "%SCRIPT_DIR%..\node_modules\file-uri-to-path" "!UPDATE_TEMP!\node_modules\file-uri-to-path\" /E /I /Y /Q > nul
 
 :: Esperar a que Defender/AV libere los archivos recien copiados
 ping -n 4 127.0.0.1 > nul
