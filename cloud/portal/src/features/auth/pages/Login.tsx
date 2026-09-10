@@ -76,7 +76,7 @@ const Login = () => {
   };
 
   return (
-    <div className="grid min-h-screen grid-cols-[repeat(auto-fit,minmax(420px,1fr))] font-sans text-ink-900">
+    <div className="grid min-h-screen grid-cols-1 font-sans text-ink-900 lg:grid-cols-[repeat(auto-fit,minmax(420px,1fr))]">
       <div className="flex min-h-[640px] flex-col bg-panel-dark">
         <div className="flex flex-1 flex-col justify-center gap-[52px] px-[clamp(24px,5vw,52px)] py-12">
           <div className="flex items-center gap-5">
