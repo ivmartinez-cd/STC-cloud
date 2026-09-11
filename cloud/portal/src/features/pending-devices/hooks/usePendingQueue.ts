@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { api } from '../../../shared/lib/api';
 import { useDebounce } from '../../../shared/hooks/useDebounce';
-import { usePageSizeReset } from '../../../shared/hooks/usePageSizeReset';
+import { clampPage } from '../../../shared/lib/clampPage';
 import { useUpdateEffect } from '../../../shared/hooks/useUpdateEffect';
 import type { ClientOption } from '../../../shared/components/DeviceLifecycleModals/types';
 import type { PendingQueueResponse, PendingQueueRow, PendingQueueSegment, PendingQueueSummary, SortDir } from '../types/pendingDevices';
@@ -13,9 +13,10 @@ function parseSegment(v: string | null): PendingQueueSegment {
   return v && (SEGMENTS as string[]).includes(v) ? (v as PendingQueueSegment) : 'todos';
 }
 function parseSortDir(v: string | null): SortDir { return v === 'asc' ? 'asc' : 'desc'; }
+/** `?page=` es 1-based (como se muestra); el estado es 0-based. */
 function parsePage(v: string | null): number {
   const n = Number(v);
-  return Number.isInteger(n) && n > 0 ? n : 0;
+  return Number.isInteger(n) && n > 1 ? n - 1 : 0;
 }
 
 /** Filtro/cliente/orden/página reflejados en la URL — mismo criterio que
@@ -31,7 +32,7 @@ function useUrlSync(q: string, clientId: string, segment: PendingQueueSegment, s
     if (clientId) next.set('client_id', clientId); else next.delete('client_id');
     if (segment !== 'todos') next.set('segment', segment); else next.delete('segment');
     if (sortDir !== 'desc') next.set('dir', sortDir); else next.delete('dir');
-    if (page > 0) next.set('page', String(page)); else next.delete('page');
+    if (page > 0) next.set('page', String(page + 1)); else next.delete('page');
     setSearchParams(next, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [q, clientId, segment, sortDir, page]);
@@ -115,8 +116,9 @@ async function loadRows(st: RowsState, filters: Filters, page: number, pageSize:
 
 /** Página actual — reactiva a filtro/cliente/segmento/orden/página. */
 function useRows(filters: Filters, pageSize: number) {
-  const { effectiveQuery, clientId, segment, sortDir, page } = filters;
+  const { effectiveQuery, clientId, segment, sortDir } = filters;
   const st = useRowsState();
+  const page = clampPage(filters.page, pageSize, st.total);
   const fetchRows = useCallback(
     () => loadRows(st, filters, page, pageSize),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -124,7 +126,7 @@ function useRows(filters: Filters, pageSize: number) {
   );
   useEffect(() => { void fetchRows(); }, [fetchRows]);
   const totalPages = Math.max(1, Math.ceil(st.total / pageSize));
-  return { ...st, totalPages, refetch: fetchRows };
+  return { ...st, totalPages, page, refetch: fetchRows };
 }
 
 /** Tira de métricas — endpoint aparte, loading/error independientes de la tabla. */
@@ -160,7 +162,6 @@ function useClientOptions() {
 export function usePendingQueue(pageSize: number) {
   const filters = useFilters();
   const rows = useRows(filters, pageSize);
-  usePageSizeReset(pageSize, filters.setPage, rows.total);
   return { ...filters, pageSize, ...rows, ...useSummary(), clients: useClientOptions() };
 }
 

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { api } from '../../../shared/lib/api';
 import { useDebounce } from '../../../shared/hooks/useDebounce';
-import { usePageSizeReset } from '../../../shared/hooks/usePageSizeReset';
+import { clampPage } from '../../../shared/lib/clampPage';
 import { useUpdateEffect } from '../../../shared/hooks/useUpdateEffect';
 import type {
   ClientDirectoryResponse, ClientDirectoryRow, ClientPortfolioSummary, ClientSegment, ClientSortField, SortDir,
@@ -20,9 +20,10 @@ function parseSortField(v: string | null): ClientSortField {
 function parseSortDir(v: string | null): SortDir {
   return v === 'asc' ? 'asc' : 'desc';
 }
+/** `?page=` es 1-based (como se muestra); el estado es 0-based. */
 function parsePage(v: string | null): number {
   const n = Number(v);
-  return Number.isInteger(n) && n > 0 ? n : 0;
+  return Number.isInteger(n) && n > 1 ? n - 1 : 0;
 }
 
 /** Filtro/orden/página reflejados en la URL (README: "para poder compartir la
@@ -35,7 +36,7 @@ function useUrlSync(q: string, segment: ClientSegment, sortField: ClientSortFiel
     if (segment !== 'todos') next.set('segment', segment); else next.delete('segment');
     if (sortField !== 'device_count') next.set('sort', sortField); else next.delete('sort');
     if (sortDir !== 'desc') next.set('dir', sortDir); else next.delete('dir');
-    if (page > 0) next.set('page', String(page)); else next.delete('page');
+    if (page > 0) next.set('page', String(page + 1)); else next.delete('page');
     setSearchParams(next, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [q, segment, sortField, sortDir, page]);
@@ -77,11 +78,12 @@ type DirectoryFilters = ReturnType<typeof useDirectoryFilters>;
 
 /** Página actual del listado — reactiva a filtro/orden/página. */
 function useDirectoryRows(filters: DirectoryFilters, pageSize: number) {
-  const { effectiveQuery, segment, sortField, sortDir, page } = filters;
+  const { effectiveQuery, segment, sortField, sortDir } = filters;
   const [rows, setRows] = useState<ClientDirectoryRow[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const page = clampPage(filters.page, pageSize, total);
 
   const fetchDirectory = useCallback(async () => {
     setLoading(true);
@@ -107,7 +109,7 @@ function useDirectoryRows(filters: DirectoryFilters, pageSize: number) {
   const maxDeviceCountOnPage = useMemo(() => rows.reduce((max, r) => Math.max(max, r.device_count), 0), [rows]);
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
-  return { rows, total, totalPages, loading, error, refetch: fetchDirectory, maxDeviceCountOnPage };
+  return { rows, total, totalPages, page, loading, error, refetch: fetchDirectory, maxDeviceCountOnPage };
 }
 
 /** Tira de métricas de cartera — endpoint aparte, loading/error independientes de la tabla. */
@@ -137,7 +139,6 @@ function useDirectorySummary() {
 export function useClientsDirectory(pageSize: number) {
   const filters = useDirectoryFilters();
   const rows = useDirectoryRows(filters, pageSize);
-  usePageSizeReset(pageSize, filters.setPage, rows.total);
   return { ...filters, pageSize, ...rows, ...useDirectorySummary() };
 }
 

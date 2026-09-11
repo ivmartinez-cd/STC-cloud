@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { api } from '../../../shared/lib/api';
 import { useDebounce } from '../../../shared/hooks/useDebounce';
-import { usePageSizeReset } from '../../../shared/hooks/usePageSizeReset';
+import { clampPage } from '../../../shared/lib/clampPage';
 import { useUpdateEffect } from '../../../shared/hooks/useUpdateEffect';
 import type {
   AgentDirectoryResponse, AgentDirectoryRow, AgentFleetSummary, AgentSegment, AgentSignalBucketsResponse, SortDir,
@@ -16,9 +16,10 @@ function parseSegment(v: string | null): AgentSegment {
 function parseSortDir(v: string | null): SortDir {
   return v === 'asc' ? 'asc' : 'desc';
 }
+/** `?page=` es 1-based (como se muestra); el estado es 0-based. */
 function parsePage(v: string | null): number {
   const n = Number(v);
-  return Number.isInteger(n) && n > 0 ? n : 0;
+  return Number.isInteger(n) && n > 1 ? n - 1 : 0;
 }
 
 /** Filtro/orden/página reflejados en la URL (mismo criterio que `/clients`) — valores por defecto se omiten para no ensuciarla. */
@@ -29,7 +30,7 @@ function useUrlSync(q: string, segment: AgentSegment, sortDir: SortDir, page: nu
     if (q) next.set('q', q); else next.delete('q');
     if (segment !== 'todos') next.set('segment', segment); else next.delete('segment');
     if (sortDir !== 'desc') next.set('dir', sortDir); else next.delete('dir');
-    if (page > 0) next.set('page', String(page)); else next.delete('page');
+    if (page > 0) next.set('page', String(page + 1)); else next.delete('page');
     setSearchParams(next, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [q, segment, sortDir, page]);
@@ -63,11 +64,12 @@ type DirectoryFilters = ReturnType<typeof useDirectoryFilters>;
 
 /** Página actual del listado — reactiva a filtro/orden/página. */
 function useDirectoryRows(filters: DirectoryFilters, pageSize: number) {
-  const { effectiveQuery, segment, sortDir, page } = filters;
+  const { effectiveQuery, segment, sortDir } = filters;
   const [rows, setRows] = useState<AgentDirectoryRow[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const page = clampPage(filters.page, pageSize, total);
 
   const fetchDirectory = useCallback(async () => {
     setLoading(true);
@@ -89,7 +91,7 @@ function useDirectoryRows(filters: DirectoryFilters, pageSize: number) {
   useEffect(() => { void fetchDirectory(); }, [fetchDirectory]);
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
-  return { rows, total, totalPages, loading, error, refetch: fetchDirectory };
+  return { rows, total, totalPages, page, loading, error, refetch: fetchDirectory };
 }
 
 /** Tira de 4 métricas de flota — endpoint aparte, loading/error independiente de la tabla. */
@@ -142,7 +144,6 @@ function useSignalBuckets() {
 export function useAgentsDirectory(pageSize: number) {
   const filters = useDirectoryFilters();
   const rows = useDirectoryRows(filters, pageSize);
-  usePageSizeReset(pageSize, filters.setPage, rows.total);
   return { ...filters, pageSize, ...rows, ...useFleetSummary(), ...useSignalBuckets() };
 }
 

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { api } from '../../../shared/lib/api';
 import { useDebounce } from '../../../shared/hooks/useDebounce';
-import { usePageSizeReset } from '../../../shared/hooks/usePageSizeReset';
+import { clampPage } from '../../../shared/lib/clampPage';
 import { useUpdateEffect } from '../../../shared/hooks/useUpdateEffect';
 import type {
   DeviceDirectoryGroup, DeviceDirectoryResponse, DeviceDirectorySegment, DeviceInventorySummary, SortDir,
@@ -16,9 +16,10 @@ function parseSegment(v: string | null): DeviceDirectorySegment {
 function parseSortDir(v: string | null): SortDir {
   return v === 'asc' ? 'asc' : 'desc';
 }
+/** `?page=` es 1-based (como se muestra); el estado es 0-based. */
 function parsePage(v: string | null): number {
   const n = Number(v);
-  return Number.isInteger(n) && n > 0 ? n : 0;
+  return Number.isInteger(n) && n > 1 ? n - 1 : 0;
 }
 
 /** Filtro/orden/página/baja reflejados en la URL — mismo criterio que `useClientsDirectory`. */
@@ -29,7 +30,7 @@ function useUrlSync(q: string, segment: DeviceDirectorySegment, sortDir: SortDir
     if (q) next.set('q', q); else next.delete('q');
     if (segment !== 'todos') next.set('segment', segment); else next.delete('segment');
     if (sortDir !== 'desc') next.set('dir', sortDir); else next.delete('dir');
-    if (page > 0) next.set('page', String(page)); else next.delete('page');
+    if (page > 0) next.set('page', String(page + 1)); else next.delete('page');
     if (includeDecommissioned) next.set('baja', '1'); else next.delete('baja');
     setSearchParams(next, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -95,8 +96,9 @@ function useDirectoryRowsState() {
 
 /** Página actual (grupos ya armados server-side) — reactiva a filtro/orden/página/baja. */
 function useDirectoryRows(filters: DirectoryFilters, pageSize: number) {
-  const { effectiveQuery, segment, sortDir, page, includeDecommissioned } = filters;
+  const { effectiveQuery, segment, sortDir, includeDecommissioned } = filters;
   const st = useDirectoryRowsState();
+  const page = clampPage(filters.page, pageSize, st.total);
 
   const fetchDirectory = useCallback(async () => {
     st.setLoading(true);
@@ -117,7 +119,7 @@ function useDirectoryRows(filters: DirectoryFilters, pageSize: number) {
 
   const totalPages = Math.max(1, Math.ceil(st.total / pageSize));
   const rowCount = useMemo(() => st.groups.reduce((sum, g) => sum + g.rows.length, 0), [st.groups]);
-  return { ...st, totalPages, rowCount, clientCount: st.groups.length, refetch: fetchDirectory };
+  return { ...st, totalPages, page, rowCount, clientCount: st.groups.length, refetch: fetchDirectory };
 }
 
 /** Tira de métricas del inventario — endpoint aparte, loading/error independientes de la tabla. */
@@ -147,7 +149,6 @@ function useDirectorySummary() {
 export function useDeviceDirectory(pageSize: number) {
   const filters = useDirectoryFilters();
   const rows = useDirectoryRows(filters, pageSize);
-  usePageSizeReset(pageSize, filters.setPage, rows.total);
   return { ...filters, pageSize, ...rows, ...useDirectorySummary() };
 }
 

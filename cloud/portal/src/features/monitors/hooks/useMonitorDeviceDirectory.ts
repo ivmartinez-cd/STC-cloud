@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { api } from '../../../shared/lib/api';
 import { useDebounce } from '../../../shared/hooks/useDebounce';
-import { usePageSizeReset } from '../../../shared/hooks/usePageSizeReset';
+import { clampPage } from '../../../shared/lib/clampPage';
 import { useUpdateEffect } from '../../../shared/hooks/useUpdateEffect';
 import type {
   AgentDeviceDirectoryResponse, AgentDeviceDirectoryRow, AgentDeviceSegment, AgentDeviceSortField, SortDir,
@@ -25,9 +25,10 @@ function parseSortField(v: string | null): AgentDeviceSortField {
 function parseSortDir(v: string | null): SortDir {
   return v === 'asc' ? 'asc' : 'desc';
 }
+/** `?page=` es 1-based (como se muestra); el estado es 0-based. */
 function parsePage(v: string | null): number {
   const n = Number(v);
-  return Number.isInteger(n) && n > 0 ? n : 0;
+  return Number.isInteger(n) && n > 1 ? n - 1 : 0;
 }
 
 /** Filtro/orden/página reflejados en la URL (README: "Tab, filtro, orden y página
@@ -47,7 +48,7 @@ function useUrlSync(active: boolean, q: string, segment: AgentDeviceSegment, sor
     if (segment !== 'todos') next.set('segment', segment); else next.delete('segment');
     if (sortField !== 'alerts_count') next.set('sort', sortField); else next.delete('sort');
     if (sortDir !== 'desc') next.set('dir', sortDir); else next.delete('dir');
-    if (page > 0) next.set('page', String(page)); else next.delete('page');
+    if (page > 0) next.set('page', String(page + 1)); else next.delete('page');
     if (next.toString() === current) return;
     setSearchParams(next, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -85,11 +86,12 @@ function useDeviceFilters(active: boolean) {
 type DeviceFilters = ReturnType<typeof useDeviceFilters>;
 
 function useDeviceRows(agentId: string, filters: DeviceFilters, pageSize: number) {
-  const { effectiveQuery, segment, sortField, sortDir, page } = filters;
+  const { effectiveQuery, segment, sortField, sortDir } = filters;
   const [rows, setRows] = useState<AgentDeviceDirectoryRow[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const page = clampPage(filters.page, pageSize, total);
 
   const fetchDirectory = useCallback(async () => {
     setLoading(true);
@@ -113,13 +115,12 @@ function useDeviceRows(agentId: string, filters: DeviceFilters, pageSize: number
   useEffect(() => { void fetchDirectory(); }, [fetchDirectory]);
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
-  return { rows, total, totalPages, pageSize, loading, error, refetch: fetchDirectory };
+  return { rows, total, totalPages, pageSize, page, loading, error, refetch: fetchDirectory };
 }
 
 export function useMonitorDeviceDirectory(agentId: string, active: boolean, pageSize: number) {
   const filters = useDeviceFilters(active);
   const rows = useDeviceRows(agentId, filters, pageSize);
-  usePageSizeReset(pageSize, filters.setPage, rows.total);
   const hasActiveFilters = useMemo(() => filters.effectiveQuery !== '' || filters.segment !== 'todos', [filters.effectiveQuery, filters.segment]);
   return { ...filters, ...rows, hasActiveFilters };
 }
