@@ -1,4 +1,4 @@
-import type { IpRange, BusinessHoursConfig } from '../agents';
+import type { IpRange, BusinessHoursConfig, MonitorIntervalsConfig } from '../agents';
 import type { MaskedSnmpCredential } from './snmp';
 
 export interface MonitorData {
@@ -18,6 +18,7 @@ export interface MonitorData {
     snmp_credentials?: MaskedSnmpCredential[];
     snmp_credentials_rev?: number;
     business_hours?: BusinessHoursConfig;
+    monitor_intervals?: MonitorIntervalsConfig;
   };
   version?: string;
   host_name?: string;
@@ -33,6 +34,7 @@ export interface EditFormData {
   tonerWarningThreshold: number;
   tonerCriticalThreshold: number;
   businessHours: BusinessHoursConfig;
+  monitorIntervals: MonitorIntervalsConfig;
 }
 
 export interface Monitor {

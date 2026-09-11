@@ -8,7 +8,7 @@ import type { AgentConfigUpdate, AuditContext } from "../../domain/entities/agen
 import type { AgentRepository } from "../../domain/repositories/agent-repository";
 import {
   buildConfigUpdates, buildDevicePolicies, buildHeartbeatRanges, parseIpRangeSpecs, parseStoredCredentials,
-  resolveBusinessHours,
+  resolveBusinessHours, resolveMonitorIntervals,
 } from "../../domain/services/agent-config-view";
 import type { AuditLogWriter } from "../ports/audit-log-writer";
 import type { ReplaceSnmpCredentialsResult, UpdateConfigResult } from "../dtos/agent-dtos";
@@ -34,10 +34,11 @@ export class UpdateAgentConfigUseCase {
 
 /**
  * Config que alimenta el HEARTBEAT del agente: `ip_ranges` COMPILADO a pares
- * planos, `ip_hosts`, `business_hours` resuelto al default, `snmp_community`
- * legacy, `snmp_credentials` descifradas (NUNCA para el portal — ver
- * `GetSnmpCredentialsMaskedUseCase`) y `device_policies`. El heartbeat nunca
- * puede fallar por el descifrado: si revienta se omite el campo.
+ * planos, `ip_hosts`, `business_hours` y `monitor_intervals` resueltos al
+ * default, `snmp_community` legacy, `snmp_credentials` descifradas (NUNCA
+ * para el portal — ver `GetSnmpCredentialsMaskedUseCase`) y
+ * `device_policies`. El heartbeat nunca puede fallar por el descifrado: si
+ * revienta se omite el campo.
  */
 export class GetAgentHeartbeatConfigUseCase {
   constructor(private readonly agents: AgentRepository) {}
@@ -56,6 +57,7 @@ export class GetAgentHeartbeatConfigUseCase {
       toner_warning_threshold: row.toner_warning_threshold,
       toner_critical_threshold: row.toner_critical_threshold,
       business_hours: resolveBusinessHours(row.business_hours),
+      monitor_intervals: resolveMonitorIntervals(row.monitor_intervals),
     };
     if (ip_hosts.length > 0) config.ip_hosts = ip_hosts;
     try {

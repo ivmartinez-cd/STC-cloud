@@ -4,6 +4,7 @@ import {
   type CompiledRange, type HostSpec, type IpRangeSpecInput,
 } from "../../../../shared/domain/ip-range-spec";
 import { DEFAULT_BUSINESS_HOURS, validateBusinessHours, type BusinessHoursConfig } from "../../../../shared/domain/business-hours";
+import { DEFAULT_MONITOR_INTERVALS, validateMonitorIntervals, type MonitorIntervalsConfig } from "../../../../shared/domain/monitor-intervals";
 import type { StoredCredential } from "../../../../shared/domain/snmp-credential";
 import type { AgentConfigUpdate } from "../entities/agent";
 import { parseJsonColumn } from "./supplies-details";
@@ -41,6 +42,10 @@ export function buildConfigUpdates(newConfig: AgentConfigUpdate): { updates: Rec
     const validated = validateBusinessHours(newConfig.business_hours);
     updates.business_hours = validated ? JSON.stringify(validated) : null;
   }
+  if (newConfig.monitor_intervals !== undefined) {
+    const validated = validateMonitorIntervals(newConfig.monitor_intervals);
+    updates.monitor_intervals = validated ? JSON.stringify(validated) : null;
+  }
   return { updates, warnings };
 }
 
@@ -53,6 +58,7 @@ export interface AgentConfigRow {
   toner_critical_threshold: number | null;
   snmp_credentials: unknown;
   business_hours: unknown;
+  monitor_intervals: unknown;
 }
 
 export interface DevicePolicyRow {
@@ -96,6 +102,10 @@ export function parseIpRangeSpecs(value: unknown): IpRangeSpecInput[] {
 
 export function resolveBusinessHours(value: unknown): BusinessHoursConfig {
   return parseJsonColumn<BusinessHoursConfig>(value) ?? DEFAULT_BUSINESS_HOURS;
+}
+
+export function resolveMonitorIntervals(value: unknown): MonitorIntervalsConfig {
+  return parseJsonColumn<MonitorIntervalsConfig>(value) ?? DEFAULT_MONITOR_INTERVALS;
 }
 
 /** `snmp_community` legacy SIEMPRE viaja (agentes sin actualizar sólo entienden este campo). */

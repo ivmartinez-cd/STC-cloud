@@ -1,5 +1,6 @@
 import { log } from './Logger';
-import { isBusinessHours, INTERVALS } from './BusinessHours';
+import { isBusinessHours } from './BusinessHours';
+import { resolveIntervals } from './MonitorIntervals';
 import type { ScanService } from './ScanService';
 import type { AgentConfig } from './config';
 
@@ -55,12 +56,22 @@ export class TaskScheduler {
   }
 
   /** Corre como mucho UNA tarea de red por tick (`isNetworkTaskRunning` las serializa) —
-   *  factorizado para no repetir el try/set-lastTime/finally cuatro veces. */
-  private async runTask(task: () => Promise<void>, onDone: () => void): Promise<void> {
+   *  factorizado para no repetir el try/set-lastTime/finally cuatro veces.
+   *
+   *  El reloj de cada loop se resetea ANTES de correr la tarea (`onStart`),
+   *  no al terminarla: mide "cuánto pasó desde que arrancó", igual que
+   *  discovery ya hacía con `lastDiscoveryTime` (ver el comentario grande más
+   *  abajo, que cita la regla de HP SDS). Antes sólo discovery se comportaba
+   *  así — meter/supplies/alert reseteaban el reloj en el callback posterior
+   *  al `await task()`, así que si algún ciclo alguna vez tardara más que su
+   *  propio intervalo el siguiente arrancaba recién después de esperar el
+   *  intervalo COMPLETO de nuevo, en vez de encadenarse de inmediato. Con
+   *  `onStart` los 4 loops quedan simétricos. */
+  private async runTask(task: () => Promise<void>, onStart: () => void): Promise<void> {
     this.isNetworkTaskRunning = true;
+    onStart();
     try {
       await task();
-      onDone();
     } finally {
       this.isNetworkTaskRunning = false;
     }
@@ -74,11 +85,12 @@ export class TaskScheduler {
 
     const now = Date.now();
     const biz = isBusinessHours(this.deps.getConfig().businessHours);
+    const intervals = resolveIntervals(this.deps.getConfig().monitorIntervals);
 
-    const alertInterval     = biz ? INTERVALS.alert.biz : INTERVALS.alert.off;
-    const discoveryInterval = biz ? INTERVALS.discovery.biz : INTERVALS.discovery.off;
-    const meterInterval     = biz ? INTERVALS.meter.biz : INTERVALS.meter.off;
-    const suppliesInterval  = biz ? INTERVALS.supplies.biz : INTERVALS.supplies.off;
+    const alertInterval     = biz ? intervals.alert.biz : intervals.alert.off;
+    const discoveryInterval = biz ? intervals.discovery.biz : intervals.discovery.off;
+    const meterInterval     = biz ? intervals.meter.biz : intervals.meter.off;
+    const suppliesInterval  = biz ? intervals.supplies.biz : intervals.supplies.off;
 
     // Orden de prioridad: alert > meter > supplies > discovery.
     //
@@ -93,18 +105,18 @@ export class TaskScheduler {
     // vuelta, que antes resuelve los hosts puntuales en secuencia, acotado por
     // PINNED_BUDGET_MS.
     if (now - this.lastAlertTime >= alertInterval) {
-      await this.runTask(() => this.deps.scanService.runAlertTask(), () => { this.lastAlertTime = Date.now(); });
+      await this.runTask(() => this.deps.scanService.runAlertTask(), () => { this.lastAlertTime = now; });
     }
     else if (now - this.lastMeterTime >= meterInterval) {
-      await this.runTask(() => this.deps.scanService.runMeterTask(), () => { this.lastMeterTime = Date.now(); });
+      await this.runTask(() => this.deps.scanService.runMeterTask(), () => { this.lastMeterTime = now; });
     }
     else if (now - this.lastSuppliesTime >= suppliesInterval) {
-      await this.runTask(() => this.deps.scanService.runSuppliesTask(), () => { this.lastSuppliesTime = Date.now(); });
+      await this.runTask(() => this.deps.scanService.runSuppliesTask(), () => { this.lastSuppliesTime = now; });
     }
     else {
-      // El intervalo de discovery (10 min laboral / 60 fuera) gatea el ARRANQUE
-      // DE UNA VUELTA NUEVA, no cada chunk: con una vuelta abierta siempre hay
-      // chunk elegible, así el barrido avanza hasta cerrarla.
+      // El intervalo de discovery (10 min laboral / 60 fuera, default) gatea el
+      // ARRANQUE DE UNA VUELTA NUEVA, no cada chunk: con una vuelta abierta
+      // siempre hay chunk elegible, así el barrido avanza hasta cerrarla.
       //
       // Por eso el reloj se actualiza SÓLO cuando el chunk abre la vuelta: mide
       // desde el arranque, no desde el último chunk. Es la regla que HP SDS
@@ -119,7 +131,7 @@ export class TaskScheduler {
       if (lapOpen || now - this.lastDiscoveryTime >= discoveryInterval) {
         await this.runTask(
           () => this.deps.scanService.scan(),
-          () => { if (!lapOpen) this.lastDiscoveryTime = Date.now(); },
+          () => { if (!lapOpen) this.lastDiscoveryTime = now; },
         );
       }
     }

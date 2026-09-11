@@ -18,7 +18,7 @@ const LIST_COLUMNS = [
   "agents.uptime", "agents.status", "agents.last_seen", "agents.client_id", "agents.created_at", "agents.remote_ews_enabled",
 ];
 
-const CONFIG_COLUMNS = ["agents.ip_ranges", "agents.snmp_community", "agents.toner_warning_threshold", "agents.toner_critical_threshold", "agents.business_hours"];
+const CONFIG_COLUMNS = ["agents.ip_ranges", "agents.snmp_community", "agents.toner_warning_threshold", "agents.toner_critical_threshold", "agents.business_hours", "agents.monitor_intervals"];
 
 // Conteos de dispositivos del agente por estado, como SQL literal (sin
 // interpolación: ni las condiciones ni los alias son variables).

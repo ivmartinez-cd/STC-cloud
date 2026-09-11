@@ -2,6 +2,7 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type Redis from "ioredis";
 import { IpRangeValidationError } from "../../../shared/domain/ip-range-spec";
 import { BusinessHoursValidationError } from "../../../shared/domain/business-hours";
+import { MonitorIntervalsValidationError } from "../../../shared/domain/monitor-intervals";
 import { MissingEncryptionKeyError } from "../../../services/cryptoService";
 import { SnmpCredentialValidationError } from "../../../services/snmpCredentials";
 import { getClientIp } from "../../../api/utils/ip";
@@ -24,7 +25,7 @@ async function replyingAgentErrors<T>(reply: FastifyReply, fn: () => Promise<T>)
   try {
     return await fn();
   } catch (e: unknown) {
-    if (e instanceof IpRangeValidationError || e instanceof BusinessHoursValidationError) return reply.status(400).send({ error: e.message, field: e.field });
+    if (e instanceof IpRangeValidationError || e instanceof BusinessHoursValidationError || e instanceof MonitorIntervalsValidationError) return reply.status(400).send({ error: e.message, field: e.field });
     if (e instanceof SnmpCredentialValidationError) return reply.status(400).send({ error: e.message, field: e.field });
     if (e instanceof MissingEncryptionKeyError) return reply.status(503).send({ error: e.message, code: e.code });
     if (e instanceof AgentNotFoundError || e instanceof AgentDeleteConflictError || e instanceof RemoteActionError) {

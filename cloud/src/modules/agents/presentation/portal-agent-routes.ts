@@ -58,6 +58,23 @@ const businessHoursSchema = {
   },
 };
 
+/** Sólo forma/tipo (`null` explícito = reset al default); la regla de negocio
+ *  (off >= biz, rango 1-1440, los 4 loops obligatorios si viene el objeto)
+ *  vive en `validateMonitorIntervals()`. */
+const intervalPairSchema = {
+  type: "object",
+  properties: { biz: { type: "integer" }, off: { type: "integer" } },
+};
+const monitorIntervalsSchema = {
+  type: ["object", "null"],
+  properties: {
+    alert: intervalPairSchema,
+    discovery: intervalPairSchema,
+    meter: intervalPairSchema,
+    supplies: intervalPairSchema,
+  },
+};
+
 const createAgentSchema = {
   body: {
     type: "object", required: ["clientId", "name"],
@@ -83,6 +100,7 @@ const updateConfigSchema = {
       toner_warning_threshold: { type: "integer", minimum: 0, maximum: 100 },
       toner_critical_threshold: { type: "integer", minimum: 0, maximum: 100 },
       business_hours: businessHoursSchema,
+      monitor_intervals: monitorIntervalsSchema,
     },
   },
 };

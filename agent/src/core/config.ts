@@ -6,6 +6,7 @@ import { execSync } from 'child_process';
 import { SecurityUtils } from './security';
 import type { SnmpCredential } from '../capture/transport/snmp';
 import type { BusinessHoursConfig } from './BusinessHours';
+import type { MonitorIntervalsConfig } from './MonitorIntervals';
 
 export interface IpRange {
   start: string;
@@ -56,6 +57,11 @@ export interface AgentConfig {
    *  `DEFAULT_BUSINESS_HOURS` (Argentina, L-V, 8-18) — mismo comportamiento
    *  hardcodeado de siempre, `isBusinessHours()` ya resuelve el fallback. */
   businessHours?: BusinessHoursConfig | null;
+  /** Intervalos de los 4 loops de monitoreo (alert/discovery/meter/supplies),
+   *  personalizables por agente — mismo patrón que `businessHours`. Ausente/null
+   *  = `DEFAULT_MONITOR_INTERVALS` (`resolveIntervals()` ya resuelve el
+   *  fallback), cero cambio de comportamiento para agentes sin configurar. */
+  monitorIntervals?: MonitorIntervalsConfig | null;
   /** Fase 10 del gap analysis vs HP SDS — sólo entradas de equipos con
    *  `monitor_state <> 'full'` o `registration_state = 'ignored'`. Ausente =
    *  ninguno (comportamiento de siempre, todo 'full'). Ver `ScanService.

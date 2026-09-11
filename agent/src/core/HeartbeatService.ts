@@ -11,6 +11,7 @@ import type { CommandHandler, CommandResult } from './CommandHandler';
 import { VERSION } from './version';
 import type { SnmpCredential } from '../capture/transport/snmp';
 import type { BusinessHoursConfig } from './BusinessHours';
+import type { MonitorIntervalsConfig } from './MonitorIntervals';
 import { setConfiguredTimezone } from './TimeZoneUtils';
 
 export interface RemoteConfigPayload {
@@ -31,6 +32,9 @@ export interface RemoteConfigPayload {
    *  cloud nunca manda `null` crudo, ver `agentService.getConfig()` — pero
    *  el tipo lo admite por si un futuro cambio lo necesita). */
   business_hours?: BusinessHoursConfig | null;
+  /** Intervalos de los 4 loops de monitoreo — mismo patrón que `business_hours`:
+   *  AUSENTE = "sin novedad", `null` = reset al default hardcodeado. */
+  monitor_intervals?: MonitorIntervalsConfig | null;
   /** Fase 10 del gap analysis vs HP SDS — mismo patrón que los campos de
    *  arriba: AUSENTE = "sin novedad", lista (incluso vacía) = reemplazo
    *  completo. */
@@ -209,6 +213,14 @@ export class HeartbeatService {
       // Se aplica siempre (no sólo si `changed`) para que Logger/LogTailer
       // usen la TZ nueva desde el próximo log, sin esperar un restart.
       setConfiguredTimezone(remote.business_hours?.timezone ?? null);
+    }
+
+    if (remote.monitor_intervals !== undefined) {
+      if (JSON.stringify(remote.monitor_intervals) !== JSON.stringify(config.monitorIntervals)) {
+        log('INFO', `Intervalos de monitoreo actualizados: ${JSON.stringify(remote.monitor_intervals)}.`);
+        config.monitorIntervals = remote.monitor_intervals;
+        changed = true;
+      }
     }
 
     if (changed) {

@@ -1,5 +1,6 @@
 import type { IpRangeSpecInput } from "../../../../shared/domain/ip-range-spec";
 import type { BusinessHoursConfig } from "../../../../shared/domain/business-hours";
+import type { MonitorIntervalsConfig } from "../../../../shared/domain/monitor-intervals";
 
 /**
  * Tipos del dominio `agents` (agentes DCA / monitores). Los payloads del
@@ -31,6 +32,8 @@ export interface AgentConfigUpdate {
   toner_critical_threshold?: number;
   /** `null` = reset explícito al default hardcodeado; `undefined` = no tocar. */
   business_hours?: BusinessHoursConfig | null;
+  /** Intervalos de los 4 loops de monitoreo — mismo criterio que `business_hours`. */
+  monitor_intervals?: MonitorIntervalsConfig | null;
 }
 
 /** Dispositivo entrante desde el agente DCA durante el registro inicial. */

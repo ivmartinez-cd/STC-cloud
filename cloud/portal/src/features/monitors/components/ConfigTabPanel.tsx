@@ -1,10 +1,10 @@
-import { useState } from 'react';
-import { Loader2, ShieldOff } from 'lucide-react';
+import { Fragment, useState } from 'react';
+import { ChevronDown, ChevronUp, Loader2, ShieldOff } from 'lucide-react';
 import { useToast } from '../../../store/ToastContext';
 import IpRangesEditor from './IpRangesEditor';
 import SnmpCredentialsPanel from './SnmpCredentialsPanel';
 import type { EditFormData, MonitorData, SnmpCredentialInput } from '../../../shared/types/monitor';
-import { DEFAULT_BUSINESS_HOURS } from '../../../shared/types/agents';
+import { DEFAULT_BUSINESS_HOURS, DEFAULT_MONITOR_INTERVALS, type MonitorIntervalsConfig } from '../../../shared/types/agents';
 
 interface ConfigTabPanelProps {
   monitor: MonitorData;
@@ -36,6 +36,17 @@ const COMMON_TIMEZONES = [
 const LABEL = 'mb-1.5 block font-montserrat text-[8.5px] font-bold uppercase tracking-[.13em] text-ink-300';
 const INPUT = 'w-full rounded-[3px] border border-line-300 bg-white px-3 py-2.5 font-sans text-[13px] text-ink-900 outline-none focus:border-brand';
 
+/** Los 4 loops de monitoreo del agente, en el orden de prioridad real del
+ *  `TaskScheduler` (alert > meter > supplies > discovery) — no el de la tabla
+ *  del White Paper de HP SDS, para que coincida con lo que el operador ve
+ *  correr primero en los logs. */
+const INTERVAL_ROWS: { key: keyof MonitorIntervalsConfig; label: string }[] = [
+  { key: 'alert', label: 'Alertas' },
+  { key: 'meter', label: 'Contadores' },
+  { key: 'supplies', label: 'Consumibles y bandejas' },
+  { key: 'discovery', label: 'Identidad (descubrimiento)' },
+];
+
 function formFromMonitor(monitor: MonitorData): EditFormData {
   // `MonitorData.config.ip_ranges` es siempre un array ya parseado — la
   // columna `agents.ip_ranges` es `jsonb`, node-pg la devuelve parseada
@@ -49,6 +60,7 @@ function formFromMonitor(monitor: MonitorData): EditFormData {
     tonerWarningThreshold: monitor.config?.toner_warning_threshold ?? 20,
     tonerCriticalThreshold: monitor.config?.toner_critical_threshold ?? 10,
     businessHours: monitor.config?.business_hours ?? DEFAULT_BUSINESS_HOURS,
+    monitorIntervals: monitor.config?.monitor_intervals ?? DEFAULT_MONITOR_INTERVALS,
   };
 }
 
@@ -68,15 +80,34 @@ function validateForm(form: EditFormData, showToast: (msg: string, kind: 'error'
     showToast('La hora de inicio del horario laboral debe ser menor que la de fin', 'warning');
     return false;
   }
+  for (const { key, label } of INTERVAL_ROWS) {
+    const { biz, off } = form.monitorIntervals[key];
+    if (!Number.isInteger(biz) || biz < 1 || !Number.isInteger(off) || off < 1) {
+      showToast(`Frecuencia de monitoreo — "${label}": los minutos deben ser enteros de al menos 1`, 'warning');
+      return false;
+    }
+    if (off < biz) {
+      showToast(`Frecuencia de monitoreo — "${label}": fuera de horario no puede ser más rápido que en horario laboral`, 'warning');
+      return false;
+    }
+  }
   return true;
 }
 
 export default function ConfigTabPanel({ monitor, onSave, onSaveSnmpCredentials, onRequestRevoke }: ConfigTabPanelProps) {
   const [form, setForm] = useState<EditFormData>(() => formFromMonitor(monitor));
   const [saving, setSaving] = useState(false);
+  // Colapsado por default: son 8 números que casi nadie toca (el operador
+  // típico deja los valores de HP SDS) — mostrarlos siempre habría forzado
+  // scroll en 1920x900 (ver Portal viewport-fit pattern) en una columna que
+  // ya tiene Umbrales + Horario laboral.
+  const [showIntervals, setShowIntervals] = useState(false);
   const { showToast } = useToast();
 
   const set = (key: keyof EditFormData, value: string | number) => setForm(prev => ({ ...prev, [key]: value }));
+  // Nombre explícito para no sombrear el `setInterval` global (no es un timer).
+  const setLoopInterval = (loop: keyof MonitorIntervalsConfig, field: 'biz' | 'off', value: number) =>
+    setForm(prev => ({ ...prev, monitorIntervals: { ...prev.monitorIntervals, [loop]: { ...prev.monitorIntervals[loop], [field]: value } } }));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -179,6 +210,46 @@ export default function ConfigTabPanel({ monitor, onSave, onSaveSnmpCredentials,
               })}
             </div>
           </div>
+        </div>
+
+        <div className="rounded-[5px] border border-line-100 bg-white p-5 short:p-4">
+          <button
+            type="button" onClick={() => setShowIntervals(s => !s)}
+            className="flex w-full items-center justify-between border-b border-line-150 pb-3.5 text-left"
+          >
+            <span className="font-montserrat text-[9px] font-bold uppercase tracking-[.15em] text-ink-600">Frecuencia de monitoreo</span>
+            {showIntervals ? <ChevronUp size={14} className="text-ink-300" /> : <ChevronDown size={14} className="text-ink-300" />}
+          </button>
+          {showIntervals && (
+            <div className="mt-4 space-y-3">
+              <p className="font-sans text-[11.5px] leading-[1.5] text-ink-300 short:hidden">
+                Cada cuánto el agente consulta cada tipo de dato, en minutos. &quot;Fuera de horario&quot; no puede ser más rápido que &quot;horario laboral&quot;.
+              </p>
+              <div className="grid grid-cols-[1fr_64px_64px] items-center gap-x-2.5 gap-y-2">
+                <span />
+                <span className={`${LABEL} mb-0 text-center`}>Laboral</span>
+                <span className={`${LABEL} mb-0 text-center`}>Fuera</span>
+                {INTERVAL_ROWS.map(({ key, label }) => (
+                  <Fragment key={key}>
+                    <span className="font-sans text-[12px] text-ink-700">{label}</span>
+                    <input
+                      type="number" min={1} max={1440} value={form.monitorIntervals[key].biz}
+                      onChange={e => setLoopInterval(key, 'biz', parseInt(e.target.value, 10) || 1)}
+                      className={`${INPUT} px-2 py-1.5 text-center font-mono text-[12px]`}
+                    />
+                    <input
+                      type="number" min={1} max={1440} value={form.monitorIntervals[key].off}
+                      onChange={e => setLoopInterval(key, 'off', parseInt(e.target.value, 10) || 1)}
+                      className={`${INPUT} px-2 py-1.5 text-center font-mono text-[12px]`}
+                    />
+                  </Fragment>
+                ))}
+              </div>
+              <p className="font-sans text-[10.5px] leading-[1.4] text-ink-300 short:hidden">
+                Default (HP SDS): alertas 3/15 · contadores 20/240 · consumibles y bandejas 60/240 · identidad 10/60.
+              </p>
+            </div>
+          )}
         </div>
         </div>
 

@@ -11,7 +11,10 @@ import { CHUNK_BUDGET_MS, CHUNK_MAX_IPS, PINNED_BUDGET_MS, ScanService, buildDis
 import { CommandHandler } from '../core/CommandHandler';
 import { TaskScheduler } from '../core/TaskScheduler';
 import { fingerprintRanges } from '../core/DiscoveryCursor';
-import { INTERVALS, DEFAULT_BUSINESS_HOURS } from '../core/BusinessHours';
+import { DEFAULT_BUSINESS_HOURS } from '../core/BusinessHours';
+import { resolveIntervals } from '../core/MonitorIntervals';
+
+const INTERVALS = resolveIntervals(undefined);
 import type { ScanState } from '../sync/database';
 import type { AgentConfig, IpHost, IpRange } from '../core/config';
 

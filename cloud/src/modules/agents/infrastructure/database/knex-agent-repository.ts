@@ -58,7 +58,7 @@ export class KnexAgentRepository implements AgentRepository {
 
   async getConfigRow(id: string): Promise<AgentConfigRow | null> {
     return (await this.db("agents").where({ id }).select(
-      "ip_ranges", "snmp_community", "scan_interval_minutes", "toner_warning_threshold", "toner_critical_threshold", "snmp_credentials", "business_hours"
+      "ip_ranges", "snmp_community", "scan_interval_minutes", "toner_warning_threshold", "toner_critical_threshold", "snmp_credentials", "business_hours", "monitor_intervals"
     ).first()) ?? null;
   }
 

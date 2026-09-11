@@ -96,6 +96,7 @@ export function useMonitorDetail(id: string) {
       toner_warning_threshold: form.tonerWarningThreshold,
       toner_critical_threshold: form.tonerCriticalThreshold,
       business_hours: form.businessHours,
+      monitor_intervals: form.monitorIntervals,
     });
     showToast('Configuración actualizada correctamente', 'success');
     // Warnings NO bloqueantes de validateIpRangeSpecs (ej. rango con IP

@@ -65,6 +65,30 @@ export const DEFAULT_BUSINESS_HOURS: BusinessHoursConfig = {
   end_hour: 18,
 };
 
+/** Un loop de monitoreo (minutos en/fuera de horario laboral). */
+export type IntervalPair = { biz: number; off: number };
+
+/**
+ * Intervalos de los 4 loops de monitoreo del agente (Alert/Identity/Meter/
+ * Consumables), personalizables por agente. Espejo del lado cloud
+ * (`shared/domain/monitor-intervals.ts`). Siempre llega resuelto (nunca
+ * `null`) desde `GET /agents/:id`/`GET /agents/:id/config` — el cloud aplica
+ * el default hardcodeado ahí mismo (White Paper "Monitoring Loops" de HP SDS).
+ */
+export type MonitorIntervalsConfig = {
+  alert: IntervalPair;
+  discovery: IntervalPair;
+  meter: IntervalPair;
+  supplies: IntervalPair;
+}
+
+export const DEFAULT_MONITOR_INTERVALS: MonitorIntervalsConfig = {
+  alert:     { biz: 3,  off: 15 },
+  discovery: { biz: 10, off: 60 },
+  meter:     { biz: 20, off: 240 },
+  supplies:  { biz: 60, off: 240 },
+};
+
 export type AgentConfig = {
   ip_ranges: IpRange[];
   snmp_community: string;
@@ -73,6 +97,7 @@ export type AgentConfig = {
    *  no hay ninguna credencial adicional configurada. */
   snmp_credentials?: unknown[];
   business_hours?: BusinessHoursConfig;
+  monitor_intervals?: MonitorIntervalsConfig;
 }
 
 export interface Client { id: string; name: string }

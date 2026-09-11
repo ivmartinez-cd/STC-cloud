@@ -3,19 +3,12 @@
 // Sin config (agente sin actualizar, o cloud sin configurar): default
 // hardcodeado de siempre — Mon-Fri 08:00-18:00 Argentina time — cero cambio
 // de comportamiento.
-
-export const INTERVALS = {
-  discovery: { biz: 10 * 60_000,       off: 60 * 60_000 },
-  meter:     { biz: 20 * 60_000,       off: 4 * 60 * 60_000 },
-  supplies:  { biz: 60 * 60_000,       off: 4 * 60 * 60_000 },
-  // Fase 11 del gap analysis vs HP SDS ("loop dedicado 3/15") — valores
-  // EXACTOS de la comparativa (§2.1: "Alert loop 3/15"), mucho más rápido
-  // que el loop de consumibles (60/240) donde vivían mezcladas hasta ahora.
-  // A diferencia de discovery/meter/supplies, acá el fuera-de-horario NO
-  // cae a 4h — 15 min sigue siendo el número de SDS, una alerta de "atasco"
-  // real no debería tardar horas en aparecer aunque sea de noche.
-  alert:     { biz: 3 * 60_000,        off: 15 * 60_000 },
-} as const;
+//
+// Los intervalos de los 4 loops de monitoreo (antes `INTERVALS`, definidos
+// acá mismo) se movieron a `MonitorIntervals.ts` — dejaron de ser una
+// constante fija: son personalizables por agente, con el mismo patrón que
+// el horario laboral de abajo (`resolveIntervals()` allá es el equivalente
+// de `isBusinessHours()` acá).
 
 export interface BusinessHoursConfig {
   /** IANA TZ, ej. "America/Argentina/Buenos_Aires", "America/Santiago". */

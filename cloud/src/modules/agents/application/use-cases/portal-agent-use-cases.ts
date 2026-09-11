@@ -2,7 +2,7 @@ import type { MaskedCredential } from "../../../../services/snmpCredentials";
 import { logger } from "../../../../logger";
 import type { AgentScope } from "../../domain/entities/agent";
 import type { AgentPortalRepository } from "../../domain/repositories/agent-portal-repository";
-import { parseIpRangeSpecs, resolveBusinessHours } from "../../domain/services/agent-config-view";
+import { parseIpRangeSpecs, resolveBusinessHours, resolveMonitorIntervals } from "../../domain/services/agent-config-view";
 import type { AuditLogWriter } from "../ports/audit-log-writer";
 import type { Actor } from "../dtos/agent-dtos";
 import { AppError } from "../../../../shared/domain/errors";
@@ -50,6 +50,7 @@ export class GetAgentDetailUseCase {
         snmp_credentials: masked?.credentials ?? [],
         snmp_credentials_rev: masked?.rev ?? 0,
         business_hours: safeBusinessHours(agent),
+        monitor_intervals: safeMonitorIntervals(agent),
       },
     };
   }
@@ -61,6 +62,10 @@ function safeParseIpRanges(agent: Record<string, unknown>): unknown[] {
 
 function safeBusinessHours(agent: Record<string, unknown>) {
   try { return resolveBusinessHours(agent.business_hours); } catch (e) { logger.error({ err: e }, "Error parsing business_hours in getAgent"); return resolveBusinessHours(null); }
+}
+
+function safeMonitorIntervals(agent: Record<string, unknown>) {
+  try { return resolveMonitorIntervals(agent.monitor_intervals); } catch (e) { logger.error({ err: e }, "Error parsing monitor_intervals in getAgent"); return resolveMonitorIntervals(null); }
 }
 
 export class GetAgentDevicesUseCase {
