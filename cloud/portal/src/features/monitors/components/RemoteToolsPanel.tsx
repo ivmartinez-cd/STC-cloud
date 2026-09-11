@@ -1,4 +1,4 @@
-import { RefreshCw, Zap, Download } from 'lucide-react';
+import { RefreshCw, Zap, Download, Radar } from 'lucide-react';
 
 interface Props {
   commandLoading: string | null;
@@ -13,7 +13,8 @@ interface CommandDef {
 }
 
 const COMMANDS: CommandDef[] = [
-  { action: 'RESCAN', label: 'Rescan', description: 'Barrido inmediato de la red local en busca de nuevos dispositivos.', icon: RefreshCw },
+  { action: 'RESCAN', label: 'Rescan', description: 'Adelanta el próximo tramo del barrido en busca de nuevos dispositivos.', icon: RefreshCw },
+  { action: 'RESTART_DISCOVERY', label: 'Reiniciar barrido', description: 'Vuelve a empezar el recorrido completo desde el primer rango.', icon: Radar },
   { action: 'RESTART', label: 'Reiniciar', description: 'Corta la telemetría por ~40 s y reinicia el servicio del agente.', icon: Zap },
   { action: 'FORCE_UPDATE', label: 'Actualizar', description: 'Instala la versión publicada más reciente del agente.', icon: Download },
 ];

@@ -1,6 +1,6 @@
-import { formatRelativeTime, APP_LOCALE } from '../../../shared/lib/formatters';
+import { fmt, formatRelativeTime, APP_LOCALE } from '../../../shared/lib/formatters';
 import type { MonitorData } from '../../../shared/types/monitor';
-import type { AgentStats } from '../types/monitorDetail';
+import type { AgentDiscoveryState, AgentStats } from '../types/monitorDetail';
 
 interface Props {
   monitor: MonitorData;
@@ -8,6 +8,8 @@ interface Props {
   stats: AgentStats | null;
   onViewDiagnostics?: () => void;
 }
+
+interface SpecRow { label: string; value: string; mono: boolean }
 
 const STATUS_TEXT: Record<string, string> = {
   active: 'Activo · telemetría en curso',
@@ -24,8 +26,13 @@ function subredBarrida(monitor: MonitorData): string {
   return ranges.length > 1 ? `${label} (+${ranges.length - 1})` : label;
 }
 
+/** Barrido MANUAL: sale de un comando RESCAN/FORCE_SCAN que disparó un
+ *  operador (`agent_commands`). El "manual" es explícito desde que la ficha
+ *  también muestra el barrido automático del agente, que es otra cosa
+ *  (`formatDiscovery`): con el nombre viejo, un agente barriendo sano se leía
+ *  como "sin barridos aún". */
 function formatSweep(iso: string | null, newCount: number): string {
-  if (!iso) return 'sin barridos aún';
+  if (!iso) return 'sin barridos manuales aún';
   const d = new Date(iso);
   const today = new Date();
   const isToday = d.toDateString() === today.toDateString();
@@ -34,10 +41,21 @@ function formatSweep(iso: string | null, newCount: number): string {
   return newCount > 0 ? `${base} · ${newCount} nuevo${newCount === 1 ? '' : 's'}` : base;
 }
 
-/** "Estado del monitor" (handoff hifi "Monitor — detalle", 25/08/2026) — valores
- * técnicos (agente, host, IP, subred) en JetBrains Mono; el resto en Source Sans. */
-export default function MonitorSpecsCard({ monitor, now, stats, onViewDiagnostics }: Props) {
-  const rows: Array<{ label: string; value: string; mono: boolean }> = [
+/** Barrido AUTOMÁTICO continuo (`discovery_state` del heartbeat: el agente
+ *  recorre sus rangos por chunks con cursor persistido). Con una vuelta en
+ *  curso lo que importa es el avance; parada, el tamaño del barrido y cuándo
+ *  cerró la última vuelta. */
+function formatDiscovery(state: AgentDiscoveryState, now: number): string {
+  if (state.in_progress) return `${fmt(state.scanned)}/${fmt(state.total)} IPs`;
+  const lap = state.last_lap_at
+    ? `última vuelta ${formatRelativeTime(state.last_lap_at, now).toLowerCase()}`
+    : 'sin vuelta completa aún';
+  return `${fmt(state.total)} IPs · ${lap}`;
+}
+
+function specRows(monitor: MonitorData, now: number, stats: AgentStats | null): SpecRow[] {
+  const discovery = stats?.discovery_state ?? null;
+  return [
     { label: 'APLICACIÓN REMOTA', value: 'STC Cloud Agent', mono: true },
     { label: 'VERSIÓN', value: monitor.version || '—', mono: false },
     { label: 'ESTADO', value: STATUS_TEXT[monitor.status] ?? monitor.status, mono: false },
@@ -45,10 +63,17 @@ export default function MonitorSpecsCard({ monitor, now, stats, onViewDiagnostic
     { label: 'SISTEMA OPERATIVO', value: monitor.host_os || '—', mono: false },
     { label: 'DIRECCIÓN IP', value: monitor.host_ip || '—', mono: true },
     { label: 'SUBRED BARRIDA', value: subredBarrida(monitor), mono: true },
-    { label: 'ÚLTIMO BARRIDO', value: formatSweep(stats?.last_sweep_at ?? null, stats?.last_sweep_new_count ?? 0), mono: false },
+    // Sólo si el agente lo reporta: uno viejo (o una API anterior al campo) no
+    // manda `discovery_state` y la ficha queda igual que antes, sin fila fantasma.
+    ...(discovery ? [{ label: 'BARRIDO AUTOMÁTICO', value: formatDiscovery(discovery, now), mono: false }] : []),
+    { label: 'BARRIDO MANUAL', value: formatSweep(stats?.last_sweep_at ?? null, stats?.last_sweep_new_count ?? 0), mono: false },
     { label: 'ÚLTIMO CONTACTO', value: formatRelativeTime(monitor.last_seen, now), mono: false },
   ];
+}
 
+/** "Estado del monitor" (handoff hifi "Monitor — detalle", 25/08/2026) — valores
+ * técnicos (agente, host, IP, subred) en JetBrains Mono; el resto en Source Sans. */
+export default function MonitorSpecsCard({ monitor, now, stats, onViewDiagnostics }: Props) {
   return (
     <div className="flex h-full flex-col rounded-[5px] border border-line-100 bg-white">
       <div className="flex items-baseline justify-between px-5 py-3.5">
@@ -63,7 +88,7 @@ export default function MonitorSpecsCard({ monitor, now, stats, onViewDiagnostic
         )}
       </div>
       <div className="flex-1 px-5 pb-4 pt-1">
-        {rows.map((r) => (
+        {specRows(monitor, now, stats).map((r) => (
           <div key={r.label} className="flex items-baseline justify-between gap-4 border-b border-line-200 py-[9px] short:py-[5px] last:border-b-0">
             <span className="whitespace-nowrap font-montserrat text-[8.5px] font-bold uppercase tracking-[.13em] text-ink-300">{r.label}</span>
             <span

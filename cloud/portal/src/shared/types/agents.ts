@@ -27,6 +27,15 @@ export type IpRange = {
   cidr?: string;
   /** Point lookup — el agente resuelve por DNS en cada ciclo de discovery. */
   hostname?: string;
+  /**
+   * Ausente o `true` = habilitado (comportamiento de siempre, retrocompatible
+   * con los rangos guardados antes de que existiera el campo). `false` = el
+   * cloud NO lo manda al agente: lo filtra al compilar el heartbeat, así que
+   * el agente nunca ve `enabled` — cero cambio de formato de alambre. Sirve
+   * para apagar un segmento sin perder su configuración (etiqueta,
+   * exclusiones, credenciales) ni tener que volver a tipearlo.
+   */
+  enabled?: boolean;
   exclude?: string[];
   /** Restringe qué credenciales de `snmp_credentials` se prueban para esta
    *  entrada durante discovery. Ausente/vacío = pool completo (comportamiento

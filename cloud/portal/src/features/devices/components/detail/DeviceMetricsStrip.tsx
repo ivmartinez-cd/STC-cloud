@@ -16,8 +16,8 @@ function Metric({ cell, first }: { cell: Cell; first: boolean }) {
 }
 
 /** Tira de 6 métricas del header (handoff hifi "Dispositivo — detalle",
- * 25/08/2026) — mismo molde que `MonitorMetricsStrip.tsx` (`border-left`,
- * nunca `gap` sobre fondo gris). */
+ * 25/08/2026) — molde de tira del handoff: divisorias por `border-left`, nunca
+ * `gap` sobre fondo gris. */
 export default function DeviceMetricsStrip({ stats, loading, error, onRetry }: {
   stats: DeviceStats | null; loading: boolean; error: boolean; onRetry: () => void;
 }) {

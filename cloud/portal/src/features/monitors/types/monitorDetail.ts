@@ -4,7 +4,36 @@
 // conectividad/actividad) se calcula en el SERVIDOR (`KnexAgentPortalRepository`),
 // nunca acá — mismo criterio que `clientDetail.ts` en el módulo `clients`.
 
-/** Tira de 6 métricas del sitio (header de identidad del monitor). */
+/**
+ * Progreso del barrido AUTOMÁTICO de discovery, tal como lo reporta el propio
+ * agente en cada heartbeat (`agents.discovery_state`, jsonb). El agente recorre
+ * sus rangos de forma continua por chunks con cursor, así que una "vuelta"
+ * (lap) es un recorrido completo de las IPs declaradas, no un comando puntual.
+ *
+ * OJO: no es lo mismo que `AgentStats.last_sweep_at`, que sale de un
+ * `RESCAN`/`FORCE_SCAN` MANUAL. Son dos conceptos que conviven y la ficha
+ * "Estado del monitor" (`MonitorSpecsCard`) los muestra en filas separadas
+ * ("BARRIDO AUTOMÁTICO" / "BARRIDO MANUAL"), a propósito.
+ */
+export interface AgentDiscoveryState {
+  /** Hay una vuelta en curso (si no, el agente espera el intervalo para arrancar otra). */
+  in_progress: boolean;
+  /** IPs recorridas en la vuelta EN CURSO (se reinicia en cada vuelta nueva). */
+  scanned: number;
+  /** IPs declaradas totales. */
+  total: number;
+  /** ISO 8601. */
+  lap_started_at: string | null;
+  /** ISO 8601 — fin de la última vuelta COMPLETA. */
+  last_lap_at: string | null;
+  /** Duración en ms de la última vuelta completa. */
+  last_lap_ms: number | null;
+  laps_completed: number;
+}
+
+/** Métricas del sitio — las consumen `DeviceSummaryCard` y `MonitorSpecsCard`
+ *  del Resumen (ya no hay una "tira": `MonitorMetricsStrip` estaba muerto y se
+ *  borró al agregar el barrido automático). */
 export interface AgentStats {
   devices_total: number;
   devices_active: number;
@@ -16,9 +45,17 @@ export interface AgentStats {
   outages_30d: number;
   downtime_30d_minutes: number;
   discovered_pending: number;
-  /** `null` si nunca corrió un barrido (RESCAN/FORCE_SCAN) exitoso para este agente. */
+  /** BARRIDO MANUAL: `null` si nunca corrió un RESCAN/FORCE_SCAN exitoso para
+   *  este agente. Nada que ver con el barrido automático (`discovery_state`). */
   last_sweep_at: string | null;
   last_sweep_new_count: number;
+  /**
+   * BARRIDO AUTOMÁTICO CONTINUO. Opcional a propósito: un agente sin
+   * actualizar todavía no lo reporta (`null`) y una API anterior a este campo
+   * ni siquiera lo manda (`undefined`) — en los dos casos `MonitorSpecsCard`
+   * omite la fila entera y la ficha queda igual que antes.
+   */
+  discovery_state?: AgentDiscoveryState | null;
 }
 
 export type ConnectivityDayStatus = 'online' | 'parcial' | 'sin_contacto';

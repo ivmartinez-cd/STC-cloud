@@ -33,7 +33,7 @@ function buildCells(summary: AgentFleetSummary | null): Cell[] {
 /** 4-métrica de flota (handoff hifi "Salud de nodos", panel izquierdo de la fila
  * de 2 columnas) — anatomía de celda recreada LOCALMENTE (README: label/valor/nota),
  * no importa `PortfolioMetricsStrip` (otra feature) ni el layout de 6 columnas de
- * `MonitorMetricsStrip` (shape de datos distinto, aunque sí es de esta misma feature). */
+ * `DeviceMetricsStrip` (shape de datos distinto). */
 export default function AgentsFleetMetricsStrip({
   summary, loading, error, onRetry,
 }: {
