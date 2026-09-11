@@ -34,15 +34,21 @@ function parsePage(v: string | null): number {
  * reflejados en la URL") — sólo mientras la tab "Dispositivos" está activa, para no
  * pisar los query params de otras tabs (ver `MonitorDetail.tsx`). */
 function useUrlSync(active: boolean, q: string, segment: AgentDeviceSegment, sortField: AgentDeviceSortField, sortDir: SortDir, page: number) {
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [, setSearchParams] = useSearchParams();
   useEffect(() => {
     if (!active) return;
-    const next = new URLSearchParams(searchParams);
+    // Base: la URL viva, no los `searchParams` del render. Con react-router 7 la
+    // navegación de la pestaña (`setSearchParams({ tab })`) va en una transición y
+    // este efecto corre antes de que el hook vea el `?tab=`; partir de los params
+    // del render lo pisaba y la URL quedaba sin tab (→ "volver" caía en Resumen).
+    const current = new URLSearchParams(window.location.search).toString();
+    const next = new URLSearchParams(window.location.search);
     if (q) next.set('q', q); else next.delete('q');
     if (segment !== 'todos') next.set('segment', segment); else next.delete('segment');
     if (sortField !== 'alerts_count') next.set('sort', sortField); else next.delete('sort');
     if (sortDir !== 'desc') next.set('dir', sortDir); else next.delete('dir');
     if (page > 0) next.set('page', String(page)); else next.delete('page');
+    if (next.toString() === current) return;
     setSearchParams(next, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active, q, segment, sortField, sortDir, page]);
