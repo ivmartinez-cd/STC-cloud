@@ -7,6 +7,7 @@ import type { AgentConfig } from '../../../../shared/types/agents';
 import { defaultConfig } from '../../../../shared/types/agents';
 import type { MaskedSnmpCredential } from '../../../../shared/types/monitor';
 import IpRangesEditor from '../IpRangesEditor';
+import { firstRangeProblem } from '../../lib/rangeSpecText';
 
 interface Props {
   modal: { id: string; name: string; remote_ews_enabled?: boolean } | null;
@@ -73,15 +74,8 @@ export default function ConfigAgentModal({ modal, onClose }: Props) {
     if (!modal) return;
     // Validación de forma en el cliente — el cloud re-valida formato/topes en
     // serio al guardar (`validateIpRangeSpecs`).
-    for (const r of configForm.ip_ranges) {
-      const invalid = r.hostname !== undefined ? !r.hostname.trim()
-        : r.cidr !== undefined ? !r.cidr.trim()
-        : (!r.start?.trim() || !r.end?.trim());
-      if (invalid) {
-        showToast('Todos los rangos deben tener un CIDR, un hostname, o una IP de inicio y fin', 'warning');
-        return;
-      }
-    }
+    const problem = firstRangeProblem(configForm.ip_ranges);
+    if (problem) { showToast(problem, 'warning'); return; }
     setSavingConfig(true);
     try {
       const result = await api.put<{ warnings?: string[] }>(`/agents/${modal.id}/config`, {
@@ -126,7 +120,7 @@ export default function ConfigAgentModal({ modal, onClose }: Props) {
             <div className="space-y-10">
               <div className="space-y-6">
                 <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] ml-1">Segmentos IP Activos</label>
-                <div className="max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                <div className="max-h-[360px] overflow-y-auto pr-2 custom-scrollbar">
                   <IpRangesEditor
                     ranges={configForm.ip_ranges}
                     onChange={ranges => setConfigForm(f => ({ ...f, ip_ranges: ranges }))}

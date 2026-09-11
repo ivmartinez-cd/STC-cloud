@@ -1215,18 +1215,24 @@
         "length": 66
       }
     ],
-    "portal/src/features/monitors/components/IpRangesEditor.tsx": [
+    "portal/src/features/monitors/components/IpRangeRow.tsx": [
       {
-        "name": "IpRangesEditor",
-        "length": 119
-      },
-      {
-        "name": "anonymous",
-        "length": 85
+        "name": "IpRangeRow",
+        "length": 41
       },
       {
         "name": "ExcludeList",
-        "length": 44
+        "length": 34
+      }
+    ],
+    "portal/src/features/monitors/components/IpRangesEditor.tsx": [
+      {
+        "name": "RangesToolbar",
+        "length": 25
+      },
+      {
+        "name": "IpRangesEditor",
+        "length": 66
       }
     ],
     "portal/src/features/monitors/components/LicenseCard.tsx": [
@@ -1277,6 +1283,12 @@
       {
         "name": "ReportsTabPanel",
         "length": 143
+      }
+    ],
+    "portal/src/features/monitors/components/SegmentsTabPanel.tsx": [
+      {
+        "name": "SegmentsTabPanel",
+        "length": 54
       }
     ],
     "portal/src/features/monitors/components/SnmpCredentialDraftForm.tsx": [

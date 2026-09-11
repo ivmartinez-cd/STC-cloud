@@ -74,7 +74,7 @@ export interface ParseRangesResult {
 }
 
 interface Bounds { startInt: number; endInt: number }
-type TokenResult = { range: IpRange } | { error: string };
+export type TokenResult = { range: IpRange } | { error: string };
 
 export function isValidIpv4(ip: string): boolean {
   const parts = ip.split('.');

@@ -1,10 +1,12 @@
 import { Fragment, useState } from 'react';
-import { ChevronDown, ChevronUp, Loader2, ShieldOff } from 'lucide-react';
+import { ArrowRight, ChevronDown, ChevronUp, Loader2, ShieldOff } from 'lucide-react';
 import { useToast } from '../../../store/ToastContext';
-import IpRangesEditor from './IpRangesEditor';
 import SnmpCredentialsPanel from './SnmpCredentialsPanel';
+import { INTERVAL_ROWS, configFormProblem, formFromMonitor } from './configFormHelpers';
 import type { EditFormData, MonitorData, SnmpCredentialInput } from '../../../shared/types/monitor';
-import { DEFAULT_BUSINESS_HOURS, DEFAULT_MONITOR_INTERVALS, type MonitorIntervalsConfig } from '../../../shared/types/agents';
+import type { MonitorIntervalsConfig } from '../../../shared/types/agents';
+import { fmt } from '../../../shared/lib/formatters';
+import { summaryText } from '../lib/rangeSpecText';
 
 interface ConfigTabPanelProps {
   monitor: MonitorData;
@@ -16,6 +18,9 @@ interface ConfigTabPanelProps {
    * `MonitorDetail.tsx` (mismo `ConfirmModal` de siempre); este panel sólo dispara
    * el pedido de apertura. */
   onRequestRevoke: () => void;
+  /** Los segmentos IP se editan en su propio tab (`SegmentsTabPanel`): acá
+   *  sólo se resumen y se linkea. */
+  onOpenSegments: () => void;
 }
 
 /** ISO weekday: 1=lunes..7=domingo — mismo convenio que `businessHours.days`. */
@@ -36,65 +41,7 @@ const COMMON_TIMEZONES = [
 const LABEL = 'mb-1.5 block font-montserrat text-[8.5px] font-bold uppercase tracking-[.13em] text-ink-300';
 const INPUT = 'w-full rounded-[3px] border border-line-300 bg-white px-3 py-2.5 font-sans text-[13px] text-ink-900 outline-none focus:border-brand';
 
-/** Los 4 loops de monitoreo del agente, en el orden de prioridad real del
- *  `TaskScheduler` (alert > meter > supplies > discovery) — no el de la tabla
- *  del White Paper de HP SDS, para que coincida con lo que el operador ve
- *  correr primero en los logs. */
-const INTERVAL_ROWS: { key: keyof MonitorIntervalsConfig; label: string }[] = [
-  { key: 'alert', label: 'Alertas' },
-  { key: 'meter', label: 'Contadores' },
-  { key: 'supplies', label: 'Consumibles y bandejas' },
-  { key: 'discovery', label: 'Identidad (descubrimiento)' },
-];
-
-function formFromMonitor(monitor: MonitorData): EditFormData {
-  // `MonitorData.config.ip_ranges` es siempre un array ya parseado — la
-  // columna `agents.ip_ranges` es `jsonb`, node-pg la devuelve parseada
-  // siempre, y el backend (`parseAgentIpRanges` en
-  // `portalAgentController/reads.ts`) nunca manda un string crudo.
-  const ranges = monitor.config?.ip_ranges?.length ? monitor.config.ip_ranges : [{ start: '', end: '' }];
-  return {
-    name: monitor.name,
-    ip_ranges: ranges,
-    snmp: monitor.config?.snmp_community ?? 'public',
-    tonerWarningThreshold: monitor.config?.toner_warning_threshold ?? 20,
-    tonerCriticalThreshold: monitor.config?.toner_critical_threshold ?? 10,
-    businessHours: monitor.config?.business_hours ?? DEFAULT_BUSINESS_HOURS,
-    monitorIntervals: monitor.config?.monitor_intervals ?? DEFAULT_MONITOR_INTERVALS,
-  };
-}
-
-function validateForm(form: EditFormData, showToast: (msg: string, kind: 'error' | 'warning') => void): boolean {
-  if (form.tonerCriticalThreshold >= form.tonerWarningThreshold) {
-    showToast('El umbral crítico debe ser menor que el umbral de advertencia', 'error');
-    return false;
-  }
-  for (const r of form.ip_ranges) {
-    const invalid = r.hostname !== undefined ? !r.hostname.trim()
-      : r.cidr !== undefined ? !r.cidr.trim()
-      : (!r.start?.trim() || !r.end?.trim());
-    if (invalid) { showToast('Todos los rangos deben tener un CIDR, un hostname, o una IP de inicio y fin', 'warning'); return false; }
-  }
-  if (form.businessHours.days.length === 0) { showToast('El horario laboral requiere al menos un día', 'warning'); return false; }
-  if (form.businessHours.start_hour >= form.businessHours.end_hour) {
-    showToast('La hora de inicio del horario laboral debe ser menor que la de fin', 'warning');
-    return false;
-  }
-  for (const { key, label } of INTERVAL_ROWS) {
-    const { biz, off } = form.monitorIntervals[key];
-    if (!Number.isInteger(biz) || biz < 1 || !Number.isInteger(off) || off < 1) {
-      showToast(`Frecuencia de monitoreo — "${label}": los minutos deben ser enteros de al menos 1`, 'warning');
-      return false;
-    }
-    if (off < biz) {
-      showToast(`Frecuencia de monitoreo — "${label}": fuera de horario no puede ser más rápido que en horario laboral`, 'warning');
-      return false;
-    }
-  }
-  return true;
-}
-
-export default function ConfigTabPanel({ monitor, onSave, onSaveSnmpCredentials, onRequestRevoke }: ConfigTabPanelProps) {
+export default function ConfigTabPanel({ monitor, onSave, onSaveSnmpCredentials, onRequestRevoke, onOpenSegments }: ConfigTabPanelProps) {
   const [form, setForm] = useState<EditFormData>(() => formFromMonitor(monitor));
   const [saving, setSaving] = useState(false);
   // Colapsado por default: son 8 números que casi nadie toca (el operador
@@ -111,42 +58,46 @@ export default function ConfigTabPanel({ monitor, onSave, onSaveSnmpCredentials,
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validateForm(form, showToast)) return;
+    const problem = configFormProblem(form);
+    if (problem) { showToast(...problem); return; }
     setSaving(true);
     try { await onSave(form); } catch (err: unknown) { showToast((err as Error).message || 'Error al actualizar configuración', 'error'); }
     finally { setSaving(false); }
   };
 
-  // 3 columnas que llenan el alto (rediseño sin scroll, 27/08/2026): red |
-  // umbrales + horario | credenciales SNMP + zona de riesgo. El editor de
-  // segmentos IP es el único bloque que puede scrollear (es una lista
-  // editable, paginarla sería peor) y ocupa lo que sobra de su columna.
+  // 3 columnas que llenan el alto (rediseño sin scroll, 27/08/2026): red +
+  // umbrales | horario + frecuencia | credenciales SNMP + zona de riesgo. Los
+  // segmentos IP (lo único que crece con el cliente) viven en su propio tab
+  // desde el 11/09/2026 — acá queda el resumen y el link.
+  const ranges = monitor.config?.ip_ranges ?? [];
   return (
     <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col gap-4">
       <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 lg:grid-cols-3">
-        <div className="flex min-h-0 flex-col rounded-[5px] border border-line-100 bg-white p-5">
+        <div className="flex min-h-0 flex-col gap-4">
+        <div className="rounded-[5px] border border-line-100 bg-white p-5">
           <div className="mb-4 border-b border-line-150 pb-3.5">
             <span className="font-montserrat text-[9px] font-bold uppercase tracking-[.15em] text-ink-600">Parámetros de red</span>
           </div>
-          <div className="flex min-h-0 flex-1 flex-col gap-4">
+          <div className="space-y-4">
             <div>
               <label className={LABEL}>Nombre del sitio</label>
               <input required type="text" value={form.name} className={INPUT} onChange={e => set('name', e.target.value)} />
             </div>
-            <div className="flex min-h-0 flex-1 flex-col">
-              <label className={LABEL}>Segmentos IP barridos</label>
-              <div className="min-h-0 flex-1 overflow-y-auto pr-1">
-                <IpRangesEditor ranges={form.ip_ranges} onChange={ranges => setForm(f => ({ ...f, ip_ranges: ranges }))} credentials={monitor.config?.snmp_credentials ?? []} />
-              </div>
-            </div>
             <div>
               <label className={LABEL}>Comunidad SNMP</label>
               <input type="text" value={form.snmp} className={`${INPUT} font-mono`} onChange={e => set('snmp', e.target.value)} />
+              <p className="mt-1.5 font-sans text-[11.5px] leading-[1.5] text-ink-300 short:hidden">Comunidad v1/v2c por defecto; las credenciales adicionales se cargan a la derecha.</p>
+            </div>
+            <div className="rounded-[3px] border border-line-150 bg-surface-input px-3.5 py-3">
+              <label className={LABEL}>Segmentos IP barridos</label>
+              <p className="font-sans text-[12px] text-ink-700">{summaryText(ranges, fmt)}</p>
+              <button type="button" onClick={onOpenSegments} className="mt-2 flex items-center gap-1.5 font-montserrat text-[10px] font-semibold uppercase tracking-[.08em] text-brand transition-colors duration-150 ease-in-out hover:text-brand-severe">
+                Editar segmentos <ArrowRight size={13} />
+              </button>
             </div>
           </div>
         </div>
 
-        <div className="flex min-h-0 flex-col gap-4">
         <div className="rounded-[5px] border border-line-100 bg-white p-5">
           <div className="mb-4 border-b border-line-150 pb-3.5">
             <span className="font-montserrat text-[9px] font-bold uppercase tracking-[.15em] text-ink-600">Umbrales de consumibles</span>
@@ -173,7 +124,9 @@ export default function ConfigTabPanel({ monitor, onSave, onSaveSnmpCredentials,
             </p>
           </div>
         </div>
+        </div>
 
+        <div className="flex min-h-0 flex-col gap-4">
         <div className="rounded-[5px] border border-line-100 bg-white p-5">
           <div className="mb-4 border-b border-line-150 pb-3.5">
             <span className="font-montserrat text-[9px] font-bold uppercase tracking-[.15em] text-ink-600">Horario laboral</span>

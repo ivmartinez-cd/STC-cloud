@@ -16,12 +16,13 @@ import DeviceInventoryTable from '../components/DeviceInventoryTable';
 import ReportsTabPanel from '../components/ReportsTabPanel';
 import RemoteToolsPanel from '../components/RemoteToolsPanel';
 import ConfigTabPanel from '../components/ConfigTabPanel';
+import SegmentsTabPanel from '../components/SegmentsTabPanel';
 import MonitorRegenKeyModal from '../components/MonitorRegenKeyModal';
 import Terminal from '../components/Terminal';
 import ConfirmModal from '../../../shared/components/ConfirmModal';
 import { useToast } from '../../../store/ToastContext';
 
-type Tab = 'overview' | 'devices' | 'console' | 'config' | 'reports';
+type Tab = 'overview' | 'devices' | 'console' | 'segments' | 'config' | 'reports';
 
 const MonitorDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -36,7 +37,7 @@ const MonitorDetail = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState<Tab>(() => {
     const tab = searchParams.get('tab');
-    return (tab === 'overview' || tab === 'devices' || tab === 'console' || tab === 'config' || tab === 'reports') ? tab : 'overview';
+    return (tab === 'overview' || tab === 'devices' || tab === 'console' || tab === 'segments' || tab === 'config' || tab === 'reports') ? tab : 'overview';
   });
   const [showRevokeModal, setShowRevokeModal] = useState(false);
   const [revoking, setRevoking] = useState(false);
@@ -122,7 +123,9 @@ const MonitorDetail = () => {
     { id: 'devices', label: 'Dispositivos' },
     ...(isReadOnlyViewer ? [] : [{ id: 'console' as Tab, label: 'Consola' }]),
     { id: 'reports', label: 'Reportes' },
-    ...(isReadOnlyViewer ? [] : [{ id: 'config' as Tab, label: 'Configuración' }]),
+    // Segmentos IP aparte de Configuración: es lo único de la config que crece
+    // con el cliente (59 rangos en un caso real) y necesita el ancho entero.
+    ...(isReadOnlyViewer ? [] : [{ id: 'segments' as Tab, label: 'Segmentos' }, { id: 'config' as Tab, label: 'Configuración' }]),
   ];
 
   return (
@@ -210,9 +213,17 @@ const MonitorDetail = () => {
         <ReportsTabPanel devices={devices} monitor={monitor} />
       )}
 
+      {/* Segments Tab */}
+      {activeTab === 'segments' && !isReadOnlyViewer && (
+        <SegmentsTabPanel monitor={monitor} onSave={saveConfig} />
+      )}
+
       {/* Config Tab */}
       {activeTab === 'config' && !isReadOnlyViewer && (
-        <ConfigTabPanel monitor={monitor} onSave={saveConfig} onSaveSnmpCredentials={saveSnmpCredentials} onRequestRevoke={() => setShowRevokeModal(true)} />
+        <ConfigTabPanel
+          monitor={monitor} onSave={saveConfig} onSaveSnmpCredentials={saveSnmpCredentials}
+          onRequestRevoke={() => setShowRevokeModal(true)} onOpenSegments={() => handleTabChange('segments')}
+        />
       )}
 
       {/* Revoke Confirm */}
