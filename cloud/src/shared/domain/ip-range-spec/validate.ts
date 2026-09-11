@@ -2,21 +2,36 @@ import { isValidIpv4, ipToInt, parseCidr } from "./ip-arithmetic";
 import { IpRangeValidationError, type IpRangeSpecInput } from "./types";
 
 /**
- * Subió de 20 a 32 al agregar hostname: comparte el mismo pool que
- * rangos/CIDR (un solo editor, un solo tope) y un cliente que ya usa varios
- * rangos de descubrimiento masivo puede querer pinear varios hosts puntuales
- * además — no vale la complejidad de un tope separado, sólo dar más margen.
+ * Pool de entradas de rango/CIDR. Una entrada extra cuesta una fila más en el
+ * jsonb, no tiempo de barrido (lo que cuesta son las IPs, y eso lo tapa
+ * `MAX_TOTAL_DECLARED_IPS`), así que el tope sólo tiene que dejar entrar la
+ * topología real: el caso que lo motivó es un cliente con 59 sedes, un /24 por
+ * sede. 256 da ese margen con lugar para crecer.
  */
-const MAX_SPECS = 32;
+const MAX_SPECS = 256;
 /**
- * Con CONCURRENCY_LIMIT=10 (ScanService.ts) y ~2000ms de costo peor-caso por
- * host muerto (checkOpenPorts), 2000 IPs ≈ (2000/10)×2s ≈ 400s (~6.7 min) de
- * discovery peor caso — margen cómodo bajo el intervalo de 10 min en horario
- * laboral (BusinessHours.ts). El gap analysis sugiere "≤4096" a modo de
- * ejemplo, pero esa cifra ronda los ~14 min y hambrea meter/supplies (el
- * scheduler evalúa discovery antes que los otros loops).
+ * Pool SEPARADO del de rangos: un hostname no es "1 IP más", es una
+ * resolución DNS SECUENCIAL con timeout de 4s del lado agente
+ * (`ScanService.resolveHost()` + `DNS_LOOKUP_TIMEOUT_MS`), así que 32 nombres
+ * con la DNS caída ya son ~2 min de vuelta por sí solos. Modelo de costo
+ * distinto, tope distinto — y el agente documenta explícitamente que su peor
+ * caso es `32 × timeout` porque el cloud lo acota acá: subir este número
+ * sin tocar el agente le alarga la vuelta en frío.
  */
-const MAX_TOTAL_DECLARED_IPS = 2000;
+const MAX_HOSTNAME_SPECS = 32;
+/**
+ * Un /16. Ya NO sale de "cuánto entra en el ciclo": con el barrido continuo
+ * por chunks con cursor, una vuelta se recorre en varias pasadas y el
+ * intervalo (10/60 min) sólo gatea el ARRANQUE DE UNA VUELTA NUEVA, nunca
+ * corta la que está en curso — regla de SDS, white paper "Monitoring Loops":
+ * "If it takes longer than the configured time for a monitoring loop to get
+ * through the list of all devices being monitored then the next run of that
+ * loop commences immediately". O sea que un espacio grande ya no rompe nada,
+ * sólo tarda: lo que este tope ataja es el error de carga (el /8 tipeado de
+ * más), no la duración. La duración se avisa aparte y sin bloquear, ver
+ * `longLapWarnings()` en `warnings.ts`.
+ */
+const MAX_TOTAL_DECLARED_IPS = 65536;
 const MAX_EXCLUDES_PER_SPEC = 32;
 const MAX_LABEL_LEN = 100;
 /** Mismo `MAX_CREDENTIALS` que `snmpCredentials.ts` — no tiene sentido
@@ -107,6 +122,16 @@ function validateCredentialIds(o: Record<string, unknown>, prefix: string, out: 
   if (ids.length > 0) out.credential_ids = ids;
 }
 
+// Ausente = habilitado: toda la config que ya está guardada no tiene el campo
+// y tiene que seguir significando "escanealo".
+function validateEnabled(o: Record<string, unknown>, prefix: string, out: IpRangeSpecInput): void {
+  if (o.enabled === undefined) return;
+  if (typeof o.enabled !== "boolean") {
+    throw new IpRangeValidationError(`${prefix}: enabled debe ser true o false`, `${prefix}.enabled`);
+  }
+  out.enabled = o.enabled;
+}
+
 function assertWithinTotal(totalDeclared: number, prefix: string): void {
   if (totalDeclared > MAX_TOTAL_DECLARED_IPS) {
     throw new IpRangeValidationError(
@@ -120,7 +145,13 @@ function extractLabel(o: Record<string, unknown>): string | null {
   return o.label === undefined || o.label === null ? null : String(o.label).slice(0, MAX_LABEL_LEN);
 }
 
-function validateOneSpec(item: unknown, i: number, totalDeclaredSoFar: number): { spec: IpRangeSpecInput; declared: number } {
+interface SpecTally {
+  ranges: number;
+  hostnames: number;
+  declaredIps: number;
+}
+
+function validateOneSpec(item: unknown, i: number, totalDeclaredSoFar: number): { spec: IpRangeSpecInput; declared: number; isHostname: boolean } {
   const prefix = `ip_ranges[${i}]`;
   if (item == null || typeof item !== "object") {
     throw new IpRangeValidationError(`${prefix}: debe ser un objeto`, prefix);
@@ -133,7 +164,20 @@ function validateOneSpec(item: unknown, i: number, totalDeclaredSoFar: number): 
 
   assertWithinTotal(totalDeclaredSoFar + declared, prefix);
   validateCredentialIds(o, prefix, out);
-  return { spec: out, declared };
+  validateEnabled(o, prefix, out);
+  return { spec: out, declared, isHostname: hasHostname };
+}
+
+// Dos pools independientes: 256 rangos y 32 hostnames conviven sin competir.
+// Se chequea a medida que se cuenta (no al final) para que el error salga en
+// la primera entrada que desborda, igual que el tope de IPs declaradas.
+function assertWithinPools(tally: SpecTally): void {
+  if (tally.ranges > MAX_SPECS) {
+    throw new IpRangeValidationError(`Máximo ${MAX_SPECS} rangos (IP o CIDR) por agente`, "ip_ranges");
+  }
+  if (tally.hostnames > MAX_HOSTNAME_SPECS) {
+    throw new IpRangeValidationError(`Máximo ${MAX_HOSTNAME_SPECS} hostnames por agente`, "ip_ranges");
+  }
 }
 
 /**
@@ -144,17 +188,29 @@ function validateOneSpec(item: unknown, i: number, totalDeclaredSoFar: number): 
  * el path del heartbeat), y NO valida que `credential_ids` referencien
  * credenciales existentes (endpoint distinto, sin transacción compartida —
  * se resuelve con gracia en `agentService.getConfig()`).
+ *
+ * Un rango con `enabled: false` se valida igual que uno habilitado (queda
+ * guardado y tiene que poder re-habilitarse sin volver a editarlo) y cuenta
+ * para los topes: son topes de tamaño de CONFIG, no de barrido. Lo que no
+ * cuesta es tiempo de vuelta, y eso lo mide `longLapWarnings()`.
  */
 export function validateIpRangeSpecs(raw: unknown): IpRangeSpecInput[] {
   if (!Array.isArray(raw)) throw new IpRangeValidationError("ip_ranges debe ser un array");
-  if (raw.length > MAX_SPECS) {
-    throw new IpRangeValidationError(`Máximo ${MAX_SPECS} rangos por agente`, "ip_ranges");
+  // Corte barato antes de recorrer: ni con los dos pools llenos entra.
+  if (raw.length > MAX_SPECS + MAX_HOSTNAME_SPECS) {
+    throw new IpRangeValidationError(
+      `Máximo ${MAX_SPECS} rangos y ${MAX_HOSTNAME_SPECS} hostnames por agente`,
+      "ip_ranges"
+    );
   }
 
-  let totalDeclared = 0;
+  const tally: SpecTally = { ranges: 0, hostnames: 0, declaredIps: 0 };
   return raw.map((item, i) => {
-    const { spec, declared } = validateOneSpec(item, i, totalDeclared);
-    totalDeclared += declared;
+    const { spec, declared, isHostname } = validateOneSpec(item, i, tally.declaredIps);
+    if (isHostname) tally.hostnames += 1;
+    else tally.ranges += 1;
+    tally.declaredIps += declared;
+    assertWithinPools(tally);
     return spec;
   });
 }

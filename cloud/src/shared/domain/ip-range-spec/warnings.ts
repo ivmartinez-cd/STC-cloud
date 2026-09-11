@@ -26,6 +26,10 @@ function boundsOf(spec: IpRangeSpecInput): { startInt: number; endInt: number } 
 export function publicIpWarnings(specs: IpRangeSpecInput[]): string[] {
   const warnings: string[] = [];
   for (const spec of specs) {
+    // Un deshabilitado no se compila (`compile.ts`): el agente ni se entera de
+    // que existe, así que nunca va a escanear esas IPs. Avisarlo prometería un
+    // comportamiento de runtime que no ocurre.
+    if (spec.enabled === false) continue;
     const bounds = boundsOf(spec);
     if (!bounds) continue;
     if (!isPrivateOrReserved(bounds.startInt) || !isPrivateOrReserved(bounds.endInt)) {
@@ -35,6 +39,47 @@ export function publicIpWarnings(specs: IpRangeSpecInput[]): string[] {
     }
   }
   return warnings;
+}
+
+/** Concurrencia real del barrido (`CONCURRENCY_LIMIT` en `ScanService.ts`) y
+ *  costo peor-caso de una IP muerta (`checkOpenPorts`). La MISMA fórmula que
+ *  usa el portal para mostrar la estimación mientras se edita — si cambia una
+ *  punta, cambian las dos, o el operador ve un número y el backend avisa por
+ *  otro. */
+const SCAN_CONCURRENCY = 10;
+const WORST_CASE_SECONDS_PER_IP = 2;
+const LONG_LAP_MINUTES = 60;
+
+/** Las deshabilitadas no se compilan (`compile.ts`), así que no cuestan vuelta.
+ *  Un spec inválido cuenta 0: acá nunca se rechaza nada, de eso se encarga
+ *  `validateIpRangeSpecs()`. */
+function declaredIpsOf(spec: IpRangeSpecInput): number {
+  if (spec.enabled === false) return 0;
+  if (spec.hostname) return 1;
+  const bounds = boundsOf(spec);
+  return bounds ? bounds.endInt - bounds.startInt + 1 : 0;
+}
+
+/**
+ * Warning NO bloqueante cuando una vuelta completa de discovery se estira más
+ * de `LONG_LAP_MINUTES`. Con el barrido continuo por chunks la vuelta ya no
+ * tiene que entrar en el intervalo — regla de SDS ("Monitoring Loops"): si la
+ * vuelta tarda más que el intervalo configurado, la siguiente arranca
+ * enseguida. O sea que nada se rompe ni se saltea; lo único que pasa es que un
+ * equipo nuevo puede tardar hasta una vuelta entera en aparecer, y eso el
+ * operador lo tiene que saber ANTES de guardar, no cuando alguien reclama que
+ * "la impresora nueva no figura".
+ */
+export function longLapWarnings(specs: IpRangeSpecInput[]): string[] {
+  const totalIps = specs.reduce((acc, spec) => acc + declaredIpsOf(spec), 0);
+  const minutes = (totalIps / SCAN_CONCURRENCY) * WORST_CASE_SECONDS_PER_IP / 60;
+  if (minutes <= LONG_LAP_MINUTES) return [];
+  return [
+    `El barrido completo tardaría ~${Math.round(minutes)} min por vuelta (${totalIps} IPs habilitadas, ` +
+      `concurrencia ${SCAN_CONCURRENCY}) — se guarda igual y el descubrimiento sigue andando, pero un equipo ` +
+      `nuevo puede tardar hasta una vuelta entera en aparecer. Considerá repartir el espacio entre varios ` +
+      `agentes o deshabilitar los rangos que no uses.`,
+  ];
 }
 
 interface CredentialRange {
@@ -48,6 +93,10 @@ interface CredentialRange {
 function toCredentialRanges(specs: IpRangeSpecInput[]): CredentialRange[] {
   const ranges: CredentialRange[] = [];
   specs.forEach((spec, index) => {
+    // Un deshabilitado no se compila, así que nunca se superpone con nada en
+    // el barrido: avisarlo sería un falso positivo que el operador no puede
+    // hacer desaparecer (justamente acaba de apagar el rango).
+    if (spec.enabled === false) return;
     const bounds = boundsOf(spec);
     if (!bounds) return; // hostname o inválido — no aplica a esta heurística
     const credKey = spec.credential_ids ? [...spec.credential_ids].sort().join(",") : "";

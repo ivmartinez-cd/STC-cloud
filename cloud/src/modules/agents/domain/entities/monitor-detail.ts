@@ -4,6 +4,8 @@
  * `clients`: read models snake_case computados en el REPO (nunca en el front).
  */
 
+import type { AgentDiscoveryState } from "./agent";
+
 /** Tira de 6 métricas del sitio (header de identidad del monitor). */
 export interface AgentStats {
   devices_total: number;
@@ -16,13 +18,26 @@ export interface AgentStats {
   outages_30d: number;
   downtime_30d_minutes: number;
   discovered_pending: number;
-  /** `null` si nunca corrió un barrido (RESCAN/FORCE_SCAN) exitoso para este agente. */
+  /**
+   * BARRIDO MANUAL. `null` si nunca corrió un RESCAN/FORCE_SCAN exitoso para
+   * este agente. Es un comando disparado desde el portal y confirmado en
+   * `agent_commands` — NO tiene nada que ver con el barrido automático que el
+   * agente corre solo (para eso está `discovery_state`).
+   */
   last_sweep_at: Date | null;
   /** Equipos con `created_at >= last_sweep_at` — proxy real (no fabricado) de
-   * "nuevos en el último barrido": no hay vínculo directo comando→dispositivo,
-   * pero un equipo creado a partir del último barrido exitoso es, por
-   * definición, uno que ese barrido detectó por primera vez. */
+   * "nuevos en el último barrido MANUAL": no hay vínculo directo
+   * comando→dispositivo, pero un equipo creado a partir del último barrido
+   * exitoso es, por definición, uno que ese barrido detectó por primera vez. */
   last_sweep_new_count: number;
+  /**
+   * BARRIDO AUTOMÁTICO CONTINUO — última foto que reportó el propio agente en
+   * su heartbeat (`agents.discovery_state`). Es el progreso real del discovery
+   * (vuelta en curso, IPs recorridas, duración de la última vuelta completa).
+   * `null` = agente sin actualizar que todavía no lo reporta; distinto de una
+   * vuelta en cero.
+   */
+  discovery_state: AgentDiscoveryState | null;
 }
 
 export type ConnectivityDayStatus = "online" | "parcial" | "sin_contacto";

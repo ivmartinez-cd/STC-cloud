@@ -35,4 +35,4 @@ export type { IpRangeSpecInput, CompiledRange, HostSpec } from "./types";
 export { IpRangeValidationError } from "./types";
 export { validateIpRangeSpecs } from "./validate";
 export { compileIpRangeSpecs, extractHostSpecs } from "./compile";
-export { publicIpWarnings, overlappingCredentialWarnings } from "./warnings";
+export { publicIpWarnings, overlappingCredentialWarnings, longLapWarnings } from "./warnings";

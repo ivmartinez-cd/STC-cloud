@@ -97,6 +97,32 @@ export interface IncomingReading {
   offline?: boolean;
 }
 
+/**
+ * Progreso del barrido de discovery del agente, tal como él lo reporta en cada
+ * heartbeat. El agente recorre sus rangos de forma continua por chunks con
+ * cursor, así que una "vuelta" (lap) es un recorrido completo de las IPs
+ * declaradas, no un comando puntual.
+ *
+ * OJO: NO es el "último barrido" que ya muestra el portal
+ * (`AgentStats.last_sweep_at`), que sale de un `RESCAN`/`FORCE_SCAN` MANUAL
+ * completado en `agent_commands`. Son dos conceptos distintos que conviven.
+ */
+export interface AgentDiscoveryState {
+  /** Hay una vuelta en curso (si no, el agente espera el intervalo para arrancar otra). */
+  in_progress: boolean;
+  /** IPs recorridas en la vuelta EN CURSO (se reinicia en cada vuelta nueva). */
+  scanned: number;
+  /** IPs declaradas totales. */
+  total: number;
+  /** ISO 8601. */
+  lap_started_at: string | null;
+  /** ISO 8601 — fin de la última vuelta COMPLETA. */
+  last_lap_at: string | null;
+  /** Duración en ms de la última vuelta completa. */
+  last_lap_ms: number | null;
+  laps_completed: number;
+}
+
 /** Información de sistema enviada por el agente en cada heartbeat. */
 export interface SystemInfoPayload {
   version?: string;
@@ -108,6 +134,8 @@ export interface SystemInfoPayload {
   channel?: string;
   /** process.version del runtime embebido, ej. "v20.2.0". */
   runtime?: string;
+  /** Aditivo: un agente sin actualizar no lo manda y la columna queda en `NULL`. */
+  discovery_state?: AgentDiscoveryState;
 }
 
 /** Paquete publicado para un canal de actualización (ver docs/dev/TECH_DEBT.md UPD-1/3). */

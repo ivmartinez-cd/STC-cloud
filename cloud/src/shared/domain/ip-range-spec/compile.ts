@@ -52,10 +52,6 @@ function resolveExcludes(spec: IpRangeSpecInput, startInt: number, endInt: numbe
 }
 
 function compileOne(spec: IpRangeSpecInput): CompiledRange[] {
-  // Los hostname no compilan a pares {start,end} — el cloud no los resuelve.
-  // Van por `extractHostSpecs()` a un campo de heartbeat aparte.
-  if (spec.hostname) return [];
-
   const { startInt, endInt, autoExclude } = resolveBounds(spec);
   const excludeInts = resolveExcludes(spec, startInt, endInt, autoExclude);
 
@@ -73,11 +69,16 @@ function compileOne(spec: IpRangeSpecInput): CompiledRange[] {
  * resto ni propaga): el heartbeat no puede romperse por un dato malo, mismo
  * criterio que `toWire()` en `snmpCredentials.ts`. Las entradas de hostname
  * se saltan silenciosamente acá (sin log de error — no son un dato corrupto,
- * ver `extractHostSpecs()`).
+ * ver `extractHostSpecs()`), y las deshabilitadas (`enabled: false`) también:
+ * el filtro vive SÓLO acá, así el formato de alambre no cambia y el agente
+ * nunca ve el campo.
  */
 export function compileIpRangeSpecs(specs: IpRangeSpecInput[]): CompiledRange[] {
   const out: CompiledRange[] = [];
   for (const spec of specs) {
+    if (spec.enabled === false) continue;
+    // Los hostname no compilan a pares {start,end} — el cloud no los resuelve.
+    // Van por `extractHostSpecs()` a un campo de heartbeat aparte.
     if (spec.hostname) continue;
     try {
       out.push(...compileOne(spec));
@@ -92,11 +93,12 @@ export function compileIpRangeSpecs(specs: IpRangeSpecInput[]): CompiledRange[] 
  * Extrae las entradas de tipo hostname — el agente las resuelve él mismo en
  * cada ciclo de discovery (DNS interno del cliente, el cloud no tiene
  * visibilidad). Viaja en un campo de heartbeat NUEVO y aditivo (`ip_hosts`)
- * — agentes viejos que nunca vieron este campo simplemente lo ignoran.
+ * — agentes viejos que nunca vieron este campo simplemente lo ignoran. Un
+ * hostname con `enabled: false` tampoco viaja, mismo criterio que un rango.
  */
 export function extractHostSpecs(specs: IpRangeSpecInput[]): HostSpec[] {
   return specs
-    .filter((s): s is IpRangeSpecInput & { hostname: string } => !!s.hostname)
+    .filter((s): s is IpRangeSpecInput & { hostname: string } => !!s.hostname && s.enabled !== false)
     .map((s) => ({
       hostname: s.hostname,
       label: s.label ?? null,

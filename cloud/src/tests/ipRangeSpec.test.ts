@@ -4,7 +4,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  validateIpRangeSpecs, publicIpWarnings, extractHostSpecs, overlappingCredentialWarnings,
+  validateIpRangeSpecs, publicIpWarnings, overlappingCredentialWarnings, longLapWarnings,
   IpRangeValidationError, type IpRangeSpecInput,
 } from '../shared/domain/ip-range-spec';
 
@@ -46,26 +46,41 @@ describe('ipRangeSpec — validateIpRangeSpecs', () => {
     assert.throws(() => validateIpRangeSpecs([{ start: '10.0.0.10', end: '10.0.0.1' }]), IpRangeValidationError);
   });
 
-  test('más de 32 specs → error', () => {
-    const many = Array.from({ length: 33 }, (_, i) => ({ start: `10.${Math.floor(i / 250)}.${i % 250}.1`, end: `10.${Math.floor(i / 250)}.${i % 250}.2` }));
+  test('más de 256 rangos → error', () => {
+    const many = Array.from({ length: 257 }, (_, i) => ({ start: `10.${Math.floor(i / 250)}.${i % 250}.1`, end: `10.${Math.floor(i / 250)}.${i % 250}.2` }));
     assert.throws(() => validateIpRangeSpecs(many), IpRangeValidationError);
   });
 
-  test('un solo spec que supera el tope de 2000 IPs declaradas → error', () => {
-    assert.throws(() => validateIpRangeSpecs([{ cidr: '10.0.0.0/20' }]), IpRangeValidationError); // /20 = 4096
+  test('256 rangos + 32 hostnames conviven: son pools SEPARADOS', () => {
+    const ranges = Array.from({ length: 256 }, (_, i) => ({ cidr: `10.0.${i}.0/30` }));
+    const hosts = Array.from({ length: 32 }, (_, i) => ({ hostname: `printer-${i}.local` }));
+    assert.doesNotThrow(() => validateIpRangeSpecs([...ranges, ...hosts]));
   });
 
-  test('varios specs chicos que SUMAN más de 2000 → error en el que hace overflow', () => {
+  test('más de 32 hostnames → error, aunque sobre lugar en el pool de rangos', () => {
+    const hosts = Array.from({ length: 33 }, (_, i) => ({ hostname: `printer-${i}.local` }));
+    assert.throws(() => validateIpRangeSpecs(hosts), IpRangeValidationError);
+  });
+
+  test('un solo spec que supera el tope de 65536 IPs declaradas → error', () => {
+    assert.throws(() => validateIpRangeSpecs([{ cidr: '10.0.0.0/15' }]), IpRangeValidationError); // /15 = 131072
+  });
+
+  test('varios specs chicos que SUMAN más de 65536 → error en el que hace overflow', () => {
     const specs = [
-      { start: '10.0.0.0', end: '10.0.7.255' },  // 2048 IPs
+      { cidr: '10.0.0.0/16' },                   // 65536 IPs exactas
       { start: '10.1.0.0', end: '10.1.0.10' },   // 11 IPs más — dispara el overflow
     ];
     assert.throws(() => validateIpRangeSpecs(specs), IpRangeValidationError);
   });
 
-  test('exactamente 2000 IPs declaradas → no lanza (el límite es inclusivo)', () => {
-    // 10.0.0.0 - 10.0.7.207 = 2000 IPs exactas (7*256 + 207 + 1 = 2000)
-    assert.doesNotThrow(() => validateIpRangeSpecs([{ start: '10.0.0.0', end: '10.0.7.207' }]));
+  test('exactamente 65536 IPs declaradas → no lanza (el límite es inclusivo)', () => {
+    assert.doesNotThrow(() => validateIpRangeSpecs([{ start: '10.0.0.0', end: '10.0.255.255' }]));
+  });
+
+  test('el caso real de 59 sedes (59 /24 ≈ 15.000 IPs) entra sin problema', () => {
+    const sedes = Array.from({ length: 59 }, (_, i) => ({ cidr: `10.0.${i}.0/24`, label: `Sede ${i + 1}` }));
+    assert.doesNotThrow(() => validateIpRangeSpecs(sedes));
   });
 
   test('exclude con IP inválida → error', () => {
@@ -116,9 +131,9 @@ describe('ipRangeSpec — validateIpRangeSpecs', () => {
   });
 
   test('un hostname cuenta 1 hacia el tope total de IPs declaradas', () => {
-    // 2000 (un rango exacto) + 1 hostname = 2001 → debe superar el tope
+    // 65536 (un /16 exacto) + 1 hostname = 65537 → debe superar el tope
     assert.throws(() => validateIpRangeSpecs([
-      { start: '10.0.0.0', end: '10.0.7.207' }, // exactamente 2000
+      { start: '10.0.0.0', end: '10.0.255.255' },
       { hostname: 'uno-de-mas.local' },
     ]), IpRangeValidationError);
   });
@@ -145,24 +160,51 @@ describe('ipRangeSpec — validateIpRangeSpecs', () => {
     const out = validateIpRangeSpecs([{ hostname: 'algo.local', credential_ids: ['cred-1'] }]);
     assert.deepEqual(out[0].credential_ids, ['cred-1']);
   });
-});
 
-describe('ipRangeSpec — extractHostSpecs', () => {
-  test('extrae sólo las entradas de hostname, con label y credential_ids', () => {
-    const specs: IpRangeSpecInput[] = [
-      { start: '10.0.0.1', end: '10.0.0.2' },
-      { hostname: 'printer1.local', label: 'Piso 3', credential_ids: ['cred-a'] },
-      { cidr: '10.0.1.0/30' },
-      { hostname: 'printer2.local' },
-    ];
-    assert.deepEqual(extractHostSpecs(specs), [
-      { hostname: 'printer1.local', label: 'Piso 3', credential_ids: ['cred-a'] },
-      { hostname: 'printer2.local', label: null },
-    ]);
+  test('enabled ausente no se inventa (ausente = habilitado, retrocompatible)', () => {
+    const out = validateIpRangeSpecs([{ start: '10.0.0.1', end: '10.0.0.2' }]);
+    assert.equal(out[0].enabled, undefined);
   });
 
-  test('sin hosts, devuelve un array vacío', () => {
-    assert.deepEqual(extractHostSpecs([{ start: '10.0.0.1', end: '10.0.0.2' }]), []);
+  test('enabled sobrevive el round-trip, en true y en false', () => {
+    const out = validateIpRangeSpecs([
+      { start: '10.0.0.1', end: '10.0.0.2', enabled: false },
+      { hostname: 'algo.local', enabled: true },
+    ]);
+    assert.equal(out[0].enabled, false);
+    assert.equal(out[1].enabled, true);
+  });
+
+  test('enabled que no es booleano → error', () => {
+    const spec = { start: '10.0.0.1', end: '10.0.0.2', enabled: 'si' as unknown as boolean };
+    assert.throws(() => validateIpRangeSpecs([spec]), IpRangeValidationError);
+  });
+
+  test('un rango deshabilitado igual se valida (tiene que poder re-habilitarse sin reeditarlo)', () => {
+    assert.throws(() => validateIpRangeSpecs([{ start: '999.0.0.1', end: '10.0.0.2', enabled: false }]), IpRangeValidationError);
+  });
+});
+
+describe('ipRangeSpec — longLapWarnings', () => {
+  test('las 59 sedes del caso real (~15.000 IPs, ~50 min) NO generan warning', () => {
+    const sedes = Array.from({ length: 59 }, (_, i) => ({ cidr: `10.0.${i}.0/24` }));
+    assert.deepEqual(longLapWarnings(sedes), []);
+  });
+
+  test('un /16 entero (~218 min) genera warning con la estimación en minutos', () => {
+    const warnings = longLapWarnings([{ cidr: '10.0.0.0/16' }]);
+    assert.equal(warnings.length, 1);
+    assert.match(warnings[0], /~218 min/); // (65536/10)*2s = 13107,2s ≈ 218,45 min
+    assert.match(warnings[0], /vuelta/);
+  });
+
+  test('es NO bloqueante: sólo devuelve texto, nunca lanza', () => {
+    assert.doesNotThrow(() => longLapWarnings([{ cidr: 'basura' } as IpRangeSpecInput]));
+    assert.doesNotThrow(() => validateIpRangeSpecs([{ cidr: '10.0.0.0/16' }]));
+  });
+
+  test('los rangos deshabilitados no suman a la estimación', () => {
+    assert.deepEqual(longLapWarnings([{ cidr: '10.0.0.0/16', enabled: false }]), []);
   });
 });
 
@@ -186,6 +228,15 @@ describe('ipRangeSpec — publicIpWarnings', () => {
 
   test('nunca lanza — es sólo informativo, nunca bloquea el guardado', () => {
     assert.doesNotThrow(() => publicIpWarnings([{ cidr: 'basura' } as IpRangeSpecInput]));
+  });
+
+  test('un rango público deshabilitado no avisa (no se compila, el agente no lo ve), el habilitado sí', () => {
+    const warnings = publicIpWarnings([
+      { label: 'Apagado', start: '8.8.8.0', end: '8.8.8.10', enabled: false },
+      { label: 'Prendido', cidr: '1.1.1.0/29' },
+    ]);
+    assert.equal(warnings.length, 1);
+    assert.match(warnings[0], /Prendido/);
   });
 });
 
@@ -235,5 +286,12 @@ describe('ipRangeSpec — overlappingCredentialWarnings', () => {
 
   test('nunca lanza, incluso con specs inválidos mezclados', () => {
     assert.doesNotThrow(() => overlappingCredentialWarnings([{ cidr: 'basura' } as IpRangeSpecInput, { start: '10.0.0.1', end: '10.0.0.2' }]));
+  });
+
+  test('un rango deshabilitado no genera warning de superposición (no se compila, no puede pisar a nadie)', () => {
+    assert.deepEqual(overlappingCredentialWarnings([
+      { label: 'A', start: '10.0.0.1', end: '10.0.0.50', credential_ids: ['cred-a'], enabled: false },
+      { label: 'B', cidr: '10.0.0.0/24' },
+    ]), []);
   });
 });

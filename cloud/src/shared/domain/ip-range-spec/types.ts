@@ -6,6 +6,10 @@ export interface IpRangeSpecInput {
   hostname?: string;
   exclude?: string[];
   credential_ids?: string[];
+  /** Ausente o `true` = habilitado (toda la config ya guardada cae acá).
+   *  `false` = se guarda pero NO se compila: el agente no lo ve nunca, ni
+   *  siquiera sabe que este campo existe (ver `compile.ts`). */
+  enabled?: boolean;
 }
 
 export interface CompiledRange {

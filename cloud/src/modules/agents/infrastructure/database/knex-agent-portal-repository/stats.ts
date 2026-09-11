@@ -1,7 +1,9 @@
 import type { Knex } from "knex";
 import { readSystemSettings } from "../../../../system-settings";
 import { onlyLiveDevices } from "../../../../../api/utils/deviceFilters";
+import type { AgentDiscoveryState } from "../../../domain/entities/agent";
 import type { AgentStats, ConnectivityDay } from "../../../domain/entities/monitor-detail";
+import { readAgentDiscoveryState } from "../../../domain/services/discovery-state";
 import { notDecommissionedNotMergedNotIgnored } from "./device-directory";
 
 /** Alertas abiertas de ESTE agente (equipos propios + alertas agent-scoped como
@@ -65,7 +67,14 @@ async function monthlyVolumeForAgent(db: Knex | Knex.Transaction, agentId: strin
   return Number(rows[0]?.monthly_pages ?? 0);
 }
 
-/** Último barrido exitoso (`RESCAN`/`FORCE_SCAN` completado) — real, de `agent_commands`. */
+/**
+ * BARRIDO MANUAL: último `RESCAN`/`FORCE_SCAN` disparado desde el portal y
+ * confirmado por el agente (`agent_commands`). Es un evento puntual a pedido.
+ *
+ * OJO: no es el barrido automático del agente — para eso está
+ * `discoveryStateForAgent()` acá abajo. Conviven los dos y se parecen sólo en
+ * el nombre.
+ */
 function lastSweepForAgent(db: Knex | Knex.Transaction, agentId: string) {
   return db("agent_commands")
     .where("agent_id", agentId)
@@ -75,6 +84,18 @@ function lastSweepForAgent(db: Knex | Knex.Transaction, agentId: string) {
     .orderBy("executed_at", "desc")
     .select("executed_at")
     .first();
+}
+
+/**
+ * BARRIDO AUTOMÁTICO CONTINUO: última foto del progreso de discovery que el
+ * propio agente mandó en su heartbeat (`agents.discovery_state`, jsonb). Acá no
+ * se recalcula nada — el cursor y la vuelta en curso sólo los conoce el agente.
+ * `null` = agente sin actualizar que todavía no reporta el campo, o que reportó
+ * algo que no cumple la forma del contrato (ver `readAgentDiscoveryState`).
+ */
+async function discoveryStateForAgent(db: Knex | Knex.Transaction, agentId: string): Promise<AgentDiscoveryState | null> {
+  const row = await db("agents").where("id", agentId).select("discovery_state").first();
+  return readAgentDiscoveryState(row?.discovery_state);
 }
 
 /** Episodios `agent_offline` que se solapan con la ventana [since, ahora] —
@@ -132,13 +153,14 @@ export async function getAgentConnectivity30d(db: Knex | Knex.Transaction, agent
 export async function getAgentStats(db: Knex | Knex.Transaction, agentId: string): Promise<AgentStats> {
   const { deviceOfflineThresholdMinutes } = await readSystemSettings(db);
   const offlineCutoff = new Date(Date.now() - deviceOfflineThresholdMinutes * 60 * 1000);
-  const [managed, alertsSummary, pending, volumeMonth, lastSweep, connectivity] = await Promise.all([
+  const [managed, alertsSummary, pending, volumeMonth, lastSweep, connectivity, discoveryState] = await Promise.all([
     managedDeviceCountsForAgent(db, agentId, offlineCutoff),
     openAlertsSummaryForAgent(db, agentId),
     pendingDeviceCountForAgent(db, agentId),
     monthlyVolumeForAgent(db, agentId),
     lastSweepForAgent(db, agentId),
     computeConnectivityWindow(db, agentId, 30),
+    discoveryStateForAgent(db, agentId),
   ]);
 
   const total = Number(managed?.total ?? 0);
@@ -166,5 +188,6 @@ export async function getAgentStats(db: Knex | Knex.Transaction, agentId: string
     discovered_pending: Number(pending?.count ?? 0),
     last_sweep_at: lastSweepAt,
     last_sweep_new_count: lastSweepNewCount,
+    discovery_state: discoveryState,
   };
 }

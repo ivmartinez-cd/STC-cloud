@@ -1,5 +1,6 @@
 import {
-  compileIpRangeSpecs, extractHostSpecs, overlappingCredentialWarnings, publicIpWarnings, validateIpRangeSpecs,
+  compileIpRangeSpecs, extractHostSpecs, longLapWarnings, overlappingCredentialWarnings, publicIpWarnings,
+  validateIpRangeSpecs,
   type CompiledRange, type HostSpec, type IpRangeSpecInput,
 } from "../../../../shared/domain/ip-range-spec";
 import { DEFAULT_BUSINESS_HOURS, validateBusinessHours, type BusinessHoursConfig } from "../../../../shared/domain/business-hours";
@@ -9,14 +10,26 @@ import { parseJsonColumn } from "./supplies-details";
 
 /** Reglas PURAS de la configuración del agente — extraídas de `AgentConfigService`. */
 
+/** Única rama de `buildConfigUpdates` con lógica propia: el resto son asignaciones directas. */
+function buildIpRangesUpdate(raw: unknown): { column: string; warnings: string[] } {
+  const validated = validateIpRangeSpecs(raw);
+  return {
+    column: JSON.stringify(validated),
+    // `longLapWarnings` compensa que el tope (2.000 → 65.536, ver validate.ts)
+    // ya no garantice una vuelta corta: el aviso también tiene que llegarle a
+    // quien guarda por API, no sólo a quien usa el portal.
+    warnings: [...publicIpWarnings(validated), ...overlappingCredentialWarnings(validated), ...longLapWarnings(validated)],
+  };
+}
+
 /** Valida y traduce un `AgentConfigUpdate` a columnas; `warnings` son no bloqueantes. */
 export function buildConfigUpdates(newConfig: AgentConfigUpdate): { updates: Record<string, unknown>; warnings: string[] } {
   const updates: Record<string, unknown> = {};
   let warnings: string[] = [];
   if (newConfig.ip_ranges !== undefined) {
-    const validated = validateIpRangeSpecs(newConfig.ip_ranges);
-    updates.ip_ranges = JSON.stringify(validated);
-    warnings = [...publicIpWarnings(validated), ...overlappingCredentialWarnings(validated)];
+    const built = buildIpRangesUpdate(newConfig.ip_ranges);
+    updates.ip_ranges = built.column;
+    warnings = built.warnings;
   }
   if (newConfig.snmp_community !== undefined) updates.snmp_community = newConfig.snmp_community;
   if (newConfig.scan_interval_minutes !== undefined) updates.scan_interval_minutes = newConfig.scan_interval_minutes;

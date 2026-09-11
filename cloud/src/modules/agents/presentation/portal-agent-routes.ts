@@ -10,7 +10,16 @@ import { createPortalAgentController } from "./portal-agent-controller";
 /**
  * Shape de una entrada de `ip_ranges` — rango manual (`start`+`end`) O bloque
  * CIDR (`cidr`). Deliberadamente SIN `required`: el schema es sólo de forma;
- * la regla "exactamente uno de cidr o start+end" vive en `validateIpRangeSpecs()`.
+ * la regla "exactamente uno de cidr, start+end u hostname" vive en
+ * `validateIpRangeSpecs()`.
+ *
+ * `hostname`, `credential_ids` y `enabled` tampoco se declaran a propósito y
+ * viajan intactos: sin `additionalProperties: false` el `removeAdditional` que
+ * Fastify le pasa a AJV no borra nada. Declararlos sería peor — con
+ * `coerceTypes` activo, un `enabled: 1` se convertiría en `true` en vez de
+ * frenar en el chequeo estricto del dominio. NO agregar
+ * `additionalProperties: false` acá: dejaría el toggle de habilitado fuera de
+ * la base sin ningún error visible.
  */
 const ipRangeItemSchema = {
   type: "object",
@@ -22,6 +31,21 @@ const ipRangeItemSchema = {
     exclude: { type: "array", maxItems: 32, items: { type: "string", maxLength: 15 } },
   },
 };
+
+/**
+ * Guard de tamaño de body nada más, a propósito MÁS FLOJO que el tope real
+ * (`MAX_SPECS` 256 + `MAX_HOSTNAME_SPECS` 32 = 288 en `validateIpRangeSpecs()`).
+ * Tiene que quedar ESTRICTAMENTE por encima, no igual: un 400 de AJV responde
+ * `{statusCode, code, error: "Bad Request", message}` y el portal lee `error`
+ * (`api.ts`), así que al operador le llega "Bad Request" pelado en vez del
+ * mensaje en castellano con `field` que arma el dominio. Igualar los números
+ * dejaba ese mensaje inalcanzable por HTTP justo en el caso que hoy es fácil de
+ * disparar (la carga masiva "Pegar lista"). Si AJV cortara MÁS ABAJO sería peor
+ * todavía: pasó con 20 acá contra 256 allá, y el caso real que motivó todo
+ * (59 sedes, un /24 por sede) moría en 400 antes de llegar a validarse.
+ * 512 entradas × 32 excludes ≈ 350 KB, bien bajo el `bodyLimit` de 1 MB.
+ */
+const MAX_IP_RANGE_ITEMS = 512;
 
 /** Sólo forma/tipo (`null` explícito = reset al default); la regla de negocio vive en `validateBusinessHours()`. */
 const businessHoursSchema = {
@@ -40,7 +64,7 @@ const createAgentSchema = {
     properties: {
       clientId: { type: "string", format: "uuid" },
       name: { type: "string", minLength: 1, maxLength: 100 },
-      ip_ranges: { type: "array", maxItems: 20, items: ipRangeItemSchema },
+      ip_ranges: { type: "array", maxItems: MAX_IP_RANGE_ITEMS, items: ipRangeItemSchema },
       snmp_community: { type: "string", maxLength: 64 },
       scan_interval_minutes: { type: "integer", minimum: 1, maximum: 1440 },
       business_hours: businessHoursSchema,
@@ -53,7 +77,7 @@ const updateConfigSchema = {
     type: "object",
     properties: {
       name: { type: "string", minLength: 1, maxLength: 100 },
-      ip_ranges: { type: "array", maxItems: 20, items: ipRangeItemSchema },
+      ip_ranges: { type: "array", maxItems: MAX_IP_RANGE_ITEMS, items: ipRangeItemSchema },
       snmp_community: { type: "string", maxLength: 64 },
       scan_interval_minutes: { type: "integer", minimum: 1, maximum: 1440 },
       toner_warning_threshold: { type: "integer", minimum: 0, maximum: 100 },
@@ -68,7 +92,14 @@ const updateConfigSchema = {
 const commandSchema = {
   body: {
     type: "object", required: ["type"],
-    properties: { type: { type: "string", enum: ["FORCE_SCAN", "RESTART", "UPDATE_CONFIG", "STC_CONSOLE", "FORCE_UPDATE"] }, payload: { type: "object" } },
+    // `RESCAN` faltaba y el panel del portal manda exactamente ese nombre
+    // (RemoteToolsPanel.tsx): el botón "Rescan" devolvía 400 sin que nadie lo
+    // notara. El agente acepta los dos nombres (CommandHandler los trata igual)
+    // y el enum de acciones en lote también lo incluye — el hueco era sólo acá.
+    // `RESTART_DISCOVERY` reinicia la vuelta de barrido desde el primer rango
+    // (equivalente del "restart discovery please" de la consola IMIL de SDS);
+    // distinto de `FORCE_SCAN`, que dispara UN chunk sin mover el cursor.
+    properties: { type: { type: "string", enum: ["RESCAN", "FORCE_SCAN", "RESTART", "UPDATE_CONFIG", "STC_CONSOLE", "FORCE_UPDATE", "RESTART_DISCOVERY"] }, payload: { type: "object" } },
   },
 };
 

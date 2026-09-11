@@ -5,7 +5,7 @@
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { compileIpRangeSpecs, type IpRangeSpecInput } from '../shared/domain/ip-range-spec';
+import { compileIpRangeSpecs, extractHostSpecs, type IpRangeSpecInput } from '../shared/domain/ip-range-spec';
 
 describe('ipRangeSpec — compileIpRangeSpecs', () => {
   test('rango manual se compila tal cual (sin exclusiones)', () => {
@@ -125,5 +125,57 @@ describe('ipRangeSpec — compileIpRangeSpecs', () => {
   test('sin credential_ids, el compilado no tiene el campo', () => {
     const out = compileIpRangeSpecs([{ start: '10.0.0.1', end: '10.0.0.2' }]);
     assert.equal(out[0].credential_ids, undefined);
+  });
+});
+
+// Movido desde ipRangeSpec.test.ts: `extractHostSpecs()` vive en compile.ts,
+// y allá el archivo ya rozaba el límite de 300 líneas del check-sizes.
+describe('ipRangeSpec — extractHostSpecs', () => {
+  test('extrae sólo las entradas de hostname, con label y credential_ids', () => {
+    const specs: IpRangeSpecInput[] = [
+      { start: '10.0.0.1', end: '10.0.0.2' },
+      { hostname: 'printer1.local', label: 'Piso 3', credential_ids: ['cred-a'] },
+      { cidr: '10.0.1.0/30' },
+      { hostname: 'printer2.local' },
+    ];
+    assert.deepEqual(extractHostSpecs(specs), [
+      { hostname: 'printer1.local', label: 'Piso 3', credential_ids: ['cred-a'] },
+      { hostname: 'printer2.local', label: null },
+    ]);
+  });
+
+  test('sin hosts, devuelve un array vacío', () => {
+    assert.deepEqual(extractHostSpecs([{ start: '10.0.0.1', end: '10.0.0.2' }]), []);
+  });
+});
+
+describe('ipRangeSpec — enabled', () => {
+  test('un rango con enabled:false no se compila', () => {
+    const out = compileIpRangeSpecs([
+      { start: '10.0.0.1', end: '10.0.0.2', enabled: false },
+      { start: '10.0.1.1', end: '10.0.1.2' },
+    ]);
+    assert.deepEqual(out, [{ start: '10.0.1.1', end: '10.0.1.2' }]);
+  });
+
+  test('enabled:true y enabled ausente compilan igual (ausente = habilitado)', () => {
+    const conCampo = compileIpRangeSpecs([{ cidr: '10.0.1.0/30', enabled: true }]);
+    const sinCampo = compileIpRangeSpecs([{ cidr: '10.0.1.0/30' }]);
+    assert.deepEqual(conCampo, sinCampo);
+  });
+
+  test('el campo enabled NUNCA viaja al agente (ni en rangos ni en hosts)', () => {
+    const [range] = compileIpRangeSpecs([{ start: '10.0.0.1', end: '10.0.0.2', enabled: true }]);
+    assert.deepEqual(Object.keys(range), ['start', 'end']);
+    const [host] = extractHostSpecs([{ hostname: 'algo.local', enabled: true }]);
+    assert.deepEqual(Object.keys(host), ['hostname', 'label']);
+  });
+
+  test('un hostname deshabilitado tampoco viaja', () => {
+    const specs: IpRangeSpecInput[] = [
+      { hostname: 'apagado.local', enabled: false },
+      { hostname: 'prendido.local' },
+    ];
+    assert.deepEqual(extractHostSpecs(specs), [{ hostname: 'prendido.local', label: null }]);
   });
 });
