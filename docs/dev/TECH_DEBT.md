@@ -9,7 +9,7 @@ que muerda.
 > `archivo:línea` que lo prueban. Cuando se cierra, se marca ✅ con la fecha y el commit,
 > y se deja en el doc (trazabilidad), no se borra.
 
-**Última revisión:** 2026-09-08
+**Última revisión:** 2026-09-11
 
 ---
 
@@ -22,6 +22,12 @@ que muerda.
 | [UPD-3](#upd-3--la-metadata-de-version-publicada-no-tiene-respaldo-real-) | Actualizaciones | La metadata de versión publicada no tiene respaldo real | 🟠 Media | ✅ Cerrado |
 | [UPD-4](#upd-4--la-clave-de-firma-ed25519-existe-en-una-sola-maquina) | Seguridad | La clave de firma Ed25519 existe en una sola máquina | 🔴 Alta | Abierto |
 | [UPD-5](#upd-5--el-camino-real-de-actualizacion-zip-no-tiene-rollback-automatico) | Actualizaciones | El camino real de actualización (ZIP) no tiene rollback automático | 🟠 Media | Abierto |
+| [DISC-1](#disc-1--las-constraints-por-item-de-ajv-siguen-tapando-los-errores-de-dominio) | Barrido | Las constraints por ítem de AJV siguen tapando los errores de dominio | 🟠 Media | Abierto |
+| [DISC-2](#disc-2--el-total-del-barrido-que-ve-el-portal-no-cuenta-los-hostnames) | Barrido | El total del barrido que ve el portal no cuenta los hostnames | 🟡 Baja | Abierto |
+| [DISC-3](#disc-3--apagar-un-rango-reinicia-la-vuelta-de-barrido-en-curso) | Barrido | Apagar un rango reinicia la vuelta de barrido en curso | 🟡 Baja | Abierto |
+| [UI-1](#ui-1--la-fila-nueva-de-monitorspecscard-no-fue-verificada-a-1920x900) | Portal | La fila nueva de `MonitorSpecsCard` no fue verificada a 1920x900 | 🟡 Baja | Abierto |
+| [ARCH-1](#arch-1--iprange-quedo-sin-consumidores-en-produccion) | Agente | `ipRange()` quedó sin consumidores en producción | 🟡 Baja | Abierto |
+| [ARCH-2](#arch-2--sizes-baselinejson-lista-un-archivo-que-ya-no-existe) | Arquitectura | `sizes-baseline.json` lista un archivo que ya no existe | 🟡 Baja | Abierto |
 
 ---
 
@@ -193,6 +199,135 @@ tests. No hay detección de "arranqué y me morí, volvé atrás".
 **Para cerrarlo:** un watchdog post-update (el `.bat` deja un flag, el agente lo borra al
 arrancar bien; si el flag sigue ahí en el próximo arranque del servicio, restaurar
 `${installDir}_backup`), o al menos exponer el rollback como comando remoto desde el portal.
+
+---
+
+## 🔍 Barrido continuo (discovery por chunks)
+
+Contexto: desde 2026-09-11 el agente no barre todos los rangos de una sola pasada —
+hace un chunk time-boxed por corrida y persiste un cursor (`agent/src/core/DiscoveryCursor.ts`,
+tabla `scan_state` en `agent/src/sync/database.ts`). Los ítems de abajo son los bordes
+conocidos de ese cambio y de la subida de topes que lo acompañó.
+
+### DISC-1 — Las constraints por ítem de AJV siguen tapando los errores de dominio
+
+**Detectado:** 2026-09-11 · **Severidad:** 🟠 Media · **Estado:** Abierto
+
+Se arregló el `maxItems` **del array** (`portal-agent-routes.ts:48`, 20 → 512), pero las
+constraints **por ítem** de `ipRangeItemSchema` (`portal-agent-routes.ts:24-33`) siguen
+teniendo el mismo problema que motivó ese fix:
+
+| Constraint | Qué pasa si se excede |
+| :--- | :--- |
+| `label.maxLength: 100` | 400 de AJV |
+| `start`/`end`/`cidr` `maxLength` 15/15/18 | 400 de AJV |
+| `exclude.maxItems: 32` | 400 de AJV |
+
+Un 400 de AJV responde `{statusCode, code, error: "Bad Request", message}` y el portal lee
+`error` (`api.ts`), así que al operador le llega **"Bad Request" pelado** en vez del mensaje
+en castellano con `field` que arma `validateIpRangeSpecs()`. Es exactamente el modo de falla
+que hacía ilegible el caso de las 59 sedes, sólo que ahora hay que pegarle a un ítem
+individual mal formado en vez de a la lista entera — bastante menos probable, pero igual de
+opaco cuando pasa.
+
+**Para cerrarlo:** aflojar esas constraints por encima del tope de dominio equivalente (mismo
+criterio que `MAX_IP_RANGE_ITEMS`) y que el rechazo lo haga el dominio, o instalar un
+`setErrorHandler` que traduzca los errores de validación de Fastify al shape `{error, field}`
+que el portal ya sabe mostrar.
+
+---
+
+### DISC-2 — El total del barrido que ve el portal no cuenta los hostnames
+
+**Detectado:** 2026-09-11 · **Severidad:** 🟡 Baja · **Estado:** Abierto
+
+`totalDeclaredIps()` suma sólo rangos (`DiscoveryCursor.ts`, recibe `CursorRange[]`), y es lo
+que va a `discovery_state.total` (`agent/src/core/ScanService.ts:183`). Los hostnames son
+point lookups: se resuelven aparte, con su propio presupuesto, y no entran en el cursor.
+
+Es correcto **para el cursor** — un hostname no tiene posición en el recorrido — pero el
+portal muestra ese número como "IPs declaradas totales" en la fila BARRIDO AUTOMÁTICO. Una
+config mayormente de hostnames (hasta 32) muestra un total más chico que lo que realmente se
+sondea. Nadie se rompe; el número simplemente miente un poco.
+
+**Para cerrarlo:** o sumarle la cantidad de hosts al `total` que se reporta, o renombrar el
+label del portal a algo que diga la verdad ("IPs en el recorrido").
+
+---
+
+### DISC-3 — Apagar un rango reinicia la vuelta de barrido en curso
+
+**Detectado:** 2026-09-11 · **Severidad:** 🟡 Baja · **Estado:** Abierto
+
+El cloud filtra las entradas con `enabled: false` antes de mandarlas
+(`cloud/src/shared/domain/ip-range-spec/compile.ts:79` y `:101`), así que apagar un rango
+cambia la lista compilada que le llega al agente, eso cambia `fingerprintRanges()`
+(`DiscoveryCursor.ts`) y el agente arranca la vuelta de cero.
+
+Es **defendible**: el conjunto de cosas a barrer efectivamente cambió, y el fingerprint está
+hecho justo para detectar eso (por lo mismo excluye a propósito `credential_ids` y `label`,
+que no cambian el recorrido). Lo que no está bien es que **el portal no lo dice**: el toggle
+parece un filtro de visualización y en realidad, en un parque grande, tira a la basura hasta
+una hora de recorrido.
+
+**Para cerrarlo:** avisarlo en la UI al togglear (mismo lugar donde ya aparece el aviso de
+vuelta larga), o hacer que el cursor sobreviva reasignándose por `start-end` en vez de por
+índice cuando el cambio es sólo una baja.
+
+---
+
+### UI-1 — La fila nueva de `MonitorSpecsCard` no fue verificada a 1920x900
+
+**Detectado:** 2026-09-11 · **Severidad:** 🟡 Baja · **Estado:** Abierto
+
+`specRows()` (`cloud/portal/src/features/monitors/components/MonitorSpecsCard.tsx:56-70`)
+devuelve 9 filas fijas más una condicional — BARRIDO AUTOMÁTICO (`:68`), que aparece **sólo**
+cuando el agente reporta `discovery_state`. O sea: la tarjeta de 10 filas todavía no existió
+en pantalla, porque ningún agente en producción corre la versión que lo reporta.
+
+El patrón de la app es que toda pantalla entre en 1920x1080 **y** en 1920x900 (el viewport
+real de Iván) sin scroll interno. La verificación pendiente es visual y no la puede hacer
+Claude: Playwright está prohibido por regla global (tilda el entorno).
+
+**Para cerrarlo:** que Iván abra el detalle del monitor de ISSN después del deploy de 1.4.0 y
+confirme que la décima fila entra a 1920x900; si no entra, la variante `short:` de la tarjeta
+es donde se ajusta.
+
+---
+
+### ARCH-1 — `ipRange()` quedó sin consumidores en producción
+
+**Detectado:** 2026-09-11 · **Severidad:** 🟡 Baja · **Estado:** Abierto
+
+`ipRange()` (`agent/src/core/NetworkUtils.ts:7`) es un generador que expande un rango IP a IP.
+Con el barrido por chunks, el planificador pasó a hacer aritmética entera sobre los extremos
+(O(rangos), no O(IPs)) y nadie lo llama más: los únicos call-sites que quedan son sus propios
+tests (`agent/src/tests/networkUtils.test.ts:11,15,19`).
+
+Es código muerto que los tests mantienen vivo, así que ninguna guarda estática lo va a marcar.
+Se deja por ahora porque expandir un rango sigue siendo útil para diagnóstico desde la consola.
+
+**Para cerrarlo:** borrarlo junto con su test, o darle un consumidor real (por ejemplo el
+`list disc` de la consola STC).
+
+---
+
+### ARCH-2 — `sizes-baseline.json` lista un archivo que ya no existe
+
+**Detectado:** 2026-09-11 · **Severidad:** 🟡 Baja · **Estado:** Abierto
+
+`cloud/scripts/sizes-baseline.json:1238` sigue teniendo la entrada de
+`portal/src/features/monitors/components/MonitorMetricsStrip.tsx`, borrado en el commit de
+carga masiva de rangos.
+
+`check-sizes` pasa igual: el checker sólo consulta la baseline para archivos que existen en
+el árbol, así que una entrada huérfana nunca se lee. Pero es ruido que ensucia el archivo y
+que "perdonaría" a un archivo futuro que se llamara igual.
+
+**Para cerrarlo:** `npm run check:sizes:baseline -w cloud` en la próxima corrida que toque
+tamaños (regenera la deuda desde el árbol actual, así que la entrada huérfana desaparece
+sola), o agregarle al checker un aviso cuando una entrada de la baseline no matchea ningún
+archivo.
 
 ---
 
