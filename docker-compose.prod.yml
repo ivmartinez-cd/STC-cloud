@@ -133,7 +133,10 @@ services:
     healthcheck:
       # Chequeo de puerto, no de contenido: nginx.conf hace redirect/SSL propios
       # que dependen del dominio y certificado reales, fuera de alcance acá.
-      test: ["CMD-SHELL", "nc -z localhost 80"]
+      # 127.0.0.1 y no `localhost`: en nginx:alpine `localhost` resuelve a `::1`
+      # y nginx.conf escucha sólo IPv4 (`listen 80;`), así que el chequeo daba
+      # siempre 1 y el contenedor figuraba unhealthy desde el arranque (11/09/2026).
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 80"]
       interval: 30s
       timeout: 5s
       retries: 3
