@@ -3,7 +3,8 @@ import { log, logTailer } from './Logger';
 import { getLocalIp, getHostOS } from './NetworkUtils';
 import { CHANNEL } from './channel';
 import { tryRefresh } from '../sync/uploader';
-import { getDeviceCount, pendingCount } from '../sync/database';
+import { getDeviceCount, pendingCount, getScanState } from '../sync/database';
+import { buildDiscoveryState } from './ScanService';
 import type { AgentConfig, IpRange, IpHost, DevicePolicy } from './config';
 import { ConfigManager, getHostname } from './config';
 import type { CommandHandler, CommandResult } from './CommandHandler';
@@ -91,6 +92,11 @@ export class HeartbeatService {
             uptime:    Math.round(os.uptime()),
             channel:   CHANNEL,
             runtime:   process.version,
+            // Progreso del barrido continuo — campo ADITIVO: un cloud viejo
+            // lo ignora. Se arma acá (y no vía `ScanService`) para no meter
+            // una dependencia nueva en el wiring de `main.ts`: el estado vive
+            // en la base, no en memoria del servicio.
+            discovery_state: buildDiscoveryState(getScanState(), config.ipRanges ?? []),
           }
         }),
         signal: AbortSignal.timeout(65_000)
@@ -211,9 +217,11 @@ export class HeartbeatService {
     }
 
     if (triggerImmediateScan) {
-      log('INFO', 'Primera configuracion de IPs recibida - iniciando scan inmediato.');
+      // `triggerScan()` es UN chunk del barrido continuo, no el espacio entero:
+      // arranca la vuelta ya mismo y el scheduler encadena el resto.
+      log('INFO', 'Primera configuracion de IPs recibida - arrancando la vuelta de discovery.');
       await this.deps.triggerScan();
-      log('INFO', 'Scan inmediato completado - sincronizando con el portal.');
+      log('INFO', 'Primer chunk de discovery completado - sincronizando con el portal.');
       await this.deps.triggerSync();
     }
   }

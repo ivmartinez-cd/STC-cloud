@@ -10,28 +10,6 @@ export function* ipRange(start: string, end: string): Generator<string> {
   for (let i = toN(start); i <= toN(end); i++) yield toIp(i >>> 0);
 }
 
-/**
- * Materializa `ipRange()` hasta `cap` IPs — tope de seguridad independiente
- * de cualquier validación cloud (defensa en profundidad contra datos viejos
- * pre-validación, ediciones manuales de DB, o cualquier bypass). Antes de
- * esto, `ScanService.scan()` hacía `[...ipRange(range.start, range.end)]`
- * sin ningún límite: un rango mal cargado (ej. un /8 entero) materializaba
- * millones de IPs en memoria de una sola vez.
- *
- * `truncated` se detecta directamente (si el generador todavía tenía más
- * para dar al llegar al tope), no por coincidencia de límites — así el
- * caller puede loguear un WARN preciso.
- */
-export function materializeRange(range: { start: string; end: string }, cap: number): { ips: string[]; truncated: boolean } {
-  const ips: string[] = [];
-  let truncated = false;
-  for (const ip of ipRange(range.start, range.end)) {
-    if (ips.length >= cap) { truncated = true; break; }
-    ips.push(ip);
-  }
-  return { ips, truncated };
-}
-
 // --- Hostname resolution (point lookup, §2.1/§2.3 gap analysis) ---
 
 const DNS_LOOKUP_TIMEOUT_MS = 4000;

@@ -105,6 +105,7 @@ async function main(): Promise<void> {
     // === Wiring de dependencias circulares ===
     commandHandler.setNetworkBusyCheck(() => scheduler.isBusy);
     commandHandler.setScanTrigger(() => { scanService.scan(); });
+    commandHandler.setRestartDiscoveryTrigger(() => scanService.restartDiscovery());
     commandHandler.setForceUpdateFn(() => updateService.checkForUpdate(true));
     commandHandler.setKnownDeviceCheck((ip) => isRegistered(ip));
     // RESTART_PRINTER (v1.2.0): misma pool de credenciales que el escaneo de

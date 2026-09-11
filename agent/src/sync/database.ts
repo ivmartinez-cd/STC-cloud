@@ -81,6 +81,22 @@ export function openQueue(): void {
       last_seen     TEXT,
       snmp_cred_id  TEXT    DEFAULT NULL
     );
+
+    -- Barrido continuo de discovery (ver core/DiscoveryCursor.ts): una sola
+    -- fila con la posición del cursor. Persistir acá (y no en memoria) es lo
+    -- que hace que un reinicio del agente retome la vuelta donde iba en vez
+    -- de volver a empezar por la primera sede.
+    CREATE TABLE IF NOT EXISTS scan_state (
+      id               INTEGER PRIMARY KEY CHECK (id = 1),
+      fingerprint      TEXT,
+      range_idx        INTEGER NOT NULL DEFAULT 0,
+      offset_in_range  INTEGER NOT NULL DEFAULT 0,
+      scanned_this_lap INTEGER NOT NULL DEFAULT 0,
+      lap_started_at   TEXT,
+      last_lap_at      TEXT,
+      last_lap_ms      INTEGER,
+      laps_completed   INTEGER NOT NULL DEFAULT 0
+    );
   `);
 
   // Migracion en caliente: agrega columna si la BD ya existia sin ella
@@ -391,6 +407,78 @@ export function getKnownDeviceInfo(ip: string): KnownDevice | null {
     'SELECT ip, brand, model, serial, poll_method, driver, snmp_cred_id FROM known_devices WHERE ip = ?',
   ).get(ip) as KnownDevice | undefined;
   return row ?? null;
+}
+
+// --- Estado del barrido continuo (ver core/DiscoveryCursor.ts) ---
+
+export interface ScanState {
+  /** Huella del espacio declarado con el que se armó este cursor. */
+  fingerprint: string | null;
+  range_idx: number;
+  offset_in_range: number;
+  /** IPs ya recorridas en la vuelta EN CURSO (para el progreso del portal). */
+  scanned_this_lap: number;
+  lap_started_at: string | null;
+  last_lap_at: string | null;
+  last_lap_ms: number | null;
+  laps_completed: number;
+}
+
+const EMPTY_SCAN_STATE: ScanState = {
+  fingerprint: null, range_idx: 0, offset_in_range: 0, scanned_this_lap: 0,
+  lap_started_at: null, last_lap_at: null, last_lap_ms: null, laps_completed: 0,
+};
+
+export function getScanState(): ScanState {
+  const row = db.prepare(
+    'SELECT fingerprint, range_idx, offset_in_range, scanned_this_lap, lap_started_at, last_lap_at, last_lap_ms, laps_completed FROM scan_state WHERE id = 1',
+  ).get() as ScanState | undefined;
+  return row ?? { ...EMPTY_SCAN_STATE };
+}
+
+/** Guarda la posición del cursor tras un chunk (no toca las métricas de vuelta). */
+export function saveScanCursor(fingerprint: string, rangeIdx: number, offset: number, scannedThisLap: number): void {
+  db.prepare(`
+    INSERT INTO scan_state (id, fingerprint, range_idx, offset_in_range, scanned_this_lap, lap_started_at)
+    VALUES (1, ?, ?, ?, ?, COALESCE((SELECT lap_started_at FROM scan_state WHERE id = 1), datetime('now')))
+    ON CONFLICT(id) DO UPDATE SET
+      fingerprint = excluded.fingerprint,
+      range_idx = excluded.range_idx,
+      offset_in_range = excluded.offset_in_range,
+      scanned_this_lap = excluded.scanned_this_lap,
+      lap_started_at = COALESCE(scan_state.lap_started_at, datetime('now'))
+  `).run(fingerprint, rangeIdx, offset, scannedThisLap);
+}
+
+/** Cierra la vuelta: registra duración/fecha y deja el cursor listo para la próxima. */
+export function recordLapComplete(fingerprint: string, lapMs: number): void {
+  db.prepare(`
+    INSERT INTO scan_state (id, fingerprint, range_idx, offset_in_range, scanned_this_lap, lap_started_at, last_lap_at, last_lap_ms, laps_completed)
+    VALUES (1, ?, 0, 0, 0, NULL, datetime('now'), ?, 1)
+    ON CONFLICT(id) DO UPDATE SET
+      fingerprint = excluded.fingerprint,
+      range_idx = 0,
+      offset_in_range = 0,
+      scanned_this_lap = 0,
+      lap_started_at = NULL,
+      last_lap_at = datetime('now'),
+      last_lap_ms = excluded.last_lap_ms,
+      laps_completed = scan_state.laps_completed + 1
+  `).run(fingerprint, lapMs);
+}
+
+/** Reinicia el cursor (cambió el espacio declarado, o `restart discovery` manual). */
+export function resetScanCursor(fingerprint: string): void {
+  db.prepare(`
+    INSERT INTO scan_state (id, fingerprint, range_idx, offset_in_range, scanned_this_lap, lap_started_at)
+    VALUES (1, ?, 0, 0, 0, datetime('now'))
+    ON CONFLICT(id) DO UPDATE SET
+      fingerprint = excluded.fingerprint,
+      range_idx = 0,
+      offset_in_range = 0,
+      scanned_this_lap = 0,
+      lap_started_at = datetime('now')
+  `).run(fingerprint);
 }
 
 

@@ -17,6 +17,7 @@ export interface CommandResult {
 }
 
 export type ScanTrigger = () => void;
+export type RestartDiscoveryTrigger = () => void;
 export type ForceUpdateFn = () => Promise<boolean>;
 
 export class CommandHandler {
@@ -24,6 +25,7 @@ export class CommandHandler {
   private processedCommandIds = new Set<string>();
   private socket: SocketManager | null = null;
   private scanTrigger: ScanTrigger | null = null;
+  private restartDiscoveryTrigger: RestartDiscoveryTrigger | null = null;
   private forceUpdateFn: ForceUpdateFn | null = null;
   private isNetworkBusy: () => boolean = () => false;
   // Fail-closed a propósito: si nadie lo configura (ej. un test que no lo
@@ -41,6 +43,12 @@ export class CommandHandler {
 
   setScanTrigger(fn: ScanTrigger): void {
     this.scanTrigger = fn;
+  }
+
+  /** "Restart discovery" de la consola IMIL de HP SDS: NO dispara un barrido,
+   *  manda el cursor al primer rango para que la vuelta arranque de nuevo. */
+  setRestartDiscoveryTrigger(fn: RestartDiscoveryTrigger): void {
+    this.restartDiscoveryTrigger = fn;
   }
 
   setForceUpdateFn(fn: ForceUpdateFn): void {
@@ -93,11 +101,28 @@ export class CommandHandler {
         case 'FORCE_SCAN':
           if (!this.isNetworkBusy()) {
             this.scanTrigger?.();
-            result = { message: 'Scan iniciado correctamente' };
+            // Desde el barrido continuo esto dispara UN chunk (≤400 IPs, ~40s),
+            // no el espacio declarado entero: decir "scan iniciado" le hacía
+            // creer al operador que el barrido completo ya terminó.
+            result = { message: 'Chunk de barrido iniciado: la vuelta sigue en los chunks siguientes' };
           } else {
             log('INFO', `Comando ${type} ignorado: tarea de red en progreso.`);
             result = { message: 'Scan pospuesto: hay una tarea de red en curso' };
           }
+          break;
+        case 'RESTART_DISCOVERY':
+          // Sin chequeo de `isNetworkBusy`: no toca la red, y `restartDiscovery()`
+          // ya difiere el reset si justo hay un chunk en vuelo.
+          if (!this.restartDiscoveryTrigger) {
+            // Fail-closed, mismo criterio que EWS_PROXY/RESTART_PRINTER: sin
+            // trigger cableado el comando no hace NADA, y un 'success' le haría
+            // creer al operador que el cursor volvió al primer rango.
+            throw new Error('Este agente no tiene cableado el reinicio de barrido');
+          }
+          this.restartDiscoveryTrigger();
+          // "próxima vuelta" y no "ya": con un chunk en vuelo el reset se
+          // aplica recién cuando ese chunk termina (ver `restartDiscovery`).
+          result = { message: 'Barrido reiniciado: la próxima vuelta arranca desde el primer rango' };
           break;
         case 'RESTART':
           log('WARN', 'Reinicio remoto solicitado. Saliendo en 2 segundos...');

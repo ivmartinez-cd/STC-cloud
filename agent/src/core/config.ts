@@ -19,7 +19,7 @@ export interface IpRange {
 }
 
 /** Point lookup (§2.1/§2.3 gap analysis) — un host puntual que el agente
- *  resuelve él mismo en cada ciclo de discovery (el cloud no tiene
+ *  resuelve él mismo al arrancar cada VUELTA de discovery (el cloud no tiene
  *  visibilidad de la DNS interna del cliente). */
 export interface IpHost {
   hostname: string;
@@ -43,8 +43,8 @@ export interface AgentConfig {
   token: string;
   refreshToken: string;
   ipRanges: IpRange[];
-  /** Hosts puntuales a resolver por DNS en cada ciclo de discovery. Ausente
-   *  = ninguno (comportamiento de siempre). */
+  /** Hosts puntuales a resolver por DNS al abrir cada vuelta de discovery
+   *  (no en cada chunk). Ausente = ninguno (comportamiento de siempre). */
   ipHosts?: IpHost[];
   snmpCommunity: string;
   snmpVersion: 1 | 2; // sigue muerto (nunca se lee) — reemplazado conceptualmente por SnmpCredential.version

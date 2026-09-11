@@ -26,6 +26,10 @@ function fakeScanService() {
     runMeterTask: async () => { calls.push('meter'); },
     runSuppliesTask: async () => { calls.push('supplies'); },
     runAlertTask: async () => { calls.push('alert'); },
+    // Sin vuelta de discovery abierta: acá sólo se testea el gate por
+    // intervalo (la elegibilidad con vuelta en curso vive en
+    // discoveryChunk.test.ts).
+    isLapInProgress: () => false,
   } as unknown as ScanService;
   return { scanService, calls };
 }
