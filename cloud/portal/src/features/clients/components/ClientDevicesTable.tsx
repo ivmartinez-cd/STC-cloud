@@ -74,7 +74,7 @@ export default function ClientDevicesTable({
   onClearFilters: () => void;
 }) {
   const location = useLocation();
-  const backState = { clientFrom: `${location.pathname}${location.search}` };
+  const returnParam = `from=${encodeURIComponent(`${location.pathname}${location.search}`)}`;
   return (
     <div className="overflow-x-auto">
       <div className="min-w-[1180px]" role="table" aria-label="Infraestructura de monitoreo">
@@ -123,8 +123,7 @@ export default function ClientDevicesTable({
         {!error && !loading && rows.map((d) => (
           <Link
             key={d.id}
-            to={`/devices/${d.id}`}
-            state={backState}
+            to={`/devices/${d.id}?${returnParam}`}
             role="row" data-fit-row
             className={`group grid ${GRID_COLS} min-h-[54px] items-center gap-x-[14px] border-b border-line-200 px-5 py-[11px] transition-colors duration-150 ease-in-out hover:bg-surface-hover`}
           >

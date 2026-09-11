@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useLocation, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { api } from '../../../shared/lib/api';
 import { useAuth } from '../../../store/AuthContext';
 import { useToast } from '../../../store/ToastContext';
@@ -49,16 +49,25 @@ const DeviceDetail = () => {
   const isReadOnlyViewer = role === 'client_viewer';
   const canSeeHistory = role === 'admin' || role === 'operator';
 
-  const location = useLocation();
-  const backState = location.state as { monitorFrom?: string; clientFrom?: string } | null;
-  const monitorBackTo = backState?.monitorFrom;
-  const clientBackTo = backState?.clientFrom;
   const [searchParams, setSearchParams] = useSearchParams();
+  // `from` sobrevive a un refresh (a diferencia de router state): guarda la URL completa
+  // de la pantalla de origen (tab/página/filtro/orden de Dispositivos) para que el
+  // breadcrumb pueda volver exactamente ahí en vez de resetear a /monitors/:id o /clients/:id.
+  const [backTo] = useState(() => searchParams.get('from'));
+  const monitorBackTo = backTo?.startsWith('/monitors/') ? backTo : undefined;
+  const clientBackTo = backTo?.startsWith('/clients/') ? backTo : undefined;
   const [activeTab, setActiveTab] = useState<DeviceDetailTab>(() => {
     const tab = searchParams.get('tab');
     return tab && TAB_IDS.has(tab as DeviceDetailTab) ? (tab as DeviceDetailTab) : 'general';
   });
-  const handleTabChange = (tab: DeviceDetailTab) => { setActiveTab(tab); setSearchParams({ tab }); };
+  const handleTabChange = (tab: DeviceDetailTab) => {
+    setActiveTab(tab);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set('tab', tab);
+      return next;
+    });
+  };
 
   const {
     device, alerts, loading, error, refetch, customFieldDefs, details, supplyRows, activeAlerts,

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { api } from '../../../shared/lib/api';
 import { useDebounce } from '../../../shared/hooks/useDebounce';
@@ -54,7 +54,13 @@ function useDeviceFilters(active: boolean) {
   const effectiveQuery = debouncedQuery.trim().length >= 2 ? debouncedQuery.trim() : '';
 
   useUrlSync(active, effectiveQuery, segment, sortField, sortDir, page);
-  useEffect(() => { setPage(0); }, [effectiveQuery, segment]);
+  // No resetear la página restaurada de la URL al montar (sólo ante un cambio real
+  // de filtro/búsqueda hecho por el usuario) — si no, "volver" a una página > 0 nunca funciona.
+  const didMountFilters = useRef(false);
+  useEffect(() => {
+    if (!didMountFilters.current) { didMountFilters.current = true; return; }
+    setPage(0);
+  }, [effectiveQuery, segment]);
 
   const clearFilters = useCallback(() => { setRawQuery(''); setSegment('todos'); }, []);
   const toggleSort = useCallback((field: ClientDeviceSortField) => {
