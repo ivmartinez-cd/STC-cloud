@@ -27,10 +27,12 @@ const KEYWORD_IMAGES: Array<[RegExp, string]> = [
   [/E501\d\d/i, 'hp-laserjet-e50145.jpg'],
   [/M479|M477|M478/i, 'hp-color-laserjet-pro-mfp-m479fdw.jpg'],
   [/M428|M429/i, 'hp-laserjet-pro-mfp-m428fdw.jpg'],
+  [/\bM?432(fdn|fdw|f)?\b/i, 'hp-laser-mfp-432fdn.png'],
   // Lexmark
   [/\bX65[468]/i, 'lexmark-x656de.png'],
   [/\bT652/i, 'lexmark-t652.png'],
   [/\bT654/i, 'lexmark-t654.png'],
+  [/\bMX410/i, 'lexmark-mx410de.png'],
 ];
 
 export function deviceSlug(brand: string | null | undefined, model: string | null | undefined): string {

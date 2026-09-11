@@ -89,6 +89,7 @@ describe('registro de perfiles y familias', () => {
     [id('samsung', 'X4300LX'),                                     'samsung.x4300lx'],
     [id('samsung', 'M5370LX'),                                     'samsung.m5370lx'],
     [id('hp', 'HP Color LaserJet Pro MFP M479fdw'),                'hp.m479fdw'],
+    [id('hp', 'HP Laser MFP 432fdn'),                              'hp.m432'],
     [id('hp', 'HP Color LaserJet MFP E47528'),                     'hp.e47528'],
     [id('hp', 'HP Color LaserJet MFP E78625'),                     'hp.e78625'],
     [id('hp', 'HP LaserJet E40040'),                               'hp.e40040'],
@@ -174,6 +175,73 @@ describe('familia samsung.syncthru', () => {
     assert.equal(res?.meters?.total, 93552);
     assert.ok(!asked.some(p => /supplies\.json/.test(p)));
     assert.equal(res?.supplies, undefined);
+  });
+});
+
+// ─── HP LaserJet MFP M432fdn (motor Samsung SWS/SyncThru, fixtures reales 192.168.178.16) ───
+const HP432_HOME = `{
+  identity: { model_name: "HP Laser MFP 432fdn", serial_num: "CNB1R4C0KK", mac_addr: "7C:4D:8F:6D:6B:D4", host_name: "HP6D6BD4", location: "" },
+  toner_black: { opt: 1, remaining: 100 },
+  tray1: { opt: 1, capa: 250 }, tray2: { opt: 2, capa: 520 }, mp: { opt: 1, capa: 50 },
+  outputTray: [ [ 1, 150, "" ] ]
+}`;
+const HP432_COUNTERS = `{ GXI_SYS_SERIAL_NUM: "CNB1R4C0KK", GXI_BILLING_SIMPLEX_BW_TOTAL_CNT: 0, GXI_BILLING_DUPLEX_BW_TOTAL_CNT: 0, GXI_BILLING_TOTAL_IMP_CNT: 0 }`;
+const HP432_SUPPLIES = `{
+  toner_black: { opt: 1, remaining: 100, cnt: 8, capa: 3000, id: "W1330", serial: "CRUM-230407A9126" },
+  drum_black: { opt: 1, remaining: 100, cnt: 8, capa: 30000, id: "W1332A", serial: "CRUM-230411A1F67" },
+  consume: { fuser_kit: 0, btr_kit: 0 },
+  consume_opt: { fuser_kit_max: 90000, btr_kit_max: 100000 }
+}`;
+const HP432_FW = `{ recordData: [ { name: "Main Firmware", id: "GXI_FW_MAIN_VER", version: "V4.00.01.28 APR-05-2022" } ] }`;
+const HP432_ALERTS = `{ recordData: [ { severity: 3, code: "M1-5120", desc: "Todas las bandejas del sistema estan vacias." }, { severity: 1, code: "S2-3313", desc: "El equipo esta en modo de ahorro de energia." } ] }`;
+
+describe('perfil hp.m432 (equipo real 192.168.178.16, motor Samsung SWS)', () => {
+  const pages = {
+    '/sws/app/information/home/home.json': HP432_HOME,
+    '/sws/app/information/counters/counters.json': HP432_COUNTERS,
+    '/sws/app/information/supplies/supplies.json': HP432_SUPPLIES,
+    '/sws/app/maintenance/fw/fwupgrade.json': HP432_FW,
+    '/sws/app/information/activealert/activealert.json': HP432_ALERTS,
+  };
+  test('resuelve a hp.m432 vía family samsung.syncthru', () => {
+    const r = resolve(id('hp', 'HP Laser MFP 432fdn'), WEB_ONLY);
+    assert.equal(r.profile?.id, 'hp.m432');
+    assert.equal(r.family.id, 'samsung.syncthru');
+  });
+  test('captura completa: brand corregido a hp, ADF agregado, contadores y tóner reales', async () => {
+    const identity = id('hp', 'HP Laser MFP 432fdn');
+    const r = resolve(identity, WEB_ONLY);
+    const ctx = ctxWith(identity, pages, {}, WEB_ONLY);
+    let res = await r.family.collect(ctx, ['identity', 'meters', 'supplies', 'alerts', 'trays']);
+    assert.ok(res);
+    // La familia fuerza brand:'samsung' en su acumulador interno (todos sus otros perfiles lo son).
+    assert.equal(res.identity?.brand, 'samsung');
+    res = await r.profile!.hooks!.afterCollect!(res, ctx);
+
+    // El hook del perfil corrige la marca comercial real.
+    assert.equal(res.identity?.brand, 'hp');
+    assert.equal(res.identity?.model, 'HP Laser MFP 432fdn');
+    assert.equal(res.identity?.serial, 'CNB1R4C0KK');
+    assert.equal(res.identity?.mac, '7C:4D:8F:6D:6B:D4');
+    assert.match(res.identity?.firmware ?? '', /^V4\.00\.01\.28/);
+    // Equipo remanufacturado/reseteado: GXI_BILLING_* en 0 aunque el tóner ya tenga páginas (cnt:8).
+    assert.equal(res.meters?.total, 0);
+    assert.equal(res.supplies?.toners.black?.percentage, 100);
+    assert.equal(res.supplies?.toners.black?.code, 'W1330');
+    assert.equal(res.supplies?.toners.black?.serial, 'CRUM-230407A9126');
+    assert.equal(res.supplies?.toners.black?.capacity, 3000);
+    assert.equal(res.supplies?.drums?.black?.percentage, 100);
+    assert.equal(res.supplies?.maintenance?.fuser?.percentage, 100);
+    assert.equal(res.alerts?.length, 2);
+    assert.equal(res.alerts?.[0].code, 'M1-5120');
+    assert.equal(res.alerts?.[0].severity, 'WARNING');
+    assert.equal(res.alerts?.[1].severity, 'INFO');
+    const trays = res.trays?.input?.map(t => t.name) ?? [];
+    assert.ok(trays.some(n => /Tray 1/i.test(n)) && trays.some(n => /Tray 2/i.test(n)) && trays.some(n => /MP/i.test(n)) && trays.some(n => /ADF/i.test(n)), `bandejas: ${trays.join(', ')}`);
+    assert.equal(res.method, 'ews');
+
+    const reading = toDeviceReading(identity, res, r.profile);
+    assert.equal(reading.brand, 'hp');
   });
 });
 

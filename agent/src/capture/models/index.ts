@@ -15,6 +15,7 @@ import samsungM5370lx   from './samsung/m5370lx';
 
 import hpM479fdw from './hp/m479fdw';
 import hpM428fdw from './hp/m428fdw';
+import hpM432    from './hp/m432';
 import hpE47528  from './hp/e47528';
 import hpE78625  from './hp/e78625';
 import hpE40040  from './hp/e40040';
@@ -30,7 +31,7 @@ export const MODEL_PROFILES: readonly ModelProfile[] = [
   // Samsung
   samsungSlM4072fd, samsungSlM4020nd, samsungScx483x, samsungClx6260, samsungClp680, samsungX4300lx, samsungM5370lx,
   // HP
-  hpM479fdw, hpM428fdw, hpE47528, hpE78625, hpE40040, hpE50145, hpE52645, hpLaserJetJetdirect,
+  hpM479fdw, hpM428fdw, hpM432, hpE47528, hpE78625, hpE40040, hpE50145, hpE52645, hpLaserJetJetdirect,
   // Lexmark
   lexmarkT652, lexmarkT654, lexmarkX656de,
 ];
