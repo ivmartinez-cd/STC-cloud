@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { Search, ChevronRight, CheckSquare, Square, Trash2, RotateCcw, ArrowRightLeft, Radio, Download } from 'lucide-react';
 import type { Device } from '../../../shared/types/monitor';
 import { api } from '../../../shared/lib/api';
@@ -43,6 +43,8 @@ const DeviceInventoryTable = ({ devices, monitorName, agentId, clientId, pending
   const [showExportModal, setShowExportModal] = useState(false);
   const [approving, setApproving] = useState(false);
   const { showToast } = useToast();
+  const location = useLocation();
+  const backState = { monitorFrom: `${location.pathname}${location.search}` };
   const fit = useFitRows({ estimate: 54 });
   const dir = useMonitorDeviceDirectory(agentId, active, fit.rows);
   const { rows, total, totalPages, pageSize, page, setPage, loading, error, refetch, rawQuery, setRawQuery, segment, setSegment, sortField, sortDir, toggleSort, hasActiveFilters, clearFilters } = dir;
@@ -248,7 +250,7 @@ const DeviceInventoryTable = ({ devices, monitorName, agentId, clientId, pending
                     {rowSelection.selected.has(d.id) ? <CheckSquare size={14} className="text-brand" /> : <Square size={14} />}
                   </button>
                 )}
-                <Link to={`/devices/${d.id}`} className="flex min-w-0 items-center gap-3">
+                <Link to={`/devices/${d.id}`} state={backState} className="flex min-w-0 items-center gap-3">
                   <span className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-[3px] border border-line-avatar bg-surface-avatar font-montserrat text-[9px] font-bold text-ink-400">
                     {brandBadge(d.brand)}
                   </span>
@@ -265,7 +267,7 @@ const DeviceInventoryTable = ({ devices, monitorName, agentId, clientId, pending
                 <div className="text-right font-sans text-[12px] text-ink-400">{formatLastReport(d.last_seen)}</div>
 
                 <div className="flex justify-end">
-                  <Link to={`/devices/${d.id}`} className="flex h-[26px] w-[26px] items-center justify-center rounded-[3px] border border-line-avatar text-ink-300 transition-colors duration-150 ease-in-out group-hover:border-line-300 group-hover:text-ink-100">
+                  <Link to={`/devices/${d.id}`} state={backState} className="flex h-[26px] w-[26px] items-center justify-center rounded-[3px] border border-line-avatar text-ink-300 transition-colors duration-150 ease-in-out group-hover:border-line-300 group-hover:text-ink-100">
                     <ChevronRight size={13} />
                   </Link>
                 </div>

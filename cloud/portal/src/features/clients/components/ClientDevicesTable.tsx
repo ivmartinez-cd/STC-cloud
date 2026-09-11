@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { ChevronRight } from 'lucide-react';
 import { fmt } from '../../../shared/lib/formatters';
 import EstadoChip from '../../../shared/components/EstadoChip';
@@ -73,6 +73,8 @@ export default function ClientDevicesTable({
   hasActiveFilters: boolean;
   onClearFilters: () => void;
 }) {
+  const location = useLocation();
+  const backState = { clientFrom: `${location.pathname}${location.search}` };
   return (
     <div className="overflow-x-auto">
       <div className="min-w-[1180px]" role="table" aria-label="Infraestructura de monitoreo">
@@ -122,6 +124,7 @@ export default function ClientDevicesTable({
           <Link
             key={d.id}
             to={`/devices/${d.id}`}
+            state={backState}
             role="row" data-fit-row
             className={`group grid ${GRID_COLS} min-h-[54px] items-center gap-x-[14px] border-b border-line-200 px-5 py-[11px] transition-colors duration-150 ease-in-out hover:bg-surface-hover`}
           >

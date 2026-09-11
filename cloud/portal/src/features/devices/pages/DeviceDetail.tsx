@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useParams, useSearchParams } from 'react-router-dom';
 import { api } from '../../../shared/lib/api';
 import { useAuth } from '../../../store/AuthContext';
 import { useToast } from '../../../store/ToastContext';
@@ -49,6 +49,10 @@ const DeviceDetail = () => {
   const isReadOnlyViewer = role === 'client_viewer';
   const canSeeHistory = role === 'admin' || role === 'operator';
 
+  const location = useLocation();
+  const backState = location.state as { monitorFrom?: string; clientFrom?: string } | null;
+  const monitorBackTo = backState?.monitorFrom;
+  const clientBackTo = backState?.clientFrom;
   const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState<DeviceDetailTab>(() => {
     const tab = searchParams.get('tab');
@@ -128,9 +132,9 @@ const DeviceDetail = () => {
       <nav className="mb-1 flex items-center gap-2 font-sans text-xs">
         <Link to="/clients" className="font-semibold text-brand-accent hover:underline">Clientes</Link>
         <span className="text-ink-sep-light">/</span>
-        {device.client_id && <Link to={`/clients/${device.client_id}`} className="font-semibold text-brand-accent hover:underline">{device.client_name}</Link>}
+        {device.client_id && <Link to={clientBackTo || `/clients/${device.client_id}`} className="font-semibold text-brand-accent hover:underline">{device.client_name}</Link>}
         <span className="text-ink-sep-light">/</span>
-        {device.agent_id && <Link to={`/monitors/${device.agent_id}`} className="font-semibold text-brand-accent hover:underline">{device.monitor_name}</Link>}
+        {device.agent_id && <Link to={monitorBackTo || `/monitors/${device.agent_id}`} className="font-semibold text-brand-accent hover:underline">{device.monitor_name}</Link>}
         <span className="text-ink-sep-light">/</span>
         <span className="text-ink-700">{device.model ?? device.name}</span>
       </nav>
