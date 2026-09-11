@@ -9,19 +9,28 @@
  *  - maintenance/fw/fwupgrade.json      → versión de firmware principal
  *  - information/activealert/activealert.json → alertas activas
  * Los cinco se piden en paralelo: son livianos y el firmware los sirve sin sesión.
+ *
+ * Algunos equipos de esta familia (p. ej. M458x Series/SL-M4580FX — hrDeviceDescr
+ * genérico sin sufijo LX/FX/GX, así que no matchea el score de samsung.sws y cae acá)
+ * comparten la MISMA consola SWS que las copiadoras XOA: no exponen el desglose por
+ * función (Impresión/Copia/Fax) en counters.json (sólo mono/color por simplex/dúplex),
+ * pero sí en la tabla HTML `countersView.sws` — ver `parseSamsungSolutionCounters` y
+ * el fix del M5370LX. Se pide como fuente extra, sólo para completar `counters`; si el
+ * equipo no la expone (404/302), `ctx.http` devuelve null y no aporta nada.
  */
-import { parseSamsungHome, parseSamsungCounters, parseSamsungFwUpgrade, parseSamsungSyncThruSupplies, parseSamsungActiveAlert, parseSamsungIdentity } from '../../snmp/ews-parsers/samsung';
+import { parseSamsungHome, parseSamsungCounters, parseSamsungSolutionCounters, parseSamsungFwUpgrade, parseSamsungSyncThruSupplies, parseSamsungActiveAlert, parseSamsungIdentity } from '../../snmp/ews-parsers/samsung';
 import type { EwsData } from '../../snmp/ews-parsers/types';
 import type { CaptureFamily, CaptureContext, CaptureResult, CaptureScope, DeviceIdentity, PortMap } from '../types';
-import { fromEwsData, mergeResults, mergeDefined } from '../bridge';
+import { fromEwsData, mergeResults, mergeDefined, mergeCountersInto } from '../bridge';
 
 const P = {
-  home:     '/sws/app/information/home/home.json',
-  identity: '/sws/app/information/identity/identity.json',
-  counters: '/sws/app/information/counters/counters.json',
-  supplies: '/sws/app/information/supplies/supplies.json',
-  fw:       '/sws/app/maintenance/fw/fwupgrade.json',
-  alerts:   '/sws/app/information/activealert/activealert.json',
+  home:         '/sws/app/information/home/home.json',
+  identity:     '/sws/app/information/identity/identity.json',
+  counters:     '/sws/app/information/counters/counters.json',
+  countersHtml: '/sws.application/information/countersView.sws',
+  supplies:     '/sws/app/information/supplies/supplies.json',
+  fw:           '/sws/app/maintenance/fw/fwupgrade.json',
+  alerts:       '/sws/app/information/activealert/activealert.json',
 } as const;
 
 export const samsungSyncThru: CaptureFamily = {
@@ -46,14 +55,15 @@ export const samsungSyncThru: CaptureFamily = {
     const wantMet  = scopes.includes('meters');
     const wantSup  = scopes.includes('supplies') || scopes.includes('trays');
     const wantAl   = scopes.includes('alerts');
-    const [home, counters, supplies, fw, alerts] = await Promise.all([
-      wantId  ? ctx.http(P.home)     : null,
-      wantMet ? ctx.http(P.counters) : null,
-      wantSup ? ctx.http(P.supplies) : null,
-      wantId  ? ctx.http(P.fw)       : null,
-      wantAl  ? ctx.http(P.alerts)   : null,
+    const [home, counters, countersHtml, supplies, fw, alerts] = await Promise.all([
+      wantId  ? ctx.http(P.home)         : null,
+      wantMet ? ctx.http(P.counters)     : null,
+      wantMet ? ctx.http(P.countersHtml) : null,
+      wantSup ? ctx.http(P.supplies)     : null,
+      wantId  ? ctx.http(P.fw)           : null,
+      wantAl  ? ctx.http(P.alerts)       : null,
     ]);
-    if (!home && !counters && !supplies) return null;
+    if (!home && !counters && !countersHtml && !supplies) return null;
 
     let acc: Partial<EwsData> = { brand: 'samsung' };
     const merge = (p: Partial<EwsData>) => {
@@ -64,6 +74,16 @@ export const samsungSyncThru: CaptureFamily = {
     if (home)     merge(parseSamsungHome(home));
     if (home && !acc.model) { const id = await ctx.http(P.identity); if (id) merge(parseSamsungIdentity(id)); }
     if (counters) merge(parseSamsungCounters(counters));
+    if (countersHtml) {
+      // countersHtml sólo rellena huecos (total/mono/color) y aporta el desglose por
+      // función (print/copy/fax): counters.json ya manda para lo primero cuando está
+      // disponible (GXI_BILLING_* es más exacto que la tabla HTML), así que no se pisa.
+      const p = parseSamsungSolutionCounters(countersHtml);
+      mergeCountersInto(acc.suppliesDetails ??= {}, p.suppliesDetails?.counters);
+      if (acc.totalPages == null && p.totalPages != null) acc.totalPages = p.totalPages;
+      if (acc.monoPages  == null && p.monoPages  != null) acc.monoPages  = p.monoPages;
+      if (acc.colorPages == null && p.colorPages != null) acc.colorPages = p.colorPages;
+    }
     if (fw)       merge(parseSamsungFwUpgrade(fw));
     if (supplies) merge(parseSamsungSyncThruSupplies(supplies));
     if (alerts)   merge(parseSamsungActiveAlert(alerts));

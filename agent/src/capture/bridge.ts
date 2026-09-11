@@ -165,6 +165,20 @@ export function mergeDefined<T extends object>(base: T, extra: Partial<T>): T {
   return out;
 }
 
+/**
+ * Mergea `suppliesDetails.counters` de dos fuentes campo a campo (no reemplaza el objeto
+ * entero): dos endpoints del mismo equipo pueden aportar sub-campos distintos de counters
+ * (p. ej. Samsung SyncThru counters.json trae monoSimplex/duplex/totalImpressions y
+ * countersView.sws trae print/copy/fax) — ver fix del desglose por función del M5370LX.
+ */
+export function mergeCountersInto(
+  target: { counters?: import('../snmp/ews-parsers/types').DetailedCounters },
+  extra: import('../snmp/ews-parsers/types').DetailedCounters | undefined,
+): void {
+  if (!extra) return;
+  target.counters = { ...(target.counters ?? {}), ...extra };
+}
+
 function compact<T extends object>(o: T): Partial<T> {
   const r: Partial<T> = {};
   for (const [k, v] of Object.entries(o)) if (v !== null && v !== undefined && v !== '') (r as Record<string, unknown>)[k] = v;

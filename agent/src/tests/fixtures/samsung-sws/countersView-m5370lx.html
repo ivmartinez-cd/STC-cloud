@@ -1,0 +1,179 @@
+
+
+
+
+
+
+
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
+
+
+<html>
+<head>
+<link rel="stylesheet" type="text/css" href="../../sws/css/sws-all.css" />
+<script type="text/javascript" src="../../sws/jquery/jquery.js"></script>
+<script type="text/javascript" src="../../sws/js/swsIncludeCommon.js"></script>
+<title>Device Information</title>
+<script type="text/javascript">
+
+function init() {
+	$("tr .tonertable3_tr").each(function(){
+		$(this).children("td").each(function(i){
+			if(i==0) {
+				$(this).attr("align","right").css("padding-right","7px");
+			}
+		});
+	});
+
+	$("tr .tonertable3_tr2").each(function(){
+		$(this).children("td").each(function(i){
+			if(i==0) {
+				$(this).attr("align","right").css("padding-right","7px");
+			}
+		});
+	});
+
+}
+</script>
+</head>
+
+<body leftmargin="0" topmargin="0" onload="init();">
+<table id='swshomeFrame' style='background-color:#787878;width:100%;height:100%;' cellspacing='1' cellpadding='0'>
+  <tr id='swshome' tagtype='titlePanel' onClick="parent.panelClick('swshome')"><td valign='top' style='background-color: rgb(255,255,255);'>
+    <table id='swshomeTitle' style='background:url(../../sws/images/sws/contents/module_title_center_dis.gif) repeat-x left top;width:100%;height:37px;' cellspacing='0' cellpadding='0'>
+      <tr>
+        <td width='70%'> <span style='padding-left:12px;color: #FFFFFF;font-family:tahoma;font-size:14px;font-weight:bold;'>사용 카운터</span></td>
+        <td width='30%' align='right' style='vertical-align:top;padding-top:2px;'><table cellspacing='0' cellpadding='0'>
+<tr><td  width='25px'><img src='../../sws/images/sws/button/button_reload_N.gif' tagtype='button' id='btn_swshome' gid=""  style='table-layout:fixed;'></td></tr>
+</table>
+<script type="text/javascript">if(countButtonObj('btn_swshome')) {	buttonFunc["btn_swshome"] = "swsIFrame_Reload();";} $('#btn_swshome').click(function(event){ eval(buttonFunc[this.id]); }).mouseover(function(){ btnImageChage(this,'ON'); }).mouseout (function(){ btnImageChage(this,'OUT'); }).mousedown(function(){ btnImageChage(this,'CLK'); }); </script>
+</td>
+      </tr> 
+    </table>
+<div id='swshomeSCROLL' class='sws_scroll_div_class' tagtype='scrollDiv' style='overflow:auto;'><table width='100%' cellspacing='0' cellpadding='0'>
+<tr height='24px'><td colspan='3'>&nbsp;</td></tr><tr><td width='30px'>&nbsp;</td><td valign='top'><!-- start main contents -->
+<table border="0" cellpadding="0" cellspacing="0" width="100%" >
+	<tr><td width="100%" >
+		    <table style='width:100%;' cellspacing='0' cellpadding='0'>
+      <tr height='36px'>      <td tagtype='subtitle' valign='top' id='subTitle1' style='font:bold 13px tahoma;color:#262626;width:82'>사용 정보</td>
+      <td valign='top' style='padding: 7px 20px 0 0px;'><table style='background-color:#BDBDBD;width:100%;height:1px' cellspacing='0' cellpadding='0'><tr height='1px'><td></td></tr></table></td>
+    </tr>
+    </table>
+    <table cellspacing='0' cellpadding='0' width='100%' border='0'>
+    <tr>
+        <td width='23px'>&nbsp;</td>
+        <td class='sws-simpleInfo-value'>
+
+			<table cellspacing='0' cellpadding='0' width='100%' class='sws-simpleInfo-value'>
+<tr  height='35px'><td  width='283px' style='font-size:12px;font-weight:bold;font-family:tahoma,arial,verdana,sans-serif;color:#1A1A1A;padding:5px 0 0 0;'>장치 일련 번호 :</td><td style='font-size:12px;font-weight:bold;font-family:tahoma,arial,verdana,sans-serif;color:#1A1A1A;padding:5px 0 0 0;'  >
+
+				<table cellpadding=0 cellspacing=0 border=0 style='table-layout:fixed;'><tr><td tagtype='string'  id='snValue' class='sws_string_bold' gid=''>076UBJFH10009AT </td></tr> 
+</table>
+
+			 </td>
+ </tr>
+</table>
+
+		 </td>
+ <td width='28px'>&nbsp;</td>
+ </tr>
+<tr height='31px'><td colspan='3'>&nbsp;</td></tr>
+</table>
+
+
+		    <table style='width:100%;' cellspacing='0' cellpadding='0'>
+      <tr height='36px'>      <td tagtype='subtitle' valign='top' id='subTitle2' style='font:bold 13px tahoma;color:#262626;width:48'>횟수</td>
+      <td valign='top' style='padding: 7px 20px 0 0px;'><table style='background-color:#BDBDBD;width:100%;height:1px' cellspacing='0' cellpadding='0'><tr height='1px'><td></td></tr></table></td>
+    </tr>
+    </table>
+    <table cellspacing='0' cellpadding='0' width='100%' border='0'>
+    <tr>
+        <td width='23px'>&nbsp;</td>
+        <td class='sws-simpleInfo-value'>
+
+			<table width="100%"><tr><td width="100%">
+			
+				<table id='counterTotalList' width='99%' cellpadding='0' cellspacing='0' style='border:1px solid #000000;'><tr>
+<tr><td>
+<table id='swstable_counterTotalList_headerTB' style='border-top:1px solid #B4B4B4;border-bottom:1px solid #B4B4B4;' width='100%' border='0' cellpadding='0' cellspacing='0'>
+<tr>
+<td height='30' width='25%' style='padding-left:7px;border-bottom:1px solid #E2E2E2;font-family:Tahoma;font-size:12px;font-weight:bold;color:#1A1A1A;background-color:#F5F5F5;text-align:center;'>총 사용량 </td>
+<td height='30' width='1' style='width:1px;background:#B4B4B4;border-top:5px solid #ffffff;border-bottom:5px solid #FFFFFF;'><span style='width: 1px; padding-right: 2px; text-align: right; height: 20px; vertical-align: middle;' valign='middle'>  </td>
+<td height='30' width='19%' style='padding-left:7px;border-bottom:1px solid #E2E2E2;font-family:Tahoma;font-size:12px;font-weight:bold;color:#1A1A1A;background-color:#F5F5F5;text-align:center;'>인쇄 </td>
+<td height='30' width='1' style='width:1px;background:#B4B4B4;border-top:5px solid #ffffff;border-bottom:5px solid #FFFFFF;'><span style='width: 1px; padding-right: 2px; text-align: right; height: 20px; vertical-align: middle;' valign='middle'>  </td>
+<td height='30' width='19%' style='padding-left:7px;border-bottom:1px solid #E2E2E2;font-family:Tahoma;font-size:12px;font-weight:bold;color:#1A1A1A;background-color:#F5F5F5;text-align:center;'>복사 </td>
+<td height='30' width='1' style='width:1px;background:#B4B4B4;border-top:5px solid #ffffff;border-bottom:5px solid #FFFFFF;'><span style='width: 1px; padding-right: 2px; text-align: right; height: 20px; vertical-align: middle;' valign='middle'>  </td>
+<td height='30' width='19%' style='padding-left:7px;border-bottom:1px solid #E2E2E2;font-family:Tahoma;font-size:12px;font-weight:bold;color:#1A1A1A;background-color:#F5F5F5;text-align:center;'>팩스 인쇄 </td>
+<td height='30' width='1' style='width:1px;background:#B4B4B4;border-top:5px solid #ffffff;border-bottom:5px solid #FFFFFF;'><span style='width: 1px; padding-right: 2px; text-align: right; height: 20px; vertical-align: middle;' valign='middle'>  </td>
+<td height='30' width='19%' style='padding-left:7px;border-bottom:1px solid #E2E2E2;font-family:Tahoma;font-size:12px;font-weight:bold;color:#1A1A1A;background-color:#F5F5F5;text-align:center;'>전체 </td>
+</tr></table>
+</td></tr>
+<tr><td><table id='swstable_counterTotalList_contentTB' width='100%' border='0' cellpadding='0' cellspacing='0'><tr>
+<tr id='swstable_counterTotalList_expandTR_0' class='tonertable3_tr2'  ><td height='25' width='25%' align='center' >흑백 에코 비율</td>
+<td height='25' width='19%' align='center' >2% (352)</td>
+<td height='25' width='19%' align='center' >0% (2)</td>
+<td height='25' width='19%' align='center' >유효하지 않음</td>
+<td height='25' width='19%' align='center' >2% (354)</td>
+</tr><tr id='swstable_counterTotalList_expandTR_1' class='tonertable3_tr'  ><td height='25' width='25%' align='center' >양면</td>
+<td height='25' width='19%' align='center' >8486</td>
+<td height='25' width='19%' align='center' >544</td>
+<td height='25' width='19%' align='center' >0</td>
+<td height='25' width='19%' align='center' >9030</td>
+</tr><tr id='swstable_counterTotalList_expandTR_2' class='tonertable3_tr2'  ><td height='25' width='25%' align='center' >전체 면수</td>
+<td height='25' width='19%' align='center' >14191</td>
+<td height='25' width='19%' align='center' >2121</td>
+<td height='25' width='19%' align='center' >0</td>
+<td height='25' width='19%' align='center' >16312</td>
+</tr></table>
+</td></tr></table>
+
+
+
+					<br>
+
+
+
+<table id='counterFaxList' width='99%' cellpadding='0' cellspacing='0' style='border:1px solid #000000;'><tr>
+<tr><td>
+<table id='swstable_counterFaxList_headerTB' style='border-top:1px solid #B4B4B4;border-bottom:1px solid #B4B4B4;' width='100%' border='0' cellpadding='0' cellspacing='0'>
+<tr>
+<td height='30' width='25%' style='padding-left:7px;border-bottom:1px solid #E2E2E2;font-family:Tahoma;font-size:12px;font-weight:bold;color:#1A1A1A;background-color:#F5F5F5;text-align:center;'>보낸 이미지 </td>
+<td height='30' width='1' style='width:1px;background:#B4B4B4;border-top:5px solid #ffffff;border-bottom:5px solid #FFFFFF;'><span style='width: 1px; padding-right: 2px; text-align: right; height: 20px; vertical-align: middle;' valign='middle'>  </td>
+<td height='30' width='25%' style='padding-left:7px;border-bottom:1px solid #E2E2E2;font-family:Tahoma;font-size:12px;font-weight:bold;color:#1A1A1A;background-color:#F5F5F5;text-align:center;'>팩스 전송 </td>
+<td height='30' width='1' style='width:1px;background:#B4B4B4;border-top:5px solid #ffffff;border-bottom:5px solid #FFFFFF;'><span style='width: 1px; padding-right: 2px; text-align: right; height: 20px; vertical-align: middle;' valign='middle'>  </td>
+<td height='30' width='25%' style='padding-left:7px;border-bottom:1px solid #E2E2E2;font-family:Tahoma;font-size:12px;font-weight:bold;color:#1A1A1A;background-color:#F5F5F5;text-align:center;'>스캔 </td>
+<td height='30' width='1' style='width:1px;background:#B4B4B4;border-top:5px solid #ffffff;border-bottom:5px solid #FFFFFF;'><span style='width: 1px; padding-right: 2px; text-align: right; height: 20px; vertical-align: middle;' valign='middle'>  </td>
+<td height='30' width='25%' style='padding-left:7px;border-bottom:1px solid #E2E2E2;font-family:Tahoma;font-size:12px;font-weight:bold;color:#1A1A1A;background-color:#F5F5F5;text-align:center;'>전체 </td>
+</tr></table>
+</td></tr>
+<tr><td><table id='swstable_counterFaxList_contentTB' width='100%' border='0' cellpadding='0' cellspacing='0'><tr>
+<tr id='swstable_counterFaxList_expandTR_0' class='tonertable3_tr2' ><td height='25' width='25%' align='center' >흑백</td>
+<td height='25' width='25%' align='center' >0</td>
+<td height='25' width='25%' align='center' >84820</td>
+<td height='25' width='25%' align='center' >84820</td>
+</tr><tr id='swstable_counterFaxList_expandTR_1' class='tonertable3_tr2' ><td height='25' width='25%' align='center' >컬러</td>
+<td height='25' width='25%' align='center' >0</td>
+<td height='25' width='25%' align='center' >10945</td>
+<td height='25' width='25%' align='center' >10945</td>
+</tr></table>
+</td></tr></table>
+
+ 
+
+			</td></tr></table>
+				 </td>
+ <td width='28px'>&nbsp;</td>
+ </tr>
+<tr height='31px'><td colspan='3'>&nbsp;</td></tr>
+</table>
+
+			</td>
+		</tr>
+	</table>
+</td>   
+<!-- end main contents --><td width='28px'>&nbsp;</td></tr></table>
+</div>
+ </td> </tr></table>
+</body>
+</html>

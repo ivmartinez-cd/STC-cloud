@@ -603,3 +603,67 @@ describe('Samsung XOA suppliesView (X4300LX real): sin bandejas basura', () => {
     assert.ok(trays.some(t => t.name === 'Tray 1' && t.paperSize === 'A4'));
   });
 });
+
+describe('Samsung XOA countersView (M5370LX real): desglose por función', () => {
+  test('extrae Print/Copy/Fax de la tabla counterTotalList (equipo en coreano)', async () => {
+    const { parseSamsungSolutionCounters } = await import('../snmp/ews-parsers/samsung');
+    const html = fs.readFileSync(path.join(__dirname, 'fixtures', 'samsung-sws', 'countersView-m5370lx.html'), 'utf8');
+    const p = parseSamsungSolutionCounters(html);
+    const counters = p.suppliesDetails?.counters;
+    assert.equal(counters?.print?.total, 14191);
+    assert.equal(counters?.copy?.total, 2121);
+    assert.equal(counters?.fax?.total, 0);
+    assert.equal(p.totalPages, 16312);
+    assert.equal(p.serial, '076UBJFH10009AT');
+  });
+});
+
+describe('Samsung XOA countersView (M4580 real, español): desglose por función', () => {
+  // Confirmado con captura de pantalla real de un cliente (11/09/2026): misma tabla
+  // counterTotalList que el M5370LX, pero en español ("Imprimir"/"Copiar"/"Impr. fax"/
+  // "Impresiones totales" en vez de coreano). Encontró un bug real: la regex de "total
+  // pages" y la de "print" sólo cubrían coreano/inglés y no matcheaban "Impresiones
+  // totales" ni "Imprimir".
+  test('extrae Print/Copy/Fax de la tabla counterTotalList (equipo en español)', async () => {
+    const { parseSamsungSolutionCounters } = await import('../snmp/ews-parsers/samsung');
+    const html = fs.readFileSync(path.join(__dirname, 'fixtures', 'samsung-sws', 'countersView-m4580-es-reconstructed.html'), 'utf8');
+    const p = parseSamsungSolutionCounters(html);
+    const counters = p.suppliesDetails?.counters;
+    assert.equal(counters?.print?.total, 167321);
+    assert.equal(counters?.copy?.total, 13427);
+    assert.equal(counters?.fax?.total, 0);
+    assert.equal(p.totalPages, 180748);
+    assert.equal(p.serial, '0ACTBJFHB0001SK');
+  });
+});
+
+describe('Samsung SyncThru: M458x/M4580 comparte SWS con la XOA (mismo desglose por función)', () => {
+  // "M458x Series" (hrDeviceDescr genérico, sin sufijo LX/FX/GX) no matchea el score de
+  // samsung.sws y cae en samsung.syncthru — ver comentario en samsung-syncthru.ts.
+  const html = fs.readFileSync(path.join(__dirname, 'fixtures', 'samsung-sws', 'countersView-m4580-es-reconstructed.html'), 'utf8');
+  const pages = {
+    '/sws/app/information/home/home.json': SAMSUNG_HOME,
+    '/sws/app/information/counters/counters.json': SAMSUNG_COUNTERS,
+    '/sws.application/information/countersView.sws': html,
+    '/sws/app/information/supplies/supplies.json': SAMSUNG_SUPPLIES,
+    '/sws/app/maintenance/fw/fwupgrade.json': SAMSUNG_FW,
+    '/sws/app/information/activealert/activealert.json': SAMSUNG_ALERTS,
+  };
+
+  test('"M458x Series" resuelve a la familia samsung.syncthru (no samsung.sws)', () => {
+    const r = resolve(id('samsung', 'Samsung M458x Series'), WEB_ONLY);
+    assert.equal(r.family.id, 'samsung.syncthru');
+  });
+
+  test('counters.json manda para total/mono/color; countersView.sws sólo aporta Print/Copy/Fax', async () => {
+    const identity = id('samsung', 'Samsung M458x Series');
+    const ctx = ctxWith(identity, pages, {}, WEB_ONLY);
+    const res = await resolve(identity, WEB_ONLY).family.collect(ctx, ['identity', 'meters']);
+    assert.ok(res);
+    assert.equal(res!.meters?.total, 93552); // de SAMSUNG_COUNTERS, no de countersView.sws (180748)
+    assert.equal(res!.meters?.detail?.print?.total, 167321);
+    assert.equal(res!.meters?.detail?.copy?.total, 13427);
+    assert.equal(res!.meters?.detail?.fax?.total, 0);
+    assert.equal(res!.meters?.detail?.duplex?.total, 13552); // sigue viniendo de counters.json
+  });
+});

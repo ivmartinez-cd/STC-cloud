@@ -22,6 +22,7 @@ que muerda.
 | [UPD-3](#upd-3--la-metadata-de-version-publicada-no-tiene-respaldo-real-) | Actualizaciones | La metadata de versión publicada no tiene respaldo real | 🟠 Media | ✅ Cerrado |
 | [UPD-4](#upd-4--la-clave-de-firma-ed25519-existe-en-una-sola-maquina) | Seguridad | La clave de firma Ed25519 existe en una sola máquina | 🔴 Alta | Abierto |
 | [UPD-5](#upd-5--el-camino-real-de-actualizacion-zip-no-tiene-rollback-automatico) | Actualizaciones | El camino real de actualización (ZIP) no tiene rollback automático | 🟠 Media | Abierto |
+| [UPD-6](#upd-6--publish-releasesh-sube-los-dos-canales-al-mismo-nombre-de-archivo) | Actualizaciones | `publish-release.sh` sube los dos canales al mismo nombre de archivo | 🟠 Media | Abierto |
 | [DISC-1](#disc-1--las-constraints-por-item-de-ajv-siguen-tapando-los-errores-de-dominio) | Barrido | Las constraints por ítem de AJV siguen tapando los errores de dominio | 🟠 Media | Abierto |
 | [DISC-2](#disc-2--el-total-del-barrido-que-ve-el-portal-no-cuenta-los-hostnames) | Barrido | El total del barrido que ve el portal no cuenta los hostnames | 🟡 Baja | Abierto |
 | [DISC-3](#disc-3--apagar-un-rango-reinicia-la-vuelta-de-barrido-en-curso) | Barrido | Apagar un rango reinicia la vuelta de barrido en curso | 🟡 Baja | Abierto |
@@ -199,6 +200,33 @@ tests. No hay detección de "arranqué y me morí, volvé atrás".
 **Para cerrarlo:** un watchdog post-update (el `.bat` deja un flag, el agente lo borra al
 arrancar bien; si el flag sigue ahí en el próximo arranque del servicio, restaurar
 `${installDir}_backup`), o al menos exponer el rollback como comando remoto desde el portal.
+
+---
+
+### UPD-6 — `publish-release.sh` sube los dos canales al mismo nombre de archivo
+
+**Detectado:** 2026-09-11 · **Severidad:** 🟠 Media · **Estado:** Abierto
+
+`publish-release.sh` sube el archivo a `~/stc-cloud/agent-updates/$(basename "$FILE")`
+(`publish-release.sh:68`) y publica `$API_URL/updates/$(basename "$FILE")` como URL del
+release (`publish-release.sh:81`). El nombre del bundle compilado es siempre `bundle.js`
+para los dos canales (`agent/build-sea.js` escribe `dist/bundle.js` y `dist-legacy/bundle.js`
+respectivamente) — el path de salida cambia, pero el `basename` no. O sea que **`stable` y
+`legacy` comparten el mismo archivo remoto y la misma URL pública**, aunque
+`agent_releases` (Postgres) sí los separa bien por canal (ver cierre de UPD-3).
+
+Hoy no se nota porque ambos bundles salen byte a byte idénticos (mismo hash) — no hay
+código en `agent/src` que dependa de `--target node20` vs `node24`, así que esbuild produce
+el mismo output. Pero el día que dejen de serlo, publicar un canal después del otro
+**pisa el archivo del que se publicó primero en el servidor**: la fila de metadata de ese
+canal en la base queda con el hash correcto, pero el archivo real en `/updates/bundle.js`
+pasa a ser el del otro canal — el agente lo descarga, la verificación SHA256 falla
+(`UpdateService.ts:108-115`) y la actualización se descarta en silencio (sin romper nada,
+pero sin actualizar tampoco).
+
+**Para cerrarlo:** nombrar el archivo remoto incluyendo el canal (p. ej.
+`bundle-${channel}.js`) en vez de sólo `basename`, o subir cada canal a su propia
+subcarpeta (`agent-updates/stable/`, `agent-updates/legacy/`).
 
 ---
 

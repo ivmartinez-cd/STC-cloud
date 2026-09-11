@@ -318,7 +318,7 @@ export function parseSamsungSolutionCounters(html: string): Partial<EwsData> {
       if (monoPages === undefined) monoPages = lastVal;
     } else if (/(?:컬러\s*-\s*총합|Color\s*-\s*Total|컬러\s*총합|Color\s*Total)/i.test(label)) {
       if (colorPages === undefined) colorPages = lastVal;
-    } else if (/(?:전체\s*면수|Total\s*Impressions|Total\s*Pages)/i.test(label)) {
+    } else if (/(?:전체\s*면수|Total\s*Impressions|Total\s*Pages|Impresiones\s*totales|Total\s*de\s*impresiones)/i.test(label)) {
       if (totalPages === undefined) totalPages = lastVal;
     }
   }
@@ -328,12 +328,70 @@ export function parseSamsungSolutionCounters(html: string): Partial<EwsData> {
     totalPages = monoPages + (colorPages ?? 0);
   }
 
+  // Desglose por función (Print/Copy/Fax) — tabla `counterTotalList` de "사용 카운터"
+  // (M5370LX/X4300LX y otras MFP de la familia XOA/SWS). Las columnas van siempre en
+  // el mismo orden pero el idioma del equipo varía, así que la función de cada columna
+  // se detecta por keyword en el header (fax antes que print: "팩스 인쇄"/"Fax Print"
+  // también matchea el patrón de print) en vez de fijar el índice de columna. Las celdas
+  // separadoras de 1px del header (sólo tienen &nbsp;) se descartan filtrando vacías,
+  // lo que las alinea 1:1 con las celdas de datos (que no tienen separadores).
+  let printTotal: number | undefined;
+  let copyTotal:  number | undefined;
+  let faxTotal:   number | undefined;
+
+  const totalListBlock = html.match(/id=['"]counterTotalList['"][\s\S]*?(?=id=['"]counterFaxList['"]|$)/i)?.[0];
+  const headerBlock = totalListBlock?.match(/id=['"]swstable_counterTotalList_headerTB['"][\s\S]*?<\/table>/i)?.[0];
+  const rowsBlock = totalListBlock?.match(/id=['"]swstable_counterTotalList_contentTB['"][\s\S]*/i)?.[0];
+
+  if (headerBlock && rowsBlock) {
+    const cellsOf = (block: string) => Array.from(block.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi))
+      .map(m => m[1].replace(/<[^>]*>/g, '').replace(/&nbsp;/gi, ' ').trim());
+
+    const headerCells = cellsOf(headerBlock).filter(c => c.length > 0);
+    const colFn: Array<'print' | 'copy' | 'fax' | null> = headerCells.map((cell, i) => {
+      if (i === 0) return null; // columna de etiqueta de fila
+      // Fax antes que print/copy: "팩스 인쇄"/"Fax Print"/"Impr. fax" contienen la palabra
+      // de print ("인쇄"/"Print"/"Impr") y quedarían mal clasificadas si se chequeara
+      // print primero. "Impr" (no sólo "Impresi.n") cubre tanto "Imprimir" (ES) como
+      // "Impresión"/"Impresion" — ver captura real de un M4580 en español (11/09/2026).
+      if (/팩스|Fax/i.test(cell))       return 'fax';
+      if (/복사|Copy|Copia/i.test(cell)) return 'copy';
+      if (/인쇄|Print|Impr/i.test(cell)) return 'print';
+      return null;
+    });
+
+    for (const rowMatch of rowsBlock.matchAll(/<tr[^>]*expandTR_\d+[^>]*>([\s\S]*?)<\/tr>/gi)) {
+      const cells = cellsOf(rowMatch[1]);
+      if (cells.length === 0) continue;
+      if (!/전체\s*면수|Total\s*(?:Impressions|Pages)|Impresiones\s*totales|Total\s*de\s*impresiones|N.mero\s*total\s*de\s*p.g/i.test(cells[0])) continue;
+      for (let i = 1; i < cells.length; i++) {
+        const fn = colFn[i];
+        if (!fn) continue;
+        const val = parseInt(cells[i].replace(/[,\.]/g, ''), 10);
+        if (isNaN(val)) continue;
+        if (fn === 'print') printTotal = val;
+        else if (fn === 'copy') copyTotal = val;
+        else if (fn === 'fax') faxTotal = val;
+      }
+      break;
+    }
+  }
+
+  const hasFunctionBreakdown = printTotal !== undefined || copyTotal !== undefined || faxTotal !== undefined;
+
   return {
     brand:      'samsung',
     serial,
     totalPages,
     monoPages,
     colorPages,
+    suppliesDetails: hasFunctionBreakdown ? {
+      counters: {
+        print: printTotal !== undefined ? { total: printTotal } : undefined,
+        copy:  copyTotal  !== undefined ? { total: copyTotal }  : undefined,
+        fax:   faxTotal   !== undefined ? { total: faxTotal }   : undefined,
+      },
+    } : undefined,
   };
 }
 

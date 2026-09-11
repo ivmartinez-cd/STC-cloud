@@ -10,7 +10,7 @@
 import { parseSamsungSolutionHome, parseSamsungSolutionCounters, parseSamsungSolutionSupplies, parseSamsungCounters, parseSamsungActiveAlert } from '../../snmp/ews-parsers/samsung';
 import type { EwsData } from '../../snmp/ews-parsers/types';
 import type { CaptureFamily, CaptureContext, CaptureResult, CaptureScope, DeviceIdentity, PortMap } from '../types';
-import { fromEwsData, mergeDefined } from '../bridge';
+import { fromEwsData, mergeDefined, mergeCountersInto } from '../bridge';
 
 const P = {
   home:      '/sws.application/home/homeDeviceInfo.sws',
@@ -63,7 +63,15 @@ export const samsungSws: CaptureFamily = {
     const merge = (p: Partial<EwsData>) => {
       const { suppliesDetails, ...rest } = p;
       for (const [k, v] of Object.entries(rest)) if (v !== undefined && v !== null && (acc as Record<string, unknown>)[k] == null) (acc as Record<string, unknown>)[k] = v;
-      if (suppliesDetails) acc.suppliesDetails = mergeDefined(acc.suppliesDetails ?? {}, suppliesDetails);
+      if (suppliesDetails) {
+        // `counters` se mergea aparte (ver mergeCountersInto) porque countJson aporta
+        // monoSimplex/duplex/totalImpressions y countHtml aporta print/copy/fax: son
+        // sub-campos distintos del mismo objeto, un merge shallow de suppliesDetails
+        // pisaría uno con el otro en vez de combinarlos.
+        const { counters, ...restDetails } = suppliesDetails;
+        acc.suppliesDetails = mergeDefined(acc.suppliesDetails ?? {}, restDetails);
+        mergeCountersInto(acc.suppliesDetails, counters);
+      }
     };
     if (home) merge(parseHomeInfo(home));
     // JSON de billing primero (exacto), la tabla HTML rellena lo que falte
