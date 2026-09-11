@@ -26,7 +26,7 @@ export default function CountersTab({
       <Card>
         <CardTitle icon={<Cpu size={16} />}>Desglose por función</CardTitle>
         {counters ? (
-          <div>
+          <div className="px-5 pb-[18px] pt-2">
             <TripleRows label="Impresión" t={counters.print} />
             <TripleRows label="Copia" t={counters.copy} />
             <TripleRows label="Fax" t={counters.fax} />
