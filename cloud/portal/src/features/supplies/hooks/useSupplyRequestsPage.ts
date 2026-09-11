@@ -81,8 +81,8 @@ export function useSupplyRequestsPage(pageSize: number) {
   const { role } = useAuth();
   const canManage = role === 'admin' || role === 'operator';
   const filters = useFilters();
-  usePageSizeReset(pageSize, filters.setPage);
   const list = useRows(filters, pageSize);
+  usePageSizeReset(pageSize, filters.setPage, list.total);
   const { clients, clientName } = useClients(canManage);
   const [detailId, setDetailId] = useState<string | null>(null);
 

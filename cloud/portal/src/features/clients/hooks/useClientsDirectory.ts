@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { api } from '../../../shared/lib/api';
 import { useDebounce } from '../../../shared/hooks/useDebounce';
 import { usePageSizeReset } from '../../../shared/hooks/usePageSizeReset';
+import { useUpdateEffect } from '../../../shared/hooks/useUpdateEffect';
 import type {
   ClientDirectoryResponse, ClientDirectoryRow, ClientPortfolioSummary, ClientSegment, ClientSortField, SortDir,
 } from '../types/clientsDirectory';
@@ -55,7 +56,8 @@ function useDirectoryFilters() {
 
   useUrlSync(effectiveQuery, segment, sortField, sortDir, page);
   // Chips/búsqueda resetean a la página 1 (README) — evita quedar en una página vacía.
-  useEffect(() => { setPage(0); }, [effectiveQuery, segment]);
+  // No corre al montar: respeta el `?page=` restaurado de la URL.
+  useUpdateEffect(() => { setPage(0); }, [effectiveQuery, segment]);
 
   const setSegment = useCallback((s: ClientSegment) => setSegmentState(s), []);
   const clearFilters = useCallback(() => { setRawQuery(''); setSegmentState('todos'); }, []);
@@ -134,8 +136,9 @@ function useDirectorySummary() {
  * alto disponible (27/08/2026 — antes 50 fijas y scroll). */
 export function useClientsDirectory(pageSize: number) {
   const filters = useDirectoryFilters();
-  usePageSizeReset(pageSize, filters.setPage);
-  return { ...filters, pageSize, ...useDirectoryRows(filters, pageSize), ...useDirectorySummary() };
+  const rows = useDirectoryRows(filters, pageSize);
+  usePageSizeReset(pageSize, filters.setPage, rows.total);
+  return { ...filters, pageSize, ...rows, ...useDirectorySummary() };
 }
 
 export type ClientsDirectoryState = ReturnType<typeof useClientsDirectory>;

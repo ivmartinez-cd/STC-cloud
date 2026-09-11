@@ -148,8 +148,9 @@ function useAlertList(filters: AlertFiltersState, pageSize: number) {
   const [page, setPage] = useState(0);
   const debouncedQ = useDebounce(filters.q, 300);
   useEffect(() => { setPage(0); }, [debouncedQ, filters.unresolved, filters.critical, filters.unacknowledged, filters.availability, filters.last24h, filters.clientId]);
-  usePageSizeReset(pageSize, setPage);
-  return { page, setPage, ...useAlertRows(filters, page, debouncedQ, pageSize), ...useAlertSummary(filters.unresolved, filters.clientId) };
+  const rows = useAlertRows(filters, page, debouncedQ, pageSize);
+  usePageSizeReset(pageSize, setPage, rows.total);
+  return { page, setPage, ...rows, ...useAlertSummary(filters.unresolved, filters.clientId) };
 }
 
 type AlertList = ReturnType<typeof useAlertList>;

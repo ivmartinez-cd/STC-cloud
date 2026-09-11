@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { api } from '../../../shared/lib/api';
 import { useDebounce } from '../../../shared/hooks/useDebounce';
 import { usePageSizeReset } from '../../../shared/hooks/usePageSizeReset';
+import { useUpdateEffect } from '../../../shared/hooks/useUpdateEffect';
 import type {
   ClientDeviceDirectoryResponse, ClientDeviceDirectoryRow, ClientDeviceSegment, ClientDeviceSortField, SortDir,
 } from '../types/clientDetail';
@@ -54,13 +55,8 @@ function useDeviceFilters(active: boolean) {
   const effectiveQuery = debouncedQuery.trim().length >= 2 ? debouncedQuery.trim() : '';
 
   useUrlSync(active, effectiveQuery, segment, sortField, sortDir, page);
-  // No resetear la página restaurada de la URL al montar (sólo ante un cambio real
-  // de filtro/búsqueda hecho por el usuario) — si no, "volver" a una página > 0 nunca funciona.
-  const didMountFilters = useRef(false);
-  useEffect(() => {
-    if (!didMountFilters.current) { didMountFilters.current = true; return; }
-    setPage(0);
-  }, [effectiveQuery, segment]);
+  // No corre al montar: respeta el `?page=` restaurado de la URL.
+  useUpdateEffect(() => { setPage(0); }, [effectiveQuery, segment]);
 
   const clearFilters = useCallback(() => { setRawQuery(''); setSegment('todos'); }, []);
   const toggleSort = useCallback((field: ClientDeviceSortField) => {
@@ -115,8 +111,8 @@ function useDeviceRows(clientId: string, filters: DeviceFilters, pageSize: numbe
  * las filas que entran en el alto disponible (27/08/2026 — antes 50 fijas). */
 export function useClientDeviceDirectory(clientId: string, active: boolean, pageSize: number) {
   const filters = useDeviceFilters(active);
-  usePageSizeReset(pageSize, filters.setPage);
   const rows = useDeviceRows(clientId, filters, pageSize);
+  usePageSizeReset(pageSize, filters.setPage, rows.total);
   const hasActiveFilters = useMemo(() => filters.effectiveQuery !== '' || filters.segment !== 'todos', [filters.effectiveQuery, filters.segment]);
   return { ...filters, ...rows, hasActiveFilters, pageSize };
 }

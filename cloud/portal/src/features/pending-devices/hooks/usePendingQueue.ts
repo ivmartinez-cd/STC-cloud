@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { api } from '../../../shared/lib/api';
 import { useDebounce } from '../../../shared/hooks/useDebounce';
 import { usePageSizeReset } from '../../../shared/hooks/usePageSizeReset';
+import { useUpdateEffect } from '../../../shared/hooks/useUpdateEffect';
 import type { ClientOption } from '../../../shared/components/DeviceLifecycleModals/types';
 import type { PendingQueueResponse, PendingQueueRow, PendingQueueSegment, PendingQueueSummary, SortDir } from '../types/pendingDevices';
 
@@ -56,7 +57,8 @@ function useFilters() {
   useUrlSync(effectiveQuery, s.clientId, s.segment, s.sortDir, s.page);
   // Buscador/cliente/segmento resetean a la página 1 — evita quedar en una página vacía.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { s.setPage(0); }, [effectiveQuery, s.clientId, s.segment]);
+  // No corre al montar: respeta el `?page=` restaurado de la URL.
+  useUpdateEffect(() => { s.setPage(0); }, [effectiveQuery, s.clientId, s.segment]);
   return {
     ...s, effectiveQuery,
     setSegment: s.setSegmentState,
@@ -157,8 +159,9 @@ function useClientOptions() {
  * alto disponible (27/08/2026 — antes 50 fijas y scroll). */
 export function usePendingQueue(pageSize: number) {
   const filters = useFilters();
-  usePageSizeReset(pageSize, filters.setPage);
-  return { ...filters, pageSize, ...useRows(filters, pageSize), ...useSummary(), clients: useClientOptions() };
+  const rows = useRows(filters, pageSize);
+  usePageSizeReset(pageSize, filters.setPage, rows.total);
+  return { ...filters, pageSize, ...rows, ...useSummary(), clients: useClientOptions() };
 }
 
 export type PendingQueueState = ReturnType<typeof usePendingQueue>;

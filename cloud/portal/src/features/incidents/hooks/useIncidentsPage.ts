@@ -114,8 +114,9 @@ function useList(filters: IncidentFiltersState, pageSize: number) {
   const [page, setPage] = useState(0);
   const debouncedQ = useDebounce(filters.q, 300);
   useEffect(() => { setPage(0); }, [debouncedQ, filters.openOnly, filters.old24h, filters.noDevice, filters.clientId]);
-  usePageSizeReset(pageSize, setPage);
-  return { page, setPage, ...useRows(filters, page, debouncedQ, pageSize) };
+  const rows = useRows(filters, page, debouncedQ, pageSize);
+  usePageSizeReset(pageSize, setPage, rows.total);
+  return { page, setPage, ...rows };
 }
 
 /** `pageSize` = filas que entran en pantalla (`useFitRows`, 27/08/2026). */

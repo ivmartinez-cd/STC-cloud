@@ -147,8 +147,8 @@ export function useSuppliesPage(pageSize: number) {
   const { role } = useAuth();
   const canFilterByClient = role === 'admin' || role === 'operator';
   const filters = useFilters();
-  usePageSizeReset(pageSize, filters.setPage);
   const list = useRows(filters, pageSize);
+  usePageSizeReset(pageSize, filters.setPage, list.total);
   const summaryState = useSummary(filters.clientId);
   const bulk = useBulkGenerate(list, summaryState);
 

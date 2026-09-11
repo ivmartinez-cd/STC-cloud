@@ -71,8 +71,8 @@ function useDirectoryRows(filters: DirectoryFilters, pageSize: number) {
  * fijas y scroll). */
 export function useRemoteActionsDirectory(pageSize: number) {
   const filters = useDirectoryFilters();
-  usePageSizeReset(pageSize, filters.setPage);
   const rows = useDirectoryRows(filters, pageSize);
+  usePageSizeReset(pageSize, filters.setPage, rows.total);
   const hasActiveFilters = useMemo(
     () => filters.effectiveQuery !== '' || filters.segment !== 'todos',
     [filters.effectiveQuery, filters.segment]

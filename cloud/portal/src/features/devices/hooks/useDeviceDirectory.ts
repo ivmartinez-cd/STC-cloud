@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { api } from '../../../shared/lib/api';
 import { useDebounce } from '../../../shared/hooks/useDebounce';
 import { usePageSizeReset } from '../../../shared/hooks/usePageSizeReset';
+import { useUpdateEffect } from '../../../shared/hooks/useUpdateEffect';
 import type {
   DeviceDirectoryGroup, DeviceDirectoryResponse, DeviceDirectorySegment, DeviceInventorySummary, SortDir,
 } from '../types/deviceDirectory';
@@ -57,7 +58,8 @@ function useDirectoryFilters() {
   useUrlSync(effectiveQuery, s.segment, s.sortDir, s.page, s.includeDecommissioned);
   // Chips/búsqueda/checkbox resetean a la página 1 — evita quedar en una página vacía.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { s.setPage(0); }, [effectiveQuery, s.segment, s.includeDecommissioned]);
+  // No corre al montar: respeta el `?page=` restaurado de la URL.
+  useUpdateEffect(() => { s.setPage(0); }, [effectiveQuery, s.segment, s.includeDecommissioned]);
   return {
     ...s, effectiveQuery,
     setSegment: s.setSegmentState,
@@ -144,8 +146,9 @@ function useDirectorySummary() {
  * en el alto disponible (27/08/2026 — antes 50 fijas y scroll). */
 export function useDeviceDirectory(pageSize: number) {
   const filters = useDirectoryFilters();
-  usePageSizeReset(pageSize, filters.setPage);
-  return { ...filters, pageSize, ...useDirectoryRows(filters, pageSize), ...useDirectorySummary() };
+  const rows = useDirectoryRows(filters, pageSize);
+  usePageSizeReset(pageSize, filters.setPage, rows.total);
+  return { ...filters, pageSize, ...rows, ...useDirectorySummary() };
 }
 
 export type DeviceDirectoryState = ReturnType<typeof useDeviceDirectory>;

@@ -111,7 +111,7 @@ export function useActivityPage(pageSize: number) {
   const { summary, summaryLoading, summaryError, fetchSummary } = useSummary(filters);
   const list = useRows(filters, summary?.top_operator?.user_id ?? null, page, pageSize);
   useEffect(() => { setPage(0); }, [filters.from, filters.to, filters.q, filters.clientId, filters.segment]);
-  usePageSizeReset(pageSize, setPage);
+  usePageSizeReset(pageSize, setPage, list.total);
   return { filters, page, setPage, summary, summaryLoading, summaryError, fetchSummary, ...list };
 }
 

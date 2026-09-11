@@ -86,8 +86,9 @@ function useClients() {
 /** `pageSize` = filas que entran en pantalla (`useFitRows`, 27/08/2026). */
 export function useEmailLogPage(pageSize: number) {
   const filters = useFilters();
-  usePageSizeReset(pageSize, filters.setPage);
-  return { filters, ...useRows(filters, pageSize), ...useSummary(), ...useClients() };
+  const rows = useRows(filters, pageSize);
+  usePageSizeReset(pageSize, filters.setPage, rows.total);
+  return { filters, ...rows, ...useSummary(), ...useClients() };
 }
 
 export type EmailLogPageState = ReturnType<typeof useEmailLogPage>;

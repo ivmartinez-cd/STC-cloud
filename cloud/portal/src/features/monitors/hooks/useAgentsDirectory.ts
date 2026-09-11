@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { api } from '../../../shared/lib/api';
 import { useDebounce } from '../../../shared/hooks/useDebounce';
 import { usePageSizeReset } from '../../../shared/hooks/usePageSizeReset';
+import { useUpdateEffect } from '../../../shared/hooks/useUpdateEffect';
 import type {
   AgentDirectoryResponse, AgentDirectoryRow, AgentFleetSummary, AgentSegment, AgentSignalBucketsResponse, SortDir,
 } from '../types/agentsDirectory';
@@ -48,7 +49,8 @@ function useDirectoryFilters() {
   const effectiveQuery = debouncedQuery.trim().length >= 2 ? debouncedQuery.trim() : '';
 
   useUrlSync(effectiveQuery, segment, sortDir, page);
-  useEffect(() => { setPage(0); }, [effectiveQuery, segment]);
+  // No corre al montar: respeta el `?page=` restaurado de la URL.
+  useUpdateEffect(() => { setPage(0); }, [effectiveQuery, segment]);
 
   const setSegment = useCallback((s: AgentSegment) => setSegmentState(s), []);
   const clearFilters = useCallback(() => { setRawQuery(''); setSegmentState('todos'); }, []);
@@ -139,8 +141,9 @@ function useSignalBuckets() {
  * alto disponible (27/08/2026 — antes 50 fijas y scroll). */
 export function useAgentsDirectory(pageSize: number) {
   const filters = useDirectoryFilters();
-  usePageSizeReset(pageSize, filters.setPage);
-  return { ...filters, pageSize, ...useDirectoryRows(filters, pageSize), ...useFleetSummary(), ...useSignalBuckets() };
+  const rows = useDirectoryRows(filters, pageSize);
+  usePageSizeReset(pageSize, filters.setPage, rows.total);
+  return { ...filters, pageSize, ...rows, ...useFleetSummary(), ...useSignalBuckets() };
 }
 
 export type AgentsDirectoryState = ReturnType<typeof useAgentsDirectory>;
