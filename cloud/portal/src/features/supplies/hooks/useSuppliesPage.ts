@@ -1,26 +1,42 @@
-import { useCallback, useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api } from '../../../shared/lib/api';
 import { useAuth } from '../../../store/AuthContext';
 import { useToast } from '../../../store/ToastContext';
-import { useDebounce } from '../../../shared/hooks/useDebounce';
 import { useRowSelection } from '../../../shared/hooks/useRowSelection';
+import { useLatestRequest } from '../../../shared/hooks/useLatestRequest';
+import { clampPage } from '../../../shared/lib/clampPage';
+import { useUrlState, useUrlSearchQuery, enumParam, stringParam, pageParam, type UrlPatch } from '../../../shared/hooks/useUrlState';
 import type { FleetSupplyRow, FleetSuppliesResponse, SuppliesSummaryResponse, SupplyKind, SupplyUrgency } from '../../../shared/types/supplies';
-import { usePageSizeReset } from '../../../shared/hooks/usePageSizeReset';
 
 export interface ClientOption { id: string; name: string }
 export type UrgencyFilter = SupplyUrgency | '';
 
+const KINDS: readonly (SupplyKind | '')[] = ['', 'Tóner', 'Tambor de imagen', 'Fusor', 'Rodillo', 'Banda de transferencia', 'Depósito de residuos', 'Kit de mantenimiento', 'Otro'];
+const URGENCIES: readonly UrgencyFilter[] = ['', 'critico', 'bajo', 'normal', 'sin_lectura'];
+
+/** Filtros y página en la URL (auditoría 12/09/2026: antes sólo se leía `client_id`
+ * una vez y nunca se escribía de vuelta; volver de un equipo reseteaba todo).
+ * `client_id` conserva el nombre porque Cliente Detalle linkea `/supplies?client_id=`. */
+const CODECS = { q: stringParam(), client_id: stringParam(), kind: enumParam(KINDS, ''), urgency: enumParam(URGENCIES, ''), page: pageParam };
+type UrlFilters = { [K in keyof typeof CODECS]: ReturnType<(typeof CODECS)[K]['parse']> };
+
+function useFilterSetters(patch: UrlPatch<UrlFilters>) {
+  return useMemo(() => ({
+    setClientId: (client_id: string) => patch({ client_id, page: 0 }),
+    setKind: (kind: SupplyKind | '') => patch({ kind, page: 0 }),
+    setUrgency: (urgency: UrgencyFilter) => patch({ urgency, page: 0 }),
+    setPage: (page: number) => patch({ page }),
+  }), [patch]);
+}
+
 function useFilters() {
-  const [initial] = useSearchParams();
-  const [rawQuery, setRawQuery] = useState('');
-  const [clientId, setClientId] = useState(() => initial.get('client_id') ?? '');
-  const [kind, setKind] = useState<SupplyKind | ''>('');
-  const [urgency, setUrgency] = useState<UrgencyFilter>('');
-  const [page, setPage] = useState(0);
-  const query = useDebounce(rawQuery, 300);
-  useEffect(() => { setPage(0); }, [query, clientId, kind, urgency]);
-  return { rawQuery, setRawQuery, query, clientId, setClientId, kind, setKind, urgency, setUrgency, page, setPage };
+  const [url, patch] = useUrlState<UrlFilters>(CODECS);
+  const { rawQuery, setRawQuery, effectiveQuery } = useUrlSearchQuery(url.q, (q) => patch({ q, page: 0 }));
+  return {
+    rawQuery, setRawQuery, query: effectiveQuery,
+    clientId: url.client_id, kind: url.kind, urgency: url.urgency, page: url.page,
+    ...useFilterSetters(patch),
+  };
 }
 
 type Filters = ReturnType<typeof useFilters>;
@@ -42,24 +58,36 @@ function useRowsState() {
   return { items, setItems, total, setTotal, loading, setLoading, error, setError };
 }
 
+type RowsState = ReturnType<typeof useRowsState>;
+
+/** `isLatest`: respuestas de un request ya superado no tocan la tabla (`useLatestRequest`). */
+async function loadSupplies(st: RowsState, f: Filters, page: number, pageSize: number, isLatest: () => boolean) {
+  st.setLoading(true);
+  st.setError('');
+  try {
+    const data = await api.get<FleetSuppliesResponse>(`/supplies?${buildSuppliesParams(f, page, pageSize).toString()}`);
+    if (!isLatest()) return;
+    st.setItems(data.items);
+    st.setTotal(data.total);
+  } catch (e) {
+    if (isLatest()) st.setError(e instanceof Error ? e.message : String(e));
+  } finally {
+    if (isLatest()) st.setLoading(false);
+  }
+}
+
 function useRows(f: Filters, pageSize: number) {
   const st = useRowsState();
-  const fetchSupplies = useCallback(async () => {
-    st.setLoading(true);
-    st.setError('');
-    try {
-      const data = await api.get<FleetSuppliesResponse>(`/supplies?${buildSuppliesParams(f, f.page, pageSize).toString()}`);
-      st.setItems(data.items);
-      st.setTotal(data.total);
-    } catch (e) {
-      st.setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      st.setLoading(false);
-    }
+  const beginRequest = useLatestRequest();
+  // `?page=` acotada al mostrar/pedir, sin persistir el clamp (ver `clampPage`).
+  const page = clampPage(f.page, pageSize, st.total);
+  const fetchSupplies = useCallback(
+    () => loadSupplies(st, f, page, pageSize, beginRequest()),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [f.query, f.clientId, f.kind, f.urgency, f.page, pageSize]);
+    [f.query, f.clientId, f.kind, f.urgency, page, pageSize],
+  );
   useEffect(() => { void fetchSupplies(); }, [fetchSupplies]);
-  return { ...st, pageSize, totalPages: Math.max(1, Math.ceil(st.total / pageSize)), fetchSupplies };
+  return { ...st, page, pageSize, totalPages: Math.max(1, Math.ceil(st.total / pageSize)), fetchSupplies };
 }
 
 function useSummary(clientId: string) {
@@ -148,7 +176,6 @@ export function useSuppliesPage(pageSize: number) {
   const canFilterByClient = role === 'admin' || role === 'operator';
   const filters = useFilters();
   const list = useRows(filters, pageSize);
-  usePageSizeReset(pageSize, filters.setPage, list.total);
   const summaryState = useSummary(filters.clientId);
   const bulk = useBulkGenerate(list, summaryState);
 

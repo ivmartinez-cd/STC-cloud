@@ -15,7 +15,7 @@ const KEY = 'stc_post_login_redirect';
  *   debe pasar la ruta capturada en el render (`useLocation()`), no leerla
  *   acá adentro.
  */
-export function stashCurrentPath(path: string = window.location.pathname + window.location.search): void {
+export function stashCurrentPath(path: string = window.location.pathname + window.location.search + window.location.hash): void {
   if (path.startsWith('/login')) return;
   sessionStorage.setItem(KEY, path);
 }

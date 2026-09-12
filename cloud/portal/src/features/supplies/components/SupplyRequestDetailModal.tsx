@@ -31,15 +31,19 @@ function fmtDate(v: string | null): string {
 export default function SupplyRequestDetailModal({ requestId, onClose, onChanged, canManage }: Props) {
   const { showToast } = useToast();
   const [detail, setDetail] = useState<SupplyRequestDetail | null>(null);
+  // `?request=<id>` llega también por link (mail, banner): un id inexistente
+  // dejaba el spinner para siempre.
+  const [missing, setMissing] = useState(false);
   const [comment, setComment] = useState('');
   const [busy, setBusy] = useState(false);
 
   const load = (id: string) => {
-    api.get<SupplyRequestDetail>(`/supply-requests/${id}`).then(setDetail).catch(() => setDetail(null));
+    api.get<SupplyRequestDetail>(`/supply-requests/${id}`).then(setDetail).catch(() => { setDetail(null); setMissing(true); });
   };
 
   useEffect(() => {
     setDetail(null);
+    setMissing(false);
     if (requestId) load(requestId);
   }, [requestId]);
 
@@ -74,7 +78,9 @@ export default function SupplyRequestDetailModal({ requestId, onClose, onChanged
 
   return (
     <BrandModal isOpen={!!requestId} onClose={onClose} title="Pedido de consumible" widthPx={620}>
-      {!detail ? (
+      {missing ? (
+        <p className="py-10 text-center text-sm text-ink-500">No se encontró el pedido. Puede haber sido eliminado o el link es incorrecto.</p>
+      ) : !detail ? (
         <div className="py-10 flex justify-center"><Loader2 size={24} className="text-brand animate-spin" /></div>
       ) : (
         <div className="space-y-4">

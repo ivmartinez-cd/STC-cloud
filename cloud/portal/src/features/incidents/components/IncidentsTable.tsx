@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import type { Incident } from '../../../shared/types/incidents';
 import EstadoChip from '../../../shared/components/EstadoChip';
 import { TableEmptyState, TableErrorState, TableSkeletonRow } from '../../../shared/components/TableStates';
@@ -37,14 +37,14 @@ function AgingCell({ inc }: { inc: Incident }) {
 }
 
 function Row({ inc, classLabels }: { inc: Incident; classLabels: Record<string, string> }) {
-  const navigate = useNavigate();
   const status = statusChipProps(inc.status);
   const origin = originChipProps(inc.origin);
   return (
-    <div
-      data-fit-row
-      className={`grid ${GRID_COLS} cursor-pointer items-center gap-x-[14px] border-b border-line-200 px-5 py-[11px] hover:bg-surface-btn-hover`}
-      style={{ height: 54 }} onClick={() => navigate(`/incidents/${inc.id}`)}
+    <Link
+      to={`/incidents/${inc.id}`}
+      role="row" data-fit-row
+      className={`grid ${GRID_COLS} items-center gap-x-[14px] border-b border-line-200 px-5 py-[11px] hover:bg-surface-btn-hover`}
+      style={{ height: 54 }}
     >
       <span className="font-mono text-[12px] font-medium text-brand-accent">#{inc.number}</span>
       <TitleAndEquipmentCell inc={inc} />
@@ -54,7 +54,7 @@ function Row({ inc, classLabels }: { inc: Incident; classLabels: Record<string, 
       <EstadoChip label={status.label} variant={status.variant} />
       <AgingCell inc={inc} />
       <span className="justify-self-end font-sans text-[13px] text-ink-200">›</span>
-    </div>
+    </Link>
   );
 }
 

@@ -1,5 +1,5 @@
 import { AlertOctagon, Loader2 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Card, CardTitle } from './primitives';
 import { fmtDateTime } from './format';
 import EstadoChip from '../../../../shared/components/EstadoChip';
@@ -19,6 +19,12 @@ export default function IncidentsTab({ incidents, incidentsLoading }: { incident
   const navigate = useNavigate();
   const fit = useFitRows({ estimate: 40 });
   const pager = useClientPagination(incidents ?? EMPTY, fit.rows);
+  // Fila entera clicable, pero # y título son `<Link>` reales (ctrl+clic / pestaña
+  // nueva): si el clic fue sobre el link, lo maneja el link y no se navega dos veces.
+  const openRow = (e: React.MouseEvent, incidentId: string | number) => {
+    if ((e.target as HTMLElement).closest('a')) return;
+    navigate(`/incidents/${incidentId}`);
+  };
 
   return (
     <Card className="flex min-h-0 flex-1 flex-col">
@@ -42,9 +48,9 @@ export default function IncidentsTab({ incidents, incidentsLoading }: { incident
             </thead>
             <tbody className="divide-y divide-line-200">
               {pager.visible.map((inc) => (
-                <tr key={inc.id} data-fit-row className="cursor-pointer hover:bg-surface-avatar" onClick={() => navigate(`/incidents/${inc.id}`)}>
-                  <td className="px-3 py-2 font-mono text-[11.5px] text-ink-700">#{inc.number}</td>
-                  <td className="px-3 py-2 font-sans text-[12.5px] font-semibold text-ink-900">{inc.title}</td>
+                <tr key={inc.id} data-fit-row className="cursor-pointer hover:bg-surface-avatar" onClick={(e) => openRow(e, inc.id)}>
+                  <td className="px-3 py-2 font-mono text-[11.5px] text-ink-700"><Link to={`/incidents/${inc.id}`}>#{inc.number}</Link></td>
+                  <td className="px-3 py-2 font-sans text-[12.5px] font-semibold text-ink-900"><Link to={`/incidents/${inc.id}`} className="hover:underline">{inc.title}</Link></td>
                   <td className="px-3 py-2 font-sans text-[12.5px] text-ink-700">{inc.class}</td>
                   <td className="px-3 py-2">
                     <EstadoChip variant={OPEN_STATUSES.has(inc.status) ? 'attention' : 'neutral'} label={INCIDENT_STATUS_LABELS[inc.status]} />

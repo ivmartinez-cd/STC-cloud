@@ -69,7 +69,7 @@ function Alerts() {
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col rounded-[5px] border border-line-100 bg-white">
-        <AlertsFilterBar filters={s.filters} />
+        <AlertsFilterBar filters={s.filters} rows={s.alerts} classLabels={s.classLabels} />
         {!s.isReadOnlyViewer && (
           <AlertsBulkBar
             count={s.rowSelection.count} busy={s.bulkBusy} groupByCode={groupByCode}

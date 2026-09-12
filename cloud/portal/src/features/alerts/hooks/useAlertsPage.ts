@@ -23,11 +23,11 @@ export interface AlertFiltersState {
   last24h: boolean; setLast24h: (v: boolean) => void;
   /** `?class=` — el panel "por clase" del dashboard manda cualquier clase, no sólo
    * availability (antes las demás se ignoraban en silencio). */
-  alertClass: string;
-  /** Deep-link únicamente (`/alerts?client_id=` desde Cliente Detalle) — sin chip propio. */
-  clientId: string;
-  /** Deep-link únicamente ("Ver todas →" de la ficha de equipo). */
-  deviceId: string;
+  alertClass: string; setAlertClass: (v: string) => void;
+  /** Deep-link (`/alerts?client_id=` desde Cliente Detalle) — se ve y se quita con `ScopeChips`. */
+  clientId: string; setClientId: (v: string) => void;
+  /** Deep-link ("Ver todas →" de la ficha de equipo). */
+  deviceId: string; setDeviceId: (v: string) => void;
 }
 
 /** Ausente → sólo sin resolver (default); `?resolved=` vacío → todas. Compatible con
@@ -50,6 +50,10 @@ function useFilterSetters(patch: UrlPatch<UrlFilters>) {
     setAvailability: (v: boolean) => patch({ class: v ? 'availability' : '', page: 0 }),
     setLast24h: (v: boolean) => patch({ last24h: v, page: 0 }),
     setPage: (page: number) => patch({ page }),
+    // Filtros de alcance que llegan por deep-link: se quitan desde `ScopeChips`.
+    setAlertClass: (v: string) => patch({ class: v, page: 0 }),
+    setClientId: (v: string) => patch({ client_id: v, page: 0 }),
+    setDeviceId: (v: string) => patch({ device_id: v, page: 0 }),
   }), [patch]);
 }
 

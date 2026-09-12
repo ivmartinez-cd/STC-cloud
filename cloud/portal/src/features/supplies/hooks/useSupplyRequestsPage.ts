@@ -1,20 +1,36 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api } from '../../../shared/lib/api';
 import { useAuth } from '../../../store/AuthContext';
-import { usePageSizeReset } from '../../../shared/hooks/usePageSizeReset';
+import { useLatestRequest } from '../../../shared/hooks/useLatestRequest';
+import { clampPage } from '../../../shared/lib/clampPage';
+import { useUrlState, enumParam, stringParam, pageParam, type UrlPatch } from '../../../shared/hooks/useUrlState';
 import type { SupplyRequest, SupplyRequestStats, SupplyRequestStatus } from '../types/supplyRequests';
 
 export interface ClientOption { id: string; name: string }
 export type RequestTab = SupplyRequestStatus | 'all';
 export const TABS: RequestTab[] = ['pending', 'reviewed', 'processed', 'completed', 'ignored', 'all'];
 
+/** Pestaña, cliente, página y el pedido abierto (`?request=<id>`) en la URL
+ * (auditoría 12/09/2026): un link a un pedido concreto es compartible (mail,
+ * banner de duplicados) y F5 no cierra el modal ni vuelve a "Pendientes". */
+const CODECS = { tab: enumParam(TABS, 'pending'), client_id: stringParam(), page: pageParam, request: stringParam() };
+type UrlFilters = { [K in keyof typeof CODECS]: ReturnType<(typeof CODECS)[K]['parse']> };
+
+function useFilterSetters(patch: UrlPatch<UrlFilters>) {
+  return useMemo(() => ({
+    setClientId: (client_id: string) => patch({ client_id, page: 0 }),
+    setTab: (tab: RequestTab) => patch({ tab, page: 0 }),
+    setPage: (page: number) => patch({ page }),
+    // Abrir un pedido apila (es una "entidad abierta": "atrás" lo cierra); cerrar reemplaza.
+    setDetailId: (id: string | null) => (id ? patch({ request: id }, { push: true }) : patch({ request: '' })),
+  }), [patch]);
+}
+
 function useFilters() {
   const { clientId: ownClientId } = useAuth();
-  const [clientId, setClientId] = useState(ownClientId ?? '');
-  const [tab, setTab] = useState<RequestTab>('pending');
-  const [page, setPage] = useState(0);
-  useEffect(() => { setPage(0); }, [tab, clientId]);
-  return { clientId, setClientId, tab, setTab, page, setPage };
+  const [url, patch] = useUrlState<UrlFilters>(CODECS);
+  // Un client_viewer siempre ve el suyo (el backend scopea igual); sin `?client_id=` no se escribe el default.
+  return { clientId: ownClientId || url.client_id, tab: url.tab, page: url.page, detailId: url.request || null, ...useFilterSetters(patch) };
 }
 
 type Filters = ReturnType<typeof useFilters>;
@@ -27,8 +43,10 @@ function useRowsState() {
   return { items, setItems, total, setTotal, stats, setStats, loading, setLoading };
 }
 
-async function requestPage(f: Filters, pageSize: number): Promise<{ list: { items: SupplyRequest[]; total: number }; stats: SupplyRequestStats }> {
-  const listParams = new URLSearchParams({ limit: String(pageSize), offset: String(f.page * pageSize) });
+type RowsState = ReturnType<typeof useRowsState>;
+
+async function requestPage(f: Filters, page: number, pageSize: number): Promise<{ list: { items: SupplyRequest[]; total: number }; stats: SupplyRequestStats }> {
+  const listParams = new URLSearchParams({ limit: String(pageSize), offset: String(page * pageSize) });
   if (f.tab !== 'all') listParams.set('status', f.tab);
   if (f.clientId) listParams.set('client_id', f.clientId);
   const statsParams = f.clientId ? `?client_id=${f.clientId}` : '';
@@ -39,25 +57,36 @@ async function requestPage(f: Filters, pageSize: number): Promise<{ list: { item
   return { list, stats };
 }
 
+/** `isLatest`: respuestas de un request ya superado no tocan la tabla (`useLatestRequest`). */
+async function loadRows(st: RowsState, f: Filters, page: number, pageSize: number, isLatest: () => boolean) {
+  st.setLoading(true);
+  try {
+    const { list, stats } = await requestPage(f, page, pageSize);
+    if (!isLatest()) return;
+    st.setItems(list.items);
+    st.setTotal(list.total);
+    st.setStats(stats);
+  } catch {
+    if (!isLatest()) return;
+    st.setItems([]);
+    st.setTotal(0);
+  } finally {
+    if (isLatest()) st.setLoading(false);
+  }
+}
+
 function useRows(f: Filters, pageSize: number) {
   const st = useRowsState();
-  const load = useCallback(async () => {
-    st.setLoading(true);
-    try {
-      const { list, stats } = await requestPage(f, pageSize);
-      st.setItems(list.items);
-      st.setTotal(list.total);
-      st.setStats(stats);
-    } catch {
-      st.setItems([]);
-      st.setTotal(0);
-    } finally {
-      st.setLoading(false);
-    }
+  const beginRequest = useLatestRequest();
+  // `?page=` acotada al mostrar/pedir, sin persistir el clamp (ver `clampPage`).
+  const page = clampPage(f.page, pageSize, st.total);
+  const load = useCallback(
+    () => loadRows(st, f, page, pageSize, beginRequest()),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [f.tab, f.clientId, f.page, pageSize]);
+    [f.tab, f.clientId, page, pageSize],
+  );
   useEffect(() => { void load(); }, [load]);
-  return { ...st, pageSize, totalPages: Math.max(1, Math.ceil(st.total / pageSize)), reload: load };
+  return { ...st, page, pageSize, totalPages: Math.max(1, Math.ceil(st.total / pageSize)), reload: load };
 }
 
 function countOfBuilder(stats: SupplyRequestStats | null) {
@@ -82,16 +111,14 @@ export function useSupplyRequestsPage(pageSize: number) {
   const canManage = role === 'admin' || role === 'operator';
   const filters = useFilters();
   const list = useRows(filters, pageSize);
-  usePageSizeReset(pageSize, filters.setPage, list.total);
   const { clients, clientName } = useClients(canManage);
-  const [detailId, setDetailId] = useState<string | null>(null);
 
   const duplicatePair = list.items.find((r) => r.possible_duplicate_of);
   const duplicateSibling = duplicatePair ? list.items.find((r) => r.id === duplicatePair.possible_duplicate_of) : undefined;
 
   return {
     canManage, clients, clientName, filters, ...list, countOf: countOfBuilder(list.stats),
-    detailId, setDetailId, duplicatePair, duplicateSibling,
+    detailId: filters.detailId, setDetailId: filters.setDetailId, duplicatePair, duplicateSibling,
   };
 }
 

@@ -13,8 +13,8 @@ export interface IncidentFiltersState {
   openOnly: boolean; setOpenOnly: (v: boolean) => void;
   old24h: boolean; setOld24h: (v: boolean) => void;
   noDevice: boolean; setNoDevice: (v: boolean) => void;
-  /** Deep-link únicamente (`/incidents?client_id=` desde Cliente Detalle) — sin chip propio. */
-  clientId: string;
+  /** Deep-link (`/incidents?client_id=` desde Cliente Detalle) — se ve y se quita con `ScopeChips`. */
+  clientId: string; setClientId: (v: string) => void;
   /** Un solo cambio de URL para los 4 filtros (no 4 escrituras). */
   clearFilters: () => void;
 }
@@ -30,6 +30,8 @@ function useFilterSetters(patch: UrlPatch<UrlFilters>, setRawQuery: (q: string) 
     setOld24h: (v: boolean) => patch({ old24h: v, page: 0 }),
     setNoDevice: (v: boolean) => patch({ no_device: v, page: 0 }),
     setPage: (page: number) => patch({ page }),
+    // Filtro de alcance que llega por deep-link: se quita desde `ScopeChips`.
+    setClientId: (v: string) => patch({ client_id: v, page: 0 }),
     clearFilters: () => { setRawQuery(''); patch({ q: '', open: false, old24h: false, no_device: false, page: 0 }); },
   }), [patch, setRawQuery]);
 }

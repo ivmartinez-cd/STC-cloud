@@ -1,4 +1,3 @@
-import { useNavigate } from 'react-router-dom';
 import DiagnosticBanner from '../../../shared/components/DiagnosticBanner';
 import { fmt } from '../../../shared/lib/formatters';
 import type { EmailLogSummary } from '../types/emailLog';
@@ -21,14 +20,13 @@ function Body({ summary }: { summary: EmailLogSummary }) {
  * con intentos en la ventana) — no tiene sentido alarmar si los avisos SÍ
  * están saliendo. */
 export default function EmailLogBanner({ summary }: { summary: EmailLogSummary | null }) {
-  const navigate = useNavigate();
   if (!summary || summary.intentos === 0 || summary.entregados > 0) return null;
   return (
     <DiagnosticBanner
       headline="NINGÚN AVISO SE ESTÁ ENTREGANDO" body={<Body summary={summary} />}
       cta={[
-        { label: 'VER CLIENTES SIN CONTACTO', onClick: () => navigate('/clients?segment=sin_contacto') },
-        { label: 'CONFIGURAR SMTP', onClick: () => navigate('/settings') },
+        { label: 'VER CLIENTES SIN CONTACTO', to: '/clients?segment=sin_contacto' },
+        { label: 'CONFIGURAR SMTP', to: '/settings' },
       ]}
     />
   );

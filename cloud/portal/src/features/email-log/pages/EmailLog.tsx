@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import PageHeader from '../../../shared/components/PageHeader';
 import HifiPagination from '../../../shared/components/HifiPagination';
 import { BTN_PRIMARY_LG, BTN_SECONDARY_LG } from '../../../shared/lib/buttons';
@@ -17,7 +17,6 @@ import EmailLogTable from '../components/EmailLogTable';
 export default function EmailLog() {
   const fit = useFitRows({ estimate: 54 });
   const s = useEmailLogPage(fit.rows);
-  const navigate = useNavigate();
   const [exporting, setExporting] = useState(false);
 
   const handleExport = async () => {
@@ -33,7 +32,7 @@ export default function EmailLog() {
         actions={
           <>
             <button type="button" onClick={handleExport} disabled={exporting} className={BTN_SECONDARY_LG}>{exporting ? 'EXPORTANDO…' : 'EXPORTAR'}</button>
-            <button type="button" onClick={() => navigate('/settings')} className={BTN_PRIMARY_LG}>CONFIGURAR SMTP</button>
+            <Link to="/settings" className={BTN_PRIMARY_LG}>CONFIGURAR SMTP</Link>
           </>
         }
       />

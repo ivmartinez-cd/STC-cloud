@@ -50,8 +50,7 @@ export default function RemoteActions() {
 
   const diagnoseFailingType = () => {
     const failing = insights.byType?.diagnostic;
-    if (failing) dir.setRawQuery(failing.label);
-    dir.setSegment('con_errores');
+    dir.applyFilters({ query: failing?.label, segment: 'con_errores' });
   };
 
   return (

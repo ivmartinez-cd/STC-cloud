@@ -1,5 +1,5 @@
 import { Radio, Trash2 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import ZoneLabel from '../../../shared/components/ZoneLabel';
 import HifiPagination from '../../../shared/components/HifiPagination';
 import { useFitRows } from '../../../shared/hooks/useFitRows';
@@ -56,10 +56,10 @@ function formatLastSeen(iso: string | null, now: number): string {
 }
 
 /** Contador de equipos del nodo — linkea a la tab "Dispositivos" del monitor. */
-function DeviceCountLink({ id, count }: { id: string; count: number }) {
+function DeviceCountLink({ id, count, from }: { id: string; count: number; from: string }) {
   return (
     <Link
-      to={`/monitors/${id}?tab=devices`}
+      to={`/monitors/${id}?tab=devices&from=${from}`}
       className="inline-flex h-[26px] min-w-[36px] items-center justify-center rounded-[3px] border border-line-avatar bg-surface-avatar px-2 font-montserrat text-[11.5px] font-semibold tabular-nums text-ink-600 transition-colors duration-150 ease-in-out hover:border-brand hover:text-brand-accent"
     >
       {count}
@@ -98,6 +98,9 @@ export default function ClientMonitorsSection({
   onCreateClick: () => void;
   onDeleteClick: (monitor: { id: string; name: string }) => void;
 }) {
+  // `from` = esta ficha con su tab/página: el breadcrumb del monitor vuelve acá.
+  const { pathname, search } = useLocation();
+  const from = encodeURIComponent(pathname + search);
   const fit = useFitRows({ estimate: 54, min: 2 });
   const pg = useClientPagination(monitors, fit.rows);
 
@@ -141,7 +144,7 @@ export default function ClientMonitorsSection({
                   className={`grid ${GRID_COLS} min-h-[54px] items-center gap-x-[14px] border-b border-line-200 px-5 py-[11px] transition-colors duration-150 ease-in-out hover:bg-surface-hover`}
                 >
                   <div role="cell" className="min-w-0">
-                    <Link to={`/monitors/${m.id}`} className="group/m flex min-w-0 items-center gap-3">
+                    <Link to={`/monitors/${m.id}?from=${from}`} className="group/m flex min-w-0 items-center gap-3">
                       <span className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-[3px] border border-line-avatar bg-surface-avatar text-ink-400 transition-colors duration-150 ease-in-out group-hover/m:border-brand group-hover/m:text-brand">
                         <Radio size={14} />
                       </span>
@@ -156,7 +159,7 @@ export default function ClientMonitorsSection({
 
                   <div className="text-right font-sans text-[12px] text-ink-400">{formatLastSeen(m.last_seen, now)}</div>
 
-                  <div className="flex justify-end"><DeviceCountLink id={m.id} count={m.device_count} /></div>
+                  <div className="flex justify-end"><DeviceCountLink id={m.id} count={m.device_count} from={from} /></div>
 
                   <div className="flex justify-end">
                     {!isReadOnlyViewer && <DeleteMonitorButton onClick={() => onDeleteClick({ id: m.id, name: m.name })} />}

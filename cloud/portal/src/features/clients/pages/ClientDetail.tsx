@@ -26,6 +26,11 @@ function parseTab(v: string | null): ClientDetailTab {
 function useActiveTab() {
   const [searchParams, setSearchParams] = useSearchParams();
   const tab = parseTab(searchParams.get('tab'));
+  // `?from=` = la cartera con sus filtros/página (`ClientsDirectoryTable`); sólo se
+  // acepta el listado de clientes (no `//evil`, no otra ruta). Sobrevive al cambio de
+  // tab porque `setTab` mergea.
+  const from = searchParams.get('from');
+  const listBackTo = from && /^\/clients(\?|$)/.test(from) ? from : '/clients';
   const setTab = useCallback((next: ClientDetailTab) => {
     setSearchParams((prev) => {
       const params = new URLSearchParams(prev);
@@ -33,7 +38,7 @@ function useActiveTab() {
       return params;
     }, { replace: true });
   }, [setSearchParams]);
-  return { tab, setTab };
+  return { tab, setTab, listBackTo };
 }
 
 /** Rediseño hifi "Cliente — detalle" (handoff 25/08/2026): jerarquiza en 3 zonas
@@ -50,7 +55,7 @@ const ClientDetail = () => {
     client, monitors, usage, loading, error,
     createMonitor, deleteMonitor, updateNotifications, updateDeviceApprovalRequired, updateClientProfile,
   } = useClientDetail(id!);
-  const { tab, setTab } = useActiveTab();
+  const { tab, setTab, listBackTo } = useActiveTab();
 
   const [showMonitorModal, setShowMonitorModal] = useState(false);
   const [monitorToDelete, setMonitorToDelete] = useState<{ id: string; name: string } | null>(null);
@@ -73,7 +78,7 @@ const ClientDetail = () => {
   return (
     <div className="-m-4 flex min-w-0 flex-col gap-4 bg-surface-page px-[34px] pb-9 pt-[26px] short:gap-3 short:pb-4 short:pt-3 md:-m-10 md:h-full md:min-h-0">
       <nav className="mb-1 flex items-center gap-2 font-sans text-xs">
-        <Link to="/clients" className="font-semibold text-brand-accent hover:underline">Clientes</Link>
+        <Link to={listBackTo} className="font-semibold text-brand-accent hover:underline">Clientes</Link>
         <span className="text-ink-sep-light">/</span>
         {client ? <span className="text-ink-700">{client.name}</span> : <div className="h-4 w-24 animate-pulse rounded-full bg-surface-track" />}
       </nav>

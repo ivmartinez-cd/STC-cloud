@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../store/AuthContext';
 import { User, Lock } from 'lucide-react';
 import { consumePostLoginRedirect } from '../../../shared/lib/postLoginRedirect';
@@ -29,7 +29,7 @@ function statValue(key: string, stats: ReturnType<typeof useLoginStats>['stats']
 }
 
 const Login = () => {
-  const { login } = useAuth();
+  const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const { stats, loading: statsLoading } = useLoginStats();
 
@@ -74,6 +74,9 @@ const Login = () => {
       setLoading(false);
     }
   };
+
+  // Con sesión viva, `/login` (favorito, "atrás" hasta el login) mostraba el formulario.
+  if (isAuthenticated) return <Navigate to="/" replace />;
 
   return (
     <div className="grid min-h-screen grid-cols-1 font-sans text-ink-900 lg:grid-cols-[repeat(auto-fit,minmax(420px,1fr))]">

@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import EstadoChip from '../../../shared/components/EstadoChip';
 import { TableEmptyState, TableErrorState, TableSkeletonRow } from '../../../shared/components/TableStates';
 import { EVENT_LABELS, STATUS_LABELS, eventDot, fmtDate, statusChipProps } from '../lib/emailLogPresentation';
@@ -18,21 +18,14 @@ function RecipientCell({ recipient }: { recipient: string | null }) {
  * reintentos (`services/notificationService/mailer.ts` no reintenta nada) —
  * un botón "reintentar" que no reintenta sería un control falso. En su lugar,
  * el CTA lleva a la causa real: configurar el SMTP. */
+const CTA_CLASS = 'justify-self-end whitespace-nowrap font-montserrat text-[10px] font-semibold uppercase tracking-[.08em] text-brand-accent hover:underline';
+
 function RowCta({ row }: { row: EmailLogRow }) {
-  const navigate = useNavigate();
   if (row.status === 'skipped_no_recipient' && row.client_id) {
-    return (
-      <button type="button" onClick={() => navigate(`/clients/${row.client_id}`)} className="justify-self-end whitespace-nowrap font-montserrat text-[10px] font-semibold uppercase tracking-[.08em] text-brand-accent hover:underline">
-        ASIGNAR CONTACTO →
-      </button>
-    );
+    return <Link to={`/clients/${row.client_id}`} className={CTA_CLASS}>ASIGNAR CONTACTO →</Link>;
   }
   if (row.status === 'skipped_no_transport' || row.status === 'error') {
-    return (
-      <button type="button" onClick={() => navigate('/settings')} className="justify-self-end whitespace-nowrap font-montserrat text-[10px] font-semibold uppercase tracking-[.08em] text-brand-accent hover:underline">
-        CONFIGURAR SMTP →
-      </button>
-    );
+    return <Link to="/settings" className={CTA_CLASS}>CONFIGURAR SMTP →</Link>;
   }
   return <span />;
 }

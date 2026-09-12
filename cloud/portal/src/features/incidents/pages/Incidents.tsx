@@ -58,7 +58,7 @@ function Incidents() {
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col rounded-[5px] border border-line-100 bg-white">
-        <IncidentsFilterBar filters={s.filters} />
+        <IncidentsFilterBar filters={s.filters} rows={s.items} />
         <div ref={fit.ref} className="min-h-0 flex-1 overflow-hidden">
           <IncidentsTable
             items={s.items} classLabels={s.classLabels} loading={s.loading} error={s.error}

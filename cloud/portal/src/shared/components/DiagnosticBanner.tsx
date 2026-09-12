@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { Link } from 'react-router-dom';
 
 function BannerIcon() {
   return (
@@ -6,19 +7,19 @@ function BannerIcon() {
   );
 }
 
-interface CtaProps { label: string; onClick: () => void }
+/** `to` para navegación (un `<Link>` real: ctrl+clic / pestaña nueva funcionan);
+ * `onClick` para acciones que no son navegación. */
+type CtaProps = { label: string } & ({ to: string; onClick?: never } | { onClick: () => void; to?: never });
+
+const CTA_CLASS = 'whitespace-nowrap rounded-[3px] border border-brand-warn-border bg-white px-[14px] py-[9px] font-montserrat text-[10px] font-semibold uppercase tracking-[.1em] text-brand-accent transition-colors duration-150 ease-in-out hover:bg-brand-warn-hover focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-2';
 
 function BannerCta({ cta }: { cta: CtaProps | CtaProps[] }) {
   const ctas = Array.isArray(cta) ? cta : [cta];
   return (
     <div className="flex flex-wrap gap-2.5">
-      {ctas.map((c) => (
-        <button
-          key={c.label} type="button" onClick={c.onClick}
-          className="whitespace-nowrap rounded-[3px] border border-brand-warn-border bg-white px-[14px] py-[9px] font-montserrat text-[10px] font-semibold uppercase tracking-[.1em] text-brand-accent transition-colors duration-150 ease-in-out hover:bg-brand-warn-hover focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-2"
-        >
-          {c.label}
-        </button>
+      {ctas.map((c) => (c.to !== undefined
+        ? <Link key={c.label} to={c.to} className={CTA_CLASS}>{c.label}</Link>
+        : <button key={c.label} type="button" onClick={c.onClick} className={CTA_CLASS}>{c.label}</button>
       ))}
     </div>
   );

@@ -3,6 +3,8 @@ import { BrowserRouter as Router, Routes, Route, Navigate, Outlet, useLocation, 
 import { AuthProvider, useAuth } from './store/AuthContext';
 import { ToastProvider } from './store/ToastContext';
 import Layout from './app/layout/Layout';
+import NotFound from './app/layout/NotFound';
+import { useToast } from './store/ToastContext';
 import Login from './features/auth/pages/Login';
 import { stashCurrentPath } from './shared/lib/postLoginRedirect';
 
@@ -32,7 +34,8 @@ function RequireAuth() {
   // de `stashCurrentPath`: para cuando el efecto corre, el `<Navigate>`
   // hermano puede haber cambiado ya `window.location` a `/login`.
   const location = useLocation();
-  const currentPath = location.pathname + location.search;
+  // Con `hash`: el deep-link a una regla de Configuración (`/settings#…`) volvía sin ancla.
+  const currentPath = location.pathname + location.search + location.hash;
   useEffect(() => {
     if (!checking && !isAuthenticated) stashCurrentPath(currentPath);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -51,7 +54,11 @@ function RequireAuth() {
  */
 function RequireRole({ allowed }: { allowed: string[] }) {
   const { role } = useAuth();
-  return allowed.includes(role) ? <Outlet /> : <Navigate to="/" replace />;
+  const { showToast } = useToast();
+  const denied = !allowed.includes(role);
+  // Antes rebotaba al Dashboard en silencio: el usuario no sabía si el link estaba roto.
+  useEffect(() => { if (denied) showToast('No tenés permisos para esa sección', 'error'); }, [denied, showToast]);
+  return denied ? <Navigate to="/" replace /> : <Outlet />;
 }
 
 /**
@@ -95,9 +102,9 @@ function App() {
                 </Route>
                 <Route path="/devices/:id"   element={<KeyedById page={DeviceDetail} />} />
                 <Route path="/settings"      element={<Settings />} />
+                <Route path="*"              element={<NotFound />} />
               </Route>
             </Route>
-            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Router>
       </ToastProvider>

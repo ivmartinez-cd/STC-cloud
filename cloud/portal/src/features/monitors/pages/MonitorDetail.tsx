@@ -49,6 +49,10 @@ const MonitorDetail = () => {
   // Derivada de la URL en cada render (no `useState` inicializado una vez): así
   // atrás/adelante del navegador y un link entrante con otro `?tab=` se reflejan.
   const activeTab = parseTab(searchParams.get('tab'), isReadOnlyViewer);
+  // `?from=` = la ficha del cliente con su tab/página (`ClientMonitorsSection`); sólo
+  // se acepta un path de cliente. Sobrevive al cambio de tab porque el handler mergea.
+  const from = searchParams.get('from');
+  const clientBackTo = from?.startsWith('/clients/') ? from : undefined;
   const [showRevokeModal, setShowRevokeModal] = useState(false);
   const [revoking, setRevoking] = useState(false);
   const [regenKey, setRegenKey] = useState<string | null>(null);
@@ -148,9 +152,9 @@ const MonitorDetail = () => {
       <nav className="mb-1 flex items-center gap-2 font-sans text-xs">
         <Link to="/clients" className="font-semibold text-brand-accent hover:underline">Clientes</Link>
         <span className="text-ink-sep-light">/</span>
-        <Link to={`/clients/${monitor.client_id}`} className="font-semibold text-brand-accent hover:underline">{monitor.client_name}</Link>
+        <Link to={clientBackTo ?? `/clients/${monitor.client_id}`} className="font-semibold text-brand-accent hover:underline">{monitor.client_name}</Link>
         <span className="text-ink-sep-light">/</span>
-        <Link to={`/clients/${monitor.client_id}`} className="font-semibold text-brand-accent hover:underline">Infraestructura</Link>
+        <Link to={clientBackTo ?? `/clients/${monitor.client_id}`} className="font-semibold text-brand-accent hover:underline">Infraestructura</Link>
         <span className="text-ink-sep-light">/</span>
         <span className="text-ink-700">{monitor.name}</span>
       </nav>

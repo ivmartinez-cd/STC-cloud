@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { api } from '../../../shared/lib/api';
-import { usePageSizeReset } from '../../../shared/hooks/usePageSizeReset';
+import { clampPage } from '../../../shared/lib/clampPage';
+import { useLatestRequest } from '../../../shared/hooks/useLatestRequest';
+import { useUrlState, useUrlSearchQuery, enumParam, stringParam, pageParam, type UrlCodec, type UrlPatch } from '../../../shared/hooks/useUrlState';
 import type { AuditLogItem, AuditLogsResponse, AuditSummary } from '../../../shared/types/audit';
 import { todayIso } from '../lib/activityPresentation';
 
@@ -12,6 +13,7 @@ const CONFIG_ACTIONS = ['SYSTEM_SETTINGS_UPDATED', 'UPDATE_CONFIG', 'USER_CREATE
 const DEVICE_DOWN_ACTIONS = ['DEVICE_DECOMMISSIONED', 'DEVICES_BULK_DECOMMISSIONED'].join(',');
 
 export type SegmentFilter = 'all' | 'config' | 'down' | 'others';
+const SEGMENTS: SegmentFilter[] = ['all', 'config', 'down', 'others'];
 
 export interface ActivityFiltersState {
   from: string; setFrom: (v: string) => void;
@@ -21,17 +23,47 @@ export interface ActivityFiltersState {
   clientId: string;
 }
 
-/** `client_id` sólo por deep-link (`/activity?client_id=` desde Cliente
- * Detalle) — mismo criterio que Alertas/Incidentes: sin selector manual en
- * la barra, el mockup tampoco lo tiene. */
-function useFilters(): ActivityFiltersState {
-  const [initial] = useSearchParams();
-  const [from, setFrom] = useState(todayIso(30));
-  const [to, setTo] = useState(todayIso(0));
-  const [q, setQ] = useState('');
-  const [segment, setSegment] = useState<SegmentFilter>('all');
-  const [clientId] = useState(() => initial.get('client_id') ?? '');
-  return { from, setFrom, to, setTo, q, setQ, segment, setSegment, clientId };
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+/** Fecha `YYYY-MM-DD` con default móvil (hoy / hace 30 días): ausente o basura →
+ * default (que no se escribe en la URL); `?from=` vacío = "sin límite" (el input
+ * `type="date"` lo emite al borrar, y antes también significaba eso). */
+function dateParam(defaultOf: () => string): UrlCodec<string> {
+  return {
+    parse: (raw) => (raw === null ? defaultOf() : raw === '' || (ISO_DATE.test(raw) && !Number.isNaN(Date.parse(raw))) ? raw : defaultOf()),
+    format: (value) => (value === defaultOf() ? null : value),
+  };
+}
+
+/** Rango, búsqueda, segmento, cliente y página viven en la URL (auditoría
+ * 12/09/2026: antes sólo `client_id`, leído una vez, y el resto se perdía al volver
+ * de un equipo o con F5). `client_id` sólo por deep-link (`/activity?client_id=`
+ * desde Cliente Detalle) — sin selector manual en la barra, el mockup tampoco lo tiene. */
+const CODECS = {
+  from: dateParam(() => todayIso(30)), to: dateParam(() => todayIso(0)),
+  q: stringParam(), segment: enumParam(SEGMENTS, 'all'), client_id: stringParam(), page: pageParam,
+};
+type UrlFilters = { [K in keyof typeof CODECS]: ReturnType<(typeof CODECS)[K]['parse']> };
+
+function useFilterSetters(patch: UrlPatch<UrlFilters>) {
+  return useMemo(() => ({
+    setFrom: (from: string) => patch({ from, page: 0 }),
+    setTo: (to: string) => patch({ to, page: 0 }),
+    setSegment: (segment: SegmentFilter) => patch({ segment, page: 0 }),
+    setPage: (page: number) => patch({ page }),
+  }), [patch]);
+}
+
+type ActivityFilters = ActivityFiltersState & { effectiveQuery: string; page: number; setPage: (page: number) => void };
+
+function useFilters(): ActivityFilters {
+  const [url, patch] = useUrlState<UrlFilters>(CODECS);
+  const { rawQuery, setRawQuery, effectiveQuery } = useUrlSearchQuery(url.q, (q) => patch({ q, page: 0 }));
+  return {
+    from: url.from, to: url.to, q: rawQuery, setQ: setRawQuery, effectiveQuery,
+    segment: url.segment, clientId: url.client_id, page: url.page,
+    ...useFilterSetters(patch),
+  };
 }
 
 /** Traduce el segmento activo + `topOperator` (para "OTROS OPERADORES") a
@@ -83,36 +115,47 @@ function useRowsState() {
   return { items, setItems, total, setTotal, loading, setLoading, error, setError };
 }
 
-function useRows(f: ActivityFiltersState, topOperatorUserId: string | null, page: number, pageSize: number) {
+type RowsState = ReturnType<typeof useRowsState>;
+
+/** `isLatest`: respuestas de un request ya superado no tocan la tabla (`useLatestRequest`). */
+async function loadRows(st: RowsState, f: ActivityFiltersState, topOperatorUserId: string | null, page: number, pageSize: number, isLatest: () => boolean) {
+  st.setLoading(true);
+  st.setError('');
+  try {
+    const qs = buildActivityQueryParams(f, topOperatorUserId, page, pageSize).toString();
+    const data = await api.get<AuditLogsResponse>(`/audit-logs?${qs}`);
+    if (!isLatest()) return;
+    st.setItems(data.items);
+    st.setTotal(data.total);
+  } catch (e) {
+    if (isLatest()) st.setError(e instanceof Error ? e.message : String(e));
+  } finally {
+    if (isLatest()) st.setLoading(false);
+  }
+}
+
+function useRows(f: ActivityFiltersState, topOperatorUserId: string | null, requestedPage: number, pageSize: number) {
   const st = useRowsState();
-  const fetchItems = useCallback(async () => {
-    st.setLoading(true);
-    st.setError('');
-    try {
-      const qs = buildActivityQueryParams(f, topOperatorUserId, page, pageSize).toString();
-      const data = await api.get<AuditLogsResponse>(`/audit-logs?${qs}`);
-      st.setItems(data.items);
-      st.setTotal(data.total);
-    } catch (e) {
-      st.setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      st.setLoading(false);
-    }
+  const beginRequest = useLatestRequest();
+  // `?page=` acotada al mostrar/pedir, sin persistir el clamp (ver `clampPage`).
+  const page = clampPage(requestedPage, pageSize, st.total);
+  const fetchItems = useCallback(
+    () => loadRows(st, f, topOperatorUserId, page, pageSize, beginRequest()),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [f.from, f.to, f.q, f.clientId, f.segment, topOperatorUserId, page, pageSize]);
+    [f.from, f.to, f.q, f.clientId, f.segment, topOperatorUserId, page, pageSize],
+  );
   useEffect(() => { void fetchItems(); }, [fetchItems]);
-  return { ...st, pageSize, totalPages: Math.max(1, Math.ceil(st.total / pageSize)), fetchItems };
+  return { ...st, page, pageSize, totalPages: Math.max(1, Math.ceil(st.total / pageSize)), fetchItems };
 }
 
 /** `pageSize` = filas que entran en pantalla (`useFitRows`, 27/08/2026). */
 export function useActivityPage(pageSize: number) {
   const filters = useFilters();
-  const [page, setPage] = useState(0);
-  const { summary, summaryLoading, summaryError, fetchSummary } = useSummary(filters);
-  const list = useRows(filters, summary?.top_operator?.user_id ?? null, page, pageSize);
-  useEffect(() => { setPage(0); }, [filters.from, filters.to, filters.q, filters.clientId, filters.segment]);
-  usePageSizeReset(pageSize, setPage, list.total);
-  return { filters, page, setPage, summary, summaryLoading, summaryError, fetchSummary, ...list };
+  // Los fetches usan la búsqueda efectiva (debounce, ≥2 chars); el input, la cruda.
+  const effective = { ...filters, q: filters.effectiveQuery };
+  const { summary, summaryLoading, summaryError, fetchSummary } = useSummary(effective);
+  const list = useRows(effective, summary?.top_operator?.user_id ?? null, filters.page, pageSize);
+  return { filters, setPage: filters.setPage, summary, summaryLoading, summaryError, fetchSummary, ...list };
 }
 
 export type ActivityPageState = ReturnType<typeof useActivityPage>;

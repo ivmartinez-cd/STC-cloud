@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { api } from '../../../shared/lib/api';
 import { useAuth } from '../../../store/AuthContext';
 import { useToast } from '../../../store/ToastContext';
+import { useUrlState, stringParam, pageParam, type UrlCodec } from '../../../shared/hooks/useUrlState';
 import type { Closure, ClosureDetail, PreviewResponse } from '../types/reports';
 import { displayDelta, rowFromClosureLine, rowFromPreview, type ReportRow } from '../lib/reportsPresentation';
 
@@ -12,17 +13,40 @@ function currentPeriod(): string {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 }
 
-function useClients(canPick: boolean, ownClientId: string | null) {
+const PERIOD_RE = /^\d{4}-\d{2}$/;
+/** `?period=YYYY-MM`: ausente o inválido → mes actual (el default depende de la
+ * fecha, así que cuando el usuario elige un período se escribe siempre, incluso
+ * el actual, para que el link compartido abra ese mes y no "el de hoy"). */
+const periodParam: UrlCodec<string> = {
+  parse: (raw) => (raw && PERIOD_RE.test(raw) ? raw : currentPeriod()),
+  format: (period) => (PERIOD_RE.test(period) ? period : null),
+};
+
+/** Cliente y período en la URL (auditoría 12/09/2026: volver de un equipo o F5
+ * caía al primer cliente y al mes actual; "el cierre de junio de Acme" no se
+ * podía compartir). `dpage` es la página del detalle (`useReportsDetailPaging`):
+ * cambiar de cliente o período la resetea. */
+const CODECS = { client_id: stringParam(), period: periodParam, dpage: pageParam };
+type UrlSelection = { [K in keyof typeof CODECS]: ReturnType<(typeof CODECS)[K]['parse']> };
+
+function useClients(canPick: boolean) {
   const [clients, setClients] = useState<ClientOption[]>([]);
-  const [selectedClientId, setSelectedClientId] = useState(ownClientId ?? '');
   useEffect(() => {
     if (!canPick) return;
-    api.get<ClientOption[]>('/clients').then((data) => {
-      setClients(data);
-      setSelectedClientId((prev) => prev || data[0]?.id || '');
-    }).catch(() => { /* comodidad: selector vacío si falla */ });
+    api.get<ClientOption[]>('/clients').then(setClients).catch(() => { /* comodidad: selector vacío si falla */ });
   }, [canPick]);
-  return { clients, selectedClientId, setSelectedClientId };
+  return clients;
+}
+
+function useSelection(canPick: boolean, ownClientId: string | null) {
+  const clients = useClients(canPick);
+  const [url, patch] = useUrlState<UrlSelection>(CODECS);
+  // Un client_viewer siempre ve el suyo; sin `?client_id=` cae al primero del
+  // selector, sin escribir ese default en la URL.
+  const selectedClientId = ownClientId || url.client_id || clients[0]?.id || '';
+  const setSelectedClientId = useCallback((client_id: string) => patch({ client_id, dpage: 0 }), [patch]);
+  const setPeriod = useCallback((period: string) => patch({ period, dpage: 0 }), [patch]);
+  return { clients, selectedClientId, setSelectedClientId, period: url.period, setPeriod };
 }
 
 /** El cierre VIGENTE para (cliente, período) — el que no fue reemplazado por
@@ -116,8 +140,7 @@ export function useReportsPage() {
   const isReadOnlyViewer = role === 'client_viewer';
   const canManage = role === 'admin' || role === 'operator';
 
-  const { clients, selectedClientId, setSelectedClientId } = useClients(canManage, ownClientId);
-  const [period, setPeriod] = useState(currentPeriod());
+  const { clients, selectedClientId, setSelectedClientId, period, setPeriod } = useSelection(canManage, ownClientId);
   const { closures, closuresLoading, fetchClosures } = useClosures(selectedClientId);
   const closure = useMemo(() => currentClosureFor(closures, period), [closures, period]);
   const { rows, loading, error, fetchRows } = useRows(selectedClientId, period, closure);
