@@ -45,19 +45,17 @@
   --color-surface-hover: #fcfcfc;     /* hover de tarjeta clicable */
   --color-surface-btn-hover: #fbfbfb; /* hover botón secundario */
 
-  /* Escala de severidad tipo semáforo (25/08/2026, ajuste post-handoff): Ivan
-     pidió noción de "bien/regular/mal" en colas y alertas, pero el handoff es
-     explícito en "sin introducir rojo/verde" — así que la escala se resuelve
-     con gradiente DENTRO del naranja institucional + gris, nunca con rojo o
-     verde literal. Son alias semánticos sobre tonos que ya existían arriba
-     (no hex nuevos): así el significado de cada uno queda documentado en un
-     solo lugar y separado de sus otros usos decorativos (categorías de
-     marca/versión, etc). */
-  --color-severity-critical: var(--color-brand-severe); /* #c6710a — requiere acción ya (crítico/abierto/sin conexión) */
-  --color-severity-warning: var(--color-brand);         /* #f7941d — en curso/atención media */
-  --color-severity-ok: var(--color-ink-100);            /* #6c7275 — resuelto/sin urgencia: gris oscuro (ya documentado
-                                                            arriba para "columna secundaria" de tarjetas de cola), NO
-                                                            verde — a propósito recede en vez de "celebrar" en color */
+  /* Escala de severidad tipo semáforo (11/09/2026, pedido explícito de Ivan:
+     revierte la decisión anterior de evitar rojo/verde — ahora los quiere,
+     apagados/desaturados en vez de un semáforo saturado tipo Bootstrap, para
+     que "bien/regular/mal" se lea de un vistazo en estado, consumibles y
+     alertas). Siguen siendo alias semánticos, no hex sueltos repetidos por
+     archivo: cambiar acá recolorea todo lo que ya usaba esta escala (chips
+     de estado, barras de consumibles, contadores de alertas, tarjetas del
+     dashboard). */
+  --color-severity-critical: #b5504a; /* rojo ladrillo apagado — requiere acción ya (crítico/abierto/sin conexión) */
+  --color-severity-warning: #bf9430;  /* ámbar apagado — en curso/atención media */
+  --color-severity-ok: #4b8b5d;       /* verde bosque apagado — resuelto/sin urgencia/en línea */
 
   /* Tokens que faltaban del handoff hifi "Clientes" (25/08/2026) — mismo sistema que
      "Panel de Control" de arriba, sólo se suman los que ese rediseño no necesitó. */

@@ -7,9 +7,9 @@ import { fmt } from '../../../shared/lib/formatters';
 const R = 36;
 const CIRC = 2 * Math.PI * R;
 
-// Semáforo sutil (README: sin rojo/verde): "en línea" es el tono más calmo
-// de la escala de severidad (gris — nada que atender) y "sin conexión" el
-// más severo (naranja oscuro) — misma escala que las colas del panel.
+// Semáforo apagado (`--color-severity-*`, 11/09/2026): "en línea" es verde
+// (nada que atender) y "sin conexión" es rojo — misma escala que las colas
+// del panel.
 function Donut({ online, offline }: { online: number; offline: number }) {
   const total = online + offline;
   const offlineLen = total > 0 ? (offline / total) * CIRC : 0;

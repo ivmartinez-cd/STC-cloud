@@ -9,9 +9,10 @@ import { fmt } from '../../../shared/lib/formatters';
 
 type AlertRow = NonNullable<DashboardData['alertsByClass']>[number];
 
-// Paleta sólo institucional (naranja + grises — README): severidad se
-// resuelve con tono, nunca con rojo/verde. Mismo agrupamiento semántico que
-// tenía la versión anterior (crítico / atención / informativo / disponible),
+// Severidad real (crítico) usa `--color-severity-critical` (semáforo apagado,
+// 11/09/2026); lo que no es crítico se queda en la paleta institucional
+// (naranja/gris) para mantener la distinción de 3+ niveles. Mismo agrupamiento
+// semántico que tenía la versión anterior (crítico / atención / informativo / disponible),
 // re-mapeado a los tonos que pide el handoff hifi. Las clases realmente
 // críticas usan el mismo `--color-severity-critical` que colas y presencia
 // de monitores (misma escala en todo el panel); "atención" se queda un

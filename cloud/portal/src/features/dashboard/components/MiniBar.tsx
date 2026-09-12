@@ -1,6 +1,6 @@
 /** Barra de progreso inline reusada por la tira de KPIs, las filas de
  * "Alertas por clase" y "Top cuentas": track `#F0F2F2`, relleno de un solo
- * color (institucional: naranja o gris, nunca rojo/verde — README). Alto y
+ * color (institucional o de `--color-severity-*` según el caso). Alto y
  * radio configurables porque el handoff usa 4px (mini KPI), 6px (fila) y
  * 7-8px (apiladas) según el bloque. */
 export default function MiniBar({

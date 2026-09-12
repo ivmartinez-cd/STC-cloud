@@ -3,7 +3,7 @@ import type { AgentDeviceSortField, SortDir } from '../types/monitorDetail';
 
 export function AlertsCell({ count }: { count: number }) {
   if (count === 0) return <div className="text-right font-montserrat text-[12.5px] font-semibold text-ink-200">—</div>;
-  const cls = count >= 5 ? 'text-brand-severe' : 'text-ink-600';
+  const cls = count >= 5 ? 'text-severity-critical' : 'text-ink-600';
   return <div className={`text-right font-montserrat text-[12.5px] font-semibold tabular-nums ${cls}`}>{fmt(count)}</div>;
 }
 

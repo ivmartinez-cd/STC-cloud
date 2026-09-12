@@ -3,7 +3,7 @@ import { fmt } from '../../../shared/lib/formatters';
 import CardError from '../../../shared/components/CardError';
 import SkeletonBlock from './Skeleton';
 
-/** Severidad de la celda en la escala sutil naranja/gris (nunca rojo/verde —
+/** Severidad de la celda en la escala de semáforo apagado (verde/ámbar/rojo —
  * ver `--color-severity-*` en index.css). `undefined` = cifra neutra (la
  * cola no tiene una noción de "bien/mal" para esa celda, ej. "Movimientos y
  * cambios"). */

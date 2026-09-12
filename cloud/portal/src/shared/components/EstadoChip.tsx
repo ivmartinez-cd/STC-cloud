@@ -24,13 +24,13 @@ export default function EstadoChip({
   if (variant === 'neutral') {
     return (
       <span className="inline-flex max-w-full items-center gap-[6px] justify-self-start whitespace-nowrap rounded-[2px] bg-surface-avatar px-[9px] py-1 font-montserrat text-[9.5px] font-semibold uppercase tracking-[.08em] text-ink-650">
-        <span className={`block h-1.5 w-1.5 rounded-full ${dotClassName ?? 'bg-brand-gray'}`} /> <span className="truncate">{label}</span>
+        <span className={`block h-1.5 w-1.5 rounded-full ${dotClassName ?? 'bg-severity-ok'}`} /> <span className="truncate">{label}</span>
       </span>
     );
   }
   return (
     <span className="inline-flex max-w-full items-center gap-[6px] justify-self-start whitespace-nowrap rounded-[2px] bg-brand-soft px-[9px] py-1 font-montserrat text-[9.5px] font-semibold uppercase tracking-[.08em] text-brand-accent">
-      <span className={`block h-1.5 w-1.5 rounded-full ${dotClassName ?? 'bg-brand'}`} /> <span className="truncate">{label}</span>
+      <span className={`block h-1.5 w-1.5 rounded-full ${dotClassName ?? 'bg-severity-critical'}`} /> <span className="truncate">{label}</span>
     </span>
   );
 }

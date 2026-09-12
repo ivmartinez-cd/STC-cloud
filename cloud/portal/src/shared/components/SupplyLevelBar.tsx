@@ -7,7 +7,7 @@
  * Antes duplicada (`ConsumibleCell`) en `DeviceInventoryTable.tsx`/`ClientDevicesTable.tsx`. */
 export default function SupplyLevelBar({ pct, fillColor }: { pct: number | null; fillColor?: string }) {
   if (pct === null) return <span className="font-sans text-[12.5px] text-ink-200">—</span>;
-  const colorClass = pct <= 15 ? 'bg-brand-severe' : pct <= 35 ? 'bg-brand' : 'bg-brand-gray';
+  const colorClass = pct <= 15 ? 'bg-severity-critical' : pct <= 35 ? 'bg-severity-warning' : 'bg-severity-ok';
   const width = Math.max(3, pct);
   return (
     <div className="flex items-center gap-2.5">
