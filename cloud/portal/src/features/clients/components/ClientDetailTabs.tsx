@@ -11,11 +11,16 @@ const TABS: Array<{ id: ClientDetailTab; label: string }> = [
 /** Tabs del detalle de cliente (handoff hifi "Cliente — detalle", 25/08/2026) — cambian
  * el contenido bajo la tarjeta de identidad; el header y la tira de métricas persisten
  * (README). "Resumen" es el único documentado en detalle; el resto reusa la tabla/
- * tarjetas correspondientes a pantalla completa (ver `ClientDetail.tsx`). */
-export default function ClientDetailTabs({ active, onChange }: { active: ClientDetailTab; onChange: (tab: ClientDetailTab) => void }) {
+ * tarjetas correspondientes a pantalla completa (ver `ClientDetail.tsx`).
+ *
+ * "Configuración" (claves de API, campos propios, reglas, SFTP, webhook) es de
+ * gestión: para un `client_viewer` el contenido ya no se montaba, así que la tab
+ * quedaba marcada con la pantalla vacía debajo (auditoría del rol, 12/09/2026). */
+export default function ClientDetailTabs({ active, onChange, isReadOnlyViewer }: { active: ClientDetailTab; onChange: (tab: ClientDetailTab) => void; isReadOnlyViewer: boolean }) {
+  const tabs = isReadOnlyViewer ? TABS.filter((t) => t.id !== 'configuracion') : TABS;
   return (
     <div role="tablist" className="flex gap-6 border-t border-line-150 px-6">
-      {TABS.map((t) => {
+      {tabs.map((t) => {
         const isActive = t.id === active;
         return (
           <button

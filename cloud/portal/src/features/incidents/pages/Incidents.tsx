@@ -69,8 +69,10 @@ function Incidents() {
         <IncidentsPagination page={s.page} total={s.total} totalPages={s.totalPages} pageSize={s.pageSize} onChange={s.setPage} />
       </div>
 
-      {/* Banner de cierres instantáneos: fuera de la tarjeta que crece, se queda al pie. */}
-      {s.stats && (
+      {/* Banner de cierres instantáneos: fuera de la tarjeta que crece, se queda al pie.
+          Sólo para quien puede actuar: es diagnóstico de la operación (pide revisar la
+          regla global de auto-cierre) y su CTA lleva a una sección que un cliente no ve. */}
+      {s.canManage && s.stats && (
         <div className="mt-4 shrink-0">
           <IncidentsInstantClosuresBanner instantClosures={s.stats.instantClosures} classLabels={s.classLabels} />
         </div>

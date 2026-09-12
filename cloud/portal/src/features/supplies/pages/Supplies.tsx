@@ -16,12 +16,15 @@ function subtitle(s: ReturnType<typeof useSuppliesPage>['summary']): string {
   return `${fmt(s.total)} ítems en toda la flota · ${fmt(s.criticalCount)} críticos y ${fmt(s.lowCount)} en nivel bajo requieren reposición`;
 }
 
-function HeaderActions({ s, exporting, onExport }: { s: ReturnType<typeof useSuppliesPage>; exporting: boolean; onExport: () => void }) {
+/** `EXPORTAR CSV` es un GET permitido para todos; generar pedidos es `POST
+ * /supply-requests`, denegado para `client_viewer` — sin el guard el botón
+ * disparaba un 403 por cada crítico (auditoría del rol, 12/09/2026). */
+function HeaderActions({ s, readOnly, exporting, onExport }: { s: ReturnType<typeof useSuppliesPage>; readOnly: boolean; exporting: boolean; onExport: () => void }) {
   const criticalCount = s.summary?.criticalCount ?? 0;
   return (
     <>
       <button type="button" onClick={onExport} disabled={exporting} className={BTN_SECONDARY_LG}>{exporting ? 'EXPORTANDO…' : 'EXPORTAR CSV'}</button>
-      {criticalCount > 0 && (
+      {!readOnly && criticalCount > 0 && (
         <button type="button" onClick={() => void s.generateAllCritical(s.filters.clientId)} disabled={s.busy} className={BTN_PRIMARY_LG}>
           {s.busy ? 'GENERANDO…' : `GENERAR PEDIDOS (${fmt(criticalCount)})`}
         </button>
@@ -48,7 +51,7 @@ export default function Supplies() {
     <div className="-m-4 flex min-w-0 flex-col bg-surface-page px-[34px] pb-9 pt-[30px] short:pb-4 short:pt-4 md:-m-10 md:h-full md:min-h-0">
       <PageHeader
         eyebrow="TÓNERES, TAMBORES Y KITS DE MANTENIMIENTO" title="Consumibles" subtitle={subtitle(s.summary)}
-        actions={<HeaderActions s={s} exporting={exporting} onExport={handleExport} />}
+        actions={<HeaderActions s={s} readOnly={readOnly} exporting={exporting} onExport={handleExport} />}
       />
 
       <div className="mt-4 flex min-h-0 flex-1 flex-col rounded-[5px] border border-line-100 bg-white">

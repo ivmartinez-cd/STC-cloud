@@ -30,6 +30,17 @@ const TABS: Array<{ id: DeviceDetailTab; label: string }> = [
   { id: 'costs', label: 'Costes' }, { id: 'history', label: 'Historial' },
 ];
 const TAB_IDS = new Set(TABS.map((t) => t.id));
+/** Contenido sólo para admin/operator (`canSeeHistory`): costes de la flota y
+ * auditoría del equipo. */
+const STAFF_ONLY_TABS: ReadonlySet<DeviceDetailTab> = new Set<DeviceDetailTab>(['costs', 'history']);
+
+/** `?tab=` inválido cae a Vista general; para un client_viewer también las tabs que
+ * no ve — si no, la barra quedaba con la pestaña marcada y la pantalla vacía debajo
+ * (mismo criterio que `MonitorDetail`). */
+function parseTab(raw: string | null, canSeeHistory: boolean): DeviceDetailTab {
+  const tab = raw && TAB_IDS.has(raw as DeviceDetailTab) ? (raw as DeviceDetailTab) : 'general';
+  return !canSeeHistory && STAFF_ONLY_TABS.has(tab) ? 'general' : tab;
+}
 
 function useLazyTab<T>(active: boolean, path: string, unwrap: (data: unknown) => T, fallback: T) {
   const [data, setData] = useState<T | null>(null);
@@ -63,8 +74,8 @@ const DeviceDetail = () => {
   // Orígenes que no encajan en el breadcrumb jerárquico (Inventario, Alertas,
   // Incidentes, Movimientos, Consumibles, Reportes): van como "volver" aparte.
   const listBackTo = backTo && !monitorBackTo && !clientBackTo ? backTo : undefined;
-  const rawTab = searchParams.get('tab');
-  const activeTab: DeviceDetailTab = rawTab && TAB_IDS.has(rawTab as DeviceDetailTab) ? (rawTab as DeviceDetailTab) : 'general';
+  const activeTab = parseTab(searchParams.get('tab'), canSeeHistory);
+  const visibleTabs = canSeeHistory ? TABS : TABS.filter((t) => !STAFF_ONLY_TABS.has(t.id));
   // `replace`: cambiar de pestaña no debe apilar entradas en el historial, si no el
   // botón "atrás" del navegador desanda pestaña por pestaña antes de salir del equipo.
   const handleTabChange = (tab: DeviceDetailTab) => {
@@ -171,7 +182,7 @@ const DeviceDetail = () => {
           onRecommission={recommission} onDecommission={() => setDecommissionOpen(true)} onDelete={() => setDeleteOpen(true)}
           onMonitorStateChange={changeMonitorState}
         />
-        <DetailTabs tabs={TABS} active={activeTab} onChange={handleTabChange} />
+        <DetailTabs tabs={visibleTabs} active={activeTab} onChange={handleTabChange} />
       </div>
 
       {/* La tab activa llena el alto restante (rediseño sin scroll, 27/08/2026). */}

@@ -61,6 +61,10 @@ export const CLIENT_VIEWER_ROUTES: ReadonlySet<string> = new Set([
   "GET /api/v1/clients/:id/reports/:closureId",
   "GET /api/v1/clients/:id/reports/:closureId/export.csv",
   "GET /api/v1/clients/:id/reports/:closureId/export.xlsx",
+  // El PDF quedó afuera por descuido (12/09/2026): mismo cierre, mismo scope y
+  // misma validación del `:id` que csv/xlsx, pero daba 403 — y como se abre con
+  // `window.open`, el cliente terminaba mirando el JSON del error en una pestaña.
+  "GET /api/v1/clients/:id/reports/:closureId/export.pdf",
   "GET /api/v1/agents",
   "GET /api/v1/agents/:id",
   "GET /api/v1/agents/:id/devices",

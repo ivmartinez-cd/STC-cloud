@@ -72,6 +72,8 @@ const HeaderBackButton = () => {
   );
 };
 
+/** El engranaje de la derecha estaba sin `onClick`: no hacía nada para ningún rol.
+ * Configuración existe para todos — un cliente ve ahí la seguridad de su cuenta. */
 const TopHeader = ({ onToggleMobile }: { onToggleMobile: () => void }) => {
   const search = useGlobalSearch();
   return (
@@ -87,7 +89,7 @@ const TopHeader = ({ onToggleMobile }: { onToggleMobile: () => void }) => {
       </div>
       <div className="flex items-center gap-4">
         <GlobalSearch s={search} />
-        <button className="p-2.5 text-slate-500 hover:bg-slate-100 rounded-xl transition-all"><Settings size={20} /></button>
+        <Link to="/settings" aria-label="Configuración" className="p-2.5 text-slate-500 hover:bg-slate-100 rounded-xl transition-all"><Settings size={20} /></Link>
       </div>
     </header>
   );

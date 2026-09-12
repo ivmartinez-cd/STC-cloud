@@ -16,17 +16,20 @@ import ClientTabRedirect from '../components/ClientTabRedirect';
 import { safeReturnTo } from '../../../shared/lib/returnTo';
 import type { ClientDetailTab } from '../types/clientDetail';
 
-function parseTab(v: string | null): ClientDetailTab {
-  return v === 'dispositivos' || v === 'alertas' || v === 'consumibles' || v === 'configuracion' ? v : 'resumen';
+/** `?tab=configuracion` compartido por un admin dejaba al cliente con la tab marcada
+ * y la pantalla vacía (el contenido es de gestión y no se monta para ese rol). */
+function parseTab(v: string | null, isReadOnlyViewer: boolean): ClientDetailTab {
+  const tab = v === 'dispositivos' || v === 'alertas' || v === 'consumibles' || v === 'configuracion' ? v : 'resumen';
+  return isReadOnlyViewer && tab === 'configuracion' ? 'resumen' : tab;
 }
 
 /** Tab activa reflejada en `?tab=` (README: "Tab... reflejados en la URL"). La URL
  * es la única fuente de verdad (derivada en cada render, no `useState` inicializado
  * una vez): atrás/adelante y links entrantes se reflejan. `replace` + merge funcional:
  * cambiar de tab no apila historial ni pisa los params de "Dispositivos". */
-function useActiveTab() {
+function useActiveTab(isReadOnlyViewer: boolean) {
   const [searchParams, setSearchParams] = useSearchParams();
-  const tab = parseTab(searchParams.get('tab'));
+  const tab = parseTab(searchParams.get('tab'), isReadOnlyViewer);
   // `?from=` = la cartera con sus filtros/página (`ClientsDirectoryTable`); sólo se
   // acepta el listado de clientes (no `//evil`, no otra ruta). Sobrevive al cambio de
   // tab porque `setTab` mergea.
@@ -58,7 +61,7 @@ const ClientDetail = () => {
     client, monitors, usage, loading, error,
     createMonitor, deleteMonitor, updateNotifications, updateDeviceApprovalRequired, updateClientProfile,
   } = useClientDetail(id!);
-  const { tab, setTab, listBackTo } = useActiveTab();
+  const { tab, setTab, listBackTo } = useActiveTab(isReadOnlyViewer);
 
   const [showMonitorModal, setShowMonitorModal] = useState(false);
   const [monitorToDelete, setMonitorToDelete] = useState<{ id: string; name: string } | null>(null);
@@ -101,7 +104,7 @@ const ClientDetail = () => {
         <>
           <div className="rounded-[5px] border border-line-100 bg-white">
             <ClientProfileCard client={client} monitors={monitors} canEdit={!isReadOnlyViewer} onSave={updateClientProfile} />
-            <ClientDetailTabs active={tab} onChange={setTab} />
+            <ClientDetailTabs active={tab} onChange={setTab} isReadOnlyViewer={isReadOnlyViewer} />
           </div>
 
           {tab === 'resumen' && (

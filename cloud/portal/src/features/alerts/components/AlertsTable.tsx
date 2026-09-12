@@ -51,10 +51,14 @@ function StatusChip({ a }: { a: Alert }) {
   return <EstadoChip label="SIN RECONOCER" variant="attention" />;
 }
 
-function RowCta({ a, pendingId, onUpdate, onCreateIncident }: Pick<Props, 'pendingId' | 'onUpdate' | 'onCreateIncident'> & { a: Alert }) {
+/** "VER INCIDENTE" es lectura de una ruta permitida para `client_viewer` — y su único
+ * camino de una alerta a su incidente, así que se muestra siempre. Sólo las dos ramas
+ * de abajo son mutaciones denegadas para ese rol. */
+function RowCta({ a, readOnly, pendingId, onUpdate, onCreateIncident }: Pick<Props, 'readOnly' | 'pendingId' | 'onUpdate' | 'onCreateIncident'> & { a: Alert }) {
   if (a.incident_id) {
     return <Link to={`/incidents/${a.incident_id}`} className="justify-self-end whitespace-nowrap font-montserrat text-[10px] font-semibold uppercase tracking-[.08em] text-brand-accent hover:underline">VER INCIDENTE →</Link>;
   }
+  if (readOnly) return <span />;
   if (!a.acknowledged) {
     return (
       <button type="button" disabled={pendingId === a.id} onClick={() => onUpdate(a.id, { acknowledged: true })} className="justify-self-end whitespace-nowrap font-montserrat text-[10px] font-semibold uppercase tracking-[.08em] text-brand-accent hover:underline disabled:opacity-50">
@@ -86,7 +90,7 @@ function AlertRow({ a, classLabels, readOnly, selection, pendingId, onUpdate, on
       <span className="justify-self-start"><EstadoChip label={a.alert_class ? (classLabels[a.alert_class] ?? a.alert_class) : 'Otro'} variant="neutral" dotClassName={classDot(a.alert_class)} /></span>
       <span className="text-right font-sans text-[12px] text-ink-600">{fmtDate(a.created_at)}</span>
       <span className="justify-self-start"><StatusChip a={a} /></span>
-      {readOnly ? <span /> : <RowCta a={a} pendingId={pendingId} onUpdate={onUpdate} onCreateIncident={onCreateIncident} />}
+      <RowCta a={a} readOnly={readOnly} pendingId={pendingId} onUpdate={onUpdate} onCreateIncident={onCreateIncident} />
     </div>
   );
 }
