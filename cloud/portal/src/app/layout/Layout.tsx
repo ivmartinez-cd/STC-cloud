@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect, Suspense } from 'react';
-import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { Link, Outlet, useLocation } from 'react-router-dom';
 import { ArrowLeft, Menu, Settings } from 'lucide-react';
 import { useAuth } from '../../store/AuthContext';
+import { useBackNavigation } from '../../shared/hooks/useBackNavigation';
 import FeedbackModal from '../../shared/components/FeedbackModal';
 import SidebarNav from './SidebarNav';
 import SidebarBrand from './SidebarBrand';
@@ -55,28 +56,10 @@ const Sidebar = ({ collapsed, onToggleCollapse, isMobileMenuOpen, onCloseMobile 
   );
 };
 
-/** Usa el historial del navegador cuando la entrada actual fue empujada
- * dentro de la app (`history.state.idx > 0`, lo que React Router persiste en
- * cada push); si se entró por URL directa o refresh no hay historial propio,
- * así que cae a la ruta padre derivada del path en vez de sacar al usuario
- * de la app. */
-function useHeaderBackNavigation() {
-  const location = useLocation();
-  const navigate = useNavigate();
-  const segments = location.pathname.split('/').filter(Boolean);
-  const parentPath = '/' + segments.slice(0, -1).join('/');
-  const goBack = () => {
-    const idx = (window.history.state as { idx?: number } | null)?.idx ?? 0;
-    if (idx > 0) navigate(-1);
-    else navigate(parentPath);
-  };
-  return { show: segments.length > 1, goBack };
-}
-
 /** Flecha "volver" global de header — se muestra en cualquier ruta de detalle
  * (más de un segmento, ej. `/clients/:id`). */
 const HeaderBackButton = () => {
-  const { show, goBack } = useHeaderBackNavigation();
+  const { show, goBack } = useBackNavigation();
   if (!show) return null;
   return (
     <button
@@ -141,6 +124,9 @@ const Layout = () => {
   const mainRef = useRef<HTMLElement>(null);
   const location = useLocation();
   useEffect(() => { mainRef.current?.scrollTo(0, 0); }, [location.pathname]);
+  // El modal de feedback vive en el layout: si el usuario navega con "atrás"
+  // con el modal abierto, la página cambiaba debajo y el overlay quedaba encima.
+  useEffect(() => { setShowFeedback(false); }, [location.pathname]);
   // El scroll-anchoring nativo del navegador reajusta scrollTop mientras el
   // contenido de la página destino sigue montándose de forma asíncrona
   // (tabs/paneles con su propio loading), deshaciendo el reset de arriba —

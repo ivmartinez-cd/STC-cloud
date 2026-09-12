@@ -20,6 +20,13 @@ export function stashCurrentPath(path: string = window.location.pathname + windo
   sessionStorage.setItem(KEY, path);
 }
 
+/** Al cerrar sesión: que el próximo login (otro usuario, misma pestaña) no
+ * aterrice en la última pantalla del anterior — un `client_viewer` rebotaba
+ * en silencio contra `/agents` (auditoría 12/09/2026). */
+export function clearPostLoginRedirect(): void {
+  sessionStorage.removeItem(KEY);
+}
+
 /** Lee y borra la ruta guardada tras el login; `/` si no había ninguna. */
 export function consumePostLoginRedirect(): string {
   const path = sessionStorage.getItem(KEY);

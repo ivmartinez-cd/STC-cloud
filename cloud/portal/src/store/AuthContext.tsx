@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react';
 import { api } from '../shared/lib/api';
+import { clearPostLoginRedirect } from '../shared/lib/postLoginRedirect';
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -81,11 +82,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(async () => {
     await api.post('/portal/logout').catch(() => {});
-    setIsAuthenticated(false);
-    setUserEmail('');
-    setUserId('');
-    setRole('operator');
-    setClientId(null);
+    // No tocar el estado de React acá: el reload lo borra igual, y conmutar
+    // `isAuthenticated` antes de navegar hacía que `RequireAuth` guardara la
+    // ruta actual como "volver después del login" (ver `clearPostLoginRedirect`).
+    clearPostLoginRedirect();
     window.location.replace('/login');
   }, []);
 

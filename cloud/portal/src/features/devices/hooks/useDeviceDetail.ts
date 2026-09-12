@@ -43,7 +43,8 @@ function useDeviceLifecycleActions(id: string, load: () => void) {
   const [changingMonitorState, setChangingMonitorState] = useState(false);
   const [recommissioning, setRecommissioning] = useState(false);
 
-  const deleteDevice = useCallback(async () => { await api.delete(`/devices/${id}`); navigate('/devices'); }, [id, navigate]);
+  // `replace`: "atrás" no vuelve a la ficha recién borrada (404); `returnTo` = `?from=` validado de la ficha.
+  const deleteDevice = useCallback(async (returnTo?: string) => { await api.delete(`/devices/${id}`); navigate(returnTo ?? '/devices', { replace: true }); }, [id, navigate]);
   const recommission = useCallback(async () => {
     setRecommissioning(true);
     try { await api.post(`/devices/${id}/recommission`, {}); await load(); } finally { setRecommissioning(false); }

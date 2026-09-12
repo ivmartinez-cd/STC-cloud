@@ -53,17 +53,18 @@ const DeviceDetail = () => {
   // `from` sobrevive a un refresh (a diferencia de router state): guarda la URL completa
   // de la pantalla de origen (tab/página/filtro/orden de Dispositivos) para que el
   // breadcrumb pueda volver exactamente ahí en vez de resetear a /monitors/:id o /clients/:id.
-  const [backTo] = useState(() => searchParams.get('from'));
+  // Derivados de la URL en cada render (no `useState` inicializado una vez): así
+  // atrás/adelante del navegador se refleja en la pestaña. `handleTabChange` conserva
+  // `from` en la URL, y sólo se acepta un path interno de monitor/cliente (no un
+  // `//evil` ni `http:`).
+  const backTo = searchParams.get('from');
   const monitorBackTo = backTo?.startsWith('/monitors/') ? backTo : undefined;
   const clientBackTo = backTo?.startsWith('/clients/') ? backTo : undefined;
-  const [activeTab, setActiveTab] = useState<DeviceDetailTab>(() => {
-    const tab = searchParams.get('tab');
-    return tab && TAB_IDS.has(tab as DeviceDetailTab) ? (tab as DeviceDetailTab) : 'general';
-  });
+  const rawTab = searchParams.get('tab');
+  const activeTab: DeviceDetailTab = rawTab && TAB_IDS.has(rawTab as DeviceDetailTab) ? (rawTab as DeviceDetailTab) : 'general';
   // `replace`: cambiar de pestaña no debe apilar entradas en el historial, si no el
   // botón "atrás" del navegador desanda pestaña por pestaña antes de salir del equipo.
   const handleTabChange = (tab: DeviceDetailTab) => {
-    setActiveTab(tab);
     setSearchParams((prev) => {
       const next = new URLSearchParams(prev);
       next.set('tab', tab);
@@ -93,7 +94,7 @@ const DeviceDetail = () => {
 
   const handleDelete = async () => {
     setDeleting(true); setDeleteError(null);
-    try { await deleteDevice(); } catch (e) { setDeleteError(e instanceof Error ? e.message : String(e)); } finally { setDeleting(false); }
+    try { await deleteDevice(monitorBackTo ?? clientBackTo); } catch (e) { setDeleteError(e instanceof Error ? e.message : String(e)); } finally { setDeleting(false); }
   };
 
   const handleSync = async () => {

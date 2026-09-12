@@ -1,9 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { api } from '../../../shared/lib/api';
 import { useAuth } from '../../../store/AuthContext';
-import { useDebounce } from '../../../shared/hooks/useDebounce';
-import { usePageSizeReset } from '../../../shared/hooks/usePageSizeReset';
+import { useLatestRequest } from '../../../shared/hooks/useLatestRequest';
+import { clampPage } from '../../../shared/lib/clampPage';
+import { useUrlState, useUrlSearchQuery, stringParam, flagParam, pageParam, type UrlPatch } from '../../../shared/hooks/useUrlState';
 import type { Incident, IncidentListResponse, IncidentStats } from '../../../shared/types/incidents';
 
 export type ClientOption = { id: string; name: string };
@@ -15,16 +15,35 @@ export interface IncidentFiltersState {
   noDevice: boolean; setNoDevice: (v: boolean) => void;
   /** Deep-link únicamente (`/incidents?client_id=` desde Cliente Detalle) — sin chip propio. */
   clientId: string;
+  /** Un solo cambio de URL para los 4 filtros (no 4 escrituras). */
+  clearFilters: () => void;
 }
 
-function useIncidentFilters(): IncidentFiltersState {
-  const [initial] = useSearchParams();
-  const [q, setQ] = useState('');
-  const [openOnly, setOpenOnly] = useState(false);
-  const [old24h, setOld24h] = useState(false);
-  const [noDevice, setNoDevice] = useState(false);
-  const [clientId] = useState(() => initial.get('client_id') ?? '');
-  return { q, setQ, openOnly, setOpenOnly, old24h, setOld24h, noDevice, setNoDevice, clientId };
+/** Filtros y página en la URL (auditoría 12/09/2026: era el único listado que no
+ * persistía ni la página — volver de un detalle reseteaba todo). */
+const CODECS = { q: stringParam(), open: flagParam(), old24h: flagParam(), no_device: flagParam(), client_id: stringParam(), page: pageParam };
+type UrlFilters = { [K in keyof typeof CODECS]: ReturnType<(typeof CODECS)[K]['parse']> };
+
+function useFilterSetters(patch: UrlPatch<UrlFilters>, setRawQuery: (q: string) => void) {
+  return useMemo(() => ({
+    setOpenOnly: (v: boolean) => patch({ open: v, page: 0 }),
+    setOld24h: (v: boolean) => patch({ old24h: v, page: 0 }),
+    setNoDevice: (v: boolean) => patch({ no_device: v, page: 0 }),
+    setPage: (page: number) => patch({ page }),
+    clearFilters: () => { setRawQuery(''); patch({ q: '', open: false, old24h: false, no_device: false, page: 0 }); },
+  }), [patch, setRawQuery]);
+}
+
+type IncidentFilters = IncidentFiltersState & { effectiveQuery: string; page: number; setPage: (page: number) => void };
+
+function useIncidentFilters(): IncidentFilters {
+  const [url, patch] = useUrlState<UrlFilters>(CODECS);
+  const { rawQuery, setRawQuery, effectiveQuery } = useUrlSearchQuery(url.q, (q) => patch({ q, page: 0 }));
+  return {
+    q: rawQuery, setQ: setRawQuery, effectiveQuery,
+    openOnly: url.open, old24h: url.old24h, noDevice: url.no_device, clientId: url.client_id, page: url.page,
+    ...useFilterSetters(patch, setRawQuery),
+  };
 }
 
 export function buildIncidentsQueryParams(f: IncidentFiltersState, page: number, pageSize: number): URLSearchParams {
@@ -89,34 +108,40 @@ function requestIncidentPage(filters: IncidentFiltersState, page: number, pageSi
   return api.get<IncidentListResponse>(`/incidents?${qs}`);
 }
 
-function useRows(filters: IncidentFiltersState, page: number, debouncedQ: string, pageSize: number) {
-  const st = useRowsState();
-  const effective = { ...filters, q: debouncedQ };
-  const fetchIncidents = useCallback(async () => {
-    st.setLoading(true);
-    st.setError('');
-    try {
-      const data = await requestIncidentPage(effective, page, pageSize);
-      st.setItems(data.items);
-      st.setTotal(data.total);
-    } catch (e) {
-      st.setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      st.setLoading(false);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedQ, filters.openOnly, filters.old24h, filters.noDevice, filters.clientId, page, pageSize]);
-  useEffect(() => { void fetchIncidents(); }, [fetchIncidents]);
-  return { ...st, pageSize, totalPages: Math.max(1, Math.ceil(st.total / pageSize)), fetchIncidents };
+type RowsState = ReturnType<typeof useRowsState>;
+
+/** `isLatest`: respuestas de un request ya superado no tocan la tabla (`useLatestRequest`). */
+async function loadIncidentPage(st: RowsState, filters: IncidentFiltersState, page: number, pageSize: number, isLatest: () => boolean) {
+  st.setLoading(true);
+  st.setError('');
+  try {
+    const data = await requestIncidentPage(filters, page, pageSize);
+    if (!isLatest()) return;
+    st.setItems(data.items);
+    st.setTotal(data.total);
+  } catch (e) {
+    if (isLatest()) st.setError(e instanceof Error ? e.message : String(e));
+  } finally {
+    if (isLatest()) st.setLoading(false);
+  }
 }
 
-function useList(filters: IncidentFiltersState, pageSize: number) {
-  const [page, setPage] = useState(0);
-  const debouncedQ = useDebounce(filters.q, 300);
-  useEffect(() => { setPage(0); }, [debouncedQ, filters.openOnly, filters.old24h, filters.noDevice, filters.clientId]);
-  const rows = useRows(filters, page, debouncedQ, pageSize);
-  usePageSizeReset(pageSize, setPage, rows.total);
-  return { page, setPage, ...rows };
+function useRows(filters: IncidentFilters, pageSize: number) {
+  const st = useRowsState();
+  const beginRequest = useLatestRequest();
+  // `?page=` acotada al mostrar/pedir, sin persistir el clamp (ver `clampPage`).
+  const page = clampPage(filters.page, pageSize, st.total);
+  const fetchIncidents = useCallback(
+    () => loadIncidentPage(st, { ...filters, q: filters.effectiveQuery }, page, pageSize, beginRequest()),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [filters.effectiveQuery, filters.openOnly, filters.old24h, filters.noDevice, filters.clientId, page, pageSize],
+  );
+  useEffect(() => { void fetchIncidents(); }, [fetchIncidents]);
+  return { ...st, page, pageSize, totalPages: Math.max(1, Math.ceil(st.total / pageSize)), fetchIncidents };
+}
+
+function useList(filters: IncidentFilters, pageSize: number) {
+  return { setPage: filters.setPage, ...useRows(filters, pageSize) };
 }
 
 /** `pageSize` = filas que entran en pantalla (`useFitRows`, 27/08/2026). */

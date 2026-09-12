@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { RefreshCw } from 'lucide-react';
 import { fmt } from '../../../shared/lib/formatters';
+import { useAuth } from '../../../store/AuthContext';
 import { exportDeviceInventoryCsv } from '../lib/exportDeviceInventoryCsv';
 import type { DeviceDirectorySegment, DeviceInventorySummary, SortDir } from '../types/deviceDirectory';
 
@@ -21,6 +22,9 @@ const BTN_SECONDARY = 'rounded-[3px] border border-line-300 bg-white px-[18px] p
  * haber un formulario manual, un equipo siempre entra vía descubrimiento de un agente. */
 function HeaderActions({ query, segment, sortDir, includeDecommissioned, onRefresh }: Omit<Props, 'summary'>) {
   const [exporting, setExporting] = useState(false);
+  // `/pending` está gateado a admin/operator (`RequireRole`): para un viewer el
+  // botón rebotaba en silencio al Dashboard.
+  const canRegister = useAuth().role !== 'client_viewer';
   const handleExport = async () => {
     setExporting(true);
     try { await exportDeviceInventoryCsv(query, segment, sortDir, includeDecommissioned); } finally { setExporting(false); }
@@ -31,7 +35,7 @@ function HeaderActions({ query, segment, sortDir, includeDecommissioned, onRefre
       <button type="button" onClick={onRefresh} className={`flex items-center gap-2 ${BTN_SECONDARY}`}>
         <RefreshCw size={12} /> ACTUALIZAR
       </button>
-      <Link to="/pending-devices" className="rounded-[3px] bg-brand px-[18px] py-[11px] font-montserrat text-[10.5px] font-semibold uppercase leading-none tracking-[.1em] text-white transition-colors duration-150 ease-in-out hover:bg-brand-severe focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-2">+ AGREGAR DISPOSITIVO</Link>
+      {canRegister && <Link to="/pending" className="rounded-[3px] bg-brand px-[18px] py-[11px] font-montserrat text-[10.5px] font-semibold uppercase leading-none tracking-[.1em] text-white transition-colors duration-150 ease-in-out hover:bg-brand-severe focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-2">+ AGREGAR DISPOSITIVO</Link>}
     </div>
   );
 }

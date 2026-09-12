@@ -1,63 +1,41 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
 import { api } from '../../../shared/lib/api';
-import { useDebounce } from '../../../shared/hooks/useDebounce';
 import { clampPage } from '../../../shared/lib/clampPage';
-import { useUpdateEffect } from '../../../shared/hooks/useUpdateEffect';
+import { useLatestRequest } from '../../../shared/hooks/useLatestRequest';
+import { enumParam, pageParam, stringParam, useUrlSearchQuery, useUrlState } from '../../../shared/hooks/useUrlState';
 import type {
   AgentDirectoryResponse, AgentDirectoryRow, AgentFleetSummary, AgentSegment, AgentSignalBucketsResponse, SortDir,
 } from '../types/agentsDirectory';
 
 const SEGMENTS: AgentSegment[] = ['todos', 'sin_senal', 'desactualizados', 'llave_por_vencer'];
+const DIRS: SortDir[] = ['asc', 'desc'];
 
-function parseSegment(v: string | null): AgentSegment {
-  return v && (SEGMENTS as string[]).includes(v) ? (v as AgentSegment) : 'todos';
-}
-function parseSortDir(v: string | null): SortDir {
-  return v === 'asc' ? 'asc' : 'desc';
-}
-/** `?page=` es 1-based (como se muestra); el estado es 0-based. */
-function parsePage(v: string | null): number {
-  const n = Number(v);
-  return Number.isInteger(n) && n > 1 ? n - 1 : 0;
-}
+/** Filtro/orden/página viven en la URL (mismo criterio que `/clients`) — los valores
+ * por defecto se omiten para no ensuciarla. La URL manda (ver `useUrlState`). */
+const CODECS = {
+  q: stringParam(),
+  segment: enumParam(SEGMENTS, 'todos'),
+  dir: enumParam(DIRS, 'desc'),
+  page: pageParam,
+};
 
-/** Filtro/orden/página reflejados en la URL (mismo criterio que `/clients`) — valores por defecto se omiten para no ensuciarla. */
-function useUrlSync(q: string, segment: AgentSegment, sortDir: SortDir, page: number) {
-  const [searchParams, setSearchParams] = useSearchParams();
-  useEffect(() => {
-    const next = new URLSearchParams(searchParams);
-    if (q) next.set('q', q); else next.delete('q');
-    if (segment !== 'todos') next.set('segment', segment); else next.delete('segment');
-    if (sortDir !== 'desc') next.set('dir', sortDir); else next.delete('dir');
-    if (page > 0) next.set('page', String(page + 1)); else next.delete('page');
-    setSearchParams(next, { replace: true });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [q, segment, sortDir, page]);
-}
-
-/** Estado de filtro/orden/página. A diferencia de Clientes, acá hay un solo
- * campo ordenable (`última señal`, spec del handoff) — no hace falta un
- * `sortField`, sólo el toggle de dirección. */
+/** Estado de filtro/orden/página, derivado de la URL. A diferencia de Clientes,
+ * acá hay un solo campo ordenable (`última señal`, spec del handoff) — no hace
+ * falta un `sortField`, sólo el toggle de dirección. Chips/búsqueda/orden resetean
+ * a la página 1 en el mismo `patch`. */
 function useDirectoryFilters() {
-  const [initial] = useSearchParams();
-  const [rawQuery, setRawQuery] = useState(initial.get('q') ?? '');
-  const [segment, setSegmentState] = useState<AgentSegment>(() => parseSegment(initial.get('segment')));
-  const [sortDir, setSortDir] = useState<SortDir>(() => parseSortDir(initial.get('dir')));
-  const [page, setPage] = useState(() => parsePage(initial.get('page')));
+  const [url, patch] = useUrlState(CODECS);
+  const { rawQuery, setRawQuery, effectiveQuery } = useUrlSearchQuery(url.q, (q) => patch({ q, page: 0 }));
 
-  const debouncedQuery = useDebounce(rawQuery, 300);
-  const effectiveQuery = debouncedQuery.trim().length >= 2 ? debouncedQuery.trim() : '';
+  const setSegment = useCallback((segment: AgentSegment) => patch({ segment, page: 0 }), [patch]);
+  const clearFilters = useCallback(() => { setRawQuery(''); patch({ q: '', segment: 'todos', page: 0 }); }, [patch, setRawQuery]);
+  const toggleSort = useCallback(() => patch({ dir: url.dir === 'desc' ? 'asc' : 'desc', page: 0 }), [patch, url.dir]);
+  const setPage = useCallback((page: number) => patch({ page }), [patch]);
 
-  useUrlSync(effectiveQuery, segment, sortDir, page);
-  // No corre al montar: respeta el `?page=` restaurado de la URL.
-  useUpdateEffect(() => { setPage(0); }, [effectiveQuery, segment]);
-
-  const setSegment = useCallback((s: AgentSegment) => setSegmentState(s), []);
-  const clearFilters = useCallback(() => { setRawQuery(''); setSegmentState('todos'); }, []);
-  const toggleSort = useCallback(() => { setSortDir((d) => (d === 'desc' ? 'asc' : 'desc')); setPage(0); }, []);
-
-  return { rawQuery, setRawQuery, effectiveQuery, segment, setSegment, clearFilters, sortDir, toggleSort, page, setPage };
+  return {
+    rawQuery, setRawQuery, effectiveQuery, segment: url.segment, setSegment, clearFilters,
+    sortDir: url.dir, toggleSort, page: url.page, setPage,
+  };
 }
 
 type DirectoryFilters = ReturnType<typeof useDirectoryFilters>;
@@ -70,8 +48,10 @@ function useDirectoryRows(filters: DirectoryFilters, pageSize: number) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const page = clampPage(filters.page, pageSize, total);
+  const beginRequest = useLatestRequest();
 
   const fetchDirectory = useCallback(async () => {
+    const isLatest = beginRequest();
     setLoading(true);
     setError('');
     const params = new URLSearchParams({ dir: sortDir, limit: String(pageSize), offset: String(page * pageSize) });
@@ -79,14 +59,15 @@ function useDirectoryRows(filters: DirectoryFilters, pageSize: number) {
     if (segment !== 'todos') params.set('segment', segment);
     try {
       const data = await api.get<AgentDirectoryResponse>(`/agents/directory?${params.toString()}`);
+      if (!isLatest()) return;
       setRows(data.items ?? []);
       setTotal(data.total ?? 0);
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : String(e));
+      if (isLatest()) setError(e instanceof Error ? e.message : String(e));
     } finally {
-      setLoading(false);
+      if (isLatest()) setLoading(false);
     }
-  }, [effectiveQuery, segment, sortDir, page, pageSize]);
+  }, [beginRequest, effectiveQuery, segment, sortDir, page, pageSize]);
 
   useEffect(() => { void fetchDirectory(); }, [fetchDirectory]);
 

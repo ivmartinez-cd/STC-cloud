@@ -140,11 +140,14 @@ export function useMonitorDetail(id: string) {
     return data.key;
   }, [id, refetch]);
 
+  // Al cliente dueño, con `replace`: "atrás" no debe volver a un monitor revocado.
+  // (Antes iba a `/monitoring`, ruta inexistente → Dashboard sin contexto.)
+  const clientId = monitor?.client_id;
   const revokeMonitor = useCallback(async () => {
     await api.post(`/agents/${id}/revoke`);
     showToast('Licencia revocada', 'success');
-    navigate('/monitoring');
-  }, [id, showToast, navigate]);
+    navigate(clientId ? `/clients/${clientId}` : '/clients', { replace: true });
+  }, [id, clientId, showToast, navigate]);
 
   /** `SINCRONIZAR AHORA` (handoff hifi "Monitor — detalle", 25/08/2026) — reusa
    * `POST /agents/:id/scan` (ya empuja `RESCAN` instantáneo vía WSS o lo encola

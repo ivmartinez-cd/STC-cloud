@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
+import { useBackNavigation } from '../../../shared/hooks/useBackNavigation';
 import {
   ArrowLeft, AlertOctagon, Loader2, MessageSquare, CheckCircle2, RotateCcw,
   Link2, Unlink, Clock, User,
@@ -26,7 +27,9 @@ const EVENT_LABELS: Record<string, string> = {
 
 const IncidentDetail = () => {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
+  // Vuelve por historial (conserva filtros/página del listado) o al listado si se
+  // entró por URL directa — antes `navigate('/incidents')` apilaba y "atrás" reabría el detalle.
+  const { goBack } = useBackNavigation();
   const { role } = useAuth();
   const { showToast } = useToast();
   const canManage = role === 'admin' || role === 'operator';
@@ -139,7 +142,7 @@ const IncidentDetail = () => {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
-      <button onClick={() => navigate('/incidents')} className="flex items-center gap-2 text-xs font-bold text-slate-400 hover:text-brand transition-colors">
+      <button onClick={goBack} className="flex items-center gap-2 text-xs font-bold text-slate-400 hover:text-brand transition-colors">
         <ArrowLeft size={14} /> Volver a incidentes
       </button>
 

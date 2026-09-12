@@ -1,5 +1,5 @@
-import { lazy, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
+import { lazy, useEffect, type ComponentType } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate, Outlet, useLocation, useParams } from 'react-router-dom';
 import { AuthProvider, useAuth } from './store/AuthContext';
 import { ToastProvider } from './store/ToastContext';
 import Layout from './app/layout/Layout';
@@ -54,6 +54,17 @@ function RequireRole({ allowed }: { allowed: string[] }) {
   return allowed.includes(role) ? <Outlet /> : <Navigate to="/" replace />;
 }
 
+/**
+ * Remonta la página de detalle cuando cambia `:id`. Sin `key`, react-router reutiliza
+ * la instancia al ir de `/devices/A` a `/devices/B` (buscador global desde una ficha,
+ * atrás/adelante entre dos fichas) y quedaban pegados la pestaña, el `?from=`, los
+ * modales abiertos y hasta los datos ya cargados del anterior (auditoría 12/09/2026).
+ */
+function KeyedById({ page: Page }: { page: ComponentType }) {
+  const { id } = useParams<{ id: string }>();
+  return <Page key={id} />;
+}
+
 function App() {
   return (
     <AuthProvider>
@@ -69,11 +80,11 @@ function App() {
                 <Route path="/supplies"      element={<Supplies />} />
                 <Route path="/supply-requests" element={<SupplyRequests />} />
                 <Route path="/incidents"     element={<Incidents />} />
-                <Route path="/incidents/:id" element={<IncidentDetail />} />
+                <Route path="/incidents/:id" element={<KeyedById page={IncidentDetail} />} />
                 <Route path="/clients"       element={<Clients />} />
                 <Route path="/devices"       element={<Devices />} />
-                <Route path="/clients/:id"   element={<ClientDetail />} />
-                <Route path="/monitors/:id"  element={<MonitorDetail />} />
+                <Route path="/clients/:id"   element={<KeyedById page={ClientDetail} />} />
+                <Route path="/monitors/:id"  element={<KeyedById page={MonitorDetail} />} />
                 <Route element={<RequireRole allowed={['admin', 'operator']} />}>
                   <Route path="/agents"      element={<Agents />} />
                   <Route path="/scheduled-reports" element={<ScheduledReports />} />
@@ -82,7 +93,7 @@ function App() {
                   <Route path="/activity"    element={<Activity />} />
                   <Route path="/pending"     element={<PendingDevices />} />
                 </Route>
-                <Route path="/devices/:id"   element={<DeviceDetail />} />
+                <Route path="/devices/:id"   element={<KeyedById page={DeviceDetail} />} />
                 <Route path="/settings"      element={<Settings />} />
               </Route>
             </Route>

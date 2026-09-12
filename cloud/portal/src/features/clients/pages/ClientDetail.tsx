@@ -19,17 +19,20 @@ function parseTab(v: string | null): ClientDetailTab {
   return v === 'dispositivos' || v === 'alertas' || v === 'consumibles' || v === 'configuracion' ? v : 'resumen';
 }
 
-/** Tab activa reflejada en `?tab=` (README: "Tab... reflejados en la URL"). */
+/** Tab activa reflejada en `?tab=` (README: "Tab... reflejados en la URL"). La URL
+ * es la única fuente de verdad (derivada en cada render, no `useState` inicializado
+ * una vez): atrás/adelante y links entrantes se reflejan. `replace` + merge funcional:
+ * cambiar de tab no apila historial ni pisa los params de "Dispositivos". */
 function useActiveTab() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [tab, setTabState] = useState<ClientDetailTab>(() => parseTab(searchParams.get('tab')));
+  const tab = parseTab(searchParams.get('tab'));
   const setTab = useCallback((next: ClientDetailTab) => {
-    setTabState(next);
-    const params = new URLSearchParams(searchParams);
-    if (next === 'resumen') params.delete('tab'); else params.set('tab', next);
-    setSearchParams(params, { replace: true });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams]);
+    setSearchParams((prev) => {
+      const params = new URLSearchParams(prev);
+      if (next === 'resumen') params.delete('tab'); else params.set('tab', next);
+      return params;
+    }, { replace: true });
+  }, [setSearchParams]);
   return { tab, setTab };
 }
 

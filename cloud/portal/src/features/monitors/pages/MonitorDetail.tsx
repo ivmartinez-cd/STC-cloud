@@ -24,6 +24,17 @@ import { useToast } from '../../../store/ToastContext';
 
 type Tab = 'overview' | 'devices' | 'console' | 'segments' | 'config' | 'reports';
 
+const TAB_IDS: readonly Tab[] = ['overview', 'devices', 'console', 'segments', 'config', 'reports'];
+const VIEWER_HIDDEN_TABS: readonly Tab[] = ['console', 'segments', 'config'];
+
+/** `?tab=` inválido cae a Resumen; para un client_viewer también las tabs que no
+ * ve (un link `?tab=config` compartido por un admin dejaba la barra sin tab activa
+ * y la pantalla vacía). */
+function parseTab(raw: string | null, isReadOnlyViewer: boolean): Tab {
+  const tab = raw && (TAB_IDS as readonly string[]).includes(raw) ? (raw as Tab) : 'overview';
+  return isReadOnlyViewer && VIEWER_HIDDEN_TABS.includes(tab) ? 'overview' : tab;
+}
+
 const MonitorDetail = () => {
   const { id } = useParams<{ id: string }>();
   const { showToast } = useToast();
@@ -35,10 +46,9 @@ const MonitorDetail = () => {
   const isReadOnlyViewer = role === 'client_viewer';
   const now = useTime(30000);
   const [searchParams, setSearchParams] = useSearchParams();
-  const [activeTab, setActiveTab] = useState<Tab>(() => {
-    const tab = searchParams.get('tab');
-    return (tab === 'overview' || tab === 'devices' || tab === 'console' || tab === 'segments' || tab === 'config' || tab === 'reports') ? tab : 'overview';
-  });
+  // Derivada de la URL en cada render (no `useState` inicializado una vez): así
+  // atrás/adelante del navegador y un link entrante con otro `?tab=` se reflejan.
+  const activeTab = parseTab(searchParams.get('tab'), isReadOnlyViewer);
   const [showRevokeModal, setShowRevokeModal] = useState(false);
   const [revoking, setRevoking] = useState(false);
   const [regenKey, setRegenKey] = useState<string | null>(null);
@@ -57,9 +67,13 @@ const MonitorDetail = () => {
   const { events, loading: eventsLoading, error: eventsError, refetch: refetchEvents } = useMonitorActivity(id!, !isReadOnlyViewer);
 
   // `replace`: cambiar de pestaña no debe apilar entradas en el historial (ver DeviceDetail).
+  // Merge funcional: pisar todos los params borraba q/segment/sort/dir/page de "Dispositivos".
   const handleTabChange = (tab: Tab) => {
-    setActiveTab(tab);
-    setSearchParams({ tab }, { replace: true });
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (tab === 'overview') next.delete('tab'); else next.set('tab', tab);
+      return next;
+    }, { replace: true });
   };
 
   const handleRegen = async () => {
@@ -111,7 +125,7 @@ const MonitorDetail = () => {
           <ShieldOff size={48} className="mx-auto mb-5 text-brand-severe" />
           <h2 className="mb-3.5 font-montserrat text-[19px] font-extrabold uppercase tracking-[.02em] text-ink-900">Nodo no encontrado</h2>
           <p className="mb-6 font-sans text-[13px] text-ink-700">{error || 'El agente solicitado no existe o no tienes permisos.'}</p>
-          <Link to="/monitoring" className="inline-flex items-center gap-2.5 rounded-[3px] bg-brand px-4 py-2.5 font-montserrat text-[11px] font-semibold uppercase tracking-[.08em] text-white transition-colors duration-150 ease-in-out hover:bg-brand-severe">
+          <Link to="/clients" className="inline-flex items-center gap-2.5 rounded-[3px] bg-brand px-4 py-2.5 font-montserrat text-[11px] font-semibold uppercase tracking-[.08em] text-white transition-colors duration-150 ease-in-out hover:bg-brand-severe">
             <ArrowLeft size={16} /> Volver a Infraestructura
           </Link>
         </div>
@@ -132,7 +146,7 @@ const MonitorDetail = () => {
   return (
     <div className="-m-4 flex min-w-0 flex-col gap-4 bg-surface-page px-[34px] pb-9 pt-[26px] short:gap-3 short:pb-4 short:pt-3 md:-m-10 md:h-full md:min-h-0">
       <nav className="mb-1 flex items-center gap-2 font-sans text-xs">
-        <Link to="/monitoring" className="font-semibold text-brand-accent hover:underline">Clientes</Link>
+        <Link to="/clients" className="font-semibold text-brand-accent hover:underline">Clientes</Link>
         <span className="text-ink-sep-light">/</span>
         <Link to={`/clients/${monitor.client_id}`} className="font-semibold text-brand-accent hover:underline">{monitor.client_name}</Link>
         <span className="text-ink-sep-light">/</span>

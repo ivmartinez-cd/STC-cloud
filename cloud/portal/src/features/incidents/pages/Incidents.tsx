@@ -26,7 +26,7 @@ function hasActiveFilters(f: IncidentsPageState['filters']): boolean {
 }
 
 function clearFilters(f: IncidentsPageState['filters']): void {
-  f.setQ(''); f.setOpenOnly(false); f.setOld24h(false); f.setNoDevice(false);
+  f.clearFilters();
 }
 
 function Incidents() {

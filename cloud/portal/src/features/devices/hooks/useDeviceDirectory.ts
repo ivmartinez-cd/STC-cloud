@@ -1,71 +1,41 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
 import { api } from '../../../shared/lib/api';
-import { useDebounce } from '../../../shared/hooks/useDebounce';
 import { clampPage } from '../../../shared/lib/clampPage';
-import { useUpdateEffect } from '../../../shared/hooks/useUpdateEffect';
+import { useLatestRequest } from '../../../shared/hooks/useLatestRequest';
+import { enumParam, flagParam, pageParam, stringParam, useUrlSearchQuery, useUrlState } from '../../../shared/hooks/useUrlState';
 import type {
   DeviceDirectoryGroup, DeviceDirectoryResponse, DeviceDirectorySegment, DeviceInventorySummary, SortDir,
 } from '../types/deviceDirectory';
 
 const SEGMENTS: DeviceDirectorySegment[] = ['todos', 'sin_contacto', 'con_alertas', 'consumible_bajo', 'sin_agente'];
+const DIRS: SortDir[] = ['asc', 'desc'];
 
-function parseSegment(v: string | null): DeviceDirectorySegment {
-  return v && (SEGMENTS as string[]).includes(v) ? (v as DeviceDirectorySegment) : 'todos';
-}
-function parseSortDir(v: string | null): SortDir {
-  return v === 'asc' ? 'asc' : 'desc';
-}
-/** `?page=` es 1-based (como se muestra); el estado es 0-based. */
-function parsePage(v: string | null): number {
-  const n = Number(v);
-  return Number.isInteger(n) && n > 1 ? n - 1 : 0;
-}
+/** Filtro/orden/página/baja viven en la URL — mismo criterio que `useClientsDirectory`
+ * (la URL manda, ver `useUrlState`). `baja=1` = incluir equipos dados de baja. */
+const CODECS = {
+  q: stringParam(),
+  segment: enumParam(SEGMENTS, 'todos'),
+  dir: enumParam(DIRS, 'desc'),
+  page: pageParam,
+  baja: flagParam(),
+};
 
-/** Filtro/orden/página/baja reflejados en la URL — mismo criterio que `useClientsDirectory`. */
-function useUrlSync(q: string, segment: DeviceDirectorySegment, sortDir: SortDir, page: number, includeDecommissioned: boolean) {
-  const [searchParams, setSearchParams] = useSearchParams();
-  useEffect(() => {
-    const next = new URLSearchParams(searchParams);
-    if (q) next.set('q', q); else next.delete('q');
-    if (segment !== 'todos') next.set('segment', segment); else next.delete('segment');
-    if (sortDir !== 'desc') next.set('dir', sortDir); else next.delete('dir');
-    if (page > 0) next.set('page', String(page + 1)); else next.delete('page');
-    if (includeDecommissioned) next.set('baja', '1'); else next.delete('baja');
-    setSearchParams(next, { replace: true });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [q, segment, sortDir, page, includeDecommissioned]);
-}
-
-/** Sólo el `useState` — separado de `useDirectoryFilters` para que ninguna de las 2
- * funciones cruce el límite de 20 líneas/función de la guía. */
-function useDirectoryFilterState() {
-  const [initial] = useSearchParams();
-  const [rawQuery, setRawQuery] = useState(initial.get('q') ?? '');
-  const [segment, setSegmentState] = useState<DeviceDirectorySegment>(() => parseSegment(initial.get('segment')));
-  const [sortDir, setSortDir] = useState<SortDir>(() => parseSortDir(initial.get('dir')));
-  const [page, setPage] = useState(() => parsePage(initial.get('page')));
-  const [includeDecommissioned, setIncludeDecommissioned] = useState(() => initial.get('baja') === '1');
-  return { rawQuery, setRawQuery, segment, setSegmentState, sortDir, setSortDir, page, setPage, includeDecommissioned, setIncludeDecommissioned };
-}
-
-/** Estado de filtro/orden/página, sincronizado con la URL. Único campo ordenable
+/** Estado de filtro/orden/página, derivado de la URL. Único campo ordenable
  * expuesto en la UI es `last_seen` (el mockup sólo pone flecha en ÚLT. CONTACTO) —
- * el backend igual soporta `alerts_count` para uso futuro. */
+ * el backend igual soporta `alerts_count` para uso futuro. Chips/búsqueda/checkbox
+ * resetean a la página 1 en el mismo `patch` — evita quedar en una página vacía. */
 function useDirectoryFilters() {
-  const s = useDirectoryFilterState();
-  const debouncedQuery = useDebounce(s.rawQuery, 300);
-  const effectiveQuery = debouncedQuery.trim().length >= 2 ? debouncedQuery.trim() : '';
-  useUrlSync(effectiveQuery, s.segment, s.sortDir, s.page, s.includeDecommissioned);
-  // Chips/búsqueda/checkbox resetean a la página 1 — evita quedar en una página vacía.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  // No corre al montar: respeta el `?page=` restaurado de la URL.
-  useUpdateEffect(() => { s.setPage(0); }, [effectiveQuery, s.segment, s.includeDecommissioned]);
+  const [url, patch] = useUrlState(CODECS);
+  const { rawQuery, setRawQuery, effectiveQuery } = useUrlSearchQuery(url.q, (q) => patch({ q, page: 0 }));
+  const setSegment = useCallback((segment: DeviceDirectorySegment) => patch({ segment, page: 0 }), [patch]);
+  const setIncludeDecommissioned = useCallback((baja: boolean) => patch({ baja, page: 0 }), [patch]);
+  const clearFilters = useCallback(() => { setRawQuery(''); patch({ q: '', segment: 'todos', page: 0 }); }, [patch, setRawQuery]);
+  const toggleSort = useCallback(() => patch({ dir: url.dir === 'desc' ? 'asc' : 'desc' }), [patch, url.dir]);
+  const setPage = useCallback((page: number) => patch({ page }), [patch]);
   return {
-    ...s, effectiveQuery,
-    setSegment: s.setSegmentState,
-    clearFilters: () => { s.setRawQuery(''); s.setSegmentState('todos'); },
-    toggleSort: () => s.setSortDir((d) => (d === 'desc' ? 'asc' : 'desc')),
+    rawQuery, setRawQuery, effectiveQuery, segment: url.segment, setSegment, clearFilters,
+    sortDir: url.dir, toggleSort, page: url.page, setPage,
+    includeDecommissioned: url.baja, setIncludeDecommissioned,
   };
 }
 
@@ -85,7 +55,7 @@ function fetchDirectoryPage(filters: DirectoryFilters, page: number, pageSize: n
 }
 
 /** Sólo el `useState` de la página actual — separado de `useDirectoryRows` por el
- * mismo motivo que `useDirectoryFilterState`. */
+ * límite de 20 líneas/función de la guía. */
 function useDirectoryRowsState() {
   const [groups, setGroups] = useState<DeviceDirectoryGroup[]>([]);
   const [total, setTotal] = useState(0);
@@ -99,21 +69,24 @@ function useDirectoryRows(filters: DirectoryFilters, pageSize: number) {
   const { effectiveQuery, segment, sortDir, includeDecommissioned } = filters;
   const st = useDirectoryRowsState();
   const page = clampPage(filters.page, pageSize, st.total);
+  const beginRequest = useLatestRequest();
 
   const fetchDirectory = useCallback(async () => {
+    const isLatest = beginRequest();
     st.setLoading(true);
     st.setError('');
     try {
       const data = await fetchDirectoryPage(filters, page, pageSize);
+      if (!isLatest()) return;
       st.setGroups(data.groups ?? []);
       st.setTotal(data.total ?? 0);
     } catch (e: unknown) {
-      st.setError(e instanceof Error ? e.message : String(e));
+      if (isLatest()) st.setError(e instanceof Error ? e.message : String(e));
     } finally {
-      st.setLoading(false);
+      if (isLatest()) st.setLoading(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [effectiveQuery, segment, sortDir, page, includeDecommissioned, pageSize]);
+  }, [beginRequest, effectiveQuery, segment, sortDir, page, includeDecommissioned, pageSize]);
 
   useEffect(() => { void fetchDirectory(); }, [fetchDirectory]);
 

@@ -1,11 +1,13 @@
-import { useState, useEffect, useCallback } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { api } from '../../../shared/lib/api';
 import { useAuth } from '../../../store/AuthContext';
 import { useToast } from '../../../store/ToastContext';
-import { useDebounce } from '../../../shared/hooks/useDebounce';
 import { useRowSelection } from '../../../shared/hooks/useRowSelection';
-import { usePageSizeReset } from '../../../shared/hooks/usePageSizeReset';
+import { useLatestRequest } from '../../../shared/hooks/useLatestRequest';
+import { clampPage } from '../../../shared/lib/clampPage';
+import {
+  useUrlState, useUrlSearchQuery, stringParam, flagParam, pageParam, type UrlCodec, type UrlPatch,
+} from '../../../shared/hooks/useUrlState';
 import type { Alert, AlertSummary } from '../../../shared/types/alerts';
 
 export type ClientOption = { id: string; name: string };
@@ -16,36 +18,53 @@ export interface AlertFiltersState {
   unresolved: boolean; setUnresolved: (v: boolean) => void;
   critical: boolean; setCritical: (v: boolean) => void;
   unacknowledged: boolean; setUnacknowledged: (v: boolean) => void;
+  /** Chip DISPONIBILIDAD = `alertClass === 'availability'`. */
   availability: boolean; setAvailability: (v: boolean) => void;
   last24h: boolean; setLast24h: (v: boolean) => void;
+  /** `?class=` — el panel "por clase" del dashboard manda cualquier clase, no sólo
+   * availability (antes las demás se ignoraban en silencio). */
+  alertClass: string;
   /** Deep-link únicamente (`/alerts?client_id=` desde Cliente Detalle) — sin chip propio. */
   clientId: string;
+  /** Deep-link únicamente ("Ver todas →" de la ficha de equipo). */
+  deviceId: string;
 }
 
-/** `class`/`resolved`/`client_id` en la URL: lo que hace clicables los contadores
- * del dashboard/detalle de cliente y permite compartir el link. */
-function useUrlSync(unresolved: boolean, availability: boolean) {
-  const [searchParams, setSearchParams] = useSearchParams();
-  useEffect(() => {
-    const next = new URLSearchParams(searchParams);
-    if (!unresolved) next.set('resolved', ''); else next.delete('resolved');
-    if (availability) next.set('class', 'availability'); else next.delete('class');
-    setSearchParams(next, { replace: true });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [unresolved, availability]);
+/** Ausente → sólo sin resolver (default); `?resolved=` vacío → todas. Compatible con
+ * el `?resolved=false` que mandan el dashboard y Cliente Detalle. */
+const resolvedParam: UrlCodec<boolean> = { parse: (raw) => raw !== '', format: (unresolved) => (unresolved ? null : '') };
+
+/** Todo el filtro y la página viven en la URL (auditoría 12/09/2026: antes sólo
+ * `resolved`/`class`, y se perdían chips y página al volver de un incidente). */
+const CODECS = {
+  q: stringParam(), resolved: resolvedParam, critical: flagParam(), unack: flagParam(), class: stringParam(),
+  last24h: flagParam(), client_id: stringParam(), device_id: stringParam(), page: pageParam,
+};
+type UrlFilters = { [K in keyof typeof CODECS]: ReturnType<(typeof CODECS)[K]['parse']> };
+
+function useFilterSetters(patch: UrlPatch<UrlFilters>) {
+  return useMemo(() => ({
+    setUnresolved: (v: boolean) => patch({ resolved: v, page: 0 }),
+    setCritical: (v: boolean) => patch({ critical: v, page: 0 }),
+    setUnacknowledged: (v: boolean) => patch({ unack: v, page: 0 }),
+    setAvailability: (v: boolean) => patch({ class: v ? 'availability' : '', page: 0 }),
+    setLast24h: (v: boolean) => patch({ last24h: v, page: 0 }),
+    setPage: (page: number) => patch({ page }),
+  }), [patch]);
 }
 
-function useAlertFilters(): AlertFiltersState {
-  const [initial] = useSearchParams();
-  const [q, setQ] = useState('');
-  const [unresolved, setUnresolved] = useState(() => initial.get('resolved') !== '');
-  const [critical, setCritical] = useState(false);
-  const [unacknowledged, setUnacknowledged] = useState(false);
-  const [availability, setAvailability] = useState(() => initial.get('class') === 'availability');
-  const [last24h, setLast24h] = useState(false);
-  const [clientId] = useState(() => initial.get('client_id') ?? '');
-  useUrlSync(unresolved, availability);
-  return { q, setQ, unresolved, setUnresolved, critical, setCritical, unacknowledged, setUnacknowledged, availability, setAvailability, last24h, setLast24h, clientId };
+type AlertFilters = AlertFiltersState & { effectiveQuery: string; page: number; setPage: (page: number) => void };
+
+function useAlertFilters(): AlertFilters {
+  const [url, patch] = useUrlState<UrlFilters>(CODECS);
+  const { rawQuery, setRawQuery, effectiveQuery } = useUrlSearchQuery(url.q, (q) => patch({ q, page: 0 }));
+  return {
+    q: rawQuery, setQ: setRawQuery, effectiveQuery,
+    unresolved: url.resolved, critical: url.critical, unacknowledged: url.unack, last24h: url.last24h,
+    availability: url.class === 'availability', alertClass: url.class,
+    clientId: url.client_id, deviceId: url.device_id, page: url.page,
+    ...useFilterSetters(patch),
+  };
 }
 
 /** Catálogos de apoyo: clases (etiqueta de la columna CLASE) y clientes (sólo
@@ -72,9 +91,10 @@ export function buildAlertsQueryParams(f: AlertFiltersState, page: number, pageS
   if (f.unresolved) params.set('resolved', 'false');
   if (f.critical) params.set('severity', 'critical');
   if (f.unacknowledged) params.set('acknowledged', 'false');
-  if (f.availability) params.set('alert_class', 'availability');
+  if (f.alertClass) params.set('alert_class', f.alertClass);
   if (f.last24h) params.set('max_age_hours', '24');
   if (f.clientId) params.set('client_id', f.clientId);
+  if (f.deviceId) params.set('device_id', f.deviceId);
   params.set('limit', String(pageSize));
   params.set('offset', String(page * pageSize));
   return params;
@@ -123,34 +143,41 @@ function useAlertRowsState() {
   return { alerts, setAlerts, total, setTotal, loading, setLoading, error, setError };
 }
 
-function useAlertRows(filters: AlertFiltersState, page: number, debouncedQ: string, pageSize: number) {
-  const st = useAlertRowsState();
-  const effective = { ...filters, q: debouncedQ };
-  const fetchAlerts = useCallback(async () => {
-    st.setLoading(true);
-    st.setError('');
-    try {
-      const { items, total: t } = await requestAlertPage(effective, page, pageSize);
-      st.setAlerts(items);
-      st.setTotal(t);
-    } catch (e) {
-      st.setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      st.setLoading(false);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedQ, filters.unresolved, filters.critical, filters.unacknowledged, filters.availability, filters.last24h, filters.clientId, page, pageSize]);
-  useEffect(() => { void fetchAlerts(); }, [fetchAlerts]);
-  return { ...st, pageSize, totalPages: Math.max(1, Math.ceil(st.total / pageSize)), fetchAlerts };
+type AlertRowsState = ReturnType<typeof useAlertRowsState>;
+
+/** `isLatest`: respuestas de un request ya superado no tocan la tabla (`useLatestRequest`). */
+async function loadAlertPage(st: AlertRowsState, filters: AlertFiltersState, page: number, pageSize: number, isLatest: () => boolean) {
+  st.setLoading(true);
+  st.setError('');
+  try {
+    const { items, total } = await requestAlertPage(filters, page, pageSize);
+    if (!isLatest()) return;
+    st.setAlerts(items);
+    st.setTotal(total);
+  } catch (e) {
+    if (isLatest()) st.setError(e instanceof Error ? e.message : String(e));
+  } finally {
+    if (isLatest()) st.setLoading(false);
+  }
 }
 
-function useAlertList(filters: AlertFiltersState, pageSize: number) {
-  const [page, setPage] = useState(0);
-  const debouncedQ = useDebounce(filters.q, 300);
-  useEffect(() => { setPage(0); }, [debouncedQ, filters.unresolved, filters.critical, filters.unacknowledged, filters.availability, filters.last24h, filters.clientId]);
-  const rows = useAlertRows(filters, page, debouncedQ, pageSize);
-  usePageSizeReset(pageSize, setPage, rows.total);
-  return { page, setPage, ...rows, ...useAlertSummary(filters.unresolved, filters.clientId) };
+function useAlertRows(filters: AlertFilters, pageSize: number) {
+  const st = useAlertRowsState();
+  const beginRequest = useLatestRequest();
+  // `?page=` acotada al mostrar/pedir, sin persistir el clamp (ver `clampPage`).
+  const page = clampPage(filters.page, pageSize, st.total);
+  const fetchAlerts = useCallback(
+    () => loadAlertPage(st, { ...filters, q: filters.effectiveQuery }, page, pageSize, beginRequest()),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [filters.effectiveQuery, filters.unresolved, filters.critical, filters.unacknowledged, filters.alertClass, filters.last24h, filters.clientId, filters.deviceId, page, pageSize],
+  );
+  useEffect(() => { void fetchAlerts(); }, [fetchAlerts]);
+  return { ...st, page, pageSize, totalPages: Math.max(1, Math.ceil(st.total / pageSize)), fetchAlerts };
+}
+
+function useAlertList(filters: AlertFilters, pageSize: number) {
+  const rows = useAlertRows(filters, pageSize);
+  return { setPage: filters.setPage, ...rows, ...useAlertSummary(filters.unresolved, filters.clientId) };
 }
 
 type AlertList = ReturnType<typeof useAlertList>;
