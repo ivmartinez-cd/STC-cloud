@@ -11,6 +11,7 @@ import MonitorPresenceCard from '../components/MonitorPresenceCard';
 import BrandDistributionCard from '../components/BrandDistributionCard';
 import TopClientsCard from '../components/TopClientsCard';
 import { fmt, APP_LOCALE } from '../../../shared/lib/formatters';
+import { useAuth } from '../../../store/AuthContext';
 /** Rediseño hifi "Panel de Control" (handoff 25/08/2026): tres preguntas en
  * orden — ¿qué está roto ahora? (titulares) → ¿cuál es el estado global del
  * parque? (tira de KPIs) → ¿qué colas tengo que atender hoy? (alertas +
@@ -27,6 +28,11 @@ function minutesAgo(from: Date, now: number): number {
 }
 
 const Dashboard = () => {
+  // Un `client_viewer` no puede entrar a `/agents`, `/pending` ni `/activity`
+  // (`RequireRole` lo rebota acá mismo con un toast): los accesos directos a esas
+  // pantallas, el alta de clientes y el ranking de cuentas se ocultan en vez de
+  // ofrecerle caminos que terminan en "no tenés permisos" (12/09/2026).
+  const isClientViewer = useAuth().role === 'client_viewer';
   const { data, loading, error, lastSyncAt, fetchDashboardData } = useDashboard();
   const {
     incidents, incidentsLoading, incidentsError, retryIncidents,
@@ -63,7 +69,9 @@ const Dashboard = () => {
           <div className="mb-2.5 flex items-center gap-3 short:mb-1.5">
             <span className="block h-0.5 w-5 bg-brand" />
             <span className="font-montserrat text-[9px] font-bold uppercase leading-none tracking-[.19em] text-ink-300">
-              Visión estratégica de la infraestructura global
+              {/* "global" es cierto para quien ve toda la red; a un cliente, que sólo ve
+                  sus propios equipos, le prometía algo que no es. */}
+              {isClientViewer ? 'Estado de su infraestructura monitoreada' : 'Visión estratégica de la infraestructura global'}
             </span>
           </div>
           <h1 className="m-0 font-montserrat text-[34px] font-extrabold short:text-[26px] leading-[1.05] tracking-[-.018em] text-ink-900">
@@ -76,25 +84,29 @@ const Dashboard = () => {
             </span>
             {data?.stats && (
               <span className="font-sans text-[12.5px] text-ink-400">
-                {headerDate(new Date())} · {fmt(data.stats.clients)} clientes · {fmt(data.stats.devices)} dispositivos
+                {headerDate(new Date())}
+                {!isClientViewer && ` · ${fmt(data.stats.clients)} clientes`}
+                {` · ${fmt(data.stats.devices)} dispositivos`}
               </span>
             )}
           </div>
         </div>
-        <div className="flex gap-2.5">
-          <Link
-            to="/clients"
-            className="rounded-[3px] border border-line-300 bg-white px-[18px] py-[11px] font-montserrat text-[10.5px] font-semibold uppercase leading-none tracking-[.1em] text-ink-600 transition-colors duration-150 ease-in-out hover:border-line-hover hover:bg-surface-btn-hover focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-2"
-          >
-            + NUEVO CLIENTE
-          </Link>
-          <Link
-            to="/agents"
-            className="rounded-[3px] bg-brand px-[18px] py-[11px] font-montserrat text-[10.5px] font-semibold uppercase leading-none tracking-[.1em] text-white transition-colors duration-150 ease-in-out hover:bg-brand-severe focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-2"
-          >
-            GESTIONAR AGENTES
-          </Link>
-        </div>
+        {!isClientViewer && (
+          <div className="flex gap-2.5">
+            <Link
+              to="/clients"
+              className="rounded-[3px] border border-line-300 bg-white px-[18px] py-[11px] font-montserrat text-[10.5px] font-semibold uppercase leading-none tracking-[.1em] text-ink-600 transition-colors duration-150 ease-in-out hover:border-line-hover hover:bg-surface-btn-hover focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-2"
+            >
+              + NUEVO CLIENTE
+            </Link>
+            <Link
+              to="/agents"
+              className="rounded-[3px] bg-brand px-[18px] py-[11px] font-montserrat text-[10.5px] font-semibold uppercase leading-none tracking-[.1em] text-white transition-colors duration-150 ease-in-out hover:bg-brand-severe focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-2"
+            >
+              GESTIONAR AGENTES
+            </Link>
+          </div>
+        )}
       </div>
 
       <HeadlineCards
@@ -112,6 +124,7 @@ const Dashboard = () => {
         onRetry={fetchDashboardData}
         supplies={supplies}
         suppliesLoading={suppliesLoading}
+        hideClients={isClientViewer}
       />
 
       <div className="mb-4 short:mb-3 grid grid-cols-1 gap-4 xl:grid-cols-[1.42fr_1fr]">
@@ -121,30 +134,36 @@ const Dashboard = () => {
           error={mainError}
           onRetry={fetchDashboardData}
         />
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <CounterPanel
-            title="Dispositivos pendientes de registro"
-            to="/pending"
-            loading={mainLoading}
-            error={mainError}
-            onRetry={fetchDashboardData}
-            cells={[
-              { label: 'Descubiertos hoy', value: d?.today ?? 0, severity: 'warning' },
-              { label: 'Ayer', value: d?.yesterday ?? 0, severity: 'warning' },
-              { label: 'Pendientes', value: d?.pendingTotal ?? 0, severity: 'warning' },
-            ]}
-          />
-          <CounterPanel
-            title="Movimientos y cambios"
-            to="/activity"
-            loading={mainLoading}
-            error={mainError}
-            onRetry={fetchDashboardData}
-            cells={[
-              { label: 'Hoy y ayer', value: data?.movements?.recent ?? 0 },
-              { label: 'Acumulado', value: data?.movements?.total ?? 0 },
-            ]}
-          />
+        {/* Con dos colas en vez de cuatro se apilan en una columna: en `sm:grid-cols-2`
+            quedaban dos tarjetas bajas y media columna vacía al lado de las alertas. */}
+        <div className={`grid grid-cols-1 gap-4 ${isClientViewer ? '' : 'sm:grid-cols-2'}`}>
+          {!isClientViewer && (
+            <CounterPanel
+              title="Dispositivos pendientes de registro"
+              to="/pending"
+              loading={mainLoading}
+              error={mainError}
+              onRetry={fetchDashboardData}
+              cells={[
+                { label: 'Descubiertos hoy', value: d?.today ?? 0, severity: 'warning' },
+                { label: 'Ayer', value: d?.yesterday ?? 0, severity: 'warning' },
+                { label: 'Pendientes', value: d?.pendingTotal ?? 0, severity: 'warning' },
+              ]}
+            />
+          )}
+          {!isClientViewer && (
+            <CounterPanel
+              title="Movimientos y cambios"
+              to="/activity"
+              loading={mainLoading}
+              error={mainError}
+              onRetry={fetchDashboardData}
+              cells={[
+                { label: 'Hoy y ayer', value: data?.movements?.recent ?? 0 },
+                { label: 'Acumulado', value: data?.movements?.total ?? 0 },
+              ]}
+            />
+          )}
           <CounterPanel
             title="Solicitudes de consumibles"
             to="/supply-requests"
@@ -172,7 +191,7 @@ const Dashboard = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-[.85fr_.95fr_1.05fr_1.25fr]">
+      <div className={`grid grid-cols-1 gap-4 sm:grid-cols-2 ${isClientViewer ? 'xl:grid-cols-3' : 'xl:grid-cols-[.85fr_.95fr_1.05fr_1.25fr]'}`}>
         <MonitorPresenceCard
           agents={data?.stats?.agents}
           loading={mainLoading}
@@ -192,13 +211,17 @@ const Dashboard = () => {
           error={mainError}
           onRetry={fetchDashboardData}
         />
-        <TopClientsCard
-          topClients={data?.topClients}
-          totalClients={data?.stats?.clients}
-          loading={mainLoading}
-          error={mainError}
-          onRetry={fetchDashboardData}
-        />
+        {/* Ranking de cuentas: es una vista de cartera del proveedor. El backend ya
+            devuelve sólo el cliente propio, así que para él sería una lista de uno. */}
+        {!isClientViewer && (
+          <TopClientsCard
+            topClients={data?.topClients}
+            totalClients={data?.stats?.clients}
+            loading={mainLoading}
+            error={mainError}
+            onRetry={fetchDashboardData}
+          />
+        )}
       </div>
     </div>
   );

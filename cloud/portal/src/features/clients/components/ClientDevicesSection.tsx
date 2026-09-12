@@ -5,25 +5,28 @@ import ClientDevicesFilterBar from './ClientDevicesFilterBar';
 import ClientDevicesTable from './ClientDevicesTable';
 import ClientDevicesPagination from './ClientDevicesPagination';
 import { useClientDeviceDirectory, type ClientDeviceDirectoryState } from '../hooks/useClientDeviceDirectory';
+import { useAuth } from '../../../store/AuthContext';
 import { exportClientDevicesCsv } from '../lib/exportClientDevicesCsv';
 
+const EXPORT_BTN = 'rounded-[3px] border border-line-300 bg-white px-3.5 py-2.5 font-montserrat text-[10px] font-semibold uppercase tracking-[.08em] text-ink-600 transition-colors duration-150 ease-in-out hover:bg-surface-btn-hover';
+
 /** Rótulo de zona + acciones (exportar / agregar) — fuera de la tarjeta medida
- * por `useFitRows`, así su alto no entra en el cálculo de filas. */
+ * por `useFitRows`, así su alto no entra en el cálculo de filas. "+ Agregar
+ * dispositivo" lleva a `/pending`, gateada a admin/operator (`RequireRole`): a un
+ * cliente lo rebotaba al panel con un toast, igual que en `DeviceInventoryHeader`. */
 function DevicesToolbar({ clientId, dir }: { clientId: string; dir: ClientDeviceDirectoryState }) {
+  const canRegister = useAuth().role !== 'client_viewer';
+  const exportCsv = () => exportClientDevicesCsv(clientId, dir.effectiveQuery, dir.segment, dir.sortField, dir.sortDir);
   return (
     <div className="flex flex-wrap items-end justify-between gap-3.5">
       <ZoneLabel text={`Infraestructura de monitoreo · ${dir.total} dispositivos`} lineColorClass="bg-brand" />
       <div className="flex gap-2.5">
-        <button
-          type="button"
-          onClick={() => exportClientDevicesCsv(clientId, dir.effectiveQuery, dir.segment, dir.sortField, dir.sortDir)}
-          className="rounded-[3px] border border-line-300 bg-white px-3.5 py-2.5 font-montserrat text-[10px] font-semibold uppercase tracking-[.08em] text-ink-600 transition-colors duration-150 ease-in-out hover:bg-surface-btn-hover"
-        >
-          Exportar
-        </button>
-        <Link to={`/pending?client_id=${clientId}`} className="rounded-[3px] bg-brand px-3.5 py-2.5 font-montserrat text-[10px] font-semibold uppercase tracking-[.08em] text-white transition-colors duration-150 ease-in-out hover:bg-brand-severe">
-          + Agregar dispositivo
-        </Link>
+        <button type="button" className={EXPORT_BTN} onClick={exportCsv}>Exportar</button>
+        {canRegister && (
+          <Link to={`/pending?client_id=${clientId}`} className="rounded-[3px] bg-brand px-3.5 py-2.5 font-montserrat text-[10px] font-semibold uppercase tracking-[.08em] text-white transition-colors duration-150 ease-in-out hover:bg-brand-severe">
+            + Agregar dispositivo
+          </Link>
+        )}
       </div>
     </div>
   );

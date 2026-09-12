@@ -6,6 +6,7 @@ import { useSettingsTab } from '../hooks/useSettingsTab';
 import SettingsBlockersBanner from '../components/SettingsBlockersBanner';
 import SettingsTabs from '../components/SettingsTabs';
 import SettingsTabPanels from '../components/SettingsTabPanels';
+import TwoFactorCard from '../components/TwoFactorCard';
 
 const ROOT_CLS = '-m-4 flex min-w-0 flex-col bg-surface-page px-[34px] pb-9 pt-[30px] short:pb-4 short:pt-4 md:-m-10 md:h-full md:min-h-0';
 
@@ -33,13 +34,33 @@ function HeaderActions({ s }: { s: SystemSettingsFormState }) {
  */
 export default function Settings() {
   const { role } = useAuth();
-  const isAdmin = role === 'admin';
+  // Un `client_viewer` no puede leer `GET /settings/system` (ver `rolePolicy.ts`):
+  // pedirlo devolvía 403, tiraba un toast de error y dejaba la pantalla en el
+  // esqueleto de carga para siempre, porque `draft` nunca llegaba. Lo único que el
+  // backend sí le permite acá es la 2FA de su propia cuenta, así que esa es su
+  // pantalla entera — sin tablist de una sola pestaña (verificado con el usuario
+  // real del cliente ISSN, 12/09/2026).
+  return role === 'client_viewer' ? <AccountSecuritySettings /> : <SystemSettings isAdmin={role === 'admin'} />;
+}
+
+/** Configuración para un cliente: sólo la seguridad de su propia cuenta. */
+function AccountSecuritySettings() {
+  return (
+    <div className={ROOT_CLS}>
+      <PageHeader
+        eyebrow="SEGURIDAD DE LA CUENTA" title="Configuración"
+        subtitle="Verificación en dos pasos para proteger el acceso a tus equipos"
+      />
+      <TwoFactorCard />
+    </div>
+  );
+}
+
+function SystemSettings({ isAdmin }: { isAdmin: boolean }) {
   const s = useSystemSettingsForm();
   const { tab, setTab } = useSettingsTab(isAdmin);
 
-  if (s.loading || !s.draft) {
-    return <div className={ROOT_CLS}><div className="h-[200px] animate-pulse rounded-[5px] bg-white" /></div>;
-  }
+  if (s.loading || !s.draft) return <div className={ROOT_CLS}><div className="h-[200px] animate-pulse rounded-[5px] bg-white" /></div>;
 
   return (
     <div className={ROOT_CLS}>

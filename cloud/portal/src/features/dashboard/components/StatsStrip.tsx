@@ -13,7 +13,7 @@ interface Cell {
   accent?: boolean;
 }
 
-function buildCells(s: DashboardData['stats'] | undefined, supplies: SuppliesSummaryResponse | null | undefined): Cell[] {
+function buildCells(s: DashboardData['stats'] | undefined, supplies: SuppliesSummaryResponse | null | undefined, hideClients = false): Cell[] {
   const agents = s?.agents.total ?? 0;
   const online = s?.agents.online ?? 0;
   const reporting = s?.agents.reporting ?? 0;
@@ -24,7 +24,8 @@ function buildCells(s: DashboardData['stats'] | undefined, supplies: SuppliesSum
   const hasSupplies = supplies != null;
 
   return [
-    { label: 'Clientes', value: s?.clients ?? 0, note: 'activos' },
+    // Para un client_viewer la celda diría siempre 1 (el suyo): ruido, no dato.
+    ...(hideClients ? [] : [{ label: 'Clientes', value: s?.clients ?? 0, note: 'activos' } as Cell]),
     { label: 'Monitores', value: agents, note: 'instalados' },
     { label: 'En línea', value: online, note: fmtPct(online, agents) },
     { label: 'Mon. reportando', value: reporting, bar: pctOf(reporting, agents) },
@@ -44,7 +45,7 @@ function buildCells(s: DashboardData['stats'] | undefined, supplies: SuppliesSum
  * (las líneas divisorias son el gap sobre `#E5E8E8`), sin cabecera propia —
  * va inmediatamente debajo de las tres tarjetas de titular. */
 export default function StatsStrip({
-  stats, loading, error, onRetry, supplies, suppliesLoading,
+  stats, loading, error, onRetry, supplies, suppliesLoading, hideClients,
 }: {
   stats: DashboardData['stats'] | undefined;
   loading?: boolean;
@@ -52,11 +53,12 @@ export default function StatsStrip({
   onRetry?: () => void;
   supplies?: SuppliesSummaryResponse | null;
   suppliesLoading?: boolean;
+  hideClients?: boolean;
 }) {
-  const cells = buildCells(stats, supplies);
+  const cells = buildCells(stats, supplies, hideClients);
 
   return (
-    <div className="mb-4 short:mb-3 grid grid-cols-3 gap-px overflow-hidden rounded-[5px] border border-line-100 bg-line-400 md:grid-cols-5 xl:grid-cols-9">
+    <div className={`mb-4 short:mb-3 grid grid-cols-3 gap-px overflow-hidden rounded-[5px] border border-line-100 bg-line-400 md:grid-cols-5 ${cells.length === 9 ? 'xl:grid-cols-9' : 'xl:grid-cols-8'}`}>
       {error ? (
         <div className="col-span-3 bg-white px-4 py-6 md:col-span-5 xl:col-span-9">
           <CardError onRetry={onRetry} className="py-2" />
