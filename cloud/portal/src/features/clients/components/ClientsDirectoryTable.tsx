@@ -1,6 +1,7 @@
-import { Link, useLocation } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { ChevronRight } from 'lucide-react';
 import { fmt } from '../../../shared/lib/formatters';
+import { useReturnParam } from '../../../shared/hooks/useReturnParam';
 import type { ClientDirectoryRow, ClientSortField, SortDir } from '../types/clientsDirectory';
 
 const GRID_COLS = 'grid-cols-[minmax(280px,1fr)_138px_190px_84px_96px_84px_106px_36px]';
@@ -95,8 +96,7 @@ export default function ClientsDirectoryTable({
 }) {
   // `from` = esta URL completa (filtros/orden/página): el breadcrumb "Clientes" de la
   // ficha vuelve exactamente acá (mismo mecanismo que `ClientDevicesTable`).
-  const { pathname, search } = useLocation();
-  const from = encodeURIComponent(pathname + search);
+  const returnParam = useReturnParam();
   return (
     <div className="overflow-x-auto">
       <div className="min-w-[1180px]" role="table" aria-label="Clientes">
@@ -164,7 +164,7 @@ export default function ClientsDirectoryTable({
           return (
             <Link
               key={r.id}
-              to={`/clients/${r.id}?from=${from}`}
+              to={`/clients/${r.id}?${returnParam}`}
               role="row"
               data-fit-row
               className={`group grid ${GRID_COLS} min-h-[54px] items-center gap-x-[14px] border-b border-line-200 px-5 py-[11px] transition-colors duration-150 ease-in-out hover:bg-surface-hover`}
