@@ -21,6 +21,7 @@ import MonitorRegenKeyModal from '../components/MonitorRegenKeyModal';
 import Terminal from '../components/Terminal';
 import ConfirmModal from '../../../shared/components/ConfirmModal';
 import { useToast } from '../../../store/ToastContext';
+import { safeReturnTo } from '../../../shared/lib/returnTo';
 
 type Tab = 'overview' | 'devices' | 'console' | 'segments' | 'config' | 'reports';
 
@@ -51,8 +52,10 @@ const MonitorDetail = () => {
   const activeTab = parseTab(searchParams.get('tab'), isReadOnlyViewer);
   // `?from=` = la ficha del cliente con su tab/página (`ClientMonitorsSection`); sólo
   // se acepta un path de cliente. Sobrevive al cambio de tab porque el handler mergea.
-  const from = searchParams.get('from');
-  const clientBackTo = from?.startsWith('/clients/') ? from : undefined;
+  // `safeReturnTo` es la única validación de destino del portal (rechaza `//evil`,
+  // esquemas externos, travesía); acá sólo se exige además que sea una ficha de cliente.
+  const backTo = safeReturnTo(searchParams.get('from'));
+  const clientBackTo = backTo?.startsWith('/clients/') ? backTo : undefined;
   const [showRevokeModal, setShowRevokeModal] = useState(false);
   const [revoking, setRevoking] = useState(false);
   const [regenKey, setRegenKey] = useState<string | null>(null);

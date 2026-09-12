@@ -49,7 +49,17 @@ export function returnToLabel(target: string): string {
   return ROOT_LABELS[rootOf(target)] ?? 'la pantalla anterior';
 }
 
-/** `from=<url actual>` listo para pegar a un link — la URL incluye los filtros vigentes. */
+/**
+ * `from=<url actual>` listo para pegar a un link — la URL incluye los filtros vigentes.
+ *
+ * Se descarta el `from` que la pantalla actual pudiera tener: si no, cada salto
+ * anidaría el anterior (`/monitors/x?from=/clients/y%3Ffrom%3D%252Fclients`) y la
+ * URL crecería en cada nivel. Con un solo nivel alcanza: se vuelve a la pantalla
+ * de la que se vino, y de ahí el breadcrumb sigue su propio camino.
+ */
 export function returnParamFor(pathname: string, search: string): string {
-  return `from=${encodeURIComponent(`${pathname}${search}`)}`;
+  const params = new URLSearchParams(search);
+  params.delete('from');
+  const query = params.toString();
+  return `from=${encodeURIComponent(`${pathname}${query ? `?${query}` : ''}`)}`;
 }

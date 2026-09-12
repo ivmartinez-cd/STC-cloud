@@ -13,6 +13,7 @@ import ClientAttentionZone from '../components/ClientAttentionZone';
 import ClientConfigZone from '../components/ClientConfigZone';
 import ClientDevicesSection from '../components/ClientDevicesSection';
 import ClientTabRedirect from '../components/ClientTabRedirect';
+import { safeReturnTo } from '../../../shared/lib/returnTo';
 import type { ClientDetailTab } from '../types/clientDetail';
 
 function parseTab(v: string | null): ClientDetailTab {
@@ -29,8 +30,10 @@ function useActiveTab() {
   // `?from=` = la cartera con sus filtros/página (`ClientsDirectoryTable`); sólo se
   // acepta el listado de clientes (no `//evil`, no otra ruta). Sobrevive al cambio de
   // tab porque `setTab` mergea.
-  const from = searchParams.get('from');
-  const listBackTo = from && /^\/clients(\?|$)/.test(from) ? from : '/clients';
+  // `safeReturnTo` es la única validación de destino del portal (rechaza `//evil`,
+  // esquemas externos, travesía); acá sólo se exige además que sea LA cartera.
+  const backTo = safeReturnTo(searchParams.get('from'));
+  const listBackTo = backTo && /^\/clients(\?|$)/.test(backTo) ? backTo : '/clients';
   const setTab = useCallback((next: ClientDetailTab) => {
     setSearchParams((prev) => {
       const params = new URLSearchParams(prev);

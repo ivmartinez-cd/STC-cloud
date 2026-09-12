@@ -98,6 +98,18 @@ describe('returnParamFor arma el link de ida', () => {
     assert.equal(returnParamFor('/clients', '?segment=con_alertas'), 'from=%2Fclients%3Fsegment%3Dcon_alertas');
   });
 
+  test('no anida el from de la pantalla actual', () => {
+    // Sin esto, cada salto metía el `from` anterior adentro del nuevo y la URL
+    // crecía en cada nivel (cartera → cliente → monitor → equipo).
+    const param = returnParamFor('/clients/abc', '?from=%2Fclients%3Fsegment%3Dcon_alertas&tab=dispositivos');
+    assert.equal(new URLSearchParams(param).get('from'), '/clients/abc?tab=dispositivos');
+  });
+
+  test('un from solo no deja el signo de pregunta colgando', () => {
+    const param = returnParamFor('/clients/abc', '?from=%2Fclients');
+    assert.equal(new URLSearchParams(param).get('from'), '/clients/abc');
+  });
+
   test('lo que arma se puede volver a leer', () => {
     const param = returnParamFor('/devices', '?page=3&dir=asc');
     const raw = new URLSearchParams(param).get('from');
