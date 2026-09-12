@@ -120,7 +120,7 @@ export default function ScheduledReports() {
   const data = useScheduledReportsData();
   const actions = useReportActions(data.load);
   const fit = useFitRows({ estimate: 54 });
-  const paging = useClientPagination(data.items, fit.rows);
+  const paging = useClientPagination(data.items, fit.rows, 'page');
   const [showAllTemplates, setShowAllTemplates] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<ScheduledReport | null>(null);

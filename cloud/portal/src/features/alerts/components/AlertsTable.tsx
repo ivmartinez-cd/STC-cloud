@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { useReturnParam } from '../../../shared/hooks/useReturnParam';
 import { CheckSquare, Square } from 'lucide-react';
 import type { Alert } from '../../../shared/types/alerts';
 import type { AlertPatch } from '../hooks/useAlertsPage';
@@ -28,7 +29,9 @@ interface Props {
 const HEAD_LABELS = ['SEVERIDAD', 'CLIENTE', 'MONITOR / EQUIPO', 'CÓDIGO Y MOTIVO', 'CLASE'];
 
 function TargetCell({ a }: { a: Alert }) {
-  if (a.device_id) return <Link to={`/devices/${a.device_id}`} className="truncate font-sans text-[12.5px] text-ink-900 hover:text-brand-accent hover:underline">{a.device_name || a.serial || 'Dispositivo'}</Link>;
+  // `from`: la ficha del equipo vuelve a Alertas con los chips y la página puestos.
+  const returnParam = useReturnParam();
+  if (a.device_id) return <Link to={`/devices/${a.device_id}?${returnParam}`} className="truncate font-sans text-[12.5px] text-ink-900 hover:text-brand-accent hover:underline">{a.device_name || a.serial || 'Dispositivo'}</Link>;
   if (a.agent_id) return <Link to={`/monitors/${a.agent_id}`} className="truncate font-sans text-[12.5px] text-ink-900 hover:text-brand-accent hover:underline">{a.agent_name || 'Monitor'}</Link>;
   return <span className="truncate font-sans text-[12.5px] text-ink-200">Equipo sin identificar</span>;
 }

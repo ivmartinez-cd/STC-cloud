@@ -29,7 +29,7 @@ jobs:
 
       - run: npm ci
       - run: npm run check    # ESLint + TypeScript + icon validation
-      - run: npm test         # lógica pura del portal (parseRanges)
+      - run: npm test         # lógica pura del portal (parseRanges, estado en la URL)
       - run: npm run build
 
   # ─── Arquitectura — guardas estáticas de docs/dev/ARCHITECTURE_GUIDE.md ──────

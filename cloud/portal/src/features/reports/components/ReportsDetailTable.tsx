@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { useReturnParam } from '../../../shared/hooks/useReturnParam';
 import EstadoChip from '../../../shared/components/EstadoChip';
 import HifiPagination from '../../../shared/components/HifiPagination';
 import { TableEmptyState, TableErrorState, TableSkeletonRow } from '../../../shared/components/TableStates';
@@ -50,10 +51,12 @@ function ReadingCell({ total, at }: { total: number | null; at: string | null })
 }
 
 function EquipmentCell({ row }: { row: ReportRow }) {
+  // `from`: la ficha vuelve al informe del cliente y período que se estaba mirando.
+  const returnParam = useReturnParam();
   return (
     <div className="min-w-0">
       {row.deviceId
-        ? <Link to={`/devices/${row.deviceId}`} className="truncate block font-sans text-[12.5px] font-semibold text-ink-900 hover:text-brand-accent hover:underline">{row.model || row.serial || 'Equipo'}</Link>
+        ? <Link to={`/devices/${row.deviceId}?${returnParam}`} className="truncate block font-sans text-[12.5px] font-semibold text-ink-900 hover:text-brand-accent hover:underline">{row.model || row.serial || 'Equipo'}</Link>
         : <span className="truncate block font-sans text-[12.5px] font-semibold text-ink-900">{row.model || row.serial || 'Equipo'}</span>}
       <div className="truncate font-mono text-[11px] text-ink-300">{row.serial ?? '—'}</div>
     </div>

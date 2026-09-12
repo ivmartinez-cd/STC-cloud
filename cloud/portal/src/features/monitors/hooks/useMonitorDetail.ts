@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../../shared/lib/api';
+import { useLatestRequest } from '../../../shared/hooks/useLatestRequest';
 import { useToast } from '../../../store/ToastContext';
 import type { MonitorData, Device, EditFormData, SnmpCredentialInput } from '../../../shared/types/monitor';
 
@@ -16,28 +17,49 @@ export function useMonitorDetail(id: string) {
   const navigate = useNavigate();
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scheduleNextRef = useRef<() => void>(() => {});
+  const beginRequest = useLatestRequest();
+  // El poll se reprograma en un `.finally`, que puede correr DESPUÉS de salir de la
+  // pantalla: sin este flag quedaba un `setTimeout` huérfano sondeando para siempre.
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
 
-  const fetchDevices = useCallback(async () => {
+  /** `isLatest` opcional: cuando lo llama `fetchAll` comparten la misma secuencia,
+   * para que el refresco de equipos no invalide al monitor que lo disparó. */
+  const fetchDevices = useCallback(async (isLatest?: () => boolean) => {
+    const check = isLatest ?? beginRequest();
     const data = await api.get<Device[]>(`/agents/${id}/devices`);
-    setDevices(data);
-  }, [id]);
+    if (check()) setDevices(data);
+  }, [id, beginRequest]);
 
+  // `isLatest`: el tick del poll (45 s) puede resolver después de un refetch manual
+  // (ACTUALIZAR, guardar config); la respuesta superada no pisa la pantalla.
   const fetchAll = useCallback(async (isInitial = false) => {
+    const isLatest = beginRequest();
     if (isInitial) setLoading(true);
     try {
       const data = await api.get<MonitorData>(`/agents/${id}`);
+      if (!isLatest()) return;
       setMonitor(data);
-      await fetchDevices();
-      setError(null);
+      await fetchDevices(isLatest);
+      if (isLatest()) setError(null);
     } catch (err: unknown) {
-      setError((err as Error).message || 'Error al cargar datos del monitor');
+      if (isLatest()) setError((err as Error).message || 'Error al cargar datos del monitor');
     } finally {
-      if (isInitial) setLoading(false);
+      // Lo apaga el ÚLTIMO request, sea o no el inicial: si la carga inicial queda
+      // superada (volver a la pestaña dispara un `fetchAll` sin `isInitial`), atar
+      // esto a `isInitial` dejaba el spinner colgado para siempre. Con datos ya en
+      // pantalla es un no-op, porque `loading` sólo se prende en la inicial.
+      if (isLatest()) setLoading(false);
     }
-  }, [id, fetchDevices]);
+  }, [id, fetchDevices, beginRequest]);
 
   const scheduleNext = useCallback(() => {
+    if (!mountedRef.current) return;
     timerRef.current = setTimeout(() => {
+      if (!mountedRef.current) return;
       if (document.visibilityState === 'visible') {
         fetchAll().finally(() => scheduleNextRef.current());
       } else {

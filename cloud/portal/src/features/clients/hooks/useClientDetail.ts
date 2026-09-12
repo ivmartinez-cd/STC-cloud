@@ -1,7 +1,55 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '../../../shared/lib/api';
+import { useLatestRequest } from '../../../shared/hooks/useLatestRequest';
 import type { Client, Monitor, UsageMonth, CreateMonitorForm } from '../../../shared/types/monitor';
 import type { ClientDetailStats } from '../types/clientDetail';
+
+type ClientSetters = {
+  setClient: (v: Client) => void;
+  setMonitors: (v: Monitor[]) => void;
+  setUsage: (v: UsageMonth[]) => void;
+  setStats: (v: ClientDetailStats | null) => void;
+  setLoading: (v: boolean) => void;
+  setError: (v: string) => void;
+};
+
+// Handoff hifi "Cliente — detalle" (25/08/2026): la tira de 6 métricas necesita
+// `stats` (managed_device_count/alertas) aparte de `client` — falla independiente,
+// sin bloquear el resto del bloque de identidad si el endpoint nuevo se cae.
+async function fetchClientDetailData(id: string) {
+  const [client, monitors, usage, stats] = await Promise.all([
+    api.get<Client>(`/clients/${id}`),
+    api.get<Monitor[]>(`/clients/${id}/monitors`),
+    api.get<UsageMonth[]>(`/clients/${id}/usage`),
+    api.get<ClientDetailStats>(`/clients/${id}/stats`).catch(() => null),
+  ]);
+  return {
+    client,
+    monitors: Array.isArray(monitors) ? monitors : [],
+    usage: Array.isArray(usage) ? usage : [],
+    stats,
+  };
+}
+
+/** `isLatest` descarta la respuesta de un request superado (dos refetch seguidos
+ * tras crear/borrar un monitor); `setError('')` al empezar evita que una falla
+ * transitoria deje la ficha en error para siempre. */
+async function loadClientDetail(id: string, st: ClientSetters, isLatest: () => boolean) {
+  st.setLoading(true);
+  st.setError('');
+  try {
+    const r = await fetchClientDetailData(id);
+    if (!isLatest()) return;
+    st.setClient(r.client);
+    st.setMonitors(r.monitors);
+    st.setUsage(r.usage);
+    st.setStats(r.stats);
+  } catch (e: unknown) {
+    if (isLatest()) st.setError(e instanceof Error ? e.message : String(e));
+  } finally {
+    if (isLatest()) st.setLoading(false);
+  }
+}
 
 export function useClientDetail(id: string) {
   const [client, setClient] = useState<Client | null>(null);
@@ -11,33 +59,12 @@ export function useClientDetail(id: string) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // Handoff hifi "Cliente — detalle" (25/08/2026): la tira de 6 métricas necesita
-  // `stats` (managed_device_count/alertas) aparte de `client` — falla independiente,
-  // sin bloquear el resto del bloque de identidad si el endpoint nuevo se cae.
+  const beginRequest = useLatestRequest();
   const fetchData = useCallback(() => {
-    setLoading(true);
-    Promise.all([
-      api.get<Client>(`/clients/${id}`),
-      api.get<Monitor[]>(`/clients/${id}/monitors`),
-      api.get<UsageMonth[]>(`/clients/${id}/usage`),
-      api.get<ClientDetailStats>(`/clients/${id}/stats`).catch(() => null),
-    ])
-      .then(([c, m, u, s]) => {
-        setClient(c);
-        setMonitors(Array.isArray(m) ? m : []);
-        setUsage(Array.isArray(u) ? u : []);
-        setStats(s);
-      })
-      .catch((e: Error) => setError(e.message))
-      .finally(() => setLoading(false));
-  }, [id]);
+    void loadClientDetail(id, { setClient, setMonitors, setUsage, setStats, setLoading, setError }, beginRequest());
+  }, [id, beginRequest]);
 
-  useEffect(() => {
-    const init = async () => {
-      await fetchData();
-    };
-    void init();
-  }, [fetchData]);
+  useEffect(() => { fetchData(); }, [fetchData]);
 
   const createMonitor = useCallback(async (form: CreateMonitorForm): Promise<string> => {
     const payload: {

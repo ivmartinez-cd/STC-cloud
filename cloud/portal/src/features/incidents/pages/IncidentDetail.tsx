@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useBackNavigation } from '../../../shared/hooks/useBackNavigation';
+import { useReturnParam } from '../../../shared/hooks/useReturnParam';
+import { useLatestRequest } from '../../../shared/hooks/useLatestRequest';
 import {
   ArrowLeft, AlertOctagon, Loader2, MessageSquare, CheckCircle2, RotateCcw,
   Link2, Unlink, Clock, User,
@@ -30,6 +32,8 @@ const IncidentDetail = () => {
   // Vuelve por historial (conserva filtros/página del listado) o al listado si se
   // entró por URL directa — antes `navigate('/incidents')` apilaba y "atrás" reabría el detalle.
   const { goBack } = useBackNavigation();
+  // `from`: desde la ficha del equipo se vuelve a este incidente, no al listado.
+  const returnParam = useReturnParam();
   const { role } = useAuth();
   const { showToast } = useToast();
   const canManage = role === 'admin' || role === 'operator';
@@ -37,6 +41,7 @@ const IncidentDetail = () => {
   const [incident, setIncident] = useState<IncidentDetailType | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const beginRequest = useLatestRequest();
   const [comment, setComment] = useState('');
   const [busy, setBusy] = useState(false);
   // 6 por página en vez de scroll interno (rediseño sin scroll, 27/08/2026).
@@ -44,18 +49,23 @@ const IncidentDetail = () => {
   const eventsPager = useClientPagination(incident?.events ?? [], 6);
 
 
+  // `isLatest`: cerrar/reabrir y comentar disparan refetch; el que quede atrás no
+  // pisa la pantalla. `setError('')` al empezar: sin eso una falla transitoria
+  // dejaba el incidente en error aunque el reintento anduviera.
   const fetchIncident = useCallback(async () => {
     if (!id) return;
+    const isLatest = beginRequest();
     setLoading(true);
+    setError('');
     try {
       const data = await api.get<IncidentDetailType>(`/incidents/${id}`);
-      setIncident(data);
+      if (isLatest()) setIncident(data);
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      if (isLatest()) setError(e instanceof Error ? e.message : String(e));
     } finally {
-      setLoading(false);
+      if (isLatest()) setLoading(false);
     }
-  }, [id]);
+  }, [id, beginRequest]);
 
   useEffect(() => { void fetchIncident(); }, [fetchIncident]);
 
@@ -264,7 +274,7 @@ const IncidentDetail = () => {
       </div>
 
       {incident.device_id && (
-        <Link to={`/devices/${incident.device_id}`} className="inline-flex items-center gap-2 text-xs font-bold text-brand hover:underline">
+        <Link to={`/devices/${incident.device_id}?${returnParam}`} className="inline-flex items-center gap-2 text-xs font-bold text-brand hover:underline">
           <User size={14} /> Ver ficha del equipo
         </Link>
       )}

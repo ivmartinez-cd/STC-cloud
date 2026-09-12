@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { useReturnParam } from '../../../shared/hooks/useReturnParam';
 import { CheckSquare, ChevronRight, Square } from 'lucide-react';
 import BrandBadge from '../../../shared/components/BrandBadge';
 import EstadoChip from '../../../shared/components/EstadoChip';
@@ -45,8 +46,10 @@ function SelectCell({ r, readOnly, selection, rowKey }: { r: FleetSupplyRow; rea
 }
 
 function DetailLinkCell({ deviceId }: { deviceId: string | null }) {
+  // `from`: la ficha vuelve a Consumibles con el filtro y la página puestos.
+  const returnParam = useReturnParam();
   if (!deviceId) return <span />;
-  return <Link to={`/devices/${deviceId}`} className="justify-self-end text-ink-300 hover:text-ink-100"><ChevronRight size={15} /></Link>;
+  return <Link to={`/devices/${deviceId}?${returnParam}`} className="justify-self-end text-ink-300 hover:text-ink-100"><ChevronRight size={15} /></Link>;
 }
 
 function Row({ r, readOnly, selection, rowKey }: { r: FleetSupplyRow; readOnly: boolean; selection: Selection; rowKey: (r: FleetSupplyRow) => string }) {

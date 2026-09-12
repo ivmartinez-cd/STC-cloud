@@ -1,4 +1,5 @@
-import { Link, useLocation } from 'react-router-dom';
+import { Link } from 'react-router-dom';
+import { useReturnParam } from '../../../shared/hooks/useReturnParam';
 import { ChevronRight } from 'lucide-react';
 import { fmt } from '../../../shared/lib/formatters';
 import EstadoChip from '../../../shared/components/EstadoChip';
@@ -73,8 +74,7 @@ export default function ClientDevicesTable({
   hasActiveFilters: boolean;
   onClearFilters: () => void;
 }) {
-  const location = useLocation();
-  const returnParam = `from=${encodeURIComponent(`${location.pathname}${location.search}`)}`;
+  const returnParam = useReturnParam();
   return (
     <div className="overflow-x-auto">
       <div className="min-w-[1180px]" role="table" aria-label="Infraestructura de monitoreo">

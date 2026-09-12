@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link } from 'react-router-dom';
+import { useReturnParam } from '../../../shared/hooks/useReturnParam';
 import { Search, ChevronRight, CheckSquare, Square, Trash2, RotateCcw, ArrowRightLeft, Radio, Download } from 'lucide-react';
 import type { Device } from '../../../shared/types/monitor';
 import { api } from '../../../shared/lib/api';
@@ -43,8 +44,7 @@ const DeviceInventoryTable = ({ devices, monitorName, agentId, clientId, pending
   const [showExportModal, setShowExportModal] = useState(false);
   const [approving, setApproving] = useState(false);
   const { showToast } = useToast();
-  const location = useLocation();
-  const returnParam = `from=${encodeURIComponent(`${location.pathname}${location.search}`)}`;
+  const returnParam = useReturnParam();
   const deviceHref = (deviceId: string) => `/devices/${deviceId}?${returnParam}`;
   const fit = useFitRows({ estimate: 54 });
   const dir = useMonitorDeviceDirectory(agentId, active, fit.rows);

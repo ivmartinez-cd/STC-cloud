@@ -19,6 +19,7 @@ import HistoryTab from '../components/detail/HistoryTab';
 import CostsTab from '../components/detail/CostsTab';
 import { useDeviceDetail } from '../hooks/useDeviceDetail';
 import { useDeviceStats, useDevicePrintTrend } from '../hooks/useDeviceOverview';
+import { safeReturnTo, returnToLabel } from '../../../shared/lib/returnTo';
 import type { AuditLogItem, AuditLogsResponse } from '../../../shared/types/audit';
 import type { Incident, IncidentListResponse } from '../../../shared/types/incidents';
 import type { DeviceDetailTab } from '../types/deviceDetailPage';
@@ -51,15 +52,17 @@ const DeviceDetail = () => {
 
   const [searchParams, setSearchParams] = useSearchParams();
   // `from` sobrevive a un refresh (a diferencia de router state): guarda la URL completa
-  // de la pantalla de origen (tab/página/filtro/orden de Dispositivos) para que el
-  // breadcrumb pueda volver exactamente ahí en vez de resetear a /monitors/:id o /clients/:id.
+  // de la pantalla de origen (tab/página/filtro/orden) para volver exactamente ahí.
   // Derivados de la URL en cada render (no `useState` inicializado una vez): así
   // atrás/adelante del navegador se refleja en la pestaña. `handleTabChange` conserva
-  // `from` en la URL, y sólo se acepta un path interno de monitor/cliente (no un
-  // `//evil` ni `http:`).
-  const backTo = searchParams.get('from');
+  // `from` en la URL, y `safeReturnTo` descarta cualquier destino que no sea un path
+  // interno conocido (`//evil`, `http:`…).
+  const backTo = safeReturnTo(searchParams.get('from'));
   const monitorBackTo = backTo?.startsWith('/monitors/') ? backTo : undefined;
   const clientBackTo = backTo?.startsWith('/clients/') ? backTo : undefined;
+  // Orígenes que no encajan en el breadcrumb jerárquico (Inventario, Alertas,
+  // Incidentes, Movimientos, Consumibles, Reportes): van como "volver" aparte.
+  const listBackTo = backTo && !monitorBackTo && !clientBackTo ? backTo : undefined;
   const rawTab = searchParams.get('tab');
   const activeTab: DeviceDetailTab = rawTab && TAB_IDS.has(rawTab as DeviceDetailTab) ? (rawTab as DeviceDetailTab) : 'general';
   // `replace`: cambiar de pestaña no debe apilar entradas en el historial, si no el
@@ -94,7 +97,7 @@ const DeviceDetail = () => {
 
   const handleDelete = async () => {
     setDeleting(true); setDeleteError(null);
-    try { await deleteDevice(monitorBackTo ?? clientBackTo); } catch (e) { setDeleteError(e instanceof Error ? e.message : String(e)); } finally { setDeleting(false); }
+    try { await deleteDevice(backTo); } catch (e) { setDeleteError(e instanceof Error ? e.message : String(e)); } finally { setDeleting(false); }
   };
 
   const handleSync = async () => {
@@ -142,6 +145,12 @@ const DeviceDetail = () => {
   return (
     <div className="-m-4 flex min-w-0 flex-col gap-4 bg-surface-page px-[34px] pb-9 pt-[26px] short:gap-3 short:pb-4 short:pt-3 md:-m-10 md:h-full md:min-h-0">
       <nav className="mb-1 flex items-center gap-2 font-sans text-xs">
+        {listBackTo && (
+          <>
+            <Link to={listBackTo} className="font-semibold text-brand-accent hover:underline">← Volver a {returnToLabel(listBackTo)}</Link>
+            <span className="text-ink-sep-light">·</span>
+          </>
+        )}
         <Link to="/clients" className="font-semibold text-brand-accent hover:underline">Clientes</Link>
         <span className="text-ink-sep-light">/</span>
         {device.client_id && <Link to={clientBackTo || `/clients/${device.client_id}`} className="font-semibold text-brand-accent hover:underline">{device.client_name}</Link>}

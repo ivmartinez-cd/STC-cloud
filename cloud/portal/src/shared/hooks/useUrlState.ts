@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useDebounce } from './useDebounce';
+import { applyChanges, parseAll, type Codecs } from '../lib/urlParams';
 
 /**
  * Estado de pantalla (tab, filtro, orden, página) con la URL como ÚNICA fuente de
@@ -11,52 +12,15 @@ import { useDebounce } from './useDebounce';
  * el estado viejo con la URL nueva. Acá el estado se deriva de `useSearchParams()`
  * en cada render, y escribir es siempre un merge funcional con `replace` (cambiar
  * de chip o de página no apila entradas de historial; `push: true` para lo que sí
- * debe apilar). Los defaults se omiten de la URL para no ensuciarla.
+ * debe apilar).
+ *
+ * Los codecs y el merge viven en `shared/lib/urlParams.ts` (puros, con tests).
  */
-export type UrlCodec<T> = {
-  parse: (raw: string | null) => T;
-  /** `null` borra el param (valor por defecto). */
-  format: (value: T) => string | null;
-};
+export {
+  enumParam, stringParam, flagParam, pageParam, type UrlCodec, type Codecs,
+} from '../lib/urlParams';
 
-export function enumParam<T extends string>(values: readonly T[], fallback: T): UrlCodec<T> {
-  return {
-    parse: (raw) => (raw !== null && (values as readonly string[]).includes(raw) ? (raw as T) : fallback),
-    format: (value) => (value === fallback ? null : value),
-  };
-}
-
-export function stringParam(): UrlCodec<string> {
-  return { parse: (raw) => raw ?? '', format: (value) => (value ? value : null) };
-}
-
-export function flagParam(): UrlCodec<boolean> {
-  return { parse: (raw) => raw === '1', format: (value) => (value ? '1' : null) };
-}
-
-/** `?page=` es 1-based (como se muestra); el estado es 0-based. Basura → página 0. */
-export const pageParam: UrlCodec<number> = {
-  parse: (raw) => { const n = Number(raw); return Number.isInteger(n) && n > 1 ? n - 1 : 0; },
-  format: (page) => (page > 0 ? String(page + 1) : null),
-};
-
-type Codecs<S> = { [K in keyof S]: UrlCodec<S[K]> };
 export type UrlPatch<S> = (changes: Partial<S>, opts?: { push?: boolean }) => void;
-
-function parseAll<S extends object>(codecs: Codecs<S>, params: URLSearchParams): S {
-  const out = {} as S;
-  for (const key of Object.keys(codecs) as Array<keyof S>) out[key] = codecs[key].parse(params.get(String(key)));
-  return out;
-}
-
-function applyChanges<S extends object>(codecs: Codecs<S>, prev: URLSearchParams, changes: Partial<S>): URLSearchParams {
-  const next = new URLSearchParams(prev);
-  for (const key of Object.keys(changes) as Array<keyof S>) {
-    const formatted = codecs[key].format(changes[key] as S[typeof key]);
-    if (formatted === null) next.delete(String(key)); else next.set(String(key), formatted);
-  }
-  return next;
-}
 
 /** `codecs` tiene que ser estable (constante de módulo o `useMemo`). */
 export function useUrlState<S extends object>(codecs: Codecs<S>): [S, UrlPatch<S>] {

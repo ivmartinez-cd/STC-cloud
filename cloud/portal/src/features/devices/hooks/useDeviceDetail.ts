@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../../shared/lib/api';
+import { useLatestRequest } from '../../../shared/hooks/useLatestRequest';
 import { OFFLINE_THRESHOLD_MS } from '../../../shared/lib/constants';
 import { parseSuppliesDetails, buildSupplyRows, usageRate, type SupplyRow } from '../../../shared/lib/supplies';
 import type { Alert } from '../../../shared/types/alerts';
@@ -79,20 +80,42 @@ async function fetchDeviceDetailData(id: string) {
   return { device, readings: Array.isArray(readings) ? readings : [], alerts: Array.isArray(alerts) ? alerts : [] };
 }
 
+type DetailSetters = {
+  setDevice: (v: DeviceDetailData) => void;
+  setReadings: (v: Reading[]) => void;
+  setAlerts: (v: Alert[]) => void;
+  setLoading: (v: boolean) => void;
+  setError: (v: string) => void;
+};
+
+/** `isLatest` descarta la respuesta de un request ya superado (refetch manual
+ * cruzado con otro, o una respuesta que llega tras salir de la pantalla).
+ * `setError('')` al empezar: sin eso, una falla transitoria dejaba la ficha en
+ * error para siempre aunque el reintento anduviera. */
+async function loadDeviceDetail(id: string, st: DetailSetters, isLatest: () => boolean) {
+  st.setLoading(true);
+  st.setError('');
+  try {
+    const r = await fetchDeviceDetailData(id);
+    if (!isLatest()) return;
+    st.setDevice(r.device); st.setReadings(r.readings); st.setAlerts(r.alerts);
+  } catch (e: unknown) {
+    if (isLatest()) st.setError(e instanceof Error ? e.message : String(e));
+  } finally {
+    if (isLatest()) st.setLoading(false);
+  }
+}
+
 function useDeviceDetailLoader(id: string) {
   const [device, setDevice] = useState<DeviceDetailData | null>(null);
   const [readings, setReadings] = useState<Reading[]>([]);
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-
+  const beginRequest = useLatestRequest();
   const load = useCallback(() => {
-    setLoading(true);
-    fetchDeviceDetailData(id)
-      .then((r) => { setDevice(r.device); setReadings(r.readings); setAlerts(r.alerts); })
-      .catch((e: Error) => setError(e.message))
-      .finally(() => setLoading(false));
-  }, [id]);
+    void loadDeviceDetail(id, { setDevice, setReadings, setAlerts, setLoading, setError }, beginRequest());
+  }, [id, beginRequest]);
 
   useEffect(() => { void load(); }, [load]);
   return { device, readings, alerts, loading, error, load };

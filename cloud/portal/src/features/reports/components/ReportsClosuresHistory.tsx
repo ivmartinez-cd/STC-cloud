@@ -78,7 +78,8 @@ function ClosuresBody({ closures, closuresLoading, activePeriod, ...rest }: Prop
  * de altura fija paginada de a 5 — la lista crecía un mes por cliente para
  * siempre y empujaba la pantalla fuera del viewport. */
 export default function ReportsClosuresHistory({ closures, ...rest }: Props) {
-  const paging = useClientPagination(closures, CLOSURES_PER_PAGE);
+  // `cpage` y no `page`: la pantalla de Reportes ya usa `dpage` para la tabla de detalle.
+  const paging = useClientPagination(closures, CLOSURES_PER_PAGE, 'cpage');
   return (
     <div className="mt-4 rounded-[5px] border border-line-100 bg-white">
       <div className="flex flex-wrap items-center justify-between gap-x-4 border-b border-line-150 pl-5">

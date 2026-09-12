@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { useReturnParam } from '../../../shared/hooks/useReturnParam';
 import { CheckSquare, ChevronRight, Square } from 'lucide-react';
 import { fmt } from '../../../shared/lib/formatters';
 import TonerLevelBars from '../../../shared/components/TonerLevelBars';
@@ -21,9 +22,9 @@ function SelectCheckbox({ selected, onToggle }: { selected: boolean; onToggle: (
 
 /** Badge de marca + nombre + "MARCA — Modelo · S/N …" en una sola línea de metadata
  * (el mockup unifica lo que antes eran 3 líneas separadas). */
-function DeviceIdentityCell({ row }: { row: Row }) {
+function DeviceIdentityCell({ row, returnParam }: { row: Row; returnParam: string }) {
   return (
-    <Link to={`/devices/${row.id}`} className="flex min-w-0 items-center gap-3">
+    <Link to={`/devices/${row.id}?${returnParam}`} className="flex min-w-0 items-center gap-3">
       <span className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-[3px] border border-line-avatar bg-surface-avatar font-montserrat text-[9px] font-bold text-ink-400">
         {brandBadge(row.brand)}
       </span>
@@ -52,10 +53,10 @@ function AlertsCell({ count }: { count: number }) {
   return <div className={`text-right font-montserrat text-[12.5px] font-semibold tabular-nums ${cls}`}>{fmt(count)}</div>;
 }
 
-function ChevronLink({ id }: { id: string }) {
+function ChevronLink({ id, returnParam }: { id: string; returnParam: string }) {
   return (
     <div className="flex justify-end">
-      <Link to={`/devices/${id}`} className="flex h-[26px] w-[26px] items-center justify-center rounded-[3px] border border-line-avatar text-ink-300 transition-colors duration-150 ease-in-out group-hover:border-line-300 group-hover:text-ink-100">
+      <Link to={`/devices/${id}?${returnParam}`} className="flex h-[26px] w-[26px] items-center justify-center rounded-[3px] border border-line-avatar text-ink-300 transition-colors duration-150 ease-in-out group-hover:border-line-300 group-hover:text-ink-100">
         <ChevronRight size={13} />
       </Link>
     </div>
@@ -66,18 +67,20 @@ function ChevronLink({ id }: { id: string }) {
  * separadas arriba para respetar el límite de 20 líneas/función de la guía. */
 export default function DeviceDirectoryRow({ row, selected, onToggle }: { row: Row; selected: boolean; onToggle: () => void }) {
   const notReporting = row.estado !== 'en_linea';
+  // `from`: la ficha vuelve al inventario con su filtro, orden y página.
+  const returnParam = useReturnParam();
   const rowClass = `group grid ${GRID_COLS} min-h-[54px] items-center gap-x-[14px] border-b border-line-200 px-5 py-[11px] transition-colors duration-150 ease-in-out hover:bg-surface-hover ${row.estado === 'dado_de_baja' ? 'opacity-60' : ''}`;
   return (
     <div data-fit-row className={rowClass}>
       <SelectCheckbox selected={selected} onToggle={onToggle} />
-      <DeviceIdentityCell row={row} />
+      <DeviceIdentityCell row={row} returnParam={returnParam} />
       <EstadoChip variant={row.estado === 'sin_contacto' ? 'attention' : 'neutral'} label={ESTADO_LABEL[row.estado]} />
       <div className="min-w-0 truncate font-mono text-[11.5px] text-ink-700">{row.ip_address ?? '—'}</div>
       <ConsumiblesCell row={row} />
       <div className="truncate font-sans text-[11.5px] text-ink-100">{row.agent_name ?? '—'}</div>
       <div className={`text-right font-sans text-[12px] ${notReporting ? 'text-brand-accent' : 'text-ink-400'}`}>{formatLastContact(row.last_seen)}</div>
       <AlertsCell count={row.alerts_count} />
-      <ChevronLink id={row.id} />
+      <ChevronLink id={row.id} returnParam={returnParam} />
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import { useState, Fragment } from 'react';
 import { Link } from 'react-router-dom';
+import { useReturnParam } from '../../../shared/hooks/useReturnParam';
 import { ChevronDown } from 'lucide-react';
 import type { AuditLogItem } from '../../../shared/types/audit';
 import { TableEmptyState, TableErrorState, TableSkeletonRow } from '../../../shared/components/TableStates';
@@ -10,7 +11,11 @@ import { fmt } from '../../../shared/lib/formatters';
 const HEAD_LABELS = ['HORA ↓', 'ACCIÓN', 'OBJETIVO', 'CLIENTE', 'USUARIO', 'ORIGEN'];
 
 function TargetCell({ item }: { item: AuditLogItem }) {
-  const href = targetHref(item);
+  // `from` sólo en los equipos: es la ficha que sabe volver al origen, y así
+  // Movimientos se recupera con su rango de fechas, filtro y página.
+  const returnParam = useReturnParam();
+  const target = targetHref(item);
+  const href = target?.startsWith('/devices/') ? `${target}?${returnParam}` : target;
   const label = item.target_label || item.target_id;
   // Sin `target_label` legible, lo que se muestra es el id crudo → monoespaciada.
   const raw = !item.target_label && isRawId(item.target_id);
