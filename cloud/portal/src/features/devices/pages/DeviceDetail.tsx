@@ -60,13 +60,15 @@ const DeviceDetail = () => {
     const tab = searchParams.get('tab');
     return tab && TAB_IDS.has(tab as DeviceDetailTab) ? (tab as DeviceDetailTab) : 'general';
   });
+  // `replace`: cambiar de pestaña no debe apilar entradas en el historial, si no el
+  // botón "atrás" del navegador desanda pestaña por pestaña antes de salir del equipo.
   const handleTabChange = (tab: DeviceDetailTab) => {
     setActiveTab(tab);
     setSearchParams((prev) => {
       const next = new URLSearchParams(prev);
       next.set('tab', tab);
       return next;
-    });
+    }, { replace: true });
   };
 
   const {

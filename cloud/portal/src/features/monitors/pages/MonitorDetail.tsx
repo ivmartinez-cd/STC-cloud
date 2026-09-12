@@ -56,9 +56,10 @@ const MonitorDetail = () => {
   const { license, loading: licenseLoading, error: licenseError, refetch: refetchLicense } = useMonitorLicense(id!);
   const { events, loading: eventsLoading, error: eventsError, refetch: refetchEvents } = useMonitorActivity(id!, !isReadOnlyViewer);
 
+  // `replace`: cambiar de pestaña no debe apilar entradas en el historial (ver DeviceDetail).
   const handleTabChange = (tab: Tab) => {
     setActiveTab(tab);
-    setSearchParams({ tab });
+    setSearchParams({ tab }, { replace: true });
   };
 
   const handleRegen = async () => {
