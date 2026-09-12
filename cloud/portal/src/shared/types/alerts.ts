@@ -7,11 +7,18 @@
  */
 export type AlertSeverity = 'warning' | 'critical';
 
-/** Ver `ALERT_CLASS_LABELS`/`RESPONDER_LABELS` en `cloud/src/services/alertCatalog.ts` — la única fuente de verdad de estos ids es el backend, vía `GET /alerts/classes`. */
-export type AlertClass =
-  | 'consumable_out' | 'consumable_low' | 'system_failure' | 'system_warning' | 'user_action'
-  | 'system_change' | 'jam' | 'media_out' | 'media_low' | 'information' | 'subunit_low'
-  | 'subunit_out' | 'availability' | 'other';
+/** Ver `ALERT_CLASS_LABELS`/`RESPONDER_LABELS` en `cloud/src/services/alertCatalog.ts` — la única fuente de verdad de estos ids es el backend, vía `GET /alerts/classes`.
+ * El espejo acá es sólo para VALIDAR lo que llega por la URL: `GET /alerts` responde
+ * 400 ante un `alert_class` desconocido, y sin este filtro un `?class=` mal tipeado
+ * dejaba la pantalla en error en vez de caer a "todas" (verificado en prod, 12/09/2026).
+ * Las etiquetas siguen viniendo de la API; acá sólo están los ids. */
+export const ALERT_CLASS_IDS = [
+  'consumable_out', 'consumable_low', 'system_failure', 'system_warning', 'user_action',
+  'system_change', 'jam', 'media_out', 'media_low', 'information', 'subunit_low',
+  'subunit_out', 'availability', 'other',
+] as const;
+
+export type AlertClass = (typeof ALERT_CLASS_IDS)[number];
 
 export type Responder = 'none' | 'untrained' | 'trained' | 'field_service' | 'management';
 

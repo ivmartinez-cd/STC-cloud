@@ -6,9 +6,9 @@ import { useRowSelection } from '../../../shared/hooks/useRowSelection';
 import { useLatestRequest } from '../../../shared/hooks/useLatestRequest';
 import { clampPage } from '../../../shared/lib/clampPage';
 import {
-  useUrlState, useUrlSearchQuery, stringParam, flagParam, pageParam, type UrlCodec, type UrlPatch,
+  useUrlState, useUrlSearchQuery, stringParam, flagParam, enumParam, pageParam, type UrlCodec, type UrlPatch,
 } from '../../../shared/hooks/useUrlState';
-import type { Alert, AlertSummary } from '../../../shared/types/alerts';
+import { ALERT_CLASS_IDS, type Alert, type AlertSummary } from '../../../shared/types/alerts';
 
 export type ClientOption = { id: string; name: string };
 export type AlertPatch = { acknowledged?: boolean; resolved?: boolean };
@@ -37,7 +37,9 @@ const resolvedParam: UrlCodec<boolean> = { parse: (raw) => raw !== '', format: (
 /** Todo el filtro y la página viven en la URL (auditoría 12/09/2026: antes sólo
  * `resolved`/`class`, y se perdían chips y página al volver de un incidente). */
 const CODECS = {
-  q: stringParam(), resolved: resolvedParam, critical: flagParam(), unack: flagParam(), class: stringParam(),
+  q: stringParam(), resolved: resolvedParam, critical: flagParam(), unack: flagParam(),
+  // Validada contra el catálogo: `GET /alerts` da 400 ante una clase desconocida.
+  class: enumParam<string>([...ALERT_CLASS_IDS], ''),
   last24h: flagParam(), client_id: stringParam(), device_id: stringParam(), page: pageParam,
 };
 type UrlFilters = { [K in keyof typeof CODECS]: ReturnType<(typeof CODECS)[K]['parse']> };
