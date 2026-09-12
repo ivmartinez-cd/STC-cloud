@@ -28,7 +28,8 @@ que muerda.
 | [DISC-3](#disc-3--apagar-un-rango-reinicia-la-vuelta-de-barrido-en-curso) | Barrido | Apagar un rango reinicia la vuelta de barrido en curso | 🟡 Baja | Abierto |
 | [UI-1](#ui-1--la-fila-nueva-de-monitorspecscard-no-fue-verificada-a-1920x900) | Portal | La fila nueva de `MonitorSpecsCard` no fue verificada a 1920x900 | 🟡 Baja | Abierto |
 | [ARCH-1](#arch-1--iprange-quedo-sin-consumidores-en-produccion) | Agente | `ipRange()` quedó sin consumidores en producción | 🟡 Baja | Abierto |
-| [ARCH-2](#arch-2--sizes-baselinejson-lista-un-archivo-que-ya-no-existe) | Arquitectura | `sizes-baseline.json` lista un archivo que ya no existe | 🟡 Baja | Abierto |
+| [ARCH-2](#arch-2--sizes-baselinejson-lista-un-archivo-que-ya-no-existe) | Arquitectura | `sizes-baseline.json` lista un archivo que ya no existe | 🟡 Baja | ✅ Cerrado |
+| [ARCH-3](#arch-3--auth-y-dashboard-importan-internals-de-agents-para-agent_releases) | Arquitectura | `auth` y `dashboard` importan internals de `agents` para `agent_releases` | 🟡 Baja | Abierto |
 
 ---
 
@@ -340,22 +341,56 @@ Se deja por ahora porque expandir un rango sigue siendo útil para diagnóstico 
 
 ---
 
-### ARCH-2 — `sizes-baseline.json` lista un archivo que ya no existe
+### ARCH-2 — `sizes-baseline.json` lista un archivo que ya no existe ✅
 
-**Detectado:** 2026-09-11 · **Severidad:** 🟡 Baja · **Estado:** Abierto
+**Detectado:** 2026-09-11 · **Severidad:** 🟡 Baja · **Estado:** Cerrado 12/09/2026
 
-`cloud/scripts/sizes-baseline.json:1238` sigue teniendo la entrada de
+**Cerrado:** al correr `check:arch` localmente antes de un push (ver UPD-6/ARCH-3 del mismo
+día) se regeneró `sizes-baseline.json` con `--write-baseline` — la entrada huérfana de
+`MonitorMetricsStrip.tsx` desapareció sola, tal como decía el "para cerrarlo" original.
+
+<details>
+<summary>Contexto original</summary>
+
+`cloud/scripts/sizes-baseline.json:1238` seguía teniendo la entrada de
 `portal/src/features/monitors/components/MonitorMetricsStrip.tsx`, borrado en el commit de
 carga masiva de rangos.
 
-`check-sizes` pasa igual: el checker sólo consulta la baseline para archivos que existen en
-el árbol, así que una entrada huérfana nunca se lee. Pero es ruido que ensucia el archivo y
+`check-sizes` pasaba igual: el checker sólo consulta la baseline para archivos que existen en
+el árbol, así que una entrada huérfana nunca se lee. Pero era ruido que ensuciaba el archivo y
 que "perdonaría" a un archivo futuro que se llamara igual.
 
-**Para cerrarlo:** `npm run check:sizes:baseline -w cloud` en la próxima corrida que toque
-tamaños (regenera la deuda desde el árbol actual, así que la entrada huérfana desaparece
-sola), o agregarle al checker un aviso cuando una entrada de la baseline no matchea ningún
-archivo.
+</details>
+
+---
+
+### ARCH-3 — `auth` y `dashboard` importan internals de `agents` para `agent_releases`
+
+**Detectado:** 2026-09-12 · **Severidad:** 🟡 Baja · **Estado:** Abierto
+
+`check:guards` (regla `arch-cross-module`) encontró 4 imports que cruzan el límite de
+módulo hacia `agents/domain/repositories/agent-release-repository` y
+`agents/infrastructure/database/knex-agent-release-repository`, sin baseline previo:
+
+- `auth/presentation/agent-version-controller.ts:3`
+- `auth/presentation/auth-controller.ts:10`
+- `dashboard/infrastructure/adapters/postgres-agent-version-reader.ts:1`
+- `dashboard/presentation/dashboard-controller.ts:8`
+
+Vienen de la Fase 1 de OTA multi-canal (10/09/2026, commit `40ac3e5`, ver UPD-3 cerrado más
+arriba): el endpoint público de versión del agente vive en `auth` y el dashboard necesita
+mostrar la versión "oficial" del canal `stable`, así que ambos módulos terminaron
+importando el repositorio de `agent_releases` directo desde `agents` en vez de por una
+interfaz compartida. La violación quedó sin detectar hasta ahora porque nadie había vuelto
+a correr `check:guards` localmente desde entonces (ver también UPD-6, mismo síntoma de
+fondo: el CI de GitHub es la única corrida real y hace rato no se dispara en cada push).
+
+Se aceptó como deuda documentada (`npm run check:guards:baseline -w cloud`) en vez de
+bloquear el push de un fix no relacionado — no se tocó el diseño.
+
+**Para cerrarlo:** mover `AgentReleaseRepository` (interfaz + implementación Knex) a un
+módulo compartido/kernel que `auth`, `dashboard` y `agents` puedan importar los tres por
+igual, en vez de que dos módulos externos perforen los internals de `agents`.
 
 ---
 

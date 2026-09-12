@@ -1,1 +1,6 @@
-{}
+{
+  "arch-cross-module|src/modules/auth/presentation/agent-version-controller.ts": 1,
+  "arch-cross-module|src/modules/auth/presentation/auth-controller.ts": 1,
+  "arch-cross-module|src/modules/dashboard/infrastructure/adapters/postgres-agent-version-reader.ts": 1,
+  "arch-cross-module|src/modules/dashboard/presentation/dashboard-controller.ts": 1
+}

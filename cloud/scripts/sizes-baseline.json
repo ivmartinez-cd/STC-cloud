@@ -124,13 +124,19 @@
     "src/modules/agents/application/use-cases/config-use-cases.ts": [
       {
         "name": "execute",
-        "length": 26
+        "length": 27
       }
     ],
     "src/modules/agents/application/use-cases/lifecycle-use-cases.ts": [
       {
         "name": "execute",
         "length": 23
+      }
+    ],
+    "src/modules/agents/application/use-cases/portal-agent-use-cases.ts": [
+      {
+        "name": "execute",
+        "length": 21
       }
     ],
     "src/modules/agents/application/use-cases/process-reading.ts": [
@@ -149,6 +155,12 @@
       {
         "name": "execute",
         "length": 27
+      }
+    ],
+    "src/modules/agents/domain/services/agent-config-view.ts": [
+      {
+        "name": "buildConfigUpdates",
+        "length": 24
       }
     ],
     "src/modules/agents/domain/services/device-row-builders.ts": [
@@ -190,7 +202,7 @@
       },
       {
         "name": "getAgentStats",
-        "length": 39
+        "length": 41
       }
     ],
     "src/modules/agents/presentation/agent-controller.ts": [
@@ -284,7 +296,7 @@
       },
       {
         "name": "execute",
-        "length": 35
+        "length": 37
       }
     ],
     "src/modules/auth/presentation/agent-auth-controller.ts": [
@@ -295,12 +307,8 @@
     ],
     "src/modules/auth/presentation/agent-version-controller.ts": [
       {
-        "name": "agentVersion",
-        "length": 32
-      },
-      {
         "name": "updateAgentVersion",
-        "length": 34
+        "length": 26
       }
     ],
     "src/modules/auth/presentation/auth-routes.ts": [
@@ -563,12 +571,6 @@
         "length": 29
       }
     ],
-    "src/services/agentVersionService.ts": [
-      {
-        "name": "getPublishedAgentVersion",
-        "length": 23
-      }
-    ],
     "src/services/cryptoService.ts": [
       {
         "name": "decryptSecret",
@@ -722,13 +724,13 @@
     "portal/src/features/activity/pages/Activity.tsx": [
       {
         "name": "Activity",
-        "length": 37
+        "length": 36
       }
     ],
     "portal/src/features/alerts/pages/Alerts.tsx": [
       {
         "name": "Alerts",
-        "length": 54
+        "length": 53
       }
     ],
     "portal/src/features/auth/pages/Login.tsx": [
@@ -780,7 +782,7 @@
     "portal/src/features/clients/components/ClientDevicesTable.tsx": [
       {
         "name": "ClientDevicesTable",
-        "length": 92
+        "length": 94
       }
     ],
     "portal/src/features/clients/components/ClientMetricsCards.tsx": [
@@ -810,7 +812,7 @@
     "portal/src/features/clients/components/ClientUsageChart.tsx": [
       {
         "name": "ChartContent",
-        "length": 36
+        "length": 40
       }
     ],
     "portal/src/features/clients/components/ClientsDirectoryTable.tsx": [
@@ -932,21 +934,21 @@
     "portal/src/features/clients/hooks/useClientDeviceDirectory.ts": [
       {
         "name": "useDeviceFilters",
-        "length": 26
+        "length": 27
       },
       {
         "name": "useDeviceRows",
-        "length": 31
+        "length": 32
       }
     ],
     "portal/src/features/clients/hooks/useClientsDirectory.ts": [
       {
         "name": "useDirectoryFilters",
-        "length": 29
+        "length": 30
       },
       {
         "name": "useDirectoryRows",
-        "length": 33
+        "length": 34
       }
     ],
     "portal/src/features/clients/lib/exportClientDevicesCsv.ts": [
@@ -958,13 +960,13 @@
     "portal/src/features/clients/pages/ClientDetail.tsx": [
       {
         "name": "ClientDetail",
-        "length": 106
+        "length": 105
       }
     ],
     "portal/src/features/clients/pages/Clients.tsx": [
       {
         "name": "Clients",
-        "length": 196
+        "length": 189
       }
     ],
     "portal/src/features/dashboard/components/AgentVersionsCard.tsx": [
@@ -1136,25 +1138,25 @@
     "portal/src/features/devices/hooks/useDeviceDirectory.ts": [
       {
         "name": "useDirectoryRows",
-        "length": 25
+        "length": 26
       }
     ],
     "portal/src/features/devices/pages/DeviceDetail.tsx": [
       {
         "name": "DeviceDetail",
-        "length": 148
+        "length": 162
       }
     ],
     "portal/src/features/devices/pages/Devices.tsx": [
       {
         "name": "Devices",
-        "length": 31
+        "length": 30
       }
     ],
     "portal/src/features/email-log/pages/EmailLog.tsx": [
       {
         "name": "EmailLog",
-        "length": 40
+        "length": 39
       }
     ],
     "portal/src/features/incidents/components/IncidentsTable.tsx": [
@@ -1172,13 +1174,13 @@
     "portal/src/features/incidents/pages/Incidents.tsx": [
       {
         "name": "Incidents",
-        "length": 55
+        "length": 54
       }
     ],
     "portal/src/features/monitors/components/ConfigTabPanel.tsx": [
       {
         "name": "ConfigTabPanel",
-        "length": 145
+        "length": 199
       }
     ],
     "portal/src/features/monitors/components/ConnectivityStrip.tsx": [
@@ -1202,7 +1204,7 @@
     "portal/src/features/monitors/components/DeviceInventoryTable.tsx": [
       {
         "name": "DeviceInventoryTable",
-        "length": 252
+        "length": 255
       },
       {
         "name": "handleApproveDiscovered",
@@ -1241,12 +1243,6 @@
         "length": 118
       }
     ],
-    "portal/src/features/monitors/components/MonitorMetricsStrip.tsx": [
-      {
-        "name": "MonitorMetricsStrip",
-        "length": 53
-      }
-    ],
     "portal/src/features/monitors/components/MonitorProfileCard.tsx": [
       {
         "name": "MonitorProfileCard",
@@ -1262,7 +1258,7 @@
     "portal/src/features/monitors/components/MonitorSpecsCard.tsx": [
       {
         "name": "MonitorSpecsCard",
-        "length": 43
+        "length": 31
       }
     ],
     "portal/src/features/monitors/components/RecentActivityCard.tsx": [
@@ -1282,7 +1278,7 @@
       },
       {
         "name": "ReportsTabPanel",
-        "length": 143
+        "length": 147
       }
     ],
     "portal/src/features/monitors/components/SegmentsTabPanel.tsx": [
@@ -1358,11 +1354,11 @@
     "portal/src/features/monitors/components/agents/ConfigAgentModal.tsx": [
       {
         "name": "ConfigAgentModal",
-        "length": 205
+        "length": 198
       },
       {
         "name": "saveConfig",
-        "length": 28
+        "length": 21
       }
     ],
     "portal/src/features/monitors/components/agents/CreateAgentModal.tsx": [
@@ -1390,7 +1386,7 @@
     "portal/src/features/monitors/hooks/useAgentsDirectory.ts": [
       {
         "name": "useDirectoryRows",
-        "length": 29
+        "length": 30
       },
       {
         "name": "useSignalBuckets",
@@ -1400,41 +1396,41 @@
     "portal/src/features/monitors/hooks/useMonitorDetail.ts": [
       {
         "name": "useMonitorDetail",
-        "length": 160
+        "length": 168
       }
     ],
     "portal/src/features/monitors/hooks/useMonitorDeviceDirectory.ts": [
       {
         "name": "useDeviceFilters",
-        "length": 26
+        "length": 27
       },
       {
         "name": "useDeviceRows",
-        "length": 31
+        "length": 32
       }
     ],
     "portal/src/features/monitors/pages/Agents.tsx": [
       {
         "name": "Agents",
-        "length": 153
+        "length": 152
       }
     ],
     "portal/src/features/monitors/pages/MonitorDetail.tsx": [
       {
         "name": "MonitorDetail",
-        "length": 212
+        "length": 222
       }
     ],
     "portal/src/features/monitors/pages/RemoteActions.tsx": [
       {
         "name": "RemoteActions",
-        "length": 109
+        "length": 106
       }
     ],
     "portal/src/features/pending-devices/pages/PendingDevices.tsx": [
       {
         "name": "PendingDevices",
-        "length": 76
+        "length": 75
       }
     ],
     "portal/src/features/reports/components/ReopenClosureModal.tsx": [
@@ -1456,7 +1452,7 @@
     "portal/src/features/reports/pages/Reports.tsx": [
       {
         "name": "Reports",
-        "length": 35
+        "length": 34
       }
     ],
     "portal/src/features/reports/pages/ScheduledReports.tsx": [
@@ -1526,13 +1522,13 @@
     "portal/src/features/supplies/pages/Supplies.tsx": [
       {
         "name": "Supplies",
-        "length": 40
+        "length": 38
       }
     ],
     "portal/src/features/supplies/pages/SupplyRequests.tsx": [
       {
         "name": "SupplyRequests",
-        "length": 40
+        "length": 38
       }
     ],
     "portal/src/shared/components/BrandModal.tsx": [
@@ -1658,7 +1654,7 @@
     "portal/src/shared/hooks/useFitRows.ts": [
       {
         "name": "useFitRows",
-        "length": 55
+        "length": 58
       }
     ],
     "portal/src/shared/hooks/useRowSelection.ts": [
