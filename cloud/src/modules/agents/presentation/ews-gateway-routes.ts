@@ -27,8 +27,41 @@ export function registerEwsGatewayRoutes(fastify: FastifyInstance, redis: Redis,
     // rechazaría con 415 todo lo que no sea JSON. Parsearlo sería peor:
     // reserializar cambia bytes y hay firmware que valida longitudes.
     instance.addContentTypeParser("*", { parseAs: "buffer" }, (_req, body, done) => done(null, body));
+    instance.addHook("onSend", stripAppSecurityHeaders);
     registerGatewayEndpoints(instance, redis, uc);
   });
+}
+
+/**
+ * Cabeceras que `@fastify/helmet` pone en TODA la app y que acá hay que sacar.
+ * Están pensadas para el portal —una SPA nuestra, moderna— y son incompatibles
+ * con el firmware de una impresora:
+ *
+ * - `X-Content-Type-Options: nosniff` bloquea cualquier `<script>` que no venga
+ *   con un content-type de JavaScript, y estos equipos sirven casi todo su JS
+ *   como `text/html`.
+ * - `Content-Security-Policy: script-src 'self'` (sin `unsafe-inline`) mata
+ *   además todos los scripts inline, y las páginas del firmware están hechas
+ *   de eso: la home de SyncThru es un `<script>` que redirige y el resto arma
+ *   la UI entera con `document.write`.
+ *
+ * Con las dos puestas no se ejecuta una sola línea de JS del equipo y la
+ * pestaña queda en blanco. El aislamiento de este contenido no lo dan estas
+ * cabeceras sino el hostname propio del gateway: nada de lo que sirve tiene
+ * acceso a las cookies ni al DOM del portal.
+ */
+const APP_SECURITY_HEADERS = [
+  "content-security-policy",
+  "content-security-policy-report-only",
+  "x-content-type-options",
+  "x-frame-options",
+  "cross-origin-embedder-policy",
+  "cross-origin-resource-policy",
+];
+
+function stripAppSecurityHeaders(_request: FastifyRequest, reply: FastifyReply, payload: unknown, done: (err: Error | null, payload?: unknown) => void) {
+  for (const header of APP_SECURITY_HEADERS) reply.removeHeader(header);
+  done(null, payload);
 }
 
 type Sessions = ReturnType<AgentUseCases["ewsSessions"]>;
