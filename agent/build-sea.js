@@ -58,6 +58,11 @@ esbuild.buildSync({
   outfile: bundlePath,
   external: ['better-sqlite3', 'bindings'],
   define: { __STC_CHANNEL__: JSON.stringify(channel) },
+  // Marca legible en la primera línea del bundle: `publish-release.sh` la
+  // compara con el canal que se le pasa antes de subir. Sin esto nada impedía
+  // publicar un bundle stable (node24) como legacy y que los Node 20 lo
+  // instalaran. Va adentro del bundle, así la firma también la cubre.
+  banner: { js: `/* stc-channel:${channel} target:${esbuildTarget} */` },
 });
 
 // 3. Copiar el ejecutable de Node.js (actual, o el runtime legacy indicado) como runtime privado

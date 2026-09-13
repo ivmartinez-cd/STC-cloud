@@ -32,3 +32,14 @@ fi
 sed -i "s/VERSION = '$CURRENT_VERSION'/VERSION = '$VERSION'/" "$VERSION_TS"
 sed -i "s/\"version\": \"$CURRENT_VERSION\"/\"version\": \"$VERSION\"/" "$PKG_JSON"
 echo "version.ts: $CURRENT_VERSION -> $VERSION"
+
+# Los dos instaladores (Inno Setup) también llevan la versión: si quedan
+# atrás, el .exe se llama v1.3.2 con un bundle 1.3.4 adentro, y el script de
+# build legacy —que lee la versión del .iss— sugiere publicar el release con
+# el número viejo. Así, los agentes que ya están en la nueva no actualizan.
+for ISS in "$SCRIPT_DIR/STC-Monitor.iss" "$SCRIPT_DIR/STC-Monitor-Legacy.iss"; do
+  if grep -q "#define MyAppVersion" "$ISS"; then
+    sed -i "s/#define MyAppVersion   \"[0-9.]*\"/#define MyAppVersion   \"$VERSION\"/" "$ISS"
+    echo "$(basename "$ISS"): -> $VERSION"
+  fi
+done

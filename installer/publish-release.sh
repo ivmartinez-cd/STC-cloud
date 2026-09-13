@@ -50,6 +50,20 @@ if [ ! -f "$SIGFILE" ]; then
   echo "ERROR: falta $SIGFILE — firmar primero con: node installer/sign-bundle.js \"$FILE\"" >&2
   exit 1
 fi
+# El bundle lleva horneado su canal en la primera línea (`build-sea.js`). Si
+# no coincide con el que se pide publicar, es el error que dejó a un agente
+# Node 20 bajando un bundle node24: se corta acá, antes de subir nada.
+if [ "$KIND" = "bundle" ]; then
+  BAKED=$(head -c 200 "$FILE" | grep -oE 'stc-channel:[a-z]+' | cut -d: -f2 || true)
+  if [ -z "$BAKED" ]; then
+    echo "ERROR: $FILE no tiene la marca de canal (¿bundle compilado con un build-sea.js viejo?). Recompilar con --channel $CHANNEL." >&2
+    exit 1
+  fi
+  if [ "$BAKED" != "$CHANNEL" ]; then
+    echo "ERROR: el bundle fue compilado para el canal '$BAKED' y se lo quiere publicar como '$CHANNEL'." >&2
+    exit 1
+  fi
+fi
 if [ -z "${STC_PORTAL_USER:-}" ] || [ -z "${STC_PORTAL_PASSWORD:-}" ]; then
   echo "ERROR: seteá STC_PORTAL_USER y STC_PORTAL_PASSWORD (admin del portal, sin TOTP)" >&2
   exit 1
