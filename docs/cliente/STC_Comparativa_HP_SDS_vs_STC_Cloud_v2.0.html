@@ -543,7 +543,14 @@
 
     <h2 id="intro">1. Introducción y Contexto del Análisis</h2>
 
-    <p>HP Smart Device Services (SDS) es la plataforma de gestión remota de impresoras de HP, compuesta por el <strong>HP SDS Manager Data Collection Application (DCA)</strong> que se instala on-site —conocido internamente como JAMC— y la infraestructura cloud <strong>HP SDS Cloud</strong>, operada bajo los estándares ISO 27001 / SOC2 por EKM Global.</p>
+    <p>HP Smart Device Services (SDS) es la plataforma de gestión remota de impresoras de HP. En el equipo on-site conviven <strong>dos componentes distintos</strong>, que el instalador despliega uno tras otro (dos acuerdos de licencia y dos instalaciones sucesivas, <em>Installation Guide v1.2</em>, págs. 5-9):</p>
+
+    <ul>
+        <li><strong>HP JetAdvantage Management Connector (JAMC)</strong>, el conector de HP: descubre dispositivos (ping + SNMP), recolecta su telemetría, y ejecuta las acciones sobre el equipo — push de firmware, autorización de consumibles originales y el acceso EWS remoto. Es el único que habla con la nube de HP (<code>jamanagement.hp.com</code>), y lo hace por <strong>polling saliente sobre HTTPS</strong>.</li>
+        <li><strong>Data Collection Application (DCA)</strong>, de <strong>EKM Global Limited</strong> (no de HP): recolecta contadores e insumos <strong>sólo por SNMP</strong> y reporta a la nube de <em>HP SDS Manager</em>, operada por EKM. Es el componente que aporta el canal XMPP del que habla la sección 2.</li>
+    </ul>
+
+    <p><strong>Por qué se confunden:</strong> HP llama genéricamente <em>"data collection agent (DCA)"</em> a su propio JAMC (<em>Security White Paper</em>, pág. 3), mientras que "DCA" a secas es también el nombre del producto de EKM. Son dos servicios Windows separados, con ejecutables, números de versión y archivos de log propios (DCA <code>7.20.2.x</code> / JAMC <code>4.1.x</code>), al punto de que el DCA trae comandos dedicados para administrar al JAMC como servicio ajeno (<code>jamcstatus</code>, <code>restart jamc please</code>, <em>IMIL Commands v29</em>, pág. 4). También son dos nubes distintas: la de HP corre sobre AWS (EE.UU. y Frankfurt) y la de SDS Manager es de EKM.</p>
 
     <p>STC Cloud Monitor es una plataforma propia de monitoreo multi-marca, construida sobre principios similares (agente local → cloud → API) pero con prioridades distintas: soporte nativo de múltiples fabricantes (HP, Samsung, Lexmark, Ricoh, Brother, Epson, Canon, Konica Minolta, Xerox), despliegue sin dependencia de infraestructura HP, y menor fricción de instalación para redes corporativas medianas.</p>
 
@@ -554,13 +561,13 @@
 
     <div class="two-col" style="margin-top: 14px;">
         <div class="col-box col-hp">
-            <div class="col-box-title">HP SDS / JAMC</div>
+            <div class="col-box-title">HP SDS (JAMC + DCA de EKM)</div>
             <ul>
-                <li>Canal de control: <strong>XMPP</strong> (puerto TCP 5222, salida)</li>
-                <li>Canal de datos: <strong>HTTPS</strong> (puerto 443, salida)</li>
-                <li>JAMC sólo genera conexiones salientes (Zero-Inbound)</li>
-                <li>Requiere apertura explícita de puerto 5222 en firewall</li>
-                <li>XMPP habilita mensajería push en tiempo real desde HP Cloud hacia el agente</li>
+                <li><strong>JAMC → nube de HP:</strong> <strong>HTTPS</strong> (443, salida), por <strong>polling periódico</strong>. Sin conexión persistente: <em>"The HP Smart Device Services platform does not maintain persistent connections or the XMPP protocol. Instead, the JetAdvantage Management Connector periodically polls the HP SDS platform for work it needs to perform"</em> (<em>Security White Paper</em>, pág. 11)</li>
+                <li><strong>DCA de EKM → nube de SDS Manager:</strong> <strong>XMPP</strong> (TCP 5222, salida) + HTTPS 443 (<em>System Requirements v2.6</em>, pág. 6)</li>
+                <li>Ambos generan sólo conexiones salientes (Zero-Inbound)</li>
+                <li>Requiere apertura explícita del puerto 5222 en el firewall, por el DCA de EKM</li>
+                <li>El push en tiempo real desde la nube hacia el equipo on-site <strong>no existe</strong> del lado de HP: el JAMC se entera de lo que tiene que hacer en su próximo ciclo de polling</li>
             </ul>
         </div>
         <div class="col-box col-stc">
@@ -575,8 +582,9 @@
     </div>
 
     <h3>Justificación de la decisión</h3>
-    <p>El puerto 5222 (XMPP) está bloqueado en la mayoría de firewalls corporativos por defecto. Forzar su apertura genera fricción de instalación y requiere coordinación con el departamento de IT del cliente. Al unificar todo el tráfico sobre WSS/443, STC Cloud simplifica drásticamente el despliegue: el mismo puerto que usa el navegador web funciona para el agente sin necesidad de cambios en la política de red.</p>
-    <p>La contrapartida es que WebSocket no es un protocolo de mensajería estándar con presencia nativa en el ecosistema de telecomunicaciones; XMPP es robusto y tiene mecanismos de store-and-forward más maduros. Esta diferencia es aceptable dado el perfil de cliente objetivo.</p>
+    <p>El puerto 5222 (XMPP) está bloqueado en la mayoría de firewalls corporativos por defecto. Forzar su apertura genera fricción de instalación y requiere coordinación con el departamento de IT del cliente. Al unificar todo el tráfico sobre WSS/443, STC Cloud simplifica el despliegue: el mismo puerto que usa el navegador web alcanza para el agente, sin cambios en la política de red.</p>
+    <p>La diferencia de fondo no es el puerto sino la <strong>latencia de comando</strong>. El JAMC no mantiene conexión persistente con la nube de HP: pregunta periódicamente si hay trabajo pendiente, así que una orden dada desde el portal espera al próximo ciclo. El WSS de STC Cloud es bidireccional y permanente, de modo que un comando llega al agente en el momento — es lo que hace viable el acceso EWS remoto interactivo de la sección 7.</p>
+    <p>La contrapartida es que WebSocket no es un protocolo de mensajería estándar con presencia nativa en el ecosistema de telecomunicaciones, y que una conexión persistente hay que sostenerla y reconectarla; XMPP tiene mecanismos de store-and-forward más maduros. Esta diferencia es aceptable dado el perfil de cliente objetivo.</p>
 
     <div class="footer">
         © 2026 CANAL DIRECTO | STC CLOUD | ANÁLISIS TÉCNICO | DOCUMENTACIÓN INTERNA | CONFIDENCIAL
@@ -864,7 +872,9 @@ STC Cloud Discovery:
             <div class="col-box-title">HP SDS / JAMC</div>
             <ul>
                 <li>Desactivado por defecto, whitelisting explícito del cliente</li>
-                <li>Túnel cifrado persistente vía XMPP/HTTPS</li>
+                <li>Sesión establecida bajo demanda contra el <strong>JAMC</strong> (no el DCA de EKM, que no participa del flujo): <em>"all further browser requests pass directly through the SDS Cloud to JAMC direct to the device"</em> (<em>Security White Paper</em>, pág. 7). Señalización por <code>ews.hpjamservices.com</code></li>
+                <li>Las requests y la sesión <strong>expiran por tiempo</strong></li>
+                <li>Sólo equipos <strong>HP</strong>, con insumos originales y un JAM device ID asignado</li>
             </ul>
         </div>
         <div class="col-box col-stc">
@@ -1134,7 +1144,7 @@ STC Cloud Discovery:
         <tbody>
             <tr>
                 <td>Canal de comunicación agente–cloud</td>
-                <td>XMPP (5222) + HTTPS (443)</td>
+                <td>JAMC: HTTPS 443 por polling · DCA de EKM: XMPP (5222) + HTTPS (443)</td>
                 <td>WSS (443)</td>
                 <td><span class="badge badge-intencional">Intencional</span></td>
             </tr>
