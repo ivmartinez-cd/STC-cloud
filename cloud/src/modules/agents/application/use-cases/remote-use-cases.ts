@@ -12,6 +12,27 @@ export class RemoteActionError extends AppError {
 }
 
 /**
+ * Cuánto puede hacer que un equipo no reporta y aun así aceptar que su IP
+ * sigue siendo suya. Protege del caso en que DHCP se la reasignó a otro host.
+ *
+ * El piso de 6 h no es arbitrario: `devices.last_seen` NO se mueve al ritmo
+ * del intervalo de scan sino al de los loops que traen lecturas (contadores
+ * 20/240 min, insumos 60/240), así que medir sólo contra `2× scan_interval`
+ * comparaba contra un reloj distinto del que mueve el dato. Con el intervalo
+ * en 15 la ventana daba 30 min y un equipo sano que había reportado hacía 48
+ * quedaba rechazado: la función era inusable (verificado contra el parque
+ * real el 13/09/2026).
+ *
+ * 6 h sigue siendo protección de verdad —una concesión DHCP corporativa dura
+ * horas o días, y un equipo que no reporta hace 6 h está apagado— y no es la
+ * única capa: el agente revalida la IP contra su catálogo local antes de
+ * conectar.
+ */
+function staleWindowMs(scanIntervalMinutes: number | null): number {
+  return Math.max(2 * (scanIntervalMinutes || 15) * 60 * 1000, 6 * 60 * 60 * 1000);
+}
+
+/**
  * Las cuatro condiciones que habilitan alcanzar la EWS de un equipo, en el
  * único lugar donde viven: el flag opt-in del monitor, que el equipo sea de
  * ese monitor, que tenga IP registrada, y que esa IP no esté vieja.
@@ -31,10 +52,8 @@ export async function assertEligibleEwsDevice(repo: AgentPortalRepository, agent
   // los callers no tienen por qué volver a chequear algo que acá ya se garantizó.
   const ipAddress = device.ip_address;
   if (!ipAddress) throw new RemoteActionError("El dispositivo no tiene una IP registrada todavía", 409);
-  // Ventana de staleness: una IP reasignada por DHCP podría apuntar a otro equipo.
-  const staleThresholdMs = 2 * (agent.scan_interval_minutes || 15) * 60 * 1000;
   const lastSeenMs = device.last_seen ? new Date(device.last_seen).getTime() : 0;
-  if (Date.now() - lastSeenMs > staleThresholdMs) {
+  if (Date.now() - lastSeenMs > staleWindowMs(agent.scan_interval_minutes)) {
     throw new RemoteActionError("El dispositivo no reportó recientemente — la IP podría haber sido reasignada. Esperá al próximo scan.", 409);
   }
   return { ...device, ip_address: ipAddress };
