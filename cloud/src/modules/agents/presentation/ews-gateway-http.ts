@@ -31,22 +31,40 @@ export function isNavigation(headers: Record<string, unknown>): boolean {
 }
 
 /**
- * Headers del navegador que se le reenvían al equipo. Allowlist, no blocklist:
- * lo que no está nombrado no viaja.
+ * Headers del navegador que NO se le reenvían al equipo. Blocklist y no
+ * allowlist, que es como se comporta un proxy de verdad: el firmware puede
+ * depender de cualquier cabecera, y adivinar cuáles sirven ya salió mal.
  *
- * - `authorization` SÍ viaja: es lo que hace que el Basic auth de Lexmark/HP
- *   funcione de punta a punta — el equipo responde 401, el navegador pregunta
- *   usuario y contraseña, y la credencial llega al equipo sin pasar por
- *   ninguna pantalla nuestra.
- * - `cookie` del navegador NO viaja nunca: la única cookie que el equipo ve es
- *   la del jar de la sesión, que vive en Redis. La del navegador identifica la
+ * El caso que lo motivó (13/09/2026): con una allowlist de cinco cabeceras se
+ * perdía `X-Requested-With`, que es lo que manda jQuery en cada AJAX. El
+ * SyncThru de ISSN lo usa para distinguir una llamada de datos de una
+ * navegación: sin esa cabecera contestaba 302 hacia la home en vez del JSON, y
+ * la app se quedaba para siempre en "Loading...".
+ *
+ * Lo que sí queda afuera y por qué:
+ * - `cookie` del navegador: la única que el equipo ve es la del jar de la
+ *   sesión, que vive del lado del servidor. La del navegador identifica la
  *   sesión del gateway y no es asunto de la impresora.
- * - `referer`/`origin` se reescriben a la URL del equipo en vez de omitirse:
- *   hay firmware que valida el Referer como defensa anti-CSRF y rechaza el
- *   formulario si no coincide. Mandar el hostname del gateway, además, le
- *   filtraría al equipo dónde vive nuestra nube.
+ * - `user-agent` y `accept-encoding`: las pone el agente, que es quien hace la
+ *   conexión real.
+ * - Las de nuestra infraestructura (`x-forwarded-*`): no tienen por qué
+ *   revelarle al equipo del cliente dónde vive la nube.
+ *
+ * `authorization` SÍ viaja: es lo que hace que el Basic auth de Lexmark/HP
+ * funcione de punta a punta, con el prompt del propio navegador y sin que la
+ * credencial pase por ninguna pantalla nuestra. Y `referer`/`origin` se
+ * reescriben a la URL del equipo, porque hay firmware que valida el Referer
+ * como defensa anti-CSRF.
  */
-const RELAYED_REQUEST_HEADERS = ["accept", "accept-language", "content-type", "authorization", "cache-control"];
+const BLOCKED_REQUEST_HEADERS = new Set([
+  // De la conexión, no del mensaje.
+  "connection", "keep-alive", "proxy-authorization", "proxy-authenticate", "te", "trailer",
+  "transfer-encoding", "upgrade", "host", "content-length",
+  // Las pone el agente: el `Cookie` sale del jar de la sesión y el resto son suyos.
+  "cookie", "accept-encoding", "user-agent",
+  // De nuestra infraestructura — no tienen por qué llegarle al equipo del cliente.
+  "x-forwarded-for", "x-forwarded-proto", "x-forwarded-host", "x-real-ip",
+]);
 
 export function requestHeadersFor(
   browserHeaders: Record<string, unknown>,
@@ -54,9 +72,9 @@ export function requestHeadersFor(
   deviceOrigin: string
 ): Record<string, string> {
   const out: Record<string, string> = {};
-  for (const name of RELAYED_REQUEST_HEADERS) {
-    const value = browserHeaders[name];
-    if (typeof value === "string" && value !== "") out[name] = value;
+  for (const [name, value] of Object.entries(browserHeaders)) {
+    if (BLOCKED_REQUEST_HEADERS.has(name.toLowerCase())) continue;
+    if (typeof value === "string" && value !== "") out[name.toLowerCase()] = value;
   }
   if (cookieJar) out["cookie"] = cookieJar;
   if (typeof browserHeaders["referer"] === "string") out["referer"] = rewriteToDevice(browserHeaders["referer"], deviceOrigin);

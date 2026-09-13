@@ -47,11 +47,22 @@ describe("requestHeadersFor — lo que llega a la impresora", () => {
     assert.equal(out.origin, ORIGIN);
   });
 
-  test("lo que no está en la allowlist no cruza", () => {
-    const out = requestHeadersFor({ "x-forwarded-for": "1.2.3.4", "user-agent": "Firefox", connection: "keep-alive" }, "", ORIGIN);
-    assert.equal(out["x-forwarded-for"], undefined);
+  test("lo que está bloqueado no cruza", () => {
+    const out = requestHeadersFor({ "x-forwarded-for": "1.2.3.4", "user-agent": "Firefox", connection: "keep-alive", host: "ews.stc.example" }, "", ORIGIN);
+    assert.equal(out["x-forwarded-for"], undefined, "no se le revela al equipo dónde vive nuestra nube");
     assert.equal(out.connection, undefined);
+    assert.equal(out.host, undefined);
     assert.equal(out["user-agent"], undefined, "el User-Agent lo pone el agente, no el navegador");
+  });
+
+  test("X-Requested-With cruza: sin eso el firmware contesta 302 en vez del JSON", () => {
+    assert.equal(requestHeadersFor({ "x-requested-with": "XMLHttpRequest" }, "", ORIGIN)["x-requested-with"], "XMLHttpRequest");
+  });
+
+  test("una cabecera cualquiera del navegador también cruza (blocklist, no allowlist)", () => {
+    const out = requestHeadersFor({ "x-token-del-firmware": "abc", "if-none-match": "W/x" }, "", ORIGIN);
+    assert.equal(out["x-token-del-firmware"], "abc");
+    assert.equal(out["if-none-match"], "W/x");
   });
 });
 
