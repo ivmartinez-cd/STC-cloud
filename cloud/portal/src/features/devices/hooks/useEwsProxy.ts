@@ -84,7 +84,12 @@ export function useEwsGateway(agentId: string | null | undefined, deviceId: stri
 
   const open = useCallback(async () => {
     if (!agentId) return;
-    const tab = window.open('', '_blank', 'noopener,noreferrer');
+    // SIN `noopener`: con esa feature `window.open` devuelve null por spec, y
+    // entonces no hay handle para navegar la pestaña — quedaba en blanco y el
+    // fallback terminaba sacando al operador de la ficha. Se abre `about:blank`
+    // ahora (con el gesto del usuario, si no el navegador la bloquea) y se le
+    // asigna la URL cuando vuelve el ticket.
+    const tab = window.open('about:blank', '_blank');
     setOpening(true); setError(null);
     const failure = await navigateToGateway(tab, agentId, deviceId);
     setOpening(false);
@@ -98,8 +103,10 @@ export function useEwsGateway(agentId: string | null | undefined, deviceId: stri
 async function navigateToGateway(tab: Window | null, agentId: string, deviceId: string): Promise<string | null> {
   try {
     const { url } = await api.post<{ url: string }>(`/agents/${agentId}/ews-session`, { device_id: deviceId });
-    // Si el navegador bloqueó la pestaña igual, se navega en la actual antes que dejar al operador sin nada.
-    if (tab) tab.location.replace(url); else window.location.assign(url);
+    // Si el navegador bloqueó la pestaña, se avisa — NUNCA se navega la actual:
+    // sacar al operador de la ficha sin que lo haya pedido es peor que no abrir nada.
+    if (!tab) return 'El navegador bloqueó la pestaña emergente. Permitila para este sitio y volvé a intentar.';
+    tab.location.replace(url);
     return null;
   } catch (e: unknown) {
     return e instanceof Error ? e.message : String(e);
