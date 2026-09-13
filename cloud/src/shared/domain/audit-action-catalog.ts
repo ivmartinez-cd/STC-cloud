@@ -70,6 +70,11 @@ const AUDIT_ACTION_META: Record<string, AuditActionMeta> = {
   REVOKE_TOKEN: { label: "Agente revocado", category: "agent" },
   REMOTE_EWS_ACCESS: { label: "Acceso remoto a EWS", category: "agent" },
   REMOTE_EWS_TOGGLE: { label: "Acceso remoto a EWS habilitado/deshabilitado", category: "agent" },
+  // Gateway navegable: apertura de sesión y, separado de las lecturas, TODA
+  // escritura contra el firmware del equipo — es lo que un auditor va a venir
+  // a buscar primero.
+  REMOTE_EWS_SESSION_OPEN: { label: "Sesión de EWS remoto abierta", category: "agent" },
+  REMOTE_EWS_WRITE: { label: "Escritura por EWS remoto", category: "agent" },
 
   // Clientes
   CLIENT_CREATED: { label: "Cliente creado", category: "client" },

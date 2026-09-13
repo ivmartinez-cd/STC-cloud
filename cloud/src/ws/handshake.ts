@@ -156,7 +156,7 @@ export async function registerWebSocket(fastify: FastifyInstance, db: Knex, redi
           // la request HTTP que espera este resultado puede estar en OTRA
           // réplica (relay, ver bloque de arriba); la propia suscripción
           // entrega localmente también en el caso de una sola réplica.
-          if (msg.data?.type === 'EWS_PROXY' && msg.data?.id) {
+          if ((msg.data?.type === 'EWS_PROXY' || msg.data?.type === 'EWS_REQUEST') && msg.data?.id) {
             const resultMsg = JSON.stringify(
               msg.data.status === 'success'
                 ? { commandId: msg.data.id, ok: true, value: msg.data.result }

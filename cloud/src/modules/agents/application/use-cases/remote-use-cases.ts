@@ -11,6 +11,35 @@ export class RemoteActionError extends AppError {
   constructor(message: string, public readonly statusCode: number) { super(message); }
 }
 
+/**
+ * Las cuatro condiciones que habilitan alcanzar la EWS de un equipo, en el
+ * único lugar donde viven: el flag opt-in del monitor, que el equipo sea de
+ * ese monitor, que tenga IP registrada, y que esa IP no esté vieja.
+ *
+ * Compartida entre el visor de una página (`EwsProxyUseCase`) y el gateway
+ * navegable (`OpenEwsSessionUseCase`) a propósito: si alguna vez se relaja
+ * una, tiene que relajarse para los dos o para ninguno — dos copias de esta
+ * lógica es exactamente cómo se abre un agujero sin que nadie lo note.
+ */
+export async function assertEligibleEwsDevice(repo: AgentPortalRepository, agentId: string, deviceId: string) {
+  const agent = await repo.findEwsAgent(agentId);
+  if (!agent) throw new RemoteActionError("Agente no encontrado", 404);
+  if (!agent.remote_ews_enabled) throw new RemoteActionError("Remote EWS no está habilitado para este agente", 403);
+  const device = await repo.findEwsDevice(agentId, deviceId);
+  if (!device) throw new RemoteActionError("Dispositivo no encontrado para este agente", 404);
+  // Se extrae a una const para que el tipo de retorno quede con `ip_address: string`:
+  // los callers no tienen por qué volver a chequear algo que acá ya se garantizó.
+  const ipAddress = device.ip_address;
+  if (!ipAddress) throw new RemoteActionError("El dispositivo no tiene una IP registrada todavía", 409);
+  // Ventana de staleness: una IP reasignada por DHCP podría apuntar a otro equipo.
+  const staleThresholdMs = 2 * (agent.scan_interval_minutes || 15) * 60 * 1000;
+  const lastSeenMs = device.last_seen ? new Date(device.last_seen).getTime() : 0;
+  if (Date.now() - lastSeenMs > staleThresholdMs) {
+    throw new RemoteActionError("El dispositivo no reportó recientemente — la IP podría haber sido reasignada. Esperá al próximo scan.", 409);
+  }
+  return { ...device, ip_address: ipAddress };
+}
+
 /** Comando remoto genérico: persiste en `agent_commands`, audita y empuja por WSS si el agente está conectado. */
 export class SendAgentCommandUseCase {
   constructor(
@@ -127,18 +156,7 @@ export class EwsProxyUseCase {
     });
   }
 
-  private async assertEligibleDevice(agentId: string, deviceId: string) {
-    const agent = await this.repo.findEwsAgent(agentId);
-    if (!agent) throw new RemoteActionError("Agente no encontrado", 404);
-    if (!agent.remote_ews_enabled) throw new RemoteActionError("Remote EWS no está habilitado para este agente", 403);
-    const device = await this.repo.findEwsDevice(agentId, deviceId);
-    if (!device) throw new RemoteActionError("Dispositivo no encontrado para este agente", 404);
-    if (!device.ip_address) throw new RemoteActionError("El dispositivo no tiene una IP registrada todavía", 409);
-    const staleThresholdMs = 2 * (agent.scan_interval_minutes || 15) * 60 * 1000;
-    const lastSeenMs = device.last_seen ? new Date(device.last_seen).getTime() : 0;
-    if (Date.now() - lastSeenMs > staleThresholdMs) {
-      throw new RemoteActionError("El dispositivo no reportó recientemente — la IP podría haber sido reasignada. Esperá al próximo scan.", 409);
-    }
-    return device;
+  private assertEligibleDevice(agentId: string, deviceId: string) {
+    return assertEligibleEwsDevice(this.repo, agentId, deviceId);
   }
 }

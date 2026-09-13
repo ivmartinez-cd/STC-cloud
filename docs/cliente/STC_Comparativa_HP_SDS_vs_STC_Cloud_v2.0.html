@@ -865,7 +865,9 @@ STC Cloud Discovery:
 
     <p>HP SDS provee una funcionalidad llamada <strong>Remote EWS</strong>: el administrador puede acceder a la interfaz web integrada (EWS) de cualquier impresora HP a través de un túnel cifrado establecido desde HP SDS Cloud hacia el JAMC local, sin necesidad de VPN ni de IP pública en la impresora. Esta funcionalidad está <em>desactivada por defecto</em> y requiere whitelisting explícito del cliente.</p>
 
-    <p>STC Cloud implementa un mecanismo equivalente reusando el canal WSS ya existente (el mismo que hoy manda comandos remotos): el cloud le pide al agente un único GET a una ruta de la EWS de un dispositivo específico, el agente lo ejecuta dentro de la LAN del cliente y devuelve el resultado por el mismo canal — sin sesión de túnel persistente, cada llamada es un request/response independiente.</p>
+    <p>STC Cloud implementa un mecanismo equivalente reusando el canal WSS ya existente (el mismo que hoy manda comandos remotos): el operador abre la EWS del equipo en una pestaña aparte y la navega con normalidad — cada petición del navegador (la página, sus recursos, los formularios que envía) viaja por el WSS hasta el agente, que la ejecuta dentro de la LAN del cliente y devuelve la respuesta por el mismo canal. No se abre ningún puerto entrante: el agente sigue siendo quien inicia todas las conexiones.</p>
+
+    <p>Una diferencia de diseño a favor nuestro: el <strong>canal WSS es persistente y bidireccional</strong>, así que la petición llega al agente en el momento. El JAMC, que consulta a la nube de HP por polling (ver sección 2), depende de su próximo ciclo para enterarse de que hay trabajo.</p>
 
     <div class="two-col">
         <div class="col-box col-hp">
@@ -880,12 +882,14 @@ STC Cloud Discovery:
         <div class="col-box col-stc">
             <div class="col-box-title">STC Cloud Monitor</div>
             <ul>
-                <li><strong>Desactivado por defecto</strong> (<code>agents.remote_ews_enabled</code>), opt-in explícito por agente</li>
-                <li>Proxy de un solo GET por vez, sin sesión persistente, sobre el WSS ya existente</li>
+                <li><strong>Desactivado por defecto</strong> (<code>agents.remote_ews_enabled</code>), opt-in explícito por monitor</li>
+                <li>Sesión de navegación sobre el WSS ya existente, que <strong>expira a los 30 minutos de inactividad</strong>; se abre con un ticket de un solo uso y 60 segundos de vida</li>
                 <li>Allowlist en <strong>dos capas</strong>: el cloud sólo permite IPs de dispositivos ya sincronizados de ese agente (nunca una IP tipeada a mano); el agente vuelve a validar contra su catálogo local antes de conectar</li>
                 <li>Rechaza si el dispositivo no reportó recientemente (ventana de staleness — mitiga el riesgo de una IP reasignada por DHCP apuntando a otro equipo)</li>
-                <li>Sólo <code>GET</code> — nunca puede mutar configuración de la impresora, mismo principio que el resto del motor de captura</li>
-                <li>Tope de 2MB por respuesta, cortado en streaming; auditado (qué ruta se pidió, nunca el contenido) en cada llamada</li>
+                <li>La sesión queda atada a <strong>un solo equipo</strong>, con la IP congelada del lado del servidor: ninguna petición del navegador puede redirigirla a otra máquina de la red del cliente</li>
+                <li>Las cookies que emite el firmware se guardan <strong>del lado del servidor</strong>; el navegador del operador sólo recibe un identificador opaco, así que la credencial administrativa del equipo nunca queda en un puesto de trabajo</li>
+                <li>Tope de 2MB por respuesta, cortado en streaming; auditoría de la apertura de sesión, de cada página visitada y —en acción separada— de <strong>toda escritura</strong>, nunca del contenido</li>
+                <li><strong>Cualquier marca</strong>, sin requisitos de insumos originales ni de IDs de fabricante</li>
             </ul>
         </div>
     </div>
@@ -893,7 +897,7 @@ STC Cloud Discovery:
     <p>Un detalle de diseño no trivial: la implementación tuvo que asegurarse de que el contenido de la EWS de un cliente sólo llegue a quien lo pidió, no a cualquier otro administrador con sesión abierta en el portal en simultáneo — el canal de difusión de resultados de comandos que ya existía enviaba a todos los portales conectados, y hubo que resolver este caso puntual por separado antes de exponerlo.</p>
 
     <div class="info-callout">
-        <strong>Lo que no se hizo:</strong> paridad completa con las funciones IMIL de HP SDS que acompañan a su Remote EWS (MIB walk remoto, deshabilitar monitoreo por equipo desde la consola, reenviar lecturas puntuales, descubrir una IP puntual desde el portal) — sólo se implementó el acceso a la EWS en sí. Tampoco hay todavía UI de portal para invocarlo (por ahora es un endpoint REST); y la activación del flag y su uso comparten el mismo nivel de permiso (admin/operator), sin un consentimiento explícito adicional del cliente como sugiere el modelo de whitelisting de HP.
+        <strong>Lo que no se hizo:</strong> paridad completa con las funciones IMIL de HP SDS que acompañan a su Remote EWS (MIB walk remoto, deshabilitar monitoreo por equipo desde la consola, reenviar lecturas puntuales, descubrir una IP puntual desde el portal) — se implementó el acceso a la EWS en sí, hoy ya con su pantalla en el portal. Queda pendiente un punto del modelo de HP: la activación del flag y su uso comparten el mismo nivel de permiso (admin/operator), sin un consentimiento explícito adicional del cliente como sugiere el whitelisting de HP.
     </div>
 
     <h2 id="secure-by-default">8. HP Secure by Default y Riesgos en FutureSmart 4.5+</h2>
@@ -938,12 +942,12 @@ STC Cloud Discovery:
             <tr>
                 <td>CSRF en EWS</td>
                 <td>Activado por defecto en operaciones de configuración</td>
-                <td>Ninguno — STC Cloud sólo hace GET de lectura, no modifica configuración</td>
+                <td>Aplica sólo durante una sesión de EWS remoto (el motor de captura sigue siendo de lectura). Mitigado: el gateway sirve un único equipo por sesión, la cookie de sesión es <code>HttpOnly</code>/<code>SameSite=Lax</code>, las cabeceras que cruzan al equipo están en lista blanca, y <code>Referer</code>/<code>Origin</code> se reescriben a la URL del propio dispositivo para que la defensa del firmware siga operando</td>
             </tr>
             <tr>
                 <td>Account Lockout (EWS)</td>
                 <td>Activo: 5 intentos fallidos → bloqueo 10 min</td>
-                <td>Ninguno — STC Cloud no autentica en EWS (páginas públicas)</td>
+                <td>El motor de captura no autentica en EWS (páginas públicas). Durante una sesión de EWS remoto, en cambio, es el operador quien tipea la contraseña del equipo en el prompt de su navegador: si se equivoca, cuenta para el bloqueo del firmware igual que si estuviera frente al equipo. STC Cloud no almacena esa contraseña ni reintenta credenciales por su cuenta</td>
             </tr>
         </tbody>
     </table>

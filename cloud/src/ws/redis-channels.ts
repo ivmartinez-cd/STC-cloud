@@ -63,10 +63,15 @@ export const WS_EWS_ONLINE_SET = "stc:ws:ews-online";
 export const WS_EWS_PUSH_CHANNEL = "stc:ws:ews-push";
 export const WS_EWS_RESULT_CHANNEL = "stc:ws:ews-result";
 
+/** Comandos que viajan por el relay síncrono: el visor de una página (`EWS_PROXY`) y el gateway navegable (`EWS_REQUEST`). */
+export type EwsCommandType = 'EWS_PROXY' | 'EWS_REQUEST';
+
 function relayEwsPushLocally(message: string): void {
   try {
-    const { agentId, commandId, payload } = JSON.parse(message);
-    sendCommandToAgent(agentId, 'EWS_PROXY', payload, commandId); // no-op si el socket tampoco está acá
+    const { agentId, commandId, payload, type } = JSON.parse(message);
+    // El default cubre el mensaje publicado por una réplica todavía sin
+    // `type` (deploy rolling): antes de `EWS_REQUEST` esto era siempre EWS_PROXY.
+    sendCommandToAgent(agentId, type ?? 'EWS_PROXY', payload, commandId); // no-op si el socket tampoco está acá
   } catch { /* mensaje corrupto, ignorar */ }
 }
 
@@ -86,11 +91,16 @@ export function relayEwsResultLocally(message: string): void {
  * diferencia de un `false` de `sendCommandToAgent` a secas, que hoy sólo
  * significa "no en ESTA réplica".
  */
-export async function pushEwsProxyCommand(agentId: string, commandId: string, payload: Record<string, unknown>): Promise<boolean> {
-  if (sendCommandToAgent(agentId, 'EWS_PROXY', payload, commandId)) return true;
+export async function pushEwsProxyCommand(
+  agentId: string,
+  commandId: string,
+  payload: Record<string, unknown>,
+  type: EwsCommandType = 'EWS_PROXY'
+): Promise<boolean> {
+  if (sendCommandToAgent(agentId, type, payload, commandId)) return true;
   const onlineElsewhere = await wsRedisPub.sismember(WS_EWS_ONLINE_SET, agentId).catch(() => 0);
   if (!onlineElsewhere) return false;
-  await wsRedisPub.publish(WS_EWS_PUSH_CHANNEL, JSON.stringify({ agentId, commandId, payload })).catch(() => {});
+  await wsRedisPub.publish(WS_EWS_PUSH_CHANNEL, JSON.stringify({ agentId, commandId, payload, type })).catch(() => {});
   return true;
 }
 

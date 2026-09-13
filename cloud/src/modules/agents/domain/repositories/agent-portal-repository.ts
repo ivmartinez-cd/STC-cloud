@@ -32,7 +32,7 @@ export interface AgentPortalRepository {
   /** Borra lecturas + equipos del agente (cascada explícita) y el agente. */
   deleteCascade(agentId: string, deviceIds: string[]): Promise<void>;
   findEwsAgent(id: string): Promise<{ remote_ews_enabled: boolean; scan_interval_minutes: number | null } | null>;
-  findEwsDevice(agentId: string, deviceId: string): Promise<{ id: string; ip_address: string | null; last_seen: Date | null } | null>;
+  findEwsDevice(agentId: string, deviceId: string): Promise<{ id: string; ip_address: string | null; last_seen: Date | null; model: string | null; serial_number: string | null } | null>;
   /** Filas tocadas (0 = agente inexistente). */
   setRemoteEwsEnabled(id: string, enabled: boolean): Promise<number>;
 }

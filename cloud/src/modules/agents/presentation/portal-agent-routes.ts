@@ -160,6 +160,9 @@ const remoteEwsSchema = { body: { type: "object", required: ["enabled"], propert
 const ewsProxySchema = {
   body: { type: "object", required: ["device_id", "path"], properties: { device_id: { type: "string", format: "uuid" }, path: { type: "string", minLength: 1, maxLength: 500 } } },
 };
+const ewsSessionSchema = {
+  body: { type: "object", required: ["device_id"], additionalProperties: false, properties: { device_id: { type: "string", format: "uuid" } } },
+};
 
 export function registerPortalAgentRoutes(fastify: FastifyInstance, db: Knex, redis: Redis, agentService: AgentService, portalAuth: AuthHook) {
   const ctrl = createPortalAgentController(fastify, redis, agentService.useCases);
@@ -206,4 +209,8 @@ export function registerPortalAgentRoutes(fastify: FastifyInstance, db: Knex, re
   fastify.put("/api/v1/agents/:id/remote-ews", { ...auth, schema: remoteEwsSchema, handler: ctrl.setRemoteEwsEnabled });
   // Más estricto que el resto (cada llamada dispara un round-trip real hacia la LAN del cliente).
   fastify.post("/api/v1/agents/:id/ews-proxy", { ...auth, schema: ewsProxySchema, config: { rateLimit: { max: 20, timeWindow: "1 minute" } }, handler: ctrl.ewsProxy });
+  // Abre una sesión de NAVEGACIÓN de la EWS y devuelve la URL del gateway (otro
+  // origen) con un ticket de un solo uso. La sesión en sí vive en Redis; acá
+  // sólo se valida y se emite el ticket.
+  fastify.post("/api/v1/agents/:id/ews-session", { ...auth, schema: ewsSessionSchema, config: { rateLimit: { max: 20, timeWindow: "1 minute" } }, handler: ctrl.openEwsSession });
 }

@@ -430,7 +430,7 @@
         </div>
 
         <div class="note-callout" style="padding: 10px 15px; margin: 15px 0 0 0; font-size: 12px;">
-            <strong>Alcance:</strong> esta guía documenta los controles de seguridad vigentes del sistema — superficie de red, criptografía, autenticación, integridad de firmware, tráfico SNMP (lectura y la única operación de escritura), acceso remoto a EWS y política de retención de datos. Cada sección describe el comportamiento real del código.
+            <strong>Alcance:</strong> esta guía documenta los controles de seguridad vigentes del sistema — superficie de red, criptografía, autenticación, integridad de firmware, tráfico SNMP (lectura y la única operación de escritura por esa vía), acceso remoto a EWS —que <strong>sí admite escritura sobre el equipo</strong>, ver Sección 10— y política de retención de datos. Cada sección describe el comportamiento real del código.
         </div>
 
         <div class="footer">
@@ -814,8 +814,11 @@ monoPages = Number(GXI_BILLING_SIMPLEX_BW_TOTAL_CNT) + Number(GXI_BILLING_DUPLEX
 
         <h2 id="ews-remoto-tunel">10. Acceso Remoto Controlado a EWS (Túnel sobre WSS Existente)</h2>
         <p>
-            Esta capacidad, deshabilitada por defecto (`agents.remote_ews_enabled = false`, activación explícita por agente), permite a un operador autorizado del portal recuperar una única página del servidor web embebido (EWS) de un dispositivo — el mismo tipo de contenido que el motor descrito en la Sección 5 ya lee de forma rutinaria, pero bajo demanda puntual.
+            Esta capacidad, deshabilitada por defecto (`agents.remote_ews_enabled = false`, activación explícita por agente), permite a un operador autorizado del portal <strong>trabajar sobre el servidor web embebido (EWS) de un dispositivo como si estuviera sentado en la red del cliente</strong>, sin VPN. Es el equivalente funcional del Remote EWS de HP SDS, que establece una sesión análoga contra su conector on-site.
         </p>
+        <div class="note-callout">
+            <strong>Alcance de escritura — léase con atención.</strong> Hasta la versión anterior de este documento esta función era estrictamente de lectura (un único GET por vez). <strong>Ya no lo es:</strong> el operador puede autenticarse contra el equipo y modificar su configuración, con el mismo alcance que tendría cualquier persona con acceso físico a la red del cliente y la contraseña del EWS. Esa contraseña la sigue custodiando el cliente: STC Cloud no la almacena ni la conoce, y si el equipo no se la entrega al operador, éste sólo verá las páginas públicas del firmware. La función continúa deshabilitada de fábrica y requiere activación explícita por monitor.
+        </div>
         <p>
             <strong>Por qué esto no contradice el modelo Zero-Inbound (Sección 2):</strong> no se abre ningún puerto nuevo ni se expone ningún socket entrante en el agente ni en la impresora hacia internet. El flujo completo se origina en la nube, que encola un comando sobre el **mismo canal WSS saliente ya existente y ya autenticado** — el mismo mecanismo de comandos remotos que el agente ya soporta para otras operaciones administrativas. El agente es quien inicia la conexión HTTP saliente hacia la impresora dentro de su propia intranet, exactamente igual que durante un escaneo normal.
         </p>
@@ -824,10 +827,23 @@ monoPages = Number(GXI_BILLING_SIMPLEX_BW_TOTAL_CNT) + Number(GXI_BILLING_DUPLEX
         <ul>
             <li><strong>Doble Validación de Allowlist:</strong> la nube resuelve la IP del dispositivo desde su propio registro (`devices`), nunca confía en una IP provista por el cliente de la petición; el agente, de forma independiente, revalida esa IP contra su propio registro local de dispositivos conocidos antes de emitir la petición HTTP real. Sin este segundo registro local, el agente rechaza la operación por defecto (fail-closed).</li>
             <li><strong>Rechazo por Antigüedad de Datos (Staleness):</strong> si el último `last_seen` del dispositivo excede el doble del intervalo de escaneo configurado (o 30 minutos por defecto), la operación se rechaza — mitigación ante el caso de que DHCP haya reasignado esa IP a otro host desde el último escaneo.</li>
-            <li><strong>Sólo Lectura, Sólo GET:</strong> validado en dos capas independientes (API pública y agente); no existe ningún camino para que esta función emita una petición de escritura (POST/PUT) hacia el firmware del dispositivo.</li>
-            <li><strong>Tope de Transferencia con Corte Temprano:</strong> la respuesta se transmite en streaming con un límite de 2 MB verificado de forma incremental — la conexión se corta apenas se excede el límite, sin esperar a bufferizar la respuesta completa primero.</li>
-            <li><strong>Integridad Binaria:</strong> el cuerpo de la respuesta se transporta como Base64, nunca decodificado a texto plano en el camino, evitando corrupción de contenido binario embebido (ej. imágenes de estado del panel).</li>
-            <li><strong>Auditoría sin Fuga de Contenido:</strong> cada uso queda registrado (`audit_logs`, acción `REMOTE_EWS_ACCESS`) con dispositivo, ruta consultada, método, código de estado y si hubo truncado — nunca el cuerpo de la respuesta. La activación/desactivación del flag por agente se audita por separado (`REMOTE_EWS_TOGGLE`).</li>
+            <li><strong>Alcance Acotado al Equipo, no a la Red:</strong> una sesión queda ligada a UN dispositivo, resuelto por la nube al abrirla. La IP se congela en ese momento del lado del servidor y ninguna petición posterior del navegador puede cambiarla: el operador no puede usar la sesión para alcanzar otra máquina de la red del cliente, ni siquiera otra impresora.</li>
+            <li><strong>Credenciales del Equipo Fuera del Navegador:</strong> las cookies de sesión que emite el firmware se guardan exclusivamente del lado del servidor, asociadas a la sesión. El navegador del operador recibe únicamente un identificador opaco, inaccesible a JavaScript. La credencial administrativa del equipo nunca queda almacenada en un puesto de trabajo.</li>
+            <li><strong>Expiración por Inactividad:</strong> la sesión caduca a los 30 minutos sin uso y se renueva sólo mientras el operador esté trabajando; no existen sesiones persistentes abiertas contra la red de un cliente. La URL de apertura lleva un ticket de un solo uso con 60 segundos de vida, de modo que reenviarla no le da acceso a nadie.</li>
+            <li><strong>Tope de Transferencia con Corte Temprano:</strong> cada respuesta se transmite en streaming con un límite de 2 MB verificado de forma incremental — la conexión se corta apenas se excede el límite, sin esperar a bufferizar la respuesta completa primero.</li>
+            <li><strong>Integridad Binaria:</strong> el cuerpo se transporta como Base64 en ambos sentidos, nunca decodificado a texto plano en el camino, evitando corrupción de contenido binario embebido (ej. imágenes de estado del panel) y de los cuerpos que el operador envía al equipo.</li>
+            <li><strong>Auditoría sin Fuga de Contenido:</strong> la apertura de cada sesión (`REMOTE_EWS_SESSION_OPEN`), cada página visitada (`REMOTE_EWS_ACCESS`) y —en acción propia y separada— <strong>toda escritura contra el equipo</strong> (`REMOTE_EWS_WRITE`) quedan registradas en `audit_logs` con dispositivo, ruta, método y código de estado. <strong>Nunca el cuerpo</strong>: ni el que va ni el que vuelve. La activación/desactivación del flag por monitor se audita por separado (`REMOTE_EWS_TOGGLE`).</li>
+        </ul>
+
+        <h3>Riesgos que Introduce la Escritura, y su Tratamiento</h3>
+        <p>
+            Esta sección declara explícitamente lo que el alcance de escritura habilita, para que el área de IT del cliente pueda evaluarlo:
+        </p>
+        <ul>
+            <li><strong>Cambios de configuración en el equipo:</strong> un operador autorizado puede modificar la configuración del dispositivo. Mitigación: es opt-in por monitor, sólo para roles admin/operator, requiere la contraseña del EWS que custodia el cliente, y cada escritura queda auditada de forma individual y distinguible de las lecturas.</li>
+            <li><strong>Bloqueo de cuenta del EWS (account lockout):</strong> intentos de autenticación fallidos contra el firmware pueden bloquear la cuenta del equipo, según la política del propio fabricante. STC Cloud no reintenta credenciales ni las almacena; el riesgo es equivalente al de cualquier persona escribiendo mal la contraseña en la pantalla del equipo.</li>
+            <li><strong>CSRF sobre el EWS:</strong> la inmunidad que otorgaba la restricción a GET deja de aplicar. Mitigación: el origen del gateway sirve exclusivamente contenido de un único equipo, la sesión es `HttpOnly`/`SameSite=Lax`, las cabeceras del navegador que cruzan al equipo están en lista blanca, y `Referer`/`Origin` se reescriben a la URL del propio dispositivo para que las defensas anti-CSRF del firmware sigan operando.</li>
+            <li><strong>Alcance lateral en la red:</strong> sin cambios respecto de la versión anterior. La doble allowlist (registro de la nube + catálogo local del agente) sigue siendo la barrera, y no se relajó para habilitar la escritura.</li>
         </ul>
 
         <h2 id="retencion-datos">11. Política de Retención de Datos</h2>

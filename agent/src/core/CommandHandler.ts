@@ -1,13 +1,27 @@
 import { log } from './Logger';
 import { ConsoleConnector } from './ConsoleConnector';
 import type { SocketManager } from './SocketManager';
-import { proxyEwsRequest } from '../capture/transport/http';
+import { ewsRequest, proxyEwsRequest, type EwsRelayResult } from '../capture/transport/http';
 import { SnmpClient, type SnmpCredential } from '../capture/transport/snmp';
 import { restartPrinter } from '../snmp/printerReset';
 
 /** Tope de tamaño de una respuesta de EWS proxyeada — un WS sin `maxPayload` explícito no debe recibir un frame arbitrariamente grande. */
 const EWS_PROXY_MAX_BYTES = 2 * 1024 * 1024;
 const EWS_PROXY_TIMEOUT_MS = 10_000;
+
+/** Errores de conexión en el 80 que ameritan reintentar por TLS: nadie escuchando, o algo que no habla HTTP en claro. */
+const RETRY_OVER_TLS_CODES = new Set(['ECONNREFUSED', 'ECONNRESET', 'EPROTO', 'EPIPE']);
+
+/** Payload de `EWS_REQUEST` — lo arma el gateway de EWS remoto de la nube a partir de la petición del navegador. */
+export interface EwsRequestPayload {
+  ip?: string;
+  path?: string;
+  method?: string;
+  headers?: Record<string, string>;
+  bodyBase64?: string;
+  protocol?: 'http' | 'https';
+  port?: number;
+}
 
 export interface CommandResult {
   status: 'success' | 'error';
@@ -165,6 +179,10 @@ export class CommandHandler {
           result = { status: proxied.status, headers: proxied.headers, bodyBase64: proxied.bodyBase64, truncated: proxied.truncated };
           break;
         }
+        case 'EWS_REQUEST': {
+          result = await this.relayEwsRequest(payload as EwsRequestPayload);
+          break;
+        }
         case 'RESTART_PRINTER': {
           const p = payload as { ip?: string };
           if (!p.ip || !this.isKnownDeviceIp(p.ip)) {
@@ -213,5 +231,45 @@ export class CommandHandler {
 
       return finalError;
     }
+  }
+
+  /**
+   * Relay de una petición del gateway de EWS remoto del portal. A diferencia
+   * de `EWS_PROXY` (una sola página, GET), acá el operador está navegando el
+   * EWS de verdad: se relayan método, headers y body, que es lo que permite
+   * loguearse en el equipo y mandar un formulario.
+   *
+   * Lo que NO se relaja es la allowlist local: la IP tiene que estar en el
+   * `known_devices` de ESTE agente (fail-closed si no hay catálogo), igual que
+   * antes. Es la segunda capa: la nube ya resolvió la IP desde `devices`, pero
+   * el agente nunca confía ciegamente en una IP que llega por el socket.
+   */
+  private async relayEwsRequest(p: EwsRequestPayload): Promise<Record<string, unknown>> {
+    if (!p.ip || !this.isKnownDeviceIp(p.ip)) {
+      throw new Error(`IP ${p.ip ?? '(vacía)'} no está en known_devices de este agente`);
+    }
+    if (!p.path || !p.path.startsWith('/')) throw new Error('path inválido');
+    const relayed = await this.tryEwsProtocols(p);
+    if (!relayed.result.ok) throw new Error(relayed.result.error);
+    const r = relayed.result.response;
+    // `protocol` vuelve al gateway para que fije el acierto en la sesión y no
+    // vuelva a sondear en cada imagen de la página.
+    return { status: r.status, headers: r.headers, setCookie: r.setCookie ?? [], bodyBase64: r.bodyBase64, truncated: r.truncated, protocol: relayed.protocol };
+  }
+
+  /**
+   * Sondeo HTTP→HTTPS: el firmware nuevo (FutureSmart, Lexmark reciente)
+   * suele venir con el 80 cerrado. Se resuelve acá, no en la nube, porque el
+   * único que puede probar es el que está adentro de la LAN — y así una sola
+   * ida y vuelta por el WSS alcanza. Si el gateway ya sabe el protocolo (lo
+   * fijó en la primera respuesta), no se sondea nada.
+   */
+  private async tryEwsProtocols(p: EwsRequestPayload): Promise<{ result: EwsRelayResult; protocol: 'http' | 'https' }> {
+    const opts = { method: p.method, headers: p.headers, bodyBase64: p.bodyBase64, port: p.port };
+    const first = p.protocol ?? 'http';
+    const result = await ewsRequest(p.ip!, p.path!, EWS_PROXY_MAX_BYTES, { ...opts, protocol: first }, EWS_PROXY_TIMEOUT_MS);
+    if (result.ok || p.protocol || p.port || !RETRY_OVER_TLS_CODES.has(result.code)) return { result, protocol: first };
+    const overTls = await ewsRequest(p.ip!, p.path!, EWS_PROXY_MAX_BYTES, { ...opts, protocol: 'https' }, EWS_PROXY_TIMEOUT_MS);
+    return overTls.ok ? { result: overTls, protocol: 'https' } : { result, protocol: first };
   }
 }

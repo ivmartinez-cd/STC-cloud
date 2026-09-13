@@ -134,15 +134,36 @@ function configHandlers(uc: AgentUseCases) {
   };
 }
 
-function remoteHandlers(fastify: FastifyInstance, uc: AgentUseCases) {
+/**
+ * Origen del gateway de EWS navegable. Es un hostname aparte del portal a
+ * propósito (ver `ews-gateway-routes.ts`); sin esta variable no hay dónde
+ * abrir la sesión, así que el endpoint responde 503 en vez de armar una URL
+ * inventada que el operador vería como una pestaña rota.
+ */
+const EWS_GATEWAY_URL = process.env.EWS_GATEWAY_URL ?? "";
+
+async function openEwsSessionFor(request: Req, reply: FastifyReply, redis: Redis, uc: AgentUseCases) {
+  if (!EWS_GATEWAY_URL) return reply.status(503).send({ error: "El gateway de EWS no está configurado en este entorno (EWS_GATEWAY_URL)" });
+  const { device_id } = request.body as { device_id: string };
+  const { ticket } = await uc.openEwsSession(redis).execute({
+    agentId: idOf(request), deviceId: device_id, role: getPortalUser(request)?.role ?? "", ...actorOf(request),
+  });
+  // El ticket viaja en la URL porque el navegador tiene que cruzar a OTRO
+  // origen, donde la cookie del portal no llega: dura 60 s y un solo uso.
+  return { url: `${EWS_GATEWAY_URL}/__stc/open?ticket=${ticket}` };
+}
+
+const sendCommandFor = (fastify: FastifyInstance, uc: AgentUseCases) => async (request: Req) => {
+  const { type, payload } = request.body as { type: string; payload?: Record<string, unknown> };
+  const result = await uc.sendCommand.execute({ agentId: idOf(request), type, payload, ...actorOf(request) });
+  fastify.log.info({ agentId: idOf(request), type, commandId: result.commandId }, "Comando remoto registrado y pendiente");
+  if (result.instant) fastify.log.info({ agentId: idOf(request) }, "Comando empujado instantáneamente vía WSS");
+  return result;
+};
+
+function remoteHandlers(fastify: FastifyInstance, redis: Redis, uc: AgentUseCases) {
   return {
-    sendCommand: async (request: Req) => {
-      const { type, payload } = request.body as { type: string; payload?: Record<string, unknown> };
-      const result = await uc.sendCommand.execute({ agentId: idOf(request), type, payload, ...actorOf(request) });
-      fastify.log.info({ agentId: idOf(request), type, commandId: result.commandId }, "Comando remoto registrado y pendiente");
-      if (result.instant) fastify.log.info({ agentId: idOf(request) }, "Comando empujado instantáneamente vía WSS");
-      return result;
-    },
+    sendCommand: sendCommandFor(fastify, uc),
     ewsProxy: (request: Req, reply: FastifyReply) =>
       replyingAgentErrors(reply, () => {
         const { device_id, path } = request.body as { device_id: string; path: unknown };
@@ -150,10 +171,12 @@ function remoteHandlers(fastify: FastifyInstance, uc: AgentUseCases) {
       }),
     setRemoteEwsEnabled: (request: Req, reply: FastifyReply) =>
       replyingAgentErrors(reply, () => uc.setRemoteEws.execute(idOf(request), (request.body as { enabled: boolean }).enabled, actorOf(request))),
+    openEwsSession: (request: Req, reply: FastifyReply) =>
+      replyingAgentErrors(reply, () => openEwsSessionFor(request, reply, redis, uc)),
     triggerScan: (request: Req) => uc.triggerScan.execute(idOf(request), actorOf(request)),
   };
 }
 
 export function createPortalAgentController(fastify: FastifyInstance, redis: Redis, uc: AgentUseCases) {
-  return { ...readHandlers(uc), ...lifecycleHandlers(fastify, redis, uc), ...configHandlers(uc), ...remoteHandlers(fastify, uc) };
+  return { ...readHandlers(uc), ...lifecycleHandlers(fastify, redis, uc), ...configHandlers(uc), ...remoteHandlers(fastify, redis, uc) };
 }

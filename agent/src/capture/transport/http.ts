@@ -162,6 +162,8 @@ export function httpRequest(ip: string, opts: HttpRequestOptions): Promise<HttpR
 export interface EwsProxyResponse {
   status: number;
   headers: Record<string, string>;
+  /** `Set-Cookie` crudos del equipo, aparte del resto: los guarda el gateway, no el navegador. */
+  setCookie?: string[];
   bodyBase64: string;
   truncated: boolean;
 }
@@ -186,20 +188,103 @@ export function proxyEwsRequest(
   timeoutMs = EWS_TIMEOUT_MS,
   port = 80
 ): Promise<EwsProxyResponse | null> {
+  return ewsRequest(ip, path, maxBytes, { port }, timeoutMs).then((r) => (r.ok ? r.response : null));
+}
+
+/** Métodos que el gateway puede relayar. `CONNECT`/`TRACE` y cualquier verbo raro quedan afuera. */
+const RELAYABLE_METHODS = new Set(['GET', 'HEAD', 'POST', 'PUT', 'DELETE', 'PATCH']);
+
+/**
+ * Headers que NUNCA se copian tal cual entre el navegador y la impresora
+ * (ni de ida ni de vuelta): son de la conexión, no del mensaje, y relayarlos
+ * rompe el framing. `content-length` se recalcula solo a partir del body, y
+ * `content-encoding`/`accept-encoding` se manejan acá adentro porque esta
+ * función ya descomprime la respuesta antes de devolverla.
+ */
+const HOP_BY_HOP_HEADERS = new Set([
+  'connection', 'keep-alive', 'proxy-authenticate', 'proxy-authorization', 'te', 'trailer',
+  'transfer-encoding', 'upgrade', 'host', 'content-length', 'content-encoding', 'accept-encoding',
+]);
+
+function sanitizeHeaders(headers: Record<string, string> | undefined): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [key, value] of Object.entries(headers ?? {})) {
+    const name = key.toLowerCase();
+    // Sin saltos de línea: un valor con CRLF inyectaría headers extra en el request a la impresora.
+    if (HOP_BY_HOP_HEADERS.has(name) || /[\r\n]/.test(String(value))) continue;
+    out[name] = String(value);
+  }
+  return out;
+}
+
+export interface EwsRelayOptions {
+  method?: string;
+  /** Headers que el gateway decidió relayar (cookie, authorization, content-type, accept…). */
+  headers?: Record<string, string>;
+  bodyBase64?: string;
+  protocol?: 'http' | 'https';
+  port?: number;
+}
+
+/**
+ * Resultado explícito en vez de `null`: el gateway necesita distinguir
+ * "no hay nada escuchando en el 80" (⇒ reintentar por HTTPS) de un timeout o
+ * de un error de TLS, y el operador necesita ver cuál de los tres fue.
+ */
+export type EwsRelayResult =
+  | { ok: true; response: EwsProxyResponse }
+  | { ok: false; error: string; code: string };
+
+/**
+ * Relay de UNA petición HTTP contra la EWS de un equipo de la LAN, para el
+ * gateway de EWS remoto del portal. Generaliza `proxyEwsRequest` (que era
+ * GET-only sobre HTTP:80, para el visor de una sola página):
+ * - Relaya método, headers y body — es lo que permite loguearse en el equipo
+ *   y mandar formularios, no sólo leer.
+ * - Habla HTTP y HTTPS, aceptando el certificado autofirmado que trae de
+ *   fábrica cualquier impresora (`rejectUnauthorized: false`): el canal que
+ *   importa es el WSS autenticado agente↔nube, no el del último salto dentro
+ *   de la LAN del cliente.
+ * - NO sigue redirects: el `Location` se le devuelve al navegador, que ya sabe
+ *   seguirlo por su cuenta (y así la barra de direcciones queda consistente).
+ *
+ * Lo que NO cambia respecto del original, porque es lo que sostiene la
+ * seguridad de todo esto: el tope de tamaño cortado en streaming, y que el
+ * caller (`CommandHandler`) valide la IP contra `known_devices` antes de
+ * llamar acá.
+ */
+export function ewsRequest(
+  ip: string,
+  path: string,
+  maxBytes: number,
+  opts: EwsRelayOptions = {},
+  timeoutMs = EWS_TIMEOUT_MS
+): Promise<EwsRelayResult> {
+  const method = (opts.method ?? 'GET').toUpperCase();
+  if (!RELAYABLE_METHODS.has(method)) {
+    return Promise.resolve({ ok: false, error: `Método no relayable: ${method}`, code: 'METHOD' });
+  }
+  const protocol = opts.protocol ?? 'http';
+  const body = opts.bodyBase64 ? Buffer.from(opts.bodyBase64, 'base64') : null;
+  const headers: Record<string, string | number> = {
+    'User-Agent': USER_AGENT,
+    'Accept-Encoding': 'gzip, deflate, identity',
+    ...sanitizeHeaders(opts.headers),
+  };
+  if (body) headers['Content-Length'] = body.length;
+
   return new Promise((resolve) => {
     let settled = false;
-    const finish = (result: EwsProxyResponse | null) => {
+    const finish = (result: EwsRelayResult) => {
       if (settled) return;
       settled = true;
       resolve(result);
     };
 
-    const req = http.request(
-      {
-        hostname: ip, port, path, method: 'GET',
-        timeout: timeoutMs,
-        headers: { 'User-Agent': USER_AGENT, 'Accept-Encoding': 'gzip, deflate, identity' },
-      },
+    const lib = protocol === 'https' ? https : http;
+    const port = opts.port ?? (protocol === 'https' ? 443 : 80);
+    const req = lib.request(
+      { hostname: ip, port, path, method, timeout: timeoutMs, rejectUnauthorized: false, headers },
       (res) => {
         const chunks: Buffer[] = [];
         let total = 0;
@@ -217,34 +302,57 @@ export function proxyEwsRequest(
         });
         res.on('end', () => {
           try {
-            const buffer = Buffer.concat(chunks);
-            const enc = String(res.headers['content-encoding'] ?? '').toLowerCase();
-            const decoded = enc.includes('gzip') ? zlib.gunzipSync(buffer)
-              : enc.includes('deflate') ? zlib.inflateSync(buffer) : buffer;
-            const headers: Record<string, string> = {};
-            for (const [k, v] of Object.entries(res.headers)) {
-              if (typeof v === 'string') headers[k] = v;
-              else if (Array.isArray(v)) headers[k] = v.join(', ');
-            }
-            finish({ status: res.statusCode ?? 0, headers, bodyBase64: decoded.toString('base64'), truncated });
+            finish({ ok: true, response: decodeEwsResponse(res, Buffer.concat(chunks), truncated) });
           } catch {
-            finish(null);
+            finish({ ok: false, error: 'No se pudo descomprimir la respuesta del equipo', code: 'DECODE' });
           }
         });
         // `destroy()` por el corte de tamaño dispara 'close', no 'end' — sin
         // este handler, la promesa nunca se resolvería en ese caso.
         res.on('close', () => {
           if (!settled && truncated) {
-            const buffer = Buffer.concat(chunks);
-            finish({ status: res.statusCode ?? 0, headers: {}, bodyBase64: buffer.toString('base64'), truncated: true });
+            const response = { status: res.statusCode ?? 0, headers: {}, bodyBase64: Buffer.concat(chunks).toString('base64'), truncated: true };
+            finish({ ok: true, response });
           }
         });
       },
     );
-    req.on('error', () => finish(null));
-    req.on('timeout', () => { req.destroy(); finish(null); });
+    req.on('error', (e: NodeJS.ErrnoException) => {
+      finish({ ok: false, error: `${e.code ?? 'ERROR'} hablando con ${ip}:${port}`, code: e.code ?? 'ERROR' });
+    });
+    req.on('timeout', () => {
+      req.destroy();
+      finish({ ok: false, error: `El equipo no respondió en ${timeoutMs} ms`, code: 'TIMEOUT' });
+    });
+    if (body) req.write(body);
     req.end();
   });
+}
+
+/**
+ * Normaliza la respuesta del equipo: descomprime y borra los headers que
+ * dejaron de ser ciertos al hacerlo (`content-encoding`, `content-length`) más
+ * los de conexión. Sin esto el navegador intenta descomprimir por segunda vez
+ * un cuerpo que ya viene en claro y la página no carga.
+ *
+ * `set-cookie` se preserva como lista aparte — es lo único que el gateway
+ * guarda en su propio jar del lado del servidor (el navegador nunca ve las
+ * cookies de la impresora).
+ */
+function decodeEwsResponse(res: http.IncomingMessage, buffer: Buffer, truncated: boolean): EwsProxyResponse {
+  const enc = String(res.headers['content-encoding'] ?? '').toLowerCase();
+  const decoded = enc.includes('gzip') ? zlib.gunzipSync(buffer)
+    : enc.includes('deflate') ? zlib.inflateSync(buffer) : buffer;
+  const headers: Record<string, string> = {};
+  const setCookie: string[] = [];
+  for (const [key, value] of Object.entries(res.headers)) {
+    const name = key.toLowerCase();
+    if (name === 'set-cookie') { setCookie.push(...(Array.isArray(value) ? value : [String(value)])); continue; }
+    if (HOP_BY_HOP_HEADERS.has(name)) continue;
+    if (typeof value === 'string') headers[name] = value;
+    else if (Array.isArray(value)) headers[name] = value.join(', ');
+  }
+  return { status: res.statusCode ?? 0, headers, setCookie, bodyBase64: decoded.toString('base64'), truncated };
 }
 
 /** Extrae pares `nombre=valor` de `Set-Cookie` y los fusiona sobre una cookie previa. */

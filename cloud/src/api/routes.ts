@@ -7,6 +7,7 @@ import type { AuthHook } from "./middlewares/authMiddleware";
 import { registerAuthRoutes } from "../modules/auth";
 import { registerAgentRoutes } from "../modules/agents/presentation/agent-routes";
 import { registerPortalAgentRoutes } from "../modules/agents/presentation/portal-agent-routes";
+import { registerEwsGatewayRoutes } from "../modules/agents/presentation/ews-gateway-routes";
 import { registerClientRoutes } from "../modules/clients/presentation/client-routes";
 import { registerPublicApiRoutes } from "../modules/public-api";
 import { registerDeviceRoutes } from "../modules/devices/presentation/device-routes";
@@ -61,6 +62,10 @@ export function registerAllRoutes(
   registerAuthRoutes(fastify, db, redis, agentService, agentAuth, portalAuth);
   registerAgentRoutes(fastify, redis, agentService, agentAuth);
   registerPortalAgentRoutes(fastify, db, redis, agentService, portalAuth);
+  // Gateway de EWS navegable: vive en un hostname aparte (nginx mapea
+  // `ews.<dominio>/*` a `/__ews/*`) y se autentica con su propia sesión, no
+  // con la cookie del portal — ver `ews-gateway-routes.ts`.
+  registerEwsGatewayRoutes(fastify, redis, agentService.useCases);
   registerClientRoutes(fastify, db, portalAuth);
   registerDeviceRoutes(fastify, db, portalAuth);
   registerDashboardRoutes(fastify, db, agentService, portalAuth);

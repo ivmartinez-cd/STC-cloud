@@ -20,6 +20,15 @@ export interface EwsProxyResult {
   headers: Record<string, string>;
   bodyBase64: string;
   truncated: boolean;
+  /**
+   * Sólo los manda `EWS_REQUEST` (el gateway navegable), no `EWS_PROXY`:
+   * - `setCookie`: los `Set-Cookie` crudos del equipo. Van aparte de `headers`
+   *   porque NO se le reenvían al navegador — los guarda la sesión del gateway.
+   * - `protocol`: con cuál de los dos (http/https) contestó el equipo, para
+   *   fijarlo en la sesión y no volver a sondear en cada recurso de la página.
+   */
+  setCookie?: string[];
+  protocol?: "http" | "https";
 }
 
 interface PendingEntry {

@@ -70,6 +70,42 @@ async function runEwsRequest(agentId: string, deviceId: string, path: string): P
  * hay nada que cerrar al desmontar más allá de descartar la respuesta en vuelo
  * (`useLatestRequest`: dos consultas encadenadas y la lenta pisaba a la nueva).
  */
+/**
+ * Abre la EWS navegable en una pestaña nueva. La pestaña se abre ANTES del
+ * fetch y se le asigna la URL después: si se abriera al volver la respuesta,
+ * el navegador la trataría como popup no solicitado y la bloquearía (no hay
+ * gesto del usuario en ese momento).
+ *
+ * El ticket dura 60 s y un solo uso, así que la URL no sirve para compartir.
+ */
+export function useEwsGateway(agentId: string | null | undefined, deviceId: string) {
+  const [opening, setOpening] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const open = useCallback(async () => {
+    if (!agentId) return;
+    const tab = window.open('', '_blank', 'noopener,noreferrer');
+    setOpening(true); setError(null);
+    const failure = await navigateToGateway(tab, agentId, deviceId);
+    setOpening(false);
+    if (failure) { tab?.close(); setError(failure); }
+  }, [agentId, deviceId]);
+
+  return { opening, error, open };
+}
+
+/** Devuelve el mensaje de error, o `null` si la pestaña quedó apuntando al gateway. */
+async function navigateToGateway(tab: Window | null, agentId: string, deviceId: string): Promise<string | null> {
+  try {
+    const { url } = await api.post<{ url: string }>(`/agents/${agentId}/ews-session`, { device_id: deviceId });
+    // Si el navegador bloqueó la pestaña igual, se navega en la actual antes que dejar al operador sin nada.
+    if (tab) tab.location.replace(url); else window.location.assign(url);
+    return null;
+  } catch (e: unknown) {
+    return e instanceof Error ? e.message : String(e);
+  }
+}
+
 export function useEwsProxy(agentId: string | null | undefined, deviceId: string) {
   const [state, setState] = useState<EwsRequestState>(IDLE);
   const beginRequest = useLatestRequest();

@@ -16,6 +16,9 @@ import { DeleteAgentUseCase, GetAgentDetailUseCase, GetAgentDevicesUseCase, List
 import { ProcessReadingUseCase } from "../application/use-cases/process-reading";
 import { RegisterDevicesFromAgentUseCase } from "../application/use-cases/register-devices";
 import { EwsProxyUseCase, SendAgentCommandUseCase, SetRemoteEwsEnabledUseCase, TriggerScanUseCase } from "../application/use-cases/remote-use-cases";
+import { OpenEwsSessionUseCase, RelayEwsRequestUseCase } from "../application/use-cases/ews-gateway-use-cases";
+import { RedisEwsSessionStore } from "../infrastructure/adapters/redis-ews-session-store";
+import type { EwsRedisClient } from "../../../services/ewsGatewayService";
 import { GlobalSearchUseCase } from "../application/use-cases/search-use-case";
 import { SyncReadingsUseCase } from "../application/use-cases/sync-readings";
 import { AlertsModuleNotifier } from "../infrastructure/adapters/alerts-module-notifier";
@@ -79,6 +82,13 @@ export function buildAgentUseCases(db: Knex, redis?: RedisClient) {
     triggerScan: new TriggerScanUseCase(commands, link, audit, agents),
     setRemoteEws: new SetRemoteEwsEnabledUseCase(portal, audit, agents),
     ewsProxy: new EwsProxyUseCase(portal, commands, new EwsProxyServiceGateway(), audit, agents),
+    // Gateway navegable de EWS: factories por Redis, mismo patrón que
+    // `revokeToken`. La sesión y el jar de cookies del equipo viven en Redis y
+    // no en memoria del proceso — con más de una réplica, una sesión en
+    // memoria andaría sólo contra la réplica que la abrió.
+    openEwsSession: (redisClient: EwsRedisClient) => new OpenEwsSessionUseCase(portal, new RedisEwsSessionStore(redisClient), audit, agents),
+    relayEws: (redisClient: EwsRedisClient) => new RelayEwsRequestUseCase(new RedisEwsSessionStore(redisClient), new EwsProxyServiceGateway(), audit),
+    ewsSessions: (redisClient: EwsRedisClient) => new RedisEwsSessionStore(redisClient),
     link,
   };
 }
