@@ -11,6 +11,11 @@ export const AGENT_SAFE_COLUMNS = [
   "agents.id", "agents.client_id", "agents.name", "agents.status", "agents.last_seen", "agents.created_at",
   "agents.hardware_id", "agents.version", "agents.host_name", "agents.host_os", "agents.host_ip", "agents.uptime",
   "agents.scan_interval_minutes", "agents.remote_ews_enabled",
+  // Canal de update + runtime del proceso: van juntos porque sólo sirven
+  // comparados. El canal se hornea en build time y el runtime lo reporta el
+  // proceso vivo; si no se corresponden, el próximo update instala un bundle
+  // que ese runtime no puede ejecutar y el agente no vuelve a levantar.
+  "agents.channel", "agents.runtime",
 ];
 
 const LIST_COLUMNS = [

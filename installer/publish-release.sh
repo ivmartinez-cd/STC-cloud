@@ -60,12 +60,22 @@ SSH_HOST="${SSH_HOST:-146.181.19.111}"
 SSH_USER="${SSH_USER:-ubuntu}"
 API_URL="${STC_API_URL:-https://146.181.19.111.nip.io}"
 
-BASENAME=$(basename "$FILE")
-SIGBASENAME=$(basename "$SIGFILE")
+# El nombre remoto lleva el canal. Antes los dos canales subían como
+# `bundle.js` al MISMO archivo: publicar uno pisaba el del otro, y el agente
+# del canal pisado se bajaba un binario cuyo SHA256 no coincidía con el hash
+# registrado, así que descartaba el update EN SILENCIO (sin alerta en el
+# portal, sólo un log local). Mientras los dos bundles fueron byte a byte
+# idénticos no se notó; dejó de serlo en cuanto stable y legacy divergieron.
+LOCALNAME=$(basename "$FILE")
+EXT="${LOCALNAME##*.}"
+STEM="${LOCALNAME%.*}"
+BASENAME="${STEM}-${CHANNEL}.${EXT}"
+SIGBASENAME="${BASENAME}.sig"
 HASH=$(sha256sum "$FILE" | cut -d' ' -f1)
 
-echo "[1/3] Subiendo $BASENAME (+ .sig) a $SSH_HOST:~/stc-cloud/agent-updates/ ..."
-scp -i "$SSH_KEY" -o BatchMode=yes "$FILE" "$SIGFILE" "$SSH_USER@$SSH_HOST:~/stc-cloud/agent-updates/"
+echo "[1/3] Subiendo $LOCALNAME como $BASENAME (+ .sig) a $SSH_HOST:~/stc-cloud/agent-updates/ ..."
+scp -i "$SSH_KEY" -o BatchMode=yes "$FILE" "$SSH_USER@$SSH_HOST:~/stc-cloud/agent-updates/$BASENAME"
+scp -i "$SSH_KEY" -o BatchMode=yes "$SIGFILE" "$SSH_USER@$SSH_HOST:~/stc-cloud/agent-updates/$SIGBASENAME"
 
 echo "[2/3] Autenticando contra el portal..."
 LOGIN_RESPONSE=$(curl -s -X POST "$API_URL/api/v1/portal/login" \

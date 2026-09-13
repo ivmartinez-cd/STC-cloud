@@ -116,7 +116,15 @@ echo       OK: TypeScript compilado.
 echo.
 echo [4/7] Generando dist-legacy\stc-node.exe y bundle.js ^(Node 20.2.0^)...
 cd /d "%AGENT_DIR%"
-"%NODE20_EXE%" build-sea.js --node-exe "%NODE20_EXE%" --target node20 --out-dir dist-legacy
+:: --channel legacy NO es opcional: sin el, build-sea.js cae al default
+:: 'stable' y el bundle queda marcado como stable aunque sea el build de
+:: Node 20. Un agente asi le pide al server el release del canal stable
+:: (compilado --target node24), se lo instala, y NSSM lo reinicia con
+:: Node 20.2.0 corriendo un bundle de Node 24: el agente no vuelve a
+:: levantar. Falto desde que se creo el canal (10/09/2026) y se detecto el
+:: 13/09 porque el agente de ISSN (Windows 7, Node 20.2.0) figuraba como
+:: "stable" en el portal.
+"%NODE20_EXE%" build-sea.js --node-exe "%NODE20_EXE%" --target node20 --out-dir dist-legacy --channel legacy
 if !errorlevel! neq 0 (
     echo [ERROR] El build-sea.js fallo. Revise el output de arriba.
     pause & exit /b 1

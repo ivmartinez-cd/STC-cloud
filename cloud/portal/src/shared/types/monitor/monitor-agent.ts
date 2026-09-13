@@ -22,6 +22,10 @@ export interface MonitorData {
   };
   /** Opt-in por monitor del acceso remoto a la EWS de sus equipos (ver `useRemoteEwsToggle`). */
   remote_ews_enabled?: boolean;
+  /** Canal de update horneado en el binario (`stable`/`legacy`) y runtime del proceso vivo.
+   *  Sólo sirven comparados — ver `updateChannelInfo`. */
+  channel?: string | null;
+  runtime?: string | null;
   version?: string;
   host_name?: string;
   host_os?: string;

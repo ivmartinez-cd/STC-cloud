@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "test": "npx tsx --test tests/parseRanges.test.ts tests/rangeSpecText.test.ts tests/urlParams.test.ts tests/returnTo.test.ts tests/ewsResponse.test.ts",
+    "test": "npx tsx --test tests/parseRanges.test.ts tests/rangeSpecText.test.ts tests/urlParams.test.ts tests/returnTo.test.ts tests/ewsResponse.test.ts tests/updateChannel.test.ts",
     "check": "node scripts/check-icons.js && tsc --noEmit -p tsconfig.app.json && eslint .",
     "preview": "vite preview"
   },

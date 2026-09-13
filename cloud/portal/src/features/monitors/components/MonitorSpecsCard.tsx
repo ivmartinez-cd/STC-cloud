@@ -1,4 +1,6 @@
+import { TriangleAlert } from 'lucide-react';
 import { fmt, formatRelativeTime, APP_LOCALE } from '../../../shared/lib/formatters';
+import { updateChannelInfo } from '../lib/updateChannel';
 import type { MonitorData } from '../../../shared/types/monitor';
 import type { AgentDiscoveryState, AgentStats } from '../types/monitorDetail';
 
@@ -9,7 +11,7 @@ interface Props {
   onViewDiagnostics?: () => void;
 }
 
-interface SpecRow { label: string; value: string; mono: boolean }
+interface SpecRow { label: string; value: string; mono: boolean; warning?: string | null }
 
 const STATUS_TEXT: Record<string, string> = {
   active: 'Activo · telemetría en curso',
@@ -55,9 +57,11 @@ function formatDiscovery(state: AgentDiscoveryState, now: number): string {
 
 function specRows(monitor: MonitorData, now: number, stats: AgentStats | null): SpecRow[] {
   const discovery = stats?.discovery_state ?? null;
+  const channel = updateChannelInfo(monitor.channel, monitor.runtime);
   return [
     { label: 'APLICACIÓN REMOTA', value: 'STC Cloud Agent', mono: true },
     { label: 'VERSIÓN', value: monitor.version || '—', mono: false },
+    { label: 'CANAL DE ACTUALIZACIÓN', value: channel.value, mono: true, warning: channel.warning },
     { label: 'ESTADO', value: STATUS_TEXT[monitor.status] ?? monitor.status, mono: false },
     { label: 'NOMBRE DEL HOST', value: monitor.host_name || '—', mono: true },
     { label: 'SISTEMA OPERATIVO', value: monitor.host_os || '—', mono: false },
@@ -70,6 +74,29 @@ function specRows(monitor: MonitorData, now: number, stats: AgentStats | null): 
     { label: 'ÚLTIMO CONTACTO', value: formatRelativeTime(monitor.last_seen, now), mono: false },
   ];
 }
+
+/** Una fila con su aviso debajo cuando el dato es contradictorio (hoy: canal
+ *  declarado vs. runtime real). El aviso va en la fila y no en un banner
+ *  aparte porque sólo se entiende pegado al valor que lo produce. */
+const SpecRowLine = ({ row }: { row: SpecRow }) => (
+  <div className="border-b border-line-200 py-[9px] short:py-[5px] last:border-b-0">
+    <div className="flex items-baseline justify-between gap-4">
+      <span className="whitespace-nowrap font-montserrat text-[8.5px] font-bold uppercase tracking-[.13em] text-ink-300">{row.label}</span>
+      <span
+        className={`min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-right ${
+          row.warning ? 'font-mono text-[12px] font-semibold text-severity-critical'
+            : row.mono ? 'font-mono text-[12px] text-ink-900' : 'font-sans text-[12.5px] font-semibold text-ink-900'
+        }`}
+      >
+        {row.warning && <TriangleAlert size={12} className="mr-1 inline align-[-2px]" />}
+        {row.value}
+      </span>
+    </div>
+    {row.warning && (
+      <p className="mt-1 font-sans text-[11.5px] leading-[1.45] text-severity-critical">{row.warning}</p>
+    )}
+  </div>
+);
 
 /** "Estado del monitor" (handoff hifi "Monitor — detalle", 25/08/2026) — valores
  * técnicos (agente, host, IP, subred) en JetBrains Mono; el resto en Source Sans. */
@@ -88,18 +115,7 @@ export default function MonitorSpecsCard({ monitor, now, stats, onViewDiagnostic
         )}
       </div>
       <div className="flex-1 px-5 pb-4 pt-1">
-        {specRows(monitor, now, stats).map((r) => (
-          <div key={r.label} className="flex items-baseline justify-between gap-4 border-b border-line-200 py-[9px] short:py-[5px] last:border-b-0">
-            <span className="whitespace-nowrap font-montserrat text-[8.5px] font-bold uppercase tracking-[.13em] text-ink-300">{r.label}</span>
-            <span
-              className={`min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-right ${
-                r.mono ? 'font-mono text-[12px] text-ink-900' : 'font-sans text-[12.5px] font-semibold text-ink-900'
-              }`}
-            >
-              {r.value}
-            </span>
-          </div>
-        ))}
+        {specRows(monitor, now, stats).map((r) => <SpecRowLine key={r.label} row={r} />)}
       </div>
     </div>
   );
