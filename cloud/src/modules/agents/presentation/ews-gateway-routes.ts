@@ -104,6 +104,12 @@ function registerGatewayEndpoints(fastify: FastifyInstance, redis: Redis, uc: Ag
   fastify.route({
     method: ["GET", "HEAD", "POST", "PUT", "DELETE", "PATCH"],
     url: `${GATEWAY_PREFIX}/*`,
+    // El límite global de la API (100/min) es para llamadas de la SPA; acá una
+    // sola pantalla del EWS dispara cientos de pedidos —cada GIF de un botón
+    // es uno— y el límite los cortaba con 429 dejando la app colgada en
+    // "Loading...". Se sube, no se saca: sigue siendo un tope, y la sesión
+    // (autenticada, atada a un equipo y con vencimiento) es el control real.
+    config: { rateLimit: { max: 1000, timeWindow: "1 minute" } },
     preHandler: sessionAuthFor(sessions),
     handler: (request, reply) => proxyToDevice(request as GatewayRequest, reply, relay),
   });
