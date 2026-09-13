@@ -89,6 +89,74 @@ export class OpenEwsSessionUseCase {
   }
 }
 
+/** El agente sólo habla HTTP/HTTPS contra la IP; el origen se arma con el protocolo que la sesión ya acertó. */
+export function deviceOriginOf(session: EwsSession): string {
+  return `${session.protocol ?? "http"}://${session.ip}`;
+}
+
+/** Los headers del equipo llegan con la capitalización que se le ocurra al firmware. */
+function headerValue(headers: Record<string, string>, name: string): string | undefined {
+  const found = Object.keys(headers).find((key) => key.toLowerCase() === name);
+  return found ? headers[found] : undefined;
+}
+
+/**
+ * Detecta que el equipo redirige a SÍ MISMO pero por el otro esquema —el
+ * clásico "esto se habla por HTTPS" de un firmware con TLS obligatorio.
+ *
+ * Hay que verlo acá y no dejarlo pasar, porque el `Location` absoluto se
+ * convierte en ruta relativa antes de llegar al navegador (si no, el navegador
+ * saldría hacia la IP de la LAN del cliente). Esa reescritura se come el
+ * cambio de esquema: el navegador vuelve a pedir la misma ruta, el gateway
+ * vuelve a hablarle al equipo por el protocolo viejo, y el equipo vuelve a
+ * redirigir. **Bucle infinito**, que Chrome corta con la pestaña en blanco.
+ *
+ * Verificado el 13/09/2026 contra el SyncThru de ISSN: 30 pedidos a `/` en 17
+ * segundos, todos 302, y ni un solo recurso de la página.
+ *
+ * Con esto la sesión aprende el protocolo bueno —igual que ya aprende el jar
+ * de cookies— y el reintento es invisible para el operador.
+ */
+export function schemeSwitchFor(location: string | undefined, deviceOrigin: string): "http" | "https" | null {
+  if (!location) return null;
+  try {
+    const target = new URL(location);
+    const device = new URL(deviceOrigin);
+    if (target.hostname !== device.hostname || target.protocol === device.protocol) return null;
+    return target.protocol === "https:" ? "https" : "http";
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Un redirect del equipo hacia la MISMA ruta que se acaba de pedir y sin
+ * cookie nueva: seguirlo daría exactamente el mismo resultado, para siempre.
+ *
+ * La salvedad de la cookie no es un detalle: "302 a mí mismo + Set-Cookie" es
+ * como muchos firmwares abren la sesión, y ahí el segundo pedido sí cambia
+ * (el jar de la sesión ya la tiene). Sin cookie nueva no hay nada que pueda
+ * cambiar, y se corta con un mensaje legible en vez de dejar que el navegador
+ * gire hasta rendirse con la pestaña en blanco.
+ */
+function isRedirectLoop(result: EwsProxyResponse, requestPath: string, deviceOrigin: string): boolean {
+  if (result.status < 300 || result.status >= 400 || result.setCookie?.length) return false;
+  const location = headerValue(result.headers, "location");
+  if (!location) return false;
+  const target = location.startsWith("/") ? location : safePathOf(location, deviceOrigin);
+  return target !== null && target.split("?")[0] === requestPath.split("?")[0];
+}
+
+/** La ruta de un `Location` absoluto, sólo si apunta al propio equipo. */
+function safePathOf(location: string, deviceOrigin: string): string | null {
+  try {
+    const target = new URL(location);
+    return target.hostname === new URL(deviceOrigin).hostname ? target.pathname + target.search : null;
+  } catch {
+    return null;
+  }
+}
+
 export interface RelayEwsInput {
   sessionId: string;
   session: EwsSession;
@@ -122,6 +190,23 @@ export class RelayEwsRequestUseCase {
   }
 
   private async relay(input: RelayEwsInput): Promise<EwsProxyResponse> {
+    const first = await this.send(input);
+    const switchTo = schemeSwitchFor(headerValue(first.headers, "location"), deviceOriginOf(input.session));
+    const result = switchTo ? await this.retryOver(input, switchTo) : first;
+    if (input.audit) await this.writeAudit(input, result.status);
+    if (isRedirectLoop(result, input.path, deviceOriginOf(input.session))) {
+      throw new RemoteActionError(`El equipo redirige ${input.path} a sí mismo sin avanzar. Probá abrir la EWS de nuevo desde el portal.`, 502);
+    }
+    return result;
+  }
+
+  /** El equipo pidió el otro esquema: se lo guarda la sesión y se repite el pedido, una sola vez. */
+  private async retryOver(input: RelayEwsInput, protocol: "http" | "https"): Promise<EwsProxyResponse> {
+    await this.sessions.update(input.sessionId, { protocol });
+    return this.send({ ...input, session: { ...input.session, protocol } });
+  }
+
+  private async send(input: RelayEwsInput): Promise<EwsProxyResponse> {
     const { session } = input;
     const commandId = crypto.randomUUID();
     const payload = {
@@ -131,9 +216,7 @@ export class RelayEwsRequestUseCase {
     if (!(await this.gateway.pushCommand(session.agentId, commandId, payload, "EWS_REQUEST"))) {
       throw new RemoteActionError("El agente no está conectado ahora mismo", 503);
     }
-    const result = await this.waitAndRemember(input, commandId);
-    if (input.audit) await this.writeAudit(input, result.status);
-    return result;
+    return this.waitAndRemember(input, commandId);
   }
 
   /** Cookies del equipo y protocolo acertado se guardan en la sesión: el navegador nunca los ve, y no se re-sondea en cada recurso. */

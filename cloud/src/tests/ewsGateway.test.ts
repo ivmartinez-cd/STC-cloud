@@ -14,6 +14,7 @@ import {
   isNavigation, isWriteMethod, pathFromUrl, requestHeadersFor, responseHeadersFor, rewriteLocation,
 } from "../modules/agents/presentation/ews-gateway-http";
 import { mergeCookieJar } from "../services/ewsGatewayService";
+import { deviceOriginOf, schemeSwitchFor } from "../modules/agents/application/use-cases/ews-gateway-use-cases";
 
 const ORIGIN = "http://10.20.0.31";
 
@@ -98,6 +99,37 @@ describe("rewriteLocation", () => {
 
   test("un redirect a OTRO host se deja intacto: el gateway no redirige a terceros", () => {
     assert.equal(rewriteLocation("https://www.samsung.com/soporte", ORIGIN), "https://www.samsung.com/soporte");
+  });
+});
+
+describe("schemeSwitchFor — el equipo pide que le hablen por el otro esquema", () => {
+  test("un redirect a sí mismo cambiando a https devuelve el esquema nuevo", () => {
+    // El bucle real del 13/09/2026: sin esto la reescritura a ruta relativa se
+    // come el cambio de esquema y el navegador gira sobre la misma URL.
+    assert.equal(schemeSwitchFor("https://10.20.0.31/", ORIGIN), "https");
+    assert.equal(schemeSwitchFor("https://10.20.0.31/sws/index.sws", ORIGIN), "https");
+  });
+
+  test("y al revés, si el equipo baja a http", () => {
+    assert.equal(schemeSwitchFor("http://10.20.0.31/", "https://10.20.0.31"), "http");
+  });
+
+  test("mismo esquema, relativo o vacío: no hay nada que cambiar", () => {
+    assert.equal(schemeSwitchFor("http://10.20.0.31/sws/x", ORIGIN), null);
+    assert.equal(schemeSwitchFor("/sws/x", ORIGIN), null);
+    assert.equal(schemeSwitchFor(undefined, ORIGIN), null);
+  });
+
+  test("otro host no cambia el protocolo de la sesión ni aunque sea https", () => {
+    assert.equal(schemeSwitchFor("https://www.samsung.com/", ORIGIN), null);
+  });
+});
+
+describe("deviceOriginOf", () => {
+  test("usa el protocolo que la sesión ya acertó, y http por defecto", () => {
+    const base = { ip: "10.20.0.31" } as Parameters<typeof deviceOriginOf>[0];
+    assert.equal(deviceOriginOf(base), "http://10.20.0.31");
+    assert.equal(deviceOriginOf({ ...base, protocol: "https" }), "https://10.20.0.31");
   });
 });
 

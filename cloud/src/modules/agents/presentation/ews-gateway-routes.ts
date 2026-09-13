@@ -2,6 +2,7 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type Redis from "ioredis";
 import type { EwsSession } from "../application/ports/ews-session-store";
 import type { AgentUseCases } from "./agent-wiring";
+import { deviceOriginOf } from "../application/use-cases/ews-gateway-use-cases";
 import { GATEWAY_PREFIX, isNavigation, isWriteMethod, pathFromUrl, requestHeadersFor, responseHeadersFor } from "./ews-gateway-http";
 
 /** Cookie del GATEWAY (no del equipo): sólo un id opaco de sesión. Distinta de la del portal para que no se pisen. */
@@ -117,11 +118,6 @@ function registerGatewayEndpoints(fastify: FastifyInstance, redis: Redis, uc: Ag
     preHandler: sessionAuthFor(sessions),
     handler: (request, reply) => proxyToDevice(request as GatewayRequest, reply, relay),
   });
-}
-
-/** El agente sólo habla HTTP/HTTPS contra la IP; el origen se arma acá para reescribir `Referer` y `Location`. */
-function deviceOriginOf(session: EwsSession): string {
-  return `${session.protocol ?? "http"}://${session.ip}`;
 }
 
 /**
