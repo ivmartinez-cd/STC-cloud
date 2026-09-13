@@ -11,7 +11,8 @@ import { useToast } from '../../../store/ToastContext';
  * PUT directo, sin optimistic locking y aparte del botón "Guardar cambios" de
  * la configuración (a diferencia de credenciales SNMP / horario laboral): es un
  * permiso, no un parámetro de monitoreo, y el backend lo audita por separado
- * (`REMOTE_EWS_TOGGLE`, distinto de cada uso `REMOTE_EWS_ACCESS`). Acumularlo
+ * (`REMOTE_EWS_TOGGLE`, distinto de cada uso: `REMOTE_EWS_SESSION_OPEN`,
+ * `REMOTE_EWS_ACCESS` por pantalla y `REMOTE_EWS_WRITE` por escritura). Acumularlo
  * con el resto del formulario habría escondido ese cambio de permiso entre
  * ajustes de umbrales.
  */

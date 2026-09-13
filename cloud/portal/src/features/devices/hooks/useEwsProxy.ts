@@ -84,28 +84,37 @@ export function useEwsGateway(agentId: string | null | undefined, deviceId: stri
 
   const open = useCallback(async () => {
     if (!agentId) return;
-    // SIN `noopener`: con esa feature `window.open` devuelve null por spec, y
-    // entonces no hay handle para navegar la pestaña — quedaba en blanco y el
-    // fallback terminaba sacando al operador de la ficha. Se abre `about:blank`
-    // ahora (con el gesto del usuario, si no el navegador la bloquea) y se le
-    // asigna la URL cuando vuelve el ticket.
-    const tab = window.open('about:blank', '_blank');
+    const tab = openBlankTab();
+    if (!tab) { setError('El navegador bloqueó la pestaña emergente. Permitila para este sitio y volvé a intentar.'); return; }
     setOpening(true); setError(null);
     const failure = await navigateToGateway(tab, agentId, deviceId);
     setOpening(false);
-    if (failure) { tab?.close(); setError(failure); }
+    if (failure) { tab.close(); setError(failure); }
   }, [agentId, deviceId]);
 
   return { opening, error, open };
 }
 
+/**
+ * SIN `noopener`: con esa feature `window.open` devuelve null por spec, y
+ * entonces no hay handle para navegar la pestaña — quedaba en blanco y el
+ * fallback terminaba sacando al operador de la ficha. Se abre `about:blank`
+ * ahora (con el gesto del usuario, si no el navegador la bloquea) y se le
+ * asigna la URL cuando vuelve el ticket.
+ *
+ * Si el navegador la bloqueó, el caller avisa ANTES de pedir la sesión: NUNCA
+ * se navega la pestaña actual (sacar al operador de la ficha sin que lo haya
+ * pedido es peor que no abrir nada), y no se deja una sesión abierta y
+ * auditada que nadie va a usar.
+ */
+function openBlankTab(): Window | null {
+  return window.open('about:blank', '_blank');
+}
+
 /** Devuelve el mensaje de error, o `null` si la pestaña quedó apuntando al gateway. */
-async function navigateToGateway(tab: Window | null, agentId: string, deviceId: string): Promise<string | null> {
+async function navigateToGateway(tab: Window, agentId: string, deviceId: string): Promise<string | null> {
   try {
     const { url } = await api.post<{ url: string }>(`/agents/${agentId}/ews-session`, { device_id: deviceId });
-    // Si el navegador bloqueó la pestaña, se avisa — NUNCA se navega la actual:
-    // sacar al operador de la ficha sin que lo haya pedido es peor que no abrir nada.
-    if (!tab) return 'El navegador bloqueó la pestaña emergente. Permitila para este sitio y volvé a intentar.';
     tab.location.replace(url);
     return null;
   } catch (e: unknown) {

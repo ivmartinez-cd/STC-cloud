@@ -12,9 +12,10 @@ const STATE_BUTTON = 'flex items-center gap-2 rounded-[3px] px-4 py-2.5 font-mon
 const Description = () => (
   <>
     <p className="mb-3.5 font-sans text-[12.5px] leading-[1.55] text-ink-700">
-      Permite traer, desde la ficha de un equipo, una página suelta de su servidor web embebido (EWS) sin VPN: la pide el
-      agente desde adentro de la red del cliente, por el mismo canal saliente que ya usa. Es de sólo lectura (un GET por vez),
-      sólo alcanza equipos ya sincronizados por este monitor y cada uso queda en la auditoría.
+      Permite abrir, desde la ficha de un equipo, su web embebida (EWS) completa en una pestaña nueva, sin VPN: cada pedido
+      lo hace el agente desde adentro de la red del cliente, por el mismo canal saliente que ya usa. Se puede navegar y
+      guardar cambios (con la contraseña del propio equipo), sólo alcanza equipos ya sincronizados por este monitor, la
+      sesión vence a los 30 minutos sin uso, y quedan en la auditoría cada apertura, cada pantalla y cada escritura.
     </p>
     <p className="mb-3.5 font-sans text-[11.5px] leading-[1.5] text-ink-300 short:hidden">
       Viene deshabilitado de fábrica. Mientras lo esté, la nube rechaza el pedido sin llegar a encolarlo.
