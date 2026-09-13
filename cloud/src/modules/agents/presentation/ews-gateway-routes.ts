@@ -50,6 +50,17 @@ export function registerEwsGatewayRoutes(fastify: FastifyInstance, redis: Redis,
  * pestaña queda en blanco. El aislamiento de este contenido no lo dan estas
  * cabeceras sino el hostname propio del gateway: nada de lo que sirve tiene
  * acceso a las cookies ni al DOM del portal.
+ *
+ * - `Referrer-Policy: no-referrer` hace que el navegador no mande `Referer`
+ *   en NINGÚN pedido de la página, y hay firmware que lo exige como defensa
+ *   anti-CSRF. El SyncThru de ISSN contesta 302 a la home si su script de
+ *   menú (`sws_menu.sws`) llega sin Referer: el navegador recibe HTML donde
+ *   esperaba JavaScript, las variables del menú nunca existen y la página se
+ *   queda en "Loading..." para siempre. Verificado el 13/09/2026: con Referer
+ *   200, sin Referer 302, las dos veces cada uno. Por curl (que lo mandaba a
+ *   mano) funcionaba; por Chrome no. Sin esta cabecera rige la política por
+ *   defecto del navegador, que sí manda el Referer completo dentro del mismo
+ *   origen, y `requestHeadersFor` lo reescribe a la URL del equipo.
  */
 const APP_SECURITY_HEADERS = [
   "content-security-policy",
@@ -58,6 +69,7 @@ const APP_SECURITY_HEADERS = [
   "x-frame-options",
   "cross-origin-embedder-policy",
   "cross-origin-resource-policy",
+  "referrer-policy",
 ];
 
 function stripAppSecurityHeaders(_request: FastifyRequest, reply: FastifyReply, payload: unknown, done: (err: Error | null, payload?: unknown) => void) {

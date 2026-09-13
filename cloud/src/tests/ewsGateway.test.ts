@@ -56,7 +56,7 @@ describe("requestHeadersFor — lo que llega a la impresora", () => {
     assert.equal(out["user-agent"], undefined, "el User-Agent lo pone el agente, no el navegador");
   });
 
-  test("X-Requested-With cruza: sin eso el firmware contesta 302 en vez del JSON", () => {
+  test("X-Requested-With cruza: es lo que manda jQuery en cada AJAX", () => {
     assert.equal(requestHeadersFor({ "x-requested-with": "XMLHttpRequest" }, "", ORIGIN)["x-requested-with"], "XMLHttpRequest");
   });
 

@@ -36,10 +36,11 @@ export function isNavigation(headers: Record<string, unknown>): boolean {
  * depender de cualquier cabecera, y adivinar cuáles sirven ya salió mal.
  *
  * El caso que lo motivó (13/09/2026): con una allowlist de cinco cabeceras se
- * perdía `X-Requested-With`, que es lo que manda jQuery en cada AJAX. El
- * SyncThru de ISSN lo usa para distinguir una llamada de datos de una
- * navegación: sin esa cabecera contestaba 302 hacia la home en vez del JSON, y
- * la app se quedaba para siempre en "Loading...".
+ * perdía `X-Requested-With`, que es lo que manda jQuery en cada AJAX, y se
+ * sospechó que por eso el SyncThru de ISSN contestaba 302 en vez de datos.
+ * Los 302 resultaron ser otra cosa (el firmware exige `Referer`, ver
+ * `APP_SECURITY_HEADERS` en las rutas), pero la conclusión se sostiene: no se
+ * puede adivinar de qué cabecera depende cada firmware.
  *
  * Lo que sí queda afuera y por qué:
  * - `cookie` del navegador: la única que el equipo ve es la del jar de la
