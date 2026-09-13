@@ -4,6 +4,7 @@ node_modules/
 # ─── Build / Compilados ──────────────────────────────────────────────────────
 dist/
 dist-legacy/
+dist-legacy-ota/
 build/
 *.exe
 *.blob

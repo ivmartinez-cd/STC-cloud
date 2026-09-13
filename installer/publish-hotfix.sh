@@ -11,9 +11,21 @@
 #     version   ej. 1.3.3
 #     canales   "stable", "legacy", o "stable legacy" (default: stable)
 #
-# legacy sólo se publica si agent/dist-legacy/bundle.js ya existe — lo genera
-# el build nativo de Windows (ver Actualizar Agente STC.bat / build-installer-
-# legacy.bat), porque necesita el Node 20.2.0 que sólo corre ahí.
+# Los DOS canales se compilan acá, cada uno con su target de esbuild y su
+# --channel, en carpetas separadas. No hace falta Windows: el Node 20.2.0 sólo
+# se necesita para EMBEBER el runtime en el instalador (--node-exe), y un
+# hotfix OTA publica únicamente bundle.js, que es JS plano. `--target node20`
+# es un flag de esbuild y corre desde cualquier Node.
+#
+# El legacy sale a `dist-legacy-ota/` y NO a `dist-legacy/`: esa última es el
+# árbol del instalador que arma build-installer-legacy.bat en Windows, con el
+# stc-node.exe de verdad adentro. Buildear ahí desde WSL lo pisaría con el
+# binario de Linux y rompería el próximo instalador.
+#
+# Que cada canal lleve su --channel es lo que impide que se mezclen: el valor
+# queda horneado en el bundle y define contra qué canal pide updates el agente
+# (ver agent/src/core/channel.ts). Sin el flag, los dos bundles salen marcados
+# "stable" y el agente legacy termina bajándose el build de Node 24.
 #
 # Pide STC_PORTAL_USER / STC_PORTAL_PASSWORD por stdin si no están en el
 # entorno (no se guardan en ningún lado).
@@ -75,24 +87,16 @@ publish_channel() {
 
 if echo "$CHANNELS" | grep -qw "stable"; then
   echo
-  echo "[2/3] Build stable (agent/dist/bundle.js)..."
-  ( cd "$AGENT_DIR" && node build-sea.js )
+  echo "[2/3] Build stable (target node24, canal stable)..."
+  ( cd "$AGENT_DIR" && node build-sea.js --target node24 --channel stable --out-dir dist )
   publish_channel "stable" "$AGENT_DIR/dist"
 fi
 
 if echo "$CHANNELS" | grep -qw "legacy"; then
   echo
-  echo "[3/3] Canal legacy..."
-  if [ -f "$AGENT_DIR/dist-legacy/bundle.js" ]; then
-    publish_channel "legacy" "$AGENT_DIR/dist-legacy"
-  else
-    echo "      SKIP: no existe agent/dist-legacy/bundle.js."
-    echo "      Generalo con Actualizar Agente STC.bat (necesita Node 20.2.0"
-    echo "      en C:\\node-v20.2.0-win-x64) y volvé a correr este script, o"
-    echo "      corré manualmente:"
-    echo "        node installer/sign-bundle.js agent/dist-legacy/bundle.js"
-    echo "        installer/publish-release.sh agent/dist-legacy/bundle.js $VERSION legacy"
-  fi
+  echo "[3/3] Build legacy (target node20, canal legacy)..."
+  ( cd "$AGENT_DIR" && node build-sea.js --target node20 --channel legacy --out-dir dist-legacy-ota )
+  publish_channel "legacy" "$AGENT_DIR/dist-legacy-ota"
 fi
 
 echo
