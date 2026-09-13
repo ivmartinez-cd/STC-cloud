@@ -302,18 +302,23 @@ export function ewsRequest(
         });
         res.on('end', () => {
           try {
-            finish({ ok: true, response: decodeEwsResponse(res, Buffer.concat(chunks), truncated) });
+            finish({ ok: true, response: decodeEwsResponse(res, Buffer.concat(chunks), truncated, maxBytes) });
           } catch {
-            finish({ ok: false, error: 'No se pudo descomprimir la respuesta del equipo', code: 'DECODE' });
+            finish({ ok: false, error: 'La respuesta del equipo no se pudo descomprimir o supera el tamaño permitido', code: 'DECODE' });
           }
         });
-        // `destroy()` por el corte de tamaño dispara 'close', no 'end' — sin
-        // este handler, la promesa nunca se resolvería en ese caso.
+        // 'close' sin 'end' tiene dos causas, y ninguna dispara `error` ni
+        // `timeout` en `req` (el socket ya murió): nuestro propio `destroy()`
+        // por el corte de tamaño, o el equipo que cortó a mitad de la
+        // respuesta. Sin este handler la promesa quedaría colgada hasta que la
+        // nube se rinda a los 20 s, ocupando un carril de la sesión todo ese
+        // tiempo.
         res.on('close', () => {
-          if (!settled && truncated) {
-            const response = { status: res.statusCode ?? 0, headers: {}, bodyBase64: Buffer.concat(chunks).toString('base64'), truncated: true };
-            finish({ ok: true, response });
-          }
+          if (settled) return;
+          if (!truncated) return finish({ ok: false, error: `El equipo cortó la conexión a mitad de la respuesta (${ip}:${port})`, code: 'ECONNRESET' });
+          // Cortado por tamaño: se devuelven las cabeceras y cookies reales, no vacías — el gateway decide qué hacer con `truncated`.
+          const { headers: h, setCookie } = collectEwsHeaders(res);
+          finish({ ok: true, response: { status: res.statusCode ?? 0, headers: h, setCookie, bodyBase64: Buffer.concat(chunks).toString('base64'), truncated: true } });
         });
       },
     );
@@ -339,10 +344,20 @@ export function ewsRequest(
  * guarda en su propio jar del lado del servidor (el navegador nunca ve las
  * cookies de la impresora).
  */
-function decodeEwsResponse(res: http.IncomingMessage, buffer: Buffer, truncated: boolean): EwsProxyResponse {
+function decodeEwsResponse(res: http.IncomingMessage, buffer: Buffer, truncated: boolean, maxBytes: number): EwsProxyResponse {
   const enc = String(res.headers['content-encoding'] ?? '').toLowerCase();
-  const decoded = enc.includes('gzip') ? zlib.gunzipSync(buffer)
-    : enc.includes('deflate') ? zlib.inflateSync(buffer) : buffer;
+  // El tope de 2 MB de arriba es sobre bytes COMPRIMIDOS; sin `maxOutputLength`
+  // un gzip de 2 MB puede inflar a gigas y tirar el agente (bomba de
+  // descompresión). Pasarse lanza `ERR_BUFFER_TOO_LARGE`, que el caller
+  // reporta como DECODE.
+  const decoded = enc.includes('gzip') ? zlib.gunzipSync(buffer, { maxOutputLength: maxBytes })
+    : enc.includes('deflate') ? zlib.inflateSync(buffer, { maxOutputLength: maxBytes }) : buffer;
+  const { headers, setCookie } = collectEwsHeaders(res);
+  return { status: res.statusCode ?? 0, headers, setCookie, bodyBase64: decoded.toString('base64'), truncated };
+}
+
+/** Cabeceras del equipo sin las de conexión; `set-cookie` aparte, siempre como lista. */
+function collectEwsHeaders(res: http.IncomingMessage): { headers: Record<string, string>; setCookie: string[] } {
   const headers: Record<string, string> = {};
   const setCookie: string[] = [];
   for (const [key, value] of Object.entries(res.headers)) {
@@ -352,7 +367,7 @@ function decodeEwsResponse(res: http.IncomingMessage, buffer: Buffer, truncated:
     if (typeof value === 'string') headers[name] = value;
     else if (Array.isArray(value)) headers[name] = value.join(', ');
   }
-  return { status: res.statusCode ?? 0, headers, setCookie, bodyBase64: decoded.toString('base64'), truncated };
+  return { headers, setCookie };
 }
 
 /** Extrae pares `nombre=valor` de `Set-Cookie` y los fusiona sobre una cookie previa. */

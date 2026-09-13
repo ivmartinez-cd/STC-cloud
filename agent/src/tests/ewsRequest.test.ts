@@ -158,9 +158,9 @@ describe('ewsRequest — redirects y errores', () => {
     assert.equal(result.ok === false ? result.code : '', 'ECONNREFUSED');
   });
 
-  test('el tope de tamaño sigue cortando en streaming', async () => {
+  test('el tope de tamaño sigue cortando en streaming, y la respuesta cortada conserva cabeceras y cookies', async () => {
     const { server, port } = await startServer((_req, res) => {
-      res.writeHead(200, { 'Content-Type': 'application/octet-stream' });
+      res.writeHead(200, { 'Content-Type': 'application/octet-stream', 'Set-Cookie': 'SESSIONID=abc' });
       res.end(Buffer.alloc(50_000, 0x41));
     });
     try {
@@ -168,6 +168,39 @@ describe('ewsRequest — redirects y errores', () => {
       assert.equal(result.ok, true);
       if (!result.ok) return;
       assert.equal(result.response.truncated, true);
+      // Antes volvía con `headers: {}` y sin cookies: el gateway servía un 200 mudo con un JS a medias.
+      assert.equal(result.response.headers['content-type'], 'application/octet-stream');
+      assert.deepEqual(result.response.setCookie, ['SESSIONID=abc']);
+    } finally { server.close(); }
+  });
+
+  test('si el equipo corta a mitad de la respuesta, se devuelve ECONNRESET al instante y no un cuelgue de 20 s', async () => {
+    const { server, port } = await startServer((_req, res) => {
+      res.writeHead(200, { 'Content-Type': 'text/html', 'Content-Length': '100000' });
+      res.write('parcial');
+      // Sin `end`: se destruye el socket con datos pendientes.
+      setTimeout(() => res.destroy(), 20);
+    });
+    try {
+      const started = Date.now();
+      const result = await ewsRequest('127.0.0.1', '/corta.html', 1_000_000, { port }, 5000);
+      assert.equal(result.ok, false);
+      assert.equal(result.ok === false ? result.code : '', 'ECONNRESET');
+      assert.ok(Date.now() - started < 4000, 'tiene que resolver por el cierre, no por el timeout');
+    } finally { server.close(); }
+  });
+
+  test('una bomba gzip no infla más allá del tope: DECODE, no OOM', async () => {
+    // 1 MB de ceros comprime a ~1 KB; con tope de 64 KB la descompresión tiene que negarse.
+    const bomb = zlib.gzipSync(Buffer.alloc(1024 * 1024, 0));
+    const { server, port } = await startServer((_req, res) => {
+      res.writeHead(200, { 'Content-Type': 'text/html', 'Content-Encoding': 'gzip' });
+      res.end(bomb);
+    });
+    try {
+      const result = await ewsRequest('127.0.0.1', '/bomba.html', 64 * 1024, { port }, 3000);
+      assert.equal(result.ok, false);
+      assert.equal(result.ok === false ? result.code : '', 'DECODE');
     } finally { server.close(); }
   });
 });

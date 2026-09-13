@@ -9,8 +9,22 @@ import { restartPrinter } from '../snmp/printerReset';
 const EWS_PROXY_MAX_BYTES = 2 * 1024 * 1024;
 const EWS_PROXY_TIMEOUT_MS = 10_000;
 
-/** Errores de conexión en el 80 que ameritan reintentar por TLS: nadie escuchando, o algo que no habla HTTP en claro. */
-const RETRY_OVER_TLS_CODES = new Set(['ECONNREFUSED', 'ECONNRESET', 'EPROTO', 'EPIPE']);
+/**
+ * Errores de conexión en el 80 que ameritan reintentar por TLS: nadie
+ * escuchando, o algo que no habla HTTP en claro. `HPE_INVALID_CONSTANT` es lo
+ * que devuelve el parser de Node cuando el 80 contesta con un handshake TLS.
+ */
+const RETRY_OVER_TLS_CODES = new Set(['ECONNREFUSED', 'ECONNRESET', 'EPROTO', 'EPIPE', 'HPE_INVALID_CONSTANT']);
+
+/**
+ * `port` sólo se acepta contra loopback: existe para que los tests levanten un
+ * servidor local, y ningún `known_devices` real tiene 127.0.0.1. Así un
+ * payload que llegue por el socket no puede apuntar al 9100 (PJL) ni al 631
+ * de un equipo, aunque la IP esté en la allowlist.
+ */
+export function portFor(p: EwsRequestPayload): number | undefined {
+  return p.port && /^127\./.test(p.ip ?? '') ? p.port : undefined;
+}
 
 /** Payload de `EWS_REQUEST` — lo arma el gateway de EWS remoto de la nube a partir de la petición del navegador. */
 export interface EwsRequestPayload {
@@ -265,10 +279,10 @@ export class CommandHandler {
    * fijó en la primera respuesta), no se sondea nada.
    */
   private async tryEwsProtocols(p: EwsRequestPayload): Promise<{ result: EwsRelayResult; protocol: 'http' | 'https' }> {
-    const opts = { method: p.method, headers: p.headers, bodyBase64: p.bodyBase64, port: p.port };
+    const opts = { method: p.method, headers: p.headers, bodyBase64: p.bodyBase64, port: portFor(p) };
     const first = p.protocol ?? 'http';
     const result = await ewsRequest(p.ip!, p.path!, EWS_PROXY_MAX_BYTES, { ...opts, protocol: first }, EWS_PROXY_TIMEOUT_MS);
-    if (result.ok || p.protocol || p.port || !RETRY_OVER_TLS_CODES.has(result.code)) return { result, protocol: first };
+    if (result.ok || p.protocol || opts.port || !RETRY_OVER_TLS_CODES.has(result.code)) return { result, protocol: first };
     const overTls = await ewsRequest(p.ip!, p.path!, EWS_PROXY_MAX_BYTES, { ...opts, protocol: 'https' }, EWS_PROXY_TIMEOUT_MS);
     return overTls.ok ? { result: overTls, protocol: 'https' } : { result, protocol: first };
   }

@@ -15,7 +15,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import http from 'node:http';
-import { CommandHandler } from '../core/CommandHandler';
+import { CommandHandler, portFor } from '../core/CommandHandler';
 
 const errorOf = (result: { result: unknown }) => (result.result as { error: string }).error;
 
@@ -94,5 +94,13 @@ describe('CommandHandler — EWS_REQUEST: camino feliz', () => {
     const result = await handler.handleCommand('EWS_REQUEST', { ip: '127.0.0.1', path: '/x', port: 1 }, 'cmd-6');
     assert.equal(result.status, 'error');
     assert.match(errorOf(result), /ECONNREFUSED/);
+  });
+
+  test('`port` sólo vale contra loopback: contra un equipo real se ignora aunque la IP esté en la allowlist', () => {
+    // Existe para los tests de arriba. Un payload que llegue por el socket no
+    // puede apuntar al 9100 (PJL) ni al 631 de una impresora del cliente.
+    assert.equal(portFor({ ip: '127.0.0.1', path: '/', port: 5 }), 5);
+    assert.equal(portFor({ ip: '10.20.0.31', path: '/', port: 9100 }), undefined);
+    assert.equal(portFor({ ip: '10.20.0.31', path: '/' }), undefined);
   });
 });
