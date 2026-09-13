@@ -14,8 +14,9 @@ Documentación del proyecto **STC Cloud**, organizada por audiencia. Todo lo lis
 | **[Arquitectura de la App Web](cliente/STC_Arquitectura_App_Web_v1.0.html)** `v1.0` | El complemento de la Auditoría: **portal + backend en la nube**. Despliegue, módulos, autenticación/roles/multi-cliente, base de datos, jobs, tiempo real y guardas de CI. |
 | **[Análisis de Escalabilidad](cliente/STC_Analisis_Escalabilidad_Limites_v2.0.html)** `v2.0` | Cómo está hecha la infraestructura, cómo se comporta bajo carga concurrente y cómo escala a 200+ clientes y miles de equipos: sizing del servidor y camino de crecimiento. |
 | **[Estándar de Arquitectura e Ingeniería](cliente/STC_Estandar_Arquitectura_Ingenieria_v1.0.html)** `v1.0` | La versión para el cliente de [`dev/ARCHITECTURE_GUIDE.md`](dev/ARCHITECTURE_GUIDE.md): qué estándar sigue el equipo, qué reglas impone y —lo que lo hace auditable— cómo las verifican las 4 guardas de CI en cada cambio. Incluye el inventario de deuda congelada y los límites de la verificación automática. |
+| **[Modelo de Datos](cliente/STC_Modelo_de_Datos_v1.0.html)** `v1.0` | El esquema PostgreSQL/TimescaleDB explicado para acompañar la revisión con DBeaver: cómo leer el DER, convenciones transversales (multi-cliente, políticas de borrado, checks, índices parciales), las 35 tablas por dominio y las decisiones de diseño justificadas. Versión imprimible de [`dev/DATA_MODEL.md`](dev/DATA_MODEL.md). |
 
-> Los cuatro se presentan juntos y no se pisan entre sí: agente (Auditoría), plataforma web (Arquitectura App Web), capacidad (Escalabilidad) y proceso de construcción (Estándar de Arquitectura).
+> Los cinco se presentan juntos y no se pisan entre sí: agente (Auditoría), plataforma web (Arquitectura App Web), capacidad (Escalabilidad), proceso de construcción (Estándar de Arquitectura) y base de datos (Modelo de Datos).
 
 ### Para otras audiencias
 | Documento | Perfil Destinatario | Propósito |
@@ -40,6 +41,7 @@ Documentación del proyecto **STC Cloud**, organizada por audiencia. Todo lo lis
 * **[CODE_MAP.md](dev/CODE_MAP.md):** Mapa de la base de código verificado contra el árbol real: agente (motor `capture/`), backend (24 módulos hexagonales + 11 jobs), portal (feature-based) y guardas de arquitectura.
 * **[STC_Technical_Architecture_Guide.md](dev/STC_Technical_Architecture_Guide.md):** Deep-dive del motor de captura por modelo del agente (`identify` → `resolve` → `collect`), SQLite/WAL, doble token y Ed25519.
 * **[STC_Capture_Drivers_Master_Prompt.md](dev/STC_Capture_Drivers_Master_Prompt.md):** Documento rector para agregar o mantener drivers de captura por modelo de impresora.
+* **[DATA_MODEL.md](dev/DATA_MODEL.md):** Modelo de datos de la base PostgreSQL/TimescaleDB, verificado contra el esquema real: DER en Mermaid, convenciones transversales (multi-tenant, políticas de borrado, checks, índices parciales), las 35 tablas explicadas por dominio y las decisiones de diseño justificadas (para acompañar la revisión con DBeaver).
 * **[PERMISSIONS_CATALOG.md](dev/PERMISSIONS_CATALOG.md):** Catálogo de rutas y permisos. **Auto-generado** — regenerar con `node cloud/scripts/check-routes.mjs --write-catalog`, no editar a mano.
 * **[TECH_DEBT.md](dev/TECH_DEBT.md):** Registro vivo de deuda técnica conocida y aceptada: lo que funciona a medias, depende de un paso manual o falla en silencio. Hoy cubre los 5 gaps del pipeline de actualización remota del agente (OTA).
 

@@ -1,0 +1,1105 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>STC Cloud - Modelo de Datos v1.0</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;900&family=Source+Sans+3:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        /* Paleta institucional Canal Directo — los mismos tokens que usa el portal
+           STC Cloud desde el rediseño de agosto/2026 (cloud/portal/src/index.css):
+           sólo naranja + grises, nunca azul, rojo ni verde. La severidad se
+           resuelve con un gradiente DENTRO del naranja y el gris, no con semáforo.
+           Si cambia la paleta de la app, cambia también acá. */
+        :root {
+            --brand: #f7941d;              /* Institucional (naranja) */
+            --brand-severe: #c6710a;       /* naranja oscuro — severidad / atención */
+            --brand-accent: #b4700b;       /* naranja de texto (contraste sobre blanco) */
+            --brand-soft: #fdf4e9;         /* fondo suave de callouts y chips */
+            --brand-light: #fbc486;        /* naranja claro — categorías secundarias */
+            --brand-warn-text: #8a6033;    /* texto sobre fondo naranja suave */
+            --brand-warn-border: #e0a76b;  /* borde cálido de aviso */
+
+            --ink-900: #2e3033;            /* títulos */
+            --ink-700: #3c4144;            /* texto de cuerpo */
+            --ink-600: #4b5053;            /* texto secundario fuerte */
+            --ink-400: #8a9094;            /* texto secundario */
+            --ink-300: #9fa4a7;            /* labels en mayúscula, pies de página */
+            --ink-200: #b4b9bb;            /* texto tenue */
+            --ink-100: #6c7275;            /* gris oscuro — "sin urgencia" (nunca verde) */
+
+            --line-100: #e2e6e6;           /* borde de tabla / tarjeta */
+            --line-150: #edefef;           /* borde interno / separador */
+            --line-300: #d5d9da;           /* borde de acento secundario */
+
+            --surface-page: #f7f8f8;       /* fondo de tarjeta, bloque y encabezado de tabla */
+            --surface-track: #f0f2f2;      /* relleno neutro (chips) */
+            --surface-table-head: #fbfcfc; /* relleno más tenue (zebra, bloques sueltos) */
+
+            --panel-dark: #2e3033;         /* panel oscuro (diagramas, consola) */
+            --panel-dark-text: #a9aeb0;    /* texto secundario sobre panel oscuro */
+            --panel-dark-code: #d8dcdd;    /* texto de consola sobre panel oscuro */
+
+            /* Alias que usa el contenido de este documento */
+            --text-dark: var(--ink-900);
+            --text-gray: var(--ink-400);
+
+            --code-bg: var(--surface-page);
+        }
+
+        body {
+            font-family: 'Source Sans 3', 'Source Sans Pro', system-ui, -apple-system, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: var(--surface-page);
+            color: var(--text-dark);
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+
+        .page {
+            width: 210mm;
+            min-height: 297mm;
+            padding: 25mm;
+            margin: 20px auto;
+            box-sizing: border-box;
+            position: relative;
+            background: white;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+
+        @media print {
+            body { background: white; }
+            .page {
+                margin: 0;
+                padding: 20mm;
+                box-shadow: none;
+                page-break-after: always;
+            }
+        }
+
+        .cover-top-bar {
+            border-bottom: 1px solid var(--line-100);
+            padding-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 75mm;
+        }
+
+        .top-title {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--ink-600);
+            letter-spacing: 0.05em;
+        }
+
+        .cover-main { text-align: left; padding-left: 10mm; }
+
+        .stc-cloud-brand {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 50px;
+        }
+
+        .brand-stc {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 900;
+            font-size: 42px;
+            color: var(--ink-900);
+            letter-spacing: -0.02em;
+        }
+
+        .brand-cloud {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 900;
+            font-size: 42px;
+            color: var(--brand);
+            letter-spacing: -0.02em;
+        }
+
+        .main-title {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 34px;
+            font-weight: 700;
+            color: var(--ink-900);
+            margin: 0;
+            line-height: 1.15;
+            text-transform: uppercase;
+        }
+
+        .main-subtitle {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 34px;
+            font-weight: 400;
+            color: var(--brand);
+            margin: 5px 0 50px 0;
+            text-transform: uppercase;
+        }
+
+        .version-tag {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-gray);
+            letter-spacing: 0.08em;
+        }
+
+        .internal-header {
+            border-bottom: 2px solid var(--brand);
+            padding-bottom: 8px;
+            margin-bottom: 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+
+        .internal-brand {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 900;
+            font-size: 16px;
+            color: var(--ink-900);
+        }
+
+        .internal-brand span { color: var(--brand); }
+
+        .internal-doc-type {
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--text-gray);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        h2 {
+            font-family: 'Montserrat', sans-serif;
+            color: var(--ink-900);
+            font-size: 20px;
+            border-bottom: 1px solid var(--line-150);
+            padding-bottom: 8px;
+            margin-top: 35px;
+        }
+
+        h3 {
+            font-family: 'Montserrat', sans-serif;
+            color: var(--brand-accent);
+            font-size: 14px;
+            margin-top: 25px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        p { font-size: 13.5px; color: var(--ink-700); line-height: 1.65; }
+
+        ul, ol { padding-left: 20px; }
+
+        li { font-size: 13.5px; color: var(--ink-700); margin-bottom: 8px; line-height: 1.6; }
+
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+
+        th, td { border: 1px solid var(--line-100); padding: 10px 12px; text-align: left; font-size: 12.5px; }
+
+        th {
+            background-color: var(--surface-page);
+            color: var(--ink-400);
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: 0.05em;
+        }
+
+        .note-callout {
+            background: var(--brand-soft);
+            border-left: 4px solid var(--brand);
+            padding: 14px 18px;
+            margin: 18px 0;
+            font-size: 13px;
+            color: var(--brand-warn-text);
+            line-height: 1.6;
+        }
+
+        .info-callout {
+            background: var(--surface-page);
+            border-left: 4px solid var(--line-300);
+            padding: 14px 18px;
+            margin: 18px 0;
+            font-size: 13px;
+            color: var(--ink-600);
+            line-height: 1.6;
+        }
+
+        .footer {
+            position: absolute;
+            bottom: 20mm;
+            left: 25mm;
+            right: 25mm;
+            border-top: 1px solid var(--line-100);
+            padding-top: 15px;
+            font-size: 10px;
+            color: var(--ink-300);
+            text-align: center;
+        }
+
+        .toc-container { margin-top: 30px; }
+
+        .toc-item {
+            display: flex;
+            align-items: baseline;
+            margin-bottom: 14px;
+            font-size: 14px;
+            color: var(--ink-700);
+            text-decoration: none;
+        }
+
+        .toc-link {
+            text-decoration: none;
+            color: inherit;
+            display: flex;
+            width: 100%;
+            align-items: baseline;
+        }
+
+        .toc-num {
+            flex-shrink: 0;
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 700;
+            color: var(--brand-accent);
+            font-size: 13px;
+            width: 28px;
+        }
+
+        .toc-text { flex-shrink: 0; padding-right: 5px; font-weight: 600; }
+
+        .toc-dots {
+            flex-grow: 1;
+            border-bottom: 1px dotted var(--line-300);
+            margin: 0 5px;
+            position: relative;
+            top: -4px;
+        }
+
+        .toc-page { flex-shrink: 0; padding-left: 5px; font-weight: 700; color: var(--brand-accent); }
+
+        .toc-section {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--brand-accent);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin: 20px 0 8px 0;
+        }
+
+        pre.code {
+            background: var(--code-bg);
+            border: 1px solid var(--line-100);
+            border-left: 4px solid var(--brand);
+            padding: 14px;
+            font-size: 11.5px;
+            font-family: 'JetBrains Mono', ui-monospace, 'Courier New', monospace;
+            color: var(--ink-700);
+            overflow-x: auto;
+            border-radius: 4px;
+            line-height: 1.5;
+            margin: 12px 0;
+        }
+
+        pre.diagram {
+            background: var(--panel-dark);
+            color: var(--brand-light);
+            border-left: 4px solid var(--brand);
+            padding: 15px;
+            font-size: 10.5px;
+            font-family: 'JetBrains Mono', ui-monospace, 'Courier New', monospace;
+            overflow-x: auto;
+            border-radius: 4px;
+            line-height: 1.35;
+            margin: 12px 0;
+        }
+
+        .diagram-title {
+            font-size: 10px;
+            color: var(--ink-400);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: -8px;
+            font-weight: 700;
+        }
+
+        .two-col {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin: 18px 0;
+        }
+
+        .three-col {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 14px;
+            margin: 18px 0;
+        }
+
+        .card {
+            background: var(--surface-page);
+            border-left: 4px solid var(--ink-300);
+            padding: 14px;
+        }
+
+        .card.orange { border-left-color: var(--brand); }
+
+        .card-title {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--ink-900);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            margin-bottom: 8px;
+        }
+
+        .card.orange .card-title { color: var(--brand-accent); }
+
+        .card p { font-size: 12px; margin: 0; color: var(--ink-600); }
+
+        code {
+            font-family: 'JetBrains Mono', ui-monospace, 'Courier New', monospace;
+            font-size: 11.5px;
+            color: var(--brand-accent);
+            background: var(--brand-soft);
+            padding: 1px 5px;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- PÁGINA 1: PORTADA -->
+    <div class="page">
+        <div class="cover-top-bar">
+            <div class="top-title">STC CLOUD – DOCUMENTACIÓN TÉCNICA</div>
+        </div>
+
+        <div class="cover-main">
+            <div class="stc-cloud-brand">
+                <span class="brand-stc">STC</span>
+                <span class="brand-cloud">CLOUD</span>
+            </div>
+
+            <h1 class="main-title">MODELO DE</h1>
+            <h1 class="main-subtitle">DATOS</h1>
+
+            <div class="version-tag">Esquema PostgreSQL + TimescaleDB | v1.0 | Septiembre 2026</div>
+        </div>
+
+        <div class="footer">
+            © 2026 CANAL DIRECTO | STC CLOUD | MODELO DE DATOS | DOCUMENTACIÓN TÉCNICA
+        </div>
+    </div>
+
+    <!-- PÁGINA 2: ÍNDICE -->
+    <div class="page">
+        <div class="internal-header">
+            <div class="internal-brand">STC <span>CLOUD</span></div>
+            <div class="internal-doc-type">Índice</div>
+        </div>
+
+        <h2 style="border: none; margin-bottom: 30px;">Índice de Contenidos</h2>
+
+        <div class="toc-container">
+            <div class="toc-section">Introducción</div>
+            <div class="toc-item"><span class="toc-num">1.</span><div class="toc-link"><span class="toc-text">Alcance, Cifras y Cómo Leer el DER</span><span class="toc-dots"></span><span class="toc-page">3</span></div></div>
+            <div class="toc-item"><span class="toc-num">2.</span><div class="toc-link"><span class="toc-text">Vista General del Modelo</span><span class="toc-dots"></span><span class="toc-page">4</span></div></div>
+            <div class="toc-item"><span class="toc-num">3.</span><div class="toc-link"><span class="toc-text">Convenciones Transversales</span><span class="toc-dots"></span><span class="toc-page">5</span></div></div>
+
+            <div class="toc-section">Tablas por Dominio</div>
+            <div class="toc-item"><span class="toc-num">4.</span><div class="toc-link"><span class="toc-text">Tenancy, Usuarios y Acceso</span><span class="toc-dots"></span><span class="toc-page">7</span></div></div>
+            <div class="toc-item"><span class="toc-num">5.</span><div class="toc-link"><span class="toc-text">Agentes y Acciones Remotas</span><span class="toc-dots"></span><span class="toc-page">8</span></div></div>
+            <div class="toc-item"><span class="toc-num">6.</span><div class="toc-link"><span class="toc-text">Dispositivos</span><span class="toc-dots"></span><span class="toc-page">9</span></div></div>
+            <div class="toc-item"><span class="toc-num">7.</span><div class="toc-link"><span class="toc-text">Lecturas y Series Temporales</span><span class="toc-dots"></span><span class="toc-page">11</span></div></div>
+            <div class="toc-item"><span class="toc-num">8.</span><div class="toc-link"><span class="toc-text">Alertas e Incidentes</span><span class="toc-dots"></span><span class="toc-page">12</span></div></div>
+            <div class="toc-item"><span class="toc-num">9.</span><div class="toc-link"><span class="toc-text">Insumos y Cierres de Facturación</span><span class="toc-dots"></span><span class="toc-page">13</span></div></div>
+            <div class="toc-item"><span class="toc-num">10.</span><div class="toc-link"><span class="toc-text">Reportes, Notificaciones e Infraestructura</span><span class="toc-dots"></span><span class="toc-page">14</span></div></div>
+
+            <div class="toc-section">Diseño y Verificación</div>
+            <div class="toc-item"><span class="toc-num">11.</span><div class="toc-link"><span class="toc-text">Decisiones de Diseño y su Justificación</span><span class="toc-dots"></span><span class="toc-page">15</span></div></div>
+            <div class="toc-item"><span class="toc-num">12.</span><div class="toc-link"><span class="toc-text">Cómo Verificar el Esquema con DBeaver o SQL</span><span class="toc-dots"></span><span class="toc-page">17</span></div></div>
+        </div>
+
+        <div class="footer">
+            PÁGINA 2 | STC CLOUD – MODELO DE DATOS
+        </div>
+    </div>
+
+    <!-- PÁGINA 3: ALCANCE -->
+    <div class="page">
+        <div class="internal-header">
+            <div class="internal-brand">STC <span>CLOUD</span></div>
+            <div class="internal-doc-type">1. Alcance y Lectura del DER</div>
+        </div>
+
+        <h2 id="alcance">1. Alcance, Cifras y Cómo Leer el DER</h2>
+        <p>
+            Este documento describe el esquema de la base de datos de STC Cloud: qué tablas existen, qué guarda cada una, cómo se relacionan y <strong>por qué están diseñadas así</strong>. Es la explicación que acompaña al DER (Diagrama Entidad-Relación) que genera cualquier cliente SQL, como DBeaver, sobre el schema <code>public</code>.
+        </p>
+        <p>
+            Todo lo que sigue fue <strong>verificado contra la base real el 12 de septiembre de 2026</strong> leyendo directamente el catálogo de PostgreSQL (columnas, tipos, claves, índices, constraints, vistas y políticas de TimescaleDB). El esquema se construye exclusivamente con las 75 migraciones versionadas de Knex que viven en el repositorio y que la API aplica al arrancar; no hay cambios manuales en producción.
+        </p>
+
+        <table>
+            <thead><tr><th style="width: 55%;">Qué</th><th>Cantidad</th></tr></thead>
+            <tbody>
+                <tr><td>Tablas</td><td>35 (33 de negocio + 2 internas de Knex)</td></tr>
+                <tr><td>Vistas</td><td>3 (2 agregados continuos de TimescaleDB + 1 vista SQL)</td></tr>
+                <tr><td>Foreign keys declaradas</td><td>63</td></tr>
+                <tr><td>Constraints <code>CHECK</code></td><td>44</td></tr>
+                <tr><td>Índices además de las claves primarias</td><td>64 (varios parciales y por expresión)</td></tr>
+                <tr><td>Hypertables (TimescaleDB)</td><td>1 (<code>readings</code>)</td></tr>
+                <tr><td>Triggers</td><td>1 (<code>agents_client_id_sync</code>)</td></tr>
+            </tbody>
+        </table>
+
+        <h3>Cómo leer el diagrama que genera DBeaver</h3>
+        <ul>
+            <li>Cada <strong>caja</strong> es una tabla. La fila en negrita al tope es la clave primaria.</li>
+            <li>Los <strong>iconos</strong> a la izquierda de cada columna indican el tipo: <code>A-Z</code> texto, <code>123</code> número, reloj fecha/hora, <code>{ }</code> JSON, tilde booleano.</li>
+            <li>Cada <strong>línea</strong> es una foreign key declarada en la base. Si dos tablas se relacionan sólo por convención del código, no hay línea (el caso concreto se explica en la sección 11).</li>
+            <li>Las cajas con icono de <strong>ojo</strong> no son tablas sino vistas: no ocupan espacio propio, se calculan a partir de otras.</li>
+        </ul>
+
+        <div class="info-callout">
+            <strong>Para reproducir el DER:</strong> en DBeaver, desplegar <em>stc_cloud → Schemas → public</em>, clic derecho sobre <em>public</em> y elegir <em>View Diagram</em>. El layout automático apila todo en una columna; conviene arrastrar <code>clients</code> y <code>users</code> a los costados y <code>devices</code> al centro, y guardar el diagrama para no rehacerlo. Se exporta a PNG o SVG desde el menú contextual.
+        </div>
+
+        <div class="footer">
+            PÁGINA 3 | STC CLOUD – MODELO DE DATOS
+        </div>
+    </div>
+
+    <!-- PÁGINA 4: VISTA GENERAL -->
+    <div class="page">
+        <div class="internal-header">
+            <div class="internal-brand">STC <span>CLOUD</span></div>
+            <div class="internal-doc-type">2. Vista General</div>
+        </div>
+
+        <h2 id="vista-general">2. Vista General del Modelo</h2>
+        <p>
+            El modelo tiene dos <strong>"hubs"</strong> hacia los que convergen casi todas las líneas del diagrama. <code>clients</code> es el tenant: casi toda tabla de negocio lleva <code>client_id</code>, la columna por la que se aísla la información entre clientes. <code>users</code> recibe todas las foreign keys de auditoría de acciones humanas: <code>created_by</code>, <code>closed_by</code>, <code>assigned_to</code>, <code>resolved_by</code>, <code>updated_by</code>.
+        </p>
+        <p>
+            La cadena operativa principal es <strong>cliente → agente → dispositivo → lectura</strong>. De los dispositivos cuelgan las alertas, los incidentes, los pedidos de insumos y las líneas de los cierres de facturación.
+        </p>
+
+        <div class="diagram-title">Relaciones principales (cada flecha es una foreign key)</div>
+        <pre class="diagram">
+                                ┌──────────────┐
+                                │   clients    │  tenant: casi todo lleva client_id
+                                └──────┬───────┘
+          ┌──────────────┬─────────────┼─────────────┬──────────────────┐
+          ▼              ▼             ▼             ▼                  ▼
+   ┌────────────┐  ┌────────────┐ ┌──────────┐ ┌──────────────┐ ┌─────────────────┐
+   │   agents   │─►│  devices   │ │  users   │ │ api_keys     │ │ report_closures │
+   └─────┬──────┘  └─────┬──────┘ └────┬─────┘ │ api_webhooks │ └────────┬────────┘
+         │               │             │       │ scheduled_   │          ▼
+         ▼               ▼             │       │   reports    │  report_closure_lines
+  agent_commands      readings ─────┐  │       └──────────────┘  (1 línea por equipo)
+  agent_logs          (hypertable)  │  │
+  remote_action_items device_costs  │  │  created_by / closed_by / assigned_to /
+                      alerts ───────┼──┘  resolved_by / updated_by  (auditoría)
+                        │           │
+                        ▼           ▼
+                 incident_alerts  supply_requests ──► supply_request_events
+                        │
+                        ▼
+                    incidents ──► incident_events        incident_rules ──► incidents
+                                                                            (rule_id)
+
+  Sin FK (catálogos, singleton y logs):  device_models · agent_releases · system_settings
+                                          audit_logs · email_log · message_templates
+                                          custom_field_defs · device_merge_candidates
+        </pre>
+
+        <div class="two-col">
+            <div class="card orange">
+                <div class="card-title">Composición (ON DELETE CASCADE)</div>
+                <p>Lo que no tiene sentido sin su padre desaparece con él: lecturas de un equipo, eventos de un incidente, equipos de un agente, todo lo que cuelga de un cliente.</p>
+            </div>
+            <div class="card">
+                <div class="card-title">Referencia (ON DELETE SET NULL)</div>
+                <p>Los vínculos de auditoría y los opcionales sobreviven al borrado del referido: un incidente conserva su historia aunque se borre el usuario o el equipo.</p>
+            </div>
+        </div>
+
+        <div class="footer">
+            PÁGINA 4 | STC CLOUD – MODELO DE DATOS
+        </div>
+    </div>
+
+    <!-- PÁGINA 5: CONVENCIONES (1/2) -->
+    <div class="page">
+        <div class="internal-header">
+            <div class="internal-brand">STC <span>CLOUD</span></div>
+            <div class="internal-doc-type">3. Convenciones Transversales</div>
+        </div>
+
+        <h2 id="convenciones">3. Convenciones Transversales</h2>
+        <p>
+            Estas reglas se repiten en todo el esquema y explican la mayor parte de lo que se ve en el DER. Conocerlas evita leer tabla por tabla.
+        </p>
+
+        <h3>Claves primarias UUID</h3>
+        <p>
+            Todas las tablas de negocio usan <code>id uuid DEFAULT gen_random_uuid()</code>. Las excepciones son herencia del esquema inicial: <code>alerts.id</code> y <code>agent_logs.id</code> son enteros con secuencia. Además hay dos numeradores legibles para humanos, separados de la clave primaria: <code>incidents.number</code> y <code>remote_action_batches.number</code>.
+        </p>
+
+        <h3>Fechas siempre con zona horaria</h3>
+        <p>
+            No existe ninguna columna <code>timestamp</code> sin zona: todo es <code>timestamptz</code>. <code>created_at</code> tiene default <code>CURRENT_TIMESTAMP</code>; <code>updated_at</code> lo mantiene la aplicación en cada actualización (no hay trigger).
+        </p>
+
+        <h3>Aislamiento multi-cliente por client_id</h3>
+        <p>
+            Las tablas que pertenecen a un cliente llevan <code>client_id</code> con foreign key a <code>clients</code>. Tres tablas de configuración admiten <code>client_id NULL</code> con el significado "valor global, aplica a todos los clientes": <code>custom_field_defs</code>, <code>incident_rules</code> y <code>message_templates</code>. Como PostgreSQL no considera iguales dos <code>NULL</code> en un índice único, la unicidad "una regla por cliente y clase" se garantiza con un índice sobre <code>COALESCE(client_id, uuid-cero)</code>.
+        </p>
+
+        <h3>Política de borrado según el tipo de relación</h3>
+        <table>
+            <thead><tr><th style="width: 16%;">ON DELETE</th><th style="width: 38%;">Cuándo se usa</th><th>Ejemplos</th></tr></thead>
+            <tbody>
+                <tr><td><code>CASCADE</code></td><td>El hijo no tiene sentido sin el padre (composición).</td><td><code>devices.agent_id</code>, <code>readings.device_id</code>, <code>incident_events.incident_id</code>, todo lo que cuelga de <code>clients</code>.</td></tr>
+                <tr><td><code>SET NULL</code></td><td>Referencia de auditoría o vínculo opcional; el registro debe sobrevivir al borrado del referido.</td><td>Todas las columnas <code>*_by</code> hacia <code>users</code>, <code>incidents.device_id</code>, <code>supply_requests.device_id</code>.</td></tr>
+                <tr><td><code>RESTRICT</code></td><td>Prohibido borrar el padre si tiene hijos.</td><td>Único caso: <code>report_closures.client_id</code>. Un cliente con cierres de facturación no se puede borrar.</td></tr>
+            </tbody>
+        </table>
+
+        <div class="footer">
+            PÁGINA 5 | STC CLOUD – MODELO DE DATOS
+        </div>
+    </div>
+
+    <!-- PÁGINA 6: CONVENCIONES (2/2) -->
+    <div class="page">
+        <div class="internal-header">
+            <div class="internal-brand">STC <span>CLOUD</span></div>
+            <div class="internal-doc-type">3. Convenciones Transversales</div>
+        </div>
+
+        <h3>Enumeraciones como CHECK, no como tipo ENUM</h3>
+        <p>
+            Los estados (<code>status</code>, <code>severity</code>, <code>origin</code>, <code>kind</code>, <code>role</code>) son columnas de texto con un <code>CHECK (columna IN (...))</code>. Agregar un valor es una migración normal y reversible; con un <code>ENUM</code> de PostgreSQL no se puede quitar un valor ni agregarlo dentro de la misma transacción que lo usa.
+        </p>
+
+        <h3>Checks de coherencia</h3>
+        <p>
+            Además de los enumerados, hay constraints que atan un estado a su marca de tiempo para que la base no admita registros contradictorios: un incidente está <code>closed</code> si y sólo si tiene <code>closed_at</code>; un pedido de insumo está en estado terminal si y sólo si tiene <code>closed_at</code>; un equipo fusionado tiene <code>merged_into</code> y <code>merged_at</code> a la vez, y nunca apunta a sí mismo; un equipo ignorado tiene <code>ignored_at</code>; un equipo dado de baja no puede estar además fusionado.
+        </p>
+
+        <h3>Índices parciales para "lo abierto"</h3>
+        <p>
+            Los listados operativos consultan casi siempre lo pendiente, no el histórico. Por eso abundan los índices con <code>WHERE status &lt;&gt; 'closed'</code>, <code>WHERE resolved = false</code> o <code>WHERE resolved_at IS NULL</code>: son chicos y cubren exactamente la consulta caliente. Varios son además <strong>únicos</strong>, y funcionan como regla de negocio garantizada por la base:
+        </p>
+        <table>
+            <thead><tr><th style="width: 42%;">Regla</th><th>Índice</th></tr></thead>
+            <tbody>
+                <tr><td>Una sola alerta abierta por equipo y tipo (y por agente y tipo)</td><td><code>alerts_device_type_open_uniq</code>, <code>alerts_agent_type_open_uniq</code></td></tr>
+                <tr><td>Un solo incidente automático abierto por equipo y clase</td><td><code>incidents_open_device_class_uniq</code></td></tr>
+                <tr><td>Un solo pedido automático abierto por equipo e insumo</td><td><code>supply_requests_open_uniq</code></td></tr>
+                <tr><td>Un solo cierre vigente por cliente y período</td><td><code>report_closures_client_period_open_uniq</code></td></tr>
+                <tr><td>Un solo candidato de fusión abierto por cliente y serial</td><td><code>device_merge_candidates_open_uniq</code></td></tr>
+            </tbody>
+        </table>
+
+        <h3>JSONB para lo que no se filtra por columna</h3>
+        <p>
+            <code>metadata</code>, <code>payload</code>, <code>params</code>, <code>recipients</code>, <code>custom_data</code>, <code>supplies_details</code>, <code>snmp_credentials</code>, <code>business_hours</code>, <code>discovery_state</code>. Sólo <code>devices.custom_data</code> tiene índice GIN, porque es el único que se filtra desde el portal.
+        </p>
+
+        <h3>Snapshots desnormalizados a propósito</h3>
+        <p>
+            <code>incidents</code>, <code>supply_requests</code> y <code>report_closure_lines</code> guardan <code>device_serial</code>, <code>device_label</code>, <code>device_model</code> o <code>agent_name</code> además del <code>device_id</code>. Es intencional: un ticket o una línea de facturación debe conservar el nombre que tenía el equipo en ese momento, aunque después se renombre, se fusione o se borre.
+        </p>
+
+        <div class="footer">
+            PÁGINA 6 | STC CLOUD – MODELO DE DATOS
+        </div>
+    </div>
+
+    <!-- PÁGINA 7: TENANCY -->
+    <div class="page">
+        <div class="internal-header">
+            <div class="internal-brand">STC <span>CLOUD</span></div>
+            <div class="internal-doc-type">4. Tenancy, Usuarios y Acceso</div>
+        </div>
+
+        <h2 id="tenancy">4. Tenancy, Usuarios y Acceso</h2>
+
+        <h3>clients</h3>
+        <p>
+            El tenant. Además de datos de contacto, concentra la configuración por cliente: <code>device_approval_required</code> (los equipos nuevos quedan pendientes hasta que alguien los apruebe), <code>supply_requests_enabled</code> y <code>supply_request_threshold_pct</code> (pedidos automáticos de insumos, umbral entre 1 y 99 %), <code>notification_email</code>, <code>notification_webhook_url</code> y <code>notification_events</code> (qué eventos se notifican), <code>sftp_destination</code> (entrega de reportes) y <code>last_alert_digest_sent_at</code> (control del resumen diario de alertas).
+        </p>
+
+        <h3>users y user_recovery_codes</h3>
+        <p>
+            Usuarios del portal. <code>role</code> es <code>admin</code>, <code>operator</code> o <code>client_viewer</code>. <code>client_id</code> es nullable: administradores y operadores son globales, pero un <code>client_viewer</code> <strong>debe</strong> tener cliente, y eso lo exige un <code>CHECK</code>. El segundo factor vive en <code>totp_secret</code>, <code>totp_enabled</code> y <code>totp_required</code>. Los códigos de recuperación se guardan en <code>user_recovery_codes</code>, uno por fila y sólo como hash, con <code>used_at</code> marcando el consumo.
+        </p>
+
+        <h3>api_keys y api_webhooks</h3>
+        <p>
+            Claves de la API pública, por cliente. Se guarda <strong>sólo el hash</strong> de la clave (único) y un prefijo de 12 caracteres para identificarla en la interfaz; <code>revoked_at</code> y <code>expires_at</code> la invalidan sin borrarla. Cada cliente tiene como máximo un webhook (<code>client_id</code> es único en <code>api_webhooks</code>), con la lista de eventos suscriptos y un secreto para firmar el envío.
+        </p>
+
+        <h3>audit_logs</h3>
+        <p>
+            Bitácora de acciones humanas: quién, qué acción, sobre qué objetivo, con qué metadata y desde qué IP. <code>target_id</code> es texto sin foreign key porque apunta a cualquier tabla (patrón polimórfico), y <code>user_id</code> tampoco la tiene para que el registro sobreviva al borrado del usuario. Está indexada por acción, por cliente y por objetivo.
+        </p>
+
+        <h3>system_settings</h3>
+        <p>
+            Configuración global de una sola fila: la clave primaria es un booleano con <code>CHECK (id)</code>, así que sólo puede existir la fila <code>true</code>. Guarda los umbrales de "fuera de línea" para agentes y equipos (1 a 1440 minutos), la configuración SMTP (la contraseña cifrada por la aplicación) y los umbrales globales de insumos.
+        </p>
+
+        <div class="info-callout">
+            <strong>Tablas menores del dominio:</strong> <code>activity_saved_views</code> (filtros guardados de la pantalla de actividad, por usuario) y <code>user_feedback</code> (reportes de error o mejora enviados desde el portal, con estado <code>open</code> / <code>in_progress</code> / <code>closed</code>).
+        </div>
+
+        <div class="footer">
+            PÁGINA 7 | STC CLOUD – MODELO DE DATOS
+        </div>
+    </div>
+
+    <!-- PÁGINA 8: AGENTES -->
+    <div class="page">
+        <div class="internal-header">
+            <div class="internal-brand">STC <span>CLOUD</span></div>
+            <div class="internal-doc-type">5. Agentes y Acciones Remotas</div>
+        </div>
+
+        <h2 id="agentes">5. Agentes y Acciones Remotas</h2>
+
+        <h3>agents</h3>
+        <p>
+            El servicio instalado en la red del cliente. Nace con una <code>activation_key</code> única y una fecha de vencimiento; al activarse queda ligado a un <code>hardware_id</code> y recibe su secreto JWT y el hash del refresh token. <code>client_id</code> es nullable porque el agente puede existir antes de asignarse a un cliente.
+        </p>
+        <p>
+            La configuración operativa que baja al agente vive en la misma fila: rangos IP a escanear, comunidad y credenciales SNMP (con un contador de revisión para detectar cambios), intervalos de escaneo y monitoreo, horario laboral, umbrales de tóner, acceso remoto al panel web de la impresora y canal de actualizaciones. La telemetría del host (versión, nombre, sistema operativo, IP, uptime, último contacto, estado del descubrimiento) también.
+        </p>
+
+        <div class="note-callout">
+            <strong>El único trigger de la base:</strong> <code>agents_client_id_sync</code>. Si se cambia el cliente de un agente, la función <code>sync_devices_client_id()</code> actualiza el <code>client_id</code> de todos sus equipos en la misma transacción. Existe porque <code>devices.client_id</code> es obligatorio y se usa en todos los filtros de aislamiento entre clientes: dejar equipos apuntando al cliente anterior sería una fuga de datos entre tenants.
+        </div>
+
+        <h3>agent_commands y agent_logs</h3>
+        <p>
+            <code>agent_commands</code> es la cola de comandos hacia un agente: tipo, payload, estado (por defecto <code>pending</code>), resultado, y cuándo se envió y se ejecutó. <code>created_by</code> es texto y no foreign key porque también los crean procesos automáticos. <code>agent_logs</code> guarda los logs que sube el agente, indexados por agente y fecha.
+        </p>
+
+        <h3>agent_releases</h3>
+        <p>
+            Catálogo de versiones publicadas del agente para la actualización remota: versión y canal únicos, tipo, URL de descarga y <code>sha256</code> para verificar el binario. Es global, sin foreign keys.
+        </p>
+
+        <h3>remote_action_batches y remote_action_items</h3>
+        <p>
+            Acciones remotas masivas (<code>RESCAN</code>, <code>FORCE_SCAN</code>, <code>RESTART</code>, <code>FORCE_UPDATE</code>, <code>RESTART_PRINTER</code>). El lote tiene fecha programada, estado y un número legible. Cada ítem apunta a un agente y opcionalmente a un equipo; cuando se despacha queda enlazado al comando generado en <code>agent_commands</code>. Un índice único impide repetir el mismo destino dentro de un lote.
+        </p>
+
+        <div class="footer">
+            PÁGINA 8 | STC CLOUD – MODELO DE DATOS
+        </div>
+    </div>
+
+    <!-- PÁGINA 9: DISPOSITIVOS (1/2) -->
+    <div class="page">
+        <div class="internal-header">
+            <div class="internal-brand">STC <span>CLOUD</span></div>
+            <div class="internal-doc-type">6. Dispositivos</div>
+        </div>
+
+        <h2 id="dispositivos">6. Dispositivos</h2>
+
+        <h3>devices: la tabla central</h3>
+        <p>
+            La impresora. Es la tabla más ancha del esquema (74 columnas) y la más consultada. Conviene leerla en capas:
+        </p>
+        <table>
+            <thead><tr><th style="width: 24%;">Capa</th><th>Columnas</th></tr></thead>
+            <tbody>
+                <tr><td>Identidad y red</td><td><code>serial_number</code>, <code>mac</code> (tipo <code>macaddr</code>), <code>ip_address</code> (tipo <code>inet</code>), <code>hostname</code>, <code>brand</code>, <code>model</code>, <code>sku</code>, <code>firmware</code>, <code>agent_id</code>, <code>client_id</code> (obligatorio).</td></tr>
+                <tr><td>Nombre y ubicación en tres columnas</td><td><code>*_reported</code> (lo que dice la impresora), <code>*_override</code> (lo que cargó un operador) y la columna efectiva (<code>name</code>, <code>location</code>, <code>asset_number</code>), que la aplicación resuelve como "override si existe, si no reported".</td></tr>
+                <tr><td>Último estado conocido</td><td>Contadores de páginas (<code>bigint</code>), niveles de tóner por color, <code>last_seen</code>, y <strong>20 columnas <code>cartridge_*</code></strong>: para cada color (negro, cian, magenta, amarillo) el código, serial, capacidad, páginas impresas y estimadas del cartucho. <code>supplies_details</code> (JSON) cubre los insumos que no son los cuatro colores: tambores, fusor, kits.</td></tr>
+                <tr><td>Estados de gestión</td><td><code>registration_state</code> (<code>pending</code> / <code>registered</code> / <code>ignored</code>), <code>monitor_state</code> (<code>full</code> / <code>supplies_only</code> / <code>reports_only</code> / <code>disabled</code>), baja (<code>decommissioned_*</code>), fusión de duplicados (<code>merged_into</code>, clave hacia la misma tabla) y origen de insumos (<code>genuine</code> / <code>non_genuine</code>). Cada estado lleva su fecha, su usuario y su motivo.</td></tr>
+                <tr><td>Campos personalizados</td><td><code>custom_data</code> (JSON con índice GIN); las definiciones viven en <code>custom_field_defs</code>.</td></tr>
+            </tbody>
+        </table>
+
+        <h3>Índices que importan en devices</h3>
+        <p>
+            El más particular es el <strong>único parcial por cliente y serial normalizado</strong>: garantiza que no haya dos equipos activos con el mismo serial en un cliente, pero excluye de la regla los seriales basura que devuelven algunas impresoras (vacíos, de menos de 5 caracteres, iguales a la IP, caracteres repetidos, "unknown") y los equipos ya fusionados. También hay índices por agente + IP, por cliente + MAC, por cliente + etiqueta de activo, y parciales para los equipos pendientes de aprobación, los que no están en monitoreo completo y los fusionados.
+        </p>
+
+        <div class="footer">
+            PÁGINA 9 | STC CLOUD – MODELO DE DATOS
+        </div>
+    </div>
+
+    <!-- PÁGINA 10: DISPOSITIVOS (2/2) -->
+    <div class="page">
+        <div class="internal-header">
+            <div class="internal-brand">STC <span>CLOUD</span></div>
+            <div class="internal-doc-type">6. Dispositivos</div>
+        </div>
+
+        <h3>device_models</h3>
+        <p>
+            Catálogo de modelos según hoja de datos: marca, clave de modelo normalizada, nombre a mostrar, ciclo de trabajo mensual, volumen recomendado y si es color. Único por marca y modelo. <strong>No tiene foreign key desde <code>devices</code></strong>: el cruce se hace por texto (marca más modelo normalizado), porque el modelo llega tal cual lo reporta la impresora y no siempre está catalogado. La sección 11 desarrolla esta decisión.
+        </p>
+
+        <h3>device_costs</h3>
+        <p>
+            Costos por equipo en relación uno a uno (<code>device_id</code> es la clave primaria): costo de capital, alquiler trimestral, costo por página mono y color, contrato de servicio y su duración en años (1 a 20), moneda (por defecto <code>ARS</code>). Todos los importes son <code>numeric</code> con un <code>CHECK</code> de no negativos.
+        </p>
+
+        <h3>device_merge_candidates</h3>
+        <p>
+            Sospechas de equipos duplicados que detecta un proceso automático: cliente, clave de serial, lista de equipos involucrados (array de UUID) y motivo. Sólo puede haber un candidato abierto por cliente y serial; al resolverse queda registrado quién y cuándo.
+        </p>
+
+        <h3>custom_field_defs</h3>
+        <p>
+            Definiciones de campos personalizados: clave, etiqueta, tipo (<code>text</code>, <code>number</code>, <code>date</code>, <code>select</code>, <code>boolean</code>), opciones para los de selección, posición y fecha de archivo. Con <code>client_id</code> nulo la definición es global. La clave es única por ámbito entre las definiciones no archivadas.
+        </p>
+
+        <div class="two-col">
+            <div class="card orange">
+                <div class="card-title">Por qué los tipos de red son nativos</div>
+                <p><code>ip_address</code> es <code>inet</code> y <code>mac</code> es <code>macaddr</code>, no texto. PostgreSQL valida el formato al insertar y permite comparar y ordenar correctamente, y el índice por agente + IP evita duplicados por reasignación DHCP.</p>
+            </div>
+            <div class="card">
+                <div class="card-title">Fusión de duplicados</div>
+                <p>Cuando dos filas resultan ser la misma impresora, la absorbida no se borra: queda con <code>merged_into</code> apuntando a la sobreviviente y sale de los listados. Así el histórico de lecturas y tickets de ambas sigue siendo consultable.</p>
+            </div>
+        </div>
+
+        <div class="footer">
+            PÁGINA 10 | STC CLOUD – MODELO DE DATOS
+        </div>
+    </div>
+
+    <!-- PÁGINA 11: LECTURAS -->
+    <div class="page">
+        <div class="internal-header">
+            <div class="internal-brand">STC <span>CLOUD</span></div>
+            <div class="internal-doc-type">7. Lecturas y Series Temporales</div>
+        </div>
+
+        <h2 id="lecturas">7. Lecturas y Series Temporales</h2>
+
+        <h3>readings</h3>
+        <p>
+            Cada lectura SNMP de un equipo: momento, equipo, contadores de páginas, niveles de tóner, si estaba fuera de línea, detalle de insumos en JSON y un <code>reading_id</code> que genera el agente para que reenviar la misma lectura no la duplique.
+        </p>
+        <p>
+            Es una <strong>hypertable de TimescaleDB</strong> particionada por tiempo, y por eso <strong>no tiene clave primaria</strong>: TimescaleDB exige que toda restricción única incluya la columna de partición, y una clave <code>id</code> sola no la incluye. La unicidad real la da el índice único sobre <code>(reading_id, time)</code>. Al 12 de septiembre de 2026 hay unas 27.000 lecturas desde el 28 de mayo.
+        </p>
+        <table>
+            <thead><tr><th style="width: 30%;">Política activa</th><th>Valor</th></tr></thead>
+            <tbody>
+                <tr><td>Compresión</td><td>Los bloques con más de 7 días se comprimen, ordenados por tiempo descendente. Reduce el espacio en disco del histórico sin cambiar cómo se consulta.</td></tr>
+                <tr><td>Retención</td><td>Las lecturas con más de 2 años se eliminan automáticamente.</td></tr>
+                <tr><td>Índices</td><td>Por equipo y tiempo descendente, y por tiempo descendente.</td></tr>
+            </tbody>
+        </table>
+
+        <h3>readings_daily_agg y readings_monthly_agg</h3>
+        <p>
+            Son <strong>agregados continuos</strong> de TimescaleDB; por eso DBeaver los muestra como vistas y su definición contiene un <code>UNION ALL</code> contra una tabla interna materializada. Por equipo y día (o mes) guardan el <strong>último</strong> valor de cada contador, no la suma, porque los contadores de una impresora son acumulativos. Se refrescan solos: el diario recalcula los últimos 3 días, el mensual los últimos 3 meses.
+        </p>
+
+        <h3>device_usage_30d</h3>
+        <p>
+            Vista SQL común sobre el agregado diario: páginas impresas en los últimos 30 días por equipo, calculadas como diferencia entre días consecutivos y descartando diferencias negativas (reinicio de contador).
+        </p>
+
+        <div class="info-callout">
+            <strong>Detalle al revisar con DBeaver:</strong> las estadísticas de PostgreSQL muestran 0 filas para <code>readings</code>. No es un error: los datos viven en los bloques internos de TimescaleDB (<code>_timescaledb_internal</code>), no en la tabla madre. Un <code>SELECT count(*)</code> devuelve el valor real.
+        </div>
+
+        <div class="footer">
+            PÁGINA 11 | STC CLOUD – MODELO DE DATOS
+        </div>
+    </div>
+
+    <!-- PÁGINA 12: ALERTAS E INCIDENTES -->
+    <div class="page">
+        <div class="internal-header">
+            <div class="internal-brand">STC <span>CLOUD</span></div>
+            <div class="internal-doc-type">8. Alertas e Incidentes</div>
+        </div>
+
+        <h2 id="alertas">8. Alertas e Incidentes</h2>
+
+        <h3>alerts</h3>
+        <p>
+            Alerta automática sobre un equipo <strong>o</strong> sobre un agente; un <code>CHECK</code> exige al menos uno de los dos. Tiene tipo, severidad (<code>warning</code> / <code>critical</code>), valor medido, mensaje, clase y motivo, y su origen (por defecto <code>cloud</code>; también puede generarla el agente). El ciclo de vida es reconocimiento (quién y cuándo) y resolución. La clave primaria es entera, herencia del esquema inicial.
+        </p>
+        <p>
+            Dos índices únicos parciales impiden que el proceso que evalúa las lecturas genere duplicados: sólo puede haber una alerta <strong>abierta</strong> por equipo y tipo, y una por agente y tipo.
+        </p>
+
+        <h3>incidents</h3>
+        <p>
+            El ticket de trabajo. Tiene un número correlativo legible, un identificador externo para el sistema de tickets del cliente, clase, título, descripción, severidad, estado (<code>open</code>, <code>in_progress</code>, <code>on_hold</code>, <code>closed</code>) y origen (<code>auto</code> / <code>manual</code>). Para el SLA guarda apertura, primera respuesta y vencimiento; para el cierre, fecha, usuario, motivo y cantidad de reaperturas. Referencia al equipo, al agente y a la regla que lo generó con <code>SET NULL</code>, y conserva serial y etiqueta del equipo como snapshot. Sólo puede haber un incidente automático abierto por equipo y clase.
+        </p>
+
+        <h3>incident_alerts</h3>
+        <p>
+            Tabla intermedia de muchos a muchos entre incidentes y alertas, con clave primaria compuesta y auditoría de quién vinculó y cuándo. Un incidente agrupa varias alertas; una alerta puede haber pasado por más de un incidente.
+        </p>
+
+        <h3>incident_events</h3>
+        <p>
+            Historial del incidente: comentarios, cambios de estado, asignaciones, vinculación y desvinculación de alertas, cambio de identificador externo, reapertura y vencimiento de SLA. Cada evento lleva cuerpo, metadata y usuario.
+        </p>
+
+        <h3>incident_rules</h3>
+        <p>
+            Reglas de apertura automática por clase de alerta: habilitada o no, severidad mínima, minutos de espera antes de abrir, horas de SLA y cierre automático cuando se resuelven las alertas. Con <code>client_id</code> nulo la regla es global; hay una sola regla por ámbito y clase.
+        </p>
+
+        <div class="footer">
+            PÁGINA 12 | STC CLOUD – MODELO DE DATOS
+        </div>
+    </div>
+
+    <!-- PÁGINA 13: INSUMOS Y CIERRES -->
+    <div class="page">
+        <div class="internal-header">
+            <div class="internal-brand">STC <span>CLOUD</span></div>
+            <div class="internal-doc-type">9. Insumos y Cierres</div>
+        </div>
+
+        <h2 id="insumos">9. Insumos y Cierres de Facturación</h2>
+
+        <h3>supply_requests y supply_request_events</h3>
+        <p>
+            Pedido de insumo (tóner, tambor, etc.) por equipo: identificador estable del insumo dentro del equipo, tipo, color, descripción, SKU, nivel porcentual y días restantes al momento de abrirlo. Estados: <code>pending</code>, <code>reviewed</code>, <code>processed</code>, <code>completed</code>, <code>ignored</code>, <code>cancelled</code>; los tres últimos son terminales y un <code>CHECK</code> exige que tengan <code>closed_at</code>. Origen automático o manual. Sólo puede haber un pedido automático abierto por equipo e insumo. El historial (cambios de estado, comentarios, cierre automático) vive en <code>supply_request_events</code>, con el mismo patrón que los eventos de incidente.
+        </p>
+
+        <h3>report_closures</h3>
+        <p>
+            Cierre mensual de contadores por cliente: período (primer día del mes), estado, totales agregados (páginas totales, mono, color, otras, cantidad de equipos y de anomalías), y quién cerró y cuándo. Si se reabre, quedan la fecha, el usuario y el motivo, y <code>superseded_by</code> apunta al cierre que lo reemplazó, así la cadena de versiones es trazable. Sólo puede haber un cierre vigente por cliente y período.
+        </p>
+
+        <div class="note-callout">
+            <strong>Única relación RESTRICT del esquema:</strong> <code>report_closures.client_id</code>. Un cliente con cierres de facturación no se puede borrar. Los cierres son registros contables y sobreviven a cualquier operación administrativa sobre el cliente.
+        </div>
+
+        <h3>report_closure_lines</h3>
+        <p>
+            Una línea por equipo dentro del cierre: primera y última lectura del período con sus contadores, diferencias calculadas (total, mono, color, otras), diferencia estimada cuando hubo huecos de lectura, fuente del dato y si hubo reinicio de contador. Guarda un snapshot completo del equipo y del agente (serial, modelo, marca, nombre del agente) porque el cierre tiene que poder reimprimirse idéntico dentro de un año, aunque el equipo ya no exista.
+        </p>
+
+        <div class="diagram-title">Cadena de un cierre mensual</div>
+        <pre class="diagram">
+   readings (histórico)  ──►  readings_daily_agg  ──►  cálculo del período
+                                                              │
+                                        ┌─────────────────────┴─────────────────────┐
+                                        ▼                                           ▼
+                              report_closures                              report_closure_lines
+                              (1 por cliente y mes, totales)               (1 por equipo, snapshot)
+                                        │
+                                        └── superseded_by ──► versión posterior si se reabre
+        </pre>
+
+        <div class="footer">
+            PÁGINA 13 | STC CLOUD – MODELO DE DATOS
+        </div>
+    </div>
+
+    <!-- PÁGINA 14: REPORTES, NOTIFICACIONES E INFRA -->
+    <div class="page">
+        <div class="internal-header">
+            <div class="internal-brand">STC <span>CLOUD</span></div>
+            <div class="internal-doc-type">10. Reportes e Infraestructura</div>
+        </div>
+
+        <h2 id="reportes">10. Reportes, Notificaciones e Infraestructura</h2>
+
+        <h3>scheduled_reports</h3>
+        <p>
+            Reportes programados por cliente. Tipos: uso, equipos no contactables, niveles de consumibles, listado de activos, historial de alertas, cierre de facturación y exportación de auditoría. Formato CSV o XLSX. Frecuencia <code>none</code>, <code>daily</code>, <code>weekdays</code>, <code>weekly</code> o <code>monthly</code>, con día de la semana (0 a 6), día del mes (1 a 28, para que exista en todos los meses) y hora (0 a 23), todo validado por <code>CHECK</code>. Guarda destinatarios, próxima y última ejecución con su resultado. Un índice parcial por <code>next_run_at</code> sobre los habilitados es lo único que consulta el planificador.
+        </p>
+
+        <h3>message_templates</h3>
+        <p>
+            Plantillas de asunto y cuerpo por evento: alerta creada, incidente creado, pedido de insumo creado y completado, cierre publicado y resumen de alertas. Con <code>client_id</code> nulo la plantilla es global; hay una por ámbito y evento.
+        </p>
+
+        <h3>email_log</h3>
+        <p>
+            Registro de cada correo intentado: evento, destinatario, asunto, estado (<code>sent</code>, <code>error</code>, <code>skipped_no_transport</code>, <code>skipped_no_recipient</code>), error y metadata. Permite diagnosticar "no me llegó el mail" sin acceder al servidor SMTP.
+        </p>
+
+        <h3>knex_migrations y knex_migrations_lock</h3>
+        <p>
+            Tablas internas de la herramienta de migraciones: qué migraciones se aplicaron y en qué lote, y un candado para que dos instancias de la API no migren a la vez. No se editan a mano.
+        </p>
+
+        <div class="two-col">
+            <div class="card orange">
+                <div class="card-title">Cómo cambia el esquema</div>
+                <p>Cada cambio es un archivo de migración versionado con su reversa. La API los aplica al arrancar, en orden, dentro de una transacción. El esquema de producción es siempre el resultado de esa secuencia, reproducible desde cero en cualquier entorno.</p>
+            </div>
+            <div class="card">
+                <div class="card-title">Qué no hay en la base</div>
+                <p>No hay procedimientos almacenados, ni lógica de negocio en SQL, ni triggers salvo el de sincronización de cliente. Las validaciones que la base sí impone (checks, unicidad) son las que un fallo de la aplicación no debe poder saltarse.</p>
+            </div>
+        </div>
+
+        <div class="footer">
+            PÁGINA 14 | STC CLOUD – MODELO DE DATOS
+        </div>
+    </div>
+
+    <!-- PÁGINA 15: DECISIONES (1/2) -->
+    <div class="page">
+        <div class="internal-header">
+            <div class="internal-brand">STC <span>CLOUD</span></div>
+            <div class="internal-doc-type">11. Decisiones de Diseño</div>
+        </div>
+
+        <h2 id="decisiones">11. Decisiones de Diseño y su Justificación</h2>
+        <p>
+            Las preguntas que suele hacer un administrador de bases de datos al ver el DER por primera vez, con la respuesta.
+        </p>
+
+        <h3>¿Por qué devices tiene 74 columnas, 20 de ellas cartridge_*?</h3>
+        <p>
+            Porque <code>devices</code> es un <strong>snapshot del último estado</strong>, pensado para que el listado principal del portal (cientos de equipos, filtrado y ordenado por cualquier columna) se resuelva con un solo <code>SELECT</code> sin joins ni agregaciones. El histórico verdadero está en <code>readings</code>. La alternativa normalizada, una tabla de insumos con una fila por color, obligaría a un join o a una tabla pivote en la consulta más frecuente del sistema. Los insumos que no son los cuatro colores clásicos van al JSON <code>supplies_details</code>, así la tabla no sigue creciendo por cada tipo nuevo.
+        </p>
+
+        <h3>¿Por qué readings no tiene clave primaria?</h3>
+        <p>
+            Es una hypertable de TimescaleDB particionada por tiempo, y TimescaleDB no permite una clave primaria que no incluya la columna de partición. La idempotencia se garantiza con el índice único sobre <code>(reading_id, time)</code>. La migración del 21 de agosto de 2026 documenta el cambio.
+        </p>
+
+        <h3>¿Por qué device_models no tiene foreign key desde devices?</h3>
+        <p>
+            El modelo llega como texto libre desde la impresora y el catálogo se carga aparte y de forma incompleta. Una foreign key obligaría a catalogar el modelo antes de registrar el equipo, o a dejar la columna vacía casi siempre. El cruce por marca y modelo normalizado, con índice único, da el mismo resultado en la práctica. Si el catálogo llega a ser completo, agregar una columna <code>model_id</code> opcional con foreign key es una migración chica.
+        </p>
+
+        <h3>¿Por qué hay columnas repetidas en incidentes, pedidos y cierres?</h3>
+        <p>
+            Son snapshots deliberados. Un ticket o una línea de facturación tiene que mostrar lo que decía el equipo en ese momento, no lo que dice hoy, y tiene que sobrevivir a que el equipo se fusione o se borre.
+        </p>
+
+        <h3>¿Por qué audit_logs.target_id es texto y no foreign key?</h3>
+        <p>
+            Porque apunta a cualquier entidad: equipo, usuario, cliente, regla. Una foreign key por tabla posible sería una columna opcional por cada una. El patrón polimórfico es el estándar en tablas de auditoría, y el índice sobre <code>target_id</code> cubre la consulta "todo lo que pasó con X".
+        </p>
+
+        <div class="footer">
+            PÁGINA 15 | STC CLOUD – MODELO DE DATOS
+        </div>
+    </div>
+
+    <!-- PÁGINA 16: DECISIONES (2/2) -->
+    <div class="page">
+        <div class="internal-header">
+            <div class="internal-brand">STC <span>CLOUD</span></div>
+            <div class="internal-doc-type">11. Decisiones de Diseño</div>
+        </div>
+
+        <h3>¿Por qué UUID y no enteros?</h3>
+        <p>
+            Los agentes generan identificadores sin conexión (<code>reading_id</code>) y las entidades aparecen en URLs del portal y de la API: un UUID no es enumerable ni adivinable. <code>alerts</code> y <code>agent_logs</code> quedaron con enteros del esquema inicial; cambiarlos no aporta y rompería la clave compuesta de <code>incident_alerts</code>.
+        </p>
+
+        <h3>¿Por qué los estados son CHECK y no ENUM?</h3>
+        <p>
+            Agregar un valor a un <code>ENUM</code> de PostgreSQL no puede hacerse dentro de la misma transacción que lo usa, y no se puede quitar un valor. Con <code>CHECK</code>, cada cambio es una migración normal y reversible.
+        </p>
+
+        <h3>¿Por qué tanto índice parcial y único?</h3>
+        <p>
+            Los únicos parciales son <strong>reglas de negocio</strong> que la aplicación no puede garantizar sola cuando dos procesos o dos réplicas de la API escriben a la vez: "una alerta abierta por equipo y tipo", "un cierre vigente por período". Que lo garantice la base es más barato y más seguro que un bloqueo en código.
+        </p>
+
+        <h3>¿Por qué system_settings.id es un booleano?</h3>
+        <p>
+            Es la forma canónica de tabla de una sola fila en PostgreSQL: clave primaria booleana con <code>CHECK (id)</code> sólo admite la fila <code>true</code>. Evita un <code>LIMIT 1</code> implícito y que alguien inserte una segunda fila.
+        </p>
+
+        <h3>¿Por qué hay un trigger si el resto de la lógica está en la aplicación?</h3>
+        <p>
+            <code>devices.client_id</code> es obligatorio y se usa en todos los filtros de aislamiento entre clientes. Si reasignar un agente dejara sus equipos con el cliente anterior, sería una fuga de datos entre tenants. El trigger hace esa actualización de forma atómica, en la misma transacción, sin importar por dónde se haga el cambio.
+        </p>
+
+        <h3>Puntos abiertos conocidos</h3>
+        <p>No son errores, pero un revisor los va a señalar y conviene tener la respuesta lista:</p>
+        <ul>
+            <li><code>agent_commands.created_by</code> es texto, no foreign key a <code>users</code>, porque también lo crean procesos automáticos.</li>
+            <li><code>audit_logs.user_id</code> no tiene foreign key, por la misma razón que <code>target_id</code>: el log debe sobrevivir al borrado del usuario.</li>
+            <li>No hay trigger de <code>updated_at</code>; lo mantiene la aplicación en cada actualización.</li>
+            <li><code>readings.device_id</code> admite nulo. No debería haber lecturas sin equipo; hoy lo garantiza la aplicación, no la base.</li>
+        </ul>
+
+        <div class="footer">
+            PÁGINA 16 | STC CLOUD – MODELO DE DATOS
+        </div>
+    </div>
+
+    <!-- PÁGINA 17: VERIFICACIÓN -->
+    <div class="page">
+        <div class="internal-header">
+            <div class="internal-brand">STC <span>CLOUD</span></div>
+            <div class="internal-doc-type">12. Verificación</div>
+        </div>
+
+        <h2 id="verificacion">12. Cómo Verificar el Esquema con DBeaver o SQL</h2>
+        <p>
+            Todas las cifras de este documento se regeneran con consultas de sólo lectura al catálogo de PostgreSQL. Cualquier revisor puede ejecutarlas desde DBeaver para confirmar que lo descripto coincide con la base que tiene delante.
+        </p>
+
+        <div class="diagram-title">Tablas y vistas del schema public</div>
+        <pre class="code">SELECT c.relname, c.relkind
+FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+WHERE n.nspname = 'public' AND c.relkind IN ('r','v','m') ORDER BY 1;</pre>
+
+        <div class="diagram-title">Foreign keys con su política de borrado (c = cascade, n = set null, r = restrict)</div>
+        <pre class="code">SELECT conrelid::regclass AS tabla, a.attname AS columna,
+       confrelid::regclass AS referencia, confdeltype AS on_delete
+FROM pg_constraint c
+JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = ANY (c.conkey)
+WHERE contype = 'f' AND connamespace = 'public'::regnamespace ORDER BY 1, 2;</pre>
+
+        <div class="diagram-title">Checks (los "enums" del esquema) e índices parciales</div>
+        <pre class="code">SELECT conrelid::regclass, conname, pg_get_constraintdef(oid)
+FROM pg_constraint WHERE contype = 'c' AND connamespace = 'public'::regnamespace;
+
+SELECT tablename, indexname, indexdef FROM pg_indexes
+WHERE schemaname = 'public' AND indexdef LIKE '%WHERE%' ORDER BY 1;</pre>
+
+        <div class="diagram-title">Estado de TimescaleDB y migraciones aplicadas</div>
+        <pre class="code">SELECT hypertable_name, compression_enabled FROM timescaledb_information.hypertables;
+SELECT hypertable_name, proc_name, config FROM timescaledb_information.jobs
+WHERE hypertable_name IS NOT NULL;
+SELECT name, batch, migration_time FROM knex_migrations ORDER BY id DESC LIMIT 5;</pre>
+
+        <div class="note-callout">
+            <strong>Recomendación al conectar con DBeaver:</strong> marcar la conexión como <em>read-only</em> en sus propiedades y usar el entorno de desarrollo, no producción. La grilla de datos de DBeaver edita en vivo: un clic de más modifica una fila real.
+        </div>
+
+        <p style="margin-top: 30px; color: var(--ink-300); font-size: 12px;">
+            La versión de desarrollo de este documento, con el detalle columna por columna y el diagrama en formato Mermaid, es <em>docs/dev/DATA_MODEL.md</em> en el repositorio. Para el contexto de la plataforma que usa esta base, ver <em>STC_Arquitectura_App_Web</em> en esta misma carpeta.
+        </p>
+
+        <div class="footer">
+            PÁGINA 17 | STC CLOUD – MODELO DE DATOS
+        </div>
+    </div>
+
+</body>
+</html>
