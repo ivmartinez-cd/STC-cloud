@@ -103,6 +103,20 @@ if [ ! -d "/etc/letsencrypt/live/${DOMAIN}" ] && [ ! -f "certbot-done.flag" ]; t
       --no-eff-email \
       -d ${DOMAIN}
 
+  # Segundo certificado, para el gateway de EWS remoto (hostname aparte, ver
+  # nginx.conf). Va separado y no como SAN del principal para que cada bloque
+  # `server` apunte a su propio directorio en /etc/letsencrypt/live.
+  docker run --rm \
+    -v "$(pwd)/certbot-certs:/etc/letsencrypt" \
+    -v "$(pwd)/certbot-www:/var/www/certbot" \
+    certbot/certbot certonly \
+      --webroot \
+      --webroot-path=/var/www/certbot \
+      --email admin@${DOMAIN} \
+      --agree-tos \
+      --no-eff-email \
+      -d ews.${DOMAIN}
+
   docker compose -f docker-compose.prod.yml down
   touch certbot-done.flag
   echo "  ✓ Certificado SSL generado"

@@ -22,6 +22,11 @@
 - Un dominio propio con el registro DNS `A` apuntando a la IP del servidor
   (necesario para que certbot pueda emitir el certificado SSL vía HTTP-01
   challenge).
+- Un segundo registro `A` para `ews.<dominio>`, a la misma IP: es el hostname
+  aparte por el que el operador navega la web embebida (EWS) de un equipo del
+  cliente. Va en un origen propio para que las páginas del firmware no
+  compartan cookies ni políticas con el portal. Sin ese DNS, certbot no puede
+  emitir su certificado y "Abrir EWS" no funciona.
 - Puertos `80` y `443` abiertos hacia el servidor.
 
 ## 1️⃣ Configurar variables de entorno
@@ -39,6 +44,9 @@ Completar en `.env.production`:
 - `DB_PASSWORD`, `PORTAL_ADMIN_PASSWORD` — contraseñas propias, no dejar los
   placeholders `CAMBIAR_POR_*` (`deploy.sh` aborta si detecta que quedaron
   sin cambiar).
+- `EWS_GATEWAY_URL` — `https://ews.<dominio>` (el segundo hostname de los
+  prerrequisitos). Es la URL a la que el portal manda al operador al abrir el
+  EWS de un equipo.
 - El resto de las variables (`DB_HOST=postgres`, `REDIS_URL=redis://redis:6379`,
   etc.) ya apuntan a los nombres de servicio correctos del propio
   `docker-compose.prod.yml` — no hace falta tocarlos salvo que cambies la
@@ -57,11 +65,13 @@ chmod +x deploy.sh
 2. Verifica que `.env.production` exista y que las variables críticas
    (`JWT_SECRET`, `DB_PASSWORD`, `PORTAL_ADMIN_PASSWORD`, `DOMAIN`) estén
    completadas (no los placeholders de ejemplo).
-3. Reemplaza el dominio placeholder en `nginx.conf` por el `DOMAIN` real.
+3. Reemplaza el dominio placeholder en `nginx.conf` por el `DOMAIN` real (en
+   los dos bloques: el del portal y el de `ews.<dominio>`).
 4. Si no existe un certificado SSL todavía, levanta `nginx` sin SSL
-   temporalmente y pide uno a Let's Encrypt vía certbot (webroot challenge).
-   Certbot corre después como su propio contenedor, renovando automáticamente
-   cada 12h mientras el certificado siga vigente.
+   temporalmente y pide DOS a Let's Encrypt vía certbot (webroot challenge):
+   uno para `DOMAIN` y otro para `ews.DOMAIN`. Certbot corre después como su
+   propio contenedor, renovando automáticamente cada 12h mientras los
+   certificados sigan vigentes.
 5. Levanta todos los servicios: `docker compose -f docker-compose.prod.yml
    --env-file .env.production up -d --build`, y corre las migraciones dentro
    del contenedor `api` (`npx knex migrate:latest --knexfile dist/db/knexfile.js`).
@@ -85,6 +95,7 @@ API_URL=https://tu-dominio.com
 | Health check | `https://tu-dominio.com/health` | `{"status":"ok"}` |
 | Portal login | `https://tu-dominio.com/login` | Pantalla de login |
 | API | `https://tu-dominio.com/api/v1/dashboard` | Requiere auth (401 sin sesión) |
+| Gateway EWS | `https://ews.tu-dominio.com/` | Texto "La sesión de EWS venció o se cerró" (401 sin sesión) |
 
 ## 🔄 Actualizar el deploy (nueva versión del backend/portal)
 
