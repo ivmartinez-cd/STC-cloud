@@ -11,6 +11,46 @@ import { mergeCookieJar as mergeJar } from "../../../../services/ewsGatewayServi
 /** Igual que el visor de una página: lo que tarde más que esto es un agente caído, no un equipo lento. */
 const RELAY_TIMEOUT_MS = 20_000;
 
+/**
+ * Cuántas peticiones pueden ir a la vez contra UN equipo.
+ *
+ * El navegador abre 6-10 conexiones en paralelo para cargar una página, y el
+ * agente las dispara todas juntas. Un servidor web embebido de impresora no es
+ * nginx: con esa andanada encima se arrastra, las peticiones se pasan del
+ * timeout del agente (10 s) y vuelven 502. Pasó con el SyncThru de ISSN — los
+ * tres archivos más grandes de la página (jquery.layout.js, swsHomeInclude.js,
+ * swsIncludeCommon.js) fallaban siempre y la app se quedaba en "Loading...",
+ * mientras que pedidos de a uno respondían en menos de un segundo.
+ *
+ * Con 3 en vuelo la página sigue cargando rápido (cada recurso tarda décimas)
+ * y el equipo no se satura. Es por sesión, o sea por equipo: dos operadores
+ * mirando equipos distintos no se estorban.
+ */
+const MAX_CONCURRENT_PER_SESSION = 3;
+
+/**
+ * Carriles por sesión: cada petición se encola en uno y espera a la anterior de
+ * ESE carril, así nunca hay más de `MAX_CONCURRENT_PER_SESSION` en vuelo.
+ *
+ * Vive en memoria del proceso (como los resolvers de `ewsProxyService`): si dos
+ * réplicas atienden la misma sesión, cada una limita su propia parte, que es
+ * suficiente. El mapa crece con las sesiones abiertas en la vida del proceso —
+ * unas pocas entradas de 3 promesas cada una, nada que haga falta purgar.
+ */
+const lanesBySession = new Map<string, { lanes: Promise<unknown>[]; next: number }>();
+
+function throttledBySession<T>(sessionId: string, run: () => Promise<T>): Promise<T> {
+  const entry = lanesBySession.get(sessionId)
+    ?? { lanes: Array.from({ length: MAX_CONCURRENT_PER_SESSION }, () => Promise.resolve() as Promise<unknown>), next: 0 };
+  lanesBySession.set(sessionId, entry);
+  const lane = entry.next;
+  entry.next = (lane + 1) % MAX_CONCURRENT_PER_SESSION;
+  const result = entry.lanes[lane].then(run, run);
+  // El carril sigue vivo aunque esta petición falle: un 502 no puede trabar el resto de la página.
+  entry.lanes[lane] = result.catch(() => undefined);
+  return result;
+}
+
 export interface OpenEwsSessionInput extends Actor {
   agentId: string;
   deviceId: string;
@@ -77,7 +117,11 @@ export class RelayEwsRequestUseCase {
     private readonly audit: AuditLogWriter
   ) {}
 
-  async execute(input: RelayEwsInput): Promise<EwsProxyResponse> {
+  execute(input: RelayEwsInput): Promise<EwsProxyResponse> {
+    return throttledBySession(input.sessionId, () => this.relay(input));
+  }
+
+  private async relay(input: RelayEwsInput): Promise<EwsProxyResponse> {
     const { session } = input;
     const commandId = crypto.randomUUID();
     const payload = {
