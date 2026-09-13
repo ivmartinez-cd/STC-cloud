@@ -201,6 +201,7 @@ const Dashboard = () => {
         <AgentVersionsCard
           agentVersions={data?.agentVersions}
           currentAgentVersion={data?.currentAgentVersion}
+          publishedAgentVersions={data?.publishedAgentVersions}
           loading={mainLoading}
           error={mainError}
           onRetry={fetchDashboardData}

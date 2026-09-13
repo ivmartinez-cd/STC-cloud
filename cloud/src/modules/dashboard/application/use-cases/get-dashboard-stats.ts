@@ -36,7 +36,7 @@ export class GetDashboardStatsUseCase {
       devicesCount, agentsStats, clientsCount, monthlyVolume, topClients, brandStats, offlineAgents,
       newDevicesCount, readings24hCount, lastReadingInfo, clientsWithAlertsCount, devicesUnmanagedCount,
       agentsReportingCount, agentVersionRows, alertsByClassRows, discoveredTodayCount, discoveredYesterdayCount,
-      pendingDevicesTotalCount, publishedAgentVersion, devicesReportingCount, movementsCounts,
+      pendingDevicesTotalCount, publishedAgentVersion, publishedAgentVersions, devicesReportingCount, movementsCounts,
       incidentsOpenCount, supplyRequestsPendingCount,
     ] = await Promise.all([
       this.repo.devicesCount(cid),
@@ -58,6 +58,7 @@ export class GetDashboardStatsUseCase {
       this.repo.discoveredYesterdayCount(cid, startOfYesterday, startOfToday),
       this.repo.pendingDevicesTotalCount(cid),
       this.agentVersionReader.getPublishedAgentVersion(),
+      this.agentVersionReader.getPublishedVersionsByChannel(),
       this.repo.devicesReportingCount(cid, twentyFourHoursAgo),
       this.repo.movementsCounts(cid, startOfYesterday),
       this.repo.incidentsOpenCount(cid),
@@ -86,8 +87,9 @@ export class GetDashboardStatsUseCase {
       topClients: topClients.map((c) => ({ ...c, device_count: Number(c.device_count) })),
       brands: brandStats.map((b) => ({ ...b, count: Number(b.count) })),
       offlineAgents,
-      agentVersions: agentVersionRows.map((v) => ({ version: v.version, count: Number(v.count) })),
+      agentVersions: agentVersionRows.map((v) => ({ version: v.version, channel: v.channel, count: Number(v.count) })),
       currentAgentVersion: publishedAgentVersion,
+      publishedAgentVersions,
       alertsByClass,
       alertsOpenTotal: alertsByClass.reduce((sum, a) => sum + a.count, 0),
       discovered: {

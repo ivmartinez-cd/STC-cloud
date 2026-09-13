@@ -186,13 +186,19 @@ export class KnexDashboardRepository implements DashboardRepository {
   // Distribución de versiones de agente en la flota — `agents.version` ya existe
   // (`20260517000000_agent_system_telemetry.ts`) y la escribe `agentService.ts`
   // en cada heartbeat.
+  // Agrupado por versión Y canal: el parque corre `stable` y `legacy` a la vez,
+  // con runtimes distintos, y cada uno se actualiza contra su propio release.
+  // Juntarlos en una sola fila escondía que un canal se quedó atrás.
   agentVersionRows(cid: string | null) {
     return this.db("agents")
       .whereNot("status", "revoked")
       .modify((q) => { if (cid) q.where("client_id", cid); })
-      .select(this.db.raw("COALESCE(NULLIF(version, ''), 'desconocida') as version"))
+      .select(
+        this.db.raw("COALESCE(NULLIF(version, ''), 'desconocida') as version"),
+        this.db.raw("COALESCE(NULLIF(channel, ''), 'stable') as channel")
+      )
       .count("* as count")
-      .groupBy("version")
+      .groupBy("version", "channel")
       .orderBy("count", "desc")
       .limit(10);
   }

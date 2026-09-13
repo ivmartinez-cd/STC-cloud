@@ -20,8 +20,11 @@ export interface DashboardData {
   topClients: Array<{ id: string; name: string; device_count: number }>;
   brands: Array<{ brand: string; count: number }>;
   offlineAgents: Array<{ id: string; name: string; client_name: string; last_seen: string }>;
-  agentVersions?: Array<{ version: string; count: number }>;
+  agentVersions?: Array<{ version: string; channel: string; count: number }>;
+  /** La publicada del canal `stable` — se mantiene por compatibilidad. */
   currentAgentVersion?: string;
+  /** Última publicada POR canal: el parque corre `stable` y `legacy` a la vez. */
+  publishedAgentVersions?: Record<string, string>;
   alertsByClass?: Array<{ alert_class: string; label: string; count: number }>;
   discovered?: { today: number; yesterday: number; pendingTotal: number };
   /** Entradas de auditoría: hoy y ayer (`recent`) + histórico (`total`). */

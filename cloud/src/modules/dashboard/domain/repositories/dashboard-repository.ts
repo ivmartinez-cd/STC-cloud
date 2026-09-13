@@ -19,7 +19,7 @@ export interface DashboardRepository {
   clientsWithAlertsCount(cid: string | null): Promise<CountRow | undefined>;
   devicesUnmanagedCount(cid: string | null): Promise<CountRow | undefined>;
   agentsReportingCount(cid: string | null, twentyFourHoursAgo: Date): Promise<CountRow | undefined>;
-  agentVersionRows(cid: string | null): Promise<Array<{ version: string; count: string | number }>>;
+  agentVersionRows(cid: string | null): Promise<Array<{ version: string; channel: string; count: string | number }>>;
   discoveredTodayCount(cid: string | null, startOfToday: Date): Promise<CountRow | undefined>;
   discoveredYesterdayCount(cid: string | null, startOfYesterday: Date, startOfToday: Date): Promise<CountRow | undefined>;
   pendingDevicesTotalCount(cid: string | null): Promise<CountRow | undefined>;
