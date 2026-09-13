@@ -22,7 +22,7 @@ que muerda.
 | [UPD-3](#upd-3--la-metadata-de-version-publicada-no-tiene-respaldo-real-) | Actualizaciones | La metadata de versión publicada no tiene respaldo real | 🟠 Media | ✅ Cerrado |
 | [UPD-4](#upd-4--la-clave-de-firma-ed25519-existe-en-una-sola-maquina) | Seguridad | La clave de firma Ed25519 existe en una sola máquina | 🔴 Alta | Abierto |
 | [UPD-5](#upd-5--el-camino-real-de-actualizacion-zip-no-tiene-rollback-automatico) | Actualizaciones | El camino real de actualización (ZIP) no tiene rollback automático | 🟠 Media | Abierto |
-| [UPD-6](#upd-6--publish-releasesh-sube-los-dos-canales-al-mismo-nombre-de-archivo) | Actualizaciones | `publish-release.sh` sube los dos canales al mismo nombre de archivo | 🟠 Media | Abierto |
+| [UPD-6](#upd-6--publish-releasesh-sube-los-dos-canales-al-mismo-nombre-de-archivo) | Actualizaciones | `publish-release.sh` sube los dos canales al mismo nombre de archivo | 🟠 Media | Cerrado (2026-09-13) |
 | [DISC-1](#disc-1--las-constraints-por-item-de-ajv-siguen-tapando-los-errores-de-dominio) | Barrido | Las constraints por ítem de AJV siguen tapando los errores de dominio | 🟠 Media | Abierto |
 | [DISC-2](#disc-2--el-total-del-barrido-que-ve-el-portal-no-cuenta-los-hostnames) | Barrido | El total del barrido que ve el portal no cuenta los hostnames | 🟡 Baja | Abierto |
 | [DISC-3](#disc-3--apagar-un-rango-reinicia-la-vuelta-de-barrido-en-curso) | Barrido | Apagar un rango reinicia la vuelta de barrido en curso | 🟡 Baja | Abierto |
@@ -206,7 +206,13 @@ arrancar bien; si el flag sigue ahí en el próximo arranque del servicio, resta
 
 ### UPD-6 — `publish-release.sh` sube los dos canales al mismo nombre de archivo
 
-**Detectado:** 2026-09-11 · **Severidad:** 🟠 Media · **Estado:** Abierto
+**Detectado:** 2026-09-11 · **Severidad:** 🟠 Media · **Estado:** Cerrado (2026-09-13)
+
+**Cerrado:** el archivo remoto ahora se llama `bundle-<canal>.js` (+ `.sig`), así que
+`stable` y `legacy` ya no se pisan. Además el bundle lleva el canal horneado en su primera
+línea (`build-sea.js`, `banner`) y `publish-release.sh` se niega a publicar un bundle bajo
+un canal distinto del que trae compilado — que era el error real que dejó al agente de ISSN
+(Node 20) reportando `stable`. Queda abajo el análisis original.
 
 `publish-release.sh` sube el archivo a `~/stc-cloud/agent-updates/$(basename "$FILE")`
 (`publish-release.sh:68`) y publica `$API_URL/updates/$(basename "$FILE")` como URL del

@@ -10,7 +10,7 @@ cliente) o está en la allowlist explícita de rutas públicas. Dentro del porta
 y sólo llega a `CLIENT_VIEWER_ROUTES` (scopeado a su cliente). Las marcadas `admin`
 además exigen `role === "admin"` en el handler.
 
-Total: 191 rutas · públicas: 10 · client_viewer: 53 · sólo admin: 8
+Total: 193 rutas · públicas: 10 · client_viewer: 54 · sólo admin: 8
 
 ## `src/api/health.ts`
 
@@ -37,6 +37,12 @@ Total: 191 rutas · públicas: 10 · client_viewer: 53 · sólo admin: 8
 | POST | `/api/v1/agents/:id/heartbeat` | agente (token) |
 | POST | `/api/v1/devices/sync` | agente (token) |
 | POST | `/api/v1/devices/register` | agente (token) |
+
+## `src/modules/agents/presentation/ews-gateway-routes.ts`
+
+| Método | Ruta | Quién puede |
+|---|---|---|
+| GET | `${GATEWAY_PREFIX}/__stc/open` | custom (ticketAuthFor) |
 
 ## `src/modules/agents/presentation/portal-agent-routes.ts`
 
@@ -68,6 +74,7 @@ Total: 191 rutas · públicas: 10 · client_viewer: 53 · sólo admin: 8
 | PUT | `/api/v1/agents/:id/snmp-credentials` | admin · operator |
 | PUT | `/api/v1/agents/:id/remote-ews` | admin · operator |
 | POST | `/api/v1/agents/:id/ews-proxy` | admin · operator |
+| POST | `/api/v1/agents/:id/ews-session` | admin · operator |
 
 ## `src/modules/alerts/presentation/alert-routes.ts`
 
@@ -272,7 +279,7 @@ Total: 191 rutas · públicas: 10 · client_viewer: 53 · sólo admin: 8
 | GET | `/api/v1/clients/:id/reports/:closureId` | admin · operator · client_viewer |
 | GET | `/api/v1/clients/:id/reports/:closureId/export.csv` | admin · operator · client_viewer |
 | GET | `/api/v1/clients/:id/reports/:closureId/export.xlsx` | admin · operator · client_viewer |
-| GET | `/api/v1/clients/:id/reports/:closureId/export.pdf` | admin · operator |
+| GET | `/api/v1/clients/:id/reports/:closureId/export.pdf` | admin · operator · client_viewer |
 | POST | `/api/v1/clients/:id/reports/close` | admin · operator |
 | POST | `/api/v1/clients/:id/reports/:closureId/reopen` | admin · operator |
 
