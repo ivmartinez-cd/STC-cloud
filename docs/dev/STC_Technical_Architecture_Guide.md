@@ -161,3 +161,37 @@ El actualizador del agente realiza una estricta validación criptográfica de do
     *   El agente descarga adicionalmente un archivo de firma digital con extensión `.sig` (que contiene la firma criptográfica asimétrica del binario).
     *   Utilizando la biblioteca criptográfica nativa de Node.js, el agente valida la firma del búfer de bytes del archivo descargado usando la clave pública empaquetada e inmutable de desarrollo `UPDATE_PUBLIC_KEY_HEX`.
     *   Si la firma no es verificada con éxito, el agente detiene inmediatamente el flujo, emite una alerta crítica de violación de integridad y elimina los archivos descargados para prevenir cualquier ejecución de código arbitrario no autorizado.
+
+---
+
+## 8. Gateway de EWS Remoto (navegación de la web embebida sin VPN)
+
+Permite que un operador del portal abra, en una pestaña aparte, la web embebida (EWS) completa de un equipo que está en la LAN de un cliente. Es la contraparte del JAMC de HP SDS: el agente hace de proxy inverso, pero sin abrir ningún puerto entrante (sección 2).
+
+**Flujo:**
+
+1. `POST /api/v1/agents/:id/ews-session` (admin/operator; el flag `remote_ews_enabled` del monitor tiene que estar activo) crea una sesión en Redis con la IP del equipo congelada —tomada de `devices`, nunca del navegador— y devuelve un **ticket** de un solo uso y 60 s.
+2. El navegador cruza al hostname propio del gateway, `ews.<dominio>` (`/__stc/open?ticket=…`), que canjea el ticket por una cookie `stc_ews` (`HttpOnly`, `Secure`, `SameSite=Strict`) y entrega una página puente que navega a `/`. Una sola sesión por navegador: abrir otro equipo cierra la anterior.
+3. nginx reescribe `ews.<dominio>/x` → `/__ews/x` en la API. Cada petición se relaya al agente como comando `EWS_REQUEST` por el WebSocket saliente que ya tiene abierto; el agente la ejecuta contra la impresora (sólo IPs de su `known_devices`, HTTP y HTTPS, sin seguir redirects, tope de 2 MB) y devuelve status, cabeceras, cuerpo y `Set-Cookie` por separado.
+4. Las cookies **del equipo** viven en la sesión del servidor (jar en Redis); el navegador sólo maneja el id opaco. Un `Location` absoluto al propio equipo se reescribe a relativo; si cambia de esquema (http↔https) la sesión aprende el nuevo.
+
+**Por qué un hostname propio y no un prefijo del portal:** las rutas absolutas del firmware (`/sws/app/…`) resuelven solas sin reescribir HTML ni JavaScript de cada marca, y las cookies y políticas del portal no se mezclan con las del equipo. Por eso el gateway quita en su origen las cabeceras de helmet (CSP, `nosniff`, `X-Frame-Options`, `Referrer-Policy`) que romperían páginas de 2009; el aislamiento lo da el origen, no las cabeceras.
+
+**Límites y auditoría:** 3 pedidos en vuelo por sesión (los servidores embebidos se saturan con el paralelismo del navegador), 1000/min por IP en la ruta, sesión de 30 min sin uso y 8 h como máximo absoluto. Se auditan la apertura (`REMOTE_EWS_SESSION_OPEN`), cada pantalla (`REMOTE_EWS_ACCESS`), cada escritura (`REMOTE_EWS_WRITE`) y el cierre (`REMOTE_EWS_SESSION_CLOSE`), con IP del operador y ruta sin query; nunca el cuerpo. Deshabilitar el flag cierra las sesiones abiertas en el acto.
+
+Código: `cloud/src/modules/agents/presentation/ews-gateway-{routes,http}.ts`, `application/use-cases/ews-gateway-use-cases.ts`, `cloud/src/services/ewsGatewayService.ts`, `agent/src/capture/transport/http.ts` (`ewsRequest`) y `agent/src/core/CommandHandler.ts` (`EWS_REQUEST`). Despliegue: bloque `server` de `ews.` en `nginx.conf`, segundo certificado en `deploy.sh`, `EWS_GATEWAY_URL` en `.env.production`.
+
+---
+
+## 9. Canales de Actualización del Agente (`stable` / `legacy`)
+
+El agente se distribuye en dos canales, porque el parque incluye equipos con Windows 7 / Server 2008 R2 donde el runtime moderno no corre:
+
+| Canal | Runtime embebido | Target de esbuild | Instalador |
+|---|---|---|---|
+| `stable` | Node 24 | `node24` | `STC-Monitor.iss` |
+| `legacy` | Node 20.2.0 | `node20` | `STC-Monitor-Legacy.iss` |
+
+El canal se **hornea en el build** (`build-sea.js --channel …`, `define __STC_CHANNEL__`) y queda también como marca legible en la primera línea del bundle. El agente pide actualizaciones sólo de su canal (`GET /api/v1/agents/version?channel=…`) y reporta en cada latido canal y runtime, que el portal contrasta: si el canal declarado no coincide con el Node que corre, la ficha del monitor lo marca en rojo.
+
+Cada canal se publica como `bundle-<canal>.js` + `.sig` en `/updates/` y como fila propia en `agent_releases` (`unique(version, channel)`). `publish-release.sh` se niega a publicar un bundle bajo un canal distinto del que trae horneado; `publish-hotfix.sh` compila los dos canales en carpetas separadas. La verificación de firma de la sección 7 aplica igual a ambos.

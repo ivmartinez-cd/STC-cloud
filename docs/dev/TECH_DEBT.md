@@ -9,7 +9,7 @@ que muerda.
 > `archivo:línea` que lo prueban. Cuando se cierra, se marca ✅ con la fecha y el commit,
 > y se deja en el doc (trazabilidad), no se borra.
 
-**Última revisión:** 2026-09-11
+**Última revisión:** 2026-09-13
 
 ---
 
@@ -30,6 +30,7 @@ que muerda.
 | [ARCH-1](#arch-1--iprange-quedo-sin-consumidores-en-produccion) | Agente | `ipRange()` quedó sin consumidores en producción | 🟡 Baja | Abierto |
 | [ARCH-2](#arch-2--sizes-baselinejson-lista-un-archivo-que-ya-no-existe) | Arquitectura | `sizes-baseline.json` lista un archivo que ya no existe | 🟡 Baja | ✅ Cerrado |
 | [ARCH-3](#arch-3--auth-y-dashboard-importan-internals-de-agents-para-agent_releases) | Arquitectura | `auth` y `dashboard` importan internals de `agents` para `agent_releases` | 🟡 Baja | Abierto |
+| [SEC-1](#sec-1--el-gateway-de-ews-admite-una-sola-sesion-por-navegador) | Seguridad | El gateway de EWS admite una sola sesión por navegador | 🟠 Media | Abierto |
 
 ---
 
@@ -407,3 +408,26 @@ igual, en vez de que dos módulos externos perforen los internals de `agents`.
 3. En el cuerpo: fecha de detección, severidad, qué se rompe **en concreto** (no "podría ser
    mejor"), las referencias `archivo:línea` que lo prueban, y qué haría falta para cerrarlo.
 4. Al cerrarlo, marcar ✅ con fecha y commit — no borrar la entrada.
+
+### SEC-1 — El gateway de EWS admite una sola sesión por navegador
+
+**Detectado:** 2026-09-13 (auditoría de seguridad del gateway) · **Severidad:** 🟠 Media · **Estado:** Abierto
+
+La cookie de sesión del gateway (`stc_ews`) es una sola por origen (`ews.<dominio>`), así
+que un operador no puede tener dos equipos abiertos a la vez: abrir el segundo cierra el
+primero (`ews-gateway-routes.ts`, `registerOpenEndpoint`). Antes del 13/09 era peor —la
+pestaña vieja seguía viva con la cookie nueva, hablando contra otro equipo, posiblemente de
+otro cliente, y con el Basic auth que Chrome cachea por origen—; cerrar la anterior es el
+parche mínimo, no la solución.
+
+**La solución de fondo** es un origen por sesión: `<id>.ews.<dominio>`, con nginx tomando el
+id del `Host` (`server_name ~^(?<sid>[a-f0-9]+)\.ews\.…`) y la API resolviendo la sesión
+desde ahí. Eso da además aislamiento real entre equipos (el JS de un firmware no puede
+alcanzar al otro) y cachés de Basic auth separadas.
+
+**Por qué no se hizo ya:** necesita un certificado wildcard `*.ews.<dominio>`, y Let's
+Encrypt sólo lo emite con desafío DNS-01 (un registro TXT en el dominio). Producción hoy
+corre sobre `nip.io`, donde no se pueden crear registros TXT propios. Queda para cuando el
+portal pase a un dominio propio con API de DNS (Cloudflare, Route53, etc.): ahí es
+`certbot --dns-<proveedor>` y la reescritura de nginx.
+

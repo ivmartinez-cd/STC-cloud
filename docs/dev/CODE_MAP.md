@@ -147,9 +147,9 @@ cloud/src/
 │   ├── publicWebhookService.ts # Webhooks salientes de la API pública (HMAC-SHA256)
 │   ├── notificationService/    # mailer, webhook y notificaciones por dominio
 │   ├── ewsProxyService.ts      # Comandos EWS "síncronos" sobre el WS asíncrono del agente
+│   ├── ewsGatewayService.ts    # Sesiones del gateway de EWS navegable (Redis: ticket, cookie jar del equipo, índice por monitor)
 │   ├── wsTicketService.ts      # Tickets WS de un solo uso (TTL 60s)
 │   ├── sftpDeliveryService.ts / sftpDestination.ts  # Entrega de reportes por SFTP
-│   ├── agentVersionService.ts  # Versión publicada del agente
 │   └── supplyOrigin.ts         # Origen de consumibles
 ├── shared/domain/          # Lógica de dominio compartida entre módulos
 │   ├── ip-range-spec/          # Validación de rangos IP (CIDR + exclusiones) y compilación
@@ -165,7 +165,7 @@ cloud/src/
 │   └── state.ts                # Mapas de conexiones activas
 ├── db/
 │   ├── knexfile.ts             # Configuración de Knex (Postgres + TimescaleDB); pool por env
-│   ├── migrations/             # 72 migraciones versionadas
+│   ├── migrations/             # 75 migraciones versionadas
 │   ├── seeds/ y manual_seed.ts # Datos de prueba
 │   └── test_db.ts              # Utilidades de base para tests
 ├── tests/                  # Suite de integración (65 archivos .test.ts)
