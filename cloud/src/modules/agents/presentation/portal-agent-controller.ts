@@ -170,9 +170,11 @@ function remoteHandlers(fastify: FastifyInstance, redis: Redis, uc: AgentUseCase
         return uc.ewsProxy.execute({ agentId: idOf(request), deviceId: device_id, path, ...actorOf(request) });
       }),
     setRemoteEwsEnabled: (request: Req, reply: FastifyReply) =>
-      replyingAgentErrors(reply, () => uc.setRemoteEws.execute(idOf(request), (request.body as { enabled: boolean }).enabled, actorOf(request))),
+      replyingAgentErrors(reply, () => uc.setRemoteEws(redis).execute(idOf(request), (request.body as { enabled: boolean }).enabled, actorOf(request))),
     openEwsSession: (request: Req, reply: FastifyReply) =>
       replyingAgentErrors(reply, () => openEwsSessionFor(request, reply, redis, uc)),
+    closeEwsSessions: (request: Req, reply: FastifyReply) =>
+      replyingAgentErrors(reply, () => uc.closeEwsSessions(redis).execute(idOf(request), actorOf(request))),
     triggerScan: (request: Req) => uc.triggerScan.execute(idOf(request), actorOf(request)),
   };
 }

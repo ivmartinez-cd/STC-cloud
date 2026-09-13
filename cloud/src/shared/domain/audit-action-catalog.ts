@@ -74,6 +74,7 @@ const AUDIT_ACTION_META: Record<string, AuditActionMeta> = {
   // escritura contra el firmware del equipo — es lo que un auditor va a venir
   // a buscar primero.
   REMOTE_EWS_SESSION_OPEN: { label: "Sesión de EWS remoto abierta", category: "agent" },
+  REMOTE_EWS_SESSION_CLOSE: { label: "Sesiones de EWS remoto cerradas", category: "agent" },
   REMOTE_EWS_WRITE: { label: "Escritura por EWS remoto", category: "agent" },
 
   // Clientes

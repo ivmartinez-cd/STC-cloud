@@ -12,6 +12,9 @@ export interface EwsRedisClient {
   getdel(key: string): Promise<string | null>;
   del(key: string): Promise<number>;
   expire(key: string, seconds: number): Promise<number>;
+  sadd(key: string, member: string): Promise<number>;
+  srem(key: string, member: string): Promise<number>;
+  smembers(key: string): Promise<string[]>;
 }
 
 /**
@@ -63,11 +66,20 @@ export interface EwsSession {
 
 const sessionKey = (id: string) => `ews-session:${id}`;
 const ticketKey = (ticket: string) => `ews-ticket:${ticket}`;
+/**
+ * Índice de sesiones por monitor, para poder cerrarlas todas cuando se
+ * deshabilita el permiso o cuando un operador lo pide desde el portal. Vive
+ * lo mismo que la sesión más larga posible; puede quedar con ids de sesiones
+ * ya vencidas, y `destroy` los tolera.
+ */
+const agentIndexKey = (agentId: string) => `ews-sessions:agent:${agentId}`;
 
 export async function createEwsSession(redis: EwsRedisClient, data: Omit<EwsSession, "cookies" | "createdAt">): Promise<string> {
   const id = crypto.randomBytes(32).toString("hex");
   const session: EwsSession = { ...data, cookies: "", createdAt: new Date().toISOString() };
   await redis.set(sessionKey(id), JSON.stringify(session), "EX", SESSION_TTL_SECONDS);
+  await redis.sadd(agentIndexKey(data.agentId), id);
+  await redis.expire(agentIndexKey(data.agentId), SESSION_MAX_AGE_MS / 1000);
   return id;
 }
 
@@ -133,7 +145,19 @@ async function applyPatch(redis: EwsRedisClient, id: string, patch: EwsSessionPa
 }
 
 export async function destroyEwsSession(redis: EwsRedisClient, id: string): Promise<void> {
+  const raw = await redis.get(sessionKey(id));
+  const session = raw ? parseSession(raw) : null;
   await redis.del(sessionKey(id));
+  if (session) await redis.srem(agentIndexKey(session.agentId), id);
+}
+
+/** Cierra TODAS las sesiones abiertas contra los equipos de un monitor; devuelve cuántas estaban vivas. */
+export async function destroyEwsSessionsForAgent(redis: EwsRedisClient, agentId: string): Promise<number> {
+  const ids = await redis.smembers(agentIndexKey(agentId));
+  let closed = 0;
+  for (const id of ids) closed += await redis.del(sessionKey(id));
+  await redis.del(agentIndexKey(agentId));
+  return closed;
 }
 
 /**

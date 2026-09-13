@@ -1,5 +1,5 @@
 import {
-  consumeEwsTicket, createEwsSession, destroyEwsSession, mintEwsTicket, readEwsSession, updateEwsSession,
+  consumeEwsTicket, createEwsSession, destroyEwsSession, destroyEwsSessionsForAgent, mintEwsTicket, readEwsSession, updateEwsSession,
   type EwsRedisClient, type EwsSession, type EwsSessionPatch,
 } from "../../../../services/ewsGatewayService";
 import type { EwsSessionStore } from "../../application/ports/ews-session-store";
@@ -30,5 +30,9 @@ export class RedisEwsSessionStore implements EwsSessionStore {
 
   destroy(id: string): Promise<void> {
     return destroyEwsSession(this.redis, id);
+  }
+
+  destroyAllForAgent(agentId: string): Promise<number> {
+    return destroyEwsSessionsForAgent(this.redis, agentId);
   }
 }

@@ -82,17 +82,40 @@ export function useEwsGateway(agentId: string | null | undefined, deviceId: stri
   const [opening, setOpening] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const { close, closed, reset } = useCloseEwsSessions(agentId, setError);
+
   const open = useCallback(async () => {
     if (!agentId) return;
     const tab = openBlankTab();
     if (!tab) { setError('El navegador bloqueó la pestaña emergente. Permitila para este sitio y volvé a intentar.'); return; }
-    setOpening(true); setError(null);
+    setOpening(true); setError(null); reset();
     const failure = await navigateToGateway(tab, agentId, deviceId);
     setOpening(false);
     if (failure) { tab.close(); setError(failure); }
-  }, [agentId, deviceId]);
+  }, [agentId, deviceId, reset]);
 
-  return { opening, error, open };
+  return { opening, error, open, close, closed };
+}
+
+/**
+ * Cierra todas las sesiones del monitor (no sólo la de este equipo): la
+ * pestaña del EWS es la web del firmware y no tiene dónde poner un botón
+ * nuestro, así que el cierre vive en la ficha. `closed` es cuántas había.
+ */
+function useCloseEwsSessions(agentId: string | null | undefined, setError: (m: string | null) => void) {
+  const [closed, setClosed] = useState<number | null>(null);
+  const close = useCallback(async () => {
+    if (!agentId) return;
+    setError(null);
+    try {
+      const { sessions_closed } = await api.delete<{ sessions_closed: number }>(`/agents/${agentId}/ews-session`);
+      setClosed(sessions_closed);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  }, [agentId, setError]);
+  const reset = useCallback(() => setClosed(null), []);
+  return { close, closed, reset };
 }
 
 /**

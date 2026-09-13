@@ -17,4 +17,6 @@ export interface EwsSessionStore {
   /** Con una función, el cambio se calcula sobre el estado ACTUAL (no sobre un snapshot viejo): así es como se fusionan cookies. */
   update(id: string, patch: EwsSessionPatch): Promise<void>;
   destroy(id: string): Promise<void>;
+  /** Cierra todas las sesiones contra los equipos de un monitor (al deshabilitar el permiso, o a pedido). Devuelve cuántas cerró. */
+  destroyAllForAgent(agentId: string): Promise<number>;
 }

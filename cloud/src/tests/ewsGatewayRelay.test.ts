@@ -11,7 +11,9 @@ import {
 import type { EwsProxyGateway, EwsProxyResponse } from "../modules/agents/application/ports/ews-proxy-gateway";
 import type { EwsSession, EwsSessionStore } from "../modules/agents/application/ports/ews-session-store";
 import type { AuditLogWriter } from "../modules/agents/application/ports/audit-log-writer";
-import { createEwsSession, readEwsSession, updateEwsSession, type EwsRedisClient } from "../services/ewsGatewayService";
+import {
+  createEwsSession, destroyEwsSession, destroyEwsSessionsForAgent, readEwsSession, updateEwsSession, type EwsRedisClient,
+} from "../services/ewsGatewayService";
 
 const deferred = <T,>() => {
   let resolve!: (v: T) => void;
@@ -128,13 +130,17 @@ describe("RelayEwsRequestUseCase — cambio de esquema", () => {
 /** Redis de mentira: lo justo para el servicio, con `get`/`set` observables. */
 function fakeRedis(): EwsRedisClient & { data: Map<string, string> } {
   const data = new Map<string, string>();
+  const sets = new Map<string, Set<string>>();
   return {
     data,
     get: async (k) => data.get(k) ?? null,
     set: async (k, v) => { data.set(k, v); return "OK"; },
     getdel: async (k) => { const v = data.get(k) ?? null; data.delete(k); return v; },
-    del: async (k) => (data.delete(k) ? 1 : 0),
+    del: async (k) => (data.delete(k) || sets.delete(k) ? 1 : 0),
     expire: async () => 1,
+    sadd: async (k, m) => { (sets.get(k) ?? sets.set(k, new Set()).get(k)!).add(m); return 1; },
+    srem: async (k, m) => (sets.get(k)?.delete(m) ? 1 : 0),
+    smembers: async (k) => [...(sets.get(k) ?? [])],
   };
 }
 
@@ -147,6 +153,17 @@ describe("ewsGatewayService — la sesión en Redis", () => {
       updateEwsSession(redis, id, (cur) => ({ cookies: `${cur.cookies}${cur.cookies ? "; " : ""}lang=es` })),
     ]);
     assert.equal((await readEwsSession(redis, id))?.cookies, "JSESSIONID=1; lang=es");
+  });
+
+  test("cerrar por monitor tumba todas sus sesiones y no las de otro", async () => {
+    const redis = fakeRedis();
+    const a1 = await createEwsSession(redis, { ...session });
+    const a2 = await createEwsSession(redis, { ...session, deviceId: "d2" });
+    const b = await createEwsSession(redis, { ...session, agentId: "a2" });
+    await destroyEwsSession(redis, a2);
+    assert.equal(await destroyEwsSessionsForAgent(redis, "a1"), 1, "a2 ya estaba cerrada: sólo cuenta a1");
+    assert.equal(await readEwsSession(redis, a1), null);
+    assert.ok(await readEwsSession(redis, b), "la del otro monitor sigue viva");
   });
 
   test("pasado el tope absoluto la sesión muere aunque se la siga usando", async () => {

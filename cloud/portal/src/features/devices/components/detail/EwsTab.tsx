@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ExternalLink, Globe, Loader2, ShieldOff, TriangleAlert } from 'lucide-react';
+import { ExternalLink, Globe, Loader2, ShieldOff, TriangleAlert, XCircle } from 'lucide-react';
 import { Card, CardTitle } from './primitives';
 import EwsPathBar from './EwsPathBar';
 import EwsResultView from './EwsResultView';
@@ -61,17 +61,27 @@ const Placeholder = () => (
  * no existe, y para ese caso queda abajo la consulta puntual, que anda con
  * cualquier versión.
  */
+const BAR_BUTTON = 'flex items-center gap-2 rounded-[3px] px-3.5 py-2 font-montserrat text-[10px] font-semibold uppercase tracking-[.08em] transition-colors duration-150 ease-in-out';
+
+const closedMessage = (closed: number) =>
+  closed === 0 ? 'No había sesiones abiertas.' : `${closed} sesión${closed === 1 ? '' : 'es'} cerrada${closed === 1 ? '' : 's'}.`;
+
 const OpenGatewayBar = ({ device }: { device: DeviceDetailData }) => {
-  const { opening, error, open } = useEwsGateway(device.agent_id, device.id);
+  const { opening, error, open, close, closed } = useEwsGateway(device.agent_id, device.id);
   return (
     <div className="flex flex-wrap items-center gap-3 border-b border-line-150 bg-surface-table-head px-5 py-3">
-      <button type="button" onClick={() => void open()} disabled={opening}
-        className="flex items-center gap-2 rounded-[3px] bg-brand px-3.5 py-2 font-montserrat text-[10px] font-semibold uppercase tracking-[.08em] text-white transition-colors duration-150 ease-in-out hover:bg-brand-severe disabled:opacity-50">
+      <button type="button" onClick={() => void open()} disabled={opening} className={`${BAR_BUTTON} bg-brand text-white hover:bg-brand-severe disabled:opacity-50`}>
         {opening ? <Loader2 size={13} className="animate-spin" /> : <ExternalLink size={13} />} Abrir la web del equipo
       </button>
+      <button type="button" onClick={() => void close()} title="Cierra todas las sesiones de EWS abiertas contra los equipos de este monitor"
+        className={`${BAR_BUTTON} border border-line-300 bg-white text-ink-600 hover:bg-surface-btn-hover`}>
+        <XCircle size={13} /> Cerrar sesiones
+      </button>
       <span className="min-w-0 flex-1 font-sans text-[11.5px] leading-[1.45] text-ink-400">
-        Se abre en una pestaña nueva y se navega como si estuvieras en la red del cliente. La sesión vence a los 30 minutos sin uso.
+        Se abre en una pestaña nueva y se navega como si estuvieras en la red del cliente. La sesión vence a los 30 minutos sin uso;
+        una sola por navegador (abrir otro equipo cierra la anterior).
       </span>
+      {closed !== null && <span className="font-sans text-[11.5px] text-ink-600">{closedMessage(closed)}</span>}
       {error && <span className="font-sans text-[11.5px] text-severity-critical">{error}</span>}
     </div>
   );

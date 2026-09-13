@@ -3,6 +3,7 @@ import type { AgentRepository } from "../../domain/repositories/agent-repository
 import type { AgentLink } from "../ports/agent-link";
 import type { AuditLogWriter } from "../ports/audit-log-writer";
 import type { EwsProxyGateway } from "../ports/ews-proxy-gateway";
+import type { EwsSessionStore } from "../ports/ews-session-store";
 import type { Actor, EwsProxyInput, EwsProxyOutput, SendCommandInput } from "../dtos/agent-dtos";
 import type { AgentCommandsUseCase } from "./command-use-cases";
 import { AppError } from "../../../../shared/domain/errors";
@@ -105,21 +106,46 @@ export class TriggerScanUseCase {
   }
 }
 
-/** Toggle auditado por separado del uso (`REMOTE_EWS_TOGGLE` vs `REMOTE_EWS_ACCESS`). */
+/**
+ * Toggle auditado por separado del uso (`REMOTE_EWS_TOGGLE` vs `REMOTE_EWS_ACCESS`).
+ * Deshabilitar cierra en el acto las sesiones navegables abiertas contra los
+ * equipos de ese monitor: apagar el permiso tiene que apagar el túnel, no
+ * dejarlo vivo hasta 30 minutos más.
+ */
 export class SetRemoteEwsEnabledUseCase {
   constructor(
     private readonly repo: AgentPortalRepository, private readonly audit: AuditLogWriter,
-    private readonly agents: AgentRepository
+    private readonly agents: AgentRepository, private readonly sessions: EwsSessionStore
   ) {}
 
-  async execute(agentId: string, enabled: boolean, actor: Actor): Promise<{ ok: true; remote_ews_enabled: boolean }> {
+  async execute(agentId: string, enabled: boolean, actor: Actor): Promise<{ ok: true; remote_ews_enabled: boolean; sessions_closed: number }> {
     if ((await this.repo.setRemoteEwsEnabled(agentId, enabled)) === 0) throw new RemoteActionError("Agente no encontrado", 404);
+    const sessionsClosed = enabled ? 0 : await this.sessions.destroyAllForAgent(agentId);
     const agent = await this.agents.findById(agentId);
     await this.audit.write({
       action: "REMOTE_EWS_TOGGLE", targetId: agentId, clientId: agent?.client_id ?? null,
-      userId: actor.userId, ipAddress: actor.ipAddress, metadata: { enabled },
+      userId: actor.userId, ipAddress: actor.ipAddress, metadata: { enabled, sessions_closed: sessionsClosed },
     });
-    return { ok: true, remote_ews_enabled: enabled };
+    return { ok: true, remote_ews_enabled: enabled, sessions_closed: sessionsClosed };
+  }
+}
+
+/** Cierre a pedido, desde el portal, de todas las sesiones de EWS abiertas contra los equipos de un monitor. */
+export class CloseEwsSessionsUseCase {
+  constructor(
+    private readonly sessions: EwsSessionStore, private readonly audit: AuditLogWriter,
+    private readonly agents: AgentRepository
+  ) {}
+
+  async execute(agentId: string, actor: Actor): Promise<{ ok: true; sessions_closed: number }> {
+    const agent = await this.agents.findById(agentId);
+    if (!agent) throw new RemoteActionError("Agente no encontrado", 404);
+    const sessionsClosed = await this.sessions.destroyAllForAgent(agentId);
+    await this.audit.write({
+      action: "REMOTE_EWS_SESSION_CLOSE", targetId: agentId, clientId: agent.client_id ?? null,
+      userId: actor.userId, ipAddress: actor.ipAddress, metadata: { sessions_closed: sessionsClosed },
+    });
+    return { ok: true, sessions_closed: sessionsClosed };
   }
 }
 

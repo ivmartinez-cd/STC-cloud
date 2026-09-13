@@ -10,7 +10,7 @@ cliente) o está en la allowlist explícita de rutas públicas. Dentro del porta
 y sólo llega a `CLIENT_VIEWER_ROUTES` (scopeado a su cliente). Las marcadas `admin`
 además exigen `role === "admin"` en el handler.
 
-Total: 193 rutas · públicas: 10 · client_viewer: 54 · sólo admin: 8
+Total: 194 rutas · públicas: 10 · client_viewer: 54 · sólo admin: 8
 
 ## `src/api/health.ts`
 
@@ -75,6 +75,7 @@ Total: 193 rutas · públicas: 10 · client_viewer: 54 · sólo admin: 8
 | PUT | `/api/v1/agents/:id/remote-ews` | admin · operator |
 | POST | `/api/v1/agents/:id/ews-proxy` | admin · operator |
 | POST | `/api/v1/agents/:id/ews-session` | admin · operator |
+| DELETE | `/api/v1/agents/:id/ews-session` | admin · operator |
 
 ## `src/modules/alerts/presentation/alert-routes.ts`
 

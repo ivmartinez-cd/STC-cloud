@@ -213,4 +213,6 @@ export function registerPortalAgentRoutes(fastify: FastifyInstance, db: Knex, re
   // origen) con un ticket de un solo uso. La sesión en sí vive en Redis; acá
   // sólo se valida y se emite el ticket.
   fastify.post("/api/v1/agents/:id/ews-session", { ...auth, schema: ewsSessionSchema, config: { rateLimit: { max: 20, timeWindow: "1 minute" } }, handler: ctrl.openEwsSession });
+  // Cierra TODAS las sesiones navegables abiertas contra los equipos de este monitor (la pestaña del EWS no tiene UI propia para cerrar).
+  fastify.delete("/api/v1/agents/:id/ews-session", { ...auth, handler: ctrl.closeEwsSessions });
 }

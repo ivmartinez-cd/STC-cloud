@@ -15,7 +15,7 @@ import {
 import { DeleteAgentUseCase, GetAgentDetailUseCase, GetAgentDevicesUseCase, ListAgentsUseCase } from "../application/use-cases/portal-agent-use-cases";
 import { ProcessReadingUseCase } from "../application/use-cases/process-reading";
 import { RegisterDevicesFromAgentUseCase } from "../application/use-cases/register-devices";
-import { EwsProxyUseCase, SendAgentCommandUseCase, SetRemoteEwsEnabledUseCase, TriggerScanUseCase } from "../application/use-cases/remote-use-cases";
+import { CloseEwsSessionsUseCase, EwsProxyUseCase, SendAgentCommandUseCase, SetRemoteEwsEnabledUseCase, TriggerScanUseCase } from "../application/use-cases/remote-use-cases";
 import { OpenEwsSessionUseCase, RelayEwsRequestUseCase } from "../application/use-cases/ews-gateway-use-cases";
 import { RedisEwsSessionStore } from "../infrastructure/adapters/redis-ews-session-store";
 import type { EwsRedisClient } from "../../../services/ewsGatewayService";
@@ -80,7 +80,9 @@ export function buildAgentUseCases(db: Knex, redis?: RedisClient) {
     deleteAgent: new DeleteAgentUseCase(new KnexAgentUnitOfWork(db)),
     sendCommand: new SendAgentCommandUseCase(commands, link, audit, agents),
     triggerScan: new TriggerScanUseCase(commands, link, audit, agents),
-    setRemoteEws: new SetRemoteEwsEnabledUseCase(portal, audit, agents),
+    // Factory por Redis: deshabilitar el permiso cierra las sesiones abiertas, que viven ahí.
+    setRemoteEws: (redisClient: EwsRedisClient) => new SetRemoteEwsEnabledUseCase(portal, audit, agents, new RedisEwsSessionStore(redisClient)),
+    closeEwsSessions: (redisClient: EwsRedisClient) => new CloseEwsSessionsUseCase(new RedisEwsSessionStore(redisClient), audit, agents),
     ewsProxy: new EwsProxyUseCase(portal, commands, new EwsProxyServiceGateway(), audit, agents),
     // Gateway navegable de EWS: factories por Redis, mismo patrón que
     // `revokeToken`. La sesión y el jar de cookies del equipo viven en Redis y
