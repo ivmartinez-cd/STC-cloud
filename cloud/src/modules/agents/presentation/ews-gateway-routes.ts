@@ -89,10 +89,7 @@ const sessionAuthFor = (sessions: Sessions) => async (request: FastifyRequest, r
   Object.assign(request as GatewayRequest, { ewsSession: session, ewsSessionId: sessionId });
 };
 
-function registerGatewayEndpoints(fastify: FastifyInstance, redis: Redis, uc: AgentUseCases) {
-  const sessions = uc.ewsSessions(redis);
-  const relay = uc.relayEws(redis);
-
+function registerOpenEndpoint(fastify: FastifyInstance, sessions: Sessions) {
   fastify.get(`${GATEWAY_PREFIX}/__stc/open`, { preHandler: ticketAuthFor(sessions) }, async (request, reply) => {
     const sessionId = (request as GatewayRequest).ewsSessionId!;
     // `Secure`+`HttpOnly`+`SameSite=Lax`: el id de sesión no lo lee ningún
@@ -100,6 +97,13 @@ function registerGatewayEndpoints(fastify: FastifyInstance, redis: Redis, uc: Ag
     reply.setCookie(SESSION_COOKIE, sessionId, { path: "/", httpOnly: true, secure: true, sameSite: "lax" });
     return reply.redirect("/", 302);
   });
+}
+
+function registerGatewayEndpoints(fastify: FastifyInstance, redis: Redis, uc: AgentUseCases) {
+  const sessions = uc.ewsSessions(redis);
+  const relay = uc.relayEws(redis);
+
+  registerOpenEndpoint(fastify, sessions);
 
   fastify.route({
     method: ["GET", "HEAD", "POST", "PUT", "DELETE", "PATCH"],
