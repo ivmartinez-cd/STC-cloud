@@ -45,9 +45,22 @@ export function detectCounterResets(existingDevice: any, newTotal: number | null
   return { counterResets, resetValue };
 }
 
+// Postgres rechaza de plano cualquier byte NUL embebido en un parámetro de
+// texto ("invalid byte sequence for encoding UTF8: 0x00") — no es un tema de
+// encoding, el protocolo no lo admite. Algunas impresoras devuelven el serial
+// con basura binaria/NUL padding en la respuesta SNMP/EWS; sin esto, ESE
+// dispositivo puntual fallaba el advisory lock de identidad (`identityLockKey`,
+// `knex-device-identity-resolver.ts`) en TODAS las vueltas de sync, para
+// siempre — nunca llegaba a resolverse ni a escribirse en `devices`. Visto en
+// producción (ISSN, 12-13/09/2026): 3 equipos (10.3.7.50, 10.10.4.240,
+// 10.200.10.217) fallando así en cada ciclo.
+function stripNulBytes(s: string): string {
+  return s.replace(/\u0000/g, "");
+}
+
 /** `device_id` vacío, con forma de IP o igual a la IP = "sin serial real". */
 export function parseRawIdentity(r: IncomingReading): { ip: string; serialToUse: string | null } {
-  const rawDeviceId = (r.device_id || "").trim();
+  const rawDeviceId = stripNulBytes((r.device_id || "").trim()).trim();
   const ip = (r.ip || "").trim();
   const isIpAsSerial = !rawDeviceId || (net.isIP(rawDeviceId) !== 0) || rawDeviceId === ip;
   return { ip, serialToUse: isIpAsSerial ? null : rawDeviceId };
