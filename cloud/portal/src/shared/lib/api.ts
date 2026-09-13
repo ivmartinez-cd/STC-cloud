@@ -23,7 +23,22 @@ function readCookie(name: string): string | null {
 
 const MUTATING_METHODS = new Set(['POST', 'PUT', 'DELETE', 'PATCH']);
 
-async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+/** Corte por defecto de una request del portal. */
+const DEFAULT_TIMEOUT_MS = 15_000;
+
+/**
+ * `timeoutMs` sólo para las rutas que esperan a un tercero y por diseño tardan
+ * más que una consulta a la base: hoy únicamente el proxy EWS remoto, que
+ * espera hasta 15 s a que el agente vuelva por WSS con la página del equipo
+ * (`EwsProxyUseCase`). Con los 15 s de acá el `AbortController` del navegador
+ * ganaba la carrera contra el backend y el operador veía "La solicitud tardó
+ * demasiado" en vez del error real (agente offline, timeout del agente…).
+ */
+export interface RequestOptions {
+  timeoutMs?: number;
+}
+
+async function request<T>(path: string, init: RequestInit = {}, opts: RequestOptions = {}): Promise<T> {
   const headers: Record<string, string> = {};
   if (init.body) headers['Content-Type'] = 'application/json';
 
@@ -36,7 +51,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   }
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 15_000);
+  const timeoutId = setTimeout(() => controller.abort(), opts.timeoutMs ?? DEFAULT_TIMEOUT_MS);
 
   let res: Response;
   try {
@@ -80,7 +95,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
 
 export const api = {
   get:    <T>(path: string)                 => request<T>(path),
-  post:   <T>(path: string, body?: unknown) => request<T>(path, { method: 'POST',   body: body !== undefined ? JSON.stringify(body) : undefined }),
+  post:   <T>(path: string, body?: unknown, opts?: RequestOptions) => request<T>(path, { method: 'POST', body: body !== undefined ? JSON.stringify(body) : undefined }, opts),
   put:    <T>(path: string, body?: unknown) => request<T>(path, { method: 'PUT',    body: body !== undefined ? JSON.stringify(body) : undefined }),
   delete: <T>(path: string)                 => request<T>(path, { method: 'DELETE' }),
 };

@@ -2,6 +2,7 @@ import { Fragment, useState } from 'react';
 import { ArrowRight, ChevronDown, ChevronUp, Loader2, ShieldOff } from 'lucide-react';
 import { useToast } from '../../../store/ToastContext';
 import SnmpCredentialsPanel from './SnmpCredentialsPanel';
+import RemoteEwsPanel from './RemoteEwsPanel';
 import { INTERVAL_ROWS, configFormProblem, formFromMonitor } from './configFormHelpers';
 import type { EditFormData, MonitorData, SnmpCredentialInput } from '../../../shared/types/monitor';
 import type { MonitorIntervalsConfig } from '../../../shared/types/agents';
@@ -208,6 +209,8 @@ export default function ConfigTabPanel({ monitor, onSave, onSaveSnmpCredentials,
 
         <div className="flex min-h-0 flex-col gap-4">
         <SnmpCredentialsPanel credentials={monitor.config?.snmp_credentials ?? []} rev={monitor.config?.snmp_credentials_rev ?? 0} onSave={onSaveSnmpCredentials} />
+
+        <RemoteEwsPanel agentId={monitor.id} initialEnabled={monitor.remote_ews_enabled ?? false} />
 
         {/* Zona de riesgo (handoff §5 punto 21) — border-left naranja oscuro, REVOCAR en variante borde, nunca rojo relleno. */}
         <div className="space-y-3.5 short:space-y-2 rounded-[5px] border border-brand-chip-border bg-white p-5 short:p-4" style={{ borderLeftWidth: 3, borderLeftColor: '#C6710A' }}>

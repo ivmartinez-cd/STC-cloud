@@ -20,6 +20,8 @@ export interface MonitorData {
     business_hours?: BusinessHoursConfig;
     monitor_intervals?: MonitorIntervalsConfig;
   };
+  /** Opt-in por monitor del acceso remoto a la EWS de sus equipos (ver `useRemoteEwsToggle`). */
+  remote_ews_enabled?: boolean;
   version?: string;
   host_name?: string;
   host_os?: string;

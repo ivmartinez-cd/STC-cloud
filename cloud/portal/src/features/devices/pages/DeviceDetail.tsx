@@ -17,6 +17,7 @@ import AlertsTab from '../components/detail/AlertsTab';
 import IncidentsTab from '../components/detail/IncidentsTab';
 import HistoryTab from '../components/detail/HistoryTab';
 import CostsTab from '../components/detail/CostsTab';
+import EwsTab from '../components/detail/EwsTab';
 import { useDeviceDetail } from '../hooks/useDeviceDetail';
 import { useDeviceStats, useDevicePrintTrend } from '../hooks/useDeviceOverview';
 import { safeReturnTo, returnToLabel } from '../../../shared/lib/returnTo';
@@ -27,12 +28,14 @@ import type { DeviceDetailTab } from '../types/deviceDetailPage';
 const TABS: Array<{ id: DeviceDetailTab; label: string }> = [
   { id: 'general', label: 'Vista general' }, { id: 'counters', label: 'Recuentos' }, { id: 'supplies', label: 'Consumibles' },
   { id: 'media', label: 'Bandejas' }, { id: 'alerts', label: 'Alertas' }, { id: 'incidents', label: 'Incidentes' },
-  { id: 'costs', label: 'Costes' }, { id: 'history', label: 'Historial' },
+  { id: 'costs', label: 'Costes' }, { id: 'history', label: 'Historial' }, { id: 'ews', label: 'EWS' },
 ];
 const TAB_IDS = new Set(TABS.map((t) => t.id));
-/** Contenido sólo para admin/operator (`canSeeHistory`): costes de la flota y
- * auditoría del equipo. */
-const STAFF_ONLY_TABS: ReadonlySet<DeviceDetailTab> = new Set<DeviceDetailTab>(['costs', 'history']);
+/** Contenido sólo para admin/operator (`canSeeHistory`): costes de la flota,
+ * auditoría del equipo y el acceso remoto a su web embebida (esta última
+ * también deny-by-default del lado del backend — no está en
+ * `CLIENT_VIEWER_ROUTES`). */
+const STAFF_ONLY_TABS: ReadonlySet<DeviceDetailTab> = new Set<DeviceDetailTab>(['costs', 'history', 'ews']);
 
 /** `?tab=` inválido cae a Vista general; para un client_viewer también las tabs que
  * no ve — si no, la barra quedaba con la pestaña marcada y la pantalla vacía debajo
@@ -201,6 +204,7 @@ const DeviceDetail = () => {
       {activeTab === 'incidents' && <IncidentsTab incidents={incidents.data} incidentsLoading={incidents.loading} />}
       {activeTab === 'costs' && canSeeHistory && <CostsTab deviceId={id!} />}
       {activeTab === 'history' && canSeeHistory && <HistoryTab history={history.data} historyLoading={history.loading} />}
+      {activeTab === 'ews' && canSeeHistory && <EwsTab device={device} />}
       </div>
 
       <ConfirmationModal

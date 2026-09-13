@@ -7,6 +7,7 @@ import type { AgentConfig } from '../../../../shared/types/agents';
 import { defaultConfig } from '../../../../shared/types/agents';
 import type { MaskedSnmpCredential } from '../../../../shared/types/monitor';
 import IpRangesEditor from '../IpRangesEditor';
+import { useRemoteEwsToggle } from '../../hooks/useRemoteEwsToggle';
 import { firstRangeProblem } from '../../lib/rangeSpecText';
 
 interface Props {
@@ -19,30 +20,10 @@ export default function ConfigAgentModal({ modal, onClose }: Props) {
   const [configForm, setConfigForm] = useState<AgentConfig>(defaultConfig);
   const [loadingConfig, setLoadingConfig] = useState(false);
   const [savingConfig, setSavingConfig] = useState(false);
-  const [remoteEwsEnabled, setRemoteEwsEnabled] = useState(false);
-  const [savingRemoteEws, setSavingRemoteEws] = useState(false);
-
-  useEffect(() => {
-    setRemoteEwsEnabled(modal?.remote_ews_enabled ?? false);
-  }, [modal]);
-
-  // Guardado independiente del botón "Aplicar Configuración" de abajo: es un
-  // PUT directo sin optimistic locking (a diferencia de SNMP credentials/
-  // business_hours), así que no tiene sentido acumularlo con esos cambios.
-  const toggleRemoteEws = async () => {
-    if (!modal) return;
-    const next = !remoteEwsEnabled;
-    setSavingRemoteEws(true);
-    try {
-      await api.put(`/agents/${modal.id}/remote-ews`, { enabled: next });
-      setRemoteEwsEnabled(next);
-      showToast(next ? 'Remote EWS habilitado para este agente' : 'Remote EWS deshabilitado', 'success');
-    } catch (e: unknown) {
-      showToast('Error al cambiar Remote EWS: ' + (e as Error).message, 'error');
-    } finally {
-      setSavingRemoteEws(false);
-    }
-  };
+  // Mismo interruptor (y mismo criterio de guardado inmediato) que el panel de
+  // la pestaña Configuración del monitor: la lógica vive en el hook para que no
+  // se separen los dos lugares desde donde se habilita.
+  const { enabled: remoteEwsEnabled, saving: savingRemoteEws, toggle: toggleRemoteEws } = useRemoteEwsToggle(modal?.id, modal?.remote_ews_enabled ?? false);
 
   useEffect(() => {
     const init = async () => {
