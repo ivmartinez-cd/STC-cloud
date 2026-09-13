@@ -131,31 +131,33 @@ export async function registerWebSocket(fastify: FastifyInstance, db: Knex, redi
       }, 8_000);
     }
 
+    const updateCommandResultSafely = (data: { id: string; status?: string; result?: Record<string, unknown> | null }) => {
+      agentService.updateCommandResult(data.id, data.status === 'success' ? 'completed' : 'error', data.result ?? null)
+        .catch((e: unknown) => {
+          const errMsg = e instanceof Error ? e.message : String(e);
+          fastify.log.error(`[WS] Error actualizando comando ${data.id}: ${errMsg}`);
+        });
+    };
+
     socket.on('message', (raw: Buffer) => {
       try {
         const msg = JSON.parse(raw.toString());
 
         if (agentId && msg.event === 'command_result') {
-          if (msg.data && msg.data.id) {
-            agentService.updateCommandResult(
-              msg.data.id,
-              msg.data.status === 'success' ? 'completed' : 'error',
-              msg.data.result
-            ).catch((e: unknown) => {
-              const errMsg = e instanceof Error ? e.message : String(e);
-              fastify.log.error(`[WS] Error actualizando comando ${msg.data.id}: ${errMsg}`);
-            });
-          }
-
-          // EWS_PROXY se resuelve DIRECTO contra la request HTTP que lo pidió
-          // (ver `ewsProxyService.ts`) — nunca por `broadcastToPortal`: ese
-          // canal manda cualquier command_result a TODOS los portales
-          // admin/operator conectados, y el contenido de la EWS de un
-          // cliente sólo debe llegar a quien lo pidió. Se publica SIEMPRE por
-          // `stc:ws:ews-result` (aunque el agente esté conectado acá) porque
-          // la request HTTP que espera este resultado puede estar en OTRA
-          // réplica (relay, ver bloque de arriba); la propia suscripción
-          // entrega localmente también en el caso de una sola réplica.
+          // EWS_REQUEST no se persiste en `agent_commands` (una pantalla del
+          // EWS son decenas de pedidos; ver `RelayEwsRequestUseCase`), así que
+          // el UPDATE de abajo no tendría fila que tocar: se resuelve primero
+          // y se corta acá, sin una query inútil por cada imagen de la página.
+          //
+          // EWS_PROXY y EWS_REQUEST se resuelven DIRECTO contra la request
+          // HTTP que los pidió (ver `ewsProxyService.ts`) — nunca por
+          // `broadcastToPortal`: ese canal manda cualquier command_result a
+          // TODOS los portales admin/operator conectados, y el contenido de la
+          // EWS de un cliente sólo debe llegar a quien lo pidió. Se publica
+          // SIEMPRE por `stc:ws:ews-result` (aunque el agente esté conectado
+          // acá) porque la request HTTP que espera este resultado puede estar
+          // en OTRA réplica (relay, ver bloque de arriba); la propia
+          // suscripción entrega localmente también con una sola réplica.
           if ((msg.data?.type === 'EWS_PROXY' || msg.data?.type === 'EWS_REQUEST') && msg.data?.id) {
             const resultMsg = JSON.stringify(
               msg.data.status === 'success'
@@ -163,8 +165,12 @@ export async function registerWebSocket(fastify: FastifyInstance, db: Knex, redi
                 : { commandId: msg.data.id, ok: false, error: msg.data.result?.error || 'Error desconocido del agente' }
             );
             wsRedisPub.publish(WS_EWS_RESULT_CHANNEL, resultMsg).catch(() => relayEwsResultLocally(resultMsg));
+            // EWS_PROXY sí tiene fila en `agent_commands` (el visor de una página la crea): se le guarda el resultado.
+            if (msg.data.type === 'EWS_PROXY') updateCommandResultSafely(msg.data);
             return;
           }
+
+          if (msg.data && msg.data.id) updateCommandResultSafely(msg.data);
 
           broadcastToPortal('command_result', {
             agentId,

@@ -14,9 +14,10 @@ import {
   isNavigation, isWriteMethod, pathFromUrl, requestHeadersFor, responseHeadersFor, rewriteLocation,
 } from "../modules/agents/presentation/ews-gateway-http";
 import { mergeCookieJar } from "../services/ewsGatewayService";
-import { deviceOriginOf, schemeSwitchFor } from "../modules/agents/application/use-cases/ews-gateway-use-cases";
+import { deviceOriginOf, isRedirectLoop, schemeSwitchFor } from "../modules/agents/application/use-cases/ews-gateway-use-cases";
 
 const ORIGIN = "http://10.20.0.31";
+const GW = "ews.stc.example";
 
 describe("pathFromUrl", () => {
   test("saca el prefijo interno y conserva la query", () => {
@@ -28,28 +29,34 @@ describe("pathFromUrl", () => {
 
 describe("requestHeadersFor — lo que llega a la impresora", () => {
   test("la cookie del NAVEGADOR nunca viaja: sólo el jar de la sesión", () => {
-    const out = requestHeadersFor({ cookie: "stc_ews=secreto-de-sesion" }, "SESSIONID=de-la-impresora", ORIGIN);
+    const out = requestHeadersFor({ cookie: "stc_ews=secreto-de-sesion" }, "SESSIONID=de-la-impresora", ORIGIN, GW);
     assert.equal(out.cookie, "SESSIONID=de-la-impresora");
     assert.ok(!out.cookie.includes("stc_ews"), "el id de sesión del gateway no es asunto de la impresora");
   });
 
   test("sin jar no se manda header cookie vacío", () => {
-    assert.equal(requestHeadersFor({}, "", ORIGIN).cookie, undefined);
+    assert.equal(requestHeadersFor({}, "", ORIGIN, GW).cookie, undefined);
   });
 
   test("authorization sí viaja: es el Basic auth del equipo de punta a punta", () => {
-    const out = requestHeadersFor({ authorization: "Basic YWRtaW46MTIzNA==" }, "", ORIGIN);
+    const out = requestHeadersFor({ authorization: "Basic YWRtaW46MTIzNA==" }, "", ORIGIN, GW);
     assert.equal(out.authorization, "Basic YWRtaW46MTIzNA==");
   });
 
-  test("referer y origin se reescriben al equipo, no se filtra el hostname del gateway", () => {
-    const out = requestHeadersFor({ referer: "https://ews.stc.example/sws/form.html?a=1", origin: "https://ews.stc.example" }, "", ORIGIN);
+  test("referer y origin del propio gateway se reescriben al equipo, no se filtra el hostname del gateway", () => {
+    const out = requestHeadersFor({ referer: "https://ews.stc.example/sws/form.html?a=1", origin: "https://ews.stc.example" }, "", ORIGIN, GW);
     assert.equal(out.referer, "http://10.20.0.31/sws/form.html?a=1", "hay firmware que valida el Referer como anti-CSRF");
     assert.equal(out.origin, ORIGIN);
   });
 
+  test("un referer de un sitio de terceros NO se lava: la defensa anti-CSRF del firmware tiene que verlo", () => {
+    const out = requestHeadersFor({ referer: "https://evil.example/trampa.html", origin: "https://evil.example" }, "", ORIGIN, GW);
+    assert.equal(out.referer, "https://evil.example/trampa.html");
+    assert.equal(out.origin, "https://evil.example");
+  });
+
   test("lo que está bloqueado no cruza", () => {
-    const out = requestHeadersFor({ "x-forwarded-for": "1.2.3.4", "user-agent": "Firefox", connection: "keep-alive", host: "ews.stc.example" }, "", ORIGIN);
+    const out = requestHeadersFor({ "x-forwarded-for": "1.2.3.4", "user-agent": "Firefox", connection: "keep-alive", host: "ews.stc.example" }, "", ORIGIN, GW);
     assert.equal(out["x-forwarded-for"], undefined, "no se le revela al equipo dónde vive nuestra nube");
     assert.equal(out.connection, undefined);
     assert.equal(out.host, undefined);
@@ -57,11 +64,11 @@ describe("requestHeadersFor — lo que llega a la impresora", () => {
   });
 
   test("X-Requested-With cruza: es lo que manda jQuery en cada AJAX", () => {
-    assert.equal(requestHeadersFor({ "x-requested-with": "XMLHttpRequest" }, "", ORIGIN)["x-requested-with"], "XMLHttpRequest");
+    assert.equal(requestHeadersFor({ "x-requested-with": "XMLHttpRequest" }, "", ORIGIN, GW)["x-requested-with"], "XMLHttpRequest");
   });
 
   test("una cabecera cualquiera del navegador también cruza (blocklist, no allowlist)", () => {
-    const out = requestHeadersFor({ "x-token-del-firmware": "abc", "if-none-match": "W/x" }, "", ORIGIN);
+    const out = requestHeadersFor({ "x-token-del-firmware": "abc", "if-none-match": "W/x" }, "", ORIGIN, GW);
     assert.equal(out["x-token-del-firmware"], "abc");
     assert.equal(out["if-none-match"], "W/x");
   });
@@ -100,12 +107,26 @@ describe("rewriteLocation", () => {
   test("un redirect a OTRO host se deja intacto: el gateway no redirige a terceros", () => {
     assert.equal(rewriteLocation("https://www.samsung.com/soporte", ORIGIN), "https://www.samsung.com/soporte");
   });
+
+  test("protocol-relative es absoluto, no una ruta", () => {
+    assert.equal(rewriteLocation("//10.20.0.31/sws/x", ORIGIN), "/sws/x");
+    assert.equal(rewriteLocation("//otro.host/x", ORIGIN), "//otro.host/x");
+  });
+
+  test("un puerto no estándar no se relativiza: iría al 80, que es otro servicio", () => {
+    assert.equal(rewriteLocation("http://10.20.0.31:8080/x", ORIGIN), "http://10.20.0.31:8080/x");
+  });
+
+  test("una ruta relativa sin barra la resuelve el navegador, acá no se toca", () => {
+    assert.equal(rewriteLocation("index.sws", ORIGIN), "index.sws");
+  });
 });
 
 describe("schemeSwitchFor — el equipo pide que le hablen por el otro esquema", () => {
   test("un redirect a sí mismo cambiando a https devuelve el esquema nuevo", () => {
-    // El bucle real del 13/09/2026: sin esto la reescritura a ruta relativa se
-    // come el cambio de esquema y el navegador gira sobre la misma URL.
+    // Caso que motivó el fix del 13/09/2026 (bucle de 302 sobre `/` en ISSN;
+    // causa no confirmada con curl): la reescritura a ruta relativa se come
+    // el cambio de esquema y el navegador gira sobre la misma URL.
     assert.equal(schemeSwitchFor("https://10.20.0.31/", ORIGIN), "https");
     assert.equal(schemeSwitchFor("https://10.20.0.31/sws/index.sws", ORIGIN), "https");
   });
@@ -122,6 +143,43 @@ describe("schemeSwitchFor — el equipo pide que le hablen por el otro esquema",
 
   test("otro host no cambia el protocolo de la sesión ni aunque sea https", () => {
     assert.equal(schemeSwitchFor("https://www.samsung.com/", ORIGIN), null);
+  });
+
+  test("puerto no estándar u otro esquema que no sea http/https: no se cambia nada", () => {
+    assert.equal(schemeSwitchFor("https://10.20.0.31:8443/", ORIGIN), null, "el agente sólo habla en 80/443");
+    assert.equal(schemeSwitchFor("ftp://10.20.0.31/", ORIGIN), null);
+  });
+});
+
+describe("isRedirectLoop — cuándo un 302 a la misma ruta es de verdad un bucle", () => {
+  const r = (status: number, location?: string, setCookie: string[] = []) => {
+    const headers: Record<string, string> = location ? { Location: location } : {};
+    return { status, headers, bodyBase64: "", truncated: false, setCookie };
+  };
+  const get = (path: string) => ({ method: "GET", path });
+
+  test("GET → 302 a exactamente la misma ruta, sin cookie nueva: bucle", () => {
+    assert.equal(isRedirectLoop(r(302, "/sws/index.sws"), get("/sws/index.sws"), ORIGIN), true);
+    assert.equal(isRedirectLoop(r(302, "http://10.20.0.31/sws/index.sws"), get("/sws/index.sws"), ORIGIN), true, "absoluto al propio equipo");
+    assert.equal(isRedirectLoop(r(302, "//10.20.0.31/sws/index.sws"), get("/sws/index.sws"), ORIGIN), true, "protocol-relative");
+  });
+
+  test("con Set-Cookie no es bucle: así abre sesión el firmware", () => {
+    assert.equal(isRedirectLoop(r(302, "/sws/index.sws", ["JSESSIONID=x"]), get("/sws/index.sws"), ORIGIN), false);
+  });
+
+  test("POST → 302 a la misma ruta es guardar-y-volver, no bucle; 307/308 sí repiten el método", () => {
+    assert.equal(isRedirectLoop(r(302, "/sws/settings.sws"), { method: "POST", path: "/sws/settings.sws" }, ORIGIN), false);
+    assert.equal(isRedirectLoop(r(307, "/sws/settings.sws"), { method: "POST", path: "/sws/settings.sws" }, ORIGIN), true);
+  });
+
+  test("misma ruta con otra query, otra ruta, otro host, relativo sin barra, o no-redirect: no es bucle", () => {
+    assert.equal(isRedirectLoop(r(302, "/index.html?sid=1"), get("/index.html"), ORIGIN), false);
+    assert.equal(isRedirectLoop(r(302, "/sws/login.sws"), get("/"), ORIGIN), false);
+    assert.equal(isRedirectLoop(r(302, "https://www.samsung.com/"), get("/"), ORIGIN), false);
+    assert.equal(isRedirectLoop(r(302, "index.sws"), get("/index.sws"), ORIGIN), false);
+    assert.equal(isRedirectLoop(r(200), get("/"), ORIGIN), false);
+    assert.equal(isRedirectLoop(r(302), get("/"), ORIGIN), false, "302 sin Location");
   });
 });
 

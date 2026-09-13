@@ -1,6 +1,6 @@
-import type { EwsSession } from "../../../../services/ewsGatewayService";
+import type { EwsSession, EwsSessionPatch } from "../../../../services/ewsGatewayService";
 
-export type { EwsSession };
+export type { EwsSession, EwsSessionPatch };
 
 /**
  * Puerto del almacén de sesiones del gateway de EWS remoto. Existe para que
@@ -14,6 +14,7 @@ export interface EwsSessionStore {
   mintTicket(sessionId: string): Promise<string>;
   consumeTicket(ticket: string): Promise<string | null>;
   read(id: string): Promise<EwsSession | null>;
-  update(id: string, patch: Partial<EwsSession>): Promise<void>;
+  /** Con una función, el cambio se calcula sobre el estado ACTUAL (no sobre un snapshot viejo): así es como se fusionan cookies. */
+  update(id: string, patch: EwsSessionPatch): Promise<void>;
   destroy(id: string): Promise<void>;
 }

@@ -2,7 +2,9 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type Redis from "ioredis";
 import type { EwsSession } from "../application/ports/ews-session-store";
 import type { AgentUseCases } from "./agent-wiring";
+import { getClientIp } from "../../../api/utils/ip";
 import { deviceOriginOf } from "../application/use-cases/ews-gateway-use-cases";
+import { RemoteActionError } from "../application/use-cases/remote-use-cases";
 import { GATEWAY_PREFIX, isNavigation, isWriteMethod, pathFromUrl, requestHeadersFor, responseHeadersFor } from "./ews-gateway-http";
 
 /** Cookie del GATEWAY (no del equipo): sólo un id opaco de sesión. Distinta de la del portal para que no se pisen. */
@@ -27,6 +29,12 @@ export function registerEwsGatewayRoutes(fastify: FastifyInstance, redis: Redis,
     // `x-www-form-urlencoded`, multipart o XML, y Fastify sin este parser
     // rechazaría con 415 todo lo que no sea JSON. Parsearlo sería peor:
     // reserializar cambia bytes y hay firmware que valida longitudes.
+    //
+    // Primero se sacan los parsers que Fastify trae de fábrica: el comodín
+    // `*` NO los reemplaza, sólo atiende lo que ningún otro atiende. Sin esto,
+    // un AJAX `application/json` o `text/plain` del firmware llegaba parseado
+    // (objeto o string, no Buffer) y el equipo recibía el POST sin cuerpo.
+    instance.removeAllContentTypeParsers();
     instance.addContentTypeParser("*", { parseAs: "buffer" }, (_req, body, done) => done(null, body));
     instance.addHook("onSend", stripAppSecurityHeaders);
     registerGatewayEndpoints(instance, redis, uc);
@@ -70,6 +78,9 @@ const APP_SECURITY_HEADERS = [
   "cross-origin-embedder-policy",
   "cross-origin-resource-policy",
   "referrer-policy",
+  // `Cross-Origin-Opener-Policy` se DEJA a propósito: corta `window.opener`
+  // hacia la pestaña del portal, y es lo que evita que el JS de un equipo
+  // navegue esa pestaña a otro lado (tabnabbing). No agregarla acá.
 ];
 
 function stripAppSecurityHeaders(_request: FastifyRequest, reply: FastifyReply, payload: unknown, done: (err: Error | null, payload?: unknown) => void) {
@@ -102,15 +113,50 @@ const sessionAuthFor = (sessions: Sessions) => async (request: FastifyRequest, r
   Object.assign(request as GatewayRequest, { ewsSession: session, ewsSessionId: sessionId });
 };
 
+/**
+ * Página puente que entrega `/__stc/open` en vez de un 302.
+ *
+ * La cookie es `SameSite=Strict`: no viaja en NINGUNA petición iniciada desde
+ * otro sitio, ni siquiera un click en un link. Eso cierra el CSRF por GET
+ * contra el equipo (mucho firmware viejo cambia configuración con un GET, y
+ * el jar del servidor ya está logueado). Pero un 302 que sigue a una
+ * navegación iniciada desde el portal —que es otro sitio— tampoco llevaría la
+ * cookie, y `/` contestaría 401. Con esta página, la navegación a `/` la
+ * inicia el propio origen del gateway, y ahí la cookie sí va.
+ */
+const OPEN_PAGE = `<!doctype html><meta charset="utf-8"><title>Abriendo EWS…</title>
+<script>location.replace("/")</script><noscript>Activá JavaScript para usar la EWS del equipo.</noscript>`;
+
 function registerOpenEndpoint(fastify: FastifyInstance, sessions: Sessions) {
   fastify.get(`${GATEWAY_PREFIX}/__stc/open`, { preHandler: ticketAuthFor(sessions) }, async (request, reply) => {
     const sessionId = (request as GatewayRequest).ewsSessionId!;
-    // `Secure`+`HttpOnly`+`SameSite=Lax`: el id de sesión no lo lee ningún
-    // script, y no viaja en peticiones cruzadas que no sean navegación.
-    reply.setCookie(SESSION_COOKIE, sessionId, { path: "/", httpOnly: true, secure: true, sameSite: "lax" });
-    return reply.redirect("/", 302);
+    // Una sola cookie por navegador = una sola sesión viva. Si había otra, se
+    // cierra en vez de dejarla huérfana: si no, la pestaña vieja seguiría
+    // hablando —con la cookie nueva— contra el equipo nuevo, que puede ser de
+    // OTRO cliente, y el Basic auth que el navegador cachea para este origen
+    // le llegaría a un equipo que no es el suyo.
+    const previous = (request.cookies ?? {})[SESSION_COOKIE];
+    if (previous && previous !== sessionId) await sessions.destroy(previous);
+    // `Secure`+`HttpOnly`+`SameSite=Strict`: el id de sesión no lo lee ningún script y no sale del propio sitio.
+    reply.setCookie(SESSION_COOKIE, sessionId, { path: "/", httpOnly: true, secure: true, sameSite: "strict" });
+    return reply.type("text/html; charset=utf-8").send(OPEN_PAGE);
   });
 }
+
+/**
+ * Límites de la ruta comodín:
+ * - Rate limit: el global de la API (100/min) es para llamadas de la SPA; acá
+ *   una sola pantalla del EWS dispara cientos de pedidos —cada GIF de un botón
+ *   es uno— y el límite los cortaba con 429 dejando la app colgada en
+ *   "Loading...". Se sube, no se saca: sigue siendo un tope, y la sesión
+ *   (autenticada, atada a un equipo y con vencimiento) es el control real.
+ * - Cuerpo: mismo tope que el `client_max_body_size` del vhost de nginx; el
+ *   default de Fastify (1 MiB) cortaba antes con un 413 sin explicación.
+ */
+const RELAY_ROUTE_LIMITS = {
+  config: { rateLimit: { max: 1000, timeWindow: "1 minute" } },
+  bodyLimit: 4 * 1024 * 1024,
+};
 
 function registerGatewayEndpoints(fastify: FastifyInstance, redis: Redis, uc: AgentUseCases) {
   const sessions = uc.ewsSessions(redis);
@@ -121,12 +167,7 @@ function registerGatewayEndpoints(fastify: FastifyInstance, redis: Redis, uc: Ag
   fastify.route({
     method: ["GET", "HEAD", "POST", "PUT", "DELETE", "PATCH"],
     url: `${GATEWAY_PREFIX}/*`,
-    // El límite global de la API (100/min) es para llamadas de la SPA; acá una
-    // sola pantalla del EWS dispara cientos de pedidos —cada GIF de un botón
-    // es uno— y el límite los cortaba con 429 dejando la app colgada en
-    // "Loading...". Se sube, no se saca: sigue siendo un tope, y la sesión
-    // (autenticada, atada a un equipo y con vencimiento) es el control real.
-    config: { rateLimit: { max: 1000, timeWindow: "1 minute" } },
+    ...RELAY_ROUTE_LIMITS,
     preHandler: sessionAuthFor(sessions),
     handler: (request, reply) => proxyToDevice(request as GatewayRequest, reply, relay),
   });
@@ -146,17 +187,29 @@ function relayInputFor(request: GatewayRequest, origin: string) {
     session,
     method: request.method,
     path: pathFromUrl(request.url),
-    headers: requestHeadersFor(headers, session.cookies, origin),
+    headers: requestHeadersFor(headers, session.cookies, origin, String(headers["host"] ?? "")),
     bodyBase64: Buffer.isBuffer(body) && body.length ? body.toString("base64") : undefined,
     audit: isWriteMethod(request.method) || isNavigation(headers),
+    ipAddress: getClientIp(request),
   };
 }
 
+/**
+ * Los errores del relay (agente desconectado, timeout, bucle) van como texto
+ * plano: el que los lee es el operador en la pestaña del EWS, no la SPA, y el
+ * JSON de Fastify ahí es ilegible. Tampoco son para Sentry: un agente
+ * apagado no es un bug nuestro.
+ */
 async function proxyToDevice(request: GatewayRequest, reply: FastifyReply, relay: ReturnType<AgentUseCases["relayEws"]>) {
   const origin = deviceOriginOf(request.ewsSession!);
-  const result = await relay.execute(relayInputFor(request, origin));
-  return reply
-    .code(result.status)
-    .headers(responseHeadersFor(result.headers, origin))
-    .send(Buffer.from(result.bodyBase64, "base64"));
+  try {
+    const result = await relay.execute(relayInputFor(request, origin));
+    return reply
+      .code(result.status)
+      .headers(responseHeadersFor(result.headers, origin))
+      .send(Buffer.from(result.bodyBase64, "base64"));
+  } catch (e: unknown) {
+    if (!(e instanceof RemoteActionError)) throw e;
+    return reply.code(e.statusCode).type("text/plain; charset=utf-8").send(e.message);
+  }
 }

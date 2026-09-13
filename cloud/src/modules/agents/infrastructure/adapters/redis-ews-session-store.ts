@@ -1,6 +1,6 @@
 import {
   consumeEwsTicket, createEwsSession, destroyEwsSession, mintEwsTicket, readEwsSession, updateEwsSession,
-  type EwsRedisClient, type EwsSession,
+  type EwsRedisClient, type EwsSession, type EwsSessionPatch,
 } from "../../../../services/ewsGatewayService";
 import type { EwsSessionStore } from "../../application/ports/ews-session-store";
 
@@ -24,7 +24,7 @@ export class RedisEwsSessionStore implements EwsSessionStore {
     return readEwsSession(this.redis, id);
   }
 
-  update(id: string, patch: Partial<EwsSession>): Promise<void> {
+  update(id: string, patch: EwsSessionPatch): Promise<void> {
     return updateEwsSession(this.redis, id, patch);
   }
 

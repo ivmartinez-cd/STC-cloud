@@ -34,6 +34,13 @@ export interface EwsRedisClient {
 
 /** Ventana deslizante: se renueva con cada request del operador, no desde que se abrió. */
 const SESSION_TTL_SECONDS = 30 * 60;
+/**
+ * Tope ABSOLUTO desde que se abrió, además de la ventana deslizante. Sin
+ * esto, una página de estado que se auto-refresca (el SyncThru lo hace)
+ * mantiene el túnel a la LAN del cliente vivo para siempre. 8 h cubre una
+ * jornada entera de trabajo sobre el mismo equipo.
+ */
+const SESSION_MAX_AGE_MS = 8 * 60 * 60 * 1000;
 /** El ticket cruza de un origen al otro por la URL — vida corta y un solo uso, igual que `wsTicketService`. */
 const TICKET_TTL_SECONDS = 60;
 
@@ -47,7 +54,7 @@ export interface EwsSession {
   ip: string;
   /** Para mostrar en la barra del gateway: modelo/serie del equipo. */
   label: string;
-  /** Lo fija la primera respuesta del agente (sondea HTTP y cae a HTTPS) para no re-sondear en cada recurso. */
+  /** Lo fija la primera respuesta del agente (sondea HTTP y cae a HTTPS), o un 302 del equipo al otro esquema; así no se re-sondea en cada recurso. */
   protocol?: "http" | "https";
   /** Jar de cookies DEL EQUIPO, serializado como header `Cookie`. */
   cookies: string;
@@ -76,11 +83,21 @@ export async function consumeEwsTicket(redis: EwsRedisClient, ticket: string): P
   return redis.getdel(ticketKey(ticket));
 }
 
-/** Leer renueva el TTL: la sesión muere por inactividad, no a los 30 minutos de haberla abierto. */
+/** Leer renueva el TTL: la sesión muere por inactividad, no a los 30 minutos de haberla abierto — pero nunca pasa del tope absoluto. */
 export async function readEwsSession(redis: EwsRedisClient, id: string): Promise<EwsSession | null> {
   const raw = await redis.get(sessionKey(id));
   if (!raw) return null;
+  const session = parseSession(raw);
+  if (!session) return null;
+  if (Date.now() - Date.parse(session.createdAt) > SESSION_MAX_AGE_MS) {
+    await redis.del(sessionKey(id));
+    return null;
+  }
   await redis.expire(sessionKey(id), SESSION_TTL_SECONDS);
+  return session;
+}
+
+function parseSession(raw: string): EwsSession | null {
   try {
     return JSON.parse(raw) as EwsSession;
   } catch {
@@ -88,10 +105,31 @@ export async function readEwsSession(redis: EwsRedisClient, id: string): Promise
   }
 }
 
-export async function updateEwsSession(redis: EwsRedisClient, id: string, patch: Partial<EwsSession>): Promise<void> {
+/** Un cambio a aplicar sobre la sesión: fijo, o calculado sobre lo que hay AHORA en Redis (para fusionar cookies sin pisar). */
+export type EwsSessionPatch = Partial<EwsSession> | ((current: EwsSession) => Partial<EwsSession>);
+
+/**
+ * Los updates de una misma sesión se encadenan en este proceso, así dos
+ * respuestas del equipo que llegan a la vez no se pisan el jar: cada una
+ * calcula su cambio sobre lo que la anterior acaba de escribir. Entre
+ * réplicas distintas la garantía no existe (sería un script Lua o WATCH);
+ * una sesión rara vez reparte sus pedidos entre dos réplicas, y el costo de
+ * perder una cookie es volver a loguearse en el equipo, no un agujero.
+ */
+const updateChains = new Map<string, Promise<void>>();
+
+export function updateEwsSession(redis: EwsRedisClient, id: string, patch: EwsSessionPatch): Promise<void> {
+  const previous = updateChains.get(id) ?? Promise.resolve();
+  const next = previous.then(() => applyPatch(redis, id, patch)).catch(() => undefined);
+  updateChains.set(id, next);
+  return next.finally(() => { if (updateChains.get(id) === next) updateChains.delete(id); });
+}
+
+async function applyPatch(redis: EwsRedisClient, id: string, patch: EwsSessionPatch): Promise<void> {
   const current = await readEwsSession(redis, id);
   if (!current) return;
-  await redis.set(sessionKey(id), JSON.stringify({ ...current, ...patch }), "EX", SESSION_TTL_SECONDS);
+  const changes = typeof patch === "function" ? patch(current) : patch;
+  await redis.set(sessionKey(id), JSON.stringify({ ...current, ...changes }), "EX", SESSION_TTL_SECONDS);
 }
 
 export async function destroyEwsSession(redis: EwsRedisClient, id: string): Promise<void> {

@@ -15,6 +15,9 @@
 /** nginx mapea `ews.<dominio>/<lo que sea>` a esta ruta de la API. */
 export const GATEWAY_PREFIX = "/__ews";
 
+/** Con esquema (`http://…`) o protocol-relative (`//host/…`): lo que apunta a un host, no una ruta. */
+export const isAbsoluteUrl = (url: string): boolean => /^[a-z][a-z0-9+.-]*:/i.test(url) || url.startsWith("//");
+
 /** Ruta que el navegador pide, ya sin el prefijo interno; siempre arranca con "/". */
 export function pathFromUrl(url: string): string {
   const path = url.startsWith(GATEWAY_PREFIX) ? url.slice(GATEWAY_PREFIX.length) : url;
@@ -33,7 +36,7 @@ export function isNavigation(headers: Record<string, unknown>): boolean {
 /**
  * Headers del navegador que NO se le reenvían al equipo. Blocklist y no
  * allowlist, que es como se comporta un proxy de verdad: el firmware puede
- * depender de cualquier cabecera, y adivinar cuáles sirven ya salió mal.
+ * depender de cualquier cabecera, y adivinar cuáles sirven es frágil.
  *
  * El caso que lo motivó (13/09/2026): con una allowlist de cinco cabeceras se
  * perdía `X-Requested-With`, que es lo que manda jQuery en cada AJAX, y se
@@ -53,24 +56,31 @@ export function isNavigation(headers: Record<string, unknown>): boolean {
  *
  * `authorization` SÍ viaja: es lo que hace que el Basic auth de Lexmark/HP
  * funcione de punta a punta, con el prompt del propio navegador y sin que la
- * credencial pase por ninguna pantalla nuestra. Y `referer`/`origin` se
- * reescriben a la URL del equipo, porque hay firmware que valida el Referer
- * como defensa anti-CSRF.
+ * credencial pase por ninguna pantalla nuestra.
+ *
+ * `referer`/`origin` se reescriben a la URL del equipo SÓLO cuando apuntan al
+ * propio gateway, porque hay firmware que valida el Referer como defensa
+ * anti-CSRF y esa defensa tiene que seguir valiendo del otro lado del túnel:
+ * un link desde un sitio de terceros llega con `Referer: https://evil/…` y
+ * así se queda (no se le regala al atacante un Referer "correcto"). Lo que no
+ * es del gateway ni de un tercero (sin Referer) se manda tal cual.
  */
 const BLOCKED_REQUEST_HEADERS = new Set([
   // De la conexión, no del mensaje.
   "connection", "keep-alive", "proxy-authorization", "proxy-authenticate", "te", "trailer",
-  "transfer-encoding", "upgrade", "host", "content-length",
+  "transfer-encoding", "upgrade", "host", "content-length", "expect",
   // Las pone el agente: el `Cookie` sale del jar de la sesión y el resto son suyos.
   "cookie", "accept-encoding", "user-agent",
   // De nuestra infraestructura — no tienen por qué llegarle al equipo del cliente.
-  "x-forwarded-for", "x-forwarded-proto", "x-forwarded-host", "x-real-ip",
+  "x-forwarded-for", "x-forwarded-proto", "x-forwarded-host", "x-forwarded-port", "x-forwarded-server",
+  "x-real-ip", "x-original-url", "forwarded", "via",
 ]);
 
 export function requestHeadersFor(
   browserHeaders: Record<string, unknown>,
   cookieJar: string,
-  deviceOrigin: string
+  deviceOrigin: string,
+  gatewayHost: string
 ): Record<string, string> {
   const out: Record<string, string> = {};
   for (const [name, value] of Object.entries(browserHeaders)) {
@@ -78,19 +88,25 @@ export function requestHeadersFor(
     if (typeof value === "string" && value !== "") out[name.toLowerCase()] = value;
   }
   if (cookieJar) out["cookie"] = cookieJar;
-  if (typeof browserHeaders["referer"] === "string") out["referer"] = rewriteToDevice(browserHeaders["referer"], deviceOrigin);
-  if (typeof browserHeaders["origin"] === "string") out["origin"] = deviceOrigin;
+  const referer = browserHeaders["referer"];
+  if (typeof referer === "string" && isFromHost(referer, gatewayHost)) out["referer"] = rewriteToDevice(referer, deviceOrigin);
+  const origin = browserHeaders["origin"];
+  if (typeof origin === "string" && isFromHost(origin, gatewayHost)) out["origin"] = deviceOrigin;
   return out;
+}
+
+function isFromHost(url: string, host: string): boolean {
+  try {
+    return new URL(url).host === host;
+  } catch {
+    return false;
+  }
 }
 
 /** `https://ews.example/sws/x` → `http://10.0.0.5/sws/x` (se conserva la ruta, cambia el origen). */
 function rewriteToDevice(url: string, deviceOrigin: string): string {
-  try {
-    const parsed = new URL(url);
-    return `${deviceOrigin}${parsed.pathname}${parsed.search}`;
-  } catch {
-    return deviceOrigin;
-  }
+  const parsed = new URL(url);
+  return `${deviceOrigin}${parsed.pathname}${parsed.search}`;
 }
 
 /**
@@ -128,14 +144,20 @@ export function responseHeadersFor(deviceHeaders: Record<string, string>, device
  * relativa para que el navegador la siga DENTRO del gateway. Si no, el
  * navegador intentaría ir a la IP de la LAN del cliente y no llegaría a
  * ninguna parte. Un `Location` hacia otro host se deja intacto: no es asunto
- * del gateway redirigir a terceros.
+ * del gateway redirigir a terceros. Tampoco se toca uno con puerto no estándar
+ * (`http://10.0.0.5:8080/x`): relativizarlo lo mandaría al 80, que es otro
+ * servicio; mejor que el navegador falle con un error claro.
+ *
+ * `//host/x` es absoluto (protocol-relative), no una ruta: se trata igual que
+ * `https://host/x`.
  */
 export function rewriteLocation(location: string, deviceOrigin: string): string {
-  if (location.startsWith("/")) return location;
+  // Sólo lo absoluto se evalúa; una ruta (`/x`, `x`, `../x`) la resuelve el navegador contra la URL actual, que ya es la del gateway.
+  if (!isAbsoluteUrl(location)) return location;
   try {
-    const parsed = new URL(location);
     const device = new URL(deviceOrigin);
-    if (parsed.hostname !== device.hostname) return location;
+    const parsed = new URL(location, deviceOrigin);
+    if (parsed.hostname !== device.hostname || parsed.port !== "") return location;
     return `${parsed.pathname}${parsed.search}${parsed.hash}`;
   } catch {
     return location;
