@@ -15,6 +15,8 @@ export interface IngestDeviceRepository {
   /** Fantasmas duplicados en la misma IP/agente (sin serial o serial = IP), excluyendo `deviceId`. */
   ghostIdsByIp(agentId: string, deviceId: string, ip: string): Promise<string[]>;
   existingIds(deviceIds: string[]): Promise<Set<string>>;
+  /** Cuántos OTROS equipos vivos del cliente reportan la misma MAC (ver `isPlaceholderMac`). */
+  countOtherLiveDevicesWithMac(clientId: string, mac: string, excludeDeviceId: string): Promise<number>;
   /** `ON CONFLICT (reading_id, time) DO NOTHING` — idempotencia ante reintentos del agente. */
   insertReadings(rows: MappedReading[]): Promise<InsertedReadingRow[]>;
 }

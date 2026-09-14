@@ -8,6 +8,7 @@ import {
   resolveReadingTime, type DisplayFields,
 } from "../../domain/services/reading-parsing";
 import { newAgentId } from "../../domain/services/tokens";
+import { NETWORK_BOARD_RESET_ALERT, isPlaceholderMac, networkBoardResetMessage } from "../../domain/services/network-board";
 import type { AlertNotifier } from "../ports/alert-notifier";
 import type { DeviceIdentityResolver, DeviceMerger } from "../ports/device-identity";
 
@@ -51,6 +52,7 @@ export class ProcessReadingUseCase {
       }
 
       await this.warnIfDecommissionedStillReporting(deviceId, existingDevice);
+      await this.syncNetworkBoardAlert(ctx.clientId, deviceId, r.mac);
       await this.syncEwsAlerts(deviceId, r.supplies_details);
       await this.mergeGhostDevicesByIp(ctx.agentId, deviceId, ip);
       return buildMappedReading(r, deviceId, resolveReadingTime(r.time, ctx.timezone));
@@ -121,6 +123,21 @@ export class ProcessReadingUseCase {
 
   private openSupplyNonGenuine(deviceId: string): Promise<void> {
     return this.alerts.open({ deviceId, type: "supply_non_genuine", severity: "warning", message: "Se detectó un consumible no original instalado", value: null });
+  }
+
+  /**
+   * Alerta de ESTADO: se abre mientras el equipo reporte una MAC de relleno
+   * (placa de red reseteada en taller) y se resuelve sola cuando vuelve a
+   * reportar una MAC propia. Sin MAC en la lectura no se afirma nada.
+   */
+  private async syncNetworkBoardAlert(clientId: string | null, deviceId: string, mac: string | null | undefined): Promise<void> {
+    if (!clientId || !mac) return;
+    const others = await this.devices.countOtherLiveDevicesWithMac(clientId, mac, deviceId);
+    if (isPlaceholderMac(mac, others)) {
+      await this.alerts.open({ deviceId, type: NETWORK_BOARD_RESET_ALERT, severity: "warning", message: networkBoardResetMessage(mac) });
+    } else {
+      await this.alerts.resolve({ deviceId, type: NETWORK_BOARD_RESET_ALERT });
+    }
   }
 
   // El matcher nunca revive una baja: se avisa en vez de reactivar en silencio.

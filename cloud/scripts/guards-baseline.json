@@ -2,5 +2,7 @@
   "arch-cross-module|src/modules/auth/presentation/agent-version-controller.ts": 1,
   "arch-cross-module|src/modules/auth/presentation/auth-controller.ts": 1,
   "arch-cross-module|src/modules/dashboard/infrastructure/adapters/postgres-agent-version-reader.ts": 1,
-  "arch-cross-module|src/modules/dashboard/presentation/dashboard-controller.ts": 1
+  "arch-cross-module|src/modules/dashboard/presentation/dashboard-controller.ts": 1,
+  "arch-portal|portal/src/features/clients/components/ClientAlertsSection.tsx": 6,
+  "arch-portal|portal/src/features/clients/components/ClientSuppliesSection.tsx": 4
 }

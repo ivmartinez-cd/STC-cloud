@@ -4,6 +4,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { detectCounterResets, parseRawIdentity } from '../modules/agents/domain/services/reading-parsing';
+import { isPlaceholderMac } from '../modules/agents/domain/services/network-board';
 import type { IncomingReading } from '../modules/agents/domain/entities/agent';
 
 const NUL = String.fromCharCode(0);
@@ -70,5 +71,27 @@ describe('detectCounterResets — sólo compara lecturas del mismo método de ca
   test('sin método entrante cae al comportamiento previo (compara)', () => {
     const { counterResets } = detectCounterResets(dev(), 100, 100, 0);
     assert.equal(counterResets.length, 2);
+  });
+});
+
+describe('isPlaceholderMac — placa de red reseteada en taller', () => {
+  test('la MAC nula o de broadcast es relleno aunque nadie más la tenga', () => {
+    assert.equal(isPlaceholderMac('00:00:00:00:00:00', 0), true);
+    assert.equal(isPlaceholderMac('FF:FF:FF:FF:FF:FF', 0), true);
+  });
+
+  test('una MAC compartida por otros DOS equipos vivos es relleno (tres placas iguales no existen)', () => {
+    // El caso real: tres HP 604CDD de ISSN con 00:00:f0:a0:00:00.
+    assert.equal(isPlaceholderMac('00:00:f0:a0:00:00', 2), true);
+  });
+
+  test('compartida con UN solo otro equipo no se afirma nada: es el caso del serial mal leído', () => {
+    assert.equal(isPlaceholderMac('b0:0c:d1:be:f0:ea', 1), false);
+    assert.equal(isPlaceholderMac('b0:0c:d1:be:f0:ea', 0), false);
+  });
+
+  test('sin MAC no hay alerta', () => {
+    assert.equal(isPlaceholderMac(null, 5), false);
+    assert.equal(isPlaceholderMac('', 5), false);
   });
 });

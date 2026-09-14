@@ -37,6 +37,8 @@ const INTERNAL_TYPES: Record<string, AlertClassification> = {
   toner_magenta_critical: { reason: "Tóner magenta agotado", klass: "consumable_out", responder: "untrained" },
   toner_yellow_critical: { reason: "Tóner amarillo agotado", klass: "consumable_out", responder: "untrained" },
   counter_reset: { reason: "Reinicio de contador detectado", klass: "system_change", responder: "management" },
+  // Placa de red reseteada en taller: la MAC queda en un valor de relleno hasta restaurar los valores de fábrica de la placa (ver `network-board.ts`).
+  network_board_reset: { reason: "Placa de red reseteada (MAC de relleno)", klass: "system_warning", responder: "field_service" },
   device_offline: { reason: "Equipo sin señal", klass: "availability", responder: "trained" },
   agent_offline: { reason: "Agente sin señal", klass: "availability", responder: "trained" },
   device_still_reporting: {

@@ -22,6 +22,13 @@ export class KnexIngestDeviceRepository implements IngestDeviceRepository {
     await this.db("devices").where("id", deviceId).update(updates);
   }
 
+  async countOtherLiveDevicesWithMac(clientId: string, mac: string, excludeDeviceId: string): Promise<number> {
+    const row = await this.db("devices").where("client_id", clientId).whereRaw("lower(mac) = lower(?)", [mac])
+      .whereNot("id", excludeDeviceId).whereNull("decommissioned_at").whereNull("merged_into")
+      .count<{ count: string }[]>("id as count").first();
+    return Number(row?.count ?? 0);
+  }
+
   async insert(row: Record<string, unknown>): Promise<void> {
     await this.db("devices").insert(row);
   }

@@ -60,6 +60,11 @@ describe('alertCatalog — tipos internos (los que escribimos nosotros)', () => 
     assert.equal(c.klass, 'system_change');
     assert.equal(c.responder, 'management');
   });
+  test('network_board_reset → system_warning / field_service (la restaura un técnico)', () => {
+    const c = classifyAlert('network_board_reset');
+    assert.equal(c.klass, 'system_warning');
+    assert.equal(c.responder, 'field_service');
+  });
   test('device_offline y agent_offline → availability', () => {
     assert.equal(classifyAlert('device_offline').klass, 'availability');
     assert.equal(classifyAlert('agent_offline').klass, 'availability');

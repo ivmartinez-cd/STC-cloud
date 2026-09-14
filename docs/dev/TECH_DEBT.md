@@ -31,6 +31,7 @@ que muerda.
 | [ARCH-2](#arch-2--sizes-baselinejson-lista-un-archivo-que-ya-no-existe) | Arquitectura | `sizes-baseline.json` lista un archivo que ya no existe | 🟡 Baja | ✅ Cerrado |
 | [ARCH-3](#arch-3--auth-y-dashboard-importan-internals-de-agents-para-agent_releases) | Arquitectura | `auth` y `dashboard` importan internals de `agents` para `agent_releases` | 🟡 Baja | Abierto |
 | [SEC-1](#sec-1--el-gateway-de-ews-admite-una-sola-sesion-por-navegador) | Seguridad | El gateway de EWS admite una sola sesión por navegador | 🟠 Media | Abierto |
+| [ARCH-4](#arch-4--las-pestanas-alertas-y-consumibles-del-cliente-importan-otros-features) | Arquitectura | Las pestañas Alertas y Consumibles del cliente importan otros features | 🟡 Baja | Abierto |
 
 ---
 
@@ -430,4 +431,23 @@ Encrypt sólo lo emite con desafío DNS-01 (un registro TXT en el dominio). Prod
 corre sobre `nip.io`, donde no se pueden crear registros TXT propios. Queda para cuando el
 portal pase a un dominio propio con API de DNS (Cloudflare, Route53, etc.): ahí es
 `certbot --dns-<proveedor>` y la reescritura de nginx.
+
+### ARCH-4 — Las pestañas Alertas y Consumibles del cliente importan otros features
+
+**Detectado:** 2026-09-14 · **Severidad:** 🟡 Baja · **Estado:** Abierto
+
+`features/clients/components/ClientAlertsSection.tsx` y `ClientSuppliesSection.tsx`
+importan la tabla, los filtros, la barra de selección y el hook de página de
+`features/alerts` y `features/supplies` (10 imports; regla `arch-portal`, baseline
+actualizado en el mismo commit). Es la forma de que la pestaña muestre exactamente la
+misma tabla que la pantalla completa, con el alcance fijo en el cliente, sin duplicar
+componentes — antes esas pestañas eran un cartel con un botón que sacaba al operador de
+la ficha (auditoría de navegación, 14/09/2026).
+
+Mismo tipo de deuda que `DeviceLifecycleModals` (ya en baseline): reuso real entre
+features que la regla no contempla.
+
+**Para cerrarlo:** mover las piezas reutilizables (tabla + filtros + barra + hook con
+`scope`) a `shared/` o a un módulo `features/alerts/public.ts` / `features/supplies/public.ts`
+que la regla reconozca como superficie pública, y que `clients` importe sólo eso.
 
