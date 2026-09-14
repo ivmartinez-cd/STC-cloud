@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import PageHeader from '../../../shared/components/PageHeader';
+import ReturnLink from '../../../shared/components/ReturnLink';
 import CreateIncidentModal from '../../../shared/components/CreateIncidentModal';
 import { BTN_PRIMARY_LG, BTN_SECONDARY_LG } from '../../../shared/lib/buttons';
 import { fmt } from '../../../shared/lib/formatters';
-import type { Alert } from '../../../shared/types/alerts';
 import { useFitRows } from '../../../shared/hooks/useFitRows';
-import { useAlertsPage, deriveIncidentContext, type AlertsPageState } from '../hooks/useAlertsPage';
+import { useAlertsPage, type AlertsPageState } from '../hooks/useAlertsPage';
+import { useIncidentModal } from '../hooks/useIncidentModal';
 import { exportAlertsCsv } from '../lib/exportAlertsCsv';
 import AlertsByCodePanel from '../components/AlertsByCodePanel';
 import AlertsFilterBar from '../components/AlertsFilterBar';
@@ -29,20 +30,6 @@ function HeaderActions({ s, exporting, onExport }: { s: AlertsPageState; exporti
   );
 }
 
-/** Incidente manual: fila puntual (`rowAlert`) o selección en bloque (`bulkIds`) —
- * mismo modal, contexto distinto. Nunca ambos a la vez. */
-function useIncidentModal(s: AlertsPageState) {
-  const [rowAlert, setRowAlert] = useState<Alert | null>(null);
-  const [bulkOpen, setBulkOpen] = useState(false);
-  const bulkAlerts = bulkOpen ? s.selectedAlerts() : [];
-  const isOpen = !!rowAlert || bulkOpen;
-  const close = () => { setRowAlert(null); setBulkOpen(false); };
-  const ctx = rowAlert
-    ? { clientId: rowAlert.client_id ?? undefined, deviceId: rowAlert.device_id ?? undefined, alertClass: rowAlert.alert_class ?? undefined, alertIds: [rowAlert.id] }
-    : { ...deriveIncidentContext(bulkAlerts), alertIds: bulkAlerts.map((a) => a.id) };
-  return { rowAlert, setRowAlert, bulkOpen, setBulkOpen, isOpen, close, ctx };
-}
-
 function Alerts() {
   // "Agrupar por código" intercala cabeceras de grupo: se descuentan 2 filas
   // del cálculo sólo mientras está activo, si no la lista quedaría corta.
@@ -59,6 +46,7 @@ function Alerts() {
 
   return (
     <div className="-m-4 flex min-w-0 flex-col bg-surface-page px-[34px] pb-9 pt-[30px] short:pb-4 short:pt-4 md:-m-10 md:h-full md:min-h-0">
+      <ReturnLink />
       <PageHeader
         eyebrow="TÓNER · RESETS DE CONTADOR · EQUIPOS SIN SEÑAL" title="Alertas" subtitle={subtitle(s.summary)}
         actions={<HeaderActions s={s} exporting={exporting} onExport={handleExport} />}

@@ -100,19 +100,11 @@ const SpecRowLine = ({ row }: { row: SpecRow }) => (
 
 /** "Estado del monitor" (handoff hifi "Monitor — detalle", 25/08/2026) — valores
  * técnicos (agente, host, IP, subred) en JetBrains Mono; el resto en Source Sans. */
-export default function MonitorSpecsCard({ monitor, now, stats, onViewDiagnostics }: Props) {
+export default function MonitorSpecsCard({ monitor, now, stats }: Props) {
   return (
     <div className="flex h-full flex-col rounded-[5px] border border-line-100 bg-white">
       <div className="flex items-baseline justify-between px-5 py-3.5">
         <span className="font-montserrat text-[9px] font-bold uppercase tracking-[.15em] text-ink-600">Estado del monitor</span>
-        {onViewDiagnostics && (
-          <button
-            type="button" onClick={onViewDiagnostics}
-            className="font-montserrat text-[10px] font-semibold uppercase tracking-[.08em] text-brand-accent hover:underline focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-2"
-          >
-            Ver diagnóstico →
-          </button>
-        )}
       </div>
       <div className="flex-1 px-5 pb-4 pt-1">
         {specRows(monitor, now, stats).map((r) => <SpecRowLine key={r.label} row={r} />)}

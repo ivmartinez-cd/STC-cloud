@@ -3,16 +3,15 @@ import { exportPendingQueueCsv } from '../lib/exportPendingQueueCsv';
 import type { PendingQueueSegment } from '../types/pendingDevices';
 
 const BTN_SECONDARY = 'rounded-[3px] border border-line-300 bg-white px-[18px] py-[11px] font-montserrat text-[10.5px] font-semibold uppercase leading-none tracking-[.1em] text-ink-600 transition-colors duration-150 ease-in-out hover:border-line-hover hover:bg-surface-btn-hover disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-2';
-const BTN_PRIMARY = 'rounded-[3px] bg-brand px-[18px] py-[11px] font-montserrat text-[10.5px] font-semibold uppercase leading-none tracking-[.1em] text-white transition-colors duration-150 ease-in-out hover:bg-brand-severe disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-2';
 
 interface Props {
-  selectedCount: number;
-  acting: boolean;
-  onApproveSelected: () => void;
   exportFilters: { query: string; clientId: string; segment: PendingQueueSegment };
 }
 
-function HeaderActions({ selectedCount, acting, onApproveSelected, exportFilters }: Props) {
+/** Sólo exportar: aprobar la selección vive en la barra de selección, junto a
+ * reasignar/fusionar/ignorar (auditoría de duplicados, 14/09/2026 — antes
+ * estaba también acá, deshabilitado hasta seleccionar algo). */
+function HeaderActions({ exportFilters }: Props) {
   const [exporting, setExporting] = useState(false);
   const handleExport = async () => {
     setExporting(true);
@@ -21,9 +20,6 @@ function HeaderActions({ selectedCount, acting, onApproveSelected, exportFilters
   return (
     <div className="flex gap-2.5">
       <button type="button" onClick={handleExport} disabled={exporting} className={BTN_SECONDARY}>{exporting ? 'EXPORTANDO…' : 'EXPORTAR'}</button>
-      <button type="button" onClick={onApproveSelected} disabled={selectedCount === 0 || acting} className={BTN_PRIMARY}>
-        APROBAR SELECCIÓN{selectedCount > 0 ? ` (${selectedCount})` : ''}
-      </button>
     </div>
   );
 }

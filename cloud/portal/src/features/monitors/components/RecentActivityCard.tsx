@@ -21,12 +21,11 @@ function formatAge(iso: string): string {
  * fusionado de 3 fuentes reales en el backend (alertas + auditoría + comandos
  * completados, ver `KnexAgentPortalRepository.getRecentActivity`). Sólo
  * admin/operator (ver `useMonitorActivity`: expone quién hizo qué). */
-export default function RecentActivityCard({ events, loading, error, onRetry, onViewConsole, visible = true }: {
+export default function RecentActivityCard({ events, loading, error, onRetry, visible = true }: {
   events: AgentActivityEvent[];
   loading: boolean;
   error: boolean;
   onRetry: () => void;
-  onViewConsole?: () => void;
   visible?: boolean;
 }) {
   // Muestra sólo los eventos que entran en el alto que le dejó la fila de
@@ -38,14 +37,6 @@ export default function RecentActivityCard({ events, loading, error, onRetry, on
     <div className="flex min-h-0 flex-col rounded-[5px] border border-line-100 bg-white">
       <div className="flex items-baseline justify-between px-5 py-3.5">
         <span className="font-montserrat text-[9px] font-bold uppercase tracking-[.15em] text-ink-600">Actividad reciente</span>
-        {onViewConsole && (
-          <button
-            type="button" onClick={onViewConsole}
-            className="font-montserrat text-[10px] font-semibold uppercase tracking-[.08em] text-brand-accent hover:underline focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-2"
-          >
-            Ver consola →
-          </button>
-        )}
       </div>
 
       <div ref={fit.ref} className="min-h-0 flex-1 overflow-hidden px-5 pb-4 pt-2">

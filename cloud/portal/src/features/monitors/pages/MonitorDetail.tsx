@@ -157,8 +157,6 @@ const MonitorDetail = () => {
         <span className="text-ink-sep-light">/</span>
         <Link to={clientBackTo ?? `/clients/${monitor.client_id}`} className="font-semibold text-brand-accent hover:underline">{monitor.client_name}</Link>
         <span className="text-ink-sep-light">/</span>
-        <Link to={clientBackTo ?? `/clients/${monitor.client_id}`} className="font-semibold text-brand-accent hover:underline">Infraestructura</Link>
-        <span className="text-ink-sep-light">/</span>
         <span className="text-ink-700">{monitor.name}</span>
       </nav>
 
@@ -167,7 +165,6 @@ const MonitorDetail = () => {
           monitor={monitor} now={now} isReadOnlyViewer={isReadOnlyViewer}
           syncing={syncing} onSync={handleSync}
           onDownloadLogs={() => window.open(`/api/v1/agents/${id}/logs/export`, '_blank')}
-          onOpenSettings={() => handleTabChange('config')}
           onRegenKey={handleRegen}
         />
         <DetailTabs tabs={TABS} active={activeTab} onChange={handleTabChange} />
@@ -180,7 +177,7 @@ const MonitorDetail = () => {
         <div className="flex min-h-0 flex-1 flex-col gap-4">
           <div className="grid grid-cols-[repeat(auto-fit,minmax(320px,1fr))] gap-4">
             <DeviceSummaryCard stats={stats} loading={statsLoading} error={statsError} onRetry={refetchStats} />
-            <MonitorSpecsCard monitor={monitor} now={now} stats={stats} onViewDiagnostics={() => handleTabChange('reports')} />
+            <MonitorSpecsCard monitor={monitor} now={now} stats={stats} />
             <LicenseCard monitor={monitor} license={license} loading={licenseLoading} error={licenseError} onRetry={refetchLicense} keyCopied={keyCopied} onCopyKey={copyKey} />
           </div>
 
@@ -191,7 +188,7 @@ const MonitorDetail = () => {
             />
             <RecentActivityCard
               events={events} loading={eventsLoading} error={eventsError} onRetry={refetchEvents}
-              visible={!isReadOnlyViewer} onViewConsole={isReadOnlyViewer ? undefined : () => handleTabChange('console')}
+              visible={!isReadOnlyViewer}
             />
           </div>
         </div>

@@ -57,7 +57,6 @@ interface Props {
   recommissioning: boolean;
   onSync: () => void;
   onRequestSupply: () => void;
-  onOpenHistory: () => void;
   onMove: () => void;
   onEdit: () => void;
   onMerge: () => void;
@@ -69,7 +68,7 @@ interface Props {
 
 export default function DeviceProfileCard({
   device, now, isReadOnlyViewer, alertsOpen, syncing, requestingSupply,
-  changingMonitorState, recommissioning, onSync, onRequestSupply, onOpenHistory, onMove,
+  changingMonitorState, recommissioning, onSync, onRequestSupply, onMove,
   onEdit, onMerge, onRecommission, onDecommission, onDelete, onMonitorStateChange,
 }: Props) {
   const { deviceOfflineThresholdMs } = useSystemSettings();
@@ -103,7 +102,6 @@ export default function DeviceProfileCard({
 
       {!isReadOnlyViewer && (
         <div className="flex flex-wrap items-center gap-[9px]">
-          <button type="button" onClick={onOpenHistory} className={`${ACTION_BASE} border border-line-300 bg-white text-ink-600 hover:border-line-hover hover:bg-surface-btn-hover`}>Historial</button>
           <button type="button" onClick={onMove} className={`${ACTION_BASE} border border-line-300 bg-white text-ink-600 hover:border-line-hover hover:bg-surface-btn-hover`}>Mover de sitio</button>
           <button type="button" onClick={onRequestSupply} disabled={requestingSupply} className={`${ACTION_BASE} border border-brand-chip-border bg-brand-soft text-brand-accent hover:bg-[var(--color-brand-warn-hover)] disabled:opacity-70`}>
             {requestingSupply ? 'Pidiendo…' : 'Pedir consumible'}

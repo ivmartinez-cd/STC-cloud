@@ -51,11 +51,7 @@ const PendingDevices = () => {
 
   return (
     <div className="-m-4 min-w-0 flex flex-col bg-surface-page px-[34px] pb-9 pt-[30px] short:pb-4 short:pt-4 md:-m-10 md:h-full md:min-h-0">
-      <PendingQueueHeader
-        selectedCount={rowSelection.count} acting={actions.acting}
-        onApproveSelected={() => approveIds(Array.from(rowSelection.selected))}
-        exportFilters={{ query: dir.effectiveQuery, clientId: dir.clientId, segment: dir.segment }}
-      />
+      <PendingQueueHeader exportFilters={{ query: dir.effectiveQuery, clientId: dir.clientId, segment: dir.segment }} />
       {/* La tarjeta crece hasta el pie; el banner de duplicados queda abajo, fuera de ella, con alto fijo. */}
       <div className="mt-4 flex min-h-0 flex-1 flex-col rounded-[5px] border border-line-100 bg-white">
         <PendingQueueFilterBar

@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import { useNow } from '../../../shared/hooks/useNow';
 import { useParams, useSearchParams, Link } from 'react-router-dom';
-import { Loader2, Bell, Droplets } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { useClientDetail } from '../hooks/useClientDetail';
 import { useToast } from '../../../store/ToastContext';
 import { useAuth } from '../../../store/AuthContext';
@@ -12,7 +12,8 @@ import ClientDetailTabs from '../components/ClientDetailTabs';
 import ClientAttentionZone from '../components/ClientAttentionZone';
 import ClientConfigZone from '../components/ClientConfigZone';
 import ClientDevicesSection from '../components/ClientDevicesSection';
-import ClientTabRedirect from '../components/ClientTabRedirect';
+import ClientAlertsSection from '../components/ClientAlertsSection';
+import ClientSuppliesSection from '../components/ClientSuppliesSection';
 import { safeReturnTo } from '../../../shared/lib/returnTo';
 import type { ClientDetailTab } from '../types/clientDetail';
 
@@ -25,22 +26,28 @@ function parseTab(v: string | null, isReadOnlyViewer: boolean): ClientDetailTab 
 
 /** Tab activa reflejada en `?tab=` (README: "Tab... reflejados en la URL"). La URL
  * es la única fuente de verdad (derivada en cada render, no `useState` inicializado
- * una vez): atrás/adelante y links entrantes se reflejan. `replace` + merge funcional:
- * cambiar de tab no apila historial ni pisa los params de "Dispositivos". */
+ * una vez): atrás/adelante y links entrantes se reflejan. `replace`: cambiar de tab
+ * no apila historial.
+ *
+ * Al cambiar de tab se conservan SÓLO `tab` y `from`: Dispositivos, Alertas y
+ * Consumibles guardan cada una su filtro y página en la URL con nombres que se
+ * pisan (`q`, `page`), y arrastrarlos de una a otra aplicaba la búsqueda de
+ * equipos a las alertas o abría Consumibles en la página 3. */
 function useActiveTab(isReadOnlyViewer: boolean) {
   const [searchParams, setSearchParams] = useSearchParams();
   const tab = parseTab(searchParams.get('tab'), isReadOnlyViewer);
   // `?from=` = la cartera con sus filtros/página (`ClientsDirectoryTable`); sólo se
-  // acepta el listado de clientes (no `//evil`, no otra ruta). Sobrevive al cambio de
-  // tab porque `setTab` mergea.
+  // acepta el listado de clientes (no `//evil`, no otra ruta).
   // `safeReturnTo` es la única validación de destino del portal (rechaza `//evil`,
   // esquemas externos, travesía); acá sólo se exige además que sea LA cartera.
   const backTo = safeReturnTo(searchParams.get('from'));
   const listBackTo = backTo && /^\/clients(\?|$)/.test(backTo) ? backTo : '/clients';
   const setTab = useCallback((next: ClientDetailTab) => {
     setSearchParams((prev) => {
-      const params = new URLSearchParams(prev);
-      if (next === 'resumen') params.delete('tab'); else params.set('tab', next);
+      const params = new URLSearchParams();
+      const from = prev.get('from');
+      if (from) params.set('from', from);
+      if (next !== 'resumen') params.set('tab', next);
       return params;
     }, { replace: true });
   }, [setSearchParams]);
@@ -122,19 +129,15 @@ const ClientDetail = () => {
           )}
 
           {tab === 'alertas' && (
-            <ClientTabRedirect
-              icon={Bell} title="Alertas de este cliente"
-              description="Reusa el listado completo de alertas, filtrado por este cliente."
-              href={`/alerts?client_id=${id}`} cta="Ver alertas"
-            />
+            <div className="flex min-h-0 flex-1 flex-col">
+              <ClientAlertsSection clientId={id!} />
+            </div>
           )}
 
           {tab === 'consumibles' && (
-            <ClientTabRedirect
-              icon={Droplets} title="Consumibles de este cliente"
-              description="Reusa el listado completo de consumibles de flota, filtrado por este cliente."
-              href={`/supplies?client_id=${id}`} cta="Ver consumibles"
-            />
+            <div className="flex min-h-0 flex-1 flex-col">
+              <ClientSuppliesSection clientId={id!} />
+            </div>
           )}
 
           {tab === 'configuracion' && !isReadOnlyViewer && <ClientConfigZone clientId={id!} canEdit={!isReadOnlyViewer} />}

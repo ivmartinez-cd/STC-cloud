@@ -35,7 +35,7 @@ function HeaderActions({ query, segment, sortDir, includeDecommissioned, onRefre
       <button type="button" onClick={onRefresh} className={`flex items-center gap-2 ${BTN_SECONDARY}`}>
         <RefreshCw size={12} /> ACTUALIZAR
       </button>
-      {canRegister && <Link to="/pending" className="rounded-[3px] bg-brand px-[18px] py-[11px] font-montserrat text-[10.5px] font-semibold uppercase leading-none tracking-[.1em] text-white transition-colors duration-150 ease-in-out hover:bg-brand-severe focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-2">+ AGREGAR DISPOSITIVO</Link>}
+      {canRegister && <Link to="/pending" className="rounded-[3px] bg-brand px-[18px] py-[11px] font-montserrat text-[10.5px] font-semibold uppercase leading-none tracking-[.1em] text-white transition-colors duration-150 ease-in-out hover:bg-brand-severe focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-2">PENDIENTES DE ALTA</Link>}
     </div>
   );
 }

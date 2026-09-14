@@ -77,7 +77,7 @@ export default function ClientProfileCard({
             Editar cliente
           </button>
           <Link to={`/pending?client_id=${client.id}`} className={`${ACTION_BASE} bg-brand text-white hover:bg-brand-severe`}>
-            + Agregar dispositivo
+            Pendientes de alta
           </Link>
         </div>
       )}

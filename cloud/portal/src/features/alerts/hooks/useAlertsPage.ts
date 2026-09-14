@@ -61,15 +61,24 @@ function useFilterSetters(patch: UrlPatch<UrlFilters>) {
 
 type AlertFilters = AlertFiltersState & { effectiveQuery: string; page: number; setPage: (page: number) => void };
 
-function useAlertFilters(): AlertFilters {
+/**
+ * Alcance FIJO, fuera de la URL: la pestaña "Alertas" de la ficha de cliente
+ * lista sólo las de ese cliente, y el operador no puede quitarlo (no es un
+ * chip, es la pestaña). El `?client_id=` de la URL se ignora en ese modo.
+ */
+export interface AlertsScope { clientId: string }
+
+function useAlertFilters(scope?: AlertsScope): AlertFilters {
   const [url, patch] = useUrlState<UrlFilters>(CODECS);
   const { rawQuery, setRawQuery, effectiveQuery } = useUrlSearchQuery(url.q, (q) => patch({ q, page: 0 }));
+  const setters = useFilterSetters(patch);
   return {
     q: rawQuery, setQ: setRawQuery, effectiveQuery,
     unresolved: url.resolved, critical: url.critical, unacknowledged: url.unack, last24h: url.last24h,
     availability: url.class === 'availability', alertClass: url.class,
-    clientId: url.client_id, deviceId: url.device_id, page: url.page,
-    ...useFilterSetters(patch),
+    clientId: scope?.clientId ?? url.client_id, deviceId: url.device_id, page: url.page,
+    ...setters,
+    ...(scope ? { setClientId: () => undefined } : {}),
   };
 }
 
@@ -270,13 +279,13 @@ function useBulkUpdate(list: AlertList) {
 /** `pageSize` = filas que entran en pantalla (`useFitRows`, 27/08/2026). El
  * toggle "agrupar por código" vive en la página, no acá: `useFitRows` necesita
  * saberlo ANTES de calcular `pageSize` (descuenta las cabeceras de grupo). */
-export function useAlertsPage(pageSize: number) {
+export function useAlertsPage(pageSize: number, scope?: AlertsScope) {
   const { role } = useAuth();
   // client_viewer ve /alerts pero no reconoce/resuelve (PUT /alerts/:id no está
   // en CLIENT_VIEWER_ROUTES): se ocultan los botones, mismo criterio que MonitorDetail.
   const isReadOnlyViewer = role === 'client_viewer';
   const canFilterByClient = role === 'admin' || role === 'operator';
-  const filters = useAlertFilters();
+  const filters = useAlertFilters(scope);
   const catalogs = useAlertCatalogs(canFilterByClient);
   const list = useAlertList(filters, pageSize);
   return {

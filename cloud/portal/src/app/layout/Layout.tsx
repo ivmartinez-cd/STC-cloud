@@ -1,8 +1,7 @@
 import { useState, useRef, useEffect, Suspense } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
-import { ArrowLeft, Menu, Settings } from 'lucide-react';
+import { Menu } from 'lucide-react';
 import { useAuth } from '../../store/AuthContext';
-import { useBackNavigation } from '../../shared/hooks/useBackNavigation';
 import FeedbackModal from '../../shared/components/FeedbackModal';
 import SidebarNav from './SidebarNav';
 import SidebarBrand from './SidebarBrand';
@@ -56,24 +55,9 @@ const Sidebar = ({ collapsed, onToggleCollapse, isMobileMenuOpen, onCloseMobile 
   );
 };
 
-/** Flecha "volver" global de header — se muestra en cualquier ruta de detalle
- * (más de un segmento, ej. `/clients/:id`). */
-const HeaderBackButton = () => {
-  const { show, goBack } = useBackNavigation();
-  if (!show) return null;
-  return (
-    <button
-      onClick={goBack}
-      aria-label="Volver"
-      className="p-2 -ml-2 text-slate-500 hover:bg-slate-100 hover:text-slate-800 rounded-xl transition-all"
-    >
-      <ArrowLeft size={20} />
-    </button>
-  );
-};
-
-/** El engranaje de la derecha estaba sin `onClick`: no hacía nada para ningún rol.
- * Configuración existe para todos — un cliente ve ahí la seguridad de su cuenta. */
+/** Sin flecha "volver" global ni engranaje (auditoría de duplicados,
+ * 14/09/2026): las cuatro fichas traen breadcrumb con destino explícito, y
+ * Configuración ya está en el sidebar para todos los roles. */
 const TopHeader = ({ onToggleMobile }: { onToggleMobile: () => void }) => {
   const search = useGlobalSearch();
   return (
@@ -82,14 +66,12 @@ const TopHeader = ({ onToggleMobile }: { onToggleMobile: () => void }) => {
         <button onClick={onToggleMobile} className="md:hidden p-2 text-slate-600 hover:bg-slate-100 rounded-xl transition-all">
           <Menu size={20} />
         </button>
-        <HeaderBackButton />
         <div className="hidden md:block">
           <span className="font-montserrat text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Centro de Operaciones</span>
         </div>
       </div>
       <div className="flex items-center gap-4">
         <GlobalSearch s={search} />
-        <Link to="/settings" aria-label="Configuración" className="p-2.5 text-slate-500 hover:bg-slate-100 rounded-xl transition-all"><Settings size={20} /></Link>
       </div>
     </header>
   );

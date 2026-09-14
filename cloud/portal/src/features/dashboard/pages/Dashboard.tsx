@@ -93,17 +93,14 @@ const Dashboard = () => {
         </div>
         {!isClientViewer && (
           <div className="flex gap-2.5">
+            {/* Abre el alta de verdad (`?new=1`, lo lee `Clients.tsx`): antes sólo
+                navegaba al listado. "Gestionar agentes" se fue: era el mismo
+                destino que "Salud de nodos" del sidebar (auditoría, 14/09/2026). */}
             <Link
-              to="/clients"
-              className="rounded-[3px] border border-line-300 bg-white px-[18px] py-[11px] font-montserrat text-[10.5px] font-semibold uppercase leading-none tracking-[.1em] text-ink-600 transition-colors duration-150 ease-in-out hover:border-line-hover hover:bg-surface-btn-hover focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-2"
-            >
-              + NUEVO CLIENTE
-            </Link>
-            <Link
-              to="/agents"
+              to="/clients?new=1"
               className="rounded-[3px] bg-brand px-[18px] py-[11px] font-montserrat text-[10.5px] font-semibold uppercase leading-none tracking-[.1em] text-white transition-colors duration-150 ease-in-out hover:bg-brand-severe focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-2"
             >
-              GESTIONAR AGENTES
+              + NUEVO CLIENTE
             </Link>
           </div>
         )}

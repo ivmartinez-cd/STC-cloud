@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Card, CardTitle } from './primitives';
 import { formatRelativeTime } from '../../../../shared/lib/formatters';
 import { api } from '../../../../shared/lib/api';
+import { useReturnParam } from '../../../../shared/hooks/useReturnParam';
 import { alertTierOf, ALERT_TIER_STYLE } from '../../lib/deviceAlertTier';
 import type { Alert, AlertClassOption } from '../../../../shared/types/alerts';
 import type { ActiveAlertItem } from '../../types/deviceDetailPage';
@@ -30,6 +31,8 @@ export default function DeviceAlertsCard({ activeAlerts, allAlerts, deviceId }: 
 
   const closed = closedThisMonth(allAlerts, deviceId);
   const monthLabel = MONTH_LONG_ES[new Date().getMonth()];
+  // `from=` para que Alertas pueda volver a esta ficha tal cual (pestaña incluida).
+  const returnParam = useReturnParam();
 
   return (
     <Card className="border-t-[3px] !border-t-brand-severe">
@@ -56,7 +59,7 @@ export default function DeviceAlertsCard({ activeAlerts, allAlerts, deviceId }: 
         })}
         <div className="flex items-center justify-between pt-3">
           <span className="font-sans text-[11.5px] text-ink-300">{closed} alertas cerradas en {monthLabel}</span>
-          <Link to={`/alerts?device_id=${deviceId}`} className="font-montserrat text-[10px] font-semibold uppercase tracking-[.08em] text-brand-accent hover:underline">Ver todas →</Link>
+          <Link to={`/alerts?device_id=${deviceId}&${returnParam}`} className="font-montserrat text-[10px] font-semibold uppercase tracking-[.08em] text-brand-accent hover:underline">Ver todas →</Link>
         </div>
       </div>
     </Card>

@@ -33,12 +33,11 @@ interface Props {
   syncing: boolean;
   onSync: () => void;
   onDownloadLogs: () => void;
-  onOpenSettings: () => void;
   onRegenKey: () => void;
 }
 
 export default function MonitorProfileCard({
-  monitor, now, isReadOnlyViewer, syncing, onSync, onDownloadLogs, onOpenSettings, onRegenKey,
+  monitor, now, isReadOnlyViewer, syncing, onSync, onDownloadLogs, onRegenKey,
 }: Props) {
   const contact = contactInfo(monitor.last_seen, now);
   const statusLabel = contact.severe ? 'INACTIVO' : (STATUS_LABEL[monitor.status] ?? monitor.status.toUpperCase());
@@ -82,9 +81,6 @@ export default function MonitorProfileCard({
         <div className="flex flex-wrap gap-[9px]">
           <button type="button" onClick={onDownloadLogs} className={`${ACTION_BASE} border border-line-300 bg-white text-ink-600 hover:border-line-hover hover:bg-surface-btn-hover`}>
             Descargar logs
-          </button>
-          <button type="button" onClick={onOpenSettings} className={`${ACTION_BASE} border border-line-300 bg-white text-ink-600 hover:border-line-hover hover:bg-surface-btn-hover`}>
-            Ajustes
           </button>
           <button type="button" onClick={onRegenKey} className={`${ACTION_BASE} border border-brand-chip-border bg-brand-soft text-brand-accent hover:bg-[var(--color-brand-warn-hover)]`}>
             Regenerar llave

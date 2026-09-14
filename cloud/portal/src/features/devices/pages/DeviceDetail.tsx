@@ -179,7 +179,7 @@ const DeviceDetail = () => {
         <DeviceProfileCard
           device={device} now={now} isReadOnlyViewer={isReadOnlyViewer} alertsOpen={activeAlerts.length}
           syncing={syncing} requestingSupply={requestingSupply} changingMonitorState={changingMonitorState} recommissioning={recommissioning}
-          onSync={handleSync} onRequestSupply={handleRequestSupply} onOpenHistory={() => handleTabChange('history')}
+          onSync={handleSync} onRequestSupply={handleRequestSupply}
           onMove={() => setMoveOpen(true)} onEdit={() => setEditOpen(true)} onMerge={() => setMergeOpen(true)}
           onRecommission={recommission} onDecommission={() => setDecommissionOpen(true)} onDelete={() => setDeleteOpen(true)}
           onMonitorStateChange={changeMonitorState}

@@ -29,13 +29,18 @@ function useFilterSetters(patch: UrlPatch<UrlFilters>) {
   }), [patch]);
 }
 
-function useFilters() {
+/** Alcance FIJO fuera de la URL (pestaña "Consumibles" de la ficha de cliente): el `?client_id=` se ignora. */
+export interface SuppliesScope { clientId: string }
+
+function useFilters(scope?: SuppliesScope) {
   const [url, patch] = useUrlState<UrlFilters>(CODECS);
   const { rawQuery, setRawQuery, effectiveQuery } = useUrlSearchQuery(url.q, (q) => patch({ q, page: 0 }));
+  const setters = useFilterSetters(patch);
   return {
     rawQuery, setRawQuery, query: effectiveQuery,
-    clientId: url.client_id, kind: url.kind, urgency: url.urgency, page: url.page,
-    ...useFilterSetters(patch),
+    clientId: scope?.clientId ?? url.client_id, kind: url.kind, urgency: url.urgency, page: url.page,
+    ...setters,
+    ...(scope ? { setClientId: () => undefined } : {}),
   };
 }
 
@@ -171,10 +176,11 @@ function useBulkGenerate(list: ReturnType<typeof useRows>, summary: ReturnType<t
 }
 
 /** `pageSize` = filas que entran en pantalla (`useFitRows`, 27/08/2026). */
-export function useSuppliesPage(pageSize: number) {
+export function useSuppliesPage(pageSize: number, scope?: SuppliesScope) {
   const { role } = useAuth();
-  const canFilterByClient = role === 'admin' || role === 'operator';
-  const filters = useFilters();
+  // Con alcance fijo no hay selector de cliente: la pestaña ya es el filtro.
+  const canFilterByClient = !scope && (role === 'admin' || role === 'operator');
+  const filters = useFilters(scope);
   const list = useRows(filters, pageSize);
   const summaryState = useSummary(filters.clientId);
   const bulk = useBulkGenerate(list, summaryState);

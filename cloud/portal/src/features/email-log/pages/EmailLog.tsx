@@ -1,8 +1,7 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
 import PageHeader from '../../../shared/components/PageHeader';
 import HifiPagination from '../../../shared/components/HifiPagination';
-import { BTN_PRIMARY_LG, BTN_SECONDARY_LG } from '../../../shared/lib/buttons';
+import { BTN_SECONDARY_LG } from '../../../shared/lib/buttons';
 import { useFitRows } from '../../../shared/hooks/useFitRows';
 import { useEmailLogPage } from '../hooks/useEmailLogPage';
 import { exportEmailLogCsv } from '../lib/exportEmailLogCsv';
@@ -29,12 +28,7 @@ export default function EmailLog() {
       <PageHeader
         eyebrow="AUDITORÍA DE EMAILS DE NOTIFICACIÓN" title="Correo"
         subtitle="Cada intento queda registrado, se haya enviado o no. Si un aviso no llegó, acá está el motivo exacto."
-        actions={
-          <>
-            <button type="button" onClick={handleExport} disabled={exporting} className={BTN_SECONDARY_LG}>{exporting ? 'EXPORTANDO…' : 'EXPORTAR'}</button>
-            <Link to="/settings" className={BTN_PRIMARY_LG}>CONFIGURAR SMTP</Link>
-          </>
-        }
+        actions={<button type="button" onClick={handleExport} disabled={exporting} className={BTN_SECONDARY_LG}>{exporting ? 'EXPORTANDO…' : 'EXPORTAR'}</button>}
       />
 
       <EmailLogBanner summary={s.summary} />

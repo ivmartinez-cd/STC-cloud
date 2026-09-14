@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Loader2, X } from 'lucide-react';
 import { api } from '../../../shared/lib/api';
 import { useToast } from '../../../store/ToastContext';
@@ -23,6 +24,16 @@ const Clients = () => {
   const dir = useClientsDirectory(fit.rows);
 
   const [showModal, setShowModal] = useState(false);
+  // "+ Nuevo cliente" del panel llega con `?new=1`: se abre el alta y se limpia
+  // el param (si no, "atrás" o F5 la volverían a abrir).
+  const [searchParams, setSearchParams] = useSearchParams();
+  useEffect(() => {
+    if (searchParams.get('new') !== '1') return;
+    setShowModal(true);
+    const next = new URLSearchParams(searchParams);
+    next.delete('new');
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [formData, setFormData] = useState({ name: '', contact_name: '', contact_phone: '', contact_email: '' });

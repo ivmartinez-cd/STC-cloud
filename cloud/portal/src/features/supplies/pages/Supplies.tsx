@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../../../store/AuthContext';
 import PageHeader from '../../../shared/components/PageHeader';
+import ReturnLink from '../../../shared/components/ReturnLink';
 import HifiPagination from '../../../shared/components/HifiPagination';
 import { BTN_PRIMARY_LG, BTN_SECONDARY_LG } from '../../../shared/lib/buttons';
 import { fmt } from '../../../shared/lib/formatters';
@@ -49,6 +50,7 @@ export default function Supplies() {
 
   return (
     <div className="-m-4 flex min-w-0 flex-col bg-surface-page px-[34px] pb-9 pt-[30px] short:pb-4 short:pt-4 md:-m-10 md:h-full md:min-h-0">
+      <ReturnLink />
       <PageHeader
         eyebrow="TÓNERES, TAMBORES Y KITS DE MANTENIMIENTO" title="Consumibles" subtitle={subtitle(s.summary)}
         actions={<HeaderActions s={s} readOnly={readOnly} exporting={exporting} onExport={handleExport} />}
