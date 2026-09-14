@@ -47,10 +47,10 @@ Debes respetar al 100% las reglas de **TypeScript estricto (cero `any`)**, **JSD
 ```
 identify()  →  resolve()  →  collect(scopes)  →  completar huecos  →  normalize()
    │              │               │                    │                  │
- SNMP            perfil de      familia           Printer-MIB /        DeviceReading
- (sysObjectID,   modelo →       (protocolo del    PJL / IPP            (contrato server,
- hrDeviceDescr)  familia →      firmware)         campo a campo        sin cambios)
- EWS probe       puntaje →
+ EWS probe       perfil de      familia           Printer-MIB /        DeviceReading
+ SNMP (sysObj-   modelo →       (protocolo del    PJL / IPP            (contrato server,
+ ectID, hrDev-   familia →      firmware)         campo a campo        sin cambios)
+ iceDescr)       puntaje →
  PJL / IPP       genérico
 ```
 

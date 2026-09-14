@@ -7,7 +7,7 @@ y *mejor dato por campo* entre fuentes.
 ```
 captureDevice({ ip, community, scopes, hint, trustHint })
    ├─ checkOpenPorts()         9100 / 631 / 80 / 443
-   ├─ identify()               SNMP (sysObjectID, hrDeviceDescr) → sondas EWS de las familias → PJL → IPP
+   ├─ identify()               sondas EWS de las familias → SNMP (sysObjectID, hrDeviceDescr) → PJL → IPP
    ├─ resolve()                perfil de modelo → familia por puntaje → generic.printer-mib
    ├─ family.collect(scopes)   (o hooks.collect del perfil)
    ├─ completar huecos         generic.printer-mib → PJL (total) → IPP (identidad)
