@@ -111,7 +111,7 @@ const Login = () => {
           <div className="rounded-[5px] border border-line-100 bg-white">
             <div className="border-b border-line-150 px-7 pb-[22px] pt-[26px]">
               <h2 className="m-0 font-montserrat text-2xl font-extrabold leading-[1.15] tracking-[-.015em] text-ink-900">Iniciar sesión</h2>
-              <p className="mt-2 font-sans text-[12.5px] leading-[1.5] text-ink-400">Ingresá con tu cuenta corporativa de Canal Directo.</p>
+              <p className="mt-2 font-sans text-[12.5px] leading-[1.5] text-ink-400">Ingresá con el usuario que te asignó Canal Directo.</p>
             </div>
 
             <div className="px-7 pb-[26px] pt-[22px]">
@@ -144,10 +144,8 @@ const Login = () => {
                     </div>
                     {fieldErrors.username && <p className="mt-1.5 font-sans text-[11.5px] text-brand-accent">Ingresá tu usuario.</p>}
 
-                    <div className="mb-2 mt-[18px] flex items-baseline justify-between gap-3">
-                      <label htmlFor="login-password" className="font-montserrat text-[8.5px] font-bold tracking-[.13em] text-ink-300">CONTRASEÑA</label>
-                      <span className="font-montserrat text-[10px] font-semibold tracking-[.08em] text-ink-200">RECUPERAR ACCESO</span>
-                    </div>
+                    {/* Sin "Recuperar acceso": no hay flujo de recuperación; un texto que parece link y no hace nada confunde al cliente. */}
+                    <label htmlFor="login-password" className="mb-2 mt-[18px] block font-montserrat text-[8.5px] font-bold tracking-[.13em] text-ink-300">CONTRASEÑA</label>
                     <div className={`flex items-center gap-2.5 rounded-[3px] border bg-surface-input px-[13px] py-[11px] focus-within:border-brand-chip-border focus-within:bg-white focus-within:shadow-[0_0_0_3px_rgba(247,148,29,.12)] ${fieldErrors.password ? 'border-brand-chip-border' : 'border-line-100'}`}>
                       <Lock size={14} className="flex-none text-ink-500" aria-hidden="true" />
                       <input
@@ -214,12 +212,9 @@ const Login = () => {
             <span className="font-sans text-[11.5px] leading-[1.5] text-ink-400">Conexión cifrada TLS 1.3. Los accesos quedan auditados junto a la dirección IP de origen.</span>
           </div>
 
-          <div className="mt-[22px] flex flex-wrap items-center justify-between gap-2.5">
+          {/* "Soporte técnico" y "Estado del servicio" se sacaron (14/09/2026): parecían links y no llevaban a ningún lado. */}
+          <div className="mt-[22px]">
             <span className="font-sans text-[11.5px] leading-none text-ink-300">Canal Directo S.A. · © {new Date().getFullYear()}</span>
-            <div className="flex gap-4">
-              <span className="font-sans text-[11.5px] leading-none text-ink-400">Soporte técnico</span>
-              <span className="font-sans text-[11.5px] leading-none text-ink-400">Estado del servicio</span>
-            </div>
           </div>
         </div>
       </div>
