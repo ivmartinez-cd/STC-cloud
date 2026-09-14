@@ -6,7 +6,6 @@ import { createAuthSessionHandlers } from "./session-controller";
 import { createAuthUserHandlers } from "./users-controller";
 import { createAuthAgentHandlers } from "./agent-auth-controller";
 import { createAuthAgentVersionHandlers } from "./agent-version-controller";
-import { createLoginStatsHandler } from "./login-stats-controller";
 import { KnexAgentReleaseRepository } from "../../agents/infrastructure/database/knex-agent-release-repository";
 
 /**
@@ -23,6 +22,5 @@ export function createAuthController(fastify: FastifyInstance, db: Knex, redis: 
     ...createAuthUserHandlers(db),
     ...createAuthAgentHandlers(fastify, agentService),
     ...createAuthAgentVersionHandlers(fastify, agentReleases),
-    ...createLoginStatsHandler(db, redis),
   };
 }

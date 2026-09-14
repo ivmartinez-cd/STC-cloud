@@ -3,35 +3,26 @@ import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../store/AuthContext';
 import { User, Lock } from 'lucide-react';
 import { consumePostLoginRedirect } from '../../../shared/lib/postLoginRedirect';
-import { useLoginStats } from '../hooks/useLoginStats';
-import { fmt, fmtCompact } from '../../../shared/lib/formatters';
 
-const STAT_LABELS = [
-  { key: 'clients', label: 'CLIENTES ACTIVOS' },
-  { key: 'devices', label: 'DISPOSITIVOS GESTIONADOS' },
-  { key: 'agents', label: 'AGENTES REGISTRADOS' },
-  { key: 'volume', label: 'PÁGINAS ESTE MES' },
+/**
+ * Qué ofrece el portal, sin datos: antes acá había cuatro cifras de TODA la
+ * red (clientes, equipos, agentes, páginas del mes) servidas sin sesión. Un
+ * cliente que llega al login veía cuántos otros clientes hay y cuánto pesan;
+ * y antes de autenticar no hay forma de filtrar por quién mira (14/09/2026).
+ */
+const PILLARS = [
+  { title: 'Contadores automáticos', text: 'Lectura periódica de cada equipo, sin planillas ni visitas.' },
+  { title: 'Consumibles y alertas', text: 'Niveles de tóner, atascos y fallas en el momento en que ocurren.' },
+  { title: 'Disponibilidad', text: 'Qué equipo está en línea y desde cuándo, por sede.' },
 ] as const;
 
 const STRIPE_COLORS = ['bg-brand-severe', 'bg-brand', 'bg-brand-light', 'bg-ink-500', 'bg-brand-gray'];
 
 const INPUT_BASE = 'institutional-input w-full bg-transparent font-sans text-[13px] text-ink-900 outline-none placeholder:text-ink-300';
 
-function statValue(key: string, stats: ReturnType<typeof useLoginStats>['stats']): string | null {
-  if (!stats) return null;
-  switch (key) {
-    case 'clients': return fmt(stats.clients);
-    case 'devices': return fmt(stats.devices);
-    case 'agents': return fmt(stats.agents);
-    case 'volume': return fmtCompact(stats.monthlyVolume);
-    default: return null;
-  }
-}
-
 const Login = () => {
   const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
-  const { stats, loading: statsLoading } = useLoginStats();
 
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -100,20 +91,13 @@ const Login = () => {
             </p>
           </div>
 
-          <div className="grid grid-cols-[repeat(auto-fit,minmax(148px,1fr))] gap-0 overflow-hidden">
-            {STAT_LABELS.map(({ key, label }) => {
-              const value = statValue(key, stats);
-              return (
-                <div key={key} className="border-t border-panel-dark-line px-[22px] pb-1 pt-5 shadow-[-1px_0_0_var(--color-panel-dark-line)]">
-                  {statsLoading ? (
-                    <span className="block h-[23px] w-14 animate-pulse rounded bg-panel-dark-line" />
-                  ) : (
-                    <div className="font-montserrat text-[23px] font-bold leading-[1.2] tabular-nums text-white">{value ?? '—'}</div>
-                  )}
-                  <div className="mt-[7px] min-h-[24px] font-montserrat text-[8px] font-bold leading-[1.5] tracking-[.13em] text-panel-dark-label">{label}</div>
-                </div>
-              );
-            })}
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-0 overflow-hidden">
+            {PILLARS.map(({ title, text }) => (
+              <div key={title} className="border-t border-panel-dark-line px-[22px] pb-1 pt-5 shadow-[-1px_0_0_var(--color-panel-dark-line)]">
+                <div className="font-montserrat text-[10px] font-bold leading-[1.4] tracking-[.13em] text-white">{title.toUpperCase()}</div>
+                <p className="mt-[7px] max-w-[30ch] font-sans text-[12.5px] font-light leading-[1.5] text-panel-dark-text">{text}</p>
+              </div>
+            ))}
           </div>
         </div>
 

@@ -3,10 +3,11 @@
  * dividido desde `dashboardController.ts`, 600 líneas). Migrado de
  * `api/controllers/dashboardController/` a módulo con capas completas en la
  * tanda 2026-08-27. `registerDashboardRoutes` mantiene la misma firma que
- * usaba `api/routes.ts`; `queryClientsCount`/`queryDevicesCount`/
- * `queryAgentsStats`/`queryMonthlyVolume` mantienen la firma que consumía
- * `authController/login-stats.ts` (reusa las mismas queries globales del
- * dashboard para la tira de métricas de /login, con `cid=null`).
+ * usaba `api/routes.ts`. `queryClientsCount`/`queryDevicesCount`/
+ * `queryAgentsStats`/`queryMonthlyVolume` se exportaban para la tira de
+ * métricas pública de /login, eliminada el 14/09/2026 (exponía cifras de toda
+ * la red sin sesión); quedan exportadas por si otro consumidor autenticado
+ * las necesita.
  */
 import type { Knex } from "knex";
 import { KnexDashboardRepository } from "./infrastructure/database/knex-dashboard-repository";

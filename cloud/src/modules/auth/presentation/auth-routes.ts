@@ -107,13 +107,9 @@ export function registerAuthRoutes(
     handler: ctrl.portalLogin,
   });
 
-  // Público (sin `preHandler`): la tira de métricas del panel de marca en /login
-  // se ve antes de autenticar. Cacheado en Redis (ver login-stats-controller.ts)
-  // para que quedar expuesto sin sesión no habilite pegarle a la DB en cada carga.
-  fastify.get("/api/v1/portal/login-stats", {
-    config: { rateLimit: { max: 30, timeWindow: "1 minute" } },
-    handler: ctrl.loginStats,
-  });
+  // `GET /portal/login-stats` (cifras de toda la red en /login, sin sesión) se
+  // eliminó el 14/09/2026: un cliente que llegaba al login veía cuántos otros
+  // clientes hay y cuánto pesan, y antes de autenticar no hay a quién filtrar.
 
   fastify.post("/api/v1/portal/logout", { handler: ctrl.portalLogout });
 
