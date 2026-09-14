@@ -69,7 +69,7 @@ type RowsState = ReturnType<typeof useRowsState>;
 
 /** `isLatest`: respuestas de un request ya superado no tocan la tabla (`useLatestRequest`). */
 async function loadRows(st: RowsState, f: DirectoryFilters, page: number, pageSize: number, isLatest: () => boolean) {
-  st.setLoading(true);
+  if (!st.rows.length) st.setLoading(true);
   st.setError('');
   try {
     const data = await fetchRemoteActionsPage(f.effectiveQuery, f.segment, f.sortDir, page, pageSize);

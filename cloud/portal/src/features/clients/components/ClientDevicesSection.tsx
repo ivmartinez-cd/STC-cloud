@@ -49,7 +49,7 @@ export default function ClientDevicesSection({ clientId, active }: { clientId: s
             skeletonRows={fit.rows}
           />
         </div>
-        {!dir.error && !dir.loading && (
+        {!dir.error && (
           <ClientDevicesPagination page={dir.page} totalPages={dir.totalPages} total={dir.total} pageSize={dir.pageSize} onPageChange={dir.setPage} />
         )}
       </div>

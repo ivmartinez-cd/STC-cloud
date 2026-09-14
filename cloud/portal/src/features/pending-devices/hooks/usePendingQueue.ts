@@ -72,7 +72,7 @@ type RowsState = ReturnType<typeof useRowsState>;
 /** Cuerpo de la carga, separado de `useRows` para no cruzar el límite de 20
  * líneas/función de la guía. `isLatest` descarta respuestas de requests viejos. */
 async function loadRows(st: RowsState, filters: Filters, page: number, pageSize: number, isLatest: () => boolean) {
-  st.setLoading(true);
+  if (!st.rows.length) st.setLoading(true);
   st.setError('');
   try {
     const data = await fetchQueuePage(filters, page, pageSize);

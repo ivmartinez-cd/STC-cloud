@@ -154,7 +154,7 @@ const Agents = () => {
           />
         </div>
 
-        {!dir.error && !dir.loading && (
+        {!dir.error && (
           <AgentsPagination page={dir.page} totalPages={dir.totalPages} total={dir.total} pageSize={dir.pageSize} staleCount={dir.summary?.stale_over_6h ?? 0} onPageChange={dir.setPage} />
         )}
       </div>

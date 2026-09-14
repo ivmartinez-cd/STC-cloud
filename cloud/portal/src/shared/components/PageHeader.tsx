@@ -22,7 +22,10 @@ export default function PageHeader({ eyebrow, title, subtitle, actions }: Props)
           <span className="font-montserrat text-[9px] font-bold uppercase leading-none tracking-[.19em] text-ink-300">{eyebrow}</span>
         </div>
         <h1 className="m-0 font-montserrat text-[34px] font-extrabold short:text-[26px] leading-[1.05] tracking-[-.018em] text-ink-900">{title}</h1>
-        {subtitle && <p className="mt-2.5 short:mt-1.5 font-sans text-[12.5px] text-ink-400">{subtitle}</p>}
+        {/* Siempre presente: la bajada llega con el resumen (un fetch aparte) y si
+            apareciera después, el encabezado crecería y la tabla de abajo tendría
+            que recalcular sus filas → refetch → parpadeo. */}
+        <p className="mt-2.5 min-h-[1.25em] short:mt-1.5 font-sans text-[12.5px] text-ink-400">{subtitle || ' '}</p>
       </div>
       {actions && <div className="flex flex-wrap gap-2.5">{actions}</div>}
     </div>

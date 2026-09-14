@@ -118,7 +118,7 @@ export default function RemoteActions() {
           />
         </div>
 
-        {!dir.error && !dir.loading && (
+        {!dir.error && (
           <RemoteActionsPagination page={dir.page} totalPages={dir.totalPages} total={dir.total} pageSize={dir.pageSize} onPageChange={dir.setPage} />
         )}
       </div>

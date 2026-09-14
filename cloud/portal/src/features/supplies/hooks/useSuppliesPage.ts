@@ -67,7 +67,7 @@ type RowsState = ReturnType<typeof useRowsState>;
 
 /** `isLatest`: respuestas de un request ya superado no tocan la tabla (`useLatestRequest`). */
 async function loadSupplies(st: RowsState, f: Filters, page: number, pageSize: number, isLatest: () => boolean) {
-  st.setLoading(true);
+  if (!st.items.length) st.setLoading(true);
   st.setError('');
   try {
     const data = await api.get<FleetSuppliesResponse>(`/supplies?${buildSuppliesParams(f, page, pageSize).toString()}`);

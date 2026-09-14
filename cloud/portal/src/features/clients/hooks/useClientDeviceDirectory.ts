@@ -55,7 +55,7 @@ function useDeviceRows(clientId: string, filters: DeviceFilters, pageSize: numbe
 
   const fetchDirectory = useCallback(async () => {
     const isLatest = beginRequest();
-    setLoading(true);
+    if (!rows.length) setLoading(true);
     setError('');
     const params = new URLSearchParams({
       sort: sortField, dir: sortDir, limit: String(pageSize), offset: String(page * pageSize),

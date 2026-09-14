@@ -16,12 +16,14 @@ const BTN = 'p-2 bg-slate-50 text-slate-600 rounded-xl border border-slate-100 d
  * no hace falta ventana de números de página: sólo prev/next + "X–Y de N".
  */
 export default function SimplePagination({ page, pageSize, total, onPageChange }: Props) {
-  if (total <= pageSize) return null;
+  // Invisible en vez de ausente cuando no hace falta paginar: así el alto del
+  // contenedor no cambia al llegar los datos (mismo criterio que `HifiPagination`).
+  const hidden = total <= pageSize;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const from = page * pageSize + 1;
   const to = Math.min((page + 1) * pageSize, total);
   return (
-    <div className="flex items-center justify-between gap-3 p-3">
+    <div className={`flex items-center justify-between gap-3 p-3 ${hidden ? 'invisible' : ''}`} aria-hidden={hidden}>
       <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
         {from}–{to} de {total}
       </span>

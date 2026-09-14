@@ -58,7 +58,7 @@ function useDirectoryRows(filters: DirectoryFilters, pageSize: number) {
 
   const fetchDirectory = useCallback(async () => {
     const isLatest = beginRequest();
-    setLoading(true);
+    if (!rows.length) setLoading(true);
     setError('');
     const params = new URLSearchParams({ sort: sortField, dir: sortDir, limit: String(pageSize), offset: String(page * pageSize) });
     if (effectiveQuery) params.set('q', effectiveQuery);

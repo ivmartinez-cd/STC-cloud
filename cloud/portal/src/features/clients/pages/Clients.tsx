@@ -81,11 +81,12 @@ const Clients = () => {
           <h1 className="m-0 font-montserrat text-[34px] font-extrabold short:text-[26px] leading-[1.05] tracking-[-.018em] text-ink-900">
             Clientes
           </h1>
-          {dir.summary && (
-            <p className="mt-2.5 font-sans text-[12.5px] text-ink-400">
-              {fmt(dir.summary.clients_total)} empresas · {fmt(dir.summary.devices_total)} dispositivos gestionados · {fmt(dir.summary.monitors_total)} monitores instalados
-            </p>
-          )}
+          {/* Siempre presente (misma razón que en `PageHeader`): si apareciera con el resumen, la tabla recalcularía filas y parpadearía. */}
+          <p className="mt-2.5 min-h-[1.25em] font-sans text-[12.5px] text-ink-400">
+            {dir.summary
+              ? `${fmt(dir.summary.clients_total)} empresas · ${fmt(dir.summary.devices_total)} dispositivos gestionados · ${fmt(dir.summary.monitors_total)} monitores instalados`
+              : ' '}
+          </p>
         </div>
         <div className="flex gap-2.5">
           <button
@@ -134,7 +135,7 @@ const Clients = () => {
           />
         </div>
 
-        {!dir.error && !dir.loading && (
+        {!dir.error && (
           <ClientsPagination page={dir.page} totalPages={dir.totalPages} total={dir.total} pageSize={dir.pageSize} onPageChange={dir.setPage} />
         )}
       </div>

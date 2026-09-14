@@ -79,11 +79,16 @@ interface Props {
  * pantallas se migren en sus fases; queda documentada como "no usar en
  * pantallas hifi nuevas". */
 export default function HifiPagination({ page, totalPages, total, pageSize, itemLabel, onPageChange }: Props) {
-  if (total === 0) return null;
+  // Con 0 ítems se dibuja igual, invisible: el pie tiene que ocupar su alto
+  // ANTES de que lleguen los datos. Si no, `useFitRows` medía el contenedor
+  // sin pie, pedía una fila de más, al llegar el contenido aparecía el pie,
+  // el contenedor se achicaba, se volvía a pedir y la tabla parpadeaba
+  // (contenido → esqueleto → contenido) en todas las pantallas (14/09/2026).
+  const empty = total === 0;
   const from = page * pageSize + 1;
   const to = Math.min((page + 1) * pageSize, total);
   return (
-    <div className="flex flex-wrap items-center justify-between gap-2.5 px-5 py-3.5">
+    <div className={`flex flex-wrap items-center justify-between gap-2.5 px-5 py-3.5 ${empty ? 'invisible' : ''}`} aria-hidden={empty}>
       <div className="font-sans text-xs text-ink-400">{fmt(from)}–{fmt(to)} de {fmt(total)} {itemLabel}</div>
       <div className="flex flex-wrap items-center gap-1.5">
         <PrevButton disabled={page === 0} onClick={() => onPageChange(page - 1)} />

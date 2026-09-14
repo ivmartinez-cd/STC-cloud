@@ -150,7 +150,7 @@ export default function ScheduledReports() {
             onRun={actions.runNow} onTogglePause={actions.togglePause} onEdit={openEdit} onRemove={actions.remove} onDuplicate={actions.duplicate} onCreate={openCreate}
           />
         </div>
-        {!data.loading && <HifiPagination page={paging.page} totalPages={paging.totalPages} total={paging.total} pageSize={paging.pageSize} itemLabel="informes" onPageChange={paging.setPage} />}
+        {<HifiPagination page={paging.page} totalPages={paging.totalPages} total={paging.total} pageSize={paging.pageSize} itemLabel="informes" onPageChange={paging.setPage} />}
       </div>
 
       <ScheduledReportModal isOpen={modalOpen} onClose={() => setModalOpen(false)} onSaved={data.load} clients={data.clients} editing={editing} initialTemplate={template} />

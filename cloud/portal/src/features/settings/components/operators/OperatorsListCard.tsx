@@ -44,7 +44,7 @@ export default function OperatorsListCard(p: Props) {
           ? <div className="px-5 py-8 text-center font-sans text-[12.5px] text-ink-900">{p.error}</div>
           : <OperatorsTable users={pager.visible} currentUserId={p.currentUserId} loading={p.loading} onOpen={p.onOpen} skeletonRows={fit.rows} />}
       </div>
-      {ready && <HifiPagination page={pager.page} totalPages={pager.totalPages} total={pager.total} pageSize={pager.pageSize} itemLabel="operadores" onPageChange={pager.setPage} />}
+      {<HifiPagination page={pager.page} totalPages={pager.totalPages} total={pager.total} pageSize={pager.pageSize} itemLabel="operadores" onPageChange={pager.setPage} />}
       {ready && <Footer users={p.users} />}
     </div>
   );

@@ -73,7 +73,7 @@ function useDirectoryRows(filters: DirectoryFilters, pageSize: number) {
 
   const fetchDirectory = useCallback(async () => {
     const isLatest = beginRequest();
-    st.setLoading(true);
+    if (!st.groups.length) st.setLoading(true);
     st.setError('');
     try {
       const data = await fetchDirectoryPage(filters, page, pageSize);

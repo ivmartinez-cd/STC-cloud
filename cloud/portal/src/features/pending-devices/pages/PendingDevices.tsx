@@ -75,7 +75,7 @@ const PendingDevices = () => {
             onRowAction={onRowAction}
           />
         </div>
-        {!dir.error && !dir.loading && (
+        {!dir.error && (
           <PendingQueuePagination page={dir.page} totalPages={dir.totalPages} total={dir.total} pageSize={dir.pageSize} waiting7dPlus={dir.summary?.waiting_7d_plus ?? 0} onPageChange={dir.setPage} />
         )}
       </div>

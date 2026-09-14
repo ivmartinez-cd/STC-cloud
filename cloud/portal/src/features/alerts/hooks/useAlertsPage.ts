@@ -162,7 +162,7 @@ type AlertRowsState = ReturnType<typeof useAlertRowsState>;
 
 /** `isLatest`: respuestas de un request ya superado no tocan la tabla (`useLatestRequest`). */
 async function loadAlertPage(st: AlertRowsState, filters: AlertFiltersState, page: number, pageSize: number, isLatest: () => boolean) {
-  st.setLoading(true);
+  if (!st.alerts.length) st.setLoading(true);
   st.setError('');
   try {
     const { items, total } = await requestAlertPage(filters, page, pageSize);

@@ -134,7 +134,7 @@ export default function ReportsDetailTable({ period, rows, paging, loading, erro
         </div>
       </div>
       {ready && rows.length > 0 && <TotalsRow rows={rows} />}
-      {ready && <HifiPagination page={paging.page} totalPages={paging.totalPages} total={paging.total} pageSize={paging.pageSize} itemLabel="equipos" onPageChange={paging.setPage} />}
+      {<HifiPagination page={paging.page} totalPages={paging.totalPages} total={paging.total} pageSize={paging.pageSize} itemLabel="equipos" onPageChange={paging.setPage} />}
     </div>
   );
 }

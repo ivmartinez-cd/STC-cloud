@@ -153,7 +153,7 @@ export default function FeedbackCard() {
           />
         ))}
       </div>
-      {!loading && !expanded && <HifiPagination page={pager.page} totalPages={pager.totalPages} total={pager.total} pageSize={pager.pageSize} itemLabel="reportes" onPageChange={pager.setPage} />}
+      {!expanded && <HifiPagination page={pager.page} totalPages={pager.totalPages} total={pager.total} pageSize={pager.pageSize} itemLabel="reportes" onPageChange={pager.setPage} />}
     </div>
   );
 }

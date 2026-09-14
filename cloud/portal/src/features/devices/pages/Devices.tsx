@@ -35,7 +35,7 @@ const Devices = () => {
             selected={rowSelection.selected} allSelected={rowSelection.allSelected} onToggleRow={rowSelection.toggle} onToggleAll={rowSelection.toggleAll}
           />
         </div>
-        {!dir.error && !dir.loading && (
+        {!dir.error && (
           <DeviceInventoryPagination page={dir.page} totalPages={dir.totalPages} total={dir.total} pageSize={dir.pageSize} clientsInPage={dir.clientCount} clientsTotal={dir.summary?.clients_total ?? null} onPageChange={dir.setPage} />
         )}
       </div>

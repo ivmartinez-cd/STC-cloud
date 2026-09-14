@@ -59,7 +59,7 @@ async function requestPage(f: Filters, page: number, pageSize: number): Promise<
 
 /** `isLatest`: respuestas de un request ya superado no tocan la tabla (`useLatestRequest`). */
 async function loadRows(st: RowsState, f: Filters, page: number, pageSize: number, isLatest: () => boolean) {
-  st.setLoading(true);
+  if (!st.items.length) st.setLoading(true);
   try {
     const { list, stats } = await requestPage(f, page, pageSize);
     if (!isLatest()) return;
