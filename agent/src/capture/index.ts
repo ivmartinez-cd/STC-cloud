@@ -102,13 +102,13 @@ export interface CaptureOutcome {
 }
 
 async function identify(ip: string, ports: PortMap, snmp: SnmpClient, log?: CaptureContext['log']): Promise<DeviceIdentity | null> {
+  // 1. SNMP (barato: 2 PDUs para descartar no-impresoras)
+  const viaSnmp = await snmpIdentity(ip, snmp);
+  if (viaSnmp) return viaSnmp;
+
   const hasWeb = ports.http || ports.https;
 
-  // 1. Sondas EWS de las familias primero (sólo si hay puerto de impresora o web,
-  //    timeout corto): el EWS suele dar marca/modelo exactos de una, y no
-  //    depende de que SNMP esté habilitado o no filtrado por la política de red
-  //    del cliente (decisión de Iván, 14/09/2026 — antes SNMP iba primero por
-  //    ser más barato para descartar rápido hosts que no son impresoras).
+  // 2. Sondas EWS de las familias (sólo si hay puerto de impresora o web). Timeout corto.
   if (hasWeb) {
     const http = (path: string, protocol: 'http' | 'https' = 'http') => fetchHttp(ip, path, protocol, 0, PROBE_HTTP_TIMEOUT);
     const base = { ip, ports, http, snmp, pjl: () => readDeviceViaPJL(ip), ipp: () => readDeviceViaIPP(ip), log };
@@ -124,11 +124,6 @@ async function identify(ip: string, ports: PortMap, snmp: SnmpClient, log?: Capt
       }
     }
   }
-  // 2. SNMP (barato: 2 PDUs) — respaldo cuando no hay web, o cuando ninguna
-  //    familia identificó al equipo por EWS.
-  const viaSnmp = await snmpIdentity(ip, snmp);
-  if (viaSnmp) return viaSnmp;
-
   // 3. PJL INFO ID (9100)
   if (ports.jetdirect) {
     const pjl = await readDeviceViaPJL(ip);

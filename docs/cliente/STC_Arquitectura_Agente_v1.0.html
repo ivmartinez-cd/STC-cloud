@@ -647,13 +647,12 @@
        ├─ ¿9100 o 631 abiertos? ──► impresora confirmada
        │
        └─ ¿solo 80/443 abiertos? ──► podría ser router/NAS/PC
-               └─ las sondas EWS de las familias (pocos requests
-                  cortos, timeout acotado) se prueban primero; si
-                  ninguna identifica al equipo como impresora,
-                  recién entonces se intenta SNMP como respaldo
+               └─ se exige validación SNMP como impresora antes de
+                  intentar HTTP, evitando falsos positivos de
+                  escaneo web sobre infraestructura de red
 
-  2. IDENTIFICAR    sondas EWS de las familias → SNMP (sysObjectID,
-                    hrDeviceDescr) → PJL → IPP
+  2. IDENTIFICAR    SNMP (sysObjectID, hrDeviceDescr) → sondas EWS de
+                    las familias → PJL → IPP
 
   3. RESOLVER       perfil del modelo exacto, si existe
                     → familia de protocolo por puntaje
