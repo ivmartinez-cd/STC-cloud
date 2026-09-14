@@ -101,6 +101,22 @@ describe('Duplicados — coincidencias reales siguen detectándose', () => {
     assert.ok('a_hostname' in pair!, 'la fila expone a_hostname');
   });
 
+  test('una MAC de relleno compartida por 3 equipos con seriales distintos → 0 pares', async () => {
+    // Caso real de ISSN (14/09/2026): tres HP 604CDD distintas reportan
+    // `00:00:f0:a0:00:00`. Una MAC física no puede estar en tres equipos vivos.
+    const mac = '00:00:f0:a0:00:00';
+    const serials = [`CNB1N3T4N8${ts}`, `CNB2N2WYBD${ts}`, `CNB1N3T4MM${ts}`];
+    for (const [i, serial] of serials.entries()) {
+      await sync([{ device_id: serial, ip: `10.31.1.${70 + i}`, mac, hostname: 'HP604CDD', model: 'HP LaserJet 604CDD', total_pages: 5 }]);
+    }
+    const rows = await duplicates();
+    for (let i = 0; i < serials.length; i++) {
+      for (let j = i + 1; j < serials.length; j++) {
+        assert.equal(pairOf(rows, serials[i], serials[j]), undefined, `${serials[i]} ↔ ${serials[j]} no es duplicado: la MAC es de relleno`);
+      }
+    }
+  });
+
   // No hay test del caso `ghost_same_ip` vía API: el sync nunca crea un
   // "fantasma" (serial = IP) al lado de un equipo real en la misma IP — la
   // escalera serial → mac → ip lo adopta/fusiona. Sólo aparece con datos

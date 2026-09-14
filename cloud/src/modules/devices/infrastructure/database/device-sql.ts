@@ -31,6 +31,20 @@ const DISTINCT_IDENTIFYING_SERIALS_SQL =
   `(${IDENTIFYING_SERIAL_SQL("a")} AND ${IDENTIFYING_SERIAL_SQL("b")}
      AND upper(btrim(a.serial_number)) <> upper(btrim(b.serial_number)))`;
 
+/**
+ * "Misma MAC" sólo cuenta si la MAC identifica algo. Hay firmware que reporta
+ * una MAC de relleno (HP 604CDD en ISSN: tres equipos distintos, tres
+ * seriales, tres IPs, todos con `00:00:f0:a0:00:00`), y eso generaba tres
+ * "pares duplicados" que no eran. Una MAC física no puede estar en más de un
+ * equipo vivo a la vez; se toleran dos (el caso real: serial mal leído sobre
+ * la misma placa) y a partir del tercero se la trata como relleno.
+ */
+const SAME_MAC_SQL = `(a.mac IS NOT NULL AND a.mac = b.mac
+     AND a.mac !~* '^(00:00:00:00:00:00|ff:ff:ff:ff:ff:ff)$'
+     AND (SELECT count(*) FROM devices m
+            WHERE m.client_id = a.client_id AND m.mac = a.mac
+              AND m.decommissioned_at IS NULL AND m.merged_into IS NULL) <= 2)`;
+
 const HOSTNAME_MATCH_SQL =
   `(a.hostname IS NOT NULL AND btrim(a.hostname) <> '' AND lower(btrim(a.hostname)) = lower(btrim(b.hostname))
      AND lower(btrim(a.hostname)) <> lower(btrim(coalesce(a.model, '')))
@@ -44,7 +58,7 @@ export const DUPLICATES_SQL = (byAgent: boolean) => `SELECT a.id AS a_id, a.seri
             b.brand AS b_brand, b.model AS b_model, b.name AS b_name, b.hostname AS b_hostname,
             LEAST(a.created_at, b.created_at) AS detected_at,
             CASE
-              WHEN a.mac IS NOT NULL AND a.mac = b.mac THEN 'same_mac'
+              WHEN ${SAME_MAC_SQL} THEN 'same_mac'
               WHEN a.serial_number IS NOT NULL AND upper(btrim(a.serial_number)) = upper(btrim(b.serial_number))
                 AND a.agent_id <> b.agent_id
                 THEN 'same_serial_different_monitor'
@@ -60,7 +74,7 @@ export const DUPLICATES_SQL = (byAgent: boolean) => `SELECT a.id AS a_id, a.seri
         AND a.decommissioned_at IS NULL AND a.merged_into IS NULL
         AND b.decommissioned_at IS NULL AND b.merged_into IS NULL
         AND (
-          (a.mac IS NOT NULL AND a.mac = b.mac)
+          ${SAME_MAC_SQL}
           OR (NOT ${DISTINCT_IDENTIFYING_SERIALS_SQL} AND (
                (a.agent_id = b.agent_id AND a.ip_address IS NOT NULL AND a.ip_address = b.ip_address)
             OR (a.serial_number IS NOT NULL AND upper(btrim(a.serial_number)) = upper(btrim(b.serial_number)))
