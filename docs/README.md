@@ -7,7 +7,12 @@ Documentación del proyecto **STC Cloud**, organizada por audiencia. Todo lo lis
 ## 🚀 1. Documentos para PRESENTAR / ENTREGAR (Print-Ready HTML)
 *Ubicados en `docs/cliente/`, diseñados con estilos A4. Ábralos en el navegador y presione `Ctrl + P` (con "Gráficos de fondo" activos) para exportarlos a PDF.*
 
-### Para la Gerencia de Sistemas (IT)
+### Para aceptación del cliente — un solo archivo
+| Documento | Propósito |
+| :--- | :--- |
+| **[Documento de Aceptación Técnica y de Seguridad](cliente/STC_Documento_Aceptacion_Seguridad_v1.0.html)** `v1.0` | **El único archivo a enviar para que el área de Seguridad Informática del cliente apruebe el despliegue.** Resume en 9 páginas: cómo funciona el sistema, el diagrama general de infraestructura (agentes, impresoras, API, protocolos y puertos), la arquitectura de seguridad, el estado honesto de la última auditoría, los dos modos de despliegue y el alcance exacto de los datos recolectados — cierra con una sección de firma. Referencia el resto de los documentos de esta tabla para el detalle exhaustivo de cada tema. **ENTREGAR.** |
+
+### Para la Gerencia de Sistemas (IT) — detalle exhaustivo
 | Documento | Propósito |
 | :--- | :--- |
 | **[Auditoría de Sistemas e IT](cliente/STC_Auditoria_Sistemas_IT_v2.1.html)** `v2.1` | Documento ancla para IT. Controles de seguridad vigentes: red Zero-Inbound, criptografía y HWID binding, descubrimiento de impresoras, autenticación de doble token, firma Ed25519 de firmware, tráfico SNMP, acceso remoto a EWS y retención de datos. Cubre en profundidad **el agente**. |
@@ -25,7 +30,7 @@ Documentación del proyecto **STC Cloud**, organizada por audiencia. Todo lo lis
 | **[Comparativa HP SDS vs STC Cloud](cliente/STC_Comparativa_HP_SDS_vs_STC_Cloud_v2.0.html)** | Comercial / Gerencia | Análisis competitivo frente a HP SDS Manager. |
 | **[Manual del Administrador de IT](cliente/STC_Manual_Administrador_IT_v1.5.html)** | Personal de Sistemas del Cliente | Configuración del portal, gestión de accesos y tokens, despliegue masivo, códigos de salida. **ENTREGAR.** |
 | **[Requisitos del Sistema Cliente](cliente/STC_Requisitos_Sistema_Cliente_v1.6.html)** | IT del Cliente Final | Requisitos de hardware y SO, puertos, cuenta de servicio, verificación SHA-256 del instalador y directorio de datos del agente. **ENTREGAR.** |
-| **[Manual de Usuario Cliente](cliente/STC_Manual_Usuario_Cliente_v1.6.html)** | Clientes Finales / Operadores | Guía visual del portal y lectura de reportes de impresión. **ENTREGAR.** |
+| **[Manual de Usuario Cliente](cliente/STC_Manual_Usuario_Cliente_v1.7.html)** | Clientes Finales / Operadores | Guía visual del portal y lectura de reportes de impresión. **ENTREGAR.** |
 
 ### Referencia técnica secundaria
 | Documento | Nota |
