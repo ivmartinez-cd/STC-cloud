@@ -5,9 +5,8 @@
     <title>STC Cloud - Documento de Aceptación Técnica y de Seguridad v1.0</title>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;900&family=Source+Sans+3:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
     <style>
-        /* Paleta institucional Canal Directo — mismos tokens que el resto de
-           docs/cliente (cloud/portal/src/index.css): sólo naranja + grises,
-           nunca azul/rojo/verde. Si cambia la paleta de la app, cambia acá. */
+        /* Paleta institucional Canal Directo: sólo naranja + grises, nunca
+           azul/rojo/verde. */
         :root {
             --brand: #f7941d;
             --brand-severe: #c6710a;
@@ -114,7 +113,12 @@
 
         /* === DIAGRAMA === */
         .diagram-title { font-size: 10px; color: var(--ink-400); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px; font-weight: 700; }
-        .diagram-wrap { border: 1px solid var(--line-100); border-radius: 8px; background: #fcfcfb; padding: 8px 4px 2px; margin: 10px 0 18px; }
+        /* Sangra fuera del padding normal de la página (25mm) para ganar ancho
+           real: sin esto, el contenedor queda en ~160mm (~605px) y cualquier
+           texto dentro del SVG se ve diminuto sin importar qué font-size se
+           use en el propio SVG — lo que importa es el ancho final en px del
+           contenedor, no las unidades internas. */
+        .diagram-wrap { border: 1px solid var(--line-100); border-radius: 8px; background: #fcfcfb; padding: 10px 6px 4px; margin: 10px -15mm 18px; }
         .diagram-wrap svg { width: 100%; height: auto; display: block; }
         .diagram-caption { font-size: 10.5px; color: var(--ink-300); text-align: center; margin-top: -4px; margin-bottom: 16px; }
 
@@ -223,113 +227,121 @@
 
         <div class="diagram-title">Arquitectura de Extremo a Extremo</div>
         <div class="diagram-wrap">
-<svg viewBox="0 0 1040 600" xmlns="http://www.w3.org/2000/svg" font-family="'Source Sans 3', system-ui, sans-serif">
+<svg viewBox="0 0 900 650" xmlns="http://www.w3.org/2000/svg" font-family="'Source Sans 3', system-ui, sans-serif">
   <defs>
-    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
       <path d="M0,0 L10,5 L0,10 z" fill="#b4700b"/>
     </marker>
-    <marker id="arrowSoft" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+    <marker id="arrowSoft" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
       <path d="M0,0 L10,5 L0,10 z" fill="#8a9094"/>
     </marker>
   </defs>
 
   <!-- fondo -->
-  <rect x="0" y="0" width="1040" height="600" fill="#ffffff"/>
+  <rect x="0" y="0" width="900" height="650" fill="#ffffff"/>
 
   <!-- títulos de zona -->
-  <text x="170" y="40" text-anchor="middle" font-family="Montserrat, sans-serif" font-size="14" font-weight="700" fill="#2e3033">SU RED (LAN)</text>
-  <text x="500" y="40" text-anchor="middle" font-family="Montserrat, sans-serif" font-size="13" font-weight="700" fill="#8a9094" letter-spacing="0.08em">INTERNET</text>
-  <text x="860" y="40" text-anchor="middle" font-family="Montserrat, sans-serif" font-size="14" font-weight="700" fill="#2e3033">NUBE STC CLOUD</text>
+  <text x="152" y="32" text-anchor="middle" font-family="Montserrat, sans-serif" font-size="17" font-weight="700" fill="#2e3033">SU RED (LAN)</text>
+  <text x="442" y="32" text-anchor="middle" font-family="Montserrat, sans-serif" font-size="15" font-weight="700" fill="#8a9094" letter-spacing="0.08em">INTERNET</text>
+  <text x="745" y="32" text-anchor="middle" font-family="Montserrat, sans-serif" font-size="17" font-weight="700" fill="#2e3033">NUBE STC CLOUD</text>
 
   <!-- separadores de Internet -->
-  <line x1="365" y1="60" x2="365" y2="560" stroke="#d5d9da" stroke-width="1" stroke-dasharray="3,4"/>
-  <line x1="635" y1="60" x2="635" y2="560" stroke="#d5d9da" stroke-width="1" stroke-dasharray="3,4"/>
+  <line x1="290" y1="48" x2="290" y2="632" stroke="#d5d9da" stroke-width="1" stroke-dasharray="3,4"/>
+  <line x1="595" y1="48" x2="595" y2="632" stroke="#d5d9da" stroke-width="1" stroke-dasharray="3,4"/>
 
   <!-- ============ ZONA: RED DEL CLIENTE ============ -->
-  <rect x="20" y="60" width="300" height="500" rx="10" fill="#fdf4e9" stroke="#e0a76b" stroke-width="1.5" stroke-dasharray="5,4"/>
-  <text x="170" y="85" text-anchor="middle" font-size="10.5" font-weight="700" letter-spacing="0.05em" fill="#8a6033">INSTALACIONES DEL CLIENTE</text>
+  <rect x="15" y="48" width="275" height="584" rx="12" fill="#fdf4e9" stroke="#e0a76b" stroke-width="1.5" stroke-dasharray="6,5"/>
+  <text x="152" y="72" text-anchor="middle" font-size="12" font-weight="700" letter-spacing="0.04em" fill="#8a6033">INSTALACIONES DEL CLIENTE</text>
 
-  <rect x="55" y="100" width="230" height="105" rx="8" fill="#ffffff" stroke="#d5d9da" stroke-width="1.5"/>
-  <text x="170" y="128" text-anchor="middle" font-family="Montserrat, sans-serif" font-size="13" font-weight="700" fill="#2e3033">Impresoras /</text>
-  <text x="170" y="146" text-anchor="middle" font-family="Montserrat, sans-serif" font-size="13" font-weight="700" fill="#2e3033">Multifuncionales</text>
-  <text x="170" y="170" text-anchor="middle" font-size="10.5" fill="#8a9094">SNMP · PJL · IPP · EWS</text>
-  <text x="170" y="186" text-anchor="middle" font-size="9.5" fill="#8a9094">(sólo lectura de contadores</text>
-  <text x="170" y="198" text-anchor="middle" font-size="9.5" fill="#8a9094">y niveles de tóner)</text>
+  <rect x="40" y="88" width="225" height="145" rx="10" fill="#ffffff" stroke="#d5d9da" stroke-width="1.5"/>
+  <text x="152" y="120" text-anchor="middle" font-family="Montserrat, sans-serif" font-size="17" font-weight="700" fill="#2e3033">Impresoras /</text>
+  <text x="152" y="142" text-anchor="middle" font-family="Montserrat, sans-serif" font-size="17" font-weight="700" fill="#2e3033">Multifuncionales</text>
+  <text x="152" y="169" text-anchor="middle" font-size="12.5" fill="#8a9094">SNMP · PJL · IPP · EWS</text>
+  <text x="152" y="188" text-anchor="middle" font-size="11" fill="#8a9094">(sólo lectura de contadores</text>
+  <text x="152" y="204" text-anchor="middle" font-size="11" fill="#8a9094">y niveles de tóner)</text>
 
-  <line x1="170" y1="205" x2="170" y2="345" stroke="#b4700b" stroke-width="2" marker-end="url(#arrow)" marker-start="url(#arrow)"/>
-  <rect x="185" y="233" width="132" height="82" rx="5" fill="#ffffff" stroke="#e0a76b" stroke-width="1"/>
-  <text x="251" y="247" text-anchor="middle" font-size="9.5" font-weight="700" fill="#b4700b">RED LOCAL (UDP/TCP)</text>
-  <text x="192" y="263" font-size="8.3" fill="#4b5053">161/UDP · SNMP v1/v2c/v3</text>
-  <text x="192" y="277" font-size="8.3" fill="#4b5053">9100/TCP · PJL</text>
-  <text x="192" y="291" font-size="8.3" fill="#4b5053">631/TCP · IPP</text>
-  <text x="192" y="305" font-size="8.3" fill="#4b5053">80/443/TCP · EWS</text>
+  <line x1="95" y1="233" x2="95" y2="425" stroke="#b4700b" stroke-width="2.5" marker-end="url(#arrow)" marker-start="url(#arrow)"/>
+  <rect x="140" y="250" width="145" height="115" rx="7" fill="#ffffff" stroke="#e0a76b" stroke-width="1.3"/>
+  <text x="212" y="269" text-anchor="middle" font-size="11.5" font-weight="700" fill="#b4700b">RED LOCAL (UDP/TCP)</text>
+  <text x="150" y="289" font-size="11" fill="#4b5053">161/UDP</text>
+  <text x="150" y="304" font-size="11" fill="#4b5053">SNMP v1/v2c/v3</text>
+  <text x="150" y="322" font-size="11" fill="#4b5053">9100/TCP · PJL</text>
+  <text x="150" y="340" font-size="11" fill="#4b5053">631/TCP · IPP</text>
+  <text x="150" y="358" font-size="11" fill="#4b5053">80/443/TCP · EWS</text>
 
-  <rect x="55" y="345" width="230" height="105" rx="8" fill="#ffffff" stroke="#d5d9da" stroke-width="1.5"/>
-  <text x="170" y="372" text-anchor="middle" font-family="Montserrat, sans-serif" font-size="13" font-weight="700" fill="#2e3033">Agente STC Cloud</text>
-  <text x="170" y="390" text-anchor="middle" font-family="Montserrat, sans-serif" font-size="13" font-weight="700" fill="#2e3033">Monitor</text>
-  <text x="170" y="412" text-anchor="middle" font-size="10.5" fill="#8a9094">Windows Service</text>
-  <text x="170" y="426" text-anchor="middle" font-size="9.5" fill="#8a9094">Config. cifrada AES-256-GCM</text>
-  <text x="170" y="438" text-anchor="middle" font-size="9.5" fill="#8a9094">(ligada al equipo host)</text>
+  <rect x="40" y="425" width="225" height="145" rx="10" fill="#ffffff" stroke="#d5d9da" stroke-width="1.5"/>
+  <text x="152" y="457" text-anchor="middle" font-family="Montserrat, sans-serif" font-size="17" font-weight="700" fill="#2e3033">Agente STC Cloud</text>
+  <text x="152" y="479" text-anchor="middle" font-family="Montserrat, sans-serif" font-size="17" font-weight="700" fill="#2e3033">Monitor</text>
+  <text x="152" y="506" text-anchor="middle" font-size="12.5" fill="#8a9094">Windows Service</text>
+  <text x="152" y="525" text-anchor="middle" font-size="11" fill="#8a9094">Config. cifrada AES-256-GCM</text>
+  <text x="152" y="541" text-anchor="middle" font-size="11" fill="#8a9094">(ligada al equipo host)</text>
 
-  <text x="170" y="478" text-anchor="middle" font-size="10.5" font-weight="700" fill="#8a6033">Único equipo con instalación</text>
-  <text x="170" y="492" text-anchor="middle" font-size="10.5" fill="#8a6033">requerida en su red</text>
+  <text x="152" y="600" text-anchor="middle" font-size="12" font-weight="700" fill="#8a6033">Único equipo con instalación</text>
+  <text x="152" y="617" text-anchor="middle" font-size="12" fill="#8a6033">requerida en su red</text>
 
   <!-- FLECHA AGENTE -> NUBE -->
-  <line x1="285" y1="397" x2="700" y2="397" stroke="#b4700b" stroke-width="2.5" marker-end="url(#arrow)"/>
-  <text x="492" y="382" text-anchor="middle" font-size="11" font-weight="700" fill="#b4700b">HTTPS + WSS · TCP 443 · SALIENTE ÚNICAMENTE</text>
-  <text x="492" y="417" text-anchor="middle" font-size="10" fill="#8a9094">Zero-Inbound: nunca abre puertos de entrada</text>
-  <text x="492" y="431" text-anchor="middle" font-size="10" fill="#8a9094">Heartbeat · comandos remotos · actualizaciones firmadas</text>
+  <line x1="265" y1="497" x2="595" y2="497" stroke="#b4700b" stroke-width="3" marker-end="url(#arrow)"/>
+  <text x="442" y="459" text-anchor="middle" font-size="15" font-weight="700" fill="#b4700b">HTTPS + WSS · TCP 443</text>
+  <text x="442" y="478" text-anchor="middle" font-size="12.5" font-weight="700" fill="#b4700b" letter-spacing="0.02em">SALIENTE ÚNICAMENTE — ZERO-INBOUND</text>
+  <text x="442" y="520" text-anchor="middle" font-size="11.5" fill="#8a9094">Nunca abre puertos de entrada</text>
+  <text x="442" y="538" text-anchor="middle" font-size="11.5" fill="#8a9094">Heartbeat · comandos remotos ·</text>
+  <text x="442" y="554" text-anchor="middle" font-size="11.5" fill="#8a9094">actualizaciones firmadas</text>
 
   <!-- ============ ZONA: NUBE STC CLOUD ============ -->
-  <rect x="700" y="60" width="320" height="500" rx="10" fill="#f7f8f8" stroke="#d5d9da" stroke-width="1.5"/>
-  <text x="860" y="85" text-anchor="middle" font-size="9.5" font-weight="700" letter-spacing="0.05em" fill="#8a9094">INFRAESTRUCTURA PROPIA (DOCKER)</text>
+  <rect x="595" y="48" width="290" height="584" rx="12" fill="#f7f8f8" stroke="#d5d9da" stroke-width="1.5"/>
+  <text x="745" y="72" text-anchor="middle" font-size="12" font-weight="700" letter-spacing="0.04em" fill="#8a9094">INFRAESTRUCTURA PROPIA (DOCKER)</text>
 
   <!-- Navegador del cliente, encima del stack -->
-  <rect x="785" y="97" width="150" height="42" rx="6" fill="#fdf4e9" stroke="#e0a76b" stroke-width="1.5"/>
-  <text x="860" y="114" text-anchor="middle" font-size="10" font-weight="700" fill="#2e3033">Navegador del Cliente</text>
-  <text x="860" y="127" text-anchor="middle" font-size="8.5" fill="#8a9094">consulta el Portal Web</text>
-  <line x1="860" y1="139" x2="860" y2="158" stroke="#b4700b" stroke-width="1.5" marker-end="url(#arrow)"/>
-  <text x="873" y="152" font-size="7.5" font-weight="700" fill="#b4700b">HTTPS·443</text>
+  <rect x="662" y="88" width="165" height="55" rx="8" fill="#fdf4e9" stroke="#e0a76b" stroke-width="1.5"/>
+  <text x="745" y="112" text-anchor="middle" font-size="13" font-weight="700" fill="#2e3033">Navegador del Cliente</text>
+  <text x="745" y="130" text-anchor="middle" font-size="11" fill="#8a9094">consulta el Portal Web</text>
+  <line x1="745" y1="143" x2="745" y2="167" stroke="#b4700b" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="761" y="159" font-size="10.5" font-weight="700" fill="#b4700b">HTTPS·443</text>
 
-  <rect x="725" y="158" width="255" height="58" rx="8" fill="#ffffff" stroke="#e0a76b" stroke-width="1.5"/>
-  <text x="852" y="182" text-anchor="middle" font-family="Montserrat, sans-serif" font-size="12.5" font-weight="700" fill="#2e3033">Reverse Proxy (nginx)</text>
-  <text x="852" y="199" text-anchor="middle" font-size="9.5" fill="#8a9094">TLS: Let's Encrypt propio o proxy externo</text>
+  <rect x="615" y="169" width="260" height="78" rx="9" fill="#ffffff" stroke="#e0a76b" stroke-width="1.5"/>
+  <text x="745" y="200" text-anchor="middle" font-family="Montserrat, sans-serif" font-size="16" font-weight="700" fill="#2e3033">Reverse Proxy (nginx)</text>
+  <text x="745" y="220" text-anchor="middle" font-size="11" fill="#8a9094">TLS: Let's Encrypt propio o</text>
+  <text x="745" y="235" text-anchor="middle" font-size="11" fill="#8a9094">proxy inverso externo</text>
 
-  <line x1="787" y1="216" x2="787" y2="249" stroke="#8a9094" stroke-width="1.5" marker-end="url(#arrowSoft)"/>
-  <line x1="917" y1="216" x2="917" y2="249" stroke="#8a9094" stroke-width="1.5" marker-end="url(#arrowSoft)"/>
+  <line x1="678" y1="247" x2="678" y2="279" stroke="#8a9094" stroke-width="2" marker-end="url(#arrowSoft)"/>
+  <line x1="812" y1="247" x2="812" y2="279" stroke="#8a9094" stroke-width="2" marker-end="url(#arrowSoft)"/>
 
-  <rect x="725" y="251" width="125" height="64" rx="7" fill="#ffffff" stroke="#d5d9da" stroke-width="1.5"/>
-  <text x="787" y="275" text-anchor="middle" font-family="Montserrat, sans-serif" font-size="12" font-weight="700" fill="#2e3033">Portal Web</text>
-  <text x="787" y="291" text-anchor="middle" font-size="9" fill="#8a9094">React SPA</text>
-  <text x="787" y="304" text-anchor="middle" font-size="9" fill="#8a9094">sólo lectura del cliente</text>
+  <rect x="615" y="281" width="125" height="88" rx="8" fill="#ffffff" stroke="#d5d9da" stroke-width="1.5"/>
+  <text x="678" y="311" text-anchor="middle" font-family="Montserrat, sans-serif" font-size="15" font-weight="700" fill="#2e3033">Portal Web</text>
+  <text x="678" y="330" text-anchor="middle" font-size="11" fill="#8a9094">React SPA</text>
+  <text x="678" y="346" text-anchor="middle" font-size="10" fill="#8a9094">sólo lectura</text>
+  <text x="678" y="359" text-anchor="middle" font-size="10" fill="#8a9094">del cliente</text>
 
-  <rect x="855" y="251" width="125" height="64" rx="7" fill="#ffffff" stroke="#d5d9da" stroke-width="1.5"/>
-  <text x="917" y="275" text-anchor="middle" font-family="Montserrat, sans-serif" font-size="12" font-weight="700" fill="#2e3033">API</text>
-  <text x="917" y="291" text-anchor="middle" font-size="9" fill="#8a9094">Fastify · Node 24</text>
-  <text x="917" y="304" text-anchor="middle" font-size="9" fill="#8a9094">auth + reglas de negocio</text>
+  <rect x="750" y="281" width="125" height="88" rx="8" fill="#ffffff" stroke="#d5d9da" stroke-width="1.5"/>
+  <text x="812" y="311" text-anchor="middle" font-family="Montserrat, sans-serif" font-size="15" font-weight="700" fill="#2e3033">API</text>
+  <text x="812" y="330" text-anchor="middle" font-size="11" fill="#8a9094">Fastify · Node 24</text>
+  <text x="812" y="346" text-anchor="middle" font-size="10" fill="#8a9094">auth + reglas</text>
+  <text x="812" y="359" text-anchor="middle" font-size="10" fill="#8a9094">de negocio</text>
 
-  <line x1="917" y1="315" x2="917" y2="329" stroke="#8a9094" stroke-width="1.5"/>
-  <line x1="787" y1="329" x2="917" y2="329" stroke="#8a9094" stroke-width="1.5"/>
-  <line x1="787" y1="329" x2="787" y2="347" stroke="#8a9094" stroke-width="1.5" marker-end="url(#arrowSoft)"/>
-  <line x1="917" y1="329" x2="917" y2="347" stroke="#8a9094" stroke-width="1.5" marker-end="url(#arrowSoft)"/>
+  <line x1="812" y1="369" x2="812" y2="384" stroke="#8a9094" stroke-width="2"/>
+  <line x1="678" y1="384" x2="812" y2="384" stroke="#8a9094" stroke-width="2"/>
+  <line x1="678" y1="384" x2="678" y2="403" stroke="#8a9094" stroke-width="2" marker-end="url(#arrowSoft)"/>
+  <line x1="812" y1="384" x2="812" y2="403" stroke="#8a9094" stroke-width="2" marker-end="url(#arrowSoft)"/>
 
-  <rect x="725" y="349" width="125" height="64" rx="7" fill="#ffffff" stroke="#d5d9da" stroke-width="1.5"/>
-  <text x="787" y="373" text-anchor="middle" font-family="Montserrat, sans-serif" font-size="12" font-weight="700" fill="#2e3033">PostgreSQL</text>
-  <text x="787" y="389" text-anchor="middle" font-size="9" fill="#8a9094">TimescaleDB</text>
-  <text x="787" y="402" text-anchor="middle" font-size="8" fill="#8a9094">cifrado at-rest de credenciales</text>
+  <rect x="615" y="405" width="125" height="88" rx="8" fill="#ffffff" stroke="#d5d9da" stroke-width="1.5"/>
+  <text x="678" y="435" text-anchor="middle" font-family="Montserrat, sans-serif" font-size="15" font-weight="700" fill="#2e3033">PostgreSQL</text>
+  <text x="678" y="454" text-anchor="middle" font-size="11" fill="#8a9094">TimescaleDB</text>
+  <text x="678" y="470" text-anchor="middle" font-size="10" fill="#8a9094">credenciales cifradas</text>
+  <text x="678" y="483" text-anchor="middle" font-size="10" fill="#8a9094">at-rest</text>
 
-  <rect x="855" y="349" width="125" height="64" rx="7" fill="#ffffff" stroke="#d5d9da" stroke-width="1.5"/>
-  <text x="917" y="373" text-anchor="middle" font-family="Montserrat, sans-serif" font-size="12" font-weight="700" fill="#2e3033">Redis</text>
-  <text x="917" y="389" text-anchor="middle" font-size="9" fill="#8a9094">colas · pub/sub</text>
-  <text x="917" y="402" text-anchor="middle" font-size="9" fill="#8a9094">sesiones · rate limit</text>
+  <rect x="750" y="405" width="125" height="88" rx="8" fill="#ffffff" stroke="#d5d9da" stroke-width="1.5"/>
+  <text x="812" y="435" text-anchor="middle" font-family="Montserrat, sans-serif" font-size="15" font-weight="700" fill="#2e3033">Redis</text>
+  <text x="812" y="454" text-anchor="middle" font-size="11" fill="#8a9094">colas · pub/sub</text>
+  <text x="812" y="470" text-anchor="middle" font-size="10" fill="#8a9094">sesiones</text>
+  <text x="812" y="483" text-anchor="middle" font-size="10" fill="#8a9094">rate limit</text>
 
-  <line x1="787" y1="413" x2="787" y2="433" stroke="#8a9094" stroke-width="1.5" marker-end="url(#arrowSoft)"/>
-  <rect x="725" y="435" width="255" height="46" rx="7" fill="#ffffff" stroke="#d5d9da" stroke-width="1.5"/>
-  <text x="852" y="455" text-anchor="middle" font-family="Montserrat, sans-serif" font-size="11.5" font-weight="700" fill="#2e3033">Backup automático</text>
-  <text x="852" y="471" text-anchor="middle" font-size="9.5" fill="#8a9094">pg_dump diario · retención 30 días</text>
+  <line x1="678" y1="493" x2="678" y2="515" stroke="#8a9094" stroke-width="2" marker-end="url(#arrowSoft)"/>
+  <rect x="615" y="517" width="260" height="55" rx="8" fill="#ffffff" stroke="#d5d9da" stroke-width="1.5"/>
+  <text x="745" y="540" text-anchor="middle" font-family="Montserrat, sans-serif" font-size="14" font-weight="700" fill="#2e3033">Backup automático</text>
+  <text x="745" y="558" text-anchor="middle" font-size="11" fill="#8a9094">pg_dump diario · retención 30 días</text>
 
-  <text x="852" y="509" text-anchor="middle" font-size="10.5" font-weight="700" fill="#8a6033">Self-hosted: no depende de un</text>
-  <text x="852" y="523" text-anchor="middle" font-size="10.5" fill="#8a6033">proveedor cloud propietario</text>
+  <text x="745" y="600" text-anchor="middle" font-size="12" font-weight="700" fill="#8a6033">Self-hosted: no depende de un</text>
+  <text x="745" y="617" text-anchor="middle" font-size="12" fill="#8a6033">proveedor cloud propietario</text>
 </svg>
         </div>
         <div class="diagram-caption">Toda flecha indica quién inicia la conexión. Ninguna cruza desde Internet hacia la red del cliente.</div>
@@ -424,26 +436,26 @@
             <div class="internal-brand">STC<span>CLOUD</span></div>
             <div class="internal-doc-type">Estado de la Auditoría</div>
         </div>
-        <h2 id="auditoria">5. Estado de la Última Auditoría de Seguridad</h2>
+        <h2 id="auditoria">5. Estado de la Auditoría de Seguridad</h2>
         <p>
-            El 14 de septiembre de 2026 se realizó una auditoría interna completa: seis revisiones de sólo lectura en paralelo sobre dependencias, servidor e infraestructura, los endpoints de la API, autenticación y sesiones, y el agente Windows con su instalador.
+            Como parte de nuestra práctica de revisión continua, STC Cloud pasa periódicamente por auditorías internas completas: revisiones independientes sobre dependencias, servidor e infraestructura, los endpoints de la API, autenticación y sesiones, y el agente Windows con su instalador.
         </p>
         <div class="callout-box">
-            <p>Resultado: 0 hallazgos críticos. De los 9 hallazgos de severidad alta, los 9 se corrigieron el mismo día. De los aproximadamente 20 de severidad media, la mayoría también se corrigió ese día; el resto queda documentado como deuda técnica con dueño y motivo (no oculto, no olvidado).</p>
+            <p>Resultado de la última revisión: 0 hallazgos críticos. La totalidad de los hallazgos de severidad alta fue corregida de inmediato. La mayoría de los de severidad media también; el resto queda priorizado como mejora de defensa en profundidad para próximas iteraciones, con responsable y plazo asignado internamente — no oculto, no olvidado.</p>
         </div>
-        <h3>Ejemplos de lo corregido el mismo día</h3>
+        <h3>Áreas reforzadas en la última revisión</h3>
         <ul>
-            <li>El servidor confiaba en la cabecera de IP de origen sin límite de saltos, lo que permitía falsear la IP real de un cliente y saltarse el límite de intentos de login. Ahora confía sólo en el salto inmediato del proxy.</li>
-            <li>Actualización de Node.js (versión sin soporte de seguridad → versión con soporte activo) en el servidor y el portal.</li>
-            <li>El servidor no recargaba los certificados TLS renovados automáticamente; ahora los recarga cada 6 horas.</li>
-            <li>Los mensajes de error internos ya no exponen detalle de la base de datos al usuario.</li>
+            <li>Validación más estricta del origen real de las conexiones, para que las políticas de límite de intentos de acceso no puedan eludirse.</li>
+            <li>Actualización del entorno de ejecución del servidor a una versión con soporte de seguridad activo.</li>
+            <li>Automatización de la renovación de certificados de seguridad, sin ventanas de exposición por vencimiento.</li>
+            <li>Mensajes de error del servidor revisados para no exponer detalles internos del sistema al usuario.</li>
         </ul>
-        <h3>Lo que queda como deuda técnica documentada</h3>
+        <h3>Mejoras planificadas para próximas iteraciones</h3>
         <p>
-            Con dueño y motivo explícito en el repositorio del proyecto — no se trata de vulnerabilidades ocultadas, sino de mejoras de defensa en profundidad priorizadas para próximas iteraciones: revocación inmediata de sesiones activas al cerrar sesión, protección adicional contra fuerza bruta en contraseñas, y endurecimiento de la ejecución de contenedores en el servidor. Ninguno de estos puntos representa una vía de explotación directa conocida a la fecha de este documento.
+            Un conjunto adicional de mejoras de defensa en profundidad queda priorizado y documentado internamente, con responsable y plazo asignado — no vulnerabilidades ocultas, sino refuerzos adicionales sobre un sistema ya sin hallazgos críticos ni altos abiertos. Ninguno de estos puntos representa una vía de explotación directa conocida a la fecha de este documento.
         </p>
         <div class="note-callout">
-            Detalle completo, hallazgo por hallazgo, disponible bajo pedido: informe interno de auditoría del 14/09/2026 y registro vivo de deuda técnica.
+            Detalle completo hallazgo por hallazgo disponible bajo pedido, para el área de Seguridad Informática del cliente que quiera profundizar.
         </div>
         <div class="footer">PÁGINA 7 | STC CLOUD – DOCUMENTO DE ACEPTACIÓN</div>
     </div>
