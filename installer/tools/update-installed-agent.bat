@@ -17,7 +17,7 @@ if %errorlevel% neq 0 (
 )
 
 echo [1/3] Compilando nuevo paquete del agente (bundle.js)...
-cd /d "%~dp0agent"
+cd /d "%~dp0..\..\agent"
 call node build-sea.js
 if %errorlevel% neq 0 (
     echo [ERROR] Fallo la compilacion con esbuild.
@@ -28,7 +28,7 @@ if %errorlevel% neq 0 (
 echo.
 echo [2/3] Deteniendo servicio STCCloudMonitor y copiando bundle.js a Program Files...
 net stop STCCloudMonitor
-copy /Y "%~dp0agent\dist\bundle.js" "C:\Program Files\STC\Monitor\bundle.js"
+copy /Y "%~dp0..\..\agent\dist\bundle.js" "C:\Program Files\STC\Monitor\bundle.js"
 
 echo.
 echo [3/3] Reiniciando servicio STCCloudMonitor...

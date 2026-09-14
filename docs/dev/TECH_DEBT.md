@@ -85,7 +85,7 @@ corrió `build-installer.bat` con `GITHUB_TOKEN` seteado, así que **no hay nada
 que un agente descargue**.
 
 Consecuencia concreta: si un cliente en prueba tiene 1.3.0 instalado a mano (con
-`update-installed-agent.bat` o el instalador local) y el server sigue apuntando a v1.0.0,
+`installer/tools/update-installed-agent.bat` o el instalador local) y el server sigue apuntando a v1.0.0,
 `isNewerVersion()` la considera más vieja y el agente no hace nada. El comportamiento es
 correcto, pero el resultado es que **ese cliente nunca se actualiza solo**.
 
