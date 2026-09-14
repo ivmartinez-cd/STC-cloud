@@ -62,23 +62,23 @@ export class KnexCustomFieldDefRepository implements CustomFieldDefRepository {
     }
   }
 
-  async findById(id: string): Promise<CustomFieldDef | null> {
-    const row = await this.db("custom_field_defs").where({ id }).whereNull("archived_at").first();
+  async findById(id: string, clientId: string): Promise<CustomFieldDef | null> {
+    const row = await this.db("custom_field_defs").where({ id, client_id: clientId }).whereNull("archived_at").first();
     return row ? toEntity(row) : null;
   }
 
-  async update(id: string, columns: UpdateCustomFieldDefColumns): Promise<CustomFieldDef> {
+  async update(id: string, clientId: string, columns: UpdateCustomFieldDefColumns): Promise<CustomFieldDef | null> {
     const updates: Record<string, unknown> = {};
     if (columns.label !== undefined) updates.label = columns.label;
     if (columns.options !== undefined) updates.options = JSON.stringify(columns.options);
     if (columns.position !== undefined) updates.position = columns.position;
 
-    const [row] = await this.db("custom_field_defs").where({ id }).update(updates).returning("*");
-    return toEntity(row);
+    const [row] = await this.db("custom_field_defs").where({ id, client_id: clientId }).update(updates).returning("*");
+    return row ? toEntity(row) : null;
   }
 
-  async archive(id: string): Promise<boolean> {
-    const updated = await this.db("custom_field_defs").where({ id }).whereNull("archived_at").update({ archived_at: new Date() });
+  async archive(id: string, clientId: string): Promise<boolean> {
+    const updated = await this.db("custom_field_defs").where({ id, client_id: clientId }).whereNull("archived_at").update({ archived_at: new Date() });
     return updated > 0;
   }
 }

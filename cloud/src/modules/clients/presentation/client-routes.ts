@@ -51,7 +51,8 @@ const updateClientSchema = {
       address: { type: "string", maxLength: 255 },
       country: { type: "string", maxLength: 100 },
       notification_email: emailOrEmpty,
-      notification_webhook_url: { type: "string", maxLength: 500 },
+      // Sólo https, y se rechaza acá (400) en vez de aceptarse y fallar en silencio en la cola de envío; la red interna la sigue bloqueando `assertSafeWebhookUrl` al enviar.
+      notification_webhook_url: { type: "string", maxLength: 500, pattern: "^(https://[^\\s]+)?$" },
       notification_events: {
         type: "array", maxItems: 10,
         items: { type: "string", enum: [
@@ -106,7 +107,7 @@ const putWebhookSchema = {
   body: {
     type: "object",
     properties: {
-      url: { type: "string", maxLength: 500 },
+      url: { type: "string", maxLength: 500, pattern: "^https://[^\\s]+$" },
       // 7 = cantidad de PORTAL_WEBHOOK_EVENTS (client-rules.ts) — quedó en 3
       // (el conteo original) tras sumar incidentes/pedidos de consumibles,
       // rechazando con 400 de Ajv ANTES de llegar a la validación real.
@@ -131,8 +132,9 @@ const putSftpDestinationSchema = {
       port: { type: "integer", minimum: 1, maximum: 65535 },
       username: { type: "string", maxLength: 100 },
       auth_method: { type: "string", enum: ["password", "private_key"] },
-      password: { type: "string" },
-      private_key: { type: "string" },
+      // Techos generosos (una clave RSA de 4096 en PEM ronda los 3,3 KB); la validación fina sigue en `sftpDestination.ts`.
+      password: { type: "string", maxLength: 1024 },
+      private_key: { type: "string", maxLength: 16384 },
       remote_path: { type: "string", maxLength: 500 },
     },
   },

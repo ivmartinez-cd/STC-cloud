@@ -39,13 +39,18 @@ async function replyingReportErrors<T>(reply: FastifyReply, fn: () => Promise<T>
   }
 }
 
-/** Preview/close históricamente devolvían 400 con el mensaje ante CUALQUIER error (no sólo los de dominio). */
+/**
+ * Preview/close: sólo los errores de dominio (`ReportError`, incluido el de
+ * período inválido) van al cliente con su mensaje. Antes cualquier excepción
+ * salía como 400 con `err.message`, y un error de Postgres le mostraba al
+ * operador nombres de tablas y columnas (auditoría 14/09/2026).
+ */
 async function replying400<T>(reply: FastifyReply, fn: () => Promise<T>) {
   try {
     return await fn();
   } catch (err) {
     if (err instanceof ReportError) return reply.status(err.statusCode).send({ error: err.message });
-    return reply.status(400).send({ error: err instanceof Error ? err.message : String(err) });
+    throw err;
   }
 }
 

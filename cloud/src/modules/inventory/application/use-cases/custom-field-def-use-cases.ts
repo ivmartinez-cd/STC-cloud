@@ -50,8 +50,8 @@ export class CreateCustomFieldDefUseCase {
 export class UpdateCustomFieldDefUseCase {
   constructor(private readonly repo: CustomFieldDefRepository) {}
 
-  async execute(id: string, request: UpdateCustomFieldDefRequest): Promise<CustomFieldDef | null> {
-    const existing = await this.repo.findById(id);
+  async execute(id: string, clientId: string, request: UpdateCustomFieldDefRequest): Promise<CustomFieldDef | null> {
+    const existing = await this.repo.findById(id, clientId);
     if (!existing) return null;
 
     const columns: UpdateCustomFieldDefColumns = {};
@@ -66,14 +66,14 @@ export class UpdateCustomFieldDefUseCase {
     if (request.position !== undefined) columns.position = request.position;
 
     if (Object.keys(columns).length === 0) return existing;
-    return this.repo.update(id, columns);
+    return this.repo.update(id, clientId, columns);
   }
 }
 
 export class ArchiveCustomFieldDefUseCase {
   constructor(private readonly repo: CustomFieldDefRepository) {}
-  execute(id: string): Promise<boolean> {
-    return this.repo.archive(id);
+  execute(id: string, clientId: string): Promise<boolean> {
+    return this.repo.archive(id, clientId);
   }
 }
 

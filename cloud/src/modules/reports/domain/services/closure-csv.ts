@@ -66,13 +66,28 @@ export function exportHeaderLines(closure: ExportClosure): [string, string] {
   ];
 }
 
+/**
+ * Una celda de CSV a prueba de Excel/LibreOffice. Serie, modelo y hostname
+ * los reporta el equipo (SNMP en la LAN del cliente) y el nombre del monitor
+ * lo escribe un operador: un valor que empiece con `=`, `+`, `-`, `@`, tab o
+ * retorno de carro lo interpreta la planilla como fórmula al abrir el archivo
+ * (inyección de fórmulas CSV). Se antepone un apóstrofo, que la planilla
+ * muestra como texto. Y un `;`, comilla o salto de línea adentro del valor
+ * rompía las columnas: va entre comillas, con las comillas internas dobladas.
+ */
+export function csvCell(value: string | number): string {
+  if (typeof value === "number") return String(value);
+  const text = /^[=+\-@\t\r]/.test(value) ? `'${value}` : value;
+  return /[;"\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+}
+
 /** Layout histórico del CSV — separador `;`, CRLF, BOM UTF-8. Puro. */
 export function buildClosureCsv(closure: ExportClosure, lines: ExportLine[]): string {
   const rows = [
     ...exportHeaderLines(closure),
     "",
     EXPORT_COLUMNS.join(";"),
-    ...lines.map((l) => exportRowValues(l).join(";")),
+    ...lines.map((l) => exportRowValues(l).map(csvCell).join(";")),
   ];
   return "﻿" + rows.join("\r\n");
 }

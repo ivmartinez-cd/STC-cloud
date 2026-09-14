@@ -62,10 +62,10 @@ function buildCreateCustomFieldHandler(useCase: CreateCustomFieldDefUseCase) {
 
 function buildUpdateCustomFieldHandler(useCase: UpdateCustomFieldDefUseCase) {
   return async (request: FastifyRequest, reply: FastifyReply) => {
-    const { fieldId } = request.params as { id: string; fieldId: string };
+    const { id, fieldId } = request.params as { id: string; fieldId: string };
     const { label, options, position } = request.body as { label?: string; options?: unknown; position?: number };
     try {
-      const updated = await useCase.execute(fieldId, { label, options, position });
+      const updated = await useCase.execute(fieldId, id, { label, options, position });
       if (!updated) return reply.status(404).send({ error: "Campo personalizado no encontrado" });
       return toCustomFieldDefView(updated);
     } catch (err) {
@@ -76,8 +76,8 @@ function buildUpdateCustomFieldHandler(useCase: UpdateCustomFieldDefUseCase) {
 
 function buildArchiveCustomFieldHandler(useCase: ArchiveCustomFieldDefUseCase) {
   return async (request: FastifyRequest, reply: FastifyReply) => {
-    const { fieldId } = request.params as { id: string; fieldId: string };
-    const archived = await useCase.execute(fieldId);
+    const { id, fieldId } = request.params as { id: string; fieldId: string };
+    const archived = await useCase.execute(fieldId, id);
     if (!archived) return reply.status(404).send({ error: "Campo personalizado no encontrado" });
     return { archived: true };
   };

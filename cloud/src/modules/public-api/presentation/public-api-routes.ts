@@ -8,7 +8,7 @@ const putWebhookSchema = {
   body: {
     type: "object",
     properties: {
-      url: { type: "string", maxLength: 500 },
+      url: { type: "string", maxLength: 500, pattern: "^https://[^\\s]+$" },
       // 7 = cantidad de VALID_PUBLIC_API_EVENTS (public-api-webhook-use-cases.ts)
       // — mismo bug y mismo fix que el gemelo de client-routes.ts.
       events: { type: "array", items: { type: "string" }, maxItems: 7 },
