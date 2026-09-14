@@ -27,20 +27,33 @@ export interface CounterResetInfo {
 // (no contra los extremos del período — eso lo corrige el cálculo de volumen
 // mensual). Un reset de firmware o reemplazo de placa formateadora hace que
 // el contador físico baje sin que cambie el serial.
-export function detectCounterResets(existingDevice: any, newTotal: number | null, newMono: number | null, newColor: number | null): CounterResetInfo {
+//
+// PERO sólo tiene sentido comparar lecturas del MISMO método de captura: SNMP,
+// EWS y PJL/IPP leen medidores distintos del mismo equipo y no dan el mismo
+// número. Un Samsung M458x reporta 223743 por SNMP y 165182 por PJL (page
+// count de vida, otro registro); un M5370LX da 1897 por SNMP y 1889 por EWS.
+// Cuando el agente cae de un método a otro —típico tras un reinicio o un
+// rescan, o si el EWS tarda y cae a SNMP— el número baja sin que nadie haya
+// reseteado nada. Comparar a ciegas generaba una alerta crítica falsa (y un
+// mail al cliente) en cada flip. Si el método cambió, no se evalúa el reset;
+// la próxima lectura del mismo método vuelve a tener una base comparable.
+export function detectCounterResets(
+  existingDevice: any, newTotal: number | null, newMono: number | null, newColor: number | null, newMethod?: string | null
+): CounterResetInfo {
+  const previousMethod = existingDevice.poll_method ?? null;
+  if (newMethod && previousMethod && newMethod !== previousMethod) {
+    return { counterResets: [], resetValue: null };
+  }
   const counterResets: string[] = [];
   let resetValue: number | null = null;
-  if (newTotal !== null && existingDevice.total_pages !== null && newTotal < existingDevice.total_pages) {
-    counterResets.push(`total: ${existingDevice.total_pages} → ${newTotal}`);
-    resetValue = newTotal;
-  }
-  if (newMono !== null && existingDevice.mono_pages !== null && newMono < existingDevice.mono_pages) {
-    counterResets.push(`mono: ${existingDevice.mono_pages} → ${newMono}`);
-    resetValue = resetValue ?? newMono;
-  }
-  if (newColor !== null && existingDevice.color_pages !== null && newColor < existingDevice.color_pages) {
-    counterResets.push(`color: ${existingDevice.color_pages} → ${newColor}`);
-    resetValue = resetValue ?? newColor;
+  for (const [label, prev, next] of [
+    ["total", existingDevice.total_pages, newTotal],
+    ["mono", existingDevice.mono_pages, newMono],
+    ["color", existingDevice.color_pages, newColor],
+  ] as const) {
+    if (next === null || prev === null || next >= prev) continue;
+    counterResets.push(`${label}: ${prev} → ${next}`);
+    resetValue = resetValue ?? next; // el valor del PRIMER contador que bajó (total → mono → color)
   }
   return { counterResets, resetValue };
 }

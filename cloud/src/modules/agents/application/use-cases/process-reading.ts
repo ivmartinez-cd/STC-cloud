@@ -86,7 +86,7 @@ export class ProcessReadingUseCase {
       return { deviceId, suppressed: true };
     }
     const fields = resolveExistingDeviceFields(existingDevice, display.cleanModel, serialToUse, ip, display.validHost);
-    const { counterResets, resetValue } = detectCounterResets(existingDevice, parseCount(r.total_pages), parseCount(r.mono_pages), parseCount(r.color_pages));
+    const { counterResets, resetValue } = detectCounterResets(existingDevice, parseCount(r.total_pages), parseCount(r.mono_pages), parseCount(r.color_pages), display.pollMethod);
     // Fase 10: `resolvedOrigin` es null cuando no hay señal (nunca se pisa `supply_origin` en ese caso).
     const resolvedOrigin = resolveSupplyOrigin(r.supply_origin, r.supplies_details);
     const originChanged = resolvedOrigin !== null && resolvedOrigin !== existingDevice.supply_origin;
