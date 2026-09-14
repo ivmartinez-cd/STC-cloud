@@ -111,6 +111,10 @@ services:
   nginx:
     image: nginx:alpine
     restart: unless-stopped
+    # Recarga cada 6 h para tomar los certificados que certbot renueva: nginx
+    # lee los PEM sólo al arrancar, y sin esto seguía sirviendo el certificado
+    # viejo hasta vencer aunque el nuevo ya estuviera en disco (auditoría 14/09/2026).
+    command: ["/bin/sh", "-c", "while :; do sleep 6h; nginx -s reload; done & exec nginx -g 'daemon off;'"]
     ports:
       - "80:80"
       - "443:443"
@@ -174,10 +178,16 @@ services:
       - |
         trap exit TERM
         while :; do
-          pg_dump -h postgres -U $${DB_USER:-stc_admin} $${DB_NAME:-stc_cloud} \
-            | gzip > /backups/stc_$$(date +%Y%m%d_%H%M).sql.gz
+          OUT=/backups/stc_$$(date +%Y%m%d_%H%M).sql.gz
+          pg_dump -h postgres -U $${DB_USER:-stc_admin} $${DB_NAME:-stc_cloud} | gzip > "$$OUT"
+          # Un dump que falla deja un .gz de ~20 bytes (pasó el 10/09/2026 y nadie
+          # lo vio): se borra y se avisa fuerte, en vez de guardar un backup vacío.
+          if [ "$$(stat -c %s "$$OUT")" -lt 1024 ]; then
+            echo "[Backup] ERROR: dump vacío o fallido ($$OUT), descartado"; rm -f "$$OUT"
+          else
+            echo "[Backup] Completado: $$OUT ($$(stat -c %s "$$OUT") bytes)"
+          fi
           find /backups -name "*.sql.gz" -mtime +30 -delete
-          echo "[Backup] Completado: $$(date)"
           sleep 86400 & wait $${!}
         done
     depends_on:

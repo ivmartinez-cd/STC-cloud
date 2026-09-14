@@ -36,11 +36,17 @@ export async function bootstrapDefaultAdmin(db: Knex): Promise<void> {
     if (count === 0) {
       logger.info("[DB] Inicializando usuario administrador por defecto...");
       const adminUser = (process.env.PORTAL_ADMIN_USER || "admin").toLowerCase();
-      const adminPass = process.env.PORTAL_ADMIN_PASSWORD || "stc123456";
+      const adminPass = process.env.PORTAL_ADMIN_PASSWORD;
+      // En producción no hay valor de respaldo: antes, sin la variable, el primer
+      // admin nacía con una contraseña conocida (auditoría de seguridad, 14/09/2026).
+      if (process.env.NODE_ENV === "production" && (!adminPass || adminPass.startsWith("CAMBIAR"))) {
+        throw new Error("PORTAL_ADMIN_PASSWORD no está definida: no se puede crear el primer administrador con una contraseña por defecto");
+      }
+      if (!adminPass) logger.warn("[DB] PORTAL_ADMIN_PASSWORD ausente: admin de desarrollo con contraseña por defecto");
       await db("users").insert({
         id: db.raw("gen_random_uuid()"),
         username: adminUser,
-        password_hash: hashPassword(adminPass),
+        password_hash: hashPassword(adminPass ?? "stc123456"),
         role: "admin",
         active: true,
       });

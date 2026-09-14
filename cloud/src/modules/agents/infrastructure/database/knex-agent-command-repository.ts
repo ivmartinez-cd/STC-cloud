@@ -22,7 +22,8 @@ export class KnexAgentCommandRepository implements AgentCommandRepository {
     }));
   }
 
-  async setResult(commandId: string, status: string, result: Record<string, unknown> | null): Promise<void> {
-    await this.db("agent_commands").where({ id: commandId }).update({ status, result: result ? JSON.stringify(result) : null, executed_at: new Date() });
+  async setResult(commandId: string, agentId: string, status: string, result: Record<string, unknown> | null): Promise<void> {
+    await this.db("agent_commands").where({ id: commandId, agent_id: agentId })
+      .update({ status, result: result ? JSON.stringify(result) : null, executed_at: new Date() });
   }
 }

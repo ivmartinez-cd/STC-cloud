@@ -16,6 +16,17 @@ import { ConsoleEngine } from './ConsoleEngine';
 import { VERSION } from './version';
 import type { AgentConfig } from './config';
 
+/** `http://user:pass@proxy:3128` → `http://proxy:3128`: los logs se suben a la nube y los lee cualquier usuario local. */
+function redactUrl(raw: string): string {
+  try {
+    const u = new URL(raw);
+    u.username = ''; u.password = '';
+    return u.toString();
+  } catch {
+    return '(url inválida)';
+  }
+}
+
 // Instalar captura de errores fatales lo antes posible
 setupProcessErrorHandlers();
 
@@ -69,7 +80,7 @@ async function main(): Promise<void> {
           setGlobalDispatcher: (dispatcher: unknown) => void;
         };
         undici.setGlobalDispatcher(new undici.ProxyAgent(currentConfig.proxyUrl));
-        log('INFO', `Proxy HTTP configurado: ${currentConfig.proxyUrl}`);
+        log('INFO', `Proxy HTTP configurado: ${redactUrl(currentConfig.proxyUrl)}`);
       } catch (e: unknown) {
         const errMsg = e instanceof Error ? e.message : String(e);
         log('WARN', `No se pudo configurar el proxy: ${errMsg}`);
@@ -143,7 +154,7 @@ async function main(): Promise<void> {
     engine.start();
 
     // === Iniciar loops ===
-    log('INFO', `Comunidad SNMP: ${currentConfig.snmpCommunity}`);
+    log('INFO', `Comunidad SNMP: ${currentConfig.snmpCommunity ? 'configurada' : 'sin configurar'}`);
 
     const heartbeatService = new HeartbeatService({
       getConfig,

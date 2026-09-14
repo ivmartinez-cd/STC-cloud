@@ -112,7 +112,10 @@ export function registerTwoFactorRoutes(fastify: FastifyInstance, db: Knex, port
   const recovery = new KnexRecoveryCodeRepository(db);
   fastify.get(`${base}/status`, { preHandler: portalAuth, handler: buildStatus(db, recovery) });
   fastify.post(`${base}/setup`, { preHandler: portalAuth, handler: buildSetup(db) });
-  fastify.post(`${base}/enable`, { preHandler: portalAuth, schema: codeBodySchema, handler: buildEnable(db) });
-  fastify.post(`${base}/disable`, { preHandler: portalAuth, schema: codeBodySchema, handler: buildDisable(db) });
-  fastify.post(`${base}/recovery-codes`, { preHandler: portalAuth, schema: codeBodySchema, handler: buildRegenerateRecovery(db, recovery) });
+  // Verifican un TOTP de 6 dígitos (±1 paso = 3 códigos válidos por intento): con
+  // el límite global de 100/min una sesión robada podía forzar `disable` en horas.
+  const totpAttempts = { rateLimit: { max: 5, timeWindow: "1 minute" } };
+  fastify.post(`${base}/enable`, { preHandler: portalAuth, schema: codeBodySchema, config: totpAttempts, handler: buildEnable(db) });
+  fastify.post(`${base}/disable`, { preHandler: portalAuth, schema: codeBodySchema, config: totpAttempts, handler: buildDisable(db) });
+  fastify.post(`${base}/recovery-codes`, { preHandler: portalAuth, schema: codeBodySchema, config: totpAttempts, handler: buildRegenerateRecovery(db, recovery) });
 }

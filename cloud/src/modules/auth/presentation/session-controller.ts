@@ -40,9 +40,14 @@ async function portalLogin(fastify: FastifyInstance, db: Knex, request: FastifyR
     { expiresIn: remember ? JWT_PORTAL_REMEMBER_TTL : JWT_PORTAL_TTL }
   );
   const isProd = process.env.NODE_ENV === "production";
+  // `lax` por defecto: el portal y la API se sirven desde el mismo dominio
+  // (nginx). `none` sólo si alguien lo pide (`COOKIE_SAMESITE=none`, portal en
+  // otro dominio): con `none` la cookie viajaba en un WebSocket abierto desde
+  // cualquier sitio ajeno (auditoría de seguridad, 14/09/2026).
+  const sameSite = (process.env.COOKIE_SAMESITE === "none" ? "none" : "lax") as "none" | "lax";
   const cookieOpts = {
     secure: isProd,
-    sameSite: (isProd ? "none" : "lax") as "none" | "lax",
+    sameSite,
     path: "/",
     maxAge: remember ? 30 * 24 * 60 * 60 : 8 * 60 * 60,
   };
@@ -72,12 +77,15 @@ async function portalLogout(_request: FastifyRequest, reply: FastifyReply) {
 
 async function portalMe(db: Knex, request: FastifyRequest) {
   const user = (request as FastifyRequest & { user: PortalUser }).user;
-  const token = request.cookies.stc_session;
+  // Sin `token` en la respuesta: devolvía el JWT de la cookie `httpOnly`, o sea
+  // que cualquier script en la página podía leerlo con un fetch a /me y la
+  // protección de la cookie no valía nada. El portal nunca lo usó (auditoría
+  // de seguridad, 14/09/2026).
   // Fase 6.3: releer el flag real (PortalUser no lo carga; una consulta barata
   // en un endpoint de baja frecuencia).
   const row = await new KnexUserRepository(db).findTotpFlags(user.userId);
   const totpEnrollmentRequired = !!row && row.totp_required === true && row.totp_enabled !== true;
-  return { userId: user.userId, username: user.username, role: user.role, clientId: user.clientId, token, totp_enrollment_required: totpEnrollmentRequired };
+  return { userId: user.userId, username: user.username, role: user.role, clientId: user.clientId, totp_enrollment_required: totpEnrollmentRequired };
 }
 
 async function portalWsTicket(redis: Redis, request: FastifyRequest) {

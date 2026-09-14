@@ -207,6 +207,13 @@ export async function activate(): Promise<void> {
   // Normalizar URL (quitar slash final)
   if (serverUrl.endsWith('/')) serverUrl = serverUrl.slice(0, -1);
 
+  // Sólo https (salvo la máquina local, para desarrollo): con http el token
+  // viajaba en claro en cada latido y el WebSocket bajaba a ws:// (auditoría 14/09/2026).
+  if (!/^https:\/\//i.test(serverUrl) && !/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(serverUrl)) {
+    console.error(`Error: la URL del servidor tiene que ser https (recibido: ${serverUrl}).`);
+    process.exit(1);
+  }
+
   console.log(`Activando en ${serverUrl}...`);
 
   try {

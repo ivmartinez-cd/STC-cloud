@@ -74,12 +74,20 @@ export function registerMetrics(fastify: FastifyInstance): void {
   });
 }
 
-/** Fase 5.2: los errores no manejados de handlers van a Sentry (además del
- * comportamiento default de Fastify, que se preserva re-lanzando). */
+/**
+ * Fase 5.2: los errores no manejados de handlers van a Sentry. Los 4xx (validación
+ * de Ajv, errores tipados con `statusCode`) siguen con el comportamiento default
+ * de Fastify. Los 5xx NO: el default devolvía `err.message` al cliente, y un
+ * error de Postgres le mostraba al usuario nombres de tablas, columnas y
+ * constraints (auditoría de seguridad, 14/09/2026). El detalle queda en el log.
+ */
 export function registerErrorHandler(fastify: FastifyInstance): void {
-  fastify.setErrorHandler((err, request) => {
+  fastify.setErrorHandler((err, request, reply) => {
     captureError(err, { route: request.url, method: request.method });
-    throw err;
+    const status = (err as { statusCode?: number }).statusCode ?? 500;
+    if (status < 500) throw err;
+    request.log.error({ err, route: request.url }, "Error interno no manejado");
+    return reply.status(status).send({ error: "Error interno del servidor" });
   });
 }
 

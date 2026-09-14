@@ -23,7 +23,7 @@ export function createAgentController(fastify: FastifyInstance, redis: RedisClie
       if (logs && Array.isArray(logs)) await agentService.ingestLogs(id, logs, timezoneOf(request));
       if (commandResults && Array.isArray(commandResults)) {
         for (const res of commandResults) {
-          await agentService.updateCommandResult(res.id, res.status, res.result);
+          await agentService.updateCommandResult(res.id, id, res.status, res.result);
           fastify.log.info({ agentId: id, commandId: res.id }, "[WSS] Reenviando resultado de comando al portal");
           agentService.broadcastCommandResult(id, res.id, res.status, res.result);
         }

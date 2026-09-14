@@ -1,8 +1,12 @@
 import { looksLikeRecoveryCode, verifyTotp } from "../../../two-factor";
 import { decryptSecret } from "../../../../services/cryptoService";
-import { verifyPassword } from "../../domain/services/password-hasher";
+import crypto from "crypto";
+import { hashPassword, verifyPassword } from "../../domain/services/password-hasher";
 import type { UserRepository, UserRow } from "../../domain/repositories/user-repository";
-import { InvalidCredentialsError, TotpRequiredError, UserDisabledError } from "../../domain/errors/auth-error";
+import { InvalidCredentialsError, TotpRequiredError } from "../../domain/errors/auth-error";
+
+/** Hash de un valor aleatorio: contra esto se verifica cuando el usuario no existe, para que el tiempo de respuesta no lo delate. */
+const DUMMY_HASH = hashPassword(crypto.randomBytes(16).toString("hex"));
 import type { TwoFactorGateway } from "../ports/two-factor-gateway";
 
 export interface LoginAuditPort {
@@ -33,13 +37,18 @@ export class LoginUseCase {
     // entorno: si no está en la tabla, no hay acceso.
     const user = await this.users.findByUsername(username);
     if (!user) {
+      // Se corre scrypt igual: si el usuario inexistente respondiera al instante
+      // y el existente después de decenas de ms, el tiempo revelaría qué
+      // usuarios hay (auditoría de seguridad, 14/09/2026).
+      verifyPassword(password, DUMMY_HASH);
       await this.audit.recordFailure(username, "unknown_user");
       throw new InvalidCredentialsError();
     }
 
     if (!user.active) {
+      // Mismo mensaje que credenciales inválidas: "usuario desactivado" confirmaba que la cuenta existe. El motivo real queda en la auditoría.
       await this.audit.recordFailure(username, "disabled", user);
-      throw new UserDisabledError();
+      throw new InvalidCredentialsError();
     }
 
     if (!verifyPassword(password, user.password_hash)) {

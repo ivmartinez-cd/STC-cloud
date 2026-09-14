@@ -15,7 +15,13 @@ export class AgentCommandsUseCase {
     return this.commands.takePending(agentId);
   }
 
-  updateResult(commandId: string, status: string, result: Record<string, unknown> | null): Promise<void> {
-    return this.commands.setResult(commandId, status, result);
+  /**
+   * `status` se normaliza a `completed`/`error`: antes se guardaba lo que
+   * mandara el agente, y un `"pending"` hacía que el comando se volviera a
+   * entregar en el próximo latido (replay).
+   */
+  updateResult(commandId: string, agentId: string, status: string, result: Record<string, unknown> | null): Promise<void> {
+    const normalized = status === "error" ? "error" : "completed";
+    return this.commands.setResult(commandId, agentId, normalized, result);
   }
 }

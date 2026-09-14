@@ -1,4 +1,4 @@
-import Fastify from "fastify";
+import Fastify, { type FastifyServerOptions } from "fastify";
 import dotenv from "dotenv";
 import path from "path";
 import Redis from "ioredis";
@@ -52,17 +52,25 @@ if (!isEncryptionConfigured()) {
   );
 }
 
-const fastify = Fastify({
+// Tipado explícito: con `trustProxy` numérico la inferencia de Fastify elegía
+// la sobrecarga HTTP/2 y rompía los `registerXRoutes(fastify: FastifyInstance)`.
+const serverOptions: FastifyServerOptions = {
   // Instancia propia (no la de `../logger`, ver ahí el porqué): `loggerInstance`
   // rompe la inferencia de tipos de Fastify a través de las funciones
   // `registerXRoutes(fastify: FastifyInstance)`. Mismo nivel via LOG_LEVEL para
   // que los logs de request y los de boot/workers queden consistentes igual.
   logger: { level: process.env.LOG_LEVEL || "info" },
   connectionTimeout: 0,
-  // Confía en el proxy inmediato (nginx en el compose propio, el edge de Render en
-  // producción) para resolver request.ip correctamente a partir de X-Forwarded-For.
-  trustProxy: true,
-});
+  // Confía SÓLO en el proxy inmediato (nginx del compose) para resolver
+  // `request.ip` desde X-Forwarded-For. Con `true` se confiaba en todos los
+  // saltos y, como nginx ANEXA el header en vez de pisarlo, la IP resultante
+  // era la que mandaba el cliente: bastaba cambiar X-Forwarded-For en cada
+  // request para saltar el límite de login/activación y falsear la IP de la
+  // auditoría (auditoría de seguridad, 14/09/2026). Si algún día hay otro
+  // proxy adelante de nginx, subir a 2 o listar sus IPs.
+  trustProxy: (_address: string, hop: number) => hop < (Number(process.env.TRUST_PROXY_HOPS) || 1),
+};
+const fastify = Fastify(serverOptions);
 
 const db = knex(knexConfig.development);
 const redis = new Redis(process.env.REDIS_URL || "redis://localhost:6379", {

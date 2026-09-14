@@ -8,9 +8,16 @@ import type { ReportFormat } from "../../domain/entities/scheduled-report";
  * cabecera en negrita en el XLSX), pero sobre una tabla arbitraria.
  */
 
+/**
+ * Hostname, ubicación, modelo y títulos de alertas los reportan los equipos o
+ * los escribe un operador, y el archivo se manda por mail a terceros: un valor
+ * que empiece con `=`, `+`, `-`, `@`, tab o retorno de carro lo abre la planilla
+ * como fórmula (inyección de fórmulas CSV). Apóstrofo adelante = texto.
+ */
 function csvCell(value: string | number | null): string {
   if (value == null) return "";
-  const s = String(value);
+  if (typeof value === "number") return String(value);
+  const s = /^[=+\-@\t\r]/.test(value) ? `'${value}` : value;
   return /[",\n;]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 

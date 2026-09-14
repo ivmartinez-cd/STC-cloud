@@ -54,7 +54,9 @@ function readHandlers(uc: AgentUseCases) {
     },
     getLogs: (request: Req) => {
       const { limit } = request.query as { limit?: string };
-      return uc.logs.list(idOf(request), limit ? parseInt(limit, 10) : 50);
+      // Acotado 1..1000: sin tope, `?limit=99999999` volcaba toda la tabla del agente.
+      const parsed = parseInt(limit ?? "", 10);
+      return uc.logs.list(idOf(request), Number.isFinite(parsed) ? Math.min(Math.max(parsed, 1), 1000) : 50);
     },
     exportLogs: async (request: Req, reply: FastifyReply) => {
       const id = idOf(request);

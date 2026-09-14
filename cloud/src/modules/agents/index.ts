@@ -61,7 +61,7 @@ export class AgentService {
   // --- Comandos remotos ---
   addCommand(agentId: string, type: string, payload: Record<string, unknown> = {}, createdBy?: string) { return this.useCases.commands.add(agentId, type, payload, createdBy); }
   getPendingCommands(agentId: string) { return this.useCases.commands.takePending(agentId); }
-  updateCommandResult(commandId: string, status: string, result: Record<string, unknown> | null) { return this.useCases.commands.updateResult(commandId, status, result); }
+  updateCommandResult(commandId: string, agentId: string, status: string, result: Record<string, unknown> | null) { return this.useCases.commands.updateResult(commandId, agentId, status, result); }
   /** Reenvío del resultado de un comando al portal (WSS). */
   broadcastCommandResult(agentId: string, commandId: string, status: string, result: unknown) {
     this.useCases.link.broadcastToPortal("command_result", { agentId, commandId, status, result });
@@ -77,5 +77,5 @@ export class AgentCommandService {
   constructor(db: Knex) { this.commands = new AgentCommandsUseCase(new KnexAgentCommandRepository(db)); }
   addCommand(agentId: string, type: string, payload: Record<string, unknown> = {}, createdBy?: string) { return this.commands.add(agentId, type, payload, createdBy); }
   getPendingCommands(agentId: string) { return this.commands.takePending(agentId); }
-  updateCommandResult(commandId: string, status: string, result: Record<string, unknown> | null) { return this.commands.updateResult(commandId, status, result); }
+  updateCommandResult(commandId: string, agentId: string, status: string, result: Record<string, unknown> | null) { return this.commands.updateResult(commandId, agentId, status, result); }
 }

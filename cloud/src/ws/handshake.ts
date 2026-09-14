@@ -9,6 +9,13 @@ import { portalClients, agentClients } from './state';
 import { wsRedisPub, WS_EWS_ONLINE_SET, WS_EWS_RESULT_CHANNEL, relayEwsResultLocally } from './redis-channels';
 import { broadcastToPortal } from './redis-channels';
 
+/** Mismos orígenes que el CORS de la API (`api/plugins.ts`): el portal configurado y los de desarrollo. */
+const PORTAL_ORIGINS = new Set([process.env.PORTAL_ORIGIN, 'http://localhost:5173', 'http://localhost:3000'].filter(Boolean) as string[]);
+
+function isPortalOrigin(origin: string | undefined): boolean {
+  return !!origin && PORTAL_ORIGINS.has(origin);
+}
+
 /**
  * Registra el endpoint WebSocket `/ws` en el servidor Fastify.
  * Autentica conexiones entrantes mediante JWT (Bearer, Cookie o Query Param)
@@ -44,6 +51,16 @@ export async function registerWebSocket(fastify: FastifyInstance, db: Knex, redi
         await request.jwtVerify();
         user = request.user as WsJwtPayload;
       } else if (cookieToken) {
+        // La cookie sólo vale si la conexión la abre el propio portal: el
+        // navegador manda la cookie de sesión en un `new WebSocket()` iniciado
+        // desde CUALQUIER sitio (CORS no aplica a WebSocket), y sin este
+        // chequeo un sitio ajeno visitado por un operador logueado recibía el
+        // broadcast del portal (auditoría de seguridad, 14/09/2026).
+        if (!isPortalOrigin(request.headers.origin)) {
+          fastify.log.warn(`Conexión WSS con cookie rechazada: Origin no permitido (${request.headers.origin ?? 'ausente'})`);
+          socket.close(4003, 'Origen no permitido');
+          return;
+        }
         user = fastify.jwt.verify<WsJwtPayload>(cookieToken);
       } else if (queryTicket) {
         // Ticket de un solo uso (`POST /portal/ws-ticket`), NO el JWT de sesión:
@@ -132,7 +149,7 @@ export async function registerWebSocket(fastify: FastifyInstance, db: Knex, redi
     }
 
     const updateCommandResultSafely = (data: { id: string; status?: string; result?: Record<string, unknown> | null }) => {
-      agentService.updateCommandResult(data.id, data.status === 'success' ? 'completed' : 'error', data.result ?? null)
+      agentService.updateCommandResult(data.id, agentId!, data.status === 'success' ? 'completed' : 'error', data.result ?? null)
         .catch((e: unknown) => {
           const errMsg = e instanceof Error ? e.message : String(e);
           fastify.log.error(`[WS] Error actualizando comando ${data.id}: ${errMsg}`);

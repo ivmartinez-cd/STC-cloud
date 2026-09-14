@@ -1,5 +1,5 @@
 # ─── Stage 1: Build ──────────────────────────────────────────────────────────
-FROM node:20-alpine AS builder
+FROM node:24-alpine AS builder
 
 WORKDIR /app
 
@@ -12,7 +12,7 @@ COPY tsconfig.json ./
 RUN npm run build
 
 # ─── Stage 2: Production ────────────────────────────────────────────────────
-FROM node:20-alpine
+FROM node:24-alpine
 
 WORKDIR /app
 
@@ -33,7 +33,7 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 --start-period=20s \
   CMD wget -qO- http://127.0.0.1:3000/health || exit 1
 
-# Ejecutar como usuario no privilegiado (node:20-alpine ya lo trae; el puerto
+# Ejecutar como usuario no privilegiado (node:24-alpine ya lo trae; el puerto
 # 3000 no requiere root).
 USER node
 

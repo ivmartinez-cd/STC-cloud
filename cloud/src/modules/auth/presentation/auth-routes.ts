@@ -20,8 +20,8 @@ const activateSchema = {
     type: "object",
     required: ["key"],
     properties: {
-      key: { type: "string" },
-      hardwareId: { type: "string" },
+      key: { type: "string", maxLength: 128 },
+      hardwareId: { type: "string", maxLength: 128 },
     },
   },
 };
@@ -42,8 +42,9 @@ const portalLoginSchema = {
     type: "object",
     required: ["username", "password"],
     properties: {
-      username: { type: "string" },
-      password: { type: "string" },
+      username: { type: "string", maxLength: 128 },
+      // Techo: sin él, un cuerpo de 1 MB pasaba entero por scrypt en cada intento.
+      password: { type: "string", maxLength: 128 },
       remember: { type: "boolean" },
     },
   },
@@ -55,7 +56,8 @@ const userCreateSchema = {
     required: ["username", "password"],
     properties: {
       username: { type: "string", minLength: 3, maxLength: 50 },
-      password: { type: "string", minLength: 6 },
+      // 10 como mínimo (antes 6: "123456" pasaba). Sin lista de comunes todavía, ver TECH_DEBT SEC-3.
+      password: { type: "string", minLength: 10, maxLength: 128 },
       role: { type: "string", enum: ["admin", "operator", "client_viewer"] },
       client_id: { type: "string", format: "uuid" },
     },
@@ -66,9 +68,10 @@ const userUpdateSchema = {
   body: {
     type: "object",
     properties: {
-      password: { type: "string", minLength: 6 },
+      password: { type: "string", minLength: 10, maxLength: 128 },
       role: { type: "string", enum: ["admin", "operator", "client_viewer"] },
       active: { type: "boolean" },
+      totp_required: { type: "boolean" },
       client_id: { type: "string", format: "uuid" },
     },
   },

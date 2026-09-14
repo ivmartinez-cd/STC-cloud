@@ -177,7 +177,7 @@ export class EwsProxyUseCase {
     // réplica, hace relay por Redis (ver `ws/index.ts`) — sólo devuelve
     // `false` cuando no está conectado a NINGUNA réplica.
     if (!(await this.gateway.pushCommand(input.agentId, command.id, payload))) {
-      await this.commands.updateResult(command.id, "error", { error: "Agente no conectado" });
+      await this.commands.updateResult(command.id, input.agentId, "error", { error: "Agente no conectado" });
       throw new RemoteActionError("El agente no está conectado ahora mismo", 503);
     }
     const base = { device_id: input.deviceId, path, method: "GET" };
