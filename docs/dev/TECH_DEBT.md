@@ -32,6 +32,15 @@ que muerda.
 | [ARCH-3](#arch-3--auth-y-dashboard-importan-internals-de-agents-para-agent_releases) | Arquitectura | `auth` y `dashboard` importan internals de `agents` para `agent_releases` | 🟡 Baja | Abierto |
 | [SEC-1](#sec-1--el-gateway-de-ews-admite-una-sola-sesion-por-navegador) | Seguridad | El gateway de EWS admite una sola sesión por navegador | 🟠 Media | Abierto |
 | [ARCH-4](#arch-4--las-pestanas-alertas-y-consumibles-del-cliente-importan-otros-features) | Arquitectura | Las pestañas Alertas y Consumibles del cliente importan otros features | 🟡 Baja | Abierto |
+| SEC-2 | Seguridad | Sesiones del portal no revocables (logout no invalida el JWT; reset no cierra sesiones) | 🟠 Media | Abierto — ver [auditoría 14/09](../security/AUDITORIA_SEGURIDAD_2026-09-14.md) |
+| SEC-3 | Seguridad | Contraseñas sin lista de comunes ni bloqueo por cuenta; scrypt con parámetros por defecto | 🟡 Baja | Abierto — ver [auditoría 14/09](../security/AUDITORIA_SEGURIDAD_2026-09-14.md) |
+| SEC-4 | Seguridad | TOTP sin protección de replay; secreto atado a la clave de SNMP; sin vía administrativa de reset | 🟠 Media | Abierto — ver [auditoría 14/09](../security/AUDITORIA_SEGURIDAD_2026-09-14.md) |
+| SEC-5 | Agente | `config.enc` descifrable por usuario local; staging de update en ProgramData; firma sin atar versión/canal; sin Authenticode | 🟠 Media | Abierto — ver [auditoría 14/09](../security/AUDITORIA_SEGURIDAD_2026-09-14.md) |
+| SEC-6 | Agente | Refresh token sin detección de reuso ni HWID; revocar no corta el WebSocket abierto | 🟡 Baja | Abierto — ver [auditoría 14/09](../security/AUDITORIA_SEGURIDAD_2026-09-14.md) |
+| SEC-7 | Infraestructura | Contenedores como root; imágenes sin pin; backups sin cifrar ni copia externa; tokens en logs de nginx; SSH sin fail2ban | 🟠 Media | Abierto — ver [auditoría 14/09](../security/AUDITORIA_SEGURIDAD_2026-09-14.md) |
+| SEC-8 | Seguridad | Incidentes: un operator puede vincular equipos/alertas de otro cliente | 🟡 Baja | Abierto — ver [auditoría 14/09](../security/AUDITORIA_SEGURIDAD_2026-09-14.md) |
+| SEC-9 | Operación | Sin procedimiento de recuperación de acceso (admin único, 2FA perdido) | 🟠 Media | Abierto — ver [auditoría 14/09](../security/AUDITORIA_SEGURIDAD_2026-09-14.md) |
+| UPD-7 | Actualizaciones | Canal legacy embebe Node 20.2.0 sin parches (limitación Win7/2008 R2) — riesgo aceptado | 🟡 Baja | Abierto — ver [auditoría 14/09](../security/AUDITORIA_SEGURIDAD_2026-09-14.md) |
 
 ---
 
