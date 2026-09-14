@@ -10,7 +10,7 @@ Documentación del proyecto **STC Cloud**, organizada por audiencia. Todo lo lis
 ### Para aceptación del cliente — un solo archivo
 | Documento | Propósito |
 | :--- | :--- |
-| **[Documento de Aceptación Técnica y de Seguridad](cliente/STC_Documento_Aceptacion_Seguridad_v1.0.html)** `v1.0` | **El único archivo a enviar para que el área de Seguridad Informática del cliente apruebe el despliegue.** Resume en 9 páginas: cómo funciona el sistema, el diagrama general de infraestructura (agentes, impresoras, API, protocolos y puertos), la arquitectura de seguridad, el estado honesto de la última auditoría, los dos modos de despliegue y el alcance exacto de los datos recolectados — cierra con una sección de firma. Referencia el resto de los documentos de esta tabla para el detalle exhaustivo de cada tema. **ENTREGAR.** |
+| **[Documento de Aceptación Técnica y de Seguridad](cliente/STC_Documento_Aceptacion_Seguridad_v1.0.html)** `v1.0` | **El único archivo a enviar para que el área de Seguridad Informática del cliente revise el despliegue.** Resume en 7 páginas: cómo funciona el sistema, el diagrama general de infraestructura (agentes, impresoras, API, protocolos y puertos), la arquitectura de seguridad, los dos modos de despliegue y el alcance exacto de los datos recolectados. Referencia el resto de los documentos de esta tabla para el detalle exhaustivo de cada tema, incluido el estado de auditoría (`STC_Auditoria_Sistemas_IT`). **ENTREGAR.** |
 
 ### Para la Gerencia de Sistemas (IT) — detalle exhaustivo
 | Documento | Propósito |

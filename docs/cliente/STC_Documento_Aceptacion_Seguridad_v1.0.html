@@ -129,13 +129,6 @@
         .toc-dots { flex-grow: 1; border-bottom: 1px dotted var(--line-300); margin: 0 5px; position: relative; top: -4px; }
         .toc-page { flex-shrink: 0; padding-left: 5px; font-weight: 600; color: var(--brand-accent); }
 
-        /* === ACEPTACIÓN === */
-        .signoff-grid { display: flex; gap: 20px; margin-top: 30px; }
-        .signoff-box { flex: 1; border: 1px solid var(--line-300); border-radius: 8px; padding: 16px; }
-        .signoff-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-400); font-weight: 700; margin-bottom: 22px; }
-        .signoff-line { border-bottom: 1px solid var(--ink-300); height: 28px; }
-        .signoff-caption { font-size: 10.5px; color: var(--ink-300); margin-top: 4px; }
-
         .footer { position: absolute; bottom: 20mm; left: 25mm; right: 25mm; border-top: 1px solid var(--border-color); padding-top: 15px; font-size: 10px; color: var(--ink-300); text-align: center; }
     </style>
 </head>
@@ -153,7 +146,7 @@
             <h1 class="main-title">Documento de Aceptación</h1>
             <h1 class="main-subtitle">Técnica y de Seguridad</h1>
             <p class="cover-desc">
-                Arquitectura, seguridad y requisitos de red de STC Cloud, en un único documento pensado para su revisión y aprobación por el área de Seguridad Informática. Incluye el diagrama general de infraestructura (agentes, impresoras, API, protocolos y puertos) y un resumen honesto del estado de la última auditoría de seguridad.
+                Arquitectura, seguridad y requisitos de red de STC Cloud, en un único documento pensado para su revisión por el área de Seguridad Informática. Incluye el diagrama general de infraestructura (agentes, impresoras, API, protocolos y puertos), la arquitectura de seguridad, el modelo de despliegue y el alcance exacto de los datos recolectados.
             </p>
             <div class="version-tag">Documento de Aceptación | v1.0 | Septiembre 2026</div>
         </div>
@@ -172,10 +165,8 @@
             <a href="#diagrama" class="toc-item"><span class="toc-text">2. Diagrama General de Infraestructura</span><span class="toc-dots"></span><span class="toc-page">4</span></a>
             <a href="#red-puertos" class="toc-item"><span class="toc-text">3. Protocolos y Puertos (detalle)</span><span class="toc-dots"></span><span class="toc-page">5</span></a>
             <a href="#seguridad" class="toc-item"><span class="toc-text">4. Arquitectura de Seguridad</span><span class="toc-dots"></span><span class="toc-page">6</span></a>
-            <a href="#auditoria" class="toc-item"><span class="toc-text">5. Estado de la Última Auditoría de Seguridad</span><span class="toc-dots"></span><span class="toc-page">7</span></a>
-            <a href="#despliegue" class="toc-item"><span class="toc-text">6. Modelo de Despliegue e Infraestructura</span><span class="toc-dots"></span><span class="toc-page">8</span></a>
-            <a href="#privacidad" class="toc-item"><span class="toc-text">7. Alcance de los Datos Recolectados</span><span class="toc-dots"></span><span class="toc-page">8</span></a>
-            <a href="#aceptacion" class="toc-item"><span class="toc-text">8. Aceptación</span><span class="toc-dots"></span><span class="toc-page">9</span></a>
+            <a href="#despliegue" class="toc-item"><span class="toc-text">5. Modelo de Despliegue e Infraestructura</span><span class="toc-dots"></span><span class="toc-page">7</span></a>
+            <a href="#privacidad" class="toc-item"><span class="toc-text">6. Alcance de los Datos Recolectados</span><span class="toc-dots"></span><span class="toc-page">7</span></a>
         </div>
         <div class="note-callout">
             Este documento resume y referencia el material técnico completo, disponible en <code>docs/cliente/</code>: Arquitectura del Agente, Arquitectura de la App Web, Requisitos del Sistema Cliente, Auditoría de Sistemas IT y Modelo de Datos. Ante cualquier duda puntual, esos documentos tienen el detalle exhaustivo de cada tema.
@@ -227,121 +218,110 @@
 
         <div class="diagram-title">Arquitectura de Extremo a Extremo</div>
         <div class="diagram-wrap">
-<svg viewBox="0 0 900 650" xmlns="http://www.w3.org/2000/svg" font-family="'Source Sans 3', system-ui, sans-serif">
+<svg viewBox="0 0 760 660" xmlns="http://www.w3.org/2000/svg" font-family="'Source Sans 3', system-ui, sans-serif">
   <defs>
-    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse">
       <path d="M0,0 L10,5 L0,10 z" fill="#b4700b"/>
     </marker>
-    <marker id="arrowSoft" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+    <marker id="arrowSoft" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
       <path d="M0,0 L10,5 L0,10 z" fill="#8a9094"/>
     </marker>
   </defs>
 
   <!-- fondo -->
-  <rect x="0" y="0" width="900" height="650" fill="#ffffff"/>
+  <rect x="0" y="0" width="760" height="660" fill="#ffffff"/>
 
   <!-- títulos de zona -->
-  <text x="152" y="32" text-anchor="middle" font-family="Montserrat, sans-serif" font-size="17" font-weight="700" fill="#2e3033">SU RED (LAN)</text>
-  <text x="442" y="32" text-anchor="middle" font-family="Montserrat, sans-serif" font-size="15" font-weight="700" fill="#8a9094" letter-spacing="0.08em">INTERNET</text>
-  <text x="745" y="32" text-anchor="middle" font-family="Montserrat, sans-serif" font-size="17" font-weight="700" fill="#2e3033">NUBE STC CLOUD</text>
+  <text x="135" y="32" text-anchor="middle" font-family="Montserrat, sans-serif" font-size="21" font-weight="700" fill="#2e3033">SU RED (LAN)</text>
+  <text x="380" y="32" text-anchor="middle" font-family="Montserrat, sans-serif" font-size="18" font-weight="700" fill="#8a9094" letter-spacing="0.06em">INTERNET</text>
+  <text x="625" y="32" text-anchor="middle" font-family="Montserrat, sans-serif" font-size="21" font-weight="700" fill="#2e3033">NUBE STC CLOUD</text>
 
   <!-- separadores de Internet -->
-  <line x1="290" y1="48" x2="290" y2="632" stroke="#d5d9da" stroke-width="1" stroke-dasharray="3,4"/>
-  <line x1="595" y1="48" x2="595" y2="632" stroke="#d5d9da" stroke-width="1" stroke-dasharray="3,4"/>
+  <line x1="260" y1="50" x2="260" y2="642" stroke="#d5d9da" stroke-width="1" stroke-dasharray="3,4"/>
+  <line x1="500" y1="50" x2="500" y2="642" stroke="#d5d9da" stroke-width="1" stroke-dasharray="3,4"/>
 
   <!-- ============ ZONA: RED DEL CLIENTE ============ -->
-  <rect x="15" y="48" width="275" height="584" rx="12" fill="#fdf4e9" stroke="#e0a76b" stroke-width="1.5" stroke-dasharray="6,5"/>
-  <text x="152" y="72" text-anchor="middle" font-size="12" font-weight="700" letter-spacing="0.04em" fill="#8a6033">INSTALACIONES DEL CLIENTE</text>
+  <rect x="10" y="50" width="250" height="590" rx="12" fill="#fdf4e9" stroke="#e0a76b" stroke-width="1.5" stroke-dasharray="6,5"/>
+  <text x="135" y="76" text-anchor="middle" font-size="14" font-weight="700" letter-spacing="0.03em" fill="#8a6033">INSTALACIONES DEL CLIENTE</text>
 
-  <rect x="40" y="88" width="225" height="145" rx="10" fill="#ffffff" stroke="#d5d9da" stroke-width="1.5"/>
-  <text x="152" y="120" text-anchor="middle" font-family="Montserrat, sans-serif" font-size="17" font-weight="700" fill="#2e3033">Impresoras /</text>
-  <text x="152" y="142" text-anchor="middle" font-family="Montserrat, sans-serif" font-size="17" font-weight="700" fill="#2e3033">Multifuncionales</text>
-  <text x="152" y="169" text-anchor="middle" font-size="12.5" fill="#8a9094">SNMP · PJL · IPP · EWS</text>
-  <text x="152" y="188" text-anchor="middle" font-size="11" fill="#8a9094">(sólo lectura de contadores</text>
-  <text x="152" y="204" text-anchor="middle" font-size="11" fill="#8a9094">y niveles de tóner)</text>
+  <rect x="27" y="95" width="216" height="120" rx="10" fill="#ffffff" stroke="#d5d9da" stroke-width="1.5"/>
+  <text x="135" y="130" text-anchor="middle" font-family="Montserrat, sans-serif" font-size="20" font-weight="700" fill="#2e3033">Impresoras /</text>
+  <text x="135" y="154" text-anchor="middle" font-family="Montserrat, sans-serif" font-size="20" font-weight="700" fill="#2e3033">Multifuncionales</text>
+  <text x="135" y="182" text-anchor="middle" font-size="15" fill="#8a9094">SNMP · PJL · IPP · EWS</text>
 
-  <line x1="95" y1="233" x2="95" y2="425" stroke="#b4700b" stroke-width="2.5" marker-end="url(#arrow)" marker-start="url(#arrow)"/>
-  <rect x="140" y="250" width="145" height="115" rx="7" fill="#ffffff" stroke="#e0a76b" stroke-width="1.3"/>
-  <text x="212" y="269" text-anchor="middle" font-size="11.5" font-weight="700" fill="#b4700b">RED LOCAL (UDP/TCP)</text>
-  <text x="150" y="289" font-size="11" fill="#4b5053">161/UDP</text>
-  <text x="150" y="304" font-size="11" fill="#4b5053">SNMP v1/v2c/v3</text>
-  <text x="150" y="322" font-size="11" fill="#4b5053">9100/TCP · PJL</text>
-  <text x="150" y="340" font-size="11" fill="#4b5053">631/TCP · IPP</text>
-  <text x="150" y="358" font-size="11" fill="#4b5053">80/443/TCP · EWS</text>
+  <line x1="60" y1="215" x2="60" y2="385" stroke="#b4700b" stroke-width="3" marker-end="url(#arrow)" marker-start="url(#arrow)"/>
+  <rect x="90" y="232" width="160" height="135" rx="8" fill="#ffffff" stroke="#e0a76b" stroke-width="1.4"/>
+  <text x="170" y="255" text-anchor="middle" font-size="15" font-weight="700" fill="#b4700b">RED LOCAL</text>
+  <text x="100" y="277" font-size="14" fill="#4b5053">161/UDP</text>
+  <text x="100" y="294" font-size="14" fill="#4b5053">SNMP v1/v2c/v3</text>
+  <text x="100" y="315" font-size="14" fill="#4b5053">9100/TCP · PJL</text>
+  <text x="100" y="333" font-size="14" fill="#4b5053">631/TCP · IPP</text>
+  <text x="100" y="351" font-size="14" fill="#4b5053">80/443/TCP · EWS</text>
 
-  <rect x="40" y="425" width="225" height="145" rx="10" fill="#ffffff" stroke="#d5d9da" stroke-width="1.5"/>
-  <text x="152" y="457" text-anchor="middle" font-family="Montserrat, sans-serif" font-size="17" font-weight="700" fill="#2e3033">Agente STC Cloud</text>
-  <text x="152" y="479" text-anchor="middle" font-family="Montserrat, sans-serif" font-size="17" font-weight="700" fill="#2e3033">Monitor</text>
-  <text x="152" y="506" text-anchor="middle" font-size="12.5" fill="#8a9094">Windows Service</text>
-  <text x="152" y="525" text-anchor="middle" font-size="11" fill="#8a9094">Config. cifrada AES-256-GCM</text>
-  <text x="152" y="541" text-anchor="middle" font-size="11" fill="#8a9094">(ligada al equipo host)</text>
+  <rect x="27" y="385" width="216" height="120" rx="10" fill="#ffffff" stroke="#d5d9da" stroke-width="1.5"/>
+  <text x="135" y="420" text-anchor="middle" font-family="Montserrat, sans-serif" font-size="20" font-weight="700" fill="#2e3033">Agente STC Cloud</text>
+  <text x="135" y="444" text-anchor="middle" font-family="Montserrat, sans-serif" font-size="20" font-weight="700" fill="#2e3033">Monitor</text>
+  <text x="135" y="472" text-anchor="middle" font-size="15" fill="#8a9094">Windows Service</text>
 
-  <text x="152" y="600" text-anchor="middle" font-size="12" font-weight="700" fill="#8a6033">Único equipo con instalación</text>
-  <text x="152" y="617" text-anchor="middle" font-size="12" fill="#8a6033">requerida en su red</text>
+  <text x="135" y="545" text-anchor="middle" font-size="14" font-weight="700" fill="#8a6033">Único equipo con instalación</text>
+  <text x="135" y="564" text-anchor="middle" font-size="14" fill="#8a6033">requerida en su red</text>
 
   <!-- FLECHA AGENTE -> NUBE -->
-  <line x1="265" y1="497" x2="595" y2="497" stroke="#b4700b" stroke-width="3" marker-end="url(#arrow)"/>
-  <text x="442" y="459" text-anchor="middle" font-size="15" font-weight="700" fill="#b4700b">HTTPS + WSS · TCP 443</text>
-  <text x="442" y="478" text-anchor="middle" font-size="12.5" font-weight="700" fill="#b4700b" letter-spacing="0.02em">SALIENTE ÚNICAMENTE — ZERO-INBOUND</text>
-  <text x="442" y="520" text-anchor="middle" font-size="11.5" fill="#8a9094">Nunca abre puertos de entrada</text>
-  <text x="442" y="538" text-anchor="middle" font-size="11.5" fill="#8a9094">Heartbeat · comandos remotos ·</text>
-  <text x="442" y="554" text-anchor="middle" font-size="11.5" fill="#8a9094">actualizaciones firmadas</text>
+  <line x1="243" y1="460" x2="500" y2="460" stroke="#b4700b" stroke-width="3.5" marker-end="url(#arrow)"/>
+  <text x="371" y="404" text-anchor="middle" font-size="18" font-weight="700" fill="#b4700b">HTTPS + WSS · TCP 443</text>
+  <text x="371" y="425" text-anchor="middle" font-size="14.5" font-weight="700" fill="#b4700b" letter-spacing="0.02em">SALIENTE ÚNICAMENTE</text>
+  <text x="371" y="443" text-anchor="middle" font-size="14.5" font-weight="700" fill="#b4700b" letter-spacing="0.02em">ZERO-INBOUND</text>
+  <text x="371" y="486" text-anchor="middle" font-size="13" fill="#8a9094">Nunca abre puertos de entrada</text>
+  <text x="371" y="504" text-anchor="middle" font-size="13" fill="#8a9094">Heartbeat · comandos remotos</text>
+  <text x="371" y="520" text-anchor="middle" font-size="13" fill="#8a9094">actualizaciones firmadas</text>
 
   <!-- ============ ZONA: NUBE STC CLOUD ============ -->
-  <rect x="595" y="48" width="290" height="584" rx="12" fill="#f7f8f8" stroke="#d5d9da" stroke-width="1.5"/>
-  <text x="745" y="72" text-anchor="middle" font-size="12" font-weight="700" letter-spacing="0.04em" fill="#8a9094">INFRAESTRUCTURA PROPIA (DOCKER)</text>
+  <rect x="500" y="50" width="250" height="590" rx="12" fill="#f7f8f8" stroke="#d5d9da" stroke-width="1.5"/>
+  <text x="625" y="76" text-anchor="middle" font-size="14" font-weight="700" letter-spacing="0.03em" fill="#8a9094">INFRAESTRUCTURA PROPIA</text>
 
   <!-- Navegador del cliente, encima del stack -->
-  <rect x="662" y="88" width="165" height="55" rx="8" fill="#fdf4e9" stroke="#e0a76b" stroke-width="1.5"/>
-  <text x="745" y="112" text-anchor="middle" font-size="13" font-weight="700" fill="#2e3033">Navegador del Cliente</text>
-  <text x="745" y="130" text-anchor="middle" font-size="11" fill="#8a9094">consulta el Portal Web</text>
-  <line x1="745" y1="143" x2="745" y2="167" stroke="#b4700b" stroke-width="2" marker-end="url(#arrow)"/>
-  <text x="761" y="159" font-size="10.5" font-weight="700" fill="#b4700b">HTTPS·443</text>
+  <rect x="530" y="95" width="190" height="65" rx="8" fill="#fdf4e9" stroke="#e0a76b" stroke-width="1.5"/>
+  <text x="625" y="122" text-anchor="middle" font-size="14" font-weight="700" fill="#2e3033">Navegador del Cliente</text>
+  <text x="625" y="142" text-anchor="middle" font-size="12.5" fill="#8a9094">consulta el Portal Web</text>
+  <line x1="625" y1="160" x2="625" y2="185" stroke="#b4700b" stroke-width="2.2" marker-end="url(#arrow)"/>
+  <text x="642" y="176" font-size="12" font-weight="700" fill="#b4700b">HTTPS·443</text>
 
-  <rect x="615" y="169" width="260" height="78" rx="9" fill="#ffffff" stroke="#e0a76b" stroke-width="1.5"/>
-  <text x="745" y="200" text-anchor="middle" font-family="Montserrat, sans-serif" font-size="16" font-weight="700" fill="#2e3033">Reverse Proxy (nginx)</text>
-  <text x="745" y="220" text-anchor="middle" font-size="11" fill="#8a9094">TLS: Let's Encrypt propio o</text>
-  <text x="745" y="235" text-anchor="middle" font-size="11" fill="#8a9094">proxy inverso externo</text>
+  <rect x="510" y="187" width="230" height="95" rx="9" fill="#ffffff" stroke="#e0a76b" stroke-width="1.5"/>
+  <text x="625" y="222" text-anchor="middle" font-family="Montserrat, sans-serif" font-size="17" font-weight="700" fill="#2e3033">Reverse Proxy (nginx)</text>
+  <text x="625" y="245" text-anchor="middle" font-size="13.5" fill="#8a9094">TLS: Let's Encrypt propio o</text>
+  <text x="625" y="263" text-anchor="middle" font-size="13.5" fill="#8a9094">proxy inverso externo</text>
 
-  <line x1="678" y1="247" x2="678" y2="279" stroke="#8a9094" stroke-width="2" marker-end="url(#arrowSoft)"/>
-  <line x1="812" y1="247" x2="812" y2="279" stroke="#8a9094" stroke-width="2" marker-end="url(#arrowSoft)"/>
+  <line x1="565" y1="282" x2="565" y2="305" stroke="#8a9094" stroke-width="2.2" marker-end="url(#arrowSoft)"/>
+  <line x1="685" y1="282" x2="685" y2="305" stroke="#8a9094" stroke-width="2.2" marker-end="url(#arrowSoft)"/>
 
-  <rect x="615" y="281" width="125" height="88" rx="8" fill="#ffffff" stroke="#d5d9da" stroke-width="1.5"/>
-  <text x="678" y="311" text-anchor="middle" font-family="Montserrat, sans-serif" font-size="15" font-weight="700" fill="#2e3033">Portal Web</text>
-  <text x="678" y="330" text-anchor="middle" font-size="11" fill="#8a9094">React SPA</text>
-  <text x="678" y="346" text-anchor="middle" font-size="10" fill="#8a9094">sólo lectura</text>
-  <text x="678" y="359" text-anchor="middle" font-size="10" fill="#8a9094">del cliente</text>
+  <rect x="510" y="307" width="110" height="72" rx="8" fill="#ffffff" stroke="#d5d9da" stroke-width="1.5"/>
+  <text x="565" y="337" text-anchor="middle" font-family="Montserrat, sans-serif" font-size="16" font-weight="700" fill="#2e3033">Portal Web</text>
+  <text x="565" y="358" text-anchor="middle" font-size="12.5" fill="#8a9094">React SPA</text>
 
-  <rect x="750" y="281" width="125" height="88" rx="8" fill="#ffffff" stroke="#d5d9da" stroke-width="1.5"/>
-  <text x="812" y="311" text-anchor="middle" font-family="Montserrat, sans-serif" font-size="15" font-weight="700" fill="#2e3033">API</text>
-  <text x="812" y="330" text-anchor="middle" font-size="11" fill="#8a9094">Fastify · Node 24</text>
-  <text x="812" y="346" text-anchor="middle" font-size="10" fill="#8a9094">auth + reglas</text>
-  <text x="812" y="359" text-anchor="middle" font-size="10" fill="#8a9094">de negocio</text>
+  <rect x="630" y="307" width="110" height="72" rx="8" fill="#ffffff" stroke="#d5d9da" stroke-width="1.5"/>
+  <text x="685" y="337" text-anchor="middle" font-family="Montserrat, sans-serif" font-size="16" font-weight="700" fill="#2e3033">API</text>
+  <text x="685" y="358" text-anchor="middle" font-size="12" fill="#8a9094">Fastify · Node 24</text>
 
-  <line x1="812" y1="369" x2="812" y2="384" stroke="#8a9094" stroke-width="2"/>
-  <line x1="678" y1="384" x2="812" y2="384" stroke="#8a9094" stroke-width="2"/>
-  <line x1="678" y1="384" x2="678" y2="403" stroke="#8a9094" stroke-width="2" marker-end="url(#arrowSoft)"/>
-  <line x1="812" y1="384" x2="812" y2="403" stroke="#8a9094" stroke-width="2" marker-end="url(#arrowSoft)"/>
+  <line x1="685" y1="379" x2="685" y2="393" stroke="#8a9094" stroke-width="2.2"/>
+  <line x1="565" y1="393" x2="685" y2="393" stroke="#8a9094" stroke-width="2.2"/>
+  <line x1="565" y1="393" x2="565" y2="410" stroke="#8a9094" stroke-width="2.2" marker-end="url(#arrowSoft)"/>
+  <line x1="685" y1="393" x2="685" y2="410" stroke="#8a9094" stroke-width="2.2" marker-end="url(#arrowSoft)"/>
 
-  <rect x="615" y="405" width="125" height="88" rx="8" fill="#ffffff" stroke="#d5d9da" stroke-width="1.5"/>
-  <text x="678" y="435" text-anchor="middle" font-family="Montserrat, sans-serif" font-size="15" font-weight="700" fill="#2e3033">PostgreSQL</text>
-  <text x="678" y="454" text-anchor="middle" font-size="11" fill="#8a9094">TimescaleDB</text>
-  <text x="678" y="470" text-anchor="middle" font-size="10" fill="#8a9094">credenciales cifradas</text>
-  <text x="678" y="483" text-anchor="middle" font-size="10" fill="#8a9094">at-rest</text>
+  <rect x="510" y="412" width="110" height="72" rx="8" fill="#ffffff" stroke="#d5d9da" stroke-width="1.5"/>
+  <text x="565" y="442" text-anchor="middle" font-family="Montserrat, sans-serif" font-size="15.5" font-weight="700" fill="#2e3033">PostgreSQL</text>
+  <text x="565" y="463" text-anchor="middle" font-size="12.5" fill="#8a9094">TimescaleDB</text>
 
-  <rect x="750" y="405" width="125" height="88" rx="8" fill="#ffffff" stroke="#d5d9da" stroke-width="1.5"/>
-  <text x="812" y="435" text-anchor="middle" font-family="Montserrat, sans-serif" font-size="15" font-weight="700" fill="#2e3033">Redis</text>
-  <text x="812" y="454" text-anchor="middle" font-size="11" fill="#8a9094">colas · pub/sub</text>
-  <text x="812" y="470" text-anchor="middle" font-size="10" fill="#8a9094">sesiones</text>
-  <text x="812" y="483" text-anchor="middle" font-size="10" fill="#8a9094">rate limit</text>
+  <rect x="630" y="412" width="110" height="72" rx="8" fill="#ffffff" stroke="#d5d9da" stroke-width="1.5"/>
+  <text x="685" y="442" text-anchor="middle" font-family="Montserrat, sans-serif" font-size="16" font-weight="700" fill="#2e3033">Redis</text>
+  <text x="685" y="463" text-anchor="middle" font-size="12" fill="#8a9094">colas · pub/sub</text>
 
-  <line x1="678" y1="493" x2="678" y2="515" stroke="#8a9094" stroke-width="2" marker-end="url(#arrowSoft)"/>
-  <rect x="615" y="517" width="260" height="55" rx="8" fill="#ffffff" stroke="#d5d9da" stroke-width="1.5"/>
-  <text x="745" y="540" text-anchor="middle" font-family="Montserrat, sans-serif" font-size="14" font-weight="700" fill="#2e3033">Backup automático</text>
-  <text x="745" y="558" text-anchor="middle" font-size="11" fill="#8a9094">pg_dump diario · retención 30 días</text>
+  <line x1="565" y1="484" x2="565" y2="505" stroke="#8a9094" stroke-width="2.2" marker-end="url(#arrowSoft)"/>
+  <rect x="510" y="507" width="230" height="62" rx="8" fill="#ffffff" stroke="#d5d9da" stroke-width="1.5"/>
+  <text x="625" y="536" text-anchor="middle" font-family="Montserrat, sans-serif" font-size="15" font-weight="700" fill="#2e3033">Backup automático</text>
+  <text x="625" y="556" text-anchor="middle" font-size="12.5" fill="#8a9094">pg_dump diario · 30 días</text>
 
-  <text x="745" y="600" text-anchor="middle" font-size="12" font-weight="700" fill="#8a6033">Self-hosted: no depende de un</text>
-  <text x="745" y="617" text-anchor="middle" font-size="12" fill="#8a6033">proveedor cloud propietario</text>
+  <text x="625" y="600" text-anchor="middle" font-size="14" font-weight="700" fill="#8a6033">Self-hosted: no depende de</text>
+  <text x="625" y="619" text-anchor="middle" font-size="14" fill="#8a6033">un proveedor cloud propio</text>
 </svg>
         </div>
         <div class="diagram-caption">Toda flecha indica quién inicia la conexión. Ninguna cruza desde Internet hacia la red del cliente.</div>
@@ -430,43 +410,13 @@
         <div class="footer">PÁGINA 6 | STC CLOUD – DOCUMENTO DE ACEPTACIÓN</div>
     </div>
 
-    <!-- PÁGINA 7: AUDITORÍA -->
-    <div class="page">
-        <div class="internal-header">
-            <div class="internal-brand">STC<span>CLOUD</span></div>
-            <div class="internal-doc-type">Estado de la Auditoría</div>
-        </div>
-        <h2 id="auditoria">5. Estado de la Auditoría de Seguridad</h2>
-        <p>
-            Como parte de nuestra práctica de revisión continua, STC Cloud pasa periódicamente por auditorías internas completas: revisiones independientes sobre dependencias, servidor e infraestructura, los endpoints de la API, autenticación y sesiones, y el agente Windows con su instalador.
-        </p>
-        <div class="callout-box">
-            <p>Resultado de la última revisión: 0 hallazgos críticos. La totalidad de los hallazgos de severidad alta fue corregida de inmediato. La mayoría de los de severidad media también; el resto queda priorizado como mejora de defensa en profundidad para próximas iteraciones, con responsable y plazo asignado internamente — no oculto, no olvidado.</p>
-        </div>
-        <h3>Áreas reforzadas en la última revisión</h3>
-        <ul>
-            <li>Validación más estricta del origen real de las conexiones, para que las políticas de límite de intentos de acceso no puedan eludirse.</li>
-            <li>Actualización del entorno de ejecución del servidor a una versión con soporte de seguridad activo.</li>
-            <li>Automatización de la renovación de certificados de seguridad, sin ventanas de exposición por vencimiento.</li>
-            <li>Mensajes de error del servidor revisados para no exponer detalles internos del sistema al usuario.</li>
-        </ul>
-        <h3>Mejoras planificadas para próximas iteraciones</h3>
-        <p>
-            Un conjunto adicional de mejoras de defensa en profundidad queda priorizado y documentado internamente, con responsable y plazo asignado — no vulnerabilidades ocultas, sino refuerzos adicionales sobre un sistema ya sin hallazgos críticos ni altos abiertos. Ninguno de estos puntos representa una vía de explotación directa conocida a la fecha de este documento.
-        </p>
-        <div class="note-callout">
-            Detalle completo hallazgo por hallazgo disponible bajo pedido, para el área de Seguridad Informática del cliente que quiera profundizar.
-        </div>
-        <div class="footer">PÁGINA 7 | STC CLOUD – DOCUMENTO DE ACEPTACIÓN</div>
-    </div>
-
-    <!-- PÁGINA 8: DESPLIEGUE Y DATOS -->
+    <!-- PÁGINA 7: DESPLIEGUE Y DATOS -->
     <div class="page">
         <div class="internal-header">
             <div class="internal-brand">STC<span>CLOUD</span></div>
             <div class="internal-doc-type">Despliegue y Datos</div>
         </div>
-        <h2 id="despliegue">6. Modelo de Despliegue e Infraestructura</h2>
+        <h2 id="despliegue">5. Modelo de Despliegue e Infraestructura</h2>
         <p>
             La nube de STC Cloud es <strong>self-hosted</strong>: corre en infraestructura propia (Docker Compose), no en un proveedor cloud propietario de terceros. El reverse proxy que recibe el tráfico admite dos modos, elegidos por configuración, sin cambiar código:
         </p>
@@ -476,7 +426,7 @@
         </ul>
         <p>Los datos se respaldan automáticamente todos los días (retención de 30 días) y el motor de base de datos usa PostgreSQL con la extensión TimescaleDB, pensada específicamente para series de tiempo (lecturas periódicas de contadores).</p>
 
-        <h2 id="privacidad">7. Alcance de los Datos Recolectados</h2>
+        <h2 id="privacidad">6. Alcance de los Datos Recolectados</h2>
         <p>El agente recolecta únicamente telemetría de hardware de impresión:</p>
         <ul>
             <li>Contadores de páginas impresas (color y monocromo).</li>
@@ -487,43 +437,7 @@
         <div class="callout-box">
             <p>El agente jamás accede al contenido de los documentos impresos, ni a archivos, correo o cualquier otro recurso de la red del cliente fuera de las impresoras mismas.</p>
         </div>
-        <div class="footer">PÁGINA 8 | STC CLOUD – DOCUMENTO DE ACEPTACIÓN</div>
-    </div>
-
-    <!-- PÁGINA 9: ACEPTACIÓN -->
-    <div class="page">
-        <div class="internal-header">
-            <div class="internal-brand">STC<span>CLOUD</span></div>
-            <div class="internal-doc-type">Aceptación</div>
-        </div>
-        <h2 id="aceptacion">8. Aceptación</h2>
-        <p>
-            Con la firma de este documento, el área de Seguridad Informática del cliente deja constancia de haber revisado la arquitectura, el modelo de red (Zero-Inbound), los protocolos y puertos utilizados, y el estado de la última auditoría de seguridad de STC Cloud descriptos en este documento, y autoriza su despliegue en la infraestructura acordada con Canal Directo.
-        </p>
-
-        <div class="signoff-grid">
-            <div class="signoff-box">
-                <div class="signoff-label">Por el Cliente</div>
-                <p style="font-size:12px; margin: 0 0 20px 0;">Nombre y cargo:</p>
-                <div class="signoff-line"></div>
-                <div class="signoff-caption">Nombre completo / Cargo</div>
-                <p style="font-size:12px; margin: 18px 0 0 0;">Firma y fecha:</p>
-                <div class="signoff-line"></div>
-            </div>
-            <div class="signoff-box">
-                <div class="signoff-label">Por Canal Directo</div>
-                <p style="font-size:12px; margin: 0 0 20px 0;">Nombre y cargo:</p>
-                <div class="signoff-line"></div>
-                <div class="signoff-caption">Nombre completo / Cargo</div>
-                <p style="font-size:12px; margin: 18px 0 0 0;">Firma y fecha:</p>
-                <div class="signoff-line"></div>
-            </div>
-        </div>
-
-        <div class="note-callout" style="margin-top: 30px;">
-            Este documento resume el estado del sistema a la fecha de su emisión (septiembre de 2026). Ante un cambio relevante de arquitectura o de seguridad, Canal Directo reemitirá una versión actualizada.
-        </div>
-        <div class="footer">PÁGINA 9 | STC CLOUD – DOCUMENTO DE ACEPTACIÓN</div>
+        <div class="footer">PÁGINA 7 | STC CLOUD – DOCUMENTO DE ACEPTACIÓN</div>
     </div>
 
 </body>
