@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>STC Cloud - Manual de Usuario y Propuesta de Valor v1.6</title>
+    <title>STC Cloud - Manual de Usuario y Propuesta de Valor v1.7</title>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;900&family=Source+Sans+3:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
     <style>
         /* Paleta institucional Canal Directo — los mismos tokens que usa el portal
@@ -337,7 +337,7 @@
                 garantiza el suministro de insumos justo a tiempo y opera bajo estándares estrictos de seguridad silenciosa.
             </p>
 
-            <div class="version-tag">Edición Cliente Final | v1.6 | Mayo 2026</div>
+            <div class="version-tag">Edición Cliente Final | v1.7 | Septiembre 2026</div>
         </div>
 
         <div class="footer">
@@ -370,15 +370,20 @@
                 <span class="toc-dots"></span>
                 <span class="toc-page">4</span>
             </a>
-            <a href="#seguridad-cliente" class="toc-item">
-                <span class="toc-text">4. Seguridad Sin Preocupaciones (Zero-Inbound)</span>
+            <a href="#portal-web" class="toc-item">
+                <span class="toc-text">4. El Portal Web: Su Panel de Control en la Nube</span>
                 <span class="toc-dots"></span>
                 <span class="toc-page">5</span>
             </a>
-            <a href="#preguntas-frecuentes" class="toc-item">
-                <span class="toc-text">5. Preguntas Frecuentes (FAQ)</span>
+            <a href="#seguridad-cliente" class="toc-item">
+                <span class="toc-text">5. Seguridad Sin Preocupaciones (Zero-Inbound)</span>
                 <span class="toc-dots"></span>
-                <span class="toc-page">5</span>
+                <span class="toc-page">6</span>
+            </a>
+            <a href="#preguntas-frecuentes" class="toc-item">
+                <span class="toc-text">6. Preguntas Frecuentes (FAQ)</span>
+                <span class="toc-dots"></span>
+                <span class="toc-page">6</span>
             </a>
         </div>
 
@@ -495,14 +500,66 @@
         </div>
     </div>
 
-    <!-- PÁGINA 5: SEGURIDAD Y PREGUNTAS FRECUENTES -->
+    <!-- PÁGINA 5: EL PORTAL WEB -->
+    <div class="page">
+        <div class="internal-header">
+            <div class="internal-brand">STC<span>CLOUD</span></div>
+            <div class="internal-doc-type">El Portal Web de Cliente</div>
+        </div>
+
+        <h2 id="portal-web">4. El Portal Web: Su Panel de Control en la Nube</h2>
+        <p>
+            Mientras el agente instalado en su red trabaja de forma silenciosa (ver secciones anteriores), el <strong>Portal Web</strong> es donde su empresa consulta día a día el estado de su parque de impresión: se accede desde cualquier navegador, con su usuario y contraseña, sin instalar nada. Su acceso es de <strong>sólo lectura sobre los datos de su propia empresa</strong> — no administra agentes, credenciales de red ni acciones remotas sobre los equipos: eso queda a cargo del equipo técnico de Canal Directo.
+        </p>
+
+        <h3>Panel Principal (Dashboard)</h3>
+        <p>
+            Al iniciar sesión, el panel principal resume de un vistazo la salud de su parque: alertas activas de tóner, resets de contador y equipos sin señal; incidentes de servicio abiertos; solicitudes de consumibles en curso; y, si corresponde, equipos detectados en su red que todavía no fueron registrados formalmente.
+        </p>
+
+        <h3>Inventario de Dispositivos</h3>
+        <p>
+            El listado completo de sus impresoras y multifuncionales, con modelo, ubicación, estado de conexión y niveles de tóner por color. Cada equipo tiene una ficha de detalle con su historial de lecturas de contador y consumo de insumos a lo largo del tiempo.
+        </p>
+
+        <h3>Alertas</h3>
+        <p>
+            Registro de los eventos técnicos que el sistema detecta automáticamente: tóner por debajo del umbral de advertencia, un contador que se reinició, o un equipo que dejó de responder. Cada alerta muestra cuándo se originó y, si ya se resolvió sola (por ejemplo, se repuso el tóner), cuándo.
+        </p>
+
+        <h3>Incidentes</h3>
+        <p>
+            Un incidente es el seguimiento de un caso de servicio: se abre a partir de una alerta técnica, pero <strong>sigue abierto aunque la alerta que lo originó se resuelva sola</strong> — permanece activo hasta que un operador de Canal Directo lo cierra formalmente, garantizando que todo problema real tenga una resolución confirmada, no sólo una mejora de estado momentánea.
+        </p>
+
+        <h3>Pedidos de Consumibles</h3>
+        <p>
+            Los pedidos de tóner se abren solos al cruzar el umbral configurado para cada equipo y se completan solos en cuanto el sistema detecta que el consumible fue reemplazado — sin que nadie tenga que generarlos ni cerrarlos a mano. Un pedido cargado manualmente por su equipo sí requiere la confirmación de un operador antes de avanzar.
+        </p>
+
+        <h3>Reportes de Facturación</h3>
+        <p>
+            Al cierre de cada período mensual, el portal genera un reporte con la lectura inicial y final de cada equipo, el delta de páginas impresas y su origen. Una vez cerrado el período, esos valores <strong>no se recalculan</strong>: quedan fijos como respaldo de lo facturado, y se pueden exportar en CSV, Excel (XLSX) o PDF.
+        </p>
+
+        <h3>Segundo Factor de Autenticación (2FA) y Feedback</h3>
+        <p>
+            Desde su propia cuenta puede activar un segundo factor de autenticación (TOTP, con una app como Google Authenticator o similar) para reforzar el acceso, con códigos de recuperación por si pierde el dispositivo. Y si encuentra un problema o quiere sugerir una mejora, el botón flotante <strong>"Dar Feedback"</strong>, presente en cualquier pantalla del portal, lo envía directo al equipo de Canal Directo.
+        </p>
+
+        <div class="footer">
+            PÁGINA 5 | STC CLOUD – MANUAL DE USUARIO
+        </div>
+    </div>
+
+    <!-- PÁGINA 6: SEGURIDAD Y PREGUNTAS FRECUENTES -->
     <div class="page">
         <div class="internal-header">
             <div class="internal-brand">STC<span>CLOUD</span></div>
             <div class="internal-doc-type">Seguridad y Preguntas Frecuentes</div>
         </div>
 
-        <h2 id="seguridad-cliente">4. Seguridad Sin Preocupaciones (Zero-Inbound)</h2>
+        <h2 id="seguridad-cliente">5. Seguridad Sin Preocupaciones (Zero-Inbound)</h2>
         <p>
             Entendemos que la seguridad de su red interna es su prioridad número uno. Por ello, STC Cloud se ha diseñado desde los cimientos bajo el paradigma de seguridad militar <strong>Zero-Inbound</strong>:
         </p>
@@ -519,7 +576,7 @@
             Además, sus credenciales y configuraciones locales de red se almacenan bajo cifrado simétrico robusto <strong>AES-256-GCM</strong>. Este cifrado se enlaza físicamente al procesador y BIOS de la máquina host por derivación de firma (HWID). Si alguien extrajera la carpeta del agente de su red, los datos no podrían descifrarse, asegurando una confidencialidad impenetrable.
         </p>
 
-        <h2 id="preguntas-frecuentes">5. Preguntas Frecuentes (FAQ)</h2>
+        <h2 id="preguntas-frecuentes">6. Preguntas Frecuentes (FAQ)</h2>
         
         <table>
             <thead>
@@ -549,7 +606,7 @@
         </table>
 
         <div class="footer">
-            PÁGINA 5 | STC CLOUD – MANUAL DE USUARIO
+            PÁGINA 6 | STC CLOUD – MANUAL DE USUARIO
         </div>
     </div>
 

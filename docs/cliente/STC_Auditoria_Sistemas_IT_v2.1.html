@@ -796,10 +796,6 @@ monoPages = Number(GXI_BILLING_SIMPLEX_BW_TOTAL_CNT) + Number(GXI_BILLING_DUPLEX
             Para redes corporativas donde SNMPv2c (comunidades en texto plano) está prohibido por política de seguridad, el agente soporta perfiles SNMPv3 completos por rango de IP o por agente — hasta 8 credenciales configurables, con combinaciones de autenticación (`MD5`/`SHA-2`) y privacidad de payload (`DES`/`AES`). Las credenciales SNMPv3 nunca se almacenan en texto plano: se cifran at-rest con el mismo esquema AES-256-GCM + derivación HKDF-SHA256 utilizado para el resto de los secretos sensibles del sistema, y se transmiten al agente únicamente dentro del canal WSS ya autenticado.
         </p>
 
-        <div class="note-callout" style="padding: 10px 15px; margin: 10px 0; font-size: 12.5px;">
-            <strong>Cumplimiento Normativo de Seguridad:</strong> Todas las consultas de diagnóstico y actualización de software se rigen por la arquitectura criptográfica de STC Cloud. Toda acción administrativa queda registrada local y remotamente, garantizando el cumplimiento de normativas ISO 27001 y SOC2 de seguridad de la información.
-        </div>
-
         <div class="footer">
             PÁGINA 8 | STC CLOUD – GUÍA DE AUDITORÍA DE SISTEMAS
         </div>
