@@ -23,7 +23,7 @@ export interface DeviceDetailData extends Device {
   merged_into_serial?: string | null;
 }
 
-export type DeviceDetailTab = 'general' | 'counters' | 'supplies' | 'media' | 'alerts' | 'incidents' | 'history' | 'costs' | 'ews';
+export type DeviceDetailTab = 'general' | 'counters' | 'supplies' | 'media' | 'alerts' | 'incidents' | 'history' | 'costs';
 
 /** Alerta activa deduplicada: del servidor + las que reporta el propio equipo.
  * `alertClass` sólo viene poblado en las de origen servidor (las que reporta
