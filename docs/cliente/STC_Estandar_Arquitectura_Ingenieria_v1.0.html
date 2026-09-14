@@ -499,7 +499,7 @@
             </div>
             <div class="card orange">
                 <div class="card-title">Reversibilidad</div>
-                <p>Las 72 migraciones de base de datos tienen su operación inversa (<code>down</code>)
+                <p>Las 75 migraciones de base de datos tienen su operación inversa (<code>down</code>)
                 escrita y versionada. Un despliegue que salga mal se revierte, no se parchea a mano
                 sobre la base productiva.</p>
             </div>
@@ -843,15 +843,15 @@
 
         <div class="metrics">
             <div class="metric">
-                <div class="metric-num">892</div>
+                <div class="metric-num">918</div>
                 <div class="metric-label">Archivos analizados<br>por la guarda de tamaños</div>
             </div>
             <div class="metric">
-                <div class="metric-num">191</div>
+                <div class="metric-num">193</div>
                 <div class="metric-label">Rutas con credencial<br>declarada y verificada</div>
             </div>
             <div class="metric">
-                <div class="metric-num">0</div>
+                <div class="metric-num">14</div>
                 <div class="metric-label">Hallazgos de las guardas<br>de dependencias e higiene</div>
             </div>
             <div class="metric">
@@ -878,12 +878,12 @@
                 <tr>
                     <td>Fronteras entre módulos y <em>features</em></td>
                     <td><strong>Cumple</strong></td>
-                    <td>Cero imports cruzados hacia partes internas de otro módulo.</td>
+                    <td>14 casos heredados en el registro de deuda (4 de fronteras entre módulos, 10 de fronteras entre <em>features</em> del portal), congelados antes de esta línea base; cero casos nuevos desde entonces.</td>
                 </tr>
                 <tr>
                     <td>Pureza de la capa de dominio</td>
                     <td><strong>Cumple</strong></td>
-                    <td>Los 91 archivos de dominio del backend no importan ninguna librería externa, base de datos ni cliente HTTP.</td>
+                    <td>Los 94 archivos de dominio del backend no importan ninguna librería externa, base de datos ni cliente HTTP.</td>
                 </tr>
                 <tr>
                     <td>Errores silenciados / trazas de depuración / SQL interpolado</td>
@@ -893,7 +893,7 @@
                 <tr>
                     <td>Autenticación declarada por endpoint</td>
                     <td><strong>Cumple</strong></td>
-                    <td>191 rutas verificadas; 10 rutas públicas declaradas explícitamente (ingreso al portal, activación y renovación de credenciales del agente, chequeo de salud y métricas).</td>
+                    <td>193 rutas verificadas; 9 rutas públicas declaradas explícitamente (ingreso al portal, activación y renovación de credenciales del agente, chequeo de salud y métricas).</td>
                 </tr>
                 <tr>
                     <td>Jerarquía de errores del estándar</td>
@@ -903,7 +903,7 @@
                 <tr>
                     <td>Reversibilidad de migraciones</td>
                     <td><strong>Cumple</strong></td>
-                    <td>Las 72 migraciones de base de datos definen su operación inversa.</td>
+                    <td>Las 75 migraciones de base de datos definen su operación inversa.</td>
                 </tr>
                 <tr>
                     <td>Formato de historial de cambios</td>
@@ -977,8 +977,8 @@
             <tbody>
                 <tr>
                     <td>Guardas de dependencias e higiene</td>
-                    <td><strong>0</strong></td>
-                    <td>Vacío. Las reglas de fronteras arquitectónicas y de higiene de código se cumplen sin ninguna excepción histórica.</td>
+                    <td><strong>14</strong></td>
+                    <td>Las reglas de higiene de código (errores silenciados, trazas de depuración, SQL interpolado) y la dirección de dependencias entre capas están en cero. Los 14 casos son de fronteras entre módulos y entre <em>features</em> del portal (4 y 10 respectivamente), congelados al fijar la línea base.</td>
                 </tr>
                 <tr>
                     <td>Límite de tamaño de archivo (300 líneas)</td>
@@ -987,18 +987,20 @@
                 </tr>
                 <tr>
                     <td>Límite de tamaño de función (20 líneas)</td>
-                    <td><strong>236</strong></td>
-                    <td>148 en el portal —en su mayoría funciones de renderizado, donde el límite es de aplicación discutible según la propia excepción del estándar— y 88 en el backend.</td>
+                    <td><strong>306</strong></td>
+                    <td>182 en el portal —en su mayoría funciones de renderizado, donde el límite es de aplicación discutible según la propia excepción del estándar— y 124 en el backend.</td>
                 </tr>
             </tbody>
         </table>
 
         <div class="note-callout">
-            <strong>Lectura para un auditor.</strong> Que las dos primeras filas estén en cero es el
-            dato relevante: las reglas que protegen la <em>estructura</em> del sistema —las que hacen
-            costoso un cambio futuro— se cumplen sin excepciones. El inventario remanente es de
-            granularidad de funciones, la categoría de menor riesgo estructural y la de corrección
-            más incremental.
+            <strong>Lectura para un auditor.</strong> El límite de tamaño de archivo está en cero y
+            las reglas de higiene de código y de dirección de dependencias entre capas también: son
+            las que protegen la <em>estructura</em> del sistema y se cumplen sin excepciones. El
+            inventario remanente son 14 casos de fronteras entre módulos/<em>features</em> (de menor
+            riesgo que una violación de dirección de dependencias, porque no cruza hacia
+            infraestructura ni rompe la pureza del dominio) y la granularidad de funciones, la
+            categoría de menor riesgo estructural y la de corrección más incremental.
         </div>
 
         <div class="footer">Canal Directo S.A. — STC Cloud · Estándar de Arquitectura e Ingeniería v1.0 · Página 8</div>

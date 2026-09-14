@@ -501,15 +501,15 @@
         <div class="diagram-title">Servicios del Despliegue (docker-compose.yml)</div>
         <pre class="diagram">
                               ┌──────────────────────┐
-                    HTTPS     │        nginx          │  Terminador TLS
-        Internet ────────────►  reverse proxy         │  (certbot renueva cada 12h)
-                              └──────────┬────────────┘
+                    HTTPS     │  nginx / nginx-ext.   │  Terminador TLS
+        Internet ────────────►  reverse proxy         │  (Let's Encrypt propio, o
+                              └──────────┬────────────┘   detrás de un proxy externo)
                                          │
                     ┌────────────────────┼────────────────────┐
                     ▼                    ▼                    │
           ┌──────────────────┐  ┌──────────────────┐          │
           │   portal (SPA)   │  │   api (Fastify)  │◄─────────┘  agentes (WSS/HTTPS)
-          │  nginx + React   │  │  Node 20 + Jobs  │
+          │  nginx + React   │  │  Node 24 + Jobs  │
           └──────────────────┘  └─────────┬────────┘
                                             │
                               ┌─────────────┼─────────────┐
@@ -526,11 +526,11 @@
                     └──────────────────┘</pre>
 
         <p>
-            El backend confía en nginx como proxy inmediato (<code>trustProxy: true</code>) para resolver la IP real del cliente vía <code>X-Forwarded-For</code>. Portal y API son contenedores separados con su propio Dockerfile; nginx enruta <code>/api/</code> y <code>/ws</code> hacia la API y todo lo demás hacia el portal estático.
+            El reverse proxy se despliega en uno de dos modos, elegidos por configuración: nginx propio con certificados de Let's Encrypt (renovados por un contenedor <code>certbot</code>), o un nginx liviano detrás de un proxy externo (nginx proxy manager, un balanceador, etc.) que termina el TLS. El backend confía únicamente en el salto inmediato de ese proxy (<code>TRUST_PROXY_HOPS</code>, 1 por defecto) para resolver la IP real del cliente vía <code>X-Forwarded-For</code> — así un cliente no puede falsear su propia IP agregando saltos falsos al header. Portal y API son contenedores separados con su propio Dockerfile; nginx enruta <code>/api/</code> y <code>/ws</code> hacia la API y todo lo demás hacia el portal estático.
         </p>
 
         <div class="note-callout">
-            <strong>Nota de escala actual:</strong> el despliegue asume explícitamente <strong>una sola réplica</strong> del contenedor <code>api</code> — varios procesos en segundo plano usan temporizadores simples (<code>setInterval</code>) en vez de colas distribuidas porque no hay más de una instancia corriendo a la vez. Escalar horizontalmente la API requeriría migrar esos procesos a colas (algunos, como el envío de notificaciones, ya usan BullMQ y sí soportan múltiples réplicas).
+            <strong>Nota de escala actual:</strong> por defecto el despliegue corre <strong>una sola réplica</strong> del contenedor <code>api</code>, pero el despliegue ya soporta escalar horizontalmente ese contenedor. Los procesos en segundo plano que usan temporizadores simples (<code>setInterval</code>) toman un <em>advisory lock</em> de Postgres al empezar cada ciclo, de modo que si hay varias réplicas sólo una ejecuta ese ciclo — no dependen de una cola distribuida para ser seguros ante múltiples instancias. Los procesos con trabajo más pesado (por ejemplo, el envío de notificaciones) sí usan colas BullMQ sobre Redis.
         </div>
 
         <div class="footer">
@@ -642,12 +642,12 @@
 
         <h2 id="db-jobs">4. Base de Datos y Procesos en Segundo Plano</h2>
         <p>
-            La plataforma usa <strong>PostgreSQL con la extensión TimescaleDB</strong>, pensada para series temporales de alto volumen (lecturas de contadores de miles de impresoras a lo largo del tiempo), administrada mediante <strong>Knex</strong> (72 migraciones versionadas al momento de este documento).
+            La plataforma usa <strong>PostgreSQL con la extensión TimescaleDB</strong>, pensada para series temporales de alto volumen (lecturas de contadores de miles de impresoras a lo largo del tiempo), administrada mediante <strong>Knex</strong> (75 migraciones versionadas al momento de este documento).
         </p>
 
         <h3>Procesos en Segundo Plano</h3>
         <p>
-            Todos los procesos corren dentro del mismo contenedor <code>api</code>, combinando dos mecanismos según la necesidad: colas <strong>BullMQ sobre Redis</strong> (para trabajo que debe sobrevivir un reinicio y eventualmente correr en varias réplicas) y temporizadores simples (para tareas periódicas de instancia única):
+            Todos los procesos corren dentro del mismo contenedor <code>api</code>, combinando dos mecanismos según la necesidad: colas <strong>BullMQ sobre Redis</strong> (para trabajo que debe sobrevivir un reinicio) y temporizadores simples con <em>advisory lock</em> de Postgres (para tareas periódicas que deben ejecutarse una sola vez por ciclo, aunque haya varias réplicas corriendo):
         </p>
         <table>
             <thead>

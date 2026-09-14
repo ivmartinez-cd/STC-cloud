@@ -550,7 +550,7 @@
     │   Frecuencia adaptativa según horario laboral del sitio   │
     │
     ├── LOOP SYNC ─────────────────────────────────────────────┐
-    │   Cada 30s: sube lotes de lecturas pendientes al portal   │
+    │   Cada 5 minutos: sube lotes de lecturas pendientes       │
     │   Purga registros ya sincronizados o vencidos (7 días)    │
     │
     └── CANAL WEBSOCKET ───────────────────────────────────────┘
@@ -574,7 +574,7 @@
 
         <h3>Canal en Tiempo Real (Comandos Remotos)</h3>
         <p>
-            El WebSocket seguro (WSS, puerto 443) es bidireccional: además de que el agente pueda notificar eventos, el portal puede empujar comandos hacia el agente sin que este tenga que consultar (polling) constantemente — por ejemplo, forzar un escaneo inmediato, pedir un reset remoto de una impresora o actualizar la configuración de rangos IP. El canal se reconecta automáticamente ante cortes de red.
+            El WebSocket seguro (WSS, puerto 443) es bidireccional: además de que el agente pueda notificar eventos, el portal puede empujar comandos hacia el agente sin que este tenga que consultar (polling) constantemente — por ejemplo, forzar un escaneo inmediato, pedir un reset remoto de una impresora o forzar la instalación de una actualización. Los cambios de configuración del sitio (rangos IP, credenciales SNMP, horario laboral) se propagan aparte, en la respuesta del heartbeat periódico. El canal se reconecta automáticamente ante cortes de red.
         </p>
 
         <div class="footer">
@@ -619,7 +619,7 @@
                 config.enc en disco</pre>
 
         <div class="note-callout">
-            <strong>Por qué importa:</strong> Si alguien copia <code>config.enc</code> a otra máquina para robar credenciales, el Hardware ID calculado en esa máquina es distinto y el descifrado falla de inmediato (<code>HWID_MISMATCH</code>). El archivo es inútil fuera del equipo original.
+            <strong>Por qué importa:</strong> Si alguien copia <code>config.enc</code> a otra máquina para robar credenciales, el Hardware ID calculado en esa máquina es distinto y el descifrado falla de inmediato (<code>HWID_MISMATCH</code>). El archivo es inútil fuera del equipo original. <strong>Alcance de esta protección:</strong> cubre la exfiltración a otro equipo, no un ataque local en la misma máquina — el MachineGuid y el serial de BIOS son legibles por cualquier usuario ya autenticado en el equipo, sin privilegios de administrador, por lo que un usuario local sin privilegios puede recalcular el mismo Hardware ID y descifrar el archivo in situ.
         </div>
 
         <div class="footer">
@@ -672,6 +672,11 @@
         <h3>Cobertura Multi-Fabricante</h3>
         <p>
             El motor combina perfiles de modelo específicos (HP, Lexmark, Samsung) con familias de protocolo compartidas para el resto del parque, y usa la Printer-MIB estándar como respaldo universal para cualquier equipo sin perfil propio. Todo el parseo se hace con expresiones regulares y lectores planos sobre HTML/XML/JSON — sin motor de navegador embebido, lo que mantiene el consumo de memoria del agente en el orden de decenas de MB.
+        </p>
+
+        <h3>Versiones de SNMP Soportadas</h3>
+        <p>
+            El agente soporta SNMP v1 y v2c por community string, y SNMP v3 con usuario autenticado (USM), incluyendo los modos con privacidad (auth+priv, con protocolos de autenticación y cifrado configurables por dispositivo). Esto permite operar contra políticas de red que exigen SNMPv3 en entornos regulados, sin degradar a community strings en texto plano.
         </p>
 
         <div class="footer">
@@ -750,7 +755,7 @@
         </p>
         <ul>
             <li><strong>Integridad:</strong> hash SHA-256 del paquete descargado, verificado contra el declarado por la API.</li>
-            <li><strong>Autenticidad:</strong> firma digital Ed25519 verificada contra una clave pública fija embebida en el binario del agente. Si la firma no valida, el archivo se borra de inmediato y se genera una alerta crítica — nunca se ejecuta código sin firma verificada.</li>
+            <li><strong>Autenticidad:</strong> firma digital Ed25519 verificada contra una clave pública fija embebida en el binario del agente. Si la firma no valida, el paquete se descarta antes de escribirse a disco (nunca llega a instalarse) y queda un registro de error en el log del agente, visible desde el portal — nunca se ejecuta código sin firma verificada.</li>
         </ul>
 
         <div class="note-callout">

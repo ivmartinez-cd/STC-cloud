@@ -637,7 +637,7 @@
 
         <h3>clients</h3>
         <p>
-            El tenant. Además de datos de contacto, concentra la configuración por cliente: <code>device_approval_required</code> (los equipos nuevos quedan pendientes hasta que alguien los apruebe), <code>supply_requests_enabled</code> y <code>supply_request_threshold_pct</code> (pedidos automáticos de insumos, umbral entre 1 y 99 %), <code>notification_email</code>, <code>notification_webhook_url</code> y <code>notification_events</code> (qué eventos se notifican), <code>sftp_destination</code> (entrega de reportes) y <code>last_alert_digest_sent_at</code> (control del resumen diario de alertas).
+            El tenant. Además de datos de contacto, concentra la configuración por cliente: <code>device_approval_required</code> (los equipos nuevos quedan pendientes hasta que alguien los apruebe), <code>supply_requests_enabled</code> y <code>supply_request_threshold_pct</code> (pedidos automáticos de insumos, umbral entre 1 y 99 %), <code>notification_email</code>, <code>notification_webhook_url</code> y <code>notification_events</code> (qué eventos se notifican), <code>sftp_destination</code> (entrega de reportes; contraseña y clave privada se guardan cifradas, nunca en claro) y <code>last_alert_digest_sent_at</code> (control del resumen diario de alertas).
         </p>
 
         <h3>users y user_recovery_codes</h3>
@@ -683,7 +683,7 @@
             El servicio instalado en la red del cliente. Nace con una <code>activation_key</code> única y una fecha de vencimiento; al activarse queda ligado a un <code>hardware_id</code> y recibe su secreto JWT y el hash del refresh token. <code>client_id</code> es nullable porque el agente puede existir antes de asignarse a un cliente.
         </p>
         <p>
-            La configuración operativa que baja al agente vive en la misma fila: rangos IP a escanear, comunidad y credenciales SNMP (con un contador de revisión para detectar cambios), intervalos de escaneo y monitoreo, horario laboral, umbrales de tóner, acceso remoto al panel web de la impresora y canal de actualizaciones. La telemetría del host (versión, nombre, sistema operativo, IP, uptime, último contacto, estado del descubrimiento) también.
+            La configuración operativa que baja al agente vive en la misma fila: rangos IP a escanear, la comunidad SNMP v1/v2c legacy en texto plano (<code>snmp_community</code>) y, desde la migración del 22 de agosto de 2026, una lista de credenciales SNMP v1/v2c/v3 (<code>snmp_credentials</code>, con un contador de revisión para detectar cambios) cuyos secretos &mdash;community, auth key, priv key&mdash; se cifran individualmente antes de guardarse, nunca en claro; intervalos de escaneo y monitoreo, horario laboral, umbrales de tóner, acceso remoto al panel web de la impresora y canal de actualizaciones. La telemetría del host (versión, nombre, sistema operativo, IP, uptime, último contacto, estado del descubrimiento) también.
         </p>
 
         <div class="note-callout">

@@ -404,7 +404,7 @@
         <div class="cover-meta">
             <div class="cover-meta-item">
                 <strong>Versión del Agente</strong>
-                1.3.0
+                1.3.5
             </div>
             <div class="cover-meta-item">
                 <strong>Clasificación</strong>
@@ -480,6 +480,11 @@
             <span class="toc-dots"></span>
             <span class="toc-page">8</span>
         </div>
+        <div class="toc-item">
+            <span class="toc-text">9. Configuración de Confianza de Endpoint</span>
+            <span class="toc-dots"></span>
+            <span class="toc-page">9</span>
+        </div>
     </div>
 
     <div class="note-callout" style="margin-top:40px;">
@@ -549,7 +554,7 @@
             </tr>
             <tr>
                 <td class="code exit-1"><span class="badge badge-warn">1 — ERROR GENÉRICO</span></td>
-                <td><code>--activate</code>, <code>--status</code></td>
+                <td><code>--activate</code>, <code>--status</code>, <code>--set-proxy</code></td>
                 <td>
                     Error no clasificado: argumentos faltantes, error del servidor (HTTP 5xx),
                     o en <code>--status</code>: agente activo pero sin conectividad al portal,
@@ -646,7 +651,7 @@
     <div class="code-block">
         <div class="code-block-label">JSON — agente activo y en buen estado (exit 0)</div>
         <pre>{
-  <span class="key">"version"</span>:                    <span class="str">"1.3.0"</span>,
+  <span class="key">"version"</span>:                    <span class="str">"1.3.5"</span>,
   <span class="key">"timestamp"</span>:                  <span class="str">"2026-05-16T14:30:00.000Z"</span>,
   <span class="key">"activated"</span>:                  <span class="num">true</span>,
   <span class="key">"agentId"</span>:                    <span class="str">"agt_a1b2c3d4"</span>,
@@ -669,7 +674,7 @@
     <div class="code-block">
         <div class="code-block-label">JSON — hardware reemplazado, reactivación requerida (exit 1)</div>
         <pre>{
-  <span class="key">"version"</span>:                    <span class="str">"1.3.0"</span>,
+  <span class="key">"version"</span>:                    <span class="str">"1.3.5"</span>,
   <span class="key">"timestamp"</span>:                  <span class="str">"2026-05-16T14:30:01.000Z"</span>,
   <span class="key">"activated"</span>:                  <span class="num">false</span>,
   <span class="key">"agentId"</span>:                    <span class="num">null</span>,
@@ -858,7 +863,7 @@ Flags: runhidden waituntilterminated;
 
     <div class="code-block">
         <div class="code-block-label">PowerShell — Verificación post-instalación embebida en Inno Setup</div>
-        <pre><span class="var">$raw</span>    = & <span class="str">"C:\Program Files\STCCloudMonitor\agente.exe"</span> <span class="kw">--status</span>
+        <pre><span class="var">$raw</span>    = & <span class="str">"C:\Program Files\STC\Monitor\agente.exe"</span> <span class="kw">--status</span>
 <span class="var">$status</span> = <span class="var">$raw</span> | <span class="fn">ConvertFrom-Json</span>
 
 <span class="kw">if</span> (<span class="var">$status</span>.hardware_binding_integrity <span class="kw">-ne</span> <span class="str">'ok'</span>) {
@@ -897,7 +902,7 @@ Flags: runhidden waituntilterminated;
     <div class="code-block">
         <div class="code-block-label">PowerShell — Detection script para Intune (exit 0 = instalado y sano)</div>
         <pre><span class="cmt"># Intune detection: exit 0 = app present and healthy, exit 1 = not detected</span>
-<span class="var">$agente</span> = <span class="str">"C:\Program Files\STCCloudMonitor\agente.exe"</span>
+<span class="var">$agente</span> = <span class="str">"C:\Program Files\STC\Monitor\agente.exe"</span>
 
 <span class="kw">if</span> (-<span class="fn">not</span> (<span class="fn">Test-Path</span> <span class="var">$agente</span>)) { <span class="kw">exit</span> <span class="num">1</span> }
 
@@ -919,7 +924,7 @@ Flags: runhidden waituntilterminated;
 
     <div class="code-block">
         <div class="code-block-label">PowerShell — Remediation script: reactivar si HWID mismatch</div>
-        <pre><span class="var">$agente</span>  = <span class="str">"C:\Program Files\STCCloudMonitor\agente.exe"</span>
+        <pre><span class="var">$agente</span>  = <span class="str">"C:\Program Files\STC\Monitor\agente.exe"</span>
 <span class="var">$clave</span>   = <span class="str">"&lt;CLAVE_DESDE_SECRET_VAULT&gt;"</span>
 <span class="var">$portal</span>  = <span class="str">"https://portal.empresa.com"</span>
 
@@ -1035,7 +1040,11 @@ Flags: runhidden waituntilterminated;
     <div class="note-callout">
         <strong>Backup de configuración:</strong> No se recomienda hacer backup del archivo <code>config.enc</code>
         ya que está criptográficamente ligado al Hardware ID del equipo original. Restaurarlo en hardware diferente
-        resultará siempre en HWID mismatch.
+        resultará siempre en HWID mismatch. Este enlace protege la <em>portabilidad</em> entre equipos, no la
+        confidencialidad del archivo frente a otros usuarios del mismo equipo: el Hardware ID se deriva de
+        datos que cualquier sesión local puede leer (MachineGuid, serie de BIOS), no de un secreto. Tratar
+        <code>config.enc</code> como archivo sensible — contiene el token de sesión del agente y las
+        credenciales SNMP configuradas.
     </div>
 
     <div class="footer">
@@ -1046,24 +1055,23 @@ Flags: runhidden waituntilterminated;
 
 <!-- ==================== PÁGINA 9 ==================== -->
 <div class="page">
-    <div class="page-header">
-        <div>
-            <div class="section-label">Manual del Administrador IT</div>
-            <div class="internal-doc-type">Configuración de Confianza de Endpoint</div>
-        </div>
+    <div class="internal-header">
+        <div class="internal-brand">STC<span>Cloud</span></div>
+        <div class="internal-doc-type">Manual del Administrador IT · v1.5</div>
     </div>
 
     <h2>9. Configuración de Confianza de Endpoint</h2>
 
     <p>
-        El binario <code>agente.exe</code> es un ejecutable nativo de Windows empaquetado con Node.js mediante
-        <strong>pkg</strong>. Esta técnica de empaquetado puede generar alertas en Windows SmartScreen o
+        El binario <code>agente.exe</code> se distribuye junto con un runtime de Node.js embebido
+        (código compilado con <strong>esbuild</strong> en un único <code>bundle.js</code>, ejecutado por una copia
+        privada de <code>node.exe</code>). Esta técnica de empaquetado puede generar alertas en Windows SmartScreen o
         Windows Defender en equipos donde el software no haya sido visto previamente. Las siguientes
         secciones describen los procedimientos validados para garantizar una ejecución ininterrumpida en entornos corporativos.
     </p>
 
     <h3>9.1 Desbloqueo de SmartScreen (Instalador)</h3>
-    <p>Si al ejecutar <code>STC-Monitor-Setup.exe</code> aparece la pantalla azul de SmartScreen:</p>
+    <p>Si al ejecutar <code>Instalador-STC-Monitor-v1.3.5.exe</code> aparece la pantalla azul de SmartScreen:</p>
     <ol style="font-size:13.5px; color:var(--ink-700); line-height:2;">
         <li>Hacer clic en <strong>"Más información"</strong> (enlace debajo del mensaje de advertencia).</li>
         <li>Hacer clic en el botón <strong>"Ejecutar de todas formas"</strong> que aparece.</li>
@@ -1072,13 +1080,13 @@ Flags: runhidden waituntilterminated;
 
     <p>Para desbloquear un archivo descargado desde el Explorador de Windows (sin ejecutarlo):</p>
     <ol style="font-size:13.5px; color:var(--ink-700); line-height:2;">
-        <li>Hacer clic derecho sobre <code>STC-Monitor-Setup.exe</code> → <strong>Propiedades</strong>.</li>
+        <li>Hacer clic derecho sobre <code>Instalador-STC-Monitor-v1.3.5.exe</code> → <strong>Propiedades</strong>.</li>
         <li>En la pestaña <strong>General</strong>, marcar la casilla <strong>"Desbloquear"</strong> en la sección de seguridad.</li>
         <li>Hacer clic en <strong>Aceptar</strong> y ejecutar el instalador.</li>
     </ol>
 
     <p>O bien desde PowerShell (requiere privilegios de administrador):</p>
-    <pre style="background:var(--panel-dark);color:var(--panel-dark-code);padding:12px 16px;border-radius:6px;font-size:12px;overflow-x:auto;">Unblock-File -Path "C:\Descargas\STC-Monitor-Setup.exe"</pre>
+    <pre style="background:var(--panel-dark);color:var(--panel-dark-code);padding:12px 16px;border-radius:6px;font-size:12px;overflow-x:auto;">Unblock-File -Path "C:\Descargas\Instalador-STC-Monitor-v1.3.5.exe"</pre>
 
     <h3>9.2 Exclusión en Windows Defender (Post-instalación)</h3>
     <p>
@@ -1086,7 +1094,7 @@ Flags: runhidden waituntilterminated;
         una exclusión de ruta permanente. Ejecutar en PowerShell <strong>como Administrador</strong>:
     </p>
     <pre style="background:var(--panel-dark);color:var(--panel-dark-code);padding:12px 16px;border-radius:6px;font-size:12px;overflow-x:auto;"># Excluir el directorio de instalación del agente
-Add-MpPreference -ExclusionPath "C:\Program Files\STC Cloud Monitor"
+Add-MpPreference -ExclusionPath "C:\Program Files\STC\Monitor"
 
 # Excluir también el directorio de datos (opcional, recomendado)
 Add-MpPreference -ExclusionPath "C:\ProgramData\STCCloudMonitor"
@@ -1109,7 +1117,7 @@ Get-MpPreference | Select-Object -ExpandProperty ExclusionPath</pre>
         <li>Abrir <strong>Group Policy Management</strong> en el Domain Controller.</li>
         <li>Crear o editar una GPO vinculada a la OU con los equipos monitoreados.</li>
         <li>Navegar a: <em>Computer Configuration → Administrative Templates → Windows Components → Microsoft Defender Antivirus → Exclusions → Path Exclusions</em>.</li>
-        <li>Añadir <code>C:\Program Files\STC Cloud Monitor</code> como valor de exclusión.</li>
+        <li>Añadir <code>C:\Program Files\STC\Monitor</code> como valor de exclusión.</li>
         <li>Forzar actualización de política: <code>gpupdate /force</code></li>
     </ol>
 
@@ -1119,7 +1127,7 @@ Get-MpPreference | Select-Object -ExpandProperty ExclusionPath</pre>
         coincide exactamente con el publicado por STC Cloud, usando el script de verificación incluido:
     </p>
     <pre style="background:var(--panel-dark);color:var(--panel-dark-code);padding:12px 16px;border-radius:6px;font-size:12px;overflow-x:auto;"># Ejecutar desde PowerShell en el directorio de descarga
-.\verify_hash.ps1 -FilePath "STC-Monitor-Setup.exe" -ExpectedHash "&lt;HASH_OFICIAL&gt;"</pre>
+.\verify_hash.ps1 -FilePath "Instalador-STC-Monitor-v1.3.5.exe" -ExpectedHash "&lt;HASH_OFICIAL&gt;"</pre>
     <p>
         El script <code>verify_hash.ps1</code> se distribuye junto al instalador y calcula el hash
         SHA-256 localmente sin enviar datos a ningún servidor externo.

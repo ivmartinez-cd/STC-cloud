@@ -428,8 +428,8 @@
                 <tr>
                     <td><strong>443</strong></td>
                     <td>TCP (HTTPS)</td>
-                    <td>github.com / raw.githubusercontent.com</td>
-                    <td>Acceso al repositorio oficial de actualizaciones para descargar versiones de software seguras.</td>
+                    <td>github.com (o ${DOMAIN}, según el canal de publicación)</td>
+                    <td>Descarga del paquete de actualización. Se valida contra un hash SHA-256 y una firma criptográfica Ed25519 antes de instalarse (ver Sección 6).</td>
                 </tr>
             </tbody>
         </table>
@@ -449,9 +449,9 @@
             <tbody>
                 <tr>
                     <td><strong>161</strong></td>
-                    <td>UDP (SNMP v1/v2c)</td>
-                    <td>SNMP query estándar</td>
-                    <td>Lectura rápida de contadores estandarizados y números de serie base.</td>
+                    <td>UDP (SNMP v1/v2c/v3)</td>
+                    <td>SNMP query estándar (v1/v2c) o USM con autenticación y cifrado (v3)</td>
+                    <td>Lectura rápida de contadores estandarizados y números de serie base. SNMPv3 disponible para redes que exigen autenticación y cifrado a nivel de dispositivo.</td>
                 </tr>
                 <tr>
                     <td><strong>80 / 443</strong></td>

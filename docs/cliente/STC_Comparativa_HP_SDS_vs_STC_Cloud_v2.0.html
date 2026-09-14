@@ -1050,6 +1050,7 @@ STC Cloud Discovery:
                 <li>Endpoints de lectura: dispositivos, lecturas, alertas, cierres de reporte — siempre acotados al cliente dueño de la key</li>
                 <li>Webhooks de integración (lecturas/alertas/cierres) firmados con HMAC-SHA256, para que el ERP del cliente verifique autenticidad</li>
                 <li>Reusa el mismo guard anti-SSRF ya construido para las notificaciones internas (HTTPS únicamente, rechaza IPs privadas/loopback/metadata)</li>
+                <li>Gestión completa desde el portal (alta/revocación de keys, vencimiento configurable al crearlas, config del webhook) — no requiere REST directo</li>
             </ul>
         </div>
     </div>
@@ -1057,7 +1058,7 @@ STC Cloud Discovery:
     <p>A diferencia de HP SDS (pensado para partners grandes de MPS), la API pública de STC Cloud está orientada a que el propio cliente final conecte su ERP o sistema de facturación interno sin intervención de STC. Cada cliente gestiona sus propias keys y su propio webhook — STC no necesita mediar la integración.</p>
 
     <div class="info-callout">
-        <strong>Lo que no se hizo:</strong> UI de portal para gestionar keys/webhooks (por ahora sólo REST); expiración automática de keys (se revocan a mano, igual que un token de acceso personal de GitHub); documentación pública tipo OpenAPI/Swagger.
+        <strong>Lo que no se hizo:</strong> Swagger UI/Redoc servido en vivo — existe la spec completa (OpenAPI 3.1, <code>docs/api/openapi.yaml</code>) pero como archivo del repo, no publicada en un endpoint propio.
     </div>
 
     <h2 id="mejoras-agente">12. Resiliencia del Agente</h2>
@@ -1267,7 +1268,7 @@ STC Cloud Discovery:
 
     <h2 id="roadmap">15. Hoja de Ruta de Mejoras Priorizadas</h2>
 
-    <p>De los 6 puntos de mejora priorizados en v1.0 (mayo 2026), <strong>5 ya están resueltos</strong> (marcados abajo). Quedan genuinamente pendientes 2 ítems — uno operativo, uno de certificación formal — más los que surgieron de esta misma pasada de trabajo (remote EWS con paridad IMIL completa, UI de portal para API pública, backend multi-réplica).</p>
+    <p>De los 6 puntos de mejora priorizados en v1.0 (mayo 2026), <strong>5 ya están resueltos</strong> (marcados abajo). Quedan genuinamente pendientes 2 ítems — uno operativo, uno de certificación formal — más los que surgieron de esta misma pasada de trabajo (remote EWS con paridad IMIL completa, backend multi-réplica).</p>
 
     <div class="improvement-card p1" style="border-left-color: var(--ink-100);">
         <div class="improvement-card-header">
@@ -1306,7 +1307,7 @@ STC Cloud Discovery:
             <div class="improvement-card-title">Acceso EWS remoto vía nube</div>
             <span class="badge badge-ok">Resuelto (parcial)</span>
         </div>
-        <p>Implementado el acceso a la EWS en sí (proxy de un GET, opt-in, allowlist en dos capas). Ver §7 para el detalle de lo que queda pendiente (paridad IMIL completa, UI de portal).</p>
+        <p>Implementado el acceso a la EWS en sí (proxy de un GET, opt-in, allowlist en dos capas), ya con su propia pantalla en el portal. Ver §7 para el detalle de lo que queda pendiente (paridad IMIL completa).</p>
     </div>
 
     <div class="improvement-card p3">
@@ -1325,12 +1326,12 @@ STC Cloud Discovery:
         <p>Parcialmente resuelto — el resto es una decisión de arquitectura pendiente, no un descuido. Los broadcasts hacia el portal ya se retransmiten entre procesos por pub/sub Redis (<code>ws/redis-channels.ts</code>), así que sobrevivirían a varias réplicas; lo que sigue atado a un proceso es el envío de comandos a un agente puntual (hay afinidad de socket, con entrega por heartbeat como respaldo). Completarlo implica además decidir si vale la pena migrar los jobs periódicos (hoy <code>setInterval</code> simple, deliberadamente NO BullMQ repeatable — la Redis de producción usa una política de desalojo que podría perder el estado de un job repetible en silencio).</p>
     </div>
 
-    <div class="improvement-card p3">
+    <div class="improvement-card p1" style="border-left-color: var(--ink-100);">
         <div class="improvement-card-header">
             <div class="improvement-card-title">UI de portal para API pública y Remote EWS</div>
-            <span class="badge badge-p3">P3 Largo plazo</span>
+            <span class="badge badge-ok">Resuelto</span>
         </div>
-        <p>Ambas funcionalidades (§7 y §11) son sólo REST por ahora — un administrador necesita <code>curl</code>/Postman hasta que exista una UI dedicada en el portal.</p>
+        <p>Ambas funcionalidades tienen pantalla propia en el portal: API keys/webhook desde el alta de la Fase 2 (23/08) y Remote EWS desde el 13/09 (ver §7 y §11) — ya no dependen de <code>curl</code>/Postman.</p>
     </div>
 
     <div class="info-callout" style="margin-top: 30px;">

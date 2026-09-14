@@ -446,7 +446,7 @@
                 <tr>
                     <td><strong>nginx / certbot / backup</strong></td>
                     <td>128 MB / 64 MB / 256 MB</td>
-                    <td>Reverse proxy + SSL automático (Let's Encrypt), y `pg_dump` diario con retención de 30 días.</td>
+                    <td>Reverse proxy — un servicio por modo de TLS elegido en `COMPOSE_PROFILES` (`nginx` con SSL automático de Let's Encrypt + `certbot`, o `nginx-external` detrás de un proxy externo, sin certbot) — y `pg_dump` diario con retención de 30 días.</td>
                     <td style="color: var(--ink-100); font-weight: bold;">SÍ</td>
                 </tr>
             </tbody>
@@ -498,10 +498,11 @@
 
         <h3>Techos de seguridad en los listados del portal</h3>
         <p>
-            `GET /agents` y `GET /clients` tienen un techo de 2.000 filas y `GET /devices` de 5.000 —
-            ninguna pantalla puede pedir una transferencia sin límite aunque la flota crezca. `Alerts`,
-            `Reports` y el `Dashboard` van más allá: paginan o agregan del lado del servidor
-            (COUNT/SUM), y nunca traen listas completas al navegador.
+            `GET /agents` y `GET /clients` tienen un techo de seguridad de 2.000 filas (sin paginación
+            real todavía) — ninguna pantalla puede pedir una transferencia sin límite aunque la flota
+            crezca. `GET /devices`, `Alerts`, `Reports` y el `Dashboard` van más allá: paginan con
+            tamaño de página real (`/devices` tope 200 filas por página) o agregan del lado del
+            servidor (COUNT/SUM), y nunca traen listas completas al navegador.
         </p>
 
         <h3>Rate limiting por identidad de agente</h3>
@@ -563,7 +564,7 @@
                 <tr>
                     <td><strong>vCPU</strong></td>
                     <td>4 vCPU</td>
-                    <td>Los límites actuales de `docker-compose.prod.yml` suman ~3.5 CPU entre todos los contenedores (api 1.0 + postgres 1.0 + redis 0.5 + portal 0.25 + nginx 0.25 + certbot 0.1 + backup 0.5) — 4 vCPU deja margen real, no sólo lo justo.</td>
+                    <td>Los límites actuales de `docker-compose.prod.yml` suman ~3.6 CPU en modo letsencrypt (api 1.0 + postgres 1.0 + redis 0.5 + portal 0.25 + nginx 0.25 + certbot 0.1 + backup 0.5) o ~3.5 CPU en modo external (sin certbot, `nginx-external` con el mismo 0.25) — 4 vCPU deja margen real, no sólo lo justo.</td>
                 </tr>
                 <tr>
                     <td><strong>RAM</strong></td>
