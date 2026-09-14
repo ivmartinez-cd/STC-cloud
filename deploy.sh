@@ -50,7 +50,10 @@ if [ ! -f .env.production ]; then
 fi
 
 # Verificar variables críticas
+set -a
+# shellcheck disable=SC1091
 source .env.production
+set +a
 
 MISSING=()
 [ -z "${JWT_SECRET:-}" ] || [ "${JWT_SECRET}" = "CAMBIAR_POR_STRING_ALEATORIO_LARGO_Y_SEGURO" ] && MISSING+=("JWT_SECRET")
@@ -68,76 +71,100 @@ if [ ${#MISSING[@]} -gt 0 ]; then
   exit 1
 fi
 
+# Modo de TLS: exactamente uno de los dos perfiles (ver .env.production.example).
+# docker compose lo lee solo desde --env-file; acá se valida y se usa para
+# decidir si hay que emitir certificados.
+TLS_MODE=""
+case ",${COMPOSE_PROFILES:-}," in
+  *,letsencrypt,*,external,*|*,external,*,letsencrypt,*)
+    echo -e "${RED}ERROR: COMPOSE_PROFILES tiene 'letsencrypt' Y 'external'; elegir uno solo.${NC}"; exit 1 ;;
+  *,letsencrypt,*) TLS_MODE=letsencrypt ;;
+  *,external,*)    TLS_MODE=external ;;
+  *)
+    echo -e "${RED}ERROR: COMPOSE_PROFILES debe incluir 'letsencrypt' o 'external' (modo de TLS).${NC}"
+    echo "  Ej.: COMPOSE_PROFILES=letsencrypt   (nginx propio con certificados de Let's Encrypt)"
+    echo "       COMPOSE_PROFILES=external      (detrás de un reverse proxy externo que hace el TLS)"
+    exit 1 ;;
+esac
+
 echo "  ✓ .env.production configurado correctamente"
 echo "  ✓ Dominio: ${DOMAIN}"
+echo "  ✓ Modo TLS: ${TLS_MODE}"
 
-# ─── 3. Actualizar dominio en nginx.conf ─────────────────────────────────────
+COMPOSE=(docker compose -f docker-compose.prod.yml --env-file .env.production)
+NGINX_SERVICE=nginx
+[ "$TLS_MODE" = external ] && NGINX_SERVICE=nginx-external
+
+# ─── 3. Build + levantar servicios ───────────────────────────────────────────
+# El dominio ya no se escribe en ningún archivo: nginx/entrypoint.sh renderiza
+# su config desde nginx/templates/ con DOMAIN al arrancar. En modo letsencrypt
+# sin certificado todavía, nginx arranca sirviendo sólo el challenge ACME y se
+# completa solo apenas certbot emite (paso 4).
 
 echo ""
-echo -e "${YELLOW}[3/5] Configurando nginx con dominio ${DOMAIN}...${NC}"
+echo -e "${YELLOW}[3/5] Construyendo y levantando servicios...${NC}"
 
-sed -i "s/stc-cloud.tu-dominio.com/${DOMAIN}/g" nginx.conf
-echo "  ✓ nginx.conf actualizado"
+"${COMPOSE[@]}" up -d --build --wait --wait-timeout 300
 
-# ─── 4. Obtener certificado SSL (primera vez) ───────────────────────────────
+# ─── 4. Certificados (sólo modo letsencrypt, primera vez) ────────────────────
 
 echo ""
-echo -e "${YELLOW}[4/5] Configurando SSL...${NC}"
+echo -e "${YELLOW}[4/5] Certificados TLS...${NC}"
 
-if [ ! -d "/etc/letsencrypt/live/${DOMAIN}" ] && [ ! -f "certbot-done.flag" ]; then
-  echo "  Generando certificado SSL con Let's Encrypt..."
-  echo "  (Asegúrate de que el DNS apunte a este servidor)"
-  echo ""
+if [ "$TLS_MODE" = letsencrypt ]; then
+  LETSENCRYPT_EMAIL="${LETSENCRYPT_EMAIL:-admin@${DOMAIN}}"
 
-  # Levantar nginx temporalmente sin SSL para el challenge
-  docker compose -f docker-compose.prod.yml up -d nginx
+  cert_exists() { # cert_exists <hostname>  — mira el volumen certbot-certs
+    "${COMPOSE[@]}" run --rm --no-deps --entrypoint sh certbot \
+      -c "test -s /etc/letsencrypt/live/$1/fullchain.pem" >/dev/null 2>&1
+  }
+  issue_cert() { # issue_cert <hostname>  — webroot challenge vía el nginx ya levantado
+    "${COMPOSE[@]}" run --rm --no-deps --entrypoint certbot certbot certonly \
+      --webroot --webroot-path=/var/www/certbot \
+      --email "${LETSENCRYPT_EMAIL}" --agree-tos --no-eff-email \
+      -d "$1"
+  }
 
-  docker run --rm \
-    -v "$(pwd)/certbot-certs:/etc/letsencrypt" \
-    -v "$(pwd)/certbot-www:/var/www/certbot" \
-    certbot/certbot certonly \
-      --webroot \
-      --webroot-path=/var/www/certbot \
-      --email admin@${DOMAIN} \
-      --agree-tos \
-      --no-eff-email \
-      -d ${DOMAIN}
+  if cert_exists "${DOMAIN}"; then
+    echo "  ✓ Certificado de ${DOMAIN} ya existe"
+  else
+    echo "  Solicitando certificado de ${DOMAIN} a Let's Encrypt..."
+    echo "  (el DNS de ${DOMAIN} tiene que apuntar a este servidor y el 80 estar abierto)"
+    issue_cert "${DOMAIN}"
+    echo "  ✓ Certificado de ${DOMAIN} emitido"
+  fi
 
   # Segundo certificado, para el gateway de EWS remoto (hostname aparte, ver
-  # nginx.conf). Va separado y no como SAN del principal para que cada bloque
-  # `server` apunte a su propio directorio en /etc/letsencrypt/live.
-  docker run --rm \
-    -v "$(pwd)/certbot-certs:/etc/letsencrypt" \
-    -v "$(pwd)/certbot-www:/var/www/certbot" \
-    certbot/certbot certonly \
-      --webroot \
-      --webroot-path=/var/www/certbot \
-      --email admin@${DOMAIN} \
-      --agree-tos \
-      --no-eff-email \
-      -d ews.${DOMAIN}
+  # nginx/snippets/ews-location.conf). Va separado y no como SAN del principal
+  # para que cada bloque `server` apunte a su propio directorio en
+  # /etc/letsencrypt/live. Sólo si el gateway está configurado; si falla (falta
+  # el DNS de ews.), el portal sigue funcionando sin EWS.
+  if [ -n "${EWS_GATEWAY_URL:-}" ]; then
+    if cert_exists "ews.${DOMAIN}"; then
+      echo "  ✓ Certificado de ews.${DOMAIN} ya existe"
+    else
+      echo "  Solicitando certificado de ews.${DOMAIN}..."
+      issue_cert "ews.${DOMAIN}" \
+        || echo -e "  ${YELLOW}⚠ No se pudo emitir el certificado de ews.${DOMAIN}: el gateway EWS queda deshabilitado hasta que exista (revisar DNS y volver a correr deploy.sh)${NC}"
+    fi
+  else
+    echo "  · EWS_GATEWAY_URL sin definir: no se pide certificado para ews.${DOMAIN}"
+  fi
 
-  docker compose -f docker-compose.prod.yml down
-  touch certbot-done.flag
-  echo "  ✓ Certificado SSL generado"
+  # Tomar los certificados sin esperar la recarga periódica de 6 h.
+  "${COMPOSE[@]}" exec "${NGINX_SERVICE}" sh /etc/nginx/entrypoint.sh reload
 else
-  echo "  ✓ Certificado SSL ya existe"
+  echo "  · Modo external: TLS a cargo del reverse proxy de adelante; nginx escucha HTTP en ${NGINX_HTTP_PORT:-80}"
+  echo "    El proxy tiene que reenviar ${DOMAIN}${EWS_GATEWAY_URL:+ y ews.${DOMAIN}} a ese puerto conservando el Host,"
+  echo "    con soporte de WebSocket (/ws). Ver docs/internos/DEPLOY_CLOUD.md."
 fi
 
-# ─── 5. Levantar todos los servicios ────────────────────────────────────────
+# ─── 5. Migraciones ──────────────────────────────────────────────────────────
 
 echo ""
-echo -e "${YELLOW}[5/5] Levantando servicios...${NC}"
+echo -e "${YELLOW}[5/5] Ejecutando migraciones de base de datos...${NC}"
 
-docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build
-
-echo ""
-echo "  Esperando a que la API esté lista..."
-sleep 10
-
-# Ejecutar migraciones dentro del contenedor
-echo "  Ejecutando migraciones de base de datos..."
-docker compose -f docker-compose.prod.yml exec api sh -c \
+"${COMPOSE[@]}" exec api sh -c \
   "npx knex migrate:latest --knexfile dist/db/knexfile.js 2>&1" || echo "  ⚠ Migraciones pendientes de ejecutar manualmente"
 
 echo ""
@@ -147,11 +174,14 @@ echo -e "${GREEN}═════════════════════
 echo ""
 echo "  Portal:  https://${DOMAIN}"
 echo "  API:     https://${DOMAIN}/api/v1/dashboard"
-echo "  Health:  https://${DOMAIN}/health"
+echo "  Health:  https://${DOMAIN}/api/v1/health"
+if [ "$TLS_MODE" = external ]; then
+  echo "  (a través del reverse proxy externo → puerto ${NGINX_HTTP_PORT:-80} de este host)"
+fi
 echo ""
-echo "  Comandos útiles:"
-echo "    docker compose -f docker-compose.prod.yml logs -f       # Ver logs"
-echo "    docker compose -f docker-compose.prod.yml ps            # Estado"
-echo "    docker compose -f docker-compose.prod.yml restart api   # Reiniciar API"
-echo "    docker compose -f docker-compose.prod.yml down          # Detener todo"
+echo "  Comandos útiles (los perfiles salen de COMPOSE_PROFILES en .env.production):"
+echo "    ${COMPOSE[*]} logs -f                   # Ver logs"
+echo "    ${COMPOSE[*]} ps                        # Estado"
+echo "    ${COMPOSE[*]} restart api               # Reiniciar API"
+echo "    ${COMPOSE[*]} down                      # Detener todo"
 echo ""

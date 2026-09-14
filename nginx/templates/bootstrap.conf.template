@@ -1,0 +1,17 @@
+# Modo `letsencrypt` ANTES de que exista el certificado (primer despliegue).
+# Sólo atiende el challenge ACME para que certbot pueda emitir; todo lo demás
+# responde 503. entrypoint.sh vigila el volumen y, apenas aparece el
+# certificado de ${DOMAIN}, renderiza la config completa y recarga nginx.
+server {
+  listen 80 default_server;
+  server_name _;
+
+  location /.well-known/acme-challenge/ {
+    root /var/www/certbot;
+  }
+
+  location / {
+    default_type text/plain;
+    return 503 "STC Cloud: esperando el certificado TLS de ${DOMAIN} (certbot)\n";
+  }
+}

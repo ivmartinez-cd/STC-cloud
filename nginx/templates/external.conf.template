@@ -1,0 +1,48 @@
+# Modo `external` — este nginx escucha SÓLO HTTP (puerto 80 del contenedor,
+# publicado en NGINX_HTTP_PORT del host). El TLS lo termina un reverse proxy
+# externo (nginx proxy manager, ALB de AWS, Caddy, Traefik…) que reenvía
+# ${DOMAIN} y ews.${DOMAIN} a ese puerto, conservando el header Host.
+# No corre certbot ni necesita certificados.
+
+# ─── IP real del cliente ──────────────────────────────────────────────────
+# El proxy externo llega con SU IP; la del cliente viene en X-Forwarded-For.
+# Se reescribe $remote_addr con ella para que el rate limit de login, el
+# X-Real-IP y lo que la API recibe (TRUST_PROXY_HOPS=1) sigan siendo por
+# cliente y no por proxy. Sólo se confía en redes privadas + loopback +
+# TRUSTED_PROXY_CIDR (.env.production): un cliente que llegara DIRECTO a este
+# puerto desde Internet no puede falsear su IP. Igual, en este modo el puerto
+# debe estar cerrado a todo lo que no sea el proxy (security group/firewall).
+set_real_ip_from 10.0.0.0/8;
+set_real_ip_from 172.16.0.0/12;
+set_real_ip_from 192.168.0.0/16;
+set_real_ip_from 127.0.0.1/32;
+set_real_ip_from ${TRUSTED_PROXY_CIDR};
+real_ip_header    X-Forwarded-For;
+real_ip_recursive on;
+
+# Esquema original: lo que declare el proxy en X-Forwarded-Proto; si no lo
+# manda, el propio (http).
+map $http_x_forwarded_proto $stc_proto {
+  default $scheme;
+  https   https;
+  http    http;
+}
+
+# ─── Principal (portal + API + WS + Grafana) ──────────────────────────────
+# default_server: si el proxy no conserva el Host (o se prueba por IP), igual
+# cae acá y no en el gateway EWS.
+server {
+  listen 80 default_server;
+  server_name ${DOMAIN};
+
+  include /etc/nginx/snippets/security-headers.conf;
+  include /etc/nginx/snippets/app-locations.conf;
+}
+
+# ─── Gateway de EWS remoto ────────────────────────────────────────────────
+server {
+  listen 80;
+  server_name ews.${DOMAIN};
+
+  include /etc/nginx/snippets/ews-location.conf;
+}

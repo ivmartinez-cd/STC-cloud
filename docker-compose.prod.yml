@@ -1,5 +1,44 @@
 # STC Cloud — Docker Compose de Producción
-# Uso: docker compose -f docker-compose.prod.yml up -d --build
+# Uso: ./deploy.sh   (o a mano: docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build)
+#
+# `COMPOSE_PROFILES` en .env.production elige el modo de TLS (letsencrypt |
+# external) y, opcionalmente, `observability`. Ver .env.production.example.
+
+# Base común de los dos servicios nginx (uno por modo de TLS, ver más abajo).
+x-nginx-common: &nginx-common
+  image: nginx:alpine
+  restart: unless-stopped
+  # nginx/entrypoint.sh renderiza los bloques `server` según TLS_MODE + DOMAIN,
+  # valida (`nginx -t`), recarga cada 6 h para tomar certificados renovados y
+  # arranca nginx. Ver el encabezado de ese script.
+  entrypoint: ["/bin/sh", "/etc/nginx/entrypoint.sh"]
+  depends_on:
+    api:
+      condition: service_healthy
+    portal:
+      condition: service_healthy
+  networks:
+    - stc-network
+  healthcheck:
+    # Chequeo de puerto, no de contenido: el 80 escucha en ambos modos
+    # (redirect+ACME en letsencrypt, la app entera en external).
+    # 127.0.0.1 y no `localhost`: en nginx:alpine `localhost` resuelve a `::1`
+    # y la config escucha sólo IPv4 (`listen 80;`), así que el chequeo daba
+    # siempre 1 y el contenedor figuraba unhealthy desde el arranque (11/09/2026).
+    test: ["CMD-SHELL", "nc -z 127.0.0.1 80"]
+    interval: 30s
+    timeout: 5s
+    retries: 3
+  logging:
+    driver: "json-file"
+    options:
+      max-size: "10m"
+      max-file: "3"
+  deploy:
+    resources:
+      limits:
+        memory: 128m
+        cpus: "0.25"
 
 services:
   # ─── Backend API (Fastify + TypeScript) ────────────────────────────────────
@@ -107,52 +146,62 @@ services:
           memory: 256m
           cpus: "0.5"
 
-  # ─── Reverse Proxy (nginx + SSL) ─────────────────────────────────────────
+  # ─── Reverse Proxy (nginx) — un servicio por modo de TLS ─────────────────
+  # El modo lo elige `COMPOSE_PROFILES` en .env.production (ver ahí):
+  #   letsencrypt → servicio `nginx` (80 + 443, certificados propios) + `certbot`
+  #   external    → servicio `nginx-external` (sólo HTTP en NGINX_HTTP_PORT; el
+  #                 TLS lo termina un reverse proxy externo). Sin certbot.
+  # Los dos comparten config (`x-nginx-common`) y sólo difieren en puertos,
+  # volúmenes y TLS_MODE, que `nginx/entrypoint.sh` usa para elegir el
+  # template de nginx/templates/ y renderizarlo con DOMAIN.
   nginx:
-    image: nginx:alpine
-    restart: unless-stopped
-    # Recarga cada 6 h para tomar los certificados que certbot renueva: nginx
-    # lee los PEM sólo al arrancar, y sin esto seguía sirviendo el certificado
-    # viejo hasta vencer aunque el nuevo ya estuviera en disco (auditoría 14/09/2026).
-    command: ["/bin/sh", "-c", "while :; do sleep 6h; nginx -s reload; done & exec nginx -g 'daemon off;'"]
+    <<: *nginx-common
+    profiles: ["letsencrypt"]
+    environment:
+      TLS_MODE: letsencrypt
+      DOMAIN: ${DOMAIN}
     ports:
       - "80:80"
       - "443:443"
     volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/snippets:/etc/nginx/snippets:ro
+      - ./nginx/templates:/etc/nginx/templates:ro
+      - ./nginx/entrypoint.sh:/etc/nginx/entrypoint.sh:ro
       - certbot-certs:/etc/letsencrypt:ro
       - certbot-www:/var/www/certbot:ro
       # Paquetes de actualización del agente publicados por
       # installer/publish-release.sh (bind mount, no volumen nombrado: así
       # publicar es un scp directo a ./agent-updates en el host, sin entrar
-      # a ningún contenedor). Ver location /updates/ en nginx.conf.
+      # a ningún contenedor). Ver location /updates/ en nginx/snippets/app-locations.conf.
       - ./agent-updates:/var/www/updates:ro
-    depends_on:
-      api:
-        condition: service_healthy
-      portal:
-        condition: service_healthy
-    networks:
-      - stc-network
-    healthcheck:
-      # Chequeo de puerto, no de contenido: nginx.conf hace redirect/SSL propios
-      # que dependen del dominio y certificado reales, fuera de alcance acá.
-      # 127.0.0.1 y no `localhost`: en nginx:alpine `localhost` resuelve a `::1`
-      # y nginx.conf escucha sólo IPv4 (`listen 80;`), así que el chequeo daba
-      # siempre 1 y el contenedor figuraba unhealthy desde el arranque (11/09/2026).
-      test: ["CMD-SHELL", "nc -z 127.0.0.1 80"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-    deploy:
-      resources:
-        limits:
-          memory: 128m
-          cpus: "0.25"
 
-  # ─── Certbot — renovación automática SSL (cada 12h) ──────────────────────
+  nginx-external:
+    <<: *nginx-common
+    profiles: ["external"]
+    environment:
+      TLS_MODE: external
+      DOMAIN: ${DOMAIN}
+      # CIDR extra del proxy externo para confiar en su X-Forwarded-For
+      # (las redes privadas ya se confían siempre) — ver nginx/templates/external.conf.template.
+      TRUSTED_PROXY_CIDR: ${TRUSTED_PROXY_CIDR:-127.0.0.1/32}
+    ports:
+      # Acepta bind explícito: NGINX_HTTP_PORT=127.0.0.1:8080 si el proxy
+      # corre en el mismo host y no hace falta exponerlo a la red.
+      - "${NGINX_HTTP_PORT:-80}:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/snippets:/etc/nginx/snippets:ro
+      - ./nginx/templates:/etc/nginx/templates:ro
+      - ./nginx/entrypoint.sh:/etc/nginx/entrypoint.sh:ro
+      - ./agent-updates:/var/www/updates:ro
+
+  # ─── Certbot — renovación automática SSL (cada 12h), sólo modo letsencrypt ─
+  # La emisión inicial la hace deploy.sh con `docker compose run --rm
+  # --entrypoint certbot certbot certonly …` sobre estos mismos volúmenes.
   certbot:
     image: certbot/certbot:latest
+    profiles: ["letsencrypt"]
     volumes:
       - certbot-certs:/etc/letsencrypt
       - certbot-www:/var/www/certbot
@@ -211,7 +260,7 @@ services:
   # `metrics/http-metrics.ts` para `/metrics` (red interna de
   # `stc-network`, sin exposición externa). Grafana SÍ se expone, pero
   # detrás del mismo nginx/TLS que portal y API (`/grafana/`, ver
-  # `nginx.conf`) — nunca un puerto nuevo — y tiene su propio login.
+  # `nginx/snippets/app-locations.conf`) — nunca un puerto nuevo — y tiene su propio login.
   prometheus:
     image: prom/prometheus:latest
     restart: unless-stopped
@@ -258,7 +307,8 @@ services:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-CAMBIAR_POR_CONTRASENA_SEGURA}
       GF_USERS_ALLOW_SIGN_UP: "false"
-      # Servido bajo /grafana/ en el mismo dominio — ver nginx.conf.
+      # Servido bajo /grafana/ en el mismo dominio — ver nginx/snippets/app-locations.conf.
+      # En modo external también es https: el TLS lo pone el proxy de adelante.
       GF_SERVER_ROOT_URL: "https://${DOMAIN}/grafana/"
       GF_SERVER_SERVE_FROM_SUB_PATH: "true"
     volumes:

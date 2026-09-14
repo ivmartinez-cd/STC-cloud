@@ -1,0 +1,34 @@
+# Modo `letsencrypt` — bloque principal. Este nginx publica 80 y 443 y termina
+# TLS con los certificados que emite/renueva certbot (volumen certbot-certs).
+# ${DOMAIN} lo sustituye entrypoint.sh; el resto de los `$var` son de nginx.
+
+# ─── HTTP → HTTPS redirect ────────────────────────────────────────────────
+server {
+  listen 80 default_server;
+  server_name _;
+
+  # Certbot ACME challenge (Let's Encrypt)
+  location /.well-known/acme-challenge/ {
+    root /var/www/certbot;
+  }
+
+  location / {
+    return 301 https://$host$request_uri;
+  }
+}
+
+# ─── HTTPS principal ──────────────────────────────────────────────────────
+server {
+  listen 443 ssl;
+  server_name ${DOMAIN};
+
+  ssl_certificate     /etc/letsencrypt/live/${DOMAIN}/fullchain.pem;
+  ssl_certificate_key /etc/letsencrypt/live/${DOMAIN}/privkey.pem;
+  include /etc/nginx/snippets/tls.conf;
+
+  # Este nginx termina TLS: el esquema real es el propio.
+  set $stc_proto $scheme;
+
+  include /etc/nginx/snippets/security-headers.conf;
+  include /etc/nginx/snippets/app-locations.conf;
+}

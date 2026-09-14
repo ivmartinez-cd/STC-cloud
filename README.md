@@ -117,7 +117,7 @@ stc-cloud/
 ├── .github/workflows/ci.yml  # CI: portal, guardas de arquitectura, API, agente
 ├── docker-compose.yml         # Infra de desarrollo (postgres + redis + api + portal en contenedor)
 ├── docker-compose.prod.yml    # Producción completa (+ nginx, certbot, backups, observabilidad)
-├── nginx.conf                 # Reverse proxy + SSL
+├── nginx/                     # Reverse proxy: config base, templates por modo de TLS y entrypoint
 ├── deploy.sh                  # Script de despliegue
 └── .env.production.example    # Template de variables
 ```
@@ -196,11 +196,16 @@ cp .env.production.example .env.production
 nano .env.production  # Completar TODOS los valores
 ```
 
-### 3. Actualizar dominio en nginx
+Además de los secretos y `DOMAIN`, ahí se elige el **modo de TLS** con `COMPOSE_PROFILES`:
 
-Editar `nginx.conf` y reemplazar `stc-cloud.tu-dominio.com` por tu dominio real.
+| `COMPOSE_PROFILES` | Qué hace |
+|---|---|
+| `letsencrypt` | El nginx del compose publica 80/443 y termina TLS con certificados de Let's Encrypt (certbot los emite y renueva solo). |
+| `external` | El nginx del compose escucha sólo HTTP (`NGINX_HTTP_PORT`); el TLS lo termina un reverse proxy externo (nginx proxy manager, ALB, Caddy…). Sin certbot ni certificados propios. |
 
-### 4. Desplegar
+El dominio no se escribe en ningún archivo: `nginx/entrypoint.sh` renderiza la config desde `nginx/templates/` con `DOMAIN` al arrancar.
+
+### 3. Desplegar
 
 ```bash
 chmod +x deploy.sh
@@ -208,13 +213,13 @@ chmod +x deploy.sh
 ```
 
 El script automáticamente:
-- Valida la configuración
-- Genera certificado SSL con Let's Encrypt
-- Levanta los servicios base (API, Portal, PostgreSQL, Redis, nginx, certbot, backups)
+- Valida la configuración (secretos, `DOMAIN`, modo de TLS)
+- Levanta los servicios (API, Portal, PostgreSQL, Redis, nginx, backups; certbot sólo en modo `letsencrypt`)
+- En modo `letsencrypt`, emite los certificados de `DOMAIN` y `ews.DOMAIN` la primera vez
 - Ejecuta migraciones de base de datos
 
-> El stack de observabilidad (Prometheus, Grafana, Alertmanager) es **opt-in**: no lo levanta `deploy.sh`. Se activa aparte con
-> `docker compose -f docker-compose.prod.yml --env-file .env.production --profile observability up -d`
+> El stack de observabilidad (Prometheus, Grafana, Alertmanager) es **opt-in**: se suma al perfil de TLS en `.env.production`
+> (`COMPOSE_PROFILES=external,observability`) o se activa aparte con `--profile observability`
 > (ver [docs/internos/DEPLOY_CLOUD.md](docs/internos/DEPLOY_CLOUD.md)).
 
 ### Comandos útiles post-deploy

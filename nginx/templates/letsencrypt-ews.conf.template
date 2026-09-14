@@ -1,0 +1,16 @@
+# Modo `letsencrypt` — gateway de EWS remoto (hostname aparte, ver
+# snippets/ews-location.conf). entrypoint.sh lo renderiza SÓLO si existe el
+# certificado de ews.${DOMAIN}: sin él, el portal funciona igual y "Abrir
+# EWS" responde 503 con un mensaje (EWS_GATEWAY_URL sin definir o sin cert).
+server {
+  listen 443 ssl;
+  server_name ews.${DOMAIN};
+
+  ssl_certificate     /etc/letsencrypt/live/ews.${DOMAIN}/fullchain.pem;
+  ssl_certificate_key /etc/letsencrypt/live/ews.${DOMAIN}/privkey.pem;
+  include /etc/nginx/snippets/tls.conf;
+
+  set $stc_proto $scheme;
+
+  include /etc/nginx/snippets/ews-location.conf;
+}
