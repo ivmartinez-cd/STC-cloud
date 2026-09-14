@@ -541,6 +541,7 @@ internal sealed class ActivationForm : Form
         }
         catch (Exception ex)
         {
+            AgentService.LogCrash("BtnSaveProxy", ex);
             _lblProxyStatus.Text = $"Error: {ex.Message}";
             _lblProxyStatus.ForeColor = Color.Red;
         }
@@ -552,64 +553,90 @@ internal sealed class ActivationForm : Form
 
     private async void BtnRefresh_Click(object? sender, EventArgs e)
     {
+        // `async void`: sin try/catch acá, una excepcion (p. ej. dentro de
+        // UpdateDisplay) no la atrapa nadie mas que el manejador global de
+        // Program.cs — mejor mostrarla en el propio boton, como los demas.
         _btnRefresh.Enabled = false;
         _statusLabel.Text = "Refrescando estado...";
-        var status = await AgentService.GetStatusAsync();
-        UpdateDisplay(status);
-        _btnRefresh.Enabled = true;
+        try
+        {
+            var status = await AgentService.GetStatusAsync();
+            UpdateDisplay(status);
+        }
+        catch (Exception ex)
+        {
+            AgentService.LogCrash("BtnRefresh", ex);
+            _statusLabel.Text = $"Error al refrescar: {ex.Message}";
+        }
+        finally
+        {
+            _btnRefresh.Enabled = true;
+        }
     }
 
     private async void BtnStartService_Click(object? sender, EventArgs e)
     {
         _btnStartService.Enabled = false;
         _statusLabel.Text = "Iniciando servicio de Windows...";
-        
-        // Intentar iniciar el servicio (si la UI no esta elevada, StartService iniciara con UAC)
-        var (ok, error) = await Task.Run(() => {
-            AgentService.SetAutoStart();
-            return AgentService.StartService();
-        });
-        
-        if (ok)
+
+        try
         {
-            _statusLabel.Text = "Servicio iniciado correctamente.";
-        }
-        else
-        {
-            // Intentar iniciar elevando nssm.exe si falla por permisos
-            _statusLabel.Text = "Solicitando permisos para iniciar servicio...";
-            var (elevatedOk, elevatedError) = await Task.Run(() => {
-                try {
-                    var nodeExe = AgentService.FindAgentExe();
-                    if (nodeExe == null) return (false, "Ejecutable no encontrado");
-                    var nssmExe = Path.Combine(Path.GetDirectoryName(nodeExe)!, "nssm.exe");
-                    if (!File.Exists(nssmExe)) return (false, "NSSM no encontrado");
-                    
-                    var psi = new System.Diagnostics.ProcessStartInfo(nssmExe, $"start STCCloudMonitor") {
-                        UseShellExecute = true,
-                        Verb = "runas",
-                        WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden,
-                        CreateNoWindow = true
-                    };
-                    using var proc = System.Diagnostics.Process.Start(psi);
-                    proc?.WaitForExit(10000);
-                    return (proc?.ExitCode == 0, "");
-                } catch (Exception ex) {
-                    return (false, ex.Message);
-                }
+            // Intentar iniciar el servicio (si la UI no esta elevada, StartService iniciara con UAC)
+            var (ok, error) = await Task.Run(() => {
+                AgentService.SetAutoStart();
+                return AgentService.StartService();
             });
-            
-            if (elevatedOk) {
-                _statusLabel.Text = "Servicio iniciado correctamente con privilegios.";
-            } else {
-                MessageBox.Show($"No se pudo iniciar el servicio:\n{elevatedError ?? error}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                _statusLabel.Text = "Fallo al iniciar el servicio.";
+
+            if (ok)
+            {
+                _statusLabel.Text = "Servicio iniciado correctamente.";
             }
+            else
+            {
+                // Intentar iniciar elevando nssm.exe si falla por permisos
+                _statusLabel.Text = "Solicitando permisos para iniciar servicio...";
+                var (elevatedOk, elevatedError) = await Task.Run(() => {
+                    try {
+                        var nodeExe = AgentService.FindAgentExe();
+                        if (nodeExe == null) return (false, "Ejecutable no encontrado");
+                        var nssmExe = Path.Combine(Path.GetDirectoryName(nodeExe)!, "nssm.exe");
+                        if (!File.Exists(nssmExe)) return (false, "NSSM no encontrado");
+
+                        var psi = new System.Diagnostics.ProcessStartInfo(nssmExe, $"start STCCloudMonitor") {
+                            UseShellExecute = true,
+                            Verb = "runas",
+                            WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden,
+                            CreateNoWindow = true
+                        };
+                        using var proc = System.Diagnostics.Process.Start(psi);
+                        proc?.WaitForExit(10000);
+                        return (proc?.ExitCode == 0, "");
+                    } catch (Exception ex) {
+                        return (false, ex.Message);
+                    }
+                });
+
+                if (elevatedOk) {
+                    _statusLabel.Text = "Servicio iniciado correctamente con privilegios.";
+                } else {
+                    MessageBox.Show($"No se pudo iniciar el servicio:\n{elevatedError ?? error}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    _statusLabel.Text = "Fallo al iniciar el servicio.";
+                }
+            }
+
+            var s = await AgentService.GetStatusAsync();
+            UpdateDisplay(s);
         }
-        
-        var s = await AgentService.GetStatusAsync();
-        UpdateDisplay(s);
-        _btnStartService.Enabled = true;
+        catch (Exception ex)
+        {
+            AgentService.LogCrash("BtnStartService", ex);
+            MessageBox.Show($"Error inesperado al iniciar el servicio:\n{ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            _statusLabel.Text = "Fallo al iniciar el servicio.";
+        }
+        finally
+        {
+            _btnStartService.Enabled = true;
+        }
     }
 
     private async void BtnActivate_Click(object? sender, EventArgs e)
@@ -671,6 +698,7 @@ internal sealed class ActivationForm : Form
         }
         catch (Exception ex)
         {
+            AgentService.LogCrash("BtnActivate", ex);
             MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
         finally

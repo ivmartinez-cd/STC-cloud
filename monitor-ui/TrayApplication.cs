@@ -26,7 +26,7 @@ internal sealed class TrayApplication : ApplicationContext
 
         // Poll service status every 30 s
         _pollTimer = new System.Windows.Forms.Timer { Interval = 30_000 };
-        _pollTimer.Tick += (_, _) => RefreshStatus();
+        _pollTimer.Tick += (_, _) => SafeRefreshStatus();
         _pollTimer.Start();
 
         // Initial status after 500 ms (so the tray icon appears first)
@@ -35,7 +35,7 @@ internal sealed class TrayApplication : ApplicationContext
         {
             init.Stop();
             init.Dispose();
-            RefreshStatus();
+            SafeRefreshStatus();
             // Auto-open form if not activated on first launch
             if (_lastStatus is null || !_lastStatus.Activated)
                 ShowStatusForm();
@@ -93,6 +93,17 @@ internal sealed class TrayApplication : ApplicationContext
     }
 
     // ── Status refresh ────────────────────────────────────────────────────────
+
+    // Este poll corre solo, sin que el operador lo haya pedido: si algo falla
+    // acá no corresponde interrumpirlo con un cartel (a diferencia de
+    // "Forzar Sincronizacion" o los botones del formulario, donde el usuario
+    // esta esperando una respuesta). Queda registrado igual, y hay un
+    // `Application.ThreadException` global (`Program.cs`) como ultima red.
+    private void SafeRefreshStatus()
+    {
+        try { RefreshStatus(); }
+        catch (Exception ex) { AgentService.LogCrash("Poll", ex); }
+    }
 
     private void RefreshStatus()
     {
@@ -197,17 +208,26 @@ internal sealed class TrayApplication : ApplicationContext
     }
     private void OpenLogs()
     {
+        // `agent.log` (bundle.js) y `monitor-ui.log` (excepciones no
+        // manejadas de esta bandeja, ver Program.cs) — se abren los dos que
+        // existan; si no existe ninguno, se avisa con la ruta esperada.
         var logPath = AgentService.GetLogPath();
-        if (!File.Exists(logPath))
+        var crashLogPath = AgentService.GetCrashLogPath();
+        var opened = false;
+        foreach (var path in new[] { logPath, crashLogPath })
+        {
+            if (!File.Exists(path)) continue;
+            opened = true;
+            try {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(path) { UseShellExecute = true });
+            } catch {
+                System.Diagnostics.Process.Start("notepad.exe", path);
+            }
+        }
+        if (!opened)
         {
             MessageBox.Show($"Archivo de log no encontrado:\n{logPath}",
                 "STC Cloud Monitor", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-            return;
-        }
-        try {
-            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(logPath) { UseShellExecute = true });
-        } catch {
-            System.Diagnostics.Process.Start("notepad.exe", logPath);
         }
     }
 

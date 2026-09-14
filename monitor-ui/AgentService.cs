@@ -235,6 +235,35 @@ internal static class AgentService
 
     // Cambia el servicio a inicio automatico una vez que el agente fue activado.
     // El instalador lo deja en DEMAND_START para evitar reinicios antes de la activacion.
+    // ── Crash log de la bandeja ───────────────────────────────────────────────
+    // Separado de `agent.log` (lo escribe bundle.js): antes de esto, una
+    // excepcion no manejada en STC.Monitor.UI se perdia sin dejar mas rastro
+    // que un codigo de falla en el Visor de eventos de Windows. Se escribe
+    // SIEMPRE en DefaultDataDir, nunca en el DataDir "real" del agente
+    // activado: resolver ese implica invocar `GetStatus()`, que lanza un
+    // proceso Node — riesgoso hacerlo justo desde el manejador de una
+    // excepcion no manejada, donde lo prioritario es no volver a fallar.
+    private static readonly object CrashLogLock = new();
+
+    public static string GetCrashLogPath() => Path.Combine(DefaultDataDir, "monitor-ui.log");
+
+    public static void LogCrash(string source, Exception ex)
+    {
+        try
+        {
+            lock (CrashLogLock)
+            {
+                Directory.CreateDirectory(DefaultDataDir);
+                File.AppendAllText(GetCrashLogPath(),
+                    $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] [{source}] {ex}{Environment.NewLine}");
+            }
+        }
+        catch
+        {
+            // Si ni esto funciona (disco lleno, sin permisos), no hay mas red de contencion posible.
+        }
+    }
+
     public static void SetAutoStart()
     {
         var nodeExe = FindAgentExe();
