@@ -28,3 +28,4 @@ export async function scanSamsungDevice(ip: string, modelName?: string): Promise
 export * from './sl-m4020';
 export * from './sl-m4072';
 export * from './x4300';
+export * from './sws-supplies';

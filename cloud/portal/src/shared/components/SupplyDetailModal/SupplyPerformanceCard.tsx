@@ -4,24 +4,32 @@ import { formatDate } from '../../lib/formatters';
 import { Card, CardTitle, Row } from './primitives';
 
 function PagesHeadline({ cycle }: { cycle: SupplyCycle }) {
-  const total = cycle.total_printed ?? 0;
-  const mono = cycle.mono_printed ?? 0;
-  const color = cycle.color_printed ?? 0;
-  const monoPct = total > 0 ? Math.round((mono / total) * 100) : 0;
+  const total = cycle.total_printed;
+  // Sin páginas medidas la barra quedaba naranja de punta a punta, como si
+  // todo hubiera sido color: con `total` en null o 0 no se dibuja ninguna.
+  const split = total != null && total > 0
+    ? Math.round(((cycle.mono_printed ?? 0) / total) * 100)
+    : null;
   return (
     <div className="px-5 pb-3.5 pt-4">
       <div className="flex items-baseline gap-2">
-        <span className="font-montserrat text-[28px] font-extrabold leading-none tracking-[-.02em] tabular-nums text-ink-900">{fmtInt(cycle.total_printed)}</span>
+        <span className="font-montserrat text-[28px] font-extrabold leading-none tracking-[-.02em] tabular-nums text-ink-900">{fmtInt(total)}</span>
         <span className="font-sans text-[11.5px] text-ink-300">páginas impresas</span>
       </div>
-      <div className="mt-2.5 flex h-[5px] overflow-hidden rounded-[3px] bg-surface-track">
-        <span className="block h-full bg-brand-gray" style={{ width: `${monoPct}%` }} />
-        <span className="block h-full flex-1 bg-brand" />
-      </div>
-      <div className="mt-1.5 flex justify-between font-sans text-[11px] text-ink-300">
-        <span>{fmtInt(cycle.mono_printed)} monocromo</span>
-        <span>{fmtInt(color)} color</span>
-      </div>
+      {split === null ? (
+        <p className="mt-2 font-sans text-[11px] text-ink-300">Todavía no se midieron páginas desde que se instaló este consumible.</p>
+      ) : (
+        <>
+          <div className="mt-2.5 flex h-[5px] overflow-hidden rounded-[3px] bg-surface-track">
+            <span className="block h-full bg-brand-gray" style={{ width: `${split}%` }} />
+            <span className="block h-full flex-1 bg-brand" />
+          </div>
+          <div className="mt-1.5 flex justify-between font-sans text-[11px] text-ink-300">
+            <span>{fmtInt(cycle.mono_printed)} monocromo</span>
+            <span>{fmtInt(cycle.color_printed)} color</span>
+          </div>
+        </>
+      )}
     </div>
   );
 }

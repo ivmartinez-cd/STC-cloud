@@ -1,5 +1,6 @@
 import { type EwsData } from './types';
 import { classifySupplyOrigin } from '../../capture/supplyOrigin';
+import { buildSwsSuppliesDetails } from './samsung/sws-supplies';
 
 // home.json — model name, serial, mac, hostname, trays, toners (SyncThru V5/V6)
 export function parseSamsungHome(body: string): Partial<EwsData> {
@@ -710,7 +711,7 @@ export function parseSamsungSolutionSupplies(html: string): Partial<EwsData> {
     outputTrays.push({ name: 'Standard Bin', capacity: '500 sheet(s)', status: 'Ready' });
   }
 
-  const suppliesDetails = {
+  const suppliesDetails: Record<string, unknown> = {
     toners: {
       black:   black   !== null ? { percentage: black,   status: 'Ready' } : undefined,
       cyan:    cyan    !== null ? { percentage: cyan,    status: 'Ready' } : undefined,
@@ -728,16 +729,51 @@ export function parseSamsungSolutionSupplies(html: string): Partial<EwsData> {
     outputTrays: outputTrays.length > 0 ? outputTrays : undefined,
   };
 
-  if (black === null && cyan === null && magenta === null && yellow === null && !suppliesDetails.drums) return {};
+  // Lectura estructurada por `id` (locale-independiente): trae serie del CRUM,
+  // SKU, capacidad e impresiones, que el raspado por texto de arriba no puede
+  // sacar. Pisa al raspado donde hay dato — ver `samsung/sws-supplies.ts`.
+  const structured = buildSwsSuppliesDetails(html);
+  const levels = applySwsStructured(suppliesDetails, structured, { black, cyan, magenta, yellow });
+
+  const hasAny = levels.black !== null || levels.cyan !== null || levels.magenta !== null
+    || levels.yellow !== null || !!suppliesDetails.drums || !!structured;
+  if (!hasAny) return {};
 
   return {
     brand: 'samsung',
-    tonerBlack: black,
-    tonerCyan: cyan,
-    tonerMagenta: magenta,
-    tonerYellow: yellow,
-    suppliesDetails,
+    tonerBlack: levels.black,
+    tonerCyan: levels.cyan,
+    tonerMagenta: levels.magenta,
+    tonerYellow: levels.yellow,
+    suppliesDetails: suppliesDetails as Partial<EwsData>['suppliesDetails'],
   };
+}
+
+type Levels = { black: number | null; cyan: number | null; magenta: number | null; yellow: number | null };
+const TONER_COLORS = ['black', 'cyan', 'magenta', 'yellow'] as const;
+
+/** Vuelca el resultado estructurado sobre el del raspado y devuelve los niveles finales. */
+function applySwsStructured(
+  details: Record<string, unknown>,
+  structured: ReturnType<typeof buildSwsSuppliesDetails>,
+  scraped: Levels,
+): Levels {
+  const levels: Levels = { ...scraped };
+  if (!structured) return levels;
+  const toners = details.toners as Record<string, unknown>;
+  const drums = (details.drums as Record<string, unknown>) ?? {};
+  for (const c of TONER_COLORS) {
+    const t = structured.toners[c];
+    if (t) { toners[c] = t; if (t.percentage != null) levels[c] = t.percentage; }
+    if (structured.drums[c]) drums[c] = structured.drums[c];
+  }
+  if (Object.keys(drums).length) details.drums = drums;
+  // Si la lectura estructurada encontró mantenimiento, MANDA ELLA: ubica cada
+  // rodillo en su slot con nombre (`tray1Roller`…), que es lo que el cloud
+  // etiqueta como "Rodillo bandeja 1". Mezclarla con el raspado por texto
+  // duplicaría el mismo rodillo, una vez con nombre y otra dentro de `other`.
+  if (Object.keys(structured.maintenance).length) details.maintenance = structured.maintenance;
+  return levels;
 }
 
 export * from './samsung/index';

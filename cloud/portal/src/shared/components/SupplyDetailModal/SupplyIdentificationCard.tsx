@@ -60,7 +60,7 @@ export default function SupplyIdentificationCard({ supply, device }: { supply: S
             {supply.percentage != null ? `${supply.percentage}%` : '—'}
           </span>
         </div>
-        <SupplyLevelBar pct={supply.percentage} fillColor={supply.color !== 'Sin color' ? SWATCH_HEX[supply.color] : undefined} />
+        <SupplyLevelBar pct={supply.percentage} fillColor={supply.color !== 'Sin color' ? SWATCH_HEX[supply.color] : undefined} showValue={false} />
         <div className="mt-2 flex justify-between font-sans text-[11px] text-ink-300">
           <span>{supply.remainingDays != null ? `${supply.remainingDays} días restantes` : 'Sin estimación de días'}</span>
           <span>{supply.remainingPages != null ? `${fmtInt(supply.remainingPages)} páginas restantes` : ''}</span>

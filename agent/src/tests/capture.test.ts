@@ -589,10 +589,15 @@ describe('Samsung XOA suppliesView (X4300LX real): sin bandejas basura', () => {
     const trays = p.suppliesDetails?.inputTrays ?? [];
     assert.ok(!trays.some(t => /function|buttonFunc|\(|\{/.test(`${t.name} ${t.paperSize} ${t.paperType}`)), JSON.stringify(trays));
     assert.ok(!trays.some(t => t.name === '소모품'));
-    const rollers = p.suppliesDetails?.maintenance?.other ?? [];
-    assert.ok(rollers.length >= 3, `rodillos: ${JSON.stringify(rollers)}`);
-    const t1 = rollers.find(r => r.name === 'Tray 1 roller')!;
-    assert.equal(t1.maxCapacity, 200000); assert.equal(t1.percentage, 20);
+    // Desde la lectura estructurada por `id` (samsung/sws-supplies.ts) los
+    // rodillos van a su slot con nombre en vez del cajón `other`: el cloud los
+    // muestra como "Rodillo bandeja 1" y no como "Kit de mantenimiento".
+    const mt = p.suppliesDetails?.maintenance ?? {};
+    assert.equal(mt.tray1Roller?.capacity, 200000);
+    assert.equal(mt.tray1Roller?.percentage, 20);
+    assert.ok(mt.fuser?.percentage != null && mt.transferBelt?.percentage != null, JSON.stringify(mt));
+    // Los del ADF no tienen slot propio y siguen en `other`, con nombre legible.
+    assert.ok((mt.other ?? []).some(r => /ADF/i.test(r.name)), JSON.stringify(mt.other));
     assert.equal(p.tonerBlack, 46);
   });
   test('normalize descarta bandejas con código aunque vengan de la familia', () => {
