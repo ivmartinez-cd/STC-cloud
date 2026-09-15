@@ -1,6 +1,6 @@
 {
   "name": "stc-cloud-monitor",
-  "version": "1.3.6",
+  "version": "1.3.7",
   "description": "Agente local STC Cloud - Scanner SNMP multimarca",
   "main": "dist/core/main.js",
   "bin": "dist/core/main.js",
@@ -10,7 +10,7 @@
     "start": "node dist/core/main.js",
     "install-svc": "node src/install/install.js",
     "uninstall-svc": "node src/install/uninstall.js",
-    "test": "npx tsx --test src/tests/capture.test.ts src/tests/queue.test.ts src/tests/snmpNegotiate.test.ts src/tests/networkUtils.test.ts src/tests/discoveryCursor.test.ts src/tests/discoveryChunk.test.ts src/tests/businessHours.test.ts src/tests/scanServiceCredentials.test.ts src/tests/devicePolicy.test.ts src/tests/supplyOrigin.test.ts src/tests/samsungSwsSupplies.test.ts src/tests/logger.test.ts src/tests/dedupeReadings.test.ts src/tests/pjlDisabledDetection.test.ts src/tests/updateRollback.test.ts src/tests/activationRetry.test.ts src/tests/ewsProxy.test.ts src/tests/commandHandlerEwsProxy.test.ts src/tests/ewsRequest.test.ts src/tests/commandHandlerEwsRequest.test.ts src/tests/snmpSet.test.ts src/tests/printerReset.test.ts src/tests/commandHandlerRestartPrinter.test.ts src/tests/taskScheduler.test.ts src/tests/monitorIntervals.test.ts",
+    "test": "npx tsx --test src/tests/capture.test.ts src/tests/queue.test.ts src/tests/snmpNegotiate.test.ts src/tests/networkUtils.test.ts src/tests/discoveryCursor.test.ts src/tests/discoveryChunk.test.ts src/tests/businessHours.test.ts src/tests/scanServiceCredentials.test.ts src/tests/devicePolicy.test.ts src/tests/supplyOrigin.test.ts src/tests/samsungSwsSupplies.test.ts src/tests/epsonWebConfig.test.ts src/tests/logger.test.ts src/tests/dedupeReadings.test.ts src/tests/pjlDisabledDetection.test.ts src/tests/updateRollback.test.ts src/tests/activationRetry.test.ts src/tests/ewsProxy.test.ts src/tests/commandHandlerEwsProxy.test.ts src/tests/ewsRequest.test.ts src/tests/commandHandlerEwsRequest.test.ts src/tests/snmpSet.test.ts src/tests/printerReset.test.ts src/tests/commandHandlerRestartPrinter.test.ts src/tests/taskScheduler.test.ts src/tests/monitorIntervals.test.ts",
     "test:capture": "npx tsx --test src/tests/capture.test.ts",
     "test:queue": "npx tsx --test src/tests/queue.test.ts",
     "snmp:sim": "npx tsx src/tests/snmpSimulator.ts",

@@ -1,6 +1,6 @@
 // Fase 4: OIDs SNMP por Marca (secciones 7.1 - 7.5 del PDF)
 
-export type Brand = 'hp' | 'lexmark' | 'samsung' | 'ricoh' | 'brother' | 'xerox' | 'generic';
+export type Brand = 'hp' | 'lexmark' | 'samsung' | 'ricoh' | 'brother' | 'xerox' | 'epson' | 'generic';
 
 // ─── Deteccion de fabricante por sysObjectID (seccion 6.3) ──────────────────
 
@@ -11,6 +11,7 @@ const ENTERPRISE_PREFIXES: Array<[string, Brand]> = [
   ['1.3.6.1.4.1.367.',  'ricoh'],    // Ricoh (enterprise 367)
   ['1.3.6.1.4.1.2435.', 'brother'],  // Brother (enterprise 2435)
   ['1.3.6.1.4.1.253.',  'xerox'],    // Xerox (enterprise 253)
+  ['1.3.6.1.4.1.1248.', 'epson'],    // Seiko Epson (enterprise 1248)
 ];
 
 export function detectBrandFromOid(sysObjectId: string): Brand {
@@ -28,6 +29,7 @@ export function detectBrandFromText(text: string): Brand {
   if (t.includes('ricoh')) return 'ricoh';
   if (t.includes('brother')) return 'brother';
   if (t.includes('xerox')) return 'xerox';
+  if (t.includes('epson')) return 'epson';
   return 'generic';
 }
 
@@ -180,6 +182,16 @@ export const XEROX_OIDS: OidMap = {
   ]
 };
 
+/**
+ * Epson: deliberadamente el Printer-MIB estándar, no OIDs propietarios.
+ * El enterprise 1248 de Epson sí existe, pero no tenemos ningún OID de
+ * contadores suyo verificado contra un equipo real, y un OID inventado
+ * devuelve null en silencio (o peor, el número equivocado). El desglose
+ * mono/color lo da el EWS (`families/epson-webconfig.ts`), que además es más
+ * rico que cualquier MIB: trae por tamaño y por función.
+ */
+export const EPSON_OIDS: OidMap = GENERIC_OIDS;
+
 export const OID_MAPS: Record<Brand, OidMap> = {
   hp:      HP_OIDS,
   lexmark: LEXMARK_OIDS,
@@ -187,6 +199,7 @@ export const OID_MAPS: Record<Brand, OidMap> = {
   ricoh:   RICOH_OIDS,
   brother: BROTHER_OIDS,
   xerox:   XEROX_OIDS,
+  epson:   EPSON_OIDS,
   generic: GENERIC_OIDS,
 };
 

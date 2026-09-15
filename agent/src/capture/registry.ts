@@ -12,10 +12,12 @@ import { hpFutureSmart } from './families/hp-futuresmart';
 import { samsungSyncThru } from './families/samsung-syncthru';
 import { samsungSws } from './families/samsung-sws';
 import { lexmarkCgi } from './families/lexmark-cgi';
+import { epsonWebConfig } from './families/epson-webconfig';
 import { MODEL_PROFILES } from './models';
 
 const FAMILIES: readonly CaptureFamily[] = [
-  hpFutureSmart, hpDevMgmt, hpJetdirectLegacy, samsungSyncThru, samsungSws, lexmarkCgi, genericEws, genericPrinterMib,
+  hpFutureSmart, hpDevMgmt, hpJetdirectLegacy, samsungSyncThru, samsungSws, lexmarkCgi, epsonWebConfig,
+  genericEws, genericPrinterMib,
 ];
 
 const familyById = new Map<string, CaptureFamily>(FAMILIES.map(f => [f.id, f]));
