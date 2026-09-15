@@ -41,8 +41,27 @@ function supplyOf(row: any) {
   };
 }
 
+/** `pg` devuelve los bigint del snapshot como string — sin Number() cualquier Δ concatena. */
+function bigint(v: unknown): number | null {
+  if (v === null || v === undefined) return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+function snapshotOf(row: any) {
+  return {
+    supplySerial: row.supply_serial ?? null,
+    externalRef: row.external_ref ?? null,
+    reason: row.reason ?? null,
+    monoPages: bigint(row.mono_pages),
+    colorPages: bigint(row.color_pages),
+    totalPages: bigint(row.total_pages),
+    replacedAt: row.replaced_at ?? null,
+  };
+}
+
 function toEntity(row: any, possibleDuplicateOf: string | null = null): SupplyRequest {
-  return { ...identityOf(row), ...supplyOf(row), possibleDuplicateOf };
+  return { ...identityOf(row), ...supplyOf(row), ...snapshotOf(row), possibleDuplicateOf };
 }
 
 function toEventEntity(row: any): SupplyRequestEvent {
@@ -54,6 +73,17 @@ function toEventEntity(row: any): SupplyRequestEvent {
     metadata: row.metadata,
     userId: row.user_id,
     createdAt: row.created_at,
+  };
+}
+
+function snapshotRow(data: SupplyRequestWrite): Record<string, unknown> {
+  return {
+    supply_serial: data.supplySerial,
+    external_ref: data.externalRef,
+    reason: data.reason,
+    mono_pages: data.monoPages,
+    color_pages: data.colorPages,
+    total_pages: data.totalPages,
   };
 }
 
@@ -70,6 +100,7 @@ function toRow(data: SupplyRequestWrite, createdBy: string | null): Record<strin
     sku: data.sku,
     level_pct: data.levelPct,
     remaining_days: data.remainingDays,
+    ...snapshotRow(data),
     origin: data.origin,
     notes: data.notes,
     created_by: createdBy,
@@ -163,6 +194,10 @@ export class KnexSupplyRequestRepository implements SupplyRequestRepository {
 
   async setStatus(id: string, status: RequestStatus, closedAt: Date | null): Promise<void> {
     await this.db(TABLE).where({ id }).update({ status, closed_at: closedAt, updated_at: new Date() });
+  }
+
+  async setReplacedAt(id: string, replacedAt: Date): Promise<void> {
+    await this.db(TABLE).where({ id }).update({ replaced_at: replacedAt, updated_at: new Date() });
   }
 
   async addEvent(requestId: string, event: EventWrite): Promise<void> {

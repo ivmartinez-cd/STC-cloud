@@ -38,6 +38,12 @@ export const createRequestSchema = {
       client_id: { type: "string", format: "uuid" },
       device_id: { type: "string", format: "uuid" },
       supply_kind: { type: "string", minLength: 2, maxLength: 30 },
+      // Clave real del consumible (`toner-black`, `mt-fuser`…), la manda el
+      // modal "Detalles del consumible" para que el pedido quede enganchado
+      // al mismo insumo que muestra el historial. Sin ella se cae al
+      // `manual:<kind>:<color>` de siempre.
+      supply_key: { type: "string", minLength: 1, maxLength: 120 },
+      external_ref: { type: ["string", "null"], maxLength: 120 },
       supply_color: { type: ["string", "null"], maxLength: 20 },
       description: { type: ["string", "null"], maxLength: 200 },
       sku: { type: ["string", "null"], maxLength: 100 },

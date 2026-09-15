@@ -10,7 +10,7 @@ import type { DeleteDeviceUseCase } from "../application/use-cases/delete-device
 import type { GetDeviceDirectoryUseCase, GetDeviceInventorySummaryUseCase } from "../application/use-cases/device-directory-use-cases";
 import type {
   GetDevicePrintTrendUseCase, GetDeviceReadingsUseCase, GetDeviceStatsUseCase, GetDeviceSuppliesUseCase,
-  GetDeviceUsageHistoryUseCase, GetDeviceUseCase, ListDevicesUseCase, ListDuplicatesUseCase,
+  GetDeviceUsageHistoryUseCase, GetDeviceUseCase, GetSupplyHistoryUseCase, ListDevicesUseCase, ListDuplicatesUseCase,
 } from "../application/use-cases/device-read-use-cases";
 import type { DecommissionDeviceUseCase, RecommissionDeviceUseCase } from "../application/use-cases/lifecycle-use-cases";
 import type { MergeDeviceRequestUseCase } from "../application/use-cases/merge-devices";
@@ -24,7 +24,8 @@ import type { UpdateDeviceUseCase } from "../application/use-cases/update-device
 
 export interface DeviceUseCases {
   list: ListDevicesUseCase; get: GetDeviceUseCase; readings: GetDeviceReadingsUseCase;
-  supplies: GetDeviceSuppliesUseCase; usageHistory: GetDeviceUsageHistoryUseCase; duplicates: ListDuplicatesUseCase;
+  supplies: GetDeviceSuppliesUseCase; supplyHistory: GetSupplyHistoryUseCase;
+  usageHistory: GetDeviceUsageHistoryUseCase; duplicates: ListDuplicatesUseCase;
   stats: GetDeviceStatsUseCase; printTrend: GetDevicePrintTrendUseCase;
   directory: GetDeviceDirectoryUseCase; inventorySummary: GetDeviceInventorySummaryUseCase;
   update: UpdateDeviceUseCase; remove: DeleteDeviceUseCase;
@@ -125,6 +126,8 @@ function readHandlers(uc: DeviceUseCases) {
     getDeviceReadings: (request: Req, reply: FastifyReply) =>
       replyingDeviceErrors(reply, () => uc.readings.execute({ ...scopedId(request), ...(request.query as { from?: string; to?: string; limit?: string }) })),
     getDeviceSupplies: (request: Req, reply: FastifyReply) => replyingDeviceErrors(reply, () => uc.supplies.execute(scopedId(request))),
+    getSupplyHistory: (request: Req, reply: FastifyReply) =>
+      replyingDeviceErrors(reply, () => uc.supplyHistory.execute({ ...scopedId(request), key: (request.query as { key?: string }).key ?? "" })),
     getDeviceUsageHistory: (request: Req, reply: FastifyReply) =>
       replyingDeviceErrors(reply, () => uc.usageHistory.execute({ ...scopedId(request), ...(request.query as { granularity?: string; limit?: string }) })),
     getDeviceStats: (request: Req, reply: FastifyReply) => replyingDeviceErrors(reply, () => uc.stats.execute(scopedId(request))),

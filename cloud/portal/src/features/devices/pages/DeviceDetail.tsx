@@ -17,6 +17,8 @@ import AlertsTab from '../components/detail/AlertsTab';
 import IncidentsTab from '../components/detail/IncidentsTab';
 import HistoryTab from '../components/detail/HistoryTab';
 import CostsTab from '../components/detail/CostsTab';
+import SupplyDetailModal from '../../../shared/components/SupplyDetailModal';
+import { useSupplyDetailParam } from '../../../shared/hooks/useSupplyDetailParam';
 import { useDeviceDetail } from '../hooks/useDeviceDetail';
 import { useDeviceStats, useDevicePrintTrend } from '../hooks/useDeviceOverview';
 import { safeReturnTo, returnToLabel } from '../../../shared/lib/returnTo';
@@ -100,6 +102,8 @@ const DeviceDetail = () => {
   const [moveOpen, setMoveOpen] = useState(false);
   const [mergeOpen, setMergeOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  // "Detalles del consumible" en la URL (`?supply=`) — igual que en Consumibles.
+  const [supplyTarget, setSupplyTarget] = useSupplyDetailParam();
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
@@ -197,7 +201,7 @@ const DeviceDetail = () => {
         />
       )}
       {activeTab === 'counters' && <CountersTab device={device} latest={latest} totalPages={totalPages} monoPages={monoPages} colorPages={colorPages} counters={counters} />}
-      {activeTab === 'supplies' && <SuppliesTable device={device} supplyRows={supplyRows} />}
+      {activeTab === 'supplies' && <SuppliesTable device={device} supplyRows={supplyRows} onOpenSupply={(key) => setSupplyTarget({ deviceId: device.id, supplyKey: key })} />}
       {activeTab === 'media' && <MediaTab inputTrays={details?.inputTrays} outputTrays={details?.outputTrays} />}
       {activeTab === 'alerts' && <AlertsTab activeAlerts={activeAlerts} />}
       {activeTab === 'incidents' && <IncidentsTab incidents={incidents.data} incidentsLoading={incidents.loading} />}
@@ -223,6 +227,7 @@ const DeviceDetail = () => {
       <DecommissionDeviceModal isOpen={decommissionOpen} onClose={() => setDecommissionOpen(false)} onDone={refetch} deviceId={device.id} />
       <MoveDeviceModal isOpen={moveOpen} onClose={() => setMoveOpen(false)} onDone={refetch} deviceId={device.id} currentClientId={device.client_id ?? null} currentAgentId={device.agent_id ?? null} />
       <MergeDeviceModal isOpen={mergeOpen} onClose={() => setMergeOpen(false)} onDone={refetch} deviceId={device.id} clientId={device.client_id ?? null} />
+      <SupplyDetailModal target={supplyTarget} onClose={() => setSupplyTarget(null)} />
     </div>
   );
 };

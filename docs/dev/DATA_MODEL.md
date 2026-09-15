@@ -405,6 +405,15 @@ insumo dentro del equipo), `supply_kind`, `supply_color`, `description`, `sku`,
 los tres estados terminales ⇔ `closed_at IS NOT NULL`. Snapshot `device_serial`,
 `device_label`. Índice único parcial: un pedido automático abierto por `(device_id, supply_key)`.
 
+Snapshot de lectura al abrir (migración `20260915120000`, para el modal "Detalles del
+consumible"): `supply_serial` (serie del cartucho), `reason` ∈ {`low_level`, `runtime`,
+`manual`}, `mono_pages` / `color_pages` / `total_pages` (contadores del equipo en ese
+momento) y `replaced_at` (cuándo se detectó el cambio de cartucho — columna aparte de
+`closed_at`, que también se llena al ignorar o cancelar). `external_ref` es la referencia
+del sistema de pedidos, la carga quien crea el pedido. Todas nullable: las solicitudes
+anteriores a la migración quedan en `NULL` y la UI muestra "—" (los Δ entre solicitudes se
+derivan, no se persisten).
+
 #### `supply_request_events`
 Historial del pedido, mismo patrón que `incident_events`: `kind` ∈ {`status_change`,
 `comment`, `auto_complete`}.

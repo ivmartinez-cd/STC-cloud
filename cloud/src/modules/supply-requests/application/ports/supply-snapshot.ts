@@ -10,6 +10,12 @@ export interface SupplyLevelRow {
   sku: string | null;
   percentage: number | null;
   remainingDays: number | null;
+  /** Serie del cartucho instalado al momento del pedido (la informa el EWS; `null` por SNMP puro). */
+  supplySerial: string | null;
+  /** Contadores del equipo al abrir el pedido — base de los Δ del historial del modal. */
+  monoPages: number | null;
+  colorPages: number | null;
+  totalPages: number | null;
 }
 
 export interface SupplySnapshot {

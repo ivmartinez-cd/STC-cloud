@@ -2,14 +2,12 @@ import { AlertTriangle } from 'lucide-react';
 import ZoneLabel from '../../../../shared/components/ZoneLabel';
 import EstadoChip from '../../../../shared/components/EstadoChip';
 import SupplyLevelBar from '../../../../shared/components/SupplyLevelBar';
+import { SWATCH_HEX } from '../../../../shared/lib/supplyColors';
+import SupplyLevelButton from '../../../../shared/components/SupplyLevelButton';
 import { fmtDate, fmtInt, type SupplyRow } from '../../../../shared/lib/supplies';
 import type { DeviceDetailData } from '../../types/deviceDetailPage';
 
 const GRID_COLS = 'grid-cols-[minmax(210px,1fr)_110px_120px_160px_132px_130px_130px]';
-
-const SWATCH_HEX: Record<SupplyRow['color'], string> = {
-  Negro: '#2E3033', Cian: '#7FB8C4', Magenta: '#C48BA8', Amarillo: '#E8C776', 'Sin color': '#DDE1E2',
-};
 
 const HEADERS = ['CONSUMIBLE', 'COLOR', 'ESTADO', 'NIVEL RESTANTE', 'CÓDIGO', 'PÁG. RESTANTES', 'INSTALADO'];
 
@@ -18,7 +16,7 @@ const HEADERS = ['CONSUMIBLE', 'COLOR', 'ESTADO', 'NIVEL RESTANTE', 'CÓDIGO', '
  * ellipsis (antes se cortaba a mitad de glifo) y páginas restantes en severo
  * si < 1.000. El estado del chip se deriva del % (no del string libre que
  * reporta el agente, que no es un enum normalizado entre fabricantes). */
-export default function SuppliesTable({ device, supplyRows }: { device: DeviceDetailData | null; supplyRows: SupplyRow[] }) {
+export default function SuppliesTable({ device, supplyRows, onOpenSupply }: { device: DeviceDetailData | null; supplyRows: SupplyRow[]; onOpenSupply?: (key: string) => void }) {
   const belowWarning = supplyRows.filter((r) => r.percentage != null && r.percentage <= 20).length;
   return (
     <div>
@@ -36,7 +34,7 @@ export default function SuppliesTable({ device, supplyRows }: { device: DeviceDe
                 <div role="row" className={`grid ${GRID_COLS} items-center gap-3.5 border-b border-line-100 bg-surface-table-head px-5 py-3`}>
                   {HEADERS.map((h) => <span key={h} className="font-montserrat text-[8.5px] font-bold uppercase tracking-[.14em] text-ink-300 last:text-right [&:nth-child(6)]:text-right">{h}</span>)}
                 </div>
-                {supplyRows.map((r) => <SupplyRowLine key={r.key} r={r} />)}
+                {supplyRows.map((r) => <SupplyRowLine key={r.key} r={r} onOpenSupply={onOpenSupply} />)}
               </div>
             </div>
             <div className="flex flex-wrap items-center justify-between gap-2.5 px-5 py-3.5">
@@ -53,7 +51,7 @@ export default function SuppliesTable({ device, supplyRows }: { device: DeviceDe
   );
 }
 
-function SupplyRowLine({ r }: { r: SupplyRow }) {
+function SupplyRowLine({ r, onOpenSupply }: { r: SupplyRow; onOpenSupply?: (key: string) => void }) {
   const attention = r.percentage != null && r.percentage <= 35;
   const lowPages = r.remainingPages != null && r.remainingPages < 1000;
   return (
@@ -66,7 +64,9 @@ function SupplyRowLine({ r }: { r: SupplyRow }) {
       {r.percentage != null
         ? <EstadoChip variant={attention ? 'attention' : 'neutral'} label={attention ? 'ADVERTENCIA' : 'OK'} />
         : <span className="justify-self-start font-sans text-[12px] text-ink-200">—</span>}
-      <SupplyLevelBar pct={r.percentage} fillColor={r.color !== 'Sin color' ? SWATCH_HEX[r.color] : undefined} />
+      <SupplyLevelButton label={r.description} onOpen={onOpenSupply ? () => onOpenSupply(r.key) : undefined}>
+        <SupplyLevelBar pct={r.percentage} fillColor={r.color !== 'Sin color' ? SWATCH_HEX[r.color] : undefined} />
+      </SupplyLevelButton>
       <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap font-mono text-[11.5px] text-ink-700" title={r.code ?? undefined}>{r.code ?? '—'}</span>
       <span className={`text-right font-montserrat text-[12.5px] font-semibold tabular-nums ${lowPages ? 'text-brand-severe' : 'text-ink-600'}`}>{fmtInt(r.remainingPages)}</span>
       <span className="text-right font-sans text-[12px] text-ink-300">{fmtDate(r.firstInstallDate)}</span>

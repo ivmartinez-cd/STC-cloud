@@ -5,6 +5,10 @@ import type {
   FleetDeviceParams, FleetDeviceRow, SuppliesDeviceRow, SuppliesRepository,
 } from "../../domain/repositories/supplies-repository";
 import type { UsageRate } from "../../domain/entities/supply-row";
+import type {
+  SupplyHistoryDevice, SupplyLevelPoint, SupplyRequestHistoryRow,
+} from "../../domain/entities/supply-history";
+import { selectHistoryDevice, selectLevelSeries, selectRequestHistory } from "./knex-supply-history-queries";
 
 // Techo de seguridad, mismo criterio que listClients/listAgents/listDevices
 // (auditoría de capacidad 23/08/2026) — no es paginación real de dispositivos,
@@ -63,14 +67,29 @@ export class KnexSuppliesRepository implements SuppliesRepository {
     return map;
   }
 
+  /** `supply_requests` no tiene `agent_id`: el filtro por sede se resuelve por los equipos de ese agente. */
   async countOpenSupplyRequests(params: FleetDeviceParams): Promise<number> {
     const [{ n }] = await this.db("supply_requests")
       .whereIn("status", OPEN_STATUSES as readonly string[])
       .modify((q) => {
-        if (params.clientId) q.where("client_id", params.clientId);
-        if (params.agentId) q.where("agent_id", params.agentId);
+        if (params.clientId) q.where("supply_requests.client_id", params.clientId);
+        if (params.agentId) {
+          q.whereIn("supply_requests.device_id", this.db("devices").select("id").where("agent_id", params.agentId));
+        }
       })
       .count("* as n");
     return Number(n);
+  }
+
+  historyDevice(deviceId: string): Promise<SupplyHistoryDevice | null> {
+    return selectHistoryDevice(this.db, deviceId);
+  }
+
+  levelSeries(deviceId: string, supplyKey: string): Promise<SupplyLevelPoint[]> {
+    return selectLevelSeries(this.db, deviceId, supplyKey);
+  }
+
+  requestHistory(deviceId: string, supplyKey: string): Promise<SupplyRequestHistoryRow[]> {
+    return selectRequestHistory(this.db, deviceId, supplyKey);
   }
 }

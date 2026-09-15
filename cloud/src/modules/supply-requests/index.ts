@@ -11,7 +11,7 @@ import { autoCompleteReplaced, openDueRequests } from "./application/use-cases/d
  * BullMQ) en vez de instanciar los adaptadores de infraestructura a mano.
  */
 export { registerSupplyRequestRoutes } from "./presentation/supply-request-routes";
-export { OPEN_STATUSES } from "./domain/entities/supply-request";
+export { AUTO_COMPLETE_RISE_PCT, OPEN_STATUSES } from "./domain/entities/supply-request";
 
 export interface SupplyRequestDetector {
   /** Cierra automáticamente pedidos cuyo insumo ya fue reemplazado. Devuelve cuántos. */

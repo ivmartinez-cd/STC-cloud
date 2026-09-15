@@ -12,14 +12,19 @@ import { ListFleetSuppliesUseCase } from "./application/use-cases/list-fleet-sup
 import { GetDeviceSuppliesUseCase } from "./application/use-cases/get-device-supplies";
 import { GetSuppliesSummaryUseCase } from "./application/use-cases/get-supplies-summary";
 import { CountSuppliesBelowThresholdUseCase } from "./application/use-cases/count-supplies-below-threshold";
+import { GetSupplyHistoryUseCase } from "./application/use-cases/get-supply-history";
 import type { FleetDeviceParams } from "./domain/repositories/supplies-repository";
 import type { FleetSuppliesParams, SuppliesSummary } from "./application/dtos/supplies-dtos";
 import type { FleetSupplyRow, SupplyRow, UsageRate } from "./domain/entities/supply-row";
+import type { SupplyHistory } from "./domain/entities/supply-history";
 
 export type {
   SuppliesItem, SupplyKind, SupplyColor, SupplyRow, FleetSupplyRow, SupplyUrgency, UsageRate,
 } from "./domain/entities/supply-row";
 export { parseSuppliesDetails, buildSupplyRows } from "./domain/services/supply-row-builder";
+export type {
+  SupplyHistory, SupplyHistoryDevice, SupplyLevelPoint, SupplyReplacement, SupplyCycle, SupplyRequestHistoryRow,
+} from "./domain/entities/supply-history";
 export type { FleetSuppliesParams, SuppliesSummary } from "./application/dtos/supplies-dtos";
 export { registerSuppliesRoutes } from "./presentation/supplies-routes";
 
@@ -41,4 +46,9 @@ export async function suppliesSummary(db: Knex, params: FleetDeviceParams): Prom
 
 export async function suppliesCountBelowThreshold(db: Knex, pct: number): Promise<number> {
   return new CountSuppliesBelowThresholdUseCase(new KnexSuppliesRepository(db)).execute(pct);
+}
+
+/** Detalle histórico de un consumible puntual (modal "Detalles del consumible"). */
+export async function supplyHistory(db: Knex, deviceId: string, supplyKey: string): Promise<SupplyHistory | null> {
+  return new GetSupplyHistoryUseCase(new KnexSuppliesRepository(db)).execute(deviceId, supplyKey);
 }

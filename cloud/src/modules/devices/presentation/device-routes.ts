@@ -136,6 +136,11 @@ export function registerDeviceRoutes(fastify: FastifyInstance, db: Knex, portalA
   fastify.get("/api/v1/devices/:id/usage-history", { ...auth, handler: ctrl.getDeviceUsageHistory });
   // Fase 8 del gap analysis vs HP SDS — superficie de consumibles.
   fastify.get("/api/v1/devices/:id/supplies", { ...auth, handler: ctrl.getDeviceSupplies });
+  // Modal "Detalles del consumible" (15/09/2026) — histórico de UN consumible
+  // (`?key=toner-black`). `key` va por query y no como segmento de path a
+  // propósito: las claves de mantenimiento (`mt-other-<nombre del MIB>`)
+  // traen espacios y barras.
+  fastify.get("/api/v1/devices/:id/supply-history", { ...auth, handler: ctrl.getSupplyHistory });
   // Handoff hifi "Dispositivo — detalle" (25/08/2026) — tira de métricas y tendencia de 12 meses.
   fastify.get("/api/v1/devices/:id/stats", { ...auth, handler: ctrl.getDeviceStats });
   fastify.get("/api/v1/devices/:id/print-trend", { ...auth, handler: ctrl.getDevicePrintTrend });

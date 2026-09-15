@@ -17,6 +17,20 @@ export interface DetectDeps {
   notifier: RequestNotifier;
 }
 
+/** Snapshot de lectura al abrir — sin esto el historial del modal no puede calcular los Δ. */
+function snapshotOf(row: SupplyLevelRow) {
+  return {
+    supplySerial: row.supplySerial,
+    externalRef: null,
+    // Hoy el único disparador automático es el umbral de nivel; cuando exista
+    // uno por días restantes, acá va `runtime` (ver `REQUEST_REASONS`).
+    reason: "low_level" as const,
+    monoPages: row.monoPages,
+    colorPages: row.colorPages,
+    totalPages: row.totalPages,
+  };
+}
+
 function toWrite(clientId: string, row: SupplyLevelRow): SupplyRequestWrite {
   return {
     clientId,
@@ -30,6 +44,7 @@ function toWrite(clientId: string, row: SupplyLevelRow): SupplyRequestWrite {
     sku: row.sku,
     levelPct: row.percentage,
     remainingDays: row.remainingDays,
+    ...snapshotOf(row),
     origin: "auto",
     notes: null,
   };
@@ -54,7 +69,11 @@ export async function openDueRequests(deps: DetectDeps): Promise<number> {
 async function completeIfReplaced(deps: DetectDeps, request: SupplyRequest): Promise<boolean> {
   const current = await deps.snapshot.currentLevel(request.deviceId!, request.supplyKey);
   if (!replacementDetected(request.levelPct, current)) return false;
-  await deps.repo.setStatus(request.id, "completed", new Date());
+  const now = new Date();
+  await deps.repo.setStatus(request.id, "completed", now);
+  // Columna aparte de `closed_at`: un pedido ignorado/cancelado también cierra,
+  // pero sólo acá se sabe que el cartucho efectivamente se cambió.
+  await deps.repo.setReplacedAt(request.id, now);
   await deps.repo.addEvent(request.id, {
     kind: "auto_complete",
     body: `Nivel subió de ${request.levelPct ?? "?"}% a ${current}% — consumible reemplazado`,

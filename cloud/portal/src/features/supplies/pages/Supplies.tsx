@@ -11,6 +11,8 @@ import { exportSuppliesCsv } from '../lib/exportSuppliesCsv';
 import SuppliesFilterBar from '../components/SuppliesFilterBar';
 import SuppliesBulkBar from '../components/SuppliesBulkBar';
 import SuppliesTable from '../components/SuppliesTable';
+import SupplyDetailModal from '../../../shared/components/SupplyDetailModal';
+import { useSupplyDetailParam } from '../../../shared/hooks/useSupplyDetailParam';
 
 function subtitle(s: ReturnType<typeof useSuppliesPage>['summary']): string {
   if (!s) return '';
@@ -42,6 +44,9 @@ export default function Supplies() {
   const fit = useFitRows({ estimate: 58 });
   const s = useSuppliesPage(fit.rows);
   const [exporting, setExporting] = useState(false);
+  // Tocar el % abre "Detalles del consumible" (paridad con el SDS); el modal
+  // vive en la URL para que el link se pueda compartir.
+  const [supplyTarget, setSupplyTarget] = useSupplyDetailParam();
 
   const handleExport = async () => {
     setExporting(true);
@@ -66,10 +71,13 @@ export default function Supplies() {
         />
         <SuppliesBulkBar count={s.rowSelection.count} busy={s.busy} onGenerate={() => void s.generateSelected()} onClear={s.rowSelection.clear} />
         <div ref={fit.ref} className="min-h-0 flex-1 overflow-hidden">
-          <SuppliesTable items={s.items} readOnly={readOnly} selection={s.rowSelection} rowKey={s.rowKey} loading={s.loading} error={s.error} onRetry={s.fetchSupplies} skeletonRows={fit.rows} />
+          <SuppliesTable items={s.items} readOnly={readOnly} selection={s.rowSelection} rowKey={s.rowKey} loading={s.loading} error={s.error} onRetry={s.fetchSupplies} skeletonRows={fit.rows}
+            onOpenSupply={(r) => setSupplyTarget({ deviceId: r.device_id, supplyKey: r.key })} />
         </div>
         <HifiPagination page={s.filters.page} totalPages={s.totalPages} total={s.total} pageSize={s.pageSize} itemLabel="ítems" onPageChange={s.filters.setPage} />
       </div>
+
+      <SupplyDetailModal target={supplyTarget} onClose={() => setSupplyTarget(null)} />
     </div>
   );
 }

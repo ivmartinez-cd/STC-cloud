@@ -5,7 +5,7 @@ import { GetDeviceDirectoryUseCase, GetDeviceInventorySummaryUseCase } from "../
 import { DeleteDeviceUseCase } from "../application/use-cases/delete-device";
 import {
   GetDevicePrintTrendUseCase, GetDeviceReadingsUseCase, GetDeviceStatsUseCase, GetDeviceSuppliesUseCase,
-  GetDeviceUsageHistoryUseCase, GetDeviceUseCase, ListDevicesUseCase, ListDuplicatesUseCase,
+  GetDeviceUsageHistoryUseCase, GetDeviceUseCase, GetSupplyHistoryUseCase, ListDevicesUseCase, ListDuplicatesUseCase,
 } from "../application/use-cases/device-read-use-cases";
 import { DecommissionDeviceUseCase, RecommissionDeviceUseCase } from "../application/use-cases/lifecycle-use-cases";
 import { MergeDeviceRequestUseCase, MergeDevicesUseCase } from "../application/use-cases/merge-devices";
@@ -46,6 +46,16 @@ function buildLifecycleUseCases(devices: KnexDeviceRepository, unitOfWork: KnexD
   };
 }
 
+/** Los tres casos de uso que necesitan el puerto de consumibles — agrupados para
+ * no cruzar el límite de 20 líneas/función (mismo motivo que `buildLifecycleUseCases`). */
+function buildSuppliesUseCases(devices: KnexDeviceRepository, suppliesReader: SuppliesServiceDeviceSuppliesReader) {
+  return {
+    supplies: new GetDeviceSuppliesUseCase(devices, suppliesReader),
+    supplyHistory: new GetSupplyHistoryUseCase(devices, suppliesReader),
+    stats: new GetDeviceStatsUseCase(devices, suppliesReader),
+  };
+}
+
 /** Composición de los casos de uso HTTP del módulo — un solo lugar para el cableado de adaptadores. */
 export function buildDeviceUseCases(db: Knex): DeviceUseCases {
   const devices = new KnexDeviceRepository(db);
@@ -56,9 +66,9 @@ export function buildDeviceUseCases(db: Knex): DeviceUseCases {
   const registration = new KnexDeviceRegistrationRepository(db);
   return {
     list: new ListDevicesUseCase(devices), get: new GetDeviceUseCase(devices), readings: new GetDeviceReadingsUseCase(devices),
-    supplies: new GetDeviceSuppliesUseCase(devices, suppliesReader),
+    ...buildSuppliesUseCases(devices, suppliesReader),
     usageHistory: new GetDeviceUsageHistoryUseCase(devices), duplicates: new ListDuplicatesUseCase(devices),
-    stats: new GetDeviceStatsUseCase(devices, suppliesReader), printTrend: new GetDevicePrintTrendUseCase(devices),
+    printTrend: new GetDevicePrintTrendUseCase(devices),
     directory: new GetDeviceDirectoryUseCase(devices), inventorySummary: new GetDeviceInventorySummaryUseCase(devices),
     update: new UpdateDeviceUseCase(devices, new InventoryCustomFieldMerger(db), audit), remove: new DeleteDeviceUseCase(unitOfWork),
     ...buildLifecycleUseCases(devices, unitOfWork, audit),

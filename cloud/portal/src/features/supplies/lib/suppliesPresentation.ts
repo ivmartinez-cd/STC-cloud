@@ -1,5 +1,5 @@
 import { APP_LOCALE } from '../../../shared/lib/formatters';
-import type { SupplyColor, SupplyUrgency } from '../../../shared/types/supplies';
+import type { SupplyUrgency } from '../../../shared/types/supplies';
 
 export const URGENCY_LABELS: Record<SupplyUrgency, string> = {
   critico: 'CRÍTICO',
@@ -17,15 +17,7 @@ export function urgencyChipProps(u: SupplyUrgency): { variant: 'neutral' | 'atte
   return { variant: 'neutral' };
 }
 
-/** Swatch desaturado del color real del cartucho (handoff hifi #3, §1 punto 6)
- * — nunca puntos saturados. */
-export const SWATCH_HEX: Record<SupplyColor, string> = {
-  Negro: '#2E3033',
-  Cian: '#7FB8C4',
-  Magenta: '#C48BA8',
-  Amarillo: '#E8C776',
-  'Sin color': '#DDE1E2',
-};
+export { SWATCH_HEX } from '../../../shared/lib/supplyColors';
 
 export function fmtDate(v: string | null): string {
   if (!v) return '—';

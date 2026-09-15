@@ -1,5 +1,5 @@
 import type { Knex } from "knex";
-import { deviceSupplies } from "../../../supplies";
+import { deviceSupplies, supplyHistory } from "../../../supplies";
 import type { DeviceLowestSupply } from "../../domain/entities/device-detail";
 import type { DeviceSuppliesReader } from "../../application/ports/device-supplies-reader";
 
@@ -9,6 +9,10 @@ export class SuppliesServiceDeviceSuppliesReader implements DeviceSuppliesReader
 
   read(deviceId: string): Promise<unknown | null> {
     return deviceSupplies(this.db, deviceId);
+  }
+
+  history(deviceId: string, supplyKey: string): Promise<unknown | null> {
+    return supplyHistory(this.db, deviceId, supplyKey);
   }
 
   async lowest(deviceId: string): Promise<DeviceLowestSupply | null> {

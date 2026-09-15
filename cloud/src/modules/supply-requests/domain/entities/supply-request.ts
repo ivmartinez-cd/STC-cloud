@@ -13,6 +13,15 @@ export const OPEN_STATUSES: readonly RequestStatus[] = ["pending", "reviewed", "
 
 export type RequestOrigin = "auto" | "manual";
 
+/**
+ * Motivo del pedido, calcado del SDS ("Nivel bajo" / "Tiempo de ejecución").
+ * Hoy el worker sólo dispara por nivel; `runtime` queda declarado para
+ * cuando exista un disparador por días restantes (el CHECK ya lo acepta,
+ * ver la migración 20260915120000).
+ */
+export const REQUEST_REASONS = ["low_level", "runtime", "manual"] as const;
+export type RequestReason = (typeof REQUEST_REASONS)[number];
+
 export interface SupplyRequest {
   id: string;
   clientId: string;
@@ -26,6 +35,14 @@ export interface SupplyRequest {
   sku: string | null;
   levelPct: number | null;
   remainingDays: number | null;
+  /** Snapshot de lectura al abrir (migración 20260915120000) — `null` en pedidos anteriores. */
+  supplySerial: string | null;
+  externalRef: string | null;
+  reason: RequestReason | null;
+  monoPages: number | null;
+  colorPages: number | null;
+  totalPages: number | null;
+  replacedAt: Date | null;
   status: RequestStatus;
   origin: RequestOrigin;
   openedAt: Date;

@@ -4,7 +4,7 @@
     "src/api/bootstrap.ts": [
       {
         "name": "bootstrapDefaultAdmin",
-        "length": 22
+        "length": 28
       }
     ],
     "src/api/health.ts": [
@@ -40,7 +40,7 @@
     "src/api/routes.ts": [
       {
         "name": "registerAllRoutes",
-        "length": 49
+        "length": 53
       }
     ],
     "src/api/server.ts": [
@@ -142,7 +142,7 @@
     "src/modules/agents/application/use-cases/process-reading.ts": [
       {
         "name": "execute",
-        "length": 28
+        "length": 29
       }
     ],
     "src/modules/agents/application/use-cases/register-devices.ts": [
@@ -214,13 +214,13 @@
     "src/modules/agents/presentation/agent-wiring.ts": [
       {
         "name": "buildAgentUseCases",
-        "length": 48
+        "length": 57
       }
     ],
     "src/modules/agents/presentation/portal-agent-controller.ts": [
       {
         "name": "readHandlers",
-        "length": 28
+        "length": 30
       },
       {
         "name": "lifecycleHandlers",
@@ -234,7 +234,7 @@
     "src/modules/agents/presentation/portal-agent-routes.ts": [
       {
         "name": "registerPortalAgentRoutes",
-        "length": 46
+        "length": 52
       }
     ],
     "src/modules/alerts/domain/services/alert-catalog.ts": [
@@ -286,7 +286,7 @@
     "src/modules/auth/application/use-cases/login-use-case.ts": [
       {
         "name": "execute",
-        "length": 48
+        "length": 53
       }
     ],
     "src/modules/auth/application/use-cases/user-management-use-cases.ts": [
@@ -314,13 +314,13 @@
     "src/modules/auth/presentation/auth-routes.ts": [
       {
         "name": "registerAuthRoutes",
-        "length": 83
+        "length": 79
       }
     ],
     "src/modules/auth/presentation/session-controller.ts": [
       {
         "name": "portalLogin",
-        "length": 50
+        "length": 55
       }
     ],
     "src/modules/auth/presentation/users-controller.ts": [
@@ -350,7 +350,7 @@
     "src/modules/dashboard/application/use-cases/get-dashboard-stats.ts": [
       {
         "name": "execute",
-        "length": 91
+        "length": 93
       }
     ],
     "src/modules/devices/application/use-cases/bulk-lifecycle-use-cases.ts": [
@@ -416,7 +416,7 @@
     "src/modules/devices/presentation/device-routes.ts": [
       {
         "name": "registerDeviceRoutes",
-        "length": 50
+        "length": 55
       }
     ],
     "src/modules/incidents/infrastructure/database/incident-mutations.ts": [
@@ -558,11 +558,11 @@
     "src/modules/supply-requests/presentation/supply-request-controller.ts": [
       {
         "name": "buildCreate",
-        "length": 25
+        "length": 31
       },
       {
         "name": "anonymous",
-        "length": 23
+        "length": 29
       }
     ],
     "src/modules/supply-requests/presentation/supply-request-routes.ts": [
@@ -664,15 +664,15 @@
     "src/ws/handshake.ts": [
       {
         "name": "registerWebSocket",
-        "length": 190
+        "length": 206
       },
       {
         "name": "anonymous",
-        "length": 182
+        "length": 198
       },
       {
         "name": "anonymous",
-        "length": 44
+        "length": 42
       }
     ],
     "portal/src/App.tsx": [
@@ -688,7 +688,7 @@
       },
       {
         "name": "Layout",
-        "length": 44
+        "length": 47
       }
     ],
     "portal/src/app/layout/SidebarNav.tsx": [
@@ -730,13 +730,13 @@
     "portal/src/features/alerts/pages/Alerts.tsx": [
       {
         "name": "Alerts",
-        "length": 53
+        "length": 54
       }
     ],
     "portal/src/features/auth/pages/Login.tsx": [
       {
         "name": "Login",
-        "length": 211
+        "length": 201
       },
       {
         "name": "handleSubmit",
@@ -764,7 +764,7 @@
     "portal/src/features/clients/components/ClientDetailTabs.tsx": [
       {
         "name": "ClientDetailTabs",
-        "length": 23
+        "length": 24
       }
     ],
     "portal/src/features/clients/components/ClientDevicesFilterBar.tsx": [
@@ -782,31 +782,19 @@
     "portal/src/features/clients/components/ClientDevicesTable.tsx": [
       {
         "name": "ClientDevicesTable",
-        "length": 94
-      }
-    ],
-    "portal/src/features/clients/components/ClientMetricsCards.tsx": [
-      {
-        "name": "ClientMetricsCards",
-        "length": 42
+        "length": 93
       }
     ],
     "portal/src/features/clients/components/ClientMonitorsSection.tsx": [
       {
         "name": "ClientMonitorsSection",
-        "length": 87
+        "length": 90
       }
     ],
     "portal/src/features/clients/components/ClientProfileCard.tsx": [
       {
         "name": "ClientProfileCard",
         "length": 54
-      }
-    ],
-    "portal/src/features/clients/components/ClientTabRedirect.tsx": [
-      {
-        "name": "ClientTabRedirect",
-        "length": 23
       }
     ],
     "portal/src/features/clients/components/ClientUsageChart.tsx": [
@@ -818,7 +806,7 @@
     "portal/src/features/clients/components/ClientsDirectoryTable.tsx": [
       {
         "name": "ClientsDirectoryTable",
-        "length": 130
+        "length": 133
       },
       {
         "name": "anonymous",
@@ -928,27 +916,19 @@
     "portal/src/features/clients/hooks/useClientDetail.ts": [
       {
         "name": "useClientDetail",
-        "length": 83
+        "length": 62
       }
     ],
     "portal/src/features/clients/hooks/useClientDeviceDirectory.ts": [
       {
-        "name": "useDeviceFilters",
-        "length": 27
-      },
-      {
         "name": "useDeviceRows",
-        "length": 32
+        "length": 35
       }
     ],
     "portal/src/features/clients/hooks/useClientsDirectory.ts": [
       {
-        "name": "useDirectoryFilters",
-        "length": 30
-      },
-      {
         "name": "useDirectoryRows",
-        "length": 34
+        "length": 37
       }
     ],
     "portal/src/features/clients/lib/exportClientDevicesCsv.ts": [
@@ -960,19 +940,19 @@
     "portal/src/features/clients/pages/ClientDetail.tsx": [
       {
         "name": "ClientDetail",
-        "length": 105
+        "length": 101
       }
     ],
     "portal/src/features/clients/pages/Clients.tsx": [
       {
         "name": "Clients",
-        "length": 189
+        "length": 200
       }
     ],
     "portal/src/features/dashboard/components/AgentVersionsCard.tsx": [
       {
         "name": "AgentVersionsCard",
-        "length": 54
+        "length": 51
       }
     ],
     "portal/src/features/dashboard/components/AlertsByClassCard.tsx": [
@@ -1022,11 +1002,11 @@
     "portal/src/features/dashboard/components/StatsStrip.tsx": [
       {
         "name": "buildCells",
-        "length": 26
+        "length": 27
       },
       {
         "name": "StatsStrip",
-        "length": 43
+        "length": 44
       }
     ],
     "portal/src/features/dashboard/components/TopClientsCard.tsx": [
@@ -1044,7 +1024,7 @@
     "portal/src/features/dashboard/pages/Dashboard.tsx": [
       {
         "name": "Dashboard",
-        "length": 177
+        "length": 197
       }
     ],
     "portal/src/features/devices/components/detail/AlertsTab.tsx": [
@@ -1080,13 +1060,7 @@
     "portal/src/features/devices/components/detail/DeviceAlertsCard.tsx": [
       {
         "name": "DeviceAlertsCard",
-        "length": 40
-      }
-    ],
-    "portal/src/features/devices/components/detail/DeviceMetricsStrip.tsx": [
-      {
-        "name": "DeviceMetricsStrip",
-        "length": 40
+        "length": 42
       }
     ],
     "portal/src/features/devices/components/detail/DeviceProfileCard.tsx": [
@@ -1096,7 +1070,7 @@
       },
       {
         "name": "DeviceProfileCard",
-        "length": 54
+        "length": 53
       }
     ],
     "portal/src/features/devices/components/detail/DeviceStatusBanners.tsx": [
@@ -1114,7 +1088,7 @@
     "portal/src/features/devices/components/detail/IncidentsTab.tsx": [
       {
         "name": "IncidentsTab",
-        "length": 49
+        "length": 55
       }
     ],
     "portal/src/features/devices/components/detail/MediaTab.tsx": [
@@ -1133,18 +1107,22 @@
       {
         "name": "SuppliesTable",
         "length": 34
+      },
+      {
+        "name": "SupplyRowLine",
+        "length": 22
       }
     ],
     "portal/src/features/devices/hooks/useDeviceDirectory.ts": [
       {
         "name": "useDirectoryRows",
-        "length": 26
+        "length": 29
       }
     ],
     "portal/src/features/devices/pages/DeviceDetail.tsx": [
       {
         "name": "DeviceDetail",
-        "length": 162
+        "length": 174
       }
     ],
     "portal/src/features/devices/pages/Devices.tsx": [
@@ -1156,7 +1134,7 @@
     "portal/src/features/email-log/pages/EmailLog.tsx": [
       {
         "name": "EmailLog",
-        "length": 39
+        "length": 33
       }
     ],
     "portal/src/features/incidents/components/IncidentsTable.tsx": [
@@ -1168,19 +1146,19 @@
     "portal/src/features/incidents/pages/IncidentDetail.tsx": [
       {
         "name": "IncidentDetail",
-        "length": 244
+        "length": 254
       }
     ],
     "portal/src/features/incidents/pages/Incidents.tsx": [
       {
         "name": "Incidents",
-        "length": 54
+        "length": 56
       }
     ],
     "portal/src/features/monitors/components/ConfigTabPanel.tsx": [
       {
         "name": "ConfigTabPanel",
-        "length": 199
+        "length": 201
       }
     ],
     "portal/src/features/monitors/components/ConnectivityStrip.tsx": [
@@ -1204,7 +1182,7 @@
     "portal/src/features/monitors/components/DeviceInventoryTable.tsx": [
       {
         "name": "DeviceInventoryTable",
-        "length": 255
+        "length": 254
       },
       {
         "name": "handleApproveDiscovered",
@@ -1246,7 +1224,7 @@
     "portal/src/features/monitors/components/MonitorProfileCard.tsx": [
       {
         "name": "MonitorProfileCard",
-        "length": 63
+        "length": 60
       }
     ],
     "portal/src/features/monitors/components/MonitorRegenKeyModal.tsx": [
@@ -1255,16 +1233,10 @@
         "length": 42
       }
     ],
-    "portal/src/features/monitors/components/MonitorSpecsCard.tsx": [
-      {
-        "name": "MonitorSpecsCard",
-        "length": 31
-      }
-    ],
     "portal/src/features/monitors/components/RecentActivityCard.tsx": [
       {
         "name": "RecentActivityCard",
-        "length": 65
+        "length": 56
       }
     ],
     "portal/src/features/monitors/components/ReportsTabPanel.tsx": [
@@ -1354,21 +1326,11 @@
     "portal/src/features/monitors/components/agents/ConfigAgentModal.tsx": [
       {
         "name": "ConfigAgentModal",
-        "length": 198
+        "length": 178
       },
       {
         "name": "saveConfig",
         "length": 21
-      }
-    ],
-    "portal/src/features/monitors/components/agents/CreateAgentModal.tsx": [
-      {
-        "name": "CreateAgentModal",
-        "length": 267
-      },
-      {
-        "name": "generateKey",
-        "length": 26
       }
     ],
     "portal/src/features/monitors/components/agents/RegenKeyModal.tsx": [
@@ -1386,7 +1348,7 @@
     "portal/src/features/monitors/hooks/useAgentsDirectory.ts": [
       {
         "name": "useDirectoryRows",
-        "length": 30
+        "length": 33
       },
       {
         "name": "useSignalBuckets",
@@ -1396,17 +1358,13 @@
     "portal/src/features/monitors/hooks/useMonitorDetail.ts": [
       {
         "name": "useMonitorDetail",
-        "length": 168
+        "length": 192
       }
     ],
     "portal/src/features/monitors/hooks/useMonitorDeviceDirectory.ts": [
       {
-        "name": "useDeviceFilters",
-        "length": 27
-      },
-      {
         "name": "useDeviceRows",
-        "length": 32
+        "length": 35
       }
     ],
     "portal/src/features/monitors/pages/Agents.tsx": [
@@ -1418,19 +1376,19 @@
     "portal/src/features/monitors/pages/MonitorDetail.tsx": [
       {
         "name": "MonitorDetail",
-        "length": 222
+        "length": 228
       }
     ],
     "portal/src/features/monitors/pages/RemoteActions.tsx": [
       {
         "name": "RemoteActions",
-        "length": 106
+        "length": 105
       }
     ],
     "portal/src/features/pending-devices/pages/PendingDevices.tsx": [
       {
         "name": "PendingDevices",
-        "length": 75
+        "length": 71
       }
     ],
     "portal/src/features/reports/components/ReopenClosureModal.tsx": [
@@ -1507,22 +1465,16 @@
         "length": 64
       }
     ],
-    "portal/src/features/settings/pages/Settings.tsx": [
-      {
-        "name": "Settings",
-        "length": 23
-      }
-    ],
     "portal/src/features/supplies/components/SupplyRequestDetailModal.tsx": [
       {
         "name": "SupplyRequestDetailModal",
-        "length": 102
+        "length": 108
       }
     ],
     "portal/src/features/supplies/pages/Supplies.tsx": [
       {
         "name": "Supplies",
-        "length": 38
+        "length": 45
       }
     ],
     "portal/src/features/supplies/pages/SupplyRequests.tsx": [
@@ -1648,7 +1600,63 @@
     "portal/src/shared/components/SimplePagination.tsx": [
       {
         "name": "SimplePagination",
-        "length": 24
+        "length": 26
+      }
+    ],
+    "portal/src/shared/components/SupplyDetailModal/SupplyCountersChart.tsx": [
+      {
+        "name": "SupplyCountersChart",
+        "length": 25
+      }
+    ],
+    "portal/src/shared/components/SupplyDetailModal/SupplyHistoryPanel.tsx": [
+      {
+        "name": "SupplyHistoryPanel",
+        "length": 54
+      }
+    ],
+    "portal/src/shared/components/SupplyDetailModal/SupplyIdentificationCard.tsx": [
+      {
+        "name": "SupplyIdentificationCard",
+        "length": 40
+      }
+    ],
+    "portal/src/shared/components/SupplyDetailModal/SupplyLevelChart.tsx": [
+      {
+        "name": "SupplyLevelChart",
+        "length": 40
+      }
+    ],
+    "portal/src/shared/components/SupplyDetailModal/SupplyPerformanceCard.tsx": [
+      {
+        "name": "PagesHeadline",
+        "length": 22
+      },
+      {
+        "name": "SupplyPerformanceCard",
+        "length": 30
+      }
+    ],
+    "portal/src/shared/components/SupplyDetailModal/SupplyRangeBrush.tsx": [
+      {
+        "name": "SupplyRangeBrush",
+        "length": 58
+      }
+    ],
+    "portal/src/shared/components/SupplyDetailModal/SupplyRequestsHistory.tsx": [
+      {
+        "name": "RequestRow",
+        "length": 23
+      },
+      {
+        "name": "SupplyRequestsHistory",
+        "length": 31
+      }
+    ],
+    "portal/src/shared/components/SupplyDetailModal/index.tsx": [
+      {
+        "name": "Body",
+        "length": 23
       }
     ],
     "portal/src/shared/hooks/useFitRows.ts": [
@@ -1661,6 +1669,18 @@
       {
         "name": "useRowSelection",
         "length": 24
+      }
+    ],
+    "portal/src/shared/hooks/useSupplyDetailParam.ts": [
+      {
+        "name": "useSupplyDetailParam",
+        "length": 22
+      }
+    ],
+    "portal/src/shared/hooks/useSupplyHistory.ts": [
+      {
+        "name": "useSupplyHistory",
+        "length": 34
       }
     ],
     "portal/src/shared/lib/api.ts": [
@@ -1684,7 +1704,7 @@
     "portal/src/store/AuthContext.tsx": [
       {
         "name": "AuthProvider",
-        "length": 79
+        "length": 78
       },
       {
         "name": "useCallback",

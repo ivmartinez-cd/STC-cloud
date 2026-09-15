@@ -15,6 +15,13 @@ export interface SupplyRequestViewDto {
   sku: string | null;
   level_pct: number | null;
   remaining_days: number | null;
+  supply_serial: string | null;
+  external_ref: string | null;
+  reason: SupplyRequest["reason"];
+  mono_pages: number | null;
+  color_pages: number | null;
+  total_pages: number | null;
+  replaced_at: string | null;
   status: SupplyRequest["status"];
   origin: SupplyRequest["origin"];
   opened_at: string;
@@ -50,6 +57,13 @@ function supplyView(r: SupplyRequest) {
     sku: r.sku,
     level_pct: r.levelPct,
     remaining_days: r.remainingDays,
+    supply_serial: r.supplySerial,
+    external_ref: r.externalRef,
+    reason: r.reason,
+    mono_pages: r.monoPages,
+    color_pages: r.colorPages,
+    total_pages: r.totalPages,
+    replaced_at: iso(r.replacedAt),
   };
 }
 

@@ -4,6 +4,7 @@ import { CheckSquare, ChevronRight, Square } from 'lucide-react';
 import BrandBadge from '../../../shared/components/BrandBadge';
 import EstadoChip from '../../../shared/components/EstadoChip';
 import SupplyLevelBar from '../../../shared/components/SupplyLevelBar';
+import SupplyLevelButton from '../../../shared/components/SupplyLevelButton';
 import { TableEmptyState, TableErrorState, TableSkeletonRow } from '../../../shared/components/TableStates';
 import { fmt } from '../../../shared/lib/formatters';
 import { SWATCH_HEX, URGENCY_LABELS, urgencyChipProps } from '../lib/suppliesPresentation';
@@ -52,7 +53,7 @@ function DetailLinkCell({ deviceId }: { deviceId: string | null }) {
   return <Link to={`/devices/${deviceId}?${returnParam}`} className="justify-self-end text-ink-300 hover:text-ink-100"><ChevronRight size={15} /></Link>;
 }
 
-function Row({ r, readOnly, selection, rowKey }: { r: FleetSupplyRow; readOnly: boolean; selection: Selection; rowKey: (r: FleetSupplyRow) => string }) {
+function Row({ r, readOnly, selection, rowKey, onOpenSupply }: { r: FleetSupplyRow; readOnly: boolean; selection: Selection; rowKey: (r: FleetSupplyRow) => string; onOpenSupply?: (r: FleetSupplyRow) => void }) {
   const chip = urgencyChipProps(r.urgency);
   return (
     <div data-fit-row className={`grid ${GRID_COLS} min-h-[54px] items-center gap-x-[14px] border-b border-line-200 px-5 py-[11px] transition-colors duration-150 ease-in-out hover:bg-surface-hover`}>
@@ -60,7 +61,9 @@ function Row({ r, readOnly, selection, rowKey }: { r: FleetSupplyRow; readOnly: 
       <EquipmentCell r={r} />
       <span className="truncate font-sans text-[12.5px] text-ink-700">{r.client_name ?? '—'}</span>
       <ConsumibleCell r={r} />
-      <SupplyLevelBar pct={r.percentage} />
+      <SupplyLevelButton label={r.description} onOpen={onOpenSupply && r.device_id ? () => onOpenSupply(r) : undefined}>
+        <SupplyLevelBar pct={r.percentage} />
+      </SupplyLevelButton>
       <span className="text-right font-montserrat text-[12.5px] font-semibold tabular-nums text-ink-600">{r.remainingPages != null ? fmt(r.remainingPages) : '—'}</span>
       <span className="justify-self-start"><EstadoChip label={URGENCY_LABELS[r.urgency]} variant={chip.variant} dotClassName={chip.dotClassName} /></span>
       <span className="truncate font-mono text-[11.5px] text-ink-300">{r.code || 'Sin SKU'}</span>
@@ -97,12 +100,14 @@ interface Props {
   error: string;
   onRetry: () => void;
   skeletonRows?: number;
+  /** Abre "Detalles del consumible" al tocar el nivel (paridad SDS). */
+  onOpenSupply?: (r: FleetSupplyRow) => void;
 }
 
 /** Tabla de Consumibles (handoff hifi #3, fase 3, 26/08/2026): NIVEL RESTANTE
  * como barra + %, PÁG. RESTANTES y URGENCIA como columnas nuevas (antes la
  * pantalla no tenía ningún agregado por fila más allá del %). */
-export default function SuppliesTable({ items, readOnly, selection, rowKey, loading, error, onRetry, skeletonRows = 8 }: Props) {
+export default function SuppliesTable({ items, readOnly, selection, rowKey, loading, error, onRetry, skeletonRows = 8, onOpenSupply }: Props) {
   return (
     <div className="overflow-x-auto">
       <div className="min-w-[1300px]" role="table" aria-label="Consumibles">
@@ -114,7 +119,7 @@ export default function SuppliesTable({ items, readOnly, selection, rowKey, load
         ) : items.length === 0 ? (
           <TableEmptyState message="Ningún consumible con los filtros actuales" />
         ) : (
-          items.map((r) => <Row key={rowKey(r)} r={r} readOnly={readOnly} selection={selection} rowKey={rowKey} />)
+          items.map((r) => <Row key={rowKey(r)} r={r} readOnly={readOnly} selection={selection} rowKey={rowKey} onOpenSupply={onOpenSupply} />)
         )}
       </div>
     </div>

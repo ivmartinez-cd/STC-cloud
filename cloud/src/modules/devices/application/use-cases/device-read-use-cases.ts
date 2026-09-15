@@ -51,6 +51,24 @@ export class GetDeviceSuppliesUseCase {
 }
 
 /**
+ * Detalle histórico de un consumible puntual — el modal "Detalles del
+ * consumible" (equivalente al del SDS al tocar el porcentaje de un insumo).
+ * `allowIp=false` igual que el historial de uso: se resuelve por id/serie,
+ * nunca por IP (una IP se recicla entre equipos y el histórico no).
+ */
+export class GetSupplyHistoryUseCase {
+  constructor(private readonly devices: DeviceRepository, private readonly supplies: DeviceSuppliesReader) {}
+  async execute(input: ScopedId & { key: string }): Promise<unknown> {
+    if (!input.key) throw new DeviceValidationError("Falta el consumible (`key`)");
+    const id = await this.devices.resolveId(input.id, input.scope, false);
+    if (!id) throw new DeviceNotFoundError();
+    const history = await this.supplies.history(id, input.key);
+    if (!history) throw new DeviceNotFoundError();
+    return history;
+  }
+}
+
+/**
  * Historial desde los agregados continuos (`readings_daily_agg`/`readings_monthly_agg`)
  * — sólo visualización, no deltas validados contra counter_reset (eso es
  * `reports`). No es de lectura inmediata: aparece con el próximo refresh.
