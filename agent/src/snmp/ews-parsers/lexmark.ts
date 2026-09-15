@@ -1,4 +1,5 @@
 import { type EwsData } from './types';
+import { buildLexmarkStatusSupplies } from './lexmark-status';
 
 // ─── Lexmark PrinterStatus parser ────────────────────────────────────────────
 
@@ -15,8 +16,34 @@ export function parseLexmarkPrinterStatus(html: string): Partial<EwsData> {
   const magenta = extractToner(/(?:T.ner\s+magenta|Magenta\s+T.ner|T.ner\s+Magenta)[^<]*?(\d+)\s*%/i);
   const yellow  = extractToner(/(?:T.ner\s+amarillo|Yellow\s+T.ner|T.ner\s+Yellow|Amarillo\s+T.ner)[^<]*?(\d+)\s*%/i);
 
-  if (black === null && cyan === null && magenta === null && yellow === null) return {};
-  return { brand: 'lexmark', tonerBlack: black, tonerCyan: cyan, tonerMagenta: magenta, tonerYellow: yellow };
+  // Lectura estructurada (`lexmark-status.ts`): además de los niveles trae el
+  // rendimiento del cartucho, la unidad de imagen y el kit de mantenimiento,
+  // que ninguna otra fuente da (SNMP sólo entrega el tóner y las bandejas).
+  // Manda ella; las regex de arriba quedan de respaldo para firmwares que no
+  // usen el comentario `<!-- Toner Level -->`.
+  const structured = buildLexmarkStatusSupplies(html);
+  const lvl = (c: 'black' | 'cyan' | 'magenta' | 'yellow', fallback: number | null) =>
+    structured?.toners[c]?.percentage ?? fallback;
+  const levels = {
+    black: lvl('black', black), cyan: lvl('cyan', cyan),
+    magenta: lvl('magenta', magenta), yellow: lvl('yellow', yellow),
+  };
+
+  const nothing = Object.values(levels).every((v) => v === null);
+  if (nothing && !structured) return {};
+
+  return {
+    brand: 'lexmark',
+    tonerBlack: levels.black, tonerCyan: levels.cyan,
+    tonerMagenta: levels.magenta, tonerYellow: levels.yellow,
+    suppliesDetails: structured
+      ? {
+          toners: structured.toners,
+          drums: Object.keys(structured.drums).length ? structured.drums : undefined,
+          maintenance: Object.keys(structured.maintenance).length ? structured.maintenance : undefined,
+        } as Partial<EwsData>['suppliesDetails']
+      : undefined,
+  };
 }
 
 // ─── Lexmark EWS parser ──────────────────────────────────────────────────────
