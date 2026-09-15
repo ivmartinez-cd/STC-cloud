@@ -205,7 +205,67 @@ quedan como `generic` y ninguna familia propia les puede dar puntaje.
 
 ---
 
-## 4. Tests
+## 4. La foto del equipo
+
+Es el paso que más se olvida y el único que se ve de una: sin foto, la ficha
+del dispositivo muestra un ícono genérico.
+
+No requiere tocar código. El portal busca, en este orden
+(`cloud/portal/src/shared/lib/deviceImage.ts`):
+
+1. `/device-images/<slug>.png` — y `.jpg`
+2. Una coincidencia de `KEYWORD_IMAGES` contra el modelo
+3. El placeholder `generic-mfp.svg` o `generic-printer.svg`
+
+El slug es `marca modelo` en minúsculas con todo lo no alfanumérico pasado a
+`-`, y con la marca deduplicada (`hp HP Color LaserJet` → `hp-color-laserjet`).
+Para saber el nombre exacto que hay que ponerle al archivo, no lo adivines:
+
+```ts
+import { deviceSlug, deviceImageCandidates } from './src/shared/lib/deviceImage';
+deviceSlug('epson', 'EPSON WF-C5891 Series');   // -> 'epson-wf-c5891-series'
+deviceImageCandidates('epson', 'EPSON WF-C5891 Series');
+```
+
+Se copia el archivo a `cloud/portal/public/device-images/` con ese nombre y
+listo. Como es un asset del portal, el cambio entra con un rebuild del
+**portal**, no con un release del agente.
+
+### Cuando el slug no sirve
+
+Si el modelo que reporta el equipo trae serie y firmware pegados, el slug es
+inusable y hay que ir por `KEYWORD_IMAGES`. Es el caso de todos los Lexmark:
+
+```
+Lexmark MX611dhe 70165PHH082ML LW50.SB7.P543
+  -> lexmark-mx611dhe-70165phh082ml-lw50-sb7-p543   ← nunca va a matchear
+```
+
+Ahí se agrega una entrada a la tabla con una regex sobre la familia del
+modelo (`[/\bX65[468]/i, 'lexmark-x656de.png']`) y el archivo con el nombre
+que diga la entrada.
+
+### Ojo con el placeholder
+
+`isMfp()` decide entre los dos genéricos por regex sobre el modelo, y hoy NO
+reconoce varias familias multifunción reales de la flota — verificado el
+15/09/2026:
+
+| Modelo | ¿Es MFP? | `isMfp()` |
+|---|---|---|
+| EPSON WF-C5891 Series | sí (tiene escáner) | `false` |
+| Lexmark MX611dhe | sí | `false` |
+| Samsung M458x Series | sí (tiene rodillos de ADF) | `false` |
+
+O sea que a los tres les pone el ícono de impresora simple. No se tocó la
+heurística a propósito: inferir "multifunción" del nombre comercial es
+adivinar (hay WorkForce con y sin escáner). **La solución real es cargar la
+foto**, que es lo que este paso pide. Si aun así hiciera falta corregir el
+placeholder, la regex está en `deviceImage.ts`.
+
+---
+
+## 5. Tests
 
 Obligatorio, contra el fixture real:
 
@@ -234,7 +294,7 @@ Sumar el archivo de test nuevo al script `test` de `agent/package.json`.
 
 ---
 
-## 5. Publicar el release
+## 6. Publicar el release
 
 Sólo para los casos B, C y D. El caso A no requiere nada.
 
@@ -288,7 +348,7 @@ portal, sólo un log local. Pasó cuando los dos canales subían al mismo `bundl
 
 ---
 
-## 6. Verificar en producción
+## 7. Verificar en producción
 
 ### Cuándo llega
 
@@ -328,7 +388,7 @@ WHERE d.model = '<modelo>' AND r.toner_black IS NOT NULL;
 
 ---
 
-## 7. Límites conocidos (no prometer lo que el equipo no da)
+## 8. Límites conocidos (no prometer lo que el equipo no da)
 
 | Fuente | Nivel | Contadores | SKU | Serie | Capacidad | Impresas |
 |---|---|---|---|---|---|---|
@@ -345,12 +405,13 @@ eso no es un bug. Lexmark y Epson tampoco los exponen por EWS.
 
 ---
 
-## 8. Checklist
+## 9. Checklist
 
 - [ ] Identifiqué el caso (A/B/C/D) con `resolve()` y el `supplies_details` real
 - [ ] Capturé el EWS del equipo real y lo guardé como fixture con sufijo de idioma
 - [ ] El parser no depende de ninguna etiqueta traducida
 - [ ] Distinguí "0 = no informado" de "0 real"
+- [ ] Cargué la foto del equipo en `portal/public/device-images/` (o su entrada en `KEYWORD_IMAGES`)
 - [ ] Tests contra el fixture + caso de HTML vacío
 - [ ] `npx tsc --noEmit` y la suite de captura en verde
 - [ ] Sumé el test nuevo al script `test` de `agent/package.json`
