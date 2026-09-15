@@ -19,6 +19,10 @@ const KEYWORD_IMAGES: Array<[RegExp, string]> = [
   [/SCX-?48[3-4]\d|SCX-?483x|5x3x/i, 'samsung-scx-483x-5x3x-series.jpg'],
   [/CLX-?626\d/i, 'samsung-clx-6260-series.jpg'],
   [/CLP-?68\d/i, 'samsung-clp-680-series.jpg'],
+  // M458x: el hrDeviceDescr llega como "Samsung M458x Series" (resuelve por
+  // slug), pero los que se identifican por su modelo comercial vienen como
+  // SL-M4580FX / M4583FX.
+  [/M458\d|M458x|SL-?M458/i, 'samsung-m458x-series.png'],
   // HP
   [/E475\d\d/i, 'hp-color-laserjet-mfp-e47528.png'],
   [/E526\d\d/i, 'hp-laserjet-mfp-e52645.png'],
