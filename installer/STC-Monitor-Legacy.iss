@@ -89,6 +89,12 @@ Name: "desktopicon"; Description: "Crear acceso directo en el &escritorio"; Grou
 
 [Run]
 Filename: "schtasks.exe"; Parameters: "/Create /SC ONLOGON /TN ""STC-Monitor-UI"" /TR ""\""{app}\STC.Monitor.UI.exe\"""" /RL HIGHEST /F"; Flags: runhidden; StatusMsg: "Configurando inicio automatico en bandeja..."
+; Mismo fix que STC-Monitor.iss: si la consola termina con codigo != 0
+; (crash, Taskkill), Task Scheduler la relanza sola en vez de dejarla afuera
+; hasta el proximo logon. En Server 2008 R2 (PowerShell 2.0 de fabrica, sin
+; el modulo ScheduledTasks) este paso falla en silencio y no rompe nada —
+; sigue funcionando el ONLOGON de arriba, sin el auto-restart.
+Filename: "powershell.exe"; Parameters: "-NoProfile -WindowStyle Hidden -Command ""$t = Get-ScheduledTask -TaskName 'STC-Monitor-UI'; $t.Settings.RestartCount = 999; $t.Settings.RestartInterval = 'PT1M'; Set-ScheduledTask -InputObject $t"""; Flags: runhidden; StatusMsg: "Optimizando tarea programada..."
 Filename: "{app}\nssm.exe"; Parameters: "set {#ServiceName} Start SERVICE_AUTO_START"; Flags: runhidden; Check: IsActivated
 Filename: "{app}\nssm.exe"; Parameters: "start {#ServiceName}"; Flags: runhidden; StatusMsg: "Iniciando servicio de monitoreo..."; Check: IsActivated
 Filename: "{app}\STC.Monitor.UI.exe"; Description: "Iniciar consola de monitoreo STC"; Flags: postinstall nowait skipifsilent shellexec; StatusMsg: "Iniciando consola de monitoreo..."

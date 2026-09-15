@@ -67,7 +67,14 @@ Name: "desktopicon"; Description: "Crear acceso directo en el &escritorio"; Grou
 
 [Run]
 Filename: "schtasks.exe"; Parameters: "/Create /SC ONLOGON /TN ""STC-Monitor-UI"" /TR ""\""{app}\STC.Monitor.UI.exe\"""" /RL HIGHEST /F"; Flags: runhidden; StatusMsg: "Configurando inicio automatico en bandeja..."
-Filename: "powershell.exe"; Parameters: "-NoProfile -WindowStyle Hidden -Command ""$t = Get-ScheduledTask -TaskName 'STC-Monitor-UI'; $t.Settings.StopIfGoingOnBatteries = $false; $t.Settings.DisallowStartIfOnBatteries = $false; $t.Settings.ExecutionTimeLimit = 'PT0S'; Set-ScheduledTask -InputObject $t"""; Flags: runhidden; StatusMsg: "Optimizando tarea programada para laptops..."
+; RestartCount/RestartInterval: si la consola termina con codigo != 0 (crash,
+; Taskkill, Explorer que la mata) Task Scheduler la vuelve a lanzar sola cada
+; 1 min, hasta 999 veces por sesion — sin esto, ONLOGON es "una sola vez por
+; login" y un cierre inesperado la deja afuera hasta el proximo logon (Ivan,
+; 15/09/2026: "la app muchas veces se cierra y el servicio sigue corriendo").
+; Un "Salir" deliberado del menu de bandeja sale con codigo 0 (Application.Exit),
+; Task Scheduler lo toma como exito y NO reintenta — no pelea contra el usuario.
+Filename: "powershell.exe"; Parameters: "-NoProfile -WindowStyle Hidden -Command ""$t = Get-ScheduledTask -TaskName 'STC-Monitor-UI'; $t.Settings.StopIfGoingOnBatteries = $false; $t.Settings.DisallowStartIfOnBatteries = $false; $t.Settings.ExecutionTimeLimit = 'PT0S'; $t.Settings.RestartCount = 999; $t.Settings.RestartInterval = 'PT1M'; Set-ScheduledTask -InputObject $t"""; Flags: runhidden; StatusMsg: "Optimizando tarea programada para laptops..."
 Filename: "{app}\nssm.exe"; Parameters: "set {#ServiceName} Start SERVICE_AUTO_START"; Flags: runhidden; Check: IsActivated
 Filename: "{app}\nssm.exe"; Parameters: "start {#ServiceName}"; Flags: runhidden; StatusMsg: "Iniciando servicio de monitoreo..."; Check: IsActivated
 Filename: "{app}\STC.Monitor.UI.exe"; Description: "Iniciar consola de monitoreo STC"; Flags: postinstall nowait skipifsilent shellexec; StatusMsg: "Iniciando consola de monitoreo..."
