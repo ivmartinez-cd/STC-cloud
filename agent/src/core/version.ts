@@ -3,4 +3,4 @@
  * identificarse (heartbeat, --status, updater, consola) importan de acá en
  * vez de declarar su propio literal — evita que diverjan entre sí.
  */
-export const VERSION = '1.3.8';
+export const VERSION = '1.3.9';

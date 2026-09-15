@@ -13,6 +13,7 @@ import { fetchHttp } from './transport/http';
 import { SnmpClient, type SnmpCredential } from './transport/snmp';
 import { snmpIdentity, genericPrinterMib } from './families/generic-printer-mib';
 import { resolve, listFamilies, GENERIC_FAMILY } from './registry';
+import { cleanSerial } from './serial';
 import { mergeResults } from './bridge';
 import { toDeviceReading } from './normalize';
 import type { CaptureContext, CaptureResult, CaptureScope, DeviceIdentity, PortMap, ResolvedDriver, PollMethod } from './types';
@@ -181,12 +182,16 @@ export async function captureDevice(opts: CaptureOptions): Promise<CaptureOutcom
         ip: opts.ip,
         brand: isBrand(opts.hint.brand) ? opts.hint.brand : 'generic',
         model: opts.hint.model ?? null,
-        serial: opts.hint.serial ?? null,
+        serial: cleanSerial(opts.hint.serial, opts.ip),
         source: opts.hint.pollMethod ?? 'unknown',
       };
     } else {
       identity = await identify(opts.ip, ports, snmp, opts.log);
       if (!identity) return null;
+      // Un placeholder de firmware (`?`, `XXXXXXX`, `unknown`…) no es un serial:
+      // dejarlo pasar bloquea el fallback por IPP de más abajo, que pregunta
+      // `!identity.serial`. Ver `capture/serial.ts`.
+      identity.serial = cleanSerial(identity.serial, opts.ip);
       // SNMP no respondió a la identificación (bloqueado por política del cliente): no gastar timeouts en el resto
       // del ciclo — el EWS es la fuente (identidad, contadores por EngineCycles/counters.json, insumos, alertas).
       if (identity.source !== 'snmp') snmp.markUnreachable();
@@ -227,7 +232,7 @@ export async function captureDevice(opts: CaptureOptions): Promise<CaptureOutcom
     if (opts.scopes.includes('meters') && result?.meters?.total == null && ports.jetdirect) {
       const pjl = await readDeviceViaPJL(opts.ip);
       if (pjl?.totalPages != null) {
-        result = mergeResults(result, { method: 'pjl', meters: { total: pjl.totalPages, mono: null, color: null, source: 'pjl' }, identity: { serial: pjl.serial } });
+        result = mergeResults(result, { method: 'pjl', meters: { total: pjl.totalPages, mono: null, color: null, source: 'pjl' }, identity: { serial: cleanSerial(pjl.serial, opts.ip) } });
       }
     }
     // 4. IPP para completar identidad
