@@ -57,6 +57,18 @@ export function swsNumber(raw: string | undefined): number | null {
   return Math.round(n * mult);
 }
 
+/**
+ * Capacidad: el firmware informa "0 K" cuando NO la conoce (visto en un
+ * M458x real de ISSN por el túnel EWS, 15/09/2026). Tomarlo como 0 haría que
+ * la ficha muestre "capacidad 0" y, peor, que `remainingPages` dé 0 con el
+ * cartucho al 92%. Un 0 acá es "sin dato", no "vacío". En `printed` en cambio
+ * el 0 SÍ es real (un rodillo sin uso informa 0), por eso no se filtra ahí.
+ */
+function capacityOrNull(raw: string | undefined): number | null {
+  const n = swsNumber(raw);
+  return n != null && n > 0 ? n : null;
+}
+
 function pct(raw: string | undefined): number | null {
   const m = raw?.match(/(\d+)\s*%/);
   if (!m) return null;
@@ -91,7 +103,7 @@ function itemOf(cells: Cell[]): SuppliesItem {
   const byId = (id: string) => cells.find((c) => c.id === id)?.value;
   const remains = cells.filter((c) => c.id === 'remainCont').map((c) => c.value);
   const capacityCell = cells.find((c) => /capacity/i.test(c.id))?.value;
-  const capacity = swsNumber(capacityCell);
+  const capacity = capacityOrNull(capacityCell);
   const level = pct(remains.find((v) => /%/.test(v)));
   return {
     percentage: level,
@@ -131,6 +143,11 @@ const MAINTENANCE_SLOTS: Record<string, string> = {
   t2RollerLife: 'transferRoller',
   tray1RollerLife: 'tray1Roller',
   mpTrayRollerLife: 'mpTrayRoller',
+  // Rodillos de retardo: los expone el M458x (no el M5370LX) y tienen slot
+  // propio en `SuppliesDetails.maintenance`, así que el portal los etiqueta
+  // como "Rodillo de retardo bandeja 1" en vez de mandarlos al cajón `other`.
+  tray1RtdRollerLife: 'tray1RetardRoller',
+  mpTrayRtdRollerLife: 'mpTrayRetardRoller',
 };
 
 /** `id` → nombre legible de los que no tienen slot propio en `SuppliesDetails`. */

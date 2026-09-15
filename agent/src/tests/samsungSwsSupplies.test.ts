@@ -15,6 +15,10 @@ import { parseSamsungSolutionSupplies } from '../snmp/ews-parsers/samsung';
 const FIX = path.join(__dirname, 'fixtures', 'samsung-sws');
 const mono = fs.readFileSync(path.join(FIX, 'suppliesView-m5370lx-ko.html'), 'utf8');
 const color = fs.readFileSync(path.join(FIX, 'suppliesView-x4300lx.html'), 'utf8');
+// Capturado de un M458x REAL de ISSN por el túnel EWS (15/09/2026): mismo
+// firmware SWS pero con dos diferencias que ningún otro fixture tenía —
+// informa "0 K" de capacidad y expone los rodillos de retardo.
+const m458x = fs.readFileSync(path.join(FIX, 'suppliesView-m458x-ko.html'), 'utf8');
 
 describe('swsNumber — "30 K" es 30.000 páginas, no 30', () => {
   test('sufijo K y M', () => {
@@ -116,5 +120,38 @@ describe('parseSamsungSolutionSupplies — integra lo estructurado sin romper lo
     assert.deepEqual(parseSamsungSolutionSupplies('<html><body>nada</body></html>'), {});
     assert.deepEqual(parseSwsSupplyBlocks(''), []);
     assert.equal(buildSwsSuppliesDetails('<html></html>'), null);
+  });
+});
+
+describe('M458x real (ISSN) — el que no se podía verificar sin el túnel EWS', () => {
+  const details = buildSwsSuppliesDetails(m458x)!;
+
+  test('sirve la misma tabla SWS: tóner y tambor con SKU y serie propios', () => {
+    assert.equal(details.toners.black?.percentage, 92);
+    assert.equal(details.toners.black?.code, 'MLT-D303E');
+    assert.equal(details.toners.black?.serial, 'CRUM-18030993855');
+    assert.equal(details.toners.black?.printed, 2433);
+    assert.equal(details.drums.black?.code, 'MLT-R303');
+    assert.equal(details.drums.black?.serial, 'CRUM-23041805246');
+  });
+
+  test('"0 K" de capacidad es SIN DATO, no cero — y no genera 0 páginas restantes', () => {
+    assert.equal(details.toners.black?.capacity, null);
+    assert.equal(details.toners.black?.remainingPages, null);
+    assert.equal(details.drums.black?.capacity, null);
+  });
+
+  test('un 0 real (rodillo sin uso) sigue siendo 0, no se confunde con "sin dato"', () => {
+    const mt = details.maintenance as Record<string, { printed?: number | null; percentage?: number | null }>;
+    assert.equal(mt.mpTrayRoller?.printed, 0);
+    assert.equal(mt.mpTrayRoller?.percentage, 100);
+  });
+
+  test('los rodillos de retardo caen en su slot con nombre, no en `other`', () => {
+    const mt = details.maintenance as Record<string, { capacity?: number | null }>;
+    assert.equal(mt.tray1RetardRoller?.capacity, 100_000);
+    assert.equal(mt.mpTrayRetardRoller?.capacity, 100_000);
+    const other = (details.maintenance.other ?? []) as Array<{ name: string }>;
+    assert.equal(other.some((o) => /retardo bandeja/i.test(o.name)), false);
   });
 });
