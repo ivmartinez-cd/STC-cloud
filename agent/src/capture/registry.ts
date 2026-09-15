@@ -70,11 +70,17 @@ export function resolve(identity: DeviceIdentity, ports: PortMap, preferredDrive
     const f = familyById.get(p.family);
     if (f) return { family: f, profile: p, via: 'profile' };
   }
-  // 1b. Familia persistida de ciclos anteriores (sólo si sigue aplicando a esta identidad)
+  // 1b. Familia persistida de ciclos anteriores (sólo si sigue aplicando a esta identidad).
+  //     El GENÉRICO no se pega: antes cortocircuitaba acá sin puntuar, así que un
+  //     equipo que alguna vez cayó en Printer-MIB no podía ser ascendido nunca a una
+  //     familia agregada después — el hint viejo le ganaba a la familia nueva. Le pasó
+  //     al primer Epson (15/09/2026): `epson.webconfig` puntuaba 80 y jamás se la
+  //     consultaba. Si acá no hay familia real aplicable, se cae al puntaje de abajo,
+  //     que termina en el genérico igual cuando nadie lo reclama.
   if (preferredDriverId) {
     const f = familyById.get(preferredDriverId);
-    if (f && (f.id === genericPrinterMib.id || f.score(identity, ports) > 0)) {
-      return { family: f, via: f.id === genericPrinterMib.id ? 'generic' : 'score' };
+    if (f && f.id !== genericPrinterMib.id && f.score(identity, ports) > 0) {
+      return { family: f, via: 'score' };
     }
   }
   // 2. Familia con mejor puntaje

@@ -581,6 +581,31 @@ describe('SNMP bloqueado por el cliente → EWS como fuente, sin esperar timeout
   });
 });
 
+describe('El driver genérico persistido NO bloquea una familia agregada después', () => {
+  // Bug real (15/09/2026): el primer Epson quedó leyéndose por `generic.printer-mib`
+  // aunque `epson.webconfig` puntuaba 80. El hint persistido en `known_devices`
+  // cortocircuitaba el paso 1b sin puntuar, así que la familia nueva nunca competía.
+  const ports = { http: true, https: true, jetdirect: true, ipp: false } as PortMap;
+  const epson = id('epson', 'WF-C5891 Series');
+
+  test('con el hint genérico viejo, la familia nueva igual gana', () => {
+    assert.equal(resolve(epson, ports, 'generic.printer-mib').family.id, 'epson.webconfig');
+  });
+
+  test('sin hint resuelve igual (el hint no era lo que lo hacía andar)', () => {
+    assert.equal(resolve(epson, ports).family.id, 'epson.webconfig');
+  });
+
+  test('un equipo que ninguna familia reclama sigue cayendo al genérico', () => {
+    const raro = id('generic', 'Aparato sin familia');
+    assert.equal(resolve(raro, ports, 'generic.printer-mib').family.id, 'generic.printer-mib');
+  });
+
+  test('el hint de una familia REAL que sigue aplicando se respeta', () => {
+    assert.equal(resolve(epson, ports, 'epson.webconfig').family.id, 'epson.webconfig');
+  });
+});
+
 describe('Samsung XOA suppliesView (X4300LX real): sin bandejas basura', () => {
   test('no toma JavaScript como bandeja y extrae vida de rodillos', async () => {
     const { parseSamsungSolutionSupplies } = await import('../snmp/ews-parsers/samsung');
