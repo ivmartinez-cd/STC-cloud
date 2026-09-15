@@ -957,14 +957,18 @@
     ],
     "portal/src/features/dashboard/components/AlertsByClassCard.tsx": [
       {
+        "name": "SeverityRing",
+        "length": 27
+      },
+      {
         "name": "AlertsByClassCard",
-        "length": 47
+        "length": 77
       }
     ],
     "portal/src/features/dashboard/components/BrandDistributionCard.tsx": [
       {
         "name": "BrandDistributionCard",
-        "length": 44
+        "length": 46
       }
     ],
     "portal/src/features/dashboard/components/CounterPanel.tsx": [
@@ -976,15 +980,15 @@
     "portal/src/features/dashboard/components/HeadlineCards.tsx": [
       {
         "name": "AlertsCard",
-        "length": 32
+        "length": 23
       },
       {
-        "name": "OfflineMonitorsCard",
-        "length": 33
+        "name": "ManagedFleetCard",
+        "length": 25
       },
       {
-        "name": "VolumeCard",
-        "length": 28
+        "name": "MonitorsOnlineCard",
+        "length": 23
       }
     ],
     "portal/src/features/dashboard/components/MiniBar.tsx": [
@@ -993,26 +997,16 @@
         "length": 22
       }
     ],
-    "portal/src/features/dashboard/components/MonitorPresenceCard.tsx": [
-      {
-        "name": "MonitorPresenceCard",
-        "length": 43
-      }
-    ],
-    "portal/src/features/dashboard/components/StatsStrip.tsx": [
-      {
-        "name": "buildCells",
-        "length": 27
-      },
-      {
-        "name": "StatsStrip",
-        "length": 44
-      }
-    ],
     "portal/src/features/dashboard/components/TopClientsCard.tsx": [
       {
         "name": "TopClientsCard",
-        "length": 55
+        "length": 57
+      }
+    ],
+    "portal/src/features/dashboard/components/WorkQueueCard.tsx": [
+      {
+        "name": "WorkQueueCard",
+        "length": 24
       }
     ],
     "portal/src/features/dashboard/hooks/useDashboard.ts": [
@@ -1024,7 +1018,7 @@
     "portal/src/features/dashboard/pages/Dashboard.tsx": [
       {
         "name": "Dashboard",
-        "length": 197
+        "length": 190
       }
     ],
     "portal/src/features/devices/components/detail/AlertsTab.tsx": [
@@ -1630,7 +1624,7 @@
     "portal/src/shared/components/SupplyDetailModal/SupplyPerformanceCard.tsx": [
       {
         "name": "PagesHeadline",
-        "length": 22
+        "length": 30
       },
       {
         "name": "SupplyPerformanceCard",
