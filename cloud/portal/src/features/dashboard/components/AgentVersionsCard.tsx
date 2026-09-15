@@ -26,10 +26,11 @@ const VersionRow = ({ version, channel, count, isCurrent }: { version: string; c
   </div>
 );
 
-/** "Versiones del agente" del handoff hifi: cifra grande = monitores en
- * versión desconocida (backend ya usa el literal `'desconocida'` para
- * agentes sin `version`, `dashboard-queries.ts`) + filas versión → cantidad
- * + TOTAL. */
+/** "Agentes" del rediseño "V1 Compacta" (handoff 14/09/2026): lista simple
+ * versión → cantidad, sin la cifra grande de "monitores en versión
+ * desconocida" que tenía antes (backend ya usa el literal `'desconocida'`
+ * para agentes sin `version`, `dashboard-queries.ts`) — ese dato baja de
+ * rango a una nota de pie, sólo cuando hay algún agente así. */
 export default function AgentVersionsCard({
   agentVersions, currentAgentVersion, publishedAgentVersions, loading, error, onRetry,
 }: {
@@ -47,33 +48,33 @@ export default function AgentVersionsCard({
   const publishedByChannel = publishedAgentVersions ?? (currentAgentVersion ? { stable: currentAgentVersion } : {});
 
   return (
-    <SdsPanel title="Versiones del agente" headerClassName="px-[18px] py-[14px]">
-      <div className="px-[18px] pb-4 pt-4">
+    <SdsPanel
+      title="Agentes"
+      headerClassName="px-[18px] py-[14px]"
+      headerRight={!loading && !error && rows.length > 0 ? <span className="font-sans text-[11px] text-ink-300">{fmt(total)} monitores</span> : undefined}
+    >
+      <div className="px-[18px] pb-4 pt-2">
         {error ? (
           <CardError onRetry={onRetry} />
         ) : loading ? (
           <>
-            <SkeletonBlock heightPx={30} widthPct={30} className="mb-3.5" />
-            <SkeletonBlock heightPx={12} className="mb-2" />
+            <SkeletonBlock heightPx={12} className="mb-2 mt-2" />
             <SkeletonBlock heightPx={12} widthPct={60} />
           </>
         ) : rows.length === 0 ? (
           <CardEmpty />
         ) : (
           <>
-            <div className="mb-3.5 flex items-baseline gap-2">
-              <span className="font-montserrat text-[30px] font-extrabold leading-none text-brand-severe">{fmt(unknown)}</span>
-              <span className="font-sans text-[11.5px] leading-[1.3] text-ink-400">monitores en versión desconocida</span>
-            </div>
             {rows.map((v) => (
               <VersionRow
                 key={`${v.version}·${v.channel}`} version={v.version} channel={v.channel} count={v.count}
                 isCurrent={publishedByChannel[v.channel] === v.version}
               />
             ))}
-            <div className="flex items-center justify-between pt-[7px]">
-              <span className="font-sans text-[10.5px] tracking-[.04em] text-ink-300">TOTAL</span>
-              <span className="font-montserrat text-[13px] font-bold text-ink-900">{fmt(total)}</span>
+            <div className="border-t border-line-150 pt-2.5 font-sans text-[11px] text-ink-300">
+              {unknown > 0 ? (
+                <><b className="font-semibold text-brand-severe">{fmt(unknown)}</b> en versión desconocida</>
+              ) : 'Sin agentes en versión desconocida'}
             </div>
           </>
         )}

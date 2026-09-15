@@ -3,8 +3,7 @@ import SdsPanel from './SdsPanel';
 import CardError from '../../../shared/components/CardError';
 import CardEmpty from './CardEmpty';
 import SkeletonBlock from './Skeleton';
-import MiniBar from './MiniBar';
-import { fmt, fmtPct } from '../../../shared/lib/formatters';
+import { fmt } from '../../../shared/lib/formatters';
 
 // Ciclo de 5 tonos institucionales (naranja + grises — README) para colorear
 // marcas en orden de aparición, igual que el handoff.
@@ -16,8 +15,11 @@ const PALETTE = [
   'var(--color-brand-severe)',
 ];
 
-/** "Distribución de marcas" del handoff hifi: barra apilada + filas marca →
- * equipos → %. */
+const BAR_TRACK_HEIGHT = 74;
+
+/** "Marcas del parque" del rediseño "V1 Compacta" (handoff 14/09/2026):
+ * columnas verticales (una por marca) en vez de la barra apilada + filas
+ * que tenía antes — más legible a simple vista para el mismo dato. */
 export default function BrandDistributionCard({
   brands, loading, error, onRetry,
 }: {
@@ -27,35 +29,37 @@ export default function BrandDistributionCard({
   onRetry?: () => void;
 }) {
   const rows = brands ?? [];
-  const total = rows.reduce((acc, r) => acc + r.count, 0);
+  const max = Math.max(1, ...rows.map((b) => b.count));
 
   return (
-    <SdsPanel title="Distribución de marcas" headerClassName="px-[18px] py-[14px]">
-      <div className="px-[18px] pb-[15px] pt-4">
+    <SdsPanel title="Marcas del parque" headerClassName="px-[18px] py-[14px]">
+      <div className="px-[18px] pb-4 pt-4">
         {error ? (
           <CardError onRetry={onRetry} />
         ) : loading ? (
-          <>
-            <MiniBar pct={0} height={7} radius={4} className="mb-3.5" />
-            {Array.from({ length: 4 }, (_, i) => <SkeletonBlock key={i} heightPx={12} className="mb-2" />)}
-          </>
+          <div className="flex items-end gap-2.5" style={{ height: BAR_TRACK_HEIGHT + 22 }}>
+            {Array.from({ length: 4 }, (_, i) => <SkeletonBlock key={i} heightPx={BAR_TRACK_HEIGHT - (i % 3) * 16} className="flex-1 self-end" />)}
+          </div>
         ) : rows.length === 0 ? (
           <CardEmpty />
         ) : (
           <>
-            <div className="mb-3.5 flex h-[7px] overflow-hidden rounded-[4px]">
+            <div className="flex items-end gap-2.5 border-b border-line-100 pb-2" style={{ height: BAR_TRACK_HEIGHT + 22 }}>
               {rows.map((b, i) => (
-                <div key={b.brand} style={{ width: `${Math.max(total > 0 ? (b.count / total) * 100 : 0, 0.5)}%`, background: PALETTE[i % PALETTE.length] }} />
+                <div key={b.brand} className="flex flex-1 flex-col items-center justify-end gap-1.5">
+                  <span className="font-montserrat text-[11px] font-semibold tabular-nums text-ink-700">{fmt(b.count)}</span>
+                  <div
+                    className="w-full rounded-t-[2px]"
+                    style={{ height: Math.max(3, (b.count / max) * BAR_TRACK_HEIGHT), background: PALETTE[i % PALETTE.length] }}
+                  />
+                </div>
               ))}
             </div>
-            {rows.map((b, i) => (
-              <div key={b.brand} className="grid grid-cols-[8px_1fr_54px_46px] items-center gap-[9px] border-b border-line-200 py-1.5">
-                <span className="block h-[7px] w-[7px] rounded-full" style={{ background: PALETTE[i % PALETTE.length] }} />
-                <span className="truncate font-sans text-[12px] leading-[1.2] text-ink-700">{b.brand}</span>
-                <span className="text-right font-montserrat text-[12px] font-semibold tabular-nums text-ink-900">{fmt(b.count)}</span>
-                <span className="text-right font-sans text-[11.5px] text-ink-300">{fmtPct(b.count, total)}</span>
-              </div>
-            ))}
+            <div className="mt-2 flex gap-2.5">
+              {rows.map((b) => (
+                <div key={b.brand} className="flex-1 truncate text-center font-sans text-[10.5px] leading-[1.3] text-ink-300">{b.brand}</div>
+              ))}
+            </div>
           </>
         )}
       </div>

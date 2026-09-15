@@ -3,20 +3,22 @@ import { Link } from 'react-router-dom';
 import { useDashboard } from '../hooks/useDashboard';
 import { useDashboardExtras } from '../hooks/useDashboardExtras';
 import HeadlineCards from '../components/HeadlineCards';
-import StatsStrip from '../components/StatsStrip';
 import CounterPanel from '../components/CounterPanel';
+import WorkQueueCard, { type QueueItem } from '../components/WorkQueueCard';
 import AlertsByClassCard from '../components/AlertsByClassCard';
 import AgentVersionsCard from '../components/AgentVersionsCard';
-import MonitorPresenceCard from '../components/MonitorPresenceCard';
 import BrandDistributionCard from '../components/BrandDistributionCard';
 import TopClientsCard from '../components/TopClientsCard';
 import { fmt, APP_LOCALE } from '../../../shared/lib/formatters';
 import { useAuth } from '../../../store/AuthContext';
-/** Rediseño hifi "Panel de Control" (handoff 25/08/2026): tres preguntas en
- * orden — ¿qué está roto ahora? (titulares) → ¿cuál es el estado global del
- * parque? (tira de KPIs) → ¿qué colas tengo que atender hoy? (alertas +
- * colas + detalle operativo). Área de contenido únicamente — sidebar/topbar
- * son de `app/layout/` y no se tocan acá. */
+/** Rediseño "V1 Compacta" (handoff 14/09/2026, `Panel de control · 3
+ * opciones.html`, elegida por Iván sobre "V2 Ejecutiva"/"V3 Operativa"):
+ * mismo espíritu de tres preguntas en orden — ¿qué está roto ahora?
+ * (titulares) → ¿alertas por clase, cómo se reparten? → ¿qué colas tengo
+ * que atender hoy? (movimientos + cola + detalle operativo) — pero en un
+ * solo scroll, con menos desglose por bloque que el handoff hifi anterior a
+ * propósito (ver docblocks de cada tarjeta). Área de contenido únicamente —
+ * sidebar/topbar son de `app/layout/` y no se tocan acá. */
 
 function headerDate(d: Date): string {
   const s = d.toLocaleDateString(APP_LOCALE, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
@@ -61,6 +63,49 @@ const Dashboard = () => {
   // error (ver comentario del chip arriba).
   const mainError = error && !data;
   const mainLoading = loading && !data;
+
+  // "Cola de trabajo" consolida 3 fuentes independientes (`/dashboard`,
+  // `/incidents/stats`, `/supply-requests/stats`) en una sola tarjeta: sólo
+  // se ve como "cargando"/"con error" si NINGUNA de las tres trajo nunca un
+  // dato bueno — mismo criterio de "última cifra buena" que el resto del
+  // panel, aplicado a las tres fuentes juntas.
+  const queueLoading = mainLoading && incidentsLoading && !incidents && supplyRequestsLoading && !supplyRequests;
+  const queueError = mainError && incidentsError && !incidents && supplyRequestsError && !supplyRequests;
+  const retryQueue = () => { fetchDashboardData(); retryIncidents(); retrySupplyRequests(); };
+
+  const queueItems: QueueItem[] = [
+    ...(isClientViewer ? [] : [{
+      key: 'pending',
+      label: 'Dispositivos por registrar',
+      meta: `${fmt(d?.today ?? 0)} descubiertos hoy · ${fmt(d?.yesterday ?? 0)} ayer`,
+      value: d?.pendingTotal ?? 0,
+      severity: (d?.pendingTotal ?? 0) > 0 ? 'warning' as const : 'ok' as const,
+      to: '/pending',
+    }]),
+    {
+      key: 'supply',
+      label: 'Solicitudes de consumible',
+      meta: 'pendientes de procesar',
+      value: sr.pending ?? 0,
+      severity: (sr.pending ?? 0) > 0 ? 'warning' as const : 'ok' as const,
+      to: '/supply-requests',
+    },
+    ...(isClientViewer ? [] : [{
+      key: 'unmanaged',
+      label: 'Dispositivos sin alta',
+      meta: `de ${fmt(data?.stats?.devices ?? 0)} en inventario`,
+      value: data?.stats?.devicesUnmanaged ?? 0,
+      severity: (data?.stats?.devicesUnmanaged ?? 0) > 0 ? 'warning' as const : 'ok' as const,
+    }]),
+    {
+      key: 'incidents',
+      label: 'Incidencias abiertas',
+      meta: inc.in_progress ? `${fmt(inc.in_progress)} en curso` : 'ninguna en curso',
+      value: inc.open ?? 0,
+      severity: (inc.open ?? 0) > 0 ? 'critical' as const : 'ok' as const,
+      to: '/incidents',
+    },
+  ];
 
   return (
     <div className="-m-4 flex flex-col bg-surface-page px-[34px] pb-9 pt-[30px] short:pb-4 short:pt-4 md:-m-10">
@@ -109,100 +154,41 @@ const Dashboard = () => {
       <HeadlineCards
         stats={data?.stats}
         alertsByClass={data?.alertsByClass}
-        loading={mainLoading}
-        error={mainError}
-        onRetry={fetchDashboardData}
-      />
-
-      <StatsStrip
-        stats={data?.stats}
-        loading={mainLoading}
-        error={mainError}
-        onRetry={fetchDashboardData}
         supplies={supplies}
         suppliesLoading={suppliesLoading}
-        hideClients={isClientViewer}
+        loading={mainLoading}
+        error={mainError}
+        onRetry={fetchDashboardData}
       />
 
-      <div className="mb-4 short:mb-3 grid grid-cols-1 gap-4 xl:grid-cols-[1.42fr_1fr]">
-        <AlertsByClassCard
-          alertsByClass={data?.alertsByClass}
-          loading={mainLoading}
-          error={mainError}
-          onRetry={fetchDashboardData}
-        />
-        {/* Con dos colas en vez de cuatro se apilan en una columna: en `sm:grid-cols-2`
-            quedaban dos tarjetas bajas y media columna vacía al lado de las alertas. */}
-        <div className={`grid grid-cols-1 gap-4 ${isClientViewer ? '' : 'sm:grid-cols-2'}`}>
-          {!isClientViewer && (
-            <CounterPanel
-              title="Dispositivos pendientes de registro"
-              to="/pending"
-              loading={mainLoading}
-              error={mainError}
-              onRetry={fetchDashboardData}
-              cells={[
-                { label: 'Descubiertos hoy', value: d?.today ?? 0, severity: 'warning' },
-                { label: 'Ayer', value: d?.yesterday ?? 0, severity: 'warning' },
-                { label: 'Pendientes', value: d?.pendingTotal ?? 0, severity: 'warning' },
-              ]}
-            />
-          )}
-          {!isClientViewer && (
-            <CounterPanel
-              title="Movimientos y cambios"
-              to="/activity"
-              loading={mainLoading}
-              error={mainError}
-              onRetry={fetchDashboardData}
-              cells={[
-                { label: 'Hoy y ayer', value: data?.movements?.recent ?? 0 },
-                { label: 'Acumulado', value: data?.movements?.total ?? 0 },
-              ]}
-            />
-          )}
+      <AlertsByClassCard
+        alertsByClass={data?.alertsByClass}
+        loading={mainLoading}
+        error={mainError}
+        onRetry={fetchDashboardData}
+      />
+
+      {/* Movimientos queda aparte de la cola (mismo criterio que "V1 Compacta"): es
+          una cifra de contexto, no algo que "atender" como las otras cuatro. Sin
+          columna propia para un `client_viewer`, la cola pasa a ocupar todo el ancho. */}
+      <div className={`mb-4 short:mb-3 grid grid-cols-1 gap-4 ${isClientViewer ? '' : 'lg:grid-cols-[1.25fr_1fr]'}`}>
+        {!isClientViewer && (
           <CounterPanel
-            title="Solicitudes de consumibles"
-            to="/supply-requests"
-            loading={supplyRequestsLoading && !supplyRequests}
-            error={supplyRequestsError && !supplyRequests}
-            onRetry={retrySupplyRequests}
+            title="Movimientos y cambios"
+            to="/activity"
+            loading={mainLoading}
+            error={mainError}
+            onRetry={fetchDashboardData}
             cells={[
-              { label: 'Pendientes', value: sr.pending ?? 0, severity: 'critical' },
-              { label: 'Procesadas', value: sr.processed ?? 0, severity: 'warning' },
-              { label: 'Completadas', value: sr.completed ?? 0, severity: 'ok' },
+              { label: 'Hoy y ayer', value: data?.movements?.recent ?? 0 },
+              { label: 'Acumulado', value: data?.movements?.total ?? 0 },
             ]}
           />
-          <CounterPanel
-            title="Incidencias"
-            to="/incidents"
-            loading={incidentsLoading && !incidents}
-            error={incidentsError && !incidents}
-            onRetry={retryIncidents}
-            cells={[
-              { label: 'Abiertas', value: inc.open ?? 0, severity: 'critical' },
-              { label: 'En curso', value: inc.in_progress ?? 0, severity: 'warning' },
-              { label: 'Cerradas', value: inc.closed ?? 0, severity: 'ok' },
-            ]}
-          />
-        </div>
+        )}
+        <WorkQueueCard items={queueItems} loading={queueLoading} error={queueError} onRetry={retryQueue} />
       </div>
 
-      <div className={`grid grid-cols-1 gap-4 sm:grid-cols-2 ${isClientViewer ? 'xl:grid-cols-3' : 'xl:grid-cols-[.85fr_.95fr_1.05fr_1.25fr]'}`}>
-        <MonitorPresenceCard
-          agents={data?.stats?.agents}
-          loading={mainLoading}
-          error={mainError}
-          onRetry={fetchDashboardData}
-        />
-        <AgentVersionsCard
-          agentVersions={data?.agentVersions}
-          currentAgentVersion={data?.currentAgentVersion}
-          publishedAgentVersions={data?.publishedAgentVersions}
-          loading={mainLoading}
-          error={mainError}
-          onRetry={fetchDashboardData}
-        />
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-[repeat(auto-fit,minmax(260px,1fr))]">
         <BrandDistributionCard
           brands={data?.brands}
           loading={mainLoading}
@@ -215,11 +201,20 @@ const Dashboard = () => {
           <TopClientsCard
             topClients={data?.topClients}
             totalClients={data?.stats?.clients}
+            totalDevices={data?.stats?.devices}
             loading={mainLoading}
             error={mainError}
             onRetry={fetchDashboardData}
           />
         )}
+        <AgentVersionsCard
+          agentVersions={data?.agentVersions}
+          currentAgentVersion={data?.currentAgentVersion}
+          publishedAgentVersions={data?.publishedAgentVersions}
+          loading={mainLoading}
+          error={mainError}
+          onRetry={fetchDashboardData}
+        />
       </div>
     </div>
   );
