@@ -16,9 +16,13 @@ import type { Knex } from "knex";
  * perdía para siempre, porque el agregado es lo único que sobrevive.
  *
  * Arreglo: `FILTER (WHERE ... IS NOT NULL)` para quedarse con la última
- * lectura REAL del día. Sólo aplica a las 4 columnas de tóner; los contadores
- * no tienen el problema (si un tick no los trae, tampoco los pisa con null en
- * la práctica, y un `FILTER` ahí cambiaría la semántica de facturación).
+ * lectura REAL del día. Acá se aplica sólo a las 4 columnas de tóner.
+ *
+ * CORRECCIÓN (misma fecha, ver `20260915160000`): este comentario decía que
+ * los contadores "no tienen el problema". Era falso — al re-materializar se
+ * vio que `total_pages` se pierde igual (138 equipos-día el 14/09, sólo 68
+ * con contador). Lo arregla la migración siguiente; se deja escrito acá para
+ * que nadie vuelva a confiar en la afirmación original.
  *
  * Un agregado continuo no se puede alterar en su definición: hay que
  * recrearlo. Re-materializar lo reconstruye desde `readings`, así que se

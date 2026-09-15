@@ -671,4 +671,35 @@ describe('Samsung SyncThru: M458x/M4580 comparte SWS con la XOA (mismo desglose 
     assert.equal(res!.meters?.detail?.fax?.total, 0);
     assert.equal(res!.meters?.detail?.duplex?.total, 13552); // sigue viniendo de counters.json
   });
+
+  // Mismo problema que los contadores, pero con los consumibles: en estos
+  // equipos `supplies.json` responde 302 y la serie del cartucho / SKU /
+  // capacidad sólo están en la tabla HTML de la consola SWS.
+  test('suppliesView.sws completa serie, SKU y capacidad cuando supplies.json no responde', async () => {
+    const suppliesHtml = fs.readFileSync(path.join(__dirname, 'fixtures', 'samsung-sws', 'suppliesView-m5370lx-ko.html'), 'utf8');
+    const identity = id('samsung', 'Samsung M458x Series');
+    const sinJson = { ...pages, '/sws.application/information/suppliesView.sws': suppliesHtml };
+    delete (sinJson as Record<string, string>)['/sws/app/information/supplies/supplies.json'];
+    const ctx = ctxWith(identity, sinJson, {}, WEB_ONLY);
+    const res = await resolve(identity, WEB_ONLY).family.collect(ctx, ['supplies']);
+    const black = res?.supplies?.toners.black;
+    assert.equal(black?.percentage, 85);
+    assert.equal(black?.code, 'MLT-D358S');
+    assert.equal(black?.serial, 'CRUM-24121814413');
+    assert.equal(black?.capacity, 30_000);
+    assert.equal(black?.printed, 3111);
+  });
+
+  // Con las dos fuentes vivas manda el JSON nativo (`supplies.json`) y el HTML
+  // sólo rellena lo que el JSON no informa — nunca lo pisa.
+  test('con supplies.json vivo, la tabla HTML rellena huecos sin pisar el dato nativo', async () => {
+    const suppliesHtml = fs.readFileSync(path.join(__dirname, 'fixtures', 'samsung-sws', 'suppliesView-m5370lx-ko.html'), 'utf8');
+    const identity = id('samsung', 'Samsung M458x Series');
+    const ctx = ctxWith(identity, { ...pages, '/sws.application/information/suppliesView.sws': suppliesHtml }, {}, WEB_ONLY);
+    const res = await resolve(identity, WEB_ONLY).family.collect(ctx, ['supplies']);
+    const black = res?.supplies?.toners.black;
+    assert.equal(black?.serial, 'CRUM00123', 'la serie sigue siendo la del JSON, no la del HTML');
+    assert.equal(black?.code, 'MLT-D201L');
+    assert.equal(black?.printed, 3111, 'las impresiones sí las aporta el HTML: el JSON no las trae');
+  });
 });

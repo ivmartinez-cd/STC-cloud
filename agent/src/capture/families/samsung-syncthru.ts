@@ -18,7 +18,7 @@
  * el fix del M5370LX. Se pide como fuente extra, sólo para completar `counters`; si el
  * equipo no la expone (404/302), `ctx.http` devuelve null y no aporta nada.
  */
-import { parseSamsungHome, parseSamsungCounters, parseSamsungSolutionCounters, parseSamsungFwUpgrade, parseSamsungSyncThruSupplies, parseSamsungActiveAlert, parseSamsungIdentity } from '../../snmp/ews-parsers/samsung';
+import { parseSamsungHome, parseSamsungCounters, parseSamsungSolutionCounters, parseSamsungFwUpgrade, parseSamsungSyncThruSupplies, parseSamsungSolutionSupplies, parseSamsungActiveAlert, parseSamsungIdentity } from '../../snmp/ews-parsers/samsung';
 import type { EwsData } from '../../snmp/ews-parsers/types';
 import type { CaptureFamily, CaptureContext, CaptureResult, CaptureScope, DeviceIdentity, PortMap } from '../types';
 import { fromEwsData, mergeResults, mergeDefined, mergeCountersInto } from '../bridge';
@@ -29,9 +29,37 @@ const P = {
   counters:     '/sws/app/information/counters/counters.json',
   countersHtml: '/sws.application/information/countersView.sws',
   supplies:     '/sws/app/information/supplies/supplies.json',
+  suppliesHtml: '/sws.application/information/suppliesView.sws',
   fw:           '/sws/app/maintenance/fw/fwupgrade.json',
   alerts:       '/sws/app/information/activealert/activealert.json',
 } as const;
+
+/**
+ * Mergea tóners y tambores COLOR POR COLOR. `mergeDefined` es shallow sobre
+ * `suppliesDetails`, así que aplicado a `toners` reemplazaría el objeto
+ * entero y borraría los colores que sólo trajo la otra fuente. Acá el dato
+ * nuevo rellena hueco por hueco y nunca pisa un valor ya conocido con null.
+ */
+function mergeSuppliesByColor(acc: Partial<EwsData>, p: Partial<EwsData>): void {
+  const src = p.suppliesDetails;
+  if (!src) return;
+  const dst = (acc.suppliesDetails ??= {});
+  for (const group of ['toners', 'drums'] as const) {
+    const from = src[group];
+    if (!from) continue;
+    const into = (dst[group] ??= {});
+    for (const [color, item] of Object.entries(from)) {
+      if (!item) continue;
+      const key = color as keyof typeof into;
+      into[key] = mergeDefined(into[key] ?? {}, item);
+    }
+  }
+  if (src.maintenance) dst.maintenance = mergeDefined(dst.maintenance ?? {}, src.maintenance);
+  for (const c of ['Black', 'Cyan', 'Magenta', 'Yellow'] as const) {
+    const lvl = p[`toner${c}`];
+    if (lvl != null && acc[`toner${c}`] == null) acc[`toner${c}`] = lvl;
+  }
+}
 
 export const samsungSyncThru: CaptureFamily = {
   id: 'samsung.syncthru',
@@ -55,15 +83,16 @@ export const samsungSyncThru: CaptureFamily = {
     const wantMet  = scopes.includes('meters');
     const wantSup  = scopes.includes('supplies') || scopes.includes('trays');
     const wantAl   = scopes.includes('alerts');
-    const [home, counters, countersHtml, supplies, fw, alerts] = await Promise.all([
+    const [home, counters, countersHtml, supplies, suppliesHtml, fw, alerts] = await Promise.all([
       wantId  ? ctx.http(P.home)         : null,
       wantMet ? ctx.http(P.counters)     : null,
       wantMet ? ctx.http(P.countersHtml) : null,
       wantSup ? ctx.http(P.supplies)     : null,
+      wantSup ? ctx.http(P.suppliesHtml) : null,
       wantId  ? ctx.http(P.fw)           : null,
       wantAl  ? ctx.http(P.alerts)       : null,
     ]);
-    if (!home && !counters && !countersHtml && !supplies) return null;
+    if (!home && !counters && !countersHtml && !supplies && !suppliesHtml) return null;
 
     let acc: Partial<EwsData> = { brand: 'samsung' };
     const merge = (p: Partial<EwsData>) => {
@@ -86,6 +115,12 @@ export const samsungSyncThru: CaptureFamily = {
     }
     if (fw)       merge(parseSamsungFwUpgrade(fw));
     if (supplies) merge(parseSamsungSyncThruSupplies(supplies));
+    // Misma historia que `countersView.sws`: los M458x/M4580 de esta familia
+    // comparten la consola SWS de las XOA y su `supplies.json` responde 302,
+    // así que el único lugar donde está la serie del cartucho, el SKU y la
+    // capacidad es la tabla HTML. En un SyncThru de verdad este pedido da
+    // 404/302, `ctx.http` devuelve null y no aporta nada.
+    if (suppliesHtml) mergeSuppliesByColor(acc, parseSamsungSolutionSupplies(suppliesHtml));
     if (alerts)   merge(parseSamsungActiveAlert(alerts));
 
     const result = fromEwsData(acc, 'ews');
