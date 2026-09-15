@@ -33,6 +33,10 @@ const KEYWORD_IMAGES: Array<[RegExp, string]> = [
   [/\bT652/i, 'lexmark-t652.png'],
   [/\bT654/i, 'lexmark-t654.png'],
   [/\bMX410/i, 'lexmark-mx410de.png'],
+  // El modelo que reportan los Lexmark trae serie y firmware pegados
+  // ("Lexmark MX611dhe 70165PHH082ML LW50.SB7.P543"), así que el slug nunca
+  // matchea y estos equipos SÓLO se resuelven por acá.
+  [/\bMX61[01]/i, 'lexmark-mx611dhe.png'],
 ];
 
 export function deviceSlug(brand: string | null | undefined, model: string | null | undefined): string {
