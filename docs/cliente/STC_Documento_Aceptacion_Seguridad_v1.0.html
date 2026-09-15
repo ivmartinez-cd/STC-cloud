@@ -60,7 +60,7 @@
         /* === PORTADA === */
         .cover-top-bar {
             border-bottom: 1px solid var(--border-color); padding-bottom: 15px;
-            display: flex; justify-content: space-between; align-items: center;
+            display: flex; align-items: center; gap: 16px;
             margin-bottom: 60mm;
         }
         .top-title {
@@ -83,6 +83,9 @@
         }
         .internal-brand { font-family: 'Montserrat', sans-serif; font-weight: 900; font-size: 18px; color: var(--ink-900); }
         .internal-brand span { color: var(--brand); }
+        .brand-group { display: flex; align-items: center; gap: 10px; }
+        .cd-logo { height: 20px; display: block; flex-shrink: 0; }
+        .cd-logo-cover { height: 26px; display: block; flex-shrink: 0; }
         .internal-doc-type { font-size: 11px; font-weight: 700; color: var(--text-gray); text-transform: uppercase; letter-spacing: 0.1em; }
 
         /* === CONTENIDO === */
@@ -137,6 +140,7 @@
     <!-- PÁGINA 1: PORTADA -->
     <div class="page">
         <div class="cover-top-bar">
+            <img src="../assets/logo_corporativo.png" class="cd-logo-cover" alt="Canal Directo">
             <div class="top-title">STC CLOUD – DOCUMENTO DE ACEPTACIÓN TÉCNICA Y DE SEGURIDAD</div>
         </div>
         <div class="cover-main">
@@ -156,7 +160,10 @@
     <!-- PÁGINA 2: ÍNDICE -->
     <div class="page">
         <div class="internal-header">
-            <div class="internal-brand">STC<span>CLOUD</span></div>
+            <div class="brand-group">
+                <img src="../assets/logo_corporativo.png" class="cd-logo" alt="Canal Directo">
+                <div class="internal-brand">STC<span>CLOUD</span></div>
+            </div>
             <div class="internal-doc-type">Tabla de Contenidos</div>
         </div>
         <h2 style="border: none; margin-bottom: 30px;">Índice</h2>
@@ -168,16 +175,16 @@
             <a href="#despliegue" class="toc-item"><span class="toc-text">5. Modelo de Despliegue e Infraestructura</span><span class="toc-dots"></span><span class="toc-page">7</span></a>
             <a href="#privacidad" class="toc-item"><span class="toc-text">6. Alcance de los Datos Recolectados</span><span class="toc-dots"></span><span class="toc-page">7</span></a>
         </div>
-        <div class="note-callout">
-            Este documento resume y referencia el material técnico completo, disponible en <code>docs/cliente/</code>: Arquitectura del Agente, Arquitectura de la App Web, Requisitos del Sistema Cliente, Auditoría de Sistemas IT y Modelo de Datos. Ante cualquier duda puntual, esos documentos tienen el detalle exhaustivo de cada tema.
-        </div>
         <div class="footer">PÁGINA 2 | STC CLOUD – DOCUMENTO DE ACEPTACIÓN</div>
     </div>
 
     <!-- PÁGINA 3: QUÉ ES / CÓMO FUNCIONA -->
     <div class="page">
         <div class="internal-header">
-            <div class="internal-brand">STC<span>CLOUD</span></div>
+            <div class="brand-group">
+                <img src="../assets/logo_corporativo.png" class="cd-logo" alt="Canal Directo">
+                <div class="internal-brand">STC<span>CLOUD</span></div>
+            </div>
             <div class="internal-doc-type">Qué es STC Cloud</div>
         </div>
         <h2 id="que-es">1. Qué es STC Cloud y Cómo Funciona</h2>
@@ -208,7 +215,10 @@
     <!-- PÁGINA 4: DIAGRAMA -->
     <div class="page">
         <div class="internal-header">
-            <div class="internal-brand">STC<span>CLOUD</span></div>
+            <div class="brand-group">
+                <img src="../assets/logo_corporativo.png" class="cd-logo" alt="Canal Directo">
+                <div class="internal-brand">STC<span>CLOUD</span></div>
+            </div>
             <div class="internal-doc-type">Diagrama de Infraestructura</div>
         </div>
         <h2 id="diagrama">2. Diagrama General de Infraestructura</h2>
@@ -252,11 +262,10 @@
   <line x1="60" y1="215" x2="60" y2="385" stroke="#b4700b" stroke-width="3" marker-end="url(#arrow)" marker-start="url(#arrow)"/>
   <rect x="90" y="232" width="160" height="135" rx="8" fill="#ffffff" stroke="#e0a76b" stroke-width="1.4"/>
   <text x="170" y="255" text-anchor="middle" font-size="15" font-weight="700" fill="#b4700b">RED LOCAL</text>
-  <text x="100" y="277" font-size="14" fill="#4b5053">161/UDP</text>
-  <text x="100" y="294" font-size="14" fill="#4b5053">SNMP v1/v2c/v3</text>
-  <text x="100" y="315" font-size="14" fill="#4b5053">9100/TCP · PJL</text>
-  <text x="100" y="333" font-size="14" fill="#4b5053">631/TCP · IPP</text>
-  <text x="100" y="351" font-size="14" fill="#4b5053">80/443/TCP · EWS</text>
+  <text x="100" y="277" font-size="14" fill="#4b5053">161/UDP · SNMP v1/v2c/v3</text>
+  <text x="100" y="298" font-size="14" fill="#4b5053">80/443/TCP · EWS</text>
+  <text x="100" y="319" font-size="14" fill="#4b5053">9100/TCP · PJL</text>
+  <text x="100" y="340" font-size="14" fill="#4b5053">631/TCP · IPP</text>
 
   <rect x="27" y="385" width="216" height="120" rx="10" fill="#ffffff" stroke="#d5d9da" stroke-width="1.5"/>
   <text x="135" y="420" text-anchor="middle" font-family="Montserrat, sans-serif" font-size="20" font-weight="700" fill="#2e3033">Agente STC Cloud</text>
@@ -335,7 +344,10 @@
     <!-- PÁGINA 5: PROTOCOLOS Y PUERTOS -->
     <div class="page">
         <div class="internal-header">
-            <div class="internal-brand">STC<span>CLOUD</span></div>
+            <div class="brand-group">
+                <img src="../assets/logo_corporativo.png" class="cd-logo" alt="Canal Directo">
+                <div class="internal-brand">STC<span>CLOUD</span></div>
+            </div>
             <div class="internal-doc-type">Protocolos y Puertos</div>
         </div>
         <h2 id="red-puertos">3. Protocolos y Puertos (Detalle)</h2>
@@ -345,9 +357,9 @@
         <table>
             <thead><tr><th>Puerto</th><th>Protocolo</th><th>Destino</th><th>Propósito</th></tr></thead>
             <tbody>
-                <tr><td><code>443</code></td><td>TCP (HTTPS)</td><td><code>${DOMAIN}</code> (dominio propio)</td><td>Registro del agente, descarga de configuración, envío de logs.</td></tr>
-                <tr><td><code>443</code></td><td>TCP (WSS)</td><td><code>${DOMAIN}</code> (dominio propio)</td><td>Canal persistente para comandos remotos y sincronización instantánea.</td></tr>
-                <tr><td><code>443</code></td><td>TCP (HTTPS)</td><td><code>github.com</code> o <code>${DOMAIN}</code></td><td>Descarga de actualizaciones, validadas con hash SHA-256 y firma Ed25519 antes de instalarse.</td></tr>
+                <tr><td><code>443</code></td><td>TCP (HTTPS)</td><td><code>[su-dominio.com]</code> (dominio propio de su instalación)</td><td>Registro del agente, descarga de configuración, envío de logs.</td></tr>
+                <tr><td><code>443</code></td><td>TCP (WSS)</td><td><code>[su-dominio.com]</code> (dominio propio de su instalación)</td><td>Canal persistente para comandos remotos y sincronización instantánea.</td></tr>
+                <tr><td><code>443</code></td><td>TCP (HTTPS)</td><td><code>github.com</code> o <code>[su-dominio.com]</code></td><td>Descarga de actualizaciones, verificadas con hash SHA-256 y firma digital Ed25519 — ambos controles son obligatorios y bloquean la instalación de forma independiente si cualquiera de los dos falla.</td></tr>
             </tbody>
         </table>
 
@@ -361,6 +373,9 @@
                 <tr><td><code>631</code>/TCP</td><td>IPP</td><td>Consulta alternativa estandarizada, cuando SNMP/PJL no están disponibles.</td></tr>
             </tbody>
         </table>
+        <p>
+            El agente prueba estos protocolos en orden, de menor a mayor costo, y sólo avanza al siguiente si el anterior no responde: primero <strong>SNMP</strong> (dos consultas livianas, para identificar rápido si el equipo es una impresora); si expone panel web, <strong>EWS</strong>; si expone el puerto JetDirect, <strong>PJL</strong>; y como último recurso, <strong>IPP</strong>. Si SNMP está bloqueado por política de red del cliente, el agente lo detecta y usa EWS como fuente de contadores e insumos para ese equipo, sin reintentar SNMP en ese ciclo.
+        </p>
 
         <h3>Hacia el portal (usuarios del cliente)</h3>
         <table>
@@ -370,16 +385,16 @@
             </tbody>
         </table>
 
-        <div class="note-callout">
-            Todas estas conexiones son <strong>iniciadas por el agente o por el navegador</strong> del usuario, nunca por el servidor hacia la red del cliente. No se requiere ninguna regla de firewall de entrada (<em>inbound</em>). Detalle completo, incluido el soporte de proxy corporativo HTTP/HTTPS con autenticación, en <code>STC_Requisitos_Sistema_Cliente</code>.
-        </div>
         <div class="footer">PÁGINA 5 | STC CLOUD – DOCUMENTO DE ACEPTACIÓN</div>
     </div>
 
     <!-- PÁGINA 6: SEGURIDAD -->
     <div class="page">
         <div class="internal-header">
-            <div class="internal-brand">STC<span>CLOUD</span></div>
+            <div class="brand-group">
+                <img src="../assets/logo_corporativo.png" class="cd-logo" alt="Canal Directo">
+                <div class="internal-brand">STC<span>CLOUD</span></div>
+            </div>
             <div class="internal-doc-type">Arquitectura de Seguridad</div>
         </div>
         <h2 id="seguridad">4. Arquitectura de Seguridad</h2>
@@ -398,11 +413,8 @@
             <li><strong>Segundo factor (2FA) obligatorio:</strong> exigible por servidor, no depende de que el navegador lo respete — si la cuenta lo requiere y todavía no lo activó, el servidor bloquea el resto de las rutas hasta que lo haga.</li>
         </ul>
 
-        <h3>Control de acceso (RBAC)</h3>
-        <p>Tres roles — <code>admin</code>, <code>operator</code> y <code>client_viewer</code> — con el rol de cliente final limitado a una lista explícita de lecturas de sus propios datos, <strong>deny-by-default</strong> en dos ejes: un rol no reconocido queda denegado, y una ruta no listada queda denegada. Un cliente nunca puede administrar agentes, credenciales de red ni ejecutar acciones remotas sobre los equipos.</p>
-
         <h3>Prevención de inyecciones</h3>
-        <p>Todas las consultas a la base de datos se parametrizan por el ORM (Knex.js); una regla automática en la integración continua bloquea cualquier consulta que interpole un valor no constante. Los comandos remotos hacia el agente están restringidos a una lista blanca cerrada de 5 acciones — no se admite la ejecución de comandos de shell arbitrarios.</p>
+        <p>Todas las consultas a la base de datos se parametrizan por el ORM (Knex.js); una regla automática en la integración continua bloquea la aparición de consultas <strong>nuevas</strong> que interpolen un valor no constante. Los comandos remotos hacia el agente están restringidos a una lista blanca cerrada de 9 acciones predefinidas: reescaneo (2 variantes), reinicio del descubrimiento, reinicio del servicio, consola de diagnóstico, actualización forzada, acceso a la web embebida del equipo (2 variantes) y reinicio remoto de la impresora — no se admite la ejecución de comandos de shell arbitrarios en el sistema operativo del agente. Sólo personal de Canal Directo puede emitirlos; el cliente no los ve ni puede ejecutarlos.</p>
 
         <h3>Trazabilidad</h3>
         <p>Toda acción administrativa (creación de agentes, activación de licencias, regeneración de llaves, revocación de acceso, cambios de configuración de red) queda registrada en una bitácora de auditoría en el servidor.</p>
@@ -413,7 +425,10 @@
     <!-- PÁGINA 7: DESPLIEGUE Y DATOS -->
     <div class="page">
         <div class="internal-header">
-            <div class="internal-brand">STC<span>CLOUD</span></div>
+            <div class="brand-group">
+                <img src="../assets/logo_corporativo.png" class="cd-logo" alt="Canal Directo">
+                <div class="internal-brand">STC<span>CLOUD</span></div>
+            </div>
             <div class="internal-doc-type">Despliegue y Datos</div>
         </div>
         <h2 id="despliegue">5. Modelo de Despliegue e Infraestructura</h2>
