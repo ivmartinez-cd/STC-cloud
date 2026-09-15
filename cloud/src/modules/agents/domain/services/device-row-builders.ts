@@ -13,13 +13,30 @@ export interface ExistingDeviceFieldPrecedence {
   finalName: string;
 }
 
+/** Predicado "este texto identifica al equipo". Se INYECTA: vive en el módulo
+ *  `devices` y el dominio de `agents` no puede importarlo (check-guards,
+ *  `arch-domain`/`arch-cross-module`). Lo pasa la capa de aplicación desde el
+ *  facade, para que matcher, índice único y esta precedencia usen el MISMO. */
+export type IdentifyingSerialFn = (raw: string | null | undefined, ip?: string | null) => boolean;
+
 export function resolveExistingDeviceFields(
-  existingDevice: any, cleanModel: string, serialToUse: string | null, ip: string, validHost: string | null
+  existingDevice: any, cleanModel: string, serialToUse: string | null, ip: string, validHost: string | null,
+  isIdentifyingSerial: IdentifyingSerialFn
 ): ExistingDeviceFieldPrecedence {
-  // Conservar número de serie real si ya existía uno registrado
-  const finalSerial = (existingDevice.serial_number && existingDevice.serial_number !== ip)
-    ? existingDevice.serial_number
-    : (serialToUse || existingDevice.serial_number || null);
+  // Conservar el número de serie REAL si ya había uno registrado. La condición
+  // vieja (`!= ip`) sólo descartaba el caso "la IP disfrazada de serial", así
+  // que cualquier otro placeholder del firmware quedaba clavado para siempre:
+  // el agente podía dejar de mandarlo y la fila seguía mostrándolo. Caso real
+  // (15/09/2026): un Epson WF-C5891 cuyo PJL devuelve `?` se quedaba con `?`
+  // como serie aunque el agente ya lo descartara.
+  //
+  // Se reusa `isIdentifyingSerial` —el mismo predicado del matcher y del
+  // índice `devices_client_serial_uniq`— para que las tres capas coincidan:
+  // un valor que no identifica nunca fue usable para matchear, así que
+  // limpiarlo no puede romper la identidad de nada.
+  const storedSerial = isIdentifyingSerial(existingDevice.serial_number, ip) ? existingDevice.serial_number : null;
+  const incomingSerial = isIdentifyingSerial(serialToUse, ip) ? (serialToUse as string).trim() : null;
+  const finalSerial = storedSerial ?? incomingSerial;
 
   // Conservar modelo detallado más largo (para evitar degradaciones a 'hp' o 'generic')
   const existingModel = existingDevice.model || "";

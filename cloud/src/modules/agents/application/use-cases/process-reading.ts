@@ -3,6 +3,9 @@ import { logger } from "../../../../logger";
 import type { IncomingReading, MappedReading } from "../../domain/entities/agent";
 import type { IngestDeviceRepository } from "../../domain/repositories/ingest-device-repository";
 import { buildExistingDeviceUpdate, buildNewDeviceInsert, resolveExistingDeviceFields } from "../../domain/services/device-row-builders";
+// El predicado de serial identificante vive en `devices`; se importa por el
+// facade (no por un internal) y se inyecta al dominio puro de `agents`.
+import { isIdentifyingSerial } from "../../../devices";
 import {
   buildMappedReading, computeDisplayFields, detectCounterResets, normalizeBrand, parseCount, parseRawIdentity,
   resolveReadingTime, type DisplayFields,
@@ -87,7 +90,7 @@ export class ProcessReadingUseCase {
       await this.devices.update(deviceId, { ip_address: ip || existingDevice.ip_address, last_seen: new Date(), active: true });
       return { deviceId, suppressed: true };
     }
-    const fields = resolveExistingDeviceFields(existingDevice, display.cleanModel, serialToUse, ip, display.validHost);
+    const fields = resolveExistingDeviceFields(existingDevice, display.cleanModel, serialToUse, ip, display.validHost, isIdentifyingSerial);
     const { counterResets, resetValue } = detectCounterResets(existingDevice, parseCount(r.total_pages), parseCount(r.mono_pages), parseCount(r.color_pages), display.pollMethod);
     // Fase 10: `resolvedOrigin` es null cuando no hay señal (nunca se pisa `supply_origin` en ese caso).
     const resolvedOrigin = resolveSupplyOrigin(r.supply_origin, r.supplies_details);
