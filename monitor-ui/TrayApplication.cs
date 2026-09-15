@@ -1,6 +1,5 @@
 using System;
 using System.Drawing;
-using System.Drawing.Drawing2D;
 using System.IO;
 using System.Windows.Forms;
 
@@ -14,10 +13,14 @@ internal sealed class TrayApplication : ApplicationContext
 {
     private readonly NotifyIcon     _tray;
     private readonly ContextMenuStrip _menu;
+    // No-readonly a propósito: se asigna dentro de BuildContextMenu(), no en
+    // el cuerpo textual del constructor — un campo readonly ahí no compila
+    // (CS0191), aunque BuildContextMenu() sólo se llame desde el constructor.
+    private ToolStripMenuItem _itemAbout = null!;
     private readonly System.Windows.Forms.Timer _pollTimer;
 
-    private ActivationForm? _form;
-    private AgentStatus?    _lastStatus;
+    private MonitorConsoleForm? _form;
+    private AgentStatus?        _lastStatus;
 
     public TrayApplication()
     {
@@ -50,7 +53,7 @@ internal sealed class TrayApplication : ApplicationContext
         var icon = new NotifyIcon
         {
             Text             = "STC Cloud Monitor",
-            Icon             = MakeCircleIcon(Color.Gray),
+            Icon             = Branding.MakeTrayIcon(Tokens.Ink500),
             ContextMenuStrip = menu,
             Visible          = true,
         };
@@ -73,8 +76,12 @@ internal sealed class TrayApplication : ApplicationContext
         var itemLogs = new ToolStripMenuItem("Abrir Logs Locales");
         itemLogs.Click += (_, _) => OpenLogs();
 
-        var itemAbout = new ToolStripMenuItem("Acerca de STC Monitor v1.0");
-        itemAbout.Click += (_, _) => ShowAbout();
+        // Texto inicial sin versión — se completa en RefreshStatus() con la
+        // versión real que reporta el agente (bundle.js --status), la misma
+        // fuente que usa la consola. Antes decía "v1.0" fijo en el código,
+        // desactualizado desde hace rato (el agente va por 1.3.x).
+        _itemAbout = new ToolStripMenuItem("Acerca de STC Cloud Monitor");
+        _itemAbout.Click += (_, _) => ShowAbout();
 
         var itemExit = new ToolStripMenuItem("Salir");
         itemExit.Click += (_, _) => ExitApp();
@@ -85,7 +92,7 @@ internal sealed class TrayApplication : ApplicationContext
             new ToolStripSeparator(),
             itemSync,
             itemLogs,
-            itemAbout,
+            _itemAbout,
             new ToolStripSeparator(),
             itemExit,
         ]);
@@ -125,55 +132,41 @@ internal sealed class TrayApplication : ApplicationContext
 
         ApplyStatusToTray(_lastStatus);
         _form?.UpdateDisplay(_lastStatus);
+        _itemAbout.Text = _lastStatus?.Version is string v ? $"Acerca de STC Cloud Monitor v{v}" : "Acerca de STC Cloud Monitor";
     }
 
+    // Disco de estado sobre la marca (favicon.ico) — mismos colores de
+    // severidad que ya usa el portal (Tokens.SeverityOk/Warning/Critical,
+    // ver Branding.cs), no un semáforo saturado aparte para la bandeja.
     private void ApplyStatusToTray(AgentStatus? s)
     {
         if (s is null)
         {
-            _tray.Icon = MakeCircleIcon(Color.Red);
+            _tray.Icon = Branding.MakeTrayIcon(Tokens.SeverityCritical);
             _tray.Text = "STC Cloud Monitor — Agente no encontrado";
             return;
         }
 
         if (!s.Activated)
         {
-            _tray.Icon = MakeCircleIcon(Color.Orange);
+            _tray.Icon = Branding.MakeTrayIcon(Tokens.Brand);
             _tray.Text = "STC Cloud Monitor — Pendiente de activacion";
         }
         else if (s.Service == "running")
         {
-            _tray.Icon = MakeCircleIcon(Color.LimeGreen);
+            _tray.Icon = Branding.MakeTrayIcon(Tokens.SeverityOk);
             _tray.Text = "STC Cloud Monitor — En ejecucion";
         }
         else if (s.Service is "stopped" or "not-installed")
         {
-            _tray.Icon = MakeCircleIcon(Color.OrangeRed);
+            _tray.Icon = Branding.MakeTrayIcon(Tokens.SeverityCritical);
             _tray.Text = $"STC Cloud Monitor — Servicio {s.Service}";
         }
         else
         {
-            _tray.Icon = MakeCircleIcon(Color.Red);
+            _tray.Icon = Branding.MakeTrayIcon(Tokens.SeverityCritical);
             _tray.Text = "STC Cloud Monitor — Error";
         }
-    }
-
-    // ── Colored circle icon (created programmatically, no resource files) ─────
-
-    internal static Icon MakeCircleIcon(Color color)
-    {
-        using var bmp = new Bitmap(16, 16, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
-        using (var g = Graphics.FromImage(bmp))
-        {
-            g.Clear(Color.Transparent);
-            g.SmoothingMode = SmoothingMode.AntiAlias;
-            using var fill      = new SolidBrush(color);
-            using var highlight = new SolidBrush(Color.FromArgb(100, 255, 255, 255));
-            g.FillEllipse(fill, 1, 1, 14, 14);
-            g.FillEllipse(highlight, 3, 2, 7, 6);   // 3D shine effect
-        }
-        var handle = bmp.GetHicon();
-        return Icon.FromHandle(handle);
     }
 
     // ── Context-menu actions ──────────────────────────────────────────────────
@@ -182,7 +175,7 @@ internal sealed class TrayApplication : ApplicationContext
     {
         if (_form is null || _form.IsDisposed)
         {
-            _form = new ActivationForm();
+            _form = new MonitorConsoleForm();
             _form.FormClosed += (_, _) => _form = null;
         }
         _form.UpdateDisplay(_lastStatus);
@@ -235,8 +228,9 @@ internal sealed class TrayApplication : ApplicationContext
     private void ShowAbout()
     {
         var exe = AgentService.FindAgentExe() ?? "(no encontrado)";
+        var version = _lastStatus?.Version ?? "—";
         MessageBox.Show(
-            $"STC Cloud Monitor  v1.0\n\n" +
+            $"STC Cloud Monitor  v{version}\n\n" +
             $"Agente de monitoreo de impresoras SNMP\n" +
             $"© STC Cloud — Todos los derechos reservados\n\n" +
             $"Agente: {exe}",
