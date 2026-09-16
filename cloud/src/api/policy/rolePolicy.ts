@@ -40,6 +40,10 @@ export type RolePolicy =
 export const CLIENT_VIEWER_ROUTES: ReadonlySet<string> = new Set([
   "GET /api/v1/portal/me",
   "GET /api/v1/dashboard",
+  // Tendencia y concentración de alertas del panel (16/09/2026): mismo scope por
+  // cliente que `/dashboard` — un client_viewer ve la serie de su propia cuenta.
+  "GET /api/v1/dashboard/trend",
+  "GET /api/v1/dashboard/hotspots",
   "GET /api/v1/alerts",
   "GET /api/v1/alerts/count",
   "GET /api/v1/alerts/classes",

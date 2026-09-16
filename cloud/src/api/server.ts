@@ -17,6 +17,7 @@ import "../jobs/scheduledReportsWorker";
 import "../jobs/supplyRequestWorker";
 import "../jobs/remoteActionWorker";
 import "../jobs/alertDigestJob";
+import "../jobs/dashboardSnapshotJob";
 import { initSentry } from "../modules/observability/sentry";
 
 // Sentry lo más temprano posible (no-op sin SENTRY_DSN) — Fase 5.2.

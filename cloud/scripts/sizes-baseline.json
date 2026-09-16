@@ -952,25 +952,41 @@
     "portal/src/features/dashboard/components/AccountsSection.tsx": [
       {
         "name": "AccountsSection",
-        "length": 37
+        "length": 34
       }
     ],
     "portal/src/features/dashboard/components/AgentsSection.tsx": [
       {
         "name": "AgentsSection",
-        "length": 41
+        "length": 40
       }
     ],
-    "portal/src/features/dashboard/components/AlertsByClassSection.tsx": [
+    "portal/src/features/dashboard/components/AlertsByClassPanel.tsx": [
       {
-        "name": "AlertsByClassSection",
-        "length": 35
+        "name": "AlertsByClassPanel",
+        "length": 37
       }
     ],
     "portal/src/features/dashboard/components/BrandsSection.tsx": [
       {
         "name": "BrandsSection",
-        "length": 28
+        "length": 32
+      }
+    ],
+    "portal/src/features/dashboard/components/HotspotsPanel.tsx": [
+      {
+        "name": "HotspotsPanel",
+        "length": 26
+      }
+    ],
+    "portal/src/features/dashboard/components/KpiStrip.tsx": [
+      {
+        "name": "Kpi",
+        "length": 21
+      },
+      {
+        "name": "kpiCells",
+        "length": 36
       }
     ],
     "portal/src/features/dashboard/components/MiniBar.tsx": [
@@ -979,10 +995,32 @@
         "length": 22
       }
     ],
+    "portal/src/features/dashboard/components/PageHeader.tsx": [
+      {
+        "name": "PageHeader",
+        "length": 36
+      }
+    ],
+    "portal/src/features/dashboard/components/SeverityPanel.tsx": [
+      {
+        "name": "SeverityPanel",
+        "length": 35
+      }
+    ],
+    "portal/src/features/dashboard/components/Sparkline.tsx": [
+      {
+        "name": "Sparkline",
+        "length": 28
+      }
+    ],
     "portal/src/features/dashboard/components/WorkQueueSection.tsx": [
       {
+        "name": "Row",
+        "length": 24
+      },
+      {
         "name": "WorkQueueSection",
-        "length": 21
+        "length": 22
       }
     ],
     "portal/src/features/dashboard/hooks/useDashboard.ts": [
@@ -991,14 +1029,16 @@
         "length": 65
       }
     ],
+    "portal/src/features/dashboard/hooks/useWorkQueue.ts": [
+      {
+        "name": "queueItems",
+        "length": 45
+      }
+    ],
     "portal/src/features/dashboard/pages/Dashboard.tsx": [
       {
-        "name": "PageHeader",
-        "length": 30
-      },
-      {
         "name": "Dashboard",
-        "length": 144
+        "length": 105
       }
     ],
     "portal/src/features/devices/components/detail/AlertsTab.tsx": [

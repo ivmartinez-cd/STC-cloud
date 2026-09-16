@@ -1,5 +1,5 @@
 import type { DashboardData } from '../../../shared/types/monitor';
-import SectionHead from './SectionHead';
+import Panel, { PanelFoot, PanelMeta } from './Panel';
 import CardError from '../../../shared/components/CardError';
 import CardEmpty from './CardEmpty';
 import SkeletonBlock from './Skeleton';
@@ -16,17 +16,16 @@ function dotColor(isCurrent: boolean, version: string): string {
  *  Juntarlos escondía que un canal se quedó atrás. */
 function VersionRow({ version, channel, count, isCurrent }: { version: string; channel: string; count: number; isCurrent: boolean }) {
   return (
-    <div className="flex items-center gap-2.5 border-b border-line-200 py-3">
+    <div className="flex items-center gap-2.5 border-b border-line-200 py-2.5">
       <span className="block h-[5px] w-[5px] shrink-0 rounded-full" style={{ background: dotColor(isCurrent, version) }} />
       <span className="font-mono text-[13px] text-ink-900">{version}</span>
-      <span className="truncate font-sans text-[11px] uppercase tracking-[.06em] text-ink-400">{channel}{isCurrent ? ' · publicada' : ''}</span>
+      <span className="truncate font-sans text-[10px] uppercase tracking-[.08em] text-ink-400">{channel}{isCurrent ? ' · publicada' : ''}</span>
       <span className="ml-auto shrink-0 font-mono text-[13px] tabular-nums text-ink-900">{fmt(count)}</span>
     </div>
   );
 }
 
-/** "Agentes" del rediseño minimalista (handoff "Panel de control",
- * 16/09/2026): lista versión · canal → cantidad, con el total de monitores en
+/** "Agentes" (handoff "Panel de control", 16/09/2026): lista versión · canal → cantidad, con el total de monitores en
  * la cabecera y los agentes en versión desconocida como nota de pie (sólo
  * cuando los hay). El backend ya usa el literal `'desconocida'` para agentes
  * sin `version` (`dashboard-queries.ts`). */
@@ -47,15 +46,14 @@ export default function AgentsSection({
   const published = publishedAgentVersions ?? (currentAgentVersion ? { stable: currentAgentVersion } : {});
 
   return (
-    <section>
-      <SectionHead
-        title="Agentes"
-        right={!loading && !error && rows.length > 0 ? <span className="font-sans text-[12px] text-ink-400">{fmt(total)} monitores</span> : undefined}
-      />
+    <Panel
+      title="Agentes"
+      right={!loading && !error && rows.length > 0 ? <PanelMeta>{fmt(total)} monitores</PanelMeta> : undefined}
+    >
       {error ? (
         <CardError onRetry={onRetry} />
       ) : loading ? (
-        Array.from({ length: 2 }, (_, i) => <SkeletonBlock key={i} heightPx={13} widthPct={70 - i * 15} className="my-3.5" />)
+        Array.from({ length: 2 }, (_, i) => <SkeletonBlock key={i} heightPx={13} widthPct={70 - i * 15} className="my-3" />)
       ) : rows.length === 0 ? (
         <CardEmpty />
       ) : (
@@ -63,11 +61,11 @@ export default function AgentsSection({
           {rows.map((v) => (
             <VersionRow key={`${v.version}·${v.channel}`} version={v.version} channel={v.channel} count={v.count} isCurrent={published[v.channel] === v.version} />
           ))}
-          <div className="mt-2.5 font-sans text-[12px] text-ink-400">
+          <PanelFoot>
             {unknown > 0 ? <><span className="text-brand-severe">{fmt(unknown)}</span> en versión desconocida</> : 'Sin agentes en versión desconocida'}
-          </div>
+          </PanelFoot>
         </>
       )}
-    </section>
+    </Panel>
   );
 }

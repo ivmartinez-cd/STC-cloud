@@ -11,7 +11,7 @@ export function severityDot(severity: string): string | undefined {
 }
 
 /** Punto de la columna CLASE — misma escala de 3 tonos (severo/atención/neutro)
- * que `features/dashboard/components/AlertsByClassSection.tsx`; duplicado a
+ * que `features/dashboard/lib/alert-tiers.ts`; duplicado a
  * propósito acá (el guard `arch-portal` bloquea importar entre features). */
 const CLASS_DOT: Record<string, string> = {
   availability: 'bg-brand',

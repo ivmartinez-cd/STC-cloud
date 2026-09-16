@@ -7,6 +7,10 @@ const db = knex(knexConfig.development);
 
 const AGENT_LOGS_RETENTION_DAYS = 90; // sólo diagnóstico operacional, purga agresiva
 const RESOLVED_ALERTS_RETENTION_MONTHS = 12; // historial razonable; abiertas NUNCA se purgan
+// Tendencia del panel de control: la ventana más larga que ofrece son 30 días,
+// y el backfill de la migración llega hasta ahí. 90 da margen para sumar un
+// rango más largo sin volver a quedarse sin historia.
+const DASHBOARD_SNAPSHOTS_RETENTION_DAYS = 90;
 
 /**
  * Se queda como `setInterval` a propósito, mismo criterio que
@@ -83,12 +87,26 @@ async function purgeResolvedAlerts() {
   }
 }
 
+async function purgeDashboardSnapshots() {
+  try {
+    const deleted = await db('dashboard_snapshots')
+      .where('at', '<', db.raw(`now() - interval '${DASHBOARD_SNAPSHOTS_RETENTION_DAYS} days'`))
+      .del();
+    if (deleted > 0) {
+      logger.info(`[RetentionJob] ${deleted} toma(s) de dashboard_snapshots purgadas (> ${DASHBOARD_SNAPSHOTS_RETENTION_DAYS} días)`);
+    }
+  } catch (err) {
+    logger.error({ err }, '[RetentionJob] fallo purgando dashboard_snapshots');
+  }
+}
+
 export async function runRetentionChecks() {
   // Lock multi-réplica + métricas + Sentry — Fase 5.3.
   await runGuardedTick(db, "retention", async () => {
     await purgeOldAgentLogs();
     await purgeResolvedAlerts();
     await purgeEmailLog();
+    await purgeDashboardSnapshots();
   });
 }
 
@@ -96,4 +114,4 @@ export async function runRetentionChecks() {
 runRetentionChecks();
 setInterval(runRetentionChecks, INTERVAL_HOURS * 60 * 60 * 1000);
 
-logger.info(`[RetentionJob] Iniciado — agent_logs > ${AGENT_LOGS_RETENTION_DAYS}d, alerts resueltas > ${RESOLVED_ALERTS_RETENTION_MONTHS}m, cada ${INTERVAL_HOURS}h`);
+logger.info(`[RetentionJob] Iniciado — agent_logs > ${AGENT_LOGS_RETENTION_DAYS}d, alerts resueltas > ${RESOLVED_ALERTS_RETENTION_MONTHS}m, dashboard_snapshots > ${DASHBOARD_SNAPSHOTS_RETENTION_DAYS}d, cada ${INTERVAL_HOURS}h`);

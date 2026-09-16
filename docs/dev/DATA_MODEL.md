@@ -18,11 +18,11 @@ u otro cliente SQL.
 
 | Qué | Cantidad |
 | :--- | :--- |
-| Tablas | 35 (33 de negocio + 2 internas de Knex) |
+| Tablas | 36 (34 de negocio + 2 internas de Knex) |
 | Vistas | 3 (2 agregados continuos de TimescaleDB + 1 vista SQL) |
-| Foreign keys | 63 |
+| Foreign keys | 64 |
 | Constraints `CHECK` | 44 |
-| Índices además de las PK | 64 (varios parciales y por expresión) |
+| Índices además de las PK | 65 (varios parciales y por expresión) |
 | Hypertables (TimescaleDB) | 1 (`readings`) |
 | Triggers | 1 (`agents_client_id_sync`) |
 
@@ -172,7 +172,8 @@ el texto queda).
 | 4.6 Insumos | `supply_requests`, `supply_request_events` |
 | 4.7 Cierres de facturación | `report_closures`, `report_closure_lines` |
 | 4.8 Reportes y notificaciones | `scheduled_reports`, `message_templates`, `email_log` |
-| 4.9 Infraestructura | `knex_migrations`, `knex_migrations_lock` |
+| 4.9 Historia del panel de control | `dashboard_snapshots` |
+| 4.10 Infraestructura | `knex_migrations`, `knex_migrations_lock` |
 
 ---
 
@@ -457,7 +458,29 @@ Registro de cada email intentado: `event`, `recipient`, `subject`, `status` ∈ 
 `error`, `skipped_no_transport`, `skipped_no_recipient`}, `error`, `metadata`. Sirve para
 diagnosticar "no me llegó el mail" sin acceder al servidor SMTP.
 
-### 5.9 Infraestructura
+### 5.9 Historia del panel de control
+
+#### `dashboard_snapshots`
+Una toma por hora y por cliente de las cifras del panel: `alerts_by_class` (jsonb
+`{clase: cantidad}`), `devices_total`/`devices_managed`, `agents_total`/`agents_online`,
+`supplies_critical`/`supplies_low`. PK `(client_id, at)`, más un índice por `at` (el lector
+siempre barre por ventana de tiempo). La escribe `jobs/dashboardSnapshotJob.ts` y la purga
+`jobs/retentionJob.ts` a los 90 días.
+
+Existe porque el resto del modelo guarda **estado actual**, no historia: `monitor_state`,
+`agents.last_seen` y `supplies_details` dicen cuánto valen hoy, no cuánto valían ayer. Sin
+esta tabla, la tendencia del panel (variación del período y sparkline por KPI) sería
+inventada. La única métrica reconstruible hacia atrás son las alertas —`created_at` +
+`resolved_at` dicen si una alerta estaba abierta en cualquier instante pasado—, y por eso
+la migración que crea la tabla backfillea 30 días de `alerts_by_class` y deja el resto de
+las columnas en `NULL`.
+
+Los contadores son nullables a propósito: `NULL` significa "esa toma no midió esto", y el
+lector lo propaga (un bucket al que le falta un cliente queda sin total para esa métrica).
+El panel entonces no dibuja curva, en vez de mostrar una suma a medias que parecería una
+caída.
+
+### 5.10 Infraestructura
 
 `knex_migrations` (qué migraciones se aplicaron, en qué batch) y `knex_migrations_lock`
 (candado para que dos instancias de la API no migren a la vez). Son de Knex; no tocar a mano.

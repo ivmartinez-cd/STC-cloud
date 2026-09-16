@@ -11,8 +11,21 @@
  */
 import type { Knex } from "knex";
 import { KnexDashboardRepository } from "./infrastructure/database/knex-dashboard-repository";
+import { KnexDashboardSnapshotRepository } from "./infrastructure/database/knex-dashboard-snapshot-repository";
+import { CaptureDashboardSnapshotUseCase, type SuppliesProbe } from "./application/use-cases/capture-dashboard-snapshot";
 
 export { registerDashboardRoutes } from "./presentation/dashboard-routes";
+
+/**
+ * Toma horaria de las cifras del panel (`dashboardSnapshotJob.ts`) — expuesta
+ * por la fachada, como el resto de los módulos que un job consume, para que el
+ * job no importe capas internas. La medición de consumibles entra por
+ * parámetro: es el único dato del snapshot que sale de otro módulo
+ * (`modules/supplies`), y así este módulo no depende de aquél.
+ */
+export function captureDashboardSnapshot(db: Knex, suppliesOf: SuppliesProbe): Promise<number> {
+  return new CaptureDashboardSnapshotUseCase(new KnexDashboardSnapshotRepository(db), suppliesOf).execute();
+}
 
 export function queryClientsCount(db: Knex, cid: string | null) {
   return new KnexDashboardRepository(db).clientsCount(cid);
