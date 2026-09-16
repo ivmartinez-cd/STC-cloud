@@ -1,3 +1,14 @@
+# Rotación de logs de Docker (16/09/2026), mismo criterio que
+# docker-compose.prod.yml. Sin esto el json-file crece sin techo: el log de
+# `stc_api` ya estaba en 11 MB, y en esta máquina el disco de WSL vive en el
+# HDD externo. 10 MB x 3 archivos = 30 MB de tope por contenedor.
+x-logging: &default-logging
+  driver: "json-file"
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+
 services:
   # Base de datos principal con extension de series temporales
   postgres:
@@ -17,6 +28,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    logging: *default-logging
     deploy:
       resources:
         limits:
@@ -38,6 +50,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    logging: *default-logging
     deploy:
       resources:
         limits:
@@ -57,6 +70,7 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    logging: *default-logging
     deploy:
       resources:
         limits:
@@ -72,6 +86,7 @@ services:
       - "5173:80"
     depends_on:
       - api
+    logging: *default-logging
     deploy:
       resources:
         limits:
