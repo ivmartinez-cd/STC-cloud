@@ -3,7 +3,7 @@ import type { AlertSummary } from '../../../shared/types/alerts';
 import CardError from '../../../shared/components/CardError';
 
 /** Sólo las 2 primeras filas (mayor volumen) llevan tono naranja — mismo criterio
- * de escala de severidad "dentro del naranja + gris" que `AlertsByClassCard`. */
+ * de escala de severidad "dentro del naranja + gris" que `AlertsByClassSection`. */
 function dotColorAt(index: number): string {
   if (index === 0) return 'var(--color-brand-severe)';
   if (index === 1) return 'var(--color-brand)';

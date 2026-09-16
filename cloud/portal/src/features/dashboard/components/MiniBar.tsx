@@ -1,8 +1,7 @@
-/** Barra de progreso inline reusada por la tira de KPIs, las filas de
- * "Alertas por clase" y "Top cuentas": track `#F0F2F2`, relleno de un solo
- * color (institucional o de `--color-severity-*` según el caso). Alto y
- * radio configurables porque el handoff usa 4px (mini KPI), 6px (fila) y
- * 7-8px (apiladas) según el bloque. */
+/** Barra de progreso inline reusada por las filas de "Alertas por clase",
+ * "Marcas del parque" y "Cuentas por equipos". Alto y radio configurables: el
+ * rediseño minimalista (handoff 16/09/2026) las usa todas con `radius={0}` —
+ * 6px en las filas de clase y marca, 4px bajo el nombre de cuenta. */
 export default function MiniBar({
   pct, color = 'var(--color-brand)', height = 6, radius = 3, className = '', minPct,
 }: {

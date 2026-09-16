@@ -166,7 +166,7 @@
     "src/modules/agents/domain/services/device-row-builders.ts": [
       {
         "name": "resolveExistingDeviceFields",
-        "length": 24
+        "length": 35
       },
       {
         "name": "buildExistingDeviceUpdate",
@@ -949,46 +949,28 @@
         "length": 200
       }
     ],
-    "portal/src/features/dashboard/components/AgentVersionsCard.tsx": [
+    "portal/src/features/dashboard/components/AccountsSection.tsx": [
       {
-        "name": "AgentVersionsCard",
-        "length": 51
+        "name": "AccountsSection",
+        "length": 37
       }
     ],
-    "portal/src/features/dashboard/components/AlertsByClassCard.tsx": [
+    "portal/src/features/dashboard/components/AgentsSection.tsx": [
       {
-        "name": "SeverityRing",
-        "length": 27
-      },
-      {
-        "name": "AlertsByClassCard",
-        "length": 77
+        "name": "AgentsSection",
+        "length": 41
       }
     ],
-    "portal/src/features/dashboard/components/BrandDistributionCard.tsx": [
+    "portal/src/features/dashboard/components/AlertsByClassSection.tsx": [
       {
-        "name": "BrandDistributionCard",
-        "length": 46
+        "name": "AlertsByClassSection",
+        "length": 35
       }
     ],
-    "portal/src/features/dashboard/components/CounterPanel.tsx": [
+    "portal/src/features/dashboard/components/BrandsSection.tsx": [
       {
-        "name": "CounterPanel",
-        "length": 39
-      }
-    ],
-    "portal/src/features/dashboard/components/HeadlineCards.tsx": [
-      {
-        "name": "AlertsCard",
-        "length": 23
-      },
-      {
-        "name": "ManagedFleetCard",
-        "length": 25
-      },
-      {
-        "name": "MonitorsOnlineCard",
-        "length": 23
+        "name": "BrandsSection",
+        "length": 28
       }
     ],
     "portal/src/features/dashboard/components/MiniBar.tsx": [
@@ -997,16 +979,10 @@
         "length": 22
       }
     ],
-    "portal/src/features/dashboard/components/TopClientsCard.tsx": [
+    "portal/src/features/dashboard/components/WorkQueueSection.tsx": [
       {
-        "name": "TopClientsCard",
-        "length": 57
-      }
-    ],
-    "portal/src/features/dashboard/components/WorkQueueCard.tsx": [
-      {
-        "name": "WorkQueueCard",
-        "length": 24
+        "name": "WorkQueueSection",
+        "length": 21
       }
     ],
     "portal/src/features/dashboard/hooks/useDashboard.ts": [
@@ -1017,8 +993,12 @@
     ],
     "portal/src/features/dashboard/pages/Dashboard.tsx": [
       {
+        "name": "PageHeader",
+        "length": 30
+      },
+      {
         "name": "Dashboard",
-        "length": 190
+        "length": 144
       }
     ],
     "portal/src/features/devices/components/detail/AlertsTab.tsx": [
