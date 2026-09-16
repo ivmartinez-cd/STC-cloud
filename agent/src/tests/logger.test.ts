@@ -12,7 +12,7 @@ import fs from 'fs';
 const TMP_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'stc-test-logger-'));
 process.env['AGENT_DATA_DIR'] = TMP_DIR;
 
-import { log } from '../core/Logger';
+import { log, purgeRotatedServiceLogs } from '../core/Logger';
 
 // `log()` recalcula la ruta en cada llamada leyendo `AGENT_DATA_DIR` (no una
 // constante fijada al importar el módulo — necesario para que ESTE test
@@ -62,5 +62,52 @@ describe('Logger — rotación en cadena', () => {
     }
     assert.ok(fs.existsSync(`${LOG_PATH}.5`), 'debe existir hasta .5');
     assert.ok(!fs.existsSync(`${LOG_PATH}.6`), 'nunca debe crecer más allá de .5');
+  });
+});
+
+// Los logs que NSSM rota por su cuenta (`nssm-stdout-<timestamp>.log`) no los
+// borra nadie: sin esta purga el disco del cliente crece igual, sólo que en
+// archivos de 10 MB en vez de uno solo enorme. Ver Logger.ts.
+describe('Logger — purga de los logs rotados por NSSM', () => {
+  const touch = (name: string) => fs.writeFileSync(path.join(TMP_DIR, name), 'x');
+
+  test('deja los 3 más nuevos de cada prefijo y borra el resto', () => {
+    const stamps = ['20260910120000', '20260911120000', '20260912120000',
+                    '20260913120000', '20260914120000'];
+    stamps.forEach((t) => { touch(`nssm-stdout-${t}.log`); touch(`nssm-stderr-${t}.log`); });
+
+    purgeRotatedServiceLogs(TMP_DIR);
+
+    const quedan = fs.readdirSync(TMP_DIR).filter((f) => f.startsWith('nssm-')).sort();
+    assert.deepEqual(quedan, [
+      'nssm-stderr-20260912120000.log', 'nssm-stderr-20260913120000.log',
+      'nssm-stderr-20260914120000.log', 'nssm-stdout-20260912120000.log',
+      'nssm-stdout-20260913120000.log', 'nssm-stdout-20260914120000.log',
+    ], 'debe quedar exactamente el tope por prefijo, y los más nuevos');
+  });
+
+  test('no toca los activos ni agent.log', () => {
+    touch('nssm-stdout.log');
+    touch('nssm-stderr.log');
+
+    purgeRotatedServiceLogs(TMP_DIR);
+
+    assert.ok(fs.existsSync(path.join(TMP_DIR, 'nssm-stdout.log')), 'el activo no se rota ni se borra');
+    assert.ok(fs.existsSync(path.join(TMP_DIR, 'nssm-stderr.log')), 'el activo no se rota ni se borra');
+    assert.ok(fs.existsSync(LOG_PATH), 'agent.log no es asunto de esta purga');
+  });
+
+  test('con menos archivos que el tope no borra nada', () => {
+    fs.readdirSync(TMP_DIR).filter((f) => f.startsWith('nssm-'))
+      .forEach((f) => fs.unlinkSync(path.join(TMP_DIR, f)));
+    touch('nssm-stdout-20260915120000.log');
+
+    purgeRotatedServiceLogs(TMP_DIR);
+
+    assert.ok(fs.existsSync(path.join(TMP_DIR, 'nssm-stdout-20260915120000.log')));
+  });
+
+  test('un directorio inexistente no tumba el logueo', () => {
+    assert.doesNotThrow(() => purgeRotatedServiceLogs(path.join(TMP_DIR, 'no-existe')));
   });
 });

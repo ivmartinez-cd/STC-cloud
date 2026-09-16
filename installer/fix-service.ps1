@@ -49,6 +49,11 @@ Write-Host "      AppParameters: bundle.js"
 & $nssm set STCCloudMonitor AppStderr "C:\ProgramData\STCCloudMonitor\nssm-stderr.log"
 & $nssm set STCCloudMonitor AppStdoutCreationDisposition 4
 & $nssm set STCCloudMonitor AppStderrCreationDisposition 4
+# Rotacion de los logs de NSSM (16/09/2026), mismos valores que el instalador:
+# sin esto nssm-stdout.log crece sin techo duplicando agent.log.
+& $nssm set STCCloudMonitor AppRotateFiles 1
+& $nssm set STCCloudMonitor AppRotateOnline 1
+& $nssm set STCCloudMonitor AppRotateBytes 10485760
 
 Write-Host "[3/5] Iniciando servicio reparado..." -ForegroundColor Yellow
 Start-Service -Name "STCCloudMonitor"

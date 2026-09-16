@@ -197,6 +197,18 @@ begin
        '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
   Exec(NssmExe, 'set {#ServiceName} AppStderrCreationDisposition 4',
        '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  // Rotacion de los logs que captura NSSM (16/09/2026). Sin esto nssm-stdout.log
+  // crece sin techo en la PC del cliente: es un duplicado linea por linea de
+  // agent.log (el Logger hace console.log ademas de escribir el archivo), pero
+  // agent.log rota a los 10 MB y este no lo hacia. Medido: 8,4 MB y subiendo.
+  // AppRotateOnline 1 rota sin reiniciar el servicio; los .log rotados que deja
+  // NSSM los purga el propio agente (ver purgeRotatedServiceLogs en Logger.ts).
+  Exec(NssmExe, 'set {#ServiceName} AppRotateFiles 1',
+       '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  Exec(NssmExe, 'set {#ServiceName} AppRotateOnline 1',
+       '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  Exec(NssmExe, 'set {#ServiceName} AppRotateBytes 10485760',
+       '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
 end;
 
 // Utilidades para parametros de consola

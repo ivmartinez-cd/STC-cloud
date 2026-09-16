@@ -45,6 +45,30 @@ function rotateLogFiles(logPath: string): void {
     if (fs.existsSync(src)) fs.renameSync(src, `${logPath}.${i + 1}`);
   }
   fs.renameSync(logPath, `${logPath}.1`);
+  purgeRotatedServiceLogs(path.dirname(logPath));
+}
+
+// NSSM (el envoltorio que corre el agente como servicio) captura stdout/stderr
+// a `nssm-stdout.log` / `nssm-stderr.log`. Desde el 16/09/2026 el instalador le
+// activa `AppRotateBytes`, pero NSSM rota renombrando a
+// `nssm-stdout-<timestamp>.log` y no borra nunca los viejos: sin esto el techo
+// seguiría siendo infinito, sólo que repartido en archivos de 10 MB. Se queda
+// con los `SERVICE_LOG_KEEP` más recientes por prefijo. Corre desde
+// `rotateLogFiles`, o sea una vez cada 10 MB de `agent.log`, no en cada línea.
+const SERVICE_LOG_KEEP = 3;
+const SERVICE_LOG_RE = /^nssm-(stdout|stderr)-[0-9]+\.log$/;
+
+export function purgeRotatedServiceLogs(dir: string): void {
+  try {
+    const rotated = fs.readdirSync(dir).filter((f) => SERVICE_LOG_RE.test(f));
+    for (const prefix of ['nssm-stdout-', 'nssm-stderr-']) {
+      rotated
+        .filter((f) => f.startsWith(prefix))
+        .sort()                       // el timestamp del nombre ordena cronológicamente
+        .slice(0, -SERVICE_LOG_KEEP)  // deja los SERVICE_LOG_KEEP más nuevos
+        .forEach((f) => fs.unlinkSync(path.join(dir, f)));
+    }
+  } catch { /* purga best-effort: nunca debe tumbar el logueo */ }
 }
 
 export type LogLevel = 'INFO' | 'WARN' | 'ERROR';

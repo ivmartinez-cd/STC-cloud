@@ -4,6 +4,16 @@
 # `COMPOSE_PROFILES` en .env.production elige el modo de TLS (letsencrypt |
 # external) y, opcionalmente, `observability`. Ver .env.production.example.
 
+# Rotación de logs de Docker, común a todos los servicios. Sin esto el driver
+# json-file crece sin techo hasta llenar el disco de la VM: el log de nginx ya
+# había llegado a 10 MB (16/09/2026) porque era de los que no lo tenían.
+# 10 MB x 3 archivos = 30 MB de tope por contenedor.
+x-logging: &default-logging
+  driver: "json-file"
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 # Base común de los dos servicios nginx (uno por modo de TLS, ver más abajo).
 x-nginx-common: &nginx-common
   image: nginx:alpine
@@ -29,11 +39,7 @@ x-nginx-common: &nginx-common
     interval: 30s
     timeout: 5s
     retries: 3
-  logging:
-    driver: "json-file"
-    options:
-      max-size: "10m"
-      max-file: "3"
+  logging: *default-logging
   deploy:
     resources:
       limits:
@@ -55,11 +61,7 @@ services:
         condition: service_healthy
     networks:
       - stc-network
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
+    logging: *default-logging
     deploy:
       # Réplicas reales (Fase 16 del gap analysis, 26/08/2026) — default 1,
       # cero cambio de comportamiento hasta que se suba `API_REPLICAS` en
@@ -87,6 +89,7 @@ services:
     restart: unless-stopped
     networks:
       - stc-network
+    logging: *default-logging
     deploy:
       resources:
         limits:
@@ -110,11 +113,7 @@ services:
       retries: 5
     networks:
       - stc-network
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
+    logging: *default-logging
     deploy:
       resources:
         limits:
@@ -135,11 +134,7 @@ services:
       retries: 5
     networks:
       - stc-network
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
+    logging: *default-logging
     deploy:
       resources:
         limits:
@@ -207,6 +202,7 @@ services:
       - certbot-www:/var/www/certbot
     entrypoint: /bin/sh -c 'trap exit TERM; while :; do certbot renew --webroot -w /var/www/certbot --quiet; sleep 12h & wait $${!}; done'
     restart: unless-stopped
+    logging: *default-logging
     deploy:
       resources:
         limits:
@@ -244,6 +240,7 @@ services:
         condition: service_healthy
     networks:
       - stc-network
+    logging: *default-logging
     deploy:
       resources:
         limits:
@@ -275,6 +272,7 @@ services:
       - --storage.tsdb.retention.time=15d
     networks:
       - stc-network
+    logging: *default-logging
     deploy:
       resources:
         limits:
@@ -290,6 +288,7 @@ services:
       - alertmanager-data:/alertmanager
     networks:
       - stc-network
+    logging: *default-logging
     deploy:
       resources:
         limits:
@@ -317,6 +316,7 @@ services:
       - grafana-data:/var/lib/grafana
     networks:
       - stc-network
+    logging: *default-logging
     deploy:
       resources:
         limits:
