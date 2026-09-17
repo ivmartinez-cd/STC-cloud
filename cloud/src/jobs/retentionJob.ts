@@ -96,6 +96,13 @@ async function purgeDashboardSnapshots() {
       logger.info(`[RetentionJob] ${deleted} toma(s) de dashboard_snapshots purgadas (> ${DASHBOARD_SNAPSHOTS_RETENTION_DAYS} días)`);
     }
   } catch (err) {
+    // 42P01 = la tabla todavía no existe. Pasa una sola vez, en el primer
+    // arranque después de desplegar la migración que la crea: este job corre su
+    // primer tick al importarse, antes de que `server.ts` llegue a
+    // `db.migrate.latest()`. No hay nada que purgar en una tabla que no existe,
+    // así que no es un error — se ignora en silencio (visto en la VM el
+    // 16/09/2026).
+    if ((err as { code?: string })?.code === '42P01') return;
     logger.error({ err }, '[RetentionJob] fallo purgando dashboard_snapshots');
   }
 }
