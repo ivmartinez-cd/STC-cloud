@@ -193,7 +193,7 @@ cloud/portal/src/
 │   ├── SidebarNav.tsx / navItems.ts / navTree.ts  # Navegación y gateo por rol
 │   ├── useNavBadges.ts         # Contadores en el menú
 │   ├── GlobalSearch.tsx / useGlobalSearch.ts      # Búsqueda global
-│   └── FeedbackFab.tsx         # Acceso a feedback
+│   └── FeedbackButton.tsx      # Acceso a feedback (cabecera)
 ├── features/<dominio>/     # 13 features autocontenidas, cada una con pages/, components/, hooks/
 │   │                       #   activity, alerts, auth, clients, dashboard, devices, email-log,
 │   │                       #   incidents, monitors, pending-devices, reports, settings, supplies

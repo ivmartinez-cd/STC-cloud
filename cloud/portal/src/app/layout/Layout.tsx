@@ -7,7 +7,7 @@ import SidebarNav from './SidebarNav';
 import SidebarBrand from './SidebarBrand';
 import SidebarUser from './SidebarUser';
 import GlobalSearch from './GlobalSearch';
-import FeedbackFab from './FeedbackFab';
+import FeedbackButton from './FeedbackButton';
 import { filterNavByRole } from './navTree';
 import { NAV_SECTIONS } from './navItems';
 import { useGlobalSearch } from './useGlobalSearch';
@@ -58,7 +58,7 @@ const Sidebar = ({ collapsed, onToggleCollapse, isMobileMenuOpen, onCloseMobile 
 /** Sin flecha "volver" global ni engranaje (auditoría de duplicados,
  * 14/09/2026): las cuatro fichas traen breadcrumb con destino explícito, y
  * Configuración ya está en el sidebar para todos los roles. */
-const TopHeader = ({ onToggleMobile }: { onToggleMobile: () => void }) => {
+const TopHeader = ({ onToggleMobile, onOpenFeedback }: { onToggleMobile: () => void; onOpenFeedback: () => void }) => {
   const search = useGlobalSearch();
   return (
     <header className="h-16 short:h-12 bg-white/80 backdrop-blur-xl border-b border-slate-200 sticky top-0 z-50 px-6 flex items-center justify-between">
@@ -72,6 +72,7 @@ const TopHeader = ({ onToggleMobile }: { onToggleMobile: () => void }) => {
       </div>
       <div className="flex items-center gap-4">
         <GlobalSearch s={search} />
+        <FeedbackButton onClick={onOpenFeedback} />
       </div>
     </header>
   );
@@ -121,7 +122,7 @@ const Layout = () => {
       {isMobileMenuOpen && <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[60] md:hidden" onClick={closeMobile} />}
       <Sidebar collapsed={collapsed} onToggleCollapse={toggleCollapse} isMobileMenuOpen={isMobileMenuOpen} onCloseMobile={closeMobile} />
       <div className={`flex flex-col flex-1 min-w-0 h-screen min-h-0 transition-all duration-300 ease-in-out ${collapsed ? 'md:pl-16' : 'md:pl-[248px]'}`}>
-        <TopHeader onToggleMobile={() => setIsMobileMenuOpen((v) => !v)} />
+        <TopHeader onToggleMobile={() => setIsMobileMenuOpen((v) => !v)} onOpenFeedback={() => setShowFeedback(true)} />
         {/* Cadena de alturas (27/08/2026): <main> sigue siendo el único contenedor
             con scroll — pero sólo como red de seguridad. Cada página se monta
             `h-full flex-col min-h-0` y dimensiona sus listas con `useFitRows`
@@ -135,7 +136,6 @@ const Layout = () => {
           </div>
         </main>
       </div>
-      <FeedbackFab onClick={() => setShowFeedback(true)} />
       {showFeedback && <FeedbackModal onClose={() => setShowFeedback(false)} />}
     </div>
   );

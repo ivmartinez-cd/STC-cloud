@@ -35,7 +35,12 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   return (
     <ToastContext.Provider value={{ showToast }}>
       {children}
-      <div className="fixed bottom-5 right-5 z-[200] flex flex-col gap-3 min-w-[320px] max-w-md">
+      {/* Arriba a la derecha, justo debajo de la cabecera (issue #25429): abajo
+          a la derecha se apoyaban encima de "Guardar cambios"/"Guardar
+          segmentos" — el toast de confirmación tapaba durante segundos el
+          botón que lo había disparado. `top` sigue la altura de la cabecera
+          (h-16, short:h-12). */}
+      <div className="fixed top-[4.75rem] short:top-[3.75rem] right-5 z-[200] flex flex-col gap-3 min-w-[320px] max-w-md">
         {toasts.map(toast => (
           <ToastItem key={toast.id} {...toast} onClose={() => removeToast(toast.id)} />
         ))}
