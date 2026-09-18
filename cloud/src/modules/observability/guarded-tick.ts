@@ -30,13 +30,21 @@ export function lockIdFor(name: string): number {
   return hash | 0; // int4 firmado
 }
 
-async function tryLock(db: Knex, objid: number): Promise<boolean> {
-  const result = await db.raw("SELECT pg_try_advisory_lock(?, ?) AS locked", [LOCK_CLASSID, objid]);
+/**
+ * El lock de sesión vive en UNA conexión: tomarlo y soltarlo con `db.raw`
+ * suelto deja que el pool sirva el unlock desde otra, que no lo tiene — el
+ * lock queda colgado de una conexión ociosa del pool y todos los ticks
+ * siguientes se saltean en silencio (VM, 17/09/2026: `dashboard-snapshot`
+ * dejó de escribir tras 3 tomas). Por eso ambos corren sobre la misma
+ * conexión, retenida mientras dura el tick.
+ */
+async function tryLock(db: Knex, conn: unknown, objid: number): Promise<boolean> {
+  const result = await db.raw("SELECT pg_try_advisory_lock(?, ?) AS locked", [LOCK_CLASSID, objid]).connection(conn);
   return result.rows?.[0]?.locked === true;
 }
 
-async function unlock(db: Knex, objid: number): Promise<void> {
-  await db.raw("SELECT pg_advisory_unlock(?, ?)", [LOCK_CLASSID, objid]).catch(() => {});
+async function unlock(db: Knex, conn: unknown, objid: number): Promise<void> {
+  await db.raw("SELECT pg_advisory_unlock(?, ?)", [LOCK_CLASSID, objid]).connection(conn).catch(() => {});
 }
 
 export async function runGuardedTick(
@@ -46,20 +54,25 @@ export async function runGuardedTick(
 ): Promise<"ok" | "error" | "skipped"> {
   const objid = lockIdFor(name);
   const started = Date.now();
-  if (!(await tryLock(db, objid))) {
-    observeJobTick(name, "skipped", 0);
-    return "skipped";
-  }
+  const conn = await db.client.acquireConnection();
   try {
-    await fn();
-    observeJobTick(name, "ok", Date.now() - started);
-    return "ok";
-  } catch (err) {
-    observeJobTick(name, "error", Date.now() - started);
-    logger.error({ err, job: name }, `[${name}] fallo del tick`);
-    captureError(err, { job: name });
-    return "error";
+    if (!(await tryLock(db, conn, objid))) {
+      observeJobTick(name, "skipped", 0);
+      return "skipped";
+    }
+    try {
+      await fn();
+      observeJobTick(name, "ok", Date.now() - started);
+      return "ok";
+    } catch (err) {
+      observeJobTick(name, "error", Date.now() - started);
+      logger.error({ err, job: name }, `[${name}] fallo del tick`);
+      captureError(err, { job: name });
+      return "error";
+    } finally {
+      await unlock(db, conn, objid);
+    }
   } finally {
-    await unlock(db, objid);
+    await db.client.releaseConnection(conn);
   }
 }

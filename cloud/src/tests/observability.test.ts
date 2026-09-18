@@ -116,6 +116,17 @@ describe('guarded-tick — lock multi-réplica real', () => {
     assert.equal(result, 'ok');
   });
 
+  test('el lock se suelta aunque el tick use el pool (unlock en la misma conexión que el lock)', async () => {
+    for (let i = 0; i < 5; i++) {
+      const result = await runGuardedTick(dbA, 'obs-test-pool', async () => {
+        await Promise.all([1, 2, 3, 4].map(() => dbA.raw('SELECT pg_sleep(0.02)')));
+      });
+      assert.equal(result, 'ok');
+      const other = await runGuardedTick(dbB, 'obs-test-pool', async () => {});
+      assert.equal(other, 'ok', `vuelta ${i}: el lock quedó colgado de una conexión del pool`);
+    }
+  });
+
   test('un tick que lanza devuelve error, libera el lock y no propaga', async () => {
     const result = await runGuardedTick(dbA, 'obs-test-err', async () => {
       throw new Error('boom controlado');
