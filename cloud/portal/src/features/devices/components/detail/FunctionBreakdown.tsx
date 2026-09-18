@@ -41,8 +41,6 @@ function BreakdownTable({ title, columns, rows }: { title: string; columns: stri
   );
 }
 
-const hasColor = (values: Cell[]) => values.some(v => (v ?? 0) > 0);
-
 function functionRows(c: DetailedCounters, withColor: boolean): TableRow[] {
   const entries: Array<[string, CounterTriple | undefined]> = [
     ['Impresión', c.print], ['Copia', c.copy], ['Fax', c.fax], ['Dúplex (equiv.)', c.duplexEquivalent],
@@ -50,10 +48,10 @@ function functionRows(c: DetailedCounters, withColor: boolean): TableRow[] {
   return entries.flatMap(([label, t]) => (t ? [{ label, cells: withColor ? [t.mono, t.color, t.total] : [t.total] }] : []));
 }
 
-function sidesRows(c: DetailedCounters): TableRow[] {
-  const entries: Array<[string, CounterRowDetail | undefined]> = [
-    ['Mono símplex', c.monoSimplex], ['Mono dúplex', c.duplex], ['Color símplex', c.colorSimplex], ['Color dúplex', c.colorDuplex],
-  ];
+function sidesRows(c: DetailedCounters, isColor: boolean): TableRow[] {
+  const entries: Array<[string, CounterRowDetail | undefined]> = isColor
+    ? [['Mono símplex', c.monoSimplex], ['Mono dúplex', c.duplex], ['Color símplex', c.colorSimplex], ['Color dúplex', c.colorDuplex]]
+    : [['Símplex', c.monoSimplex], ['Dúplex', c.duplex]];
   const rows: TableRow[] = entries.flatMap(([label, d]) => (d ? [{ label, cells: [d.print, d.report, d.total] }] : []));
   if (rows.length > 0 && c.totalImpressions) {
     const t = c.totalImpressions;
@@ -99,15 +97,14 @@ function SidesBar({ c }: { c: DetailedCounters }) {
   );
 }
 
-export default function FunctionBreakdown({ counters: c }: { counters: DetailedCounters }) {
-  const withColor = hasColor([c.print?.color, c.copy?.color, c.fax?.color, c.duplexEquivalent?.color]);
+export default function FunctionBreakdown({ counters: c, isColor }: { counters: DetailedCounters; isColor: boolean }) {
   return (
     <div className="px-5 pb-[18px] pt-2">
       <SidesBar c={c} />
-      <BreakdownTable title="Caras" columns={['Impresión', 'Informes', 'Total']} rows={sidesRows(c)} />
-      <BreakdownTable title="Función" columns={withColor ? ['Mono', 'Color', 'Total'] : ['Total']} rows={functionRows(c, withColor)} />
+      <BreakdownTable title="Caras" columns={['Impresión', 'Informes', 'Total']} rows={sidesRows(c, isColor)} />
+      <BreakdownTable title="Función" columns={isColor ? ['Mono', 'Color', 'Total'] : ['Total']} rows={functionRows(c, isColor)} />
       <BreakdownTable title="Escaneos" columns={['Total']} rows={scanRows(c.scans)} />
-      {c.colorEngineCycles != null && <Row label="Ciclos del motor en color" value={fmtInt(c.colorEngineCycles)} />}
+      {isColor && c.colorEngineCycles != null && <Row label="Ciclos del motor en color" value={fmtInt(c.colorEngineCycles)} />}
     </div>
   );
 }

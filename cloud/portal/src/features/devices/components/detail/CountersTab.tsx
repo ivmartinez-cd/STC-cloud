@@ -11,6 +11,7 @@ export default function CountersTab({
   totalPages,
   monoPages,
   colorPages,
+  isColor,
   counters,
 }: {
   device: DeviceDetailData;
@@ -18,15 +19,16 @@ export default function CountersTab({
   totalPages: number | null;
   monoPages: number | null;
   colorPages: number | null;
+  isColor: boolean;
   counters: DetailedCounters | undefined;
 }) {
   return (
     <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-2">
-      <CountersCard device={device} latest={latest} totalPages={totalPages} monoPages={monoPages} colorPages={colorPages} counters={counters} />
+      <CountersCard device={device} latest={latest} totalPages={totalPages} monoPages={monoPages} colorPages={colorPages} isColor={isColor} counters={counters} />
       <Card>
         <CardTitle icon={<Cpu size={16} />}>Desglose por función</CardTitle>
         {counters ? (
-          <FunctionBreakdown counters={counters} />
+          <FunctionBreakdown counters={counters} isColor={isColor} />
         ) : (
           <p className="px-4 py-4 font-sans text-[12.5px] text-ink-300">El equipo no expone desglose de contadores por función (sólo total/mono/color).</p>
         )}

@@ -58,6 +58,8 @@ export interface Device {
   asset_tag?:                     string | null;
   duty_cycle_monthly_override?:   number | null;
   duty_cycle_effective?:          number | null;
+  /** `device_models.is_color` del catálogo (null = modelo sin catalogar). */
+  model_is_color?:                boolean | null;
   utilization_pct?:               number | null;
   pages_30d?:                     number | null;
   mono_30d?:                      number | null;

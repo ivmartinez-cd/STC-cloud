@@ -24,6 +24,7 @@ import { useDeviceStats, useDevicePrintTrend } from '../hooks/useDeviceOverview'
 import { safeReturnTo, returnToLabel } from '../../../shared/lib/returnTo';
 import type { AuditLogItem, AuditLogsResponse } from '../../../shared/types/audit';
 import type { Incident, IncidentListResponse } from '../../../shared/types/incidents';
+import { isColorDevice } from '../lib/deviceColorCapability';
 import type { DeviceDetailTab } from '../types/deviceDetailPage';
 
 const TABS: Array<{ id: DeviceDetailTab; label: string }> = [
@@ -146,6 +147,7 @@ const DeviceDetail = () => {
   const colorPages = device?.color_pages ?? null;
   const counters = useMemo(() => details?.counters, [details]);
   const extra = useMemo(() => details?.device, [details]);
+  const isColor = useMemo(() => (device ? isColorDevice(device, supplyRows, counters) : true), [device, supplyRows, counters]);
 
   if (loading && !device) {
     return <div className="p-10 text-center font-sans text-[12.5px] text-ink-300">Cargando equipo…</div>;
@@ -195,17 +197,17 @@ const DeviceDetail = () => {
       <div className="flex min-h-0 flex-1 flex-col">
       {activeTab === 'general' && (
         <GeneralTab
-          device={device} extra={extra} latest={latest} totalPages={totalPages} monoPages={monoPages} colorPages={colorPages}
+          device={device} extra={extra} latest={latest} totalPages={totalPages} monoPages={monoPages} colorPages={colorPages} isColor={isColor}
           counters={counters} activeAlerts={activeAlerts} allAlerts={alerts}
           trend={trend} trendLoading={trendLoading} trendError={trendError} onRetryTrend={refetchTrend}
         />
       )}
-      {activeTab === 'counters' && <CountersTab device={device} latest={latest} totalPages={totalPages} monoPages={monoPages} colorPages={colorPages} counters={counters} />}
+      {activeTab === 'counters' && <CountersTab device={device} latest={latest} totalPages={totalPages} monoPages={monoPages} colorPages={colorPages} isColor={isColor} counters={counters} />}
       {activeTab === 'supplies' && <SuppliesTable device={device} supplyRows={supplyRows} onOpenSupply={(key) => setSupplyTarget({ deviceId: device.id, supplyKey: key })} />}
       {activeTab === 'media' && <MediaTab inputTrays={details?.inputTrays} outputTrays={details?.outputTrays} />}
       {activeTab === 'alerts' && <AlertsTab activeAlerts={activeAlerts} />}
       {activeTab === 'incidents' && <IncidentsTab incidents={incidents.data} incidentsLoading={incidents.loading} />}
-      {activeTab === 'costs' && canSeeHistory && <CostsTab deviceId={id!} />}
+      {activeTab === 'costs' && canSeeHistory && <CostsTab deviceId={id!} isColor={isColor} />}
       {activeTab === 'history' && canSeeHistory && <HistoryTab history={history.data} historyLoading={history.loading} />}
       </div>
 

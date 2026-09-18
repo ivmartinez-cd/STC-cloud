@@ -30,7 +30,7 @@ const FIELDS: { key: keyof DeviceCosts; label: string; step: string }[] = [
  * informe de uso programado. Solo admin/operator (la pestaña ya viene
  * gateada desde DeviceDetail).
  */
-export default function CostsTab({ deviceId }: { deviceId: string }) {
+export default function CostsTab({ deviceId, isColor }: { deviceId: string; isColor: boolean }) {
   const { showToast } = useToast();
   const [costs, setCosts] = useState<DeviceCosts | null>(null);
   const [saving, setSaving] = useState(false);
@@ -86,7 +86,7 @@ export default function CostsTab({ deviceId }: { deviceId: string }) {
         <p className="mb-2 font-sans text-[12px] leading-[1.5] text-ink-400">
           Los costes por página alimentan las columnas de facturación del informe de uso programado.
         </p>
-        {FIELDS.map((f) => (
+        {FIELDS.filter((f) => isColor || f.key !== 'color_page_cost').map((f) => (
           <label key={f.key} className="flex items-center justify-between gap-4 border-b border-line-200 py-[9px]">
             <span className="font-montserrat text-[8.5px] font-bold uppercase leading-[1.3] tracking-[.13em] text-ink-300">{f.label}</span>
             <input type="number" min={0} step={f.step} value={(costs[f.key] as number | null) ?? ''}

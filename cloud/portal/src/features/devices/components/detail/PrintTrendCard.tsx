@@ -11,15 +11,15 @@ const MONTH_SHORT_ES: Record<string, string> = {
 /** "Tendencia de impresión · 12 meses" (handoff hifi "Dispositivo — detalle") —
  * 12 barras apiladas mono/color, ya vienen del backend como deltas mensuales
  * (nunca contadores acumulados — ver `PRINT_TREND_SQL` del lado cloud). */
-export default function PrintTrendCard({ trend, loading, error, onRetry }: {
-  trend: PrintTrend | null; loading: boolean; error: boolean; onRetry: () => void;
+export default function PrintTrendCard({ isColor, trend, loading, error, onRetry }: {
+  isColor: boolean; trend: PrintTrend | null; loading: boolean; error: boolean; onRetry: () => void;
 }) {
   const months = trend?.months ?? [];
   const max = Math.max(...months.map((m) => m.total), 1);
 
   return (
     <Card>
-      <CardTitle right={
+      <CardTitle right={isColor &&
         <div className="flex gap-4">
           <span className="flex items-center gap-2 font-sans text-[11.5px] text-ink-400"><span className="block h-[3px] w-[9px] bg-brand-gray" />Monocromo</span>
           <span className="flex items-center gap-2 font-sans text-[11.5px] text-ink-400"><span className="block h-[3px] w-[9px] bg-brand" />Color</span>

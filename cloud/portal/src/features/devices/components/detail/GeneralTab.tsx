@@ -14,6 +14,7 @@ interface GeneralTabProps {
   totalPages: number | null;
   monoPages: number | null;
   colorPages: number | null;
+  isColor: boolean;
   counters: DetailedCounters | undefined;
   activeAlerts: ActiveAlertItem[];
   allAlerts: Alert[];
@@ -29,7 +30,7 @@ interface GeneralTabProps {
  * identidad sin scroll (27/08/2026) — antes eran 2 bandas y la segunda
  * quedaba fuera de pantalla. */
 export default function GeneralTab({
-  device, extra, latest, totalPages, monoPages, colorPages, counters,
+  device, extra, latest, totalPages, monoPages, colorPages, isColor, counters,
   activeAlerts, allAlerts, trend, trendLoading, trendError, onRetryTrend,
 }: GeneralTabProps) {
   return (
@@ -38,9 +39,9 @@ export default function GeneralTab({
       <DeviceSpecsCard device={device} extra={extra} />
       <div className="flex min-h-0 flex-col gap-4">
         <DeviceAlertsCard activeAlerts={activeAlerts} allAlerts={allAlerts} deviceId={device.id} />
-        <PrintTrendCard trend={trend} loading={trendLoading} error={trendError} onRetry={onRetryTrend} />
+        <PrintTrendCard isColor={isColor} trend={trend} loading={trendLoading} error={trendError} onRetry={onRetryTrend} />
       </div>
-      <CurrentCountersCard device={device} latest={latest} totalPages={totalPages} monoPages={monoPages} colorPages={colorPages} counters={counters} />
+      <CurrentCountersCard device={device} latest={latest} totalPages={totalPages} monoPages={monoPages} colorPages={colorPages} isColor={isColor} counters={counters} />
     </div>
   );
 }

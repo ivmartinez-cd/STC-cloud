@@ -88,7 +88,7 @@ export class KnexDeviceRepository implements DeviceRepository {
       .select(
         "devices.*", db.raw(STATUS_SQL), "agents.name as monitor_name", "agents.status as agent_status",
         "agents.last_seen as agent_last_seen", "clients.name as client_name", "merged_target.serial_number as merged_into_serial",
-        "u30.pages_30d", "u30.mono_30d", "u30.color_30d",
+        "u30.pages_30d", "u30.mono_30d", "u30.color_30d", "dm.is_color as model_is_color",
         db.raw("COALESCE(devices.duty_cycle_monthly_override, dm.duty_cycle_monthly) as duty_cycle_effective"),
         db.raw(`
         CASE WHEN COALESCE(devices.duty_cycle_monthly_override, dm.duty_cycle_monthly) > 0

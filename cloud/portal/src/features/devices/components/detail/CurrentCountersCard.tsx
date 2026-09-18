@@ -7,8 +7,8 @@ import type { DeviceDetailData, Reading } from '../../types/deviceDetailPage';
 /** "Contadores actuales" (handoff hifi "Dispositivo — detalle") — total +
  * barra apilada mono/color + desglose por función (cuando el equipo lo
  * reporta) + aviso de confiabilidad de lectura si el método es SNMP. */
-export default function CurrentCountersCard({ device, latest, totalPages, monoPages, colorPages, counters }: {
-  device: DeviceDetailData; latest: Reading | null; totalPages: number | null; monoPages: number | null; colorPages: number | null; counters: DetailedCounters | undefined;
+export default function CurrentCountersCard({ device, latest, totalPages, monoPages, colorPages, isColor, counters }: {
+  device: DeviceDetailData; isColor: boolean; latest: Reading | null; totalPages: number | null; monoPages: number | null; colorPages: number | null; counters: DetailedCounters | undefined;
 }) {
   const total = totalPages ?? 0;
   const monoPct = total > 0 ? Math.round(((monoPages ?? 0) / total) * 1000) / 10 : 0;
@@ -23,12 +23,16 @@ export default function CurrentCountersCard({ device, latest, totalPages, monoPa
           <span className="font-montserrat text-[34px] font-extrabold short:text-[26px] leading-none tracking-[-.02em] tabular-nums text-ink-900">{fmtInt(totalPages)}</span>
           <span className="font-sans text-[12.5px] text-ink-100">páginas totales</span>
         </div>
-        <div className="mb-4 flex h-2 overflow-hidden rounded-[4px]">
-          <div className="bg-brand-gray" style={{ width: `${monoPct}%` }} />
-          <div className="bg-brand" style={{ width: `${colorPct}%` }} />
-        </div>
-        <Row label="Monocromo" value={fmtInt(monoPages)} />
-        <Row label="Color" value={fmtInt(colorPages)} />
+        {isColor && (
+          <>
+            <div className="mb-4 flex h-2 overflow-hidden rounded-[4px]">
+              <div className="bg-brand-gray" style={{ width: `${monoPct}%` }} />
+              <div className="bg-brand" style={{ width: `${colorPct}%` }} />
+            </div>
+            <Row label="Monocromo" value={fmtInt(monoPages)} />
+            <Row label="Color" value={fmtInt(colorPages)} />
+          </>
+        )}
         {counters?.copy?.total != null && <Row label="Copias" value={fmtInt(counters.copy.total)} />}
         {counters?.scans?.total != null && <Row label="Escaneos" value={fmtInt(counters.scans.total)} />}
         {counters?.duplexEquivalent?.total != null && <Row label="Doble faz" value={fmtInt(counters.duplexEquivalent.total)} />}
