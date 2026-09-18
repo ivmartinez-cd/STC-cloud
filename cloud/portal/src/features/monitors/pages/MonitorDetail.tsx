@@ -145,9 +145,11 @@ const MonitorDetail = () => {
     { id: 'devices', label: 'Dispositivos' },
     ...(isReadOnlyViewer ? [] : [{ id: 'console' as Tab, label: 'Consola' }]),
     { id: 'reports', label: 'Reportes' },
-    // Segmentos IP aparte de Configuración: es lo único de la config que crece
-    // con el cliente (59 rangos en un caso real) y necesita el ancho entero.
-    ...(isReadOnlyViewer ? [] : [{ id: 'segments' as Tab, label: 'Segmentos' }, { id: 'config' as Tab, label: 'Configuración' }]),
+    // "Red" (ex "Segmentos", 18/09/2026): además de los rangos IP —lo único de
+    // la config que crece con el cliente (59 rangos en un caso real) y
+    // necesita el ancho entero— reúne ahora todo lo que es de red del sitio
+    // (nombre, comunidad SNMP), separado de Configuración.
+    ...(isReadOnlyViewer ? [] : [{ id: 'segments' as Tab, label: 'Red' }, { id: 'config' as Tab, label: 'Configuración' }]),
   ];
 
   return (
@@ -241,7 +243,7 @@ const MonitorDetail = () => {
       {activeTab === 'config' && !isReadOnlyViewer && (
         <ConfigTabPanel
           monitor={monitor} onSave={saveConfig} onSaveSnmpCredentials={saveSnmpCredentials}
-          onRequestRevoke={() => setShowRevokeModal(true)} onOpenSegments={() => handleTabChange('segments')}
+          onRequestRevoke={() => setShowRevokeModal(true)}
         />
       )}
 

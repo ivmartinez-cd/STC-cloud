@@ -13,12 +13,12 @@ const Description = () => (
   <>
     <p className="mb-3.5 font-sans text-[12.5px] leading-[1.55] text-ink-700">
       Permite abrir, desde la ficha de un equipo, su web embebida (EWS) completa en una pestaña nueva, sin VPN: cada pedido
-      lo hace el agente desde adentro de la red del cliente, por el mismo canal saliente que ya usa. Se puede navegar y
-      guardar cambios (con la contraseña del propio equipo), sólo alcanza equipos ya sincronizados por este monitor, la
-      sesión vence a los 30 minutos sin uso, y quedan en la auditoría cada apertura, cada pantalla y cada escritura.
+      lo hace el agente desde adentro de la red del cliente, por el mismo canal saliente que ya usa.
     </p>
     <p className="mb-3.5 font-sans text-[11.5px] leading-[1.5] text-ink-300 short:hidden">
-      Viene deshabilitado de fábrica. Mientras lo esté, la nube rechaza el pedido sin llegar a encolarlo.
+      Se puede navegar y guardar cambios (con la contraseña del propio equipo), sólo alcanza equipos ya sincronizados por
+      este monitor, la sesión vence a los 30 minutos sin uso, y quedan en la auditoría cada apertura, cada pantalla y cada
+      escritura. Viene deshabilitado de fábrica: mientras lo esté, la nube rechaza el pedido sin llegar a encolarlo.
     </p>
   </>
 );

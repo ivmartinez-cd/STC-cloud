@@ -42,6 +42,11 @@ export default function SnmpCredentialsPanel({ credentials, rev, onSave }: Props
     setRows(rowsFromMasked(credentials));
   }
 
+  const dirty = rows.some((r) => r.kind !== 'kept')
+    || rows.map((r) => (r.kind === 'kept' ? r.id : '')).join() !== baseline.map((c) => c.id).join();
+
+  const discard = () => { setBaseline(credentials); setRows(rowsFromMasked(credentials)); };
+
   const moveRow = (idx: number, dir: -1 | 1) => {
     setRows((prev) => {
       const next = prev.slice();
@@ -104,6 +109,9 @@ export default function SnmpCredentialsPanel({ credentials, rev, onSave }: Props
     setSaving(true);
     try {
       await onSave(payload, rev);
+      // Los borradores ya viajaron: se sueltan para que la resincronización de
+      // arriba tome la lista guardada (si quedaban, un segundo Guardar las duplicaba).
+      setRows((prev) => prev.filter((r) => r.kind === 'kept'));
     } catch (err: unknown) {
       if (err instanceof ApiError && err.status === 409) {
         showToast('La lista cambió desde otra sesión — se recargó con los valores más recientes, revisá y volvé a guardar', 'warning');
@@ -178,15 +186,22 @@ export default function SnmpCredentialsPanel({ credentials, rev, onSave }: Props
           </div>
         ))}
 
-        <div className="flex items-center justify-between pt-2">
+        {dirty && <p className="font-sans text-[11.5px] text-brand-accent">Cambios sin guardar</p>}
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
           <button type="button" onClick={addRow}
             className="flex items-center gap-2 font-montserrat text-[10px] font-semibold uppercase tracking-[.08em] text-brand transition-colors duration-150 ease-in-out hover:text-brand-severe">
             <Plus size={14} /> Agregar credencial
           </button>
-          <button type="button" onClick={handleSave} disabled={saving}
+          <div className="flex items-center gap-2.5">
+          <button type="button" onClick={discard} disabled={saving || !dirty}
+            className="rounded-[3px] border border-line-300 bg-white px-4 py-2.5 font-montserrat text-[11px] font-semibold uppercase tracking-[.08em] text-ink-600 transition-colors duration-150 ease-in-out hover:bg-surface-btn-hover disabled:opacity-50">
+            Descartar
+          </button>
+          <button type="button" onClick={handleSave} disabled={saving || !dirty}
             className="flex items-center gap-2.5 rounded-[3px] bg-brand px-4 py-2.5 font-montserrat text-[11px] font-semibold uppercase tracking-[.08em] text-white transition-colors duration-150 ease-in-out hover:bg-brand-severe disabled:opacity-50">
             {saving && <Loader2 size={14} className="animate-spin" />} Guardar credenciales
           </button>
+          </div>
         </div>
       </div>
     </div>
